@@ -1,0 +1,79 @@
+# Auto-labeling configuration for PRs
+
+# Documentation
+documentation:
+  - '**/*.md'
+  - 'docs/**/*'
+
+# UI/Frontend
+ui:
+  - 'components/**/*'
+  - 'app/**/*'
+  - '**/*.tsx'
+  - 'public/**/*'
+
+# Backend/Electron
+electron:
+  - 'electron/**/*'
+  - 'electron-builder.json'
+
+# LangGraph
+langgraph:
+  - 'lib/langgraph/**/*'
+
+# RAG System
+rag:
+  - 'lib/documents/**/*'
+  - 'electron/services/vectordb.ts'
+  - 'electron/ipc/handlers/vectordb.ts'
+  - 'electron/ipc/handlers/embeddings.ts'
+  - 'components/rag/**/*'
+
+# MCP Integration
+mcp:
+  - 'lib/mcp/**/*'
+  - 'electron/ipc/handlers/mcp.ts'
+  - 'components/mcp/**/*'
+
+# LLM
+llm:
+  - 'lib/llm/**/*'
+  - 'electron/ipc/handlers/llm.ts'
+
+# Configuration
+config:
+  - '**/*.json'
+  - '**/*.yml'
+  - '**/*.yaml'
+  - '.env*'
+  - 'lib/config/**/*'
+  - 'electron/ipc/handlers/config.ts'
+
+# Dependencies
+dependencies:
+  - 'package.json'
+  - 'pnpm-lock.yaml'
+  - 'package-lock.json'
+
+# Testing
+testing:
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/*.spec.ts'
+  - '**/*.spec.tsx'
+
+# CI/CD
+ci-cd:
+  - '.github/**/*'
+
+# Security
+security:
+  - 'SECURITY.md'
+  - 'lib/config/encryption.ts'
+  - 'electron/services/token-manager.ts'
+
+# GitHub Integration
+github:
+  - 'electron/ipc/handlers/github.ts'
+  - 'lib/auth/github-oauth.ts'
+  - 'components/settings/GitHubOAuthSettings.tsx'

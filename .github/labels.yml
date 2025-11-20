@@ -1,0 +1,202 @@
+# GitHub Labels Configuration
+# Use with: gh label sync --file .github/labels.yml
+
+# Type labels
+- name: bug
+  description: Something isn't working
+  color: d73a4a
+
+- name: enhancement
+  description: New feature or request
+  color: a2eeef
+
+- name: feature
+  description: New feature
+  color: 0e8a16
+
+- name: fix
+  description: Bug fix
+  color: d73a4a
+
+- name: documentation
+  description: Improvements or additions to documentation
+  color: 0075ca
+
+- name: question
+  description: Further information is requested
+  color: d876e3
+
+# Priority labels
+- name: priority/critical
+  description: Critical priority
+  color: b60205
+
+- name: priority/high
+  description: High priority
+  color: d93f0b
+
+- name: priority/medium
+  description: Medium priority
+  color: fbca04
+
+- name: priority/low
+  description: Low priority
+  color: 0e8a16
+
+# Status labels
+- name: needs-triage
+  description: Needs to be triaged
+  color: ededed
+
+- name: in-progress
+  description: Currently being worked on
+  color: fbca04
+
+- name: blocked
+  description: Blocked by dependencies or other issues
+  color: b60205
+
+- name: ready
+  description: Ready to be worked on
+  color: 0e8a16
+
+- name: wontfix
+  description: This will not be worked on
+  color: ffffff
+
+- name: duplicate
+  description: This issue or pull request already exists
+  color: cfd3d7
+
+- name: invalid
+  description: This doesn't seem right
+  color: e4e669
+
+- name: stale
+  description: No recent activity
+  color: fef2c0
+
+# Component labels
+- name: ui
+  description: UI/UX related
+  color: 1d76db
+
+- name: electron
+  description: Electron related
+  color: 47848f
+
+- name: langgraph
+  description: LangGraph integration
+  color: 2ea043
+
+- name: rag
+  description: RAG system
+  color: bf5af2
+
+- name: mcp
+  description: MCP integration
+  color: 0969da
+
+- name: llm
+  description: LLM providers
+  color: 8957e5
+
+- name: config
+  description: Configuration related
+  color: 6f42c1
+
+- name: github
+  description: GitHub integration
+  color: 000000
+
+- name: security
+  description: Security related
+  color: d93f0b
+
+- name: chat
+  description: Chat system
+  color: 0e8a16
+
+# Size labels
+- name: size/xs
+  description: Extra small PR (0-10 lines)
+  color: 00ff00
+
+- name: size/s
+  description: Small PR (10-100 lines)
+  color: 7fff00
+
+- name: size/m
+  description: Medium PR (100-500 lines)
+  color: ffff00
+
+- name: size/l
+  description: Large PR (500-1000 lines)
+  color: ff7f00
+
+- name: size/xl
+  description: Extra large PR (1000+ lines)
+  color: ff0000
+
+# Dependency labels
+- name: dependencies
+  description: Pull requests that update a dependency file
+  color: 0366d6
+
+- name: npm
+  description: NPM dependency updates
+  color: cb3837
+
+- name: github-actions
+  description: GitHub Actions updates
+  color: 2088ff
+
+# Development labels
+- name: breaking
+  description: Breaking change
+  color: b60205
+
+- name: major
+  description: Major version update
+  color: d93f0b
+
+- name: minor
+  description: Minor version update
+  color: fbca04
+
+- name: patch
+  description: Patch version update
+  color: 0e8a16
+
+- name: chore
+  description: Maintenance tasks
+  color: fef2c0
+
+- name: refactor
+  description: Code refactoring
+  color: 1d76db
+
+- name: performance
+  description: Performance improvements
+  color: 0e8a16
+
+- name: test
+  description: Testing related
+  color: 0075ca
+
+- name: ci-cd
+  description: CI/CD related
+  color: 2088ff
+
+# Special labels
+- name: good first issue
+  description: Good for newcomers
+  color: 7057ff
+
+- name: help wanted
+  description: Extra attention is needed
+  color: 008672
+
+- name: pinned
+  description: Pinned issue/PR
+  color: 000000
