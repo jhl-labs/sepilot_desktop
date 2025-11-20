@@ -1,5 +1,7 @@
 // Electron API 타입 정의
 import type { Conversation, Message, AppConfig, MCPServerConfig, NetworkConfig, ImageAttachment } from './index';
+import type { MCPTool } from '../lib/mcp/types';
+import type { GitHubUser, GitHubRepository, OAuthToken } from '../lib/auth/types';
 
 // IPC 응답 타입
 interface IPCResponse<T = void> {
@@ -25,29 +27,13 @@ interface ConfigAPI {
   getSetting: (key: string) => Promise<IPCResponse<unknown>>;
 }
 
-// MCP 관련 타입
-interface MCPTool {
-  name: string;
-  description?: string;
-  inputSchema?: Record<string, unknown>;
-}
-
 interface MCPAPI {
-  addServer: (config: MCPServerConfig) => Promise<IPCResponse<MCPServerConfig>>;
+  addServer: (config: MCPServerConfig) => Promise<IPCResponse<MCPTool[]>>;
   removeServer: (name: string) => Promise<IPCResponse>;
   listServers: () => Promise<IPCResponse<MCPServerConfig[]>>;
   getAllTools: () => Promise<IPCResponse<MCPTool[]>>;
   callTool: (serverName: string, toolName: string, args: Record<string, unknown>) => Promise<IPCResponse<unknown>>;
   toggleServer: (name: string) => Promise<IPCResponse>;
-}
-
-// GitHub 사용자 정보 타입
-interface GitHubUser {
-  login: string;
-  id: number;
-  avatar_url: string;
-  name?: string;
-  email?: string;
 }
 
 // OAuth 로그인 정보 타입
@@ -59,7 +45,7 @@ interface OAuthLoginInfo {
 interface AuthAPI {
   initiateLogin: () => Promise<OAuthLoginInfo>;
   githubLogin: (authUrl: string) => Promise<IPCResponse>;
-  exchangeCode: (code: string, codeVerifier: string) => Promise<IPCResponse<{ access_token: string }>>;
+  exchangeCode: (code: string, codeVerifier: string) => Promise<IPCResponse<OAuthToken>>;
   saveToken: (token: string) => Promise<IPCResponse>;
   getUserInfo: (token: string) => Promise<IPCResponse<GitHubUser>>;
   getToken: () => Promise<IPCResponse<string | null>>;
@@ -138,15 +124,6 @@ interface VectorDBAPI {
   delete: (ids: string[]) => Promise<IPCResponse>;
   count: () => Promise<IPCResponse<number>>;
   getAll: () => Promise<IPCResponse<VectorDocument[]>>;
-}
-
-// GitHub 저장소 타입
-interface GitHubRepository {
-  id: number;
-  name: string;
-  full_name: string;
-  private: boolean;
-  description?: string;
 }
 
 interface FileAPI {
