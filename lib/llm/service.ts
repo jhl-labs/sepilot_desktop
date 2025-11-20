@@ -152,9 +152,9 @@ export class LLMService {
         }
       } finally {
         // 이벤트 리스너 제거
-        window.electronAPI.llm.removeStreamListener('llm-stream-chunk', chunkHandler);
-        window.electronAPI.llm.removeStreamListener('llm-stream-done', doneHandler);
-        window.electronAPI.llm.removeStreamListener('llm-stream-error', errorHandler);
+        window.electronAPI.llm.removeStreamListener('llm-stream-chunk', chunkHandler as (...args: unknown[]) => void);
+        window.electronAPI.llm.removeStreamListener('llm-stream-done', doneHandler as (...args: unknown[]) => void);
+        window.electronAPI.llm.removeStreamListener('llm-stream-error', errorHandler as (...args: unknown[]) => void);
       }
 
       return;

@@ -81,7 +81,15 @@ export class SQLiteVecAdapter extends VectorDB {
       throw new Error('Electron API not available');
     }
 
-    const result = await window.electronAPI.vectorDB.insert(documents);
+    // Convert VectorDocument to Electron API format
+    const electronDocs = documents.map(doc => ({
+      id: doc.id,
+      text: doc.content,
+      embedding: doc.embedding || [],
+      metadata: doc.metadata,
+    }));
+
+    const result = await window.electronAPI.vectorDB.insert(electronDocs);
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to insert documents');
@@ -99,7 +107,15 @@ export class SQLiteVecAdapter extends VectorDB {
       throw new Error(result.error || 'Failed to search documents');
     }
 
-    return result.data ?? [];
+    // Convert Electron API format to SearchResult
+    const searchResults = (result.data ?? []).map(doc => ({
+      id: doc.id,
+      content: doc.text,
+      metadata: doc.metadata ?? {},
+      score: doc.score,
+    }));
+
+    return searchResults;
   }
 
   async delete(ids: string[]): Promise<void> {
@@ -139,6 +155,14 @@ export class SQLiteVecAdapter extends VectorDB {
       throw new Error(result.error || 'Failed to get all documents');
     }
 
-    return result.data || [];
+    // Convert Electron API format to VectorDocument
+    const documents = (result.data || []).map(doc => ({
+      id: doc.id,
+      content: doc.text,
+      metadata: doc.metadata ?? {},
+      embedding: doc.embedding,
+    }));
+
+    return documents;
   }
 }

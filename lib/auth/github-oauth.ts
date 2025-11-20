@@ -85,7 +85,7 @@ export class GitHubOAuth {
         code,
         codeVerifier,
       );
-      if (result.success) {
+      if (result.success && result.data) {
         return result.data;
       } else {
         throw new Error(result.error || 'Failed to exchange code for token');
@@ -101,7 +101,7 @@ export class GitHubOAuth {
   async getUserInfo(token: string): Promise<GitHubUser> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       const result = await window.electronAPI.auth.getUserInfo(token);
-      if (result.success) {
+      if (result.success && result.data) {
         return result.data;
       } else {
         throw new Error(result.error || 'Failed to get user info');

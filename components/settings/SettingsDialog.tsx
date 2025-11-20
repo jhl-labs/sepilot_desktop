@@ -433,7 +433,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   const persistAppConfig = async (partial: Partial<AppConfig>) => {
     if (typeof window === 'undefined' || !isElectron() || !window.electronAPI) {
-      return false;
+      return { success: false, config: null };
     }
 
     const merged: AppConfig = {
@@ -452,7 +452,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       console.error('Failed to save config to DB:', result.error);
     }
 
-    return result.success;
+    return { success: result.success, config: merged };
   };
 
   const handleSave = async () => {
@@ -481,9 +481,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       let saved = false;
       if (isElectron() && window.electronAPI) {
         try {
-          saved = await persistAppConfig({ llm: config, network: networkConfig });
-          if (saved) {
-            await window.electronAPI.llm.init(config);
+          const result = await persistAppConfig({ llm: config, network: networkConfig });
+          saved = result.success;
+          if (saved && result.config) {
+            await window.electronAPI.llm.init(result.config);
           }
         } catch (error) {
           console.error('Error saving config to DB:', error);
@@ -526,7 +527,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       let saved = false;
       if (isElectron() && window.electronAPI) {
         try {
-          saved = await persistAppConfig({ comfyUI: comfyConfig });
+          const result = await persistAppConfig({ comfyUI: comfyConfig });
+          saved = result.success;
         } catch (error) {
           console.error('Error saving ComfyUI config to DB:', error);
         }
@@ -1321,7 +1323,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   try {
                     let saved = false;
                     if (isElectron() && window.electronAPI) {
-                      saved = await persistAppConfig({ network: networkConfig });
+                      const result = await persistAppConfig({ network: networkConfig });
+                      saved = result.success;
                     }
                     if (!saved) {
                       localStorage.setItem('sepilot_network_config', JSON.stringify(networkConfig));
@@ -1625,7 +1628,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               setGithubConfig(newConfig);
               let saved = false;
               if (isElectron() && window.electronAPI) {
-                saved = await persistAppConfig({ github: newConfig });
+                const result = await persistAppConfig({ github: newConfig });
+                saved = result.success;
               }
               if (!saved) {
                 const currentAppConfig = localStorage.getItem('sepilot_app_config');
