@@ -1,0 +1,435 @@
+/**
+ * LLM IPC Handlers
+ * 메인 프로세스에서 LLM API를 호출하여 CORS 문제 해결
+ */
+
+import { ipcMain } from 'electron';
+import { Message, LLMConfig, AppConfig } from '../../../types';
+import { getLLMClient, initializeLLMClient } from '../../../lib/llm/client';
+import { OpenAIProvider } from '../../../lib/llm/providers/openai';
+import { logger } from '../../services/logger';
+import { databaseService } from '../../services/database';
+
+/**
+ * Check if any message contains images
+ */
+function hasImages(messages: Message[]): boolean {
+  return messages.some((msg) => msg.images && msg.images.length > 0);
+}
+
+/**
+ * Get vision provider if vision config is available
+ */
+async function getVisionProvider(): Promise<OpenAIProvider | null> {
+  try {
+    const configStr = databaseService.getSetting('app_config');
+    if (!configStr) {
+      return null;
+    }
+
+    const config = JSON.parse(configStr) as AppConfig;
+
+    if (!config?.llm?.vision) {
+      return null;
+    }
+
+    const visionConfig = config.llm.vision;
+
+    // Only use vision model if it's enabled and configured
+    if (!visionConfig.enabled || !visionConfig.model) {
+      return null;
+    }
+
+    const baseURL = visionConfig.baseURL || config.llm.baseURL;
+    const apiKey = visionConfig.apiKey || config.llm.apiKey || '';
+
+    logger.info('[LLM IPC] Vision provider config:', {
+      baseURL,
+      model: visionConfig.model,
+      provider: visionConfig.provider,
+      enableStreaming: visionConfig.enableStreaming ?? false,
+    });
+
+    // Vision 모델용 max_tokens 제한 (Ollama는 큰 값을 처리 못함)
+    const maxTokens = visionConfig.maxImageTokens || config.llm.maxTokens;
+    const limitedMaxTokens = Math.min(maxTokens, 4096); // 최대 4096으로 제한
+
+    logger.info('[LLM IPC] Vision max_tokens:', { original: maxTokens, limited: limitedMaxTokens });
+
+    // Always use OpenAI-compatible provider (supports Ollama's OpenAI-compatible API)
+    const provider = new OpenAIProvider(
+      baseURL,
+      apiKey,
+      visionConfig.model,
+      {
+        temperature: config.llm.temperature,
+        maxTokens: limitedMaxTokens,
+      },
+      config.llm
+    );
+
+    // Set streaming capability based on config
+    (provider as any).streamingEnabled = visionConfig.enableStreaming ?? false;
+
+    return provider;
+  } catch (error) {
+    logger.error('[LLM IPC] Error getting vision provider:', error);
+    return null;
+  }
+}
+
+export function setupLLMHandlers() {
+  // 기존 핸들러 제거 (핫 리로드 대비)
+  ipcMain.removeHandler('llm-stream-chat');
+  ipcMain.removeHandler('llm-chat');
+  ipcMain.removeHandler('llm-init');
+  ipcMain.removeHandler('llm-validate');
+  ipcMain.removeHandler('llm-fetch-models');
+
+  /**
+   * LLM 스트리밍 채팅
+   */
+  ipcMain.handle('llm-stream-chat', async (event, messages: Message[]) => {
+    try {
+      // 디버깅: IPC로 받은 메시지 확인
+      logger.info('[LLM IPC] Received messages count:', messages.length);
+      messages.forEach((msg, idx) => {
+        logger.info(`[LLM IPC] Message ${idx}:`, {
+          role: msg.role,
+          hasImages: !!msg.images,
+          imageCount: msg.images?.length || 0,
+          contentPreview: msg.content?.substring(0, 50),
+        });
+        if (msg.images && msg.images.length > 0) {
+          msg.images.forEach((img, imgIdx) => {
+            logger.info(`[LLM IPC] Image ${imgIdx}:`, {
+              id: img.id,
+              filename: img.filename,
+              mimeType: img.mimeType,
+              base64Preview: img.base64?.substring(0, 50) + '...',
+            });
+          });
+        }
+      });
+
+      const client = getLLMClient();
+
+      if (!client.isConfigured()) {
+        throw new Error('LLM client is not configured. Please set up your API key in settings.');
+      }
+
+      // Check if messages contain images and use vision model if available
+      let provider = client.getProvider();
+
+      if (hasImages(messages)) {
+        logger.info('[LLM IPC] Images detected, attempting to use vision model');
+        const visionProvider = await getVisionProvider();
+        if (visionProvider) {
+          const streamingEnabled = (visionProvider as any).streamingEnabled ?? false;
+          logger.info('[LLM IPC] Using vision model for image analysis, streaming:', streamingEnabled);
+
+          // 비전 모델이 스트리밍 비활성화된 경우 non-streaming으로 처리
+          if (!streamingEnabled) {
+            logger.info('[LLM IPC] Vision streaming disabled, using non-streaming chat');
+            const response = await visionProvider.chat(messages);
+            event.sender.send('llm-stream-chunk', response.content);
+            event.sender.send('llm-stream-done');
+            return {
+              success: true,
+              content: response.content,
+            };
+          }
+
+          provider = visionProvider;
+        } else {
+          logger.warn('[LLM IPC] Images present but vision model not configured, using regular model');
+        }
+      }
+
+      const chunks: string[] = [];
+
+      // 스트리밍으로 받아서 렌더러로 전송
+      try {
+        for await (const chunk of provider.stream(messages)) {
+          if (!chunk.done && chunk.content) {
+            // 각 청크를 렌더러로 전송
+            event.sender.send('llm-stream-chunk', chunk.content);
+            chunks.push(chunk.content);
+          }
+        }
+      } catch (streamError: any) {
+        logger.error('[LLM IPC] Stream error details:', {
+          message: streamError.message,
+          stack: streamError.stack,
+          name: streamError.name,
+        });
+        throw streamError;
+      }
+
+      // 완료 신호 전송
+      event.sender.send('llm-stream-done');
+
+      return {
+        success: true,
+        content: chunks.join(''),
+      };
+    } catch (error: any) {
+      logger.error('LLM stream chat error:', error);
+      event.sender.send('llm-stream-error', error.message);
+      return {
+        success: false,
+        error: error.message || 'Failed to stream chat',
+      };
+    }
+  });
+
+  /**
+   * LLM 일반 채팅 (non-streaming)
+   */
+  ipcMain.handle('llm-chat', async (event, messages: Message[], options?: any) => {
+    console.log('[LLM IPC] ===== llm-chat handler called =====');
+    console.log('[LLM IPC] Messages count:', messages.length);
+    console.log('[LLM IPC] Has options:', !!options);
+    console.log('[LLM IPC] Has tools:', !!options?.tools);
+
+    try {
+      logger.info('[LLM IPC] Chat request:', {
+        messageCount: messages.length,
+        hasOptions: !!options,
+        hasTools: !!options?.tools,
+        toolCount: options?.tools?.length || 0,
+      });
+
+      const client = getLLMClient();
+
+      if (!client.isConfigured()) {
+        const error = 'LLM client is not configured. Please set up your API key in settings.';
+        logger.error('[LLM IPC]', error);
+        throw new Error(error);
+      }
+
+      // Check if messages contain images and use vision model if available
+      let provider = client.getProvider();
+
+      if (hasImages(messages)) {
+        logger.info('[LLM IPC] Images detected in chat, attempting to use vision model');
+        const visionProvider = await getVisionProvider();
+        if (visionProvider) {
+          logger.info('[LLM IPC] Using vision model for chat with images');
+          provider = visionProvider;
+        } else {
+          logger.warn('[LLM IPC] Images present but vision model not configured, using regular model');
+        }
+      }
+
+      console.log('[LLM IPC] ===== Calling provider.chat =====');
+      logger.info('[LLM IPC] Calling provider.chat...');
+
+      const response = await provider.chat(messages, options);
+
+      console.log('[LLM IPC] ===== Provider.chat completed =====');
+      console.log('[LLM IPC] Response:', response);
+      logger.info('[LLM IPC] Provider.chat completed');
+      logger.info('[LLM IPC] Raw response:', response);
+
+      if (!response) {
+        const error = 'Provider returned null/undefined response';
+        logger.error('[LLM IPC]', error);
+        throw new Error(error);
+      }
+
+      logger.info('[LLM IPC] Chat response:', {
+        hasContent: !!response.content,
+        contentLength: response.content?.length || 0,
+        hasToolCalls: !!response.toolCalls,
+        toolCallsCount: response.toolCalls?.length || 0,
+      });
+
+      console.log('[LLM IPC] ===== Returning success response =====');
+      console.log('[LLM IPC] Response data:', response);
+
+      return {
+        success: true,
+        data: response,
+      };
+    } catch (error: any) {
+      console.log('[LLM IPC] ===== Error occurred =====');
+      console.log('[LLM IPC] Error:', error);
+      console.log('[LLM IPC] Error stack:', error.stack);
+      logger.error('[LLM IPC] Chat error:', error);
+      logger.error('[LLM IPC] Error stack:', error.stack);
+      return {
+        success: false,
+        error: error.message || 'Failed to chat',
+      };
+    }
+  });
+
+  /**
+   * LLM 설정 초기화
+   */
+  ipcMain.handle('llm-init', async (event, config: LLMConfig) => {
+    try {
+      initializeLLMClient(config);
+      logger.info('LLM client initialized with config');
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      logger.error('Failed to initialize LLM client:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to initialize LLM client',
+      };
+    }
+  });
+
+  /**
+   * LLM 설정 검증
+   */
+  ipcMain.handle('llm-validate', async () => {
+    try {
+      const client = getLLMClient();
+
+      if (!client.isConfigured()) {
+        return {
+          success: false,
+          error: 'LLM client is not configured',
+        };
+      }
+
+      const provider = client.getProvider();
+      const isValid = await provider.validate();
+
+      return {
+        success: isValid,
+        error: isValid ? null : 'API key validation failed',
+      };
+    } catch (error: any) {
+      logger.error('LLM validate error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to validate',
+      };
+    }
+  });
+
+  /**
+   * LLM 모델 목록 가져오기 (Network Config 포함, CORS 없음)
+   */
+  ipcMain.handle(
+    'llm-fetch-models',
+    async (
+      _event,
+      config: {
+        provider: LLMConfig['provider'];
+        baseURL?: string;
+        apiKey: string;
+        networkConfig?: LLMConfig['network'];
+      }
+    ) => {
+      try {
+        const { provider, baseURL, apiKey, networkConfig } = config;
+
+        if (!apiKey.trim()) {
+          return {
+            success: false,
+            error: 'API key is required',
+          };
+        }
+
+        // Normalize base URL
+        const normalizedBaseURL = baseURL?.trim()
+          ? baseURL.trim().replace(/\/+$/, '')
+          : provider === 'anthropic'
+          ? 'https://api.anthropic.com/v1'
+          : 'https://api.openai.com/v1';
+
+        const endpoint = `${normalizedBaseURL}/models`;
+
+        // Build headers
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+
+        if (provider === 'anthropic') {
+          headers['x-api-key'] = apiKey;
+          headers['anthropic-version'] = '2023-06-01';
+        } else {
+          headers.Authorization = `Bearer ${apiKey}`;
+        }
+
+        // Add custom headers from network config
+        if (networkConfig?.customHeaders) {
+          Object.entries(networkConfig.customHeaders).forEach(([key, value]) => {
+            headers[key] = value;
+          });
+        }
+
+        // Build fetch options with network config
+        const fetchOptions: RequestInit = {
+          method: 'GET',
+          headers,
+        };
+
+        // Add proxy support if configured
+        if (networkConfig?.proxy) {
+          // Note: fetch API doesn't support proxy directly
+          // In production, you would use a library like node-fetch with proxy support
+          // or configure system proxy
+          logger.info('[LLM IPC] Proxy configured:', networkConfig.proxy);
+        }
+
+        // SSL verification
+        if (networkConfig?.ssl?.verify === false) {
+          logger.warn('[LLM IPC] SSL verification disabled');
+          // Note: In production, you'd need to configure SSL rejection
+        }
+
+        logger.info('[LLM IPC] Fetching models from:', endpoint);
+
+        const response = await fetch(endpoint, fetchOptions);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch models: ${response.status} ${errorText}`);
+        }
+
+        const payload = await response.json();
+
+        // Extract model IDs from response
+        const models = extractModelIds(payload);
+
+        return {
+          success: true,
+          data: Array.from(new Set(models)).sort(),
+        };
+      } catch (error: any) {
+        logger.error('[LLM IPC] Fetch models error:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to fetch models',
+        };
+      }
+    }
+  );
+
+  logger.info('LLM IPC handlers registered');
+}
+
+/**
+ * Extract model IDs from API response
+ */
+function extractModelIds(payload: any): string[] {
+  const models: string[] = [];
+
+  if (payload.data && Array.isArray(payload.data)) {
+    payload.data.forEach((item: any) => {
+      if (item.id) {
+        models.push(item.id);
+      }
+    });
+  }
+
+  return models;
+}

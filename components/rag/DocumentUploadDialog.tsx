@@ -1,0 +1,420 @@
+'use client';
+
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Loader2 } from 'lucide-react';
+import { DocumentSourceType } from '@/lib/documents/types';
+import { fetchDocument } from '@/lib/documents/fetchers';
+import { cleanDocumentsWithLLM } from '@/lib/documents/cleaner';
+
+interface DocumentUploadDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpload: (documents: { content: string; metadata: Record<string, any> }[]) => Promise<void>;
+}
+
+export function DocumentUploadDialog({
+  open,
+  onOpenChange,
+  onUpload,
+}: DocumentUploadDialogProps) {
+  const [sourceType, setSourceType] = useState<DocumentSourceType>('manual');
+  const [title, setTitle] = useState('');
+  const [source, setSource] = useState('');
+  const [content, setContent] = useState('');
+
+  // HTTP 문서용
+  const [httpUrl, setHttpUrl] = useState('');
+
+  // GitHub 문서용
+  const [githubRepoUrl, setGithubRepoUrl] = useState('');
+  const [githubPath, setGithubPath] = useState('');
+  const [githubBranch, setGithubBranch] = useState('main');
+  const [githubToken, setGithubToken] = useState('');
+
+  const [cleanWithLLM, setCleanWithLLM] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleUpload = async () => {
+    setIsUploading(true);
+    setMessage(null);
+
+    try {
+      let documentsToUpload: { content: string; metadata: Record<string, any> }[] = [];
+
+      if (sourceType === 'manual') {
+        // 직접 작성
+        if (!content.trim()) {
+          setMessage({ type: 'error', text: '문서 내용을 입력해주세요.' });
+          setIsUploading(false);
+          return;
+        }
+
+        documentsToUpload = [
+          {
+            content: content.trim(),
+            metadata: {
+              title: title.trim() || '제목 없음',
+              source: source.trim() || 'manual',
+              uploadedAt: Date.now(),
+            },
+          },
+        ];
+      } else if (sourceType === 'http') {
+        // HTTP 문서
+        if (!httpUrl.trim()) {
+          setMessage({ type: 'error', text: 'URL을 입력해주세요.' });
+          setIsUploading(false);
+          return;
+        }
+
+        const fetchedDocs = await fetchDocument({
+          type: 'http',
+          url: httpUrl.trim(),
+        });
+
+        let processedDocs: { content: string; metadata: Record<string, any> }[] = fetchedDocs.map((doc) => ({
+          content: doc.content,
+          metadata: {
+            ...doc.metadata,
+            title: title.trim() || doc.metadata.title || 'Untitled',
+          },
+        }));
+
+        // LLM으로 정제
+        if (cleanWithLLM) {
+          setMessage({ type: 'success', text: 'LLM으로 문서를 정제하는 중...' });
+          processedDocs = await cleanDocumentsWithLLM(processedDocs, (current, total) => {
+            setUploadProgress({ current, total });
+          });
+          setUploadProgress(null);
+        }
+
+        documentsToUpload = processedDocs;
+      } else if (sourceType === 'github') {
+        // GitHub 문서
+        if (!githubRepoUrl.trim() || !githubPath.trim()) {
+          setMessage({ type: 'error', text: 'Repository URL과 경로를 입력해주세요.' });
+          setIsUploading(false);
+          return;
+        }
+
+        const fetchedDocs = await fetchDocument({
+          type: 'github',
+          repoUrl: githubRepoUrl.trim(),
+          path: githubPath.trim(),
+          branch: githubBranch.trim() || 'main',
+          token: githubToken.trim() || undefined,
+        });
+
+        let processedDocs: { content: string; metadata: Record<string, any> }[] = fetchedDocs.map((doc) => ({
+          content: doc.content,
+          metadata: {
+            ...doc.metadata,
+            title: doc.metadata.title || 'Untitled',
+          },
+        }));
+
+        // LLM으로 정제
+        if (cleanWithLLM) {
+          setMessage({ type: 'success', text: 'LLM으로 문서를 정제하는 중...' });
+          processedDocs = await cleanDocumentsWithLLM(processedDocs, (current, total) => {
+            setUploadProgress({ current, total });
+          });
+          setUploadProgress(null);
+        }
+
+        documentsToUpload = processedDocs;
+      }
+
+      await onUpload(documentsToUpload);
+
+      const docCount = documentsToUpload.length;
+      setMessage({
+        type: 'success',
+        text: `${docCount}개의 문서가 성공적으로 업로드되었습니다!`,
+      });
+
+      // 입력 필드 초기화
+      setContent('');
+      setTitle('');
+      setSource('');
+      setHttpUrl('');
+      setGithubRepoUrl('');
+      setGithubPath('');
+      setGithubBranch('main');
+      setGithubToken('');
+      setCleanWithLLM(false);
+
+      setTimeout(() => {
+        onOpenChange(false);
+        setMessage(null);
+      }, 1500);
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      setMessage({ type: 'error', text: error.message || '문서 업로드에 실패했습니다.' });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="!w-[90vw] !max-w-[1400px] h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>문서 업로드</DialogTitle>
+          <DialogDescription>새 문서를 추가하여 RAG 검색에 활용하세요.</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4 flex-1 overflow-y-auto">
+          {/* Document Source Type */}
+          <div className="space-y-2">
+            <Label htmlFor="source-type">문서 소스 타입</Label>
+            <select
+              id="source-type"
+              value={sourceType}
+              onChange={(e) => setSourceType(e.target.value as DocumentSourceType)}
+              disabled={isUploading}
+              className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
+            >
+              <option value="manual">직접 작성</option>
+              <option value="http">HTTP 문서</option>
+              <option value="github">GitHub Repository</option>
+            </select>
+          </div>
+
+          {/* Manual Type Fields */}
+          {sourceType === 'manual' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="upload-title">제목 (선택)</Label>
+                <Input
+                  id="upload-title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="문서 제목"
+                  disabled={isUploading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="upload-source">출처 (선택)</Label>
+                <Input
+                  id="upload-source"
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  placeholder="예: Wikipedia, 내부 문서"
+                  disabled={isUploading}
+                />
+              </div>
+
+              <div className="space-y-2 flex-1 flex flex-col">
+                <Label htmlFor="upload-content">문서 내용</Label>
+                <Textarea
+                  id="upload-content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="업로드할 문서 내용을 입력하세요..."
+                  className="flex-1 min-h-[400px] font-mono text-sm resize-none"
+                  disabled={isUploading}
+                />
+              </div>
+            </>
+          )}
+
+          {/* HTTP Type Fields */}
+          {sourceType === 'http' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="http-url">문서 URL</Label>
+                <Input
+                  id="http-url"
+                  value={httpUrl}
+                  onChange={(e) => setHttpUrl(e.target.value)}
+                  placeholder="https://example.com/document.txt"
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  HTTP(S) URL을 통해 텍스트 문서를 가져옵니다.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="http-title">제목 (선택)</Label>
+                <Input
+                  id="http-title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="문서 제목 (비워두면 URL에서 추출)"
+                  disabled={isUploading}
+                />
+              </div>
+
+              {/* LLM 정제 옵션 */}
+              <div className="flex items-center space-x-2 p-3 rounded-md border bg-muted/50">
+                <input
+                  type="checkbox"
+                  id="clean-with-llm-http"
+                  checked={cleanWithLLM}
+                  onChange={(e) => setCleanWithLLM(e.target.checked)}
+                  disabled={isUploading}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="clean-with-llm-http" className="cursor-pointer font-medium">
+                    LLM으로 문서 정제
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    HTML 태그, 광고, 불필요한 텍스트를 제거하고 핵심 내용만 추출합니다
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* GitHub Type Fields */}
+          {sourceType === 'github' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="github-repo">Repository URL</Label>
+                <Input
+                  id="github-repo"
+                  value={githubRepoUrl}
+                  onChange={(e) => setGithubRepoUrl(e.target.value)}
+                  placeholder="https://github.com/owner/repo"
+                  disabled={isUploading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="github-path">파일 또는 디렉토리 경로</Label>
+                <Input
+                  id="github-path"
+                  value={githubPath}
+                  onChange={(e) => setGithubPath(e.target.value)}
+                  placeholder="docs/README.md 또는 docs/"
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  파일 경로 또는 디렉토리 경로 (디렉토리인 경우 모든 .md, .txt 파일 가져옴)
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="github-branch">브랜치</Label>
+                  <Input
+                    id="github-branch"
+                    value={githubBranch}
+                    onChange={(e) => setGithubBranch(e.target.value)}
+                    placeholder="main"
+                    disabled={isUploading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="github-token">GitHub Token (선택)</Label>
+                  <Input
+                    id="github-token"
+                    type="password"
+                    value={githubToken}
+                    onChange={(e) => setGithubToken(e.target.value)}
+                    placeholder="ghp_..."
+                    disabled={isUploading}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-3 text-xs text-blue-600 dark:text-blue-400">
+                <p className="font-medium">Private Repository 접근 시:</p>
+                <p className="mt-1">
+                  GitHub Personal Access Token이 필요합니다. Settings → Developer settings → Personal access tokens에서 생성할 수 있습니다.
+                </p>
+              </div>
+
+              {/* LLM 정제 옵션 */}
+              <div className="flex items-center space-x-2 p-3 rounded-md border bg-muted/50">
+                <input
+                  type="checkbox"
+                  id="clean-with-llm-github"
+                  checked={cleanWithLLM}
+                  onChange={(e) => setCleanWithLLM(e.target.checked)}
+                  disabled={isUploading}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="clean-with-llm-github" className="cursor-pointer font-medium">
+                    LLM으로 문서 정제
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    마크다운 외 불필요한 코드/주석 제거, 핵심 문서 내용만 추출합니다
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Info */}
+          <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+            <p>• 문서는 자동으로 청킹되고 임베딩되어 Vector DB에 저장됩니다.</p>
+            <p>• RAG 채팅 모드에서 이 문서를 기반으로 답변을 생성합니다.</p>
+          </div>
+
+          {/* Progress */}
+          {uploadProgress && (
+            <div className="rounded-md bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-sm text-blue-600 dark:text-blue-400">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>
+                  문서 정제 중... ({uploadProgress.current} / {uploadProgress.total})
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Message */}
+          {message && (
+            <div
+              className={`rounded-md px-3 py-2 text-sm ${
+                message.type === 'success'
+                  ? 'bg-green-500/10 text-green-500'
+                  : 'bg-destructive/10 text-destructive'
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
+            취소
+          </Button>
+          <Button onClick={handleUpload} disabled={isUploading}>
+            {isUploading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                업로드 중...
+              </>
+            ) : (
+              '업로드'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

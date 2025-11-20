@@ -1,0 +1,112 @@
+SEPilot Desktop License
+
+Copyright (c) 2025 SEPilot Desktop
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. Definitions
+
+   "License" shall mean the terms and conditions for use, reproduction, and
+   distribution as defined by Sections 1 through 9 of this document.
+
+   "Licensor" shall mean the copyright owner or entity authorized by the
+   copyright owner that is granting the License.
+
+   "You" (or "Your") shall mean an individual or Legal Entity exercising
+   permissions granted by this License.
+
+   "Source Code" shall mean the preferred form for making modifications,
+   including but not limited to software source code, documentation source,
+   and configuration files.
+
+   "Binary Form" shall mean any form resulting from mechanical transformation
+   or translation of a Source Code, including but not limited to compiled
+   object code, generated documentation, and conversions to other media types.
+
+   "Commercial Use" shall mean use primarily intended for or directed toward
+   commercial advantage or monetary compensation by a Legal Entity (including
+   corporations, companies, and other business entities).
+
+2. Grant of Binary Usage Rights
+
+   Subject to the terms and conditions of this License, Licensor hereby grants
+   to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free license
+   to use, reproduce, and distribute the Binary Form of the Software for both
+   personal and commercial purposes.
+
+3. Restrictions on Source Code Usage
+
+   3.1. Personal and Non-Commercial Use
+        You may use, modify, and distribute the Source Code for personal,
+        educational, and non-commercial purposes, subject to Section 5 below.
+
+   3.2. Commercial Use by Legal Entities
+        Legal Entities (corporations, companies, and other business entities)
+        are NOT permitted to use, modify, or distribute the Source Code for
+        Commercial Use without prior written permission from the Licensor.
+
+   3.3. Permitted Commercial Use
+        Commercial Use of the Source Code is permitted only upon obtaining
+        explicit written permission from the Licensor. Requests for such
+        permission should be directed to the contact information provided
+        in the repository.
+
+4. Distribution and Sharing
+
+   4.1. You may share and distribute the Source Code to others, provided that:
+        (a) Such distribution is not for Commercial Use (unless permitted
+            under Section 3.3), and
+        (b) You comply with the notification requirements in Section 5.
+
+   4.2. All distributions must include this License and retain all copyright
+        and attribution notices.
+
+5. Notification Requirement
+
+   5.1. If You modify the Source Code, You MUST notify the Licensor by:
+        (a) Creating an issue or pull request in the official repository, OR
+        (b) Sending written notice to the contact information provided in
+            the repository
+
+   5.2. If You distribute the Source Code (modified or unmodified), You MUST
+        notify the Licensor using one of the methods specified in Section 5.1
+        within 30 days of such distribution.
+
+   5.3. The notification must include:
+        (a) Description of modifications made (if any)
+        (b) Intended use and distribution scope
+        (c) Your contact information
+
+6. Attribution
+
+   You must retain, in the Source Code and Binary Form that You distribute,
+   all copyright, patent, trademark, and attribution notices from the Source
+   Code, excluding those notices that do not pertain to any part of the
+   distribution.
+
+7. Disclaimer of Warranty
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+8. Limitation of Liability
+
+   IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY SPECIAL, INCIDENTAL,
+   INDIRECT, OR CONSEQUENTIAL DAMAGES WHATSOEVER ARISING OUT OF OR RELATED TO
+   YOUR USE OR INABILITY TO USE THE SOFTWARE.
+
+9. Contact Information
+
+   For permissions, notifications, or other inquiries, please contact:
+   - Repository: https://github.com/[your-org]/sepilot-desktop
+   - Issues: https://github.com/[your-org]/sepilot-desktop/issues
+
+10. Acceptance
+
+    By using, modifying, or distributing this Software, You agree to be bound
+    by the terms of this License.

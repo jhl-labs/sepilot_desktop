@@ -1,0 +1,56 @@
+{
+  "appId": "com.sepilot.desktop",
+  "productName": "SEPilot Desktop",
+  "publish": null,
+  "npmRebuild": false,
+  "buildDependenciesFromSource": false,
+  "directories": {
+    "output": "release",
+    "buildResources": "assets"
+  },
+  "files": [
+    "out/**/*",
+    "dist/electron/**/*",
+    "public/**/*",
+    "!public/**/*.md",
+    "node_modules/**/*",
+    "!node_modules/**/*.{md,markdown,MD}",
+    "!node_modules/**/test/**/*",
+    "!node_modules/**/tests/**/*",
+    "!node_modules/**/*.test.js",
+    "!node_modules/**/*.spec.js",
+    "package.json"
+  ],
+  "asarUnpack": [
+    "node_modules/**/*.node",
+    "node_modules/**/*.wasm",
+    "node_modules/sql.js/**/*",
+    "node_modules/better-sqlite3/**/*"
+  ],
+  "mac": {
+    "category": "public.app-category.developer-tools",
+    "target": ["dmg", "zip"],
+    "icon": "assets/icon.png",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "assets/entitlements.mac.plist",
+    "entitlementsInherit": "assets/entitlements.mac.plist"
+  },
+  "win": {
+    "target": ["nsis", "portable"],
+    "icon": "assets/icon.ico",
+    "signAndEditExecutable": false,
+    "verifyUpdateCodeSignature": false
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "category": "Development",
+    "icon": "assets/icon.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  }
+}

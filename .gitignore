@@ -1,0 +1,101 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+/dist
+/release
+
+# misc
+.DS_Store
+*.pem
+*.key
+*.p12
+*.pfx
+*.cert
+*.crt
+*.cer
+credentials*.json
+
+# debug
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# local env files
+# Note: .env is committed for telemetry disable (safe, no secrets)
+.env*.local
+.env.production
+.env.development
+.env.staging
+.env.test
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# database
+*.db
+*.db-journal
+
+# config
+config.json
+secrets/
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# cache
+.eslintcache
+.stylelintcache
+.cache/
+
+# test coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# temporary files
+*.tmp
+*.temp
+.*.swp
+.*.swo
+.*.swn
