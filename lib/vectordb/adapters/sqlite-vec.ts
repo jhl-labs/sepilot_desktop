@@ -110,7 +110,7 @@ export class SQLiteVecAdapter extends VectorDB {
     // Convert Electron API format to SearchResult
     const searchResults = (result.data ?? []).map(doc => ({
       id: doc.id,
-      content: doc.text,
+      content: doc.text || '',
       metadata: doc.metadata ?? {},
       score: doc.score,
     }));
@@ -158,7 +158,7 @@ export class SQLiteVecAdapter extends VectorDB {
     // Convert Electron API format to VectorDocument
     const documents = (result.data || []).map(doc => ({
       id: doc.id,
-      content: doc.text,
+      content: doc.text || '',
       metadata: doc.metadata ?? {},
       embedding: doc.embedding,
     }));

@@ -108,8 +108,9 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         <div className="space-y-2">
           {documents.map((doc) => {
             const isExpanded = expandedDocs.has(doc.id);
-            const contentPreview = doc.content.slice(0, 150);
-            const hasMore = doc.content.length > 150;
+            const content = doc.content || '';
+            const contentPreview = content.slice(0, 150);
+            const hasMore = content.length > 150;
 
             return (
               <div
@@ -137,7 +138,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                         : '알 수 없음'}
                     </p>
                     <div className={`text-sm text-muted-foreground ${isExpanded ? '' : 'line-clamp-3 min-h-[60px]'}`}>
-                      {isExpanded ? doc.content : contentPreview}
+                      {isExpanded ? content : contentPreview}
                       {!isExpanded && hasMore && '...'}
                     </div>
                     {hasMore && (
