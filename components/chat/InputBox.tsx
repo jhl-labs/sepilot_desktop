@@ -138,7 +138,28 @@ export function InputBox() {
 
     // Custom event listener for config updates (Electron environment)
     const handleConfigUpdate = ((e: CustomEvent) => {
-      const { comfyUI } = e.detail;
+      const { comfyUI, llm } = e.detail || {};
+
+      // LLM 설정 업데이트
+      if (llm) {
+        if (isElectron() && window.electronAPI) {
+          // Electron: IPC를 통해 LLM 클라이언트 재초기화
+          initializeLLMClient(llm);
+          console.log('[InputBox] LLM config updated from event (Electron):', {
+            provider: llm.provider,
+            model: llm.model,
+          });
+        } else {
+          // Web: WebLLMClient 재초기화
+          configureWebLLMClient(llm);
+          console.log('[InputBox] LLM config updated from event (Web):', {
+            provider: llm.provider,
+            model: llm.model,
+          });
+        }
+      }
+
+      // ComfyUI 설정 업데이트
       if (comfyUI) {
         initializeComfyUIClient(comfyUI);
         const isAvailable = comfyUI.enabled && !!comfyUI.httpUrl;

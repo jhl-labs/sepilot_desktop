@@ -129,56 +129,81 @@ export function MainLayout({ children }: MainLayoutProps) {
     };
   }, [isResizing, handleMouseMove, handleMouseUp]);
 
+  // Initialize VectorDB and Embedding from config
+  const initializeFromConfig = useCallback(async (vectorDBConfig?: any, embeddingConfig?: any) => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      // VectorDB 초기화
+      if (vectorDBConfig) {
+        console.log('[MainLayout] Initializing VectorDB:', vectorDBConfig.type);
+
+        // SQLite-vec는 브라우저에서 건너뛰기
+        if (vectorDBConfig.type === 'sqlite-vec' && !isElectron()) {
+          console.log('⊘ Skipping SQLite-vec in browser environment');
+        } else {
+          try {
+            await initializeVectorDB(vectorDBConfig);
+            console.log('✓ VectorDB initialized:', vectorDBConfig.type);
+          } catch (error) {
+            console.error('✗ Failed to initialize VectorDB:', error);
+          }
+        }
+      }
+
+      // Embedding 초기화
+      if (embeddingConfig) {
+        try {
+          initializeEmbedding(embeddingConfig);
+          console.log('✓ Embedding initialized:', embeddingConfig.provider);
+        } catch (error) {
+          console.error('✗ Failed to initialize Embedding:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Initialization error:', error);
+    }
+  }, []);
+
   // Auto-initialize VectorDB and Embedding on app start
   useEffect(() => {
     const autoInitialize = async () => {
       if (typeof window === 'undefined') return;
 
-      try {
-        // VectorDB 설정 로드 및 초기화
-        const savedVectorDBConfig = localStorage.getItem('sepilot_vectordb_config');
-        if (savedVectorDBConfig) {
-          const parsedVectorDBConfig = JSON.parse(savedVectorDBConfig);
+      const savedVectorDBConfig = localStorage.getItem('sepilot_vectordb_config');
+      const savedEmbeddingConfig = localStorage.getItem('sepilot_embedding_config');
 
-          console.log('[DEBUG] VectorDB type:', parsedVectorDBConfig.type);
-          console.log('[DEBUG] isElectron():', isElectron());
+      const vectorDBConfig = savedVectorDBConfig ? JSON.parse(savedVectorDBConfig) : null;
+      const embeddingConfig = savedEmbeddingConfig ? JSON.parse(savedEmbeddingConfig) : null;
 
-          // SQLite-vec는 브라우저에서 건너뛰기
-          if (parsedVectorDBConfig.type === 'sqlite-vec' && !isElectron()) {
-            console.log('⊘ Skipping SQLite-vec in browser environment');
-          } else {
-            // VectorDB 자동 초기화
-            try {
-              await initializeVectorDB(parsedVectorDBConfig);
-              console.log('✓ VectorDB auto-initialized:', parsedVectorDBConfig.type);
-            } catch (error) {
-              console.error('✗ Failed to auto-initialize VectorDB:', error);
-            }
-          }
-        } else {
-          console.log('[DEBUG] No VectorDB config in localStorage');
-        }
-
-        // Embedding 설정 로드 및 초기화
-        const savedEmbeddingConfig = localStorage.getItem('sepilot_embedding_config');
-        if (savedEmbeddingConfig) {
-          const parsedEmbeddingConfig = JSON.parse(savedEmbeddingConfig);
-
-          // Embedding 자동 초기화
-          try {
-            initializeEmbedding(parsedEmbeddingConfig);
-            console.log('✓ Embedding auto-initialized:', parsedEmbeddingConfig.provider);
-          } catch (error) {
-            console.error('✗ Failed to auto-initialize Embedding:', error);
-          }
-        }
-      } catch (error) {
-        console.error('Auto-initialization error:', error);
+      if (!vectorDBConfig) {
+        console.log('[MainLayout] No VectorDB config in localStorage');
       }
+
+      await initializeFromConfig(vectorDBConfig, embeddingConfig);
     };
 
     autoInitialize();
-  }, []);
+  }, [initializeFromConfig]);
+
+  // Listen for config updates from SettingsDialog
+  useEffect(() => {
+    const handleConfigUpdate = async (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { vectorDB, embedding } = customEvent.detail || {};
+
+      if (vectorDB || embedding) {
+        console.log('[MainLayout] Config update received:', { vectorDB: !!vectorDB, embedding: !!embedding });
+        await initializeFromConfig(vectorDB, embedding);
+      }
+    };
+
+    window.addEventListener('sepilot:config-updated', handleConfigUpdate);
+
+    return () => {
+      window.removeEventListener('sepilot:config-updated', handleConfigUpdate);
+    };
+  }, [initializeFromConfig]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">

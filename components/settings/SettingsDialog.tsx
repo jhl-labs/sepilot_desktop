@@ -501,6 +501,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         configureWebLLMClient(config);
       }
 
+      // Notify all components about LLM/Network config update
+      window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
+        detail: { llm: config, network: networkConfig }
+      }));
+
       setMessage({ type: 'success', text: '설정이 저장되었습니다!' });
     } catch (error: any) {
       console.error('Failed to save config:', error);
@@ -634,9 +639,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       if (vectorDBConfig.type === 'sqlite-vec') {
         // SQLite-vec는 Node.js 환경에서만 사용 가능
         if (isElectron() && typeof window !== 'undefined' && window.electronAPI) {
-          // Electron 환경: 메인 프로세스에 초기화 요청
-          // TODO: Electron IPC로 VectorDB 초기화 요청
-          console.log('SQLite-vec는 Electron 환경에서만 초기화됩니다.');
+          // Electron 환경: VectorDB 초기화
+          await initializeVectorDB(vectorDBConfig);
+          console.log('SQLite-vec initialized in Electron environment');
         } else {
           // 브라우저 환경: 설정만 저장, 초기화는 건너뛰기
           console.log('브라우저 환경에서는 SQLite-vec를 사용할 수 없습니다. 설정만 저장됩니다.');
@@ -646,7 +651,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         await initializeVectorDB(vectorDBConfig);
       }
 
-      // console.log('VectorDB and Embedding configuration saved successfully');
+      // Notify all components about VectorDB/Embedding config update
+      window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
+        detail: { vectorDB: vectorDBConfig, embedding: embeddingConfigWithNetwork }
+      }));
+
+      console.log('VectorDB and Embedding configuration saved and initialized successfully');
     } catch (error: any) {
       console.error('Failed to save VectorDB config:', error);
       throw error;
@@ -1329,6 +1339,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     if (!saved) {
                       localStorage.setItem('sepilot_network_config', JSON.stringify(networkConfig));
                     }
+                    // Notify all components about Network config update
+                    window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
+                      detail: { network: networkConfig }
+                    }));
                     setMessage({ type: 'success', text: '네트워크 설정이 저장되었습니다!' });
                   } catch (error: any) {
                     setMessage({ type: 'error', text: error.message || '설정 저장에 실패했습니다.' });
