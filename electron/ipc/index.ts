@@ -1,3 +1,8 @@
+/**
+ * IPC Module
+ * Electron IPC 핸들러 등록
+ */
+
 import { setupChatHandlers } from './handlers/chat';
 import { setupConfigHandlers } from './handlers/config';
 import { setupMCPHandlers } from './handlers/mcp';
@@ -10,6 +15,9 @@ import { setupEmbeddingsHandlers } from './handlers/embeddings';
 import { setupComfyUIHandlers } from './handlers/comfyui';
 import { logger } from '../services/logger';
 
+/**
+ * Register all IPC handlers
+ */
 export function setupIpcHandlers() {
   logger.info('Setting up IPC handlers');
 
@@ -26,3 +34,20 @@ export function setupIpcHandlers() {
 
   logger.info('IPC handlers setup complete');
 }
+
+// Re-export utilities
+export * from './utils';
+
+// Re-export individual setup functions for granular control
+export {
+  setupChatHandlers,
+  setupConfigHandlers,
+  setupLLMHandlers,
+  setupMCPHandlers,
+  setupVectorDBHandlers,
+  setupEmbeddingsHandlers,
+  setupAuthHandlers,
+  setupGitHubHandlers,
+  registerFileHandlers,
+  setupComfyUIHandlers,
+};

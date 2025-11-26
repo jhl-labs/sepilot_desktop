@@ -107,8 +107,20 @@ export class AgentGraph {
       // 3. tools 노드 실행
       console.log('[AgentGraph] Executing tools node');
       const toolsResult = await toolsNode(state);
+
+      // Remove tool_calls from the last message to prevent duplicate execution
+      const updatedMessages = [...state.messages];
+      const lastMessageIndex = updatedMessages.length - 1;
+      if (lastMessageIndex >= 0 && updatedMessages[lastMessageIndex].tool_calls) {
+        updatedMessages[lastMessageIndex] = {
+          ...updatedMessages[lastMessageIndex],
+          tool_calls: undefined,
+        };
+      }
+
       state = {
         ...state,
+        messages: updatedMessages,
         toolResults: toolsResult.toolResults || [],
       };
 

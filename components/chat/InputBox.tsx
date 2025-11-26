@@ -41,9 +41,7 @@ export function InputBox() {
     updateMessage,
     activeConversationId,
     createConversation,
-    isStreaming,
-    setStreaming,
-    setStreamingMessageId,
+    streamingConversations,
     startStreaming,
     stopStreaming,
     messages,
@@ -52,6 +50,9 @@ export function InputBox() {
     conversations,
     updateConversationTitle,
   } = useChatStore();
+
+  // Determine if any conversation is currently streaming
+  const isStreaming = activeConversationId ? streamingConversations.has(activeConversationId) : false;
 
   // Set mounted state to avoid hydration mismatch with Tooltip
   useEffect(() => {

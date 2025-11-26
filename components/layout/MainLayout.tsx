@@ -25,7 +25,10 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
-  const { createConversation, messages, isStreaming } = useChatStore();
+  const { createConversation, messages, activeConversationId, streamingConversations } = useChatStore();
+
+  // Determine if current conversation is streaming
+  const isStreaming = activeConversationId ? streamingConversations.has(activeConversationId) : false;
   const startXRef = useRef(0);
   const startWidthRef = useRef(DEFAULT_SIDEBAR_WIDTH);
 

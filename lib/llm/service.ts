@@ -1,76 +1,6 @@
-import { Message, LLMConfig } from '@/types';
+import { Message } from '@/types';
 import { getLLMClient } from './client';
-import { OpenAIProvider } from './providers/openai';
-
-/**
- * Check if any message contains images
- */
-function hasImages(messages: Message[]): boolean {
-  return messages.some((msg) => msg.images && msg.images.length > 0);
-}
-
-/**
- * Get vision provider if vision config is available
- */
-async function getVisionProvider(): Promise<OpenAIProvider | null> {
-  // Load config from database (Electron) or localStorage (Web)
-  let config: LLMConfig | null = null;
-
-  if (typeof window !== 'undefined' && window.electronAPI) {
-    const result = await window.electronAPI.config.load();
-    if (result.success && result.data?.llm?.vision) {
-      const visionConfig = result.data.llm.vision;
-
-      // Only use vision model if it's enabled and configured
-      if (visionConfig.enabled && visionConfig.model) {
-        const baseURL = visionConfig.baseURL || result.data.llm.baseURL;
-        const apiKey = visionConfig.apiKey || result.data.llm.apiKey || '';
-
-        console.log('[LLMService] Vision provider config:', {
-          baseURL,
-          model: visionConfig.model,
-          provider: visionConfig.provider,
-        });
-
-        // Always use OpenAI-compatible provider (supports Ollama's OpenAI-compatible API)
-        return new OpenAIProvider(
-          baseURL,
-          apiKey,
-          visionConfig.model,
-          {
-            temperature: result.data.llm.temperature,
-            maxTokens: visionConfig.maxImageTokens || result.data.llm.maxTokens,
-          },
-          result.data.llm
-        );
-      }
-    }
-  } else if (typeof window !== 'undefined') {
-    // Web environment: try localStorage
-    const savedConfig = localStorage.getItem('sepilot_llm_config');
-    if (savedConfig) {
-      const parsedConfig = JSON.parse(savedConfig);
-      if (parsedConfig.vision?.enabled && parsedConfig.vision?.model) {
-        const visionConfig = parsedConfig.vision;
-        const baseURL = visionConfig.baseURL || parsedConfig.baseURL;
-        const apiKey = visionConfig.apiKey || parsedConfig.apiKey || '';
-
-        return new OpenAIProvider(
-          baseURL,
-          apiKey,
-          visionConfig.model,
-          {
-            temperature: parsedConfig.temperature,
-            maxTokens: visionConfig.maxImageTokens || parsedConfig.maxTokens,
-          },
-          parsedConfig
-        );
-      }
-    }
-  }
-
-  return null;
-}
+import { hasImages, getVisionProviderFromConfig } from './vision-utils';
 
 export class LLMService {
   /**
@@ -220,7 +150,7 @@ export class LLMService {
 
     if (hasImages(messages)) {
       console.log('[LLMService] Images detected, attempting to use vision model');
-      const visionProvider = await getVisionProvider();
+      const visionProvider = await getVisionProviderFromConfig();
       if (visionProvider) {
         console.log('[LLMService] Using vision model for image analysis');
         provider = visionProvider;

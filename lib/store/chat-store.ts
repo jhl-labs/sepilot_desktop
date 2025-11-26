@@ -39,8 +39,6 @@ interface ChatStore {
   conversations: Conversation[];
   activeConversationId: string | null;
   messages: Message[];
-  isStreaming: boolean; // Deprecated: kept for backward compatibility
-  streamingMessageId: string | null; // Deprecated: kept for backward compatibility
   streamingConversations: Map<string, string>; // conversationId -> messageId mapping
   isLoading: boolean;
   graphType: GraphType;
@@ -60,8 +58,6 @@ interface ChatStore {
   clearMessages: () => void;
 
   // Actions - Streaming
-  setStreaming: (isStreaming: boolean) => void; // Deprecated: kept for backward compatibility
-  setStreamingMessageId: (id: string | null) => void; // Deprecated: kept for backward compatibility
   startStreaming: (conversationId: string, messageId: string) => void;
   stopStreaming: (conversationId: string) => void;
   isConversationStreaming: (conversationId: string) => boolean;
@@ -75,8 +71,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   conversations: [],
   activeConversationId: null,
   messages: [],
-  isStreaming: false, // Deprecated
-  streamingMessageId: null, // Deprecated
   streamingConversations: new Map<string, string>(),
   isLoading: false,
   graphType: 'chat',
@@ -143,9 +137,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         conversations: newConversations,
         activeConversationId: newConversation.id,
         messages: [],
-        isStreaming: false,
-        streamingMessageId: null,
-        // No need to modify streamingConversations - new conversation has no streaming
       };
     });
   },
@@ -186,32 +177,23 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
       // Remove from streaming conversations if it was streaming
       const newStreamingConversations = new Map(state.streamingConversations);
+      const wasStreaming = newStreamingConversations.has(id);
       newStreamingConversations.delete(id);
-
-      const wasActiveAndStreaming = state.activeConversationId === id && state.streamingConversations.has(id);
 
       return {
         conversations: filtered,
         activeConversationId: newActiveId,
         messages: newActiveId === id ? [] : state.messages,
         streamingConversations: newStreamingConversations,
-        isStreaming: wasActiveAndStreaming ? false : state.isStreaming,
-        streamingMessageId: wasActiveAndStreaming ? null : state.streamingMessageId,
       };
     });
   },
 
   setActiveConversation: async (id: string) => {
-    const state = get();
-    const isCurrentlyStreaming = state.streamingConversations.has(id);
-
     set({
       activeConversationId: id,
       messages: [],
       isLoading: true,
-      // Keep backward compatibility: update deprecated fields based on new conversation's streaming state
-      isStreaming: isCurrentlyStreaming,
-      streamingMessageId: isCurrentlyStreaming ? state.streamingConversations.get(id) || null : null,
     });
 
     // Load messages from database or localStorage
@@ -447,27 +429,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ messages: [] });
   },
 
-  // Streaming (deprecated - kept for backward compatibility)
-  setStreaming: (isStreaming: boolean) => {
-    set({ isStreaming });
-  },
-
-  setStreamingMessageId: (id: string | null) => {
-    set({ streamingMessageId: id });
-  },
-
-  // New streaming actions (conversation-specific)
+  // Streaming actions (conversation-specific)
   startStreaming: (conversationId: string, messageId: string) => {
     set((state) => {
       const newMap = new Map(state.streamingConversations);
       newMap.set(conversationId, messageId);
-
-      return {
-        streamingConversations: newMap,
-        // Update deprecated fields for backward compatibility if this is the active conversation
-        isStreaming: state.activeConversationId === conversationId ? true : state.isStreaming,
-        streamingMessageId: state.activeConversationId === conversationId ? messageId : state.streamingMessageId,
-      };
+      return { streamingConversations: newMap };
     });
   },
 
@@ -475,13 +442,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set((state) => {
       const newMap = new Map(state.streamingConversations);
       newMap.delete(conversationId);
-
-      return {
-        streamingConversations: newMap,
-        // Update deprecated fields for backward compatibility if this was the active conversation
-        isStreaming: state.activeConversationId === conversationId ? false : state.isStreaming,
-        streamingMessageId: state.activeConversationId === conversationId ? null : state.streamingMessageId,
-      };
+      return { streamingConversations: newMap };
     });
   },
 

@@ -6,21 +6,14 @@
 import { ipcMain } from 'electron';
 import { Message, LLMConfig, AppConfig } from '../../../types';
 import { getLLMClient, initializeLLMClient } from '../../../lib/llm/client';
-import { OpenAIProvider } from '../../../lib/llm/providers/openai';
+import { hasImages, createVisionProvider } from '../../../lib/llm/vision-utils';
 import { logger } from '../../services/logger';
 import { databaseService } from '../../services/database';
 
 /**
- * Check if any message contains images
+ * Get vision provider from database config (Electron main process)
  */
-function hasImages(messages: Message[]): boolean {
-  return messages.some((msg) => msg.images && msg.images.length > 0);
-}
-
-/**
- * Get vision provider if vision config is available
- */
-async function getVisionProvider(): Promise<OpenAIProvider | null> {
+function getVisionProviderFromDB() {
   try {
     const configStr = databaseService.getSetting('app_config');
     if (!configStr) {
@@ -29,47 +22,28 @@ async function getVisionProvider(): Promise<OpenAIProvider | null> {
 
     const config = JSON.parse(configStr) as AppConfig;
 
-    if (!config?.llm?.vision) {
+    if (!config?.llm) {
       return null;
     }
-
-    const visionConfig = config.llm.vision;
-
-    // Only use vision model if it's enabled and configured
-    if (!visionConfig.enabled || !visionConfig.model) {
-      return null;
-    }
-
-    const baseURL = visionConfig.baseURL || config.llm.baseURL;
-    const apiKey = visionConfig.apiKey || config.llm.apiKey || '';
 
     logger.info('[LLM IPC] Vision provider config:', {
-      baseURL,
-      model: visionConfig.model,
-      provider: visionConfig.provider,
-      enableStreaming: visionConfig.enableStreaming ?? false,
+      baseURL: config.llm.vision?.baseURL || config.llm.baseURL,
+      model: config.llm.vision?.model,
+      provider: config.llm.vision?.provider,
+      enableStreaming: config.llm.vision?.enableStreaming ?? false,
     });
 
-    // Vision 모델용 max_tokens 제한 (Ollama는 큰 값을 처리 못함)
-    const maxTokens = visionConfig.maxImageTokens || config.llm.maxTokens;
-    const limitedMaxTokens = Math.min(maxTokens, 4096); // 최대 4096으로 제한
+    const provider = createVisionProvider(config.llm, {
+      enableStreaming: config.llm.vision?.enableStreaming ?? false,
+      maxImageTokens: 4096, // Ollama 호환을 위해 제한
+    });
 
-    logger.info('[LLM IPC] Vision max_tokens:', { original: maxTokens, limited: limitedMaxTokens });
-
-    // Always use OpenAI-compatible provider (supports Ollama's OpenAI-compatible API)
-    const provider = new OpenAIProvider(
-      baseURL,
-      apiKey,
-      visionConfig.model,
-      {
-        temperature: config.llm.temperature,
-        maxTokens: limitedMaxTokens,
-      },
-      config.llm
-    );
-
-    // Set streaming capability based on config
-    (provider as any).streamingEnabled = visionConfig.enableStreaming ?? false;
+    if (provider) {
+      logger.info('[LLM IPC] Vision max_tokens:', {
+        original: config.llm.vision?.maxImageTokens || config.llm.maxTokens,
+        limited: Math.min(config.llm.vision?.maxImageTokens || config.llm.maxTokens, 4096),
+      });
+    }
 
     return provider;
   } catch (error) {
@@ -123,7 +97,7 @@ export function setupLLMHandlers() {
 
       if (hasImages(messages)) {
         logger.info('[LLM IPC] Images detected, attempting to use vision model');
-        const visionProvider = await getVisionProvider();
+        const visionProvider = getVisionProviderFromDB();
         if (visionProvider) {
           const streamingEnabled = (visionProvider as any).streamingEnabled ?? false;
           logger.info('[LLM IPC] Using vision model for image analysis, streaming:', streamingEnabled);
@@ -213,7 +187,7 @@ export function setupLLMHandlers() {
 
       if (hasImages(messages)) {
         logger.info('[LLM IPC] Images detected in chat, attempting to use vision model');
-        const visionProvider = await getVisionProvider();
+        const visionProvider = getVisionProviderFromDB();
         if (visionProvider) {
           logger.info('[LLM IPC] Using vision model for chat with images');
           provider = visionProvider;

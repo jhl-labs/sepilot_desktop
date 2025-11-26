@@ -9,7 +9,10 @@ import { GraphFactory } from '@/lib/langgraph';
 import { Message } from '@/types';
 
 export function ChatArea() {
-  const { messages, activeConversationId, graphType, updateMessage, deleteMessage, addMessage, setStreaming, setStreamingMessageId, streamingMessageId } = useChatStore();
+  const { messages, activeConversationId, graphType, updateMessage, deleteMessage, addMessage, startStreaming, stopStreaming, streamingConversations } = useChatStore();
+
+  // Get streaming state for current conversation
+  const streamingMessageId = activeConversationId ? streamingConversations.get(activeConversationId) || null : null;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Handle message edit
@@ -89,8 +92,7 @@ export function ChatArea() {
         });
       };
 
-      setStreaming(true);
-      setStreamingMessageId(assistantMessageId);
+      startStreaming(activeConversationId, assistantMessageId);
 
       // 5. Stream response from LangGraph
       for await (const event of GraphFactory.stream(graphType, previousMessages)) {
@@ -135,8 +137,7 @@ export function ChatArea() {
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
       }
-      setStreaming(false);
-      setStreamingMessageId(null);
+      stopStreaming(activeConversationId);
     }
   };
 
