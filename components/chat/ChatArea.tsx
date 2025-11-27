@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './MessageBubble';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -14,6 +14,104 @@ export function ChatArea() {
   // Get streaming state for current conversation
   const streamingMessageId = activeConversationId ? streamingConversations.get(activeConversationId) || null : null;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Handle drag events for text files
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    const textContents: string[] = [];
+    const imageFiles: { filename: string; mimeType: string; base64: string }[] = [];
+
+    for (const file of files) {
+      // 텍스트 파일인지 확인
+      const isTextFile =
+        file.type.startsWith('text/') ||
+        file.name.endsWith('.txt') ||
+        file.name.endsWith('.md') ||
+        file.name.endsWith('.json') ||
+        file.name.endsWith('.js') ||
+        file.name.endsWith('.ts') ||
+        file.name.endsWith('.tsx') ||
+        file.name.endsWith('.jsx') ||
+        file.name.endsWith('.css') ||
+        file.name.endsWith('.html') ||
+        file.name.endsWith('.xml') ||
+        file.name.endsWith('.yaml') ||
+        file.name.endsWith('.yml') ||
+        file.name.endsWith('.py') ||
+        file.name.endsWith('.java') ||
+        file.name.endsWith('.c') ||
+        file.name.endsWith('.cpp') ||
+        file.name.endsWith('.h') ||
+        file.name.endsWith('.sh') ||
+        file.name.endsWith('.sql') ||
+        file.name.endsWith('.csv');
+
+      if (isTextFile) {
+        try {
+          const text = await file.text();
+          textContents.push(`📄 **${file.name}**\n\`\`\`\n${text}\n\`\`\``);
+        } catch (error) {
+          console.error(`Failed to read file ${file.name}:`, error);
+        }
+      } else if (file.type.startsWith('image/')) {
+        // 이미지 파일 처리
+        try {
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => resolve(event.target?.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          imageFiles.push({
+            filename: file.name,
+            mimeType: file.type,
+            base64,
+          });
+        } catch (error) {
+          console.error(`Failed to read image ${file.name}:`, error);
+        }
+      }
+    }
+
+    // Dispatch custom event to InputBox
+    if (textContents.length > 0 || imageFiles.length > 0) {
+      window.dispatchEvent(
+        new CustomEvent('sepilot:file-drop', {
+          detail: {
+            textContents,
+            imageFiles,
+          },
+        })
+      );
+    }
+  };
 
   // Handle message edit
   const handleEdit = async (messageId: string, newContent: string) => {
@@ -161,7 +259,25 @@ export function ChatArea() {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div
+      ref={dropZoneRef}
+      className={`flex flex-1 flex-col overflow-hidden relative transition-colors ${
+        isDragging ? 'bg-primary/5' : ''
+      }`}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDragging && (
+        <div className="absolute inset-0 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg z-10 pointer-events-none m-4">
+          <div className="text-center">
+            <MessageSquare className="mx-auto mb-2 h-12 w-12 text-primary opacity-60" />
+            <p className="text-sm font-medium text-primary">텍스트 파일을 여기에 드롭하세요</p>
+            <p className="text-xs text-muted-foreground mt-1">.txt, .md, .json, .js, .ts 등</p>
+          </div>
+        </div>
+      )}
       <ScrollArea ref={scrollRef} className="flex-1 overflow-y-auto">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-muted-foreground px-4">

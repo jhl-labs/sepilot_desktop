@@ -33,8 +33,10 @@ export function InputBox() {
   const [comfyUIAvailable, setComfyUIAvailable] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [imageGenProgress, setImageGenProgress] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
   const {
     addMessage,
@@ -57,6 +59,34 @@ export function InputBox() {
   // Set mounted state to avoid hydration mismatch with Tooltip
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Listen for file drop events from ChatArea
+  useEffect(() => {
+    const handleFileDrop = (e: CustomEvent<{ textContents: string[]; imageFiles: { filename: string; mimeType: string; base64: string }[] }>) => {
+      const { textContents, imageFiles } = e.detail;
+
+      if (textContents.length > 0) {
+        const combinedText = textContents.join('\n\n');
+        setInput((prev) => (prev ? `${prev}\n\n${combinedText}` : combinedText));
+      }
+
+      if (imageFiles.length > 0) {
+        const newImages: ImageAttachment[] = imageFiles.map((img) => ({
+          id: `drop-${Date.now()}-${Math.random()}`,
+          path: '',
+          filename: img.filename,
+          mimeType: img.mimeType,
+          base64: img.base64,
+        }));
+        setSelectedImages((prev) => [...prev, ...newImages]);
+      }
+    };
+
+    window.addEventListener('sepilot:file-drop', handleFileDrop as EventListener);
+    return () => {
+      window.removeEventListener('sepilot:file-drop', handleFileDrop as EventListener);
+    };
   }, []);
 
   // Load LLM and ComfyUI config on mount
@@ -277,6 +307,100 @@ export function InputBox() {
         console.error('Failed to read clipboard image:', error);
         setError(error.message || '클립보드 이미지를 처리하는 중 오류가 발생했습니다');
       }
+    }
+  };
+
+  // Handle drag events for text files
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // dropZone 바깥으로 나갈 때만 isDragging을 false로 설정
+    if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    const textContents: string[] = [];
+
+    for (const file of files) {
+      // 텍스트 파일인지 확인
+      const isTextFile =
+        file.type.startsWith('text/') ||
+        file.name.endsWith('.txt') ||
+        file.name.endsWith('.md') ||
+        file.name.endsWith('.json') ||
+        file.name.endsWith('.js') ||
+        file.name.endsWith('.ts') ||
+        file.name.endsWith('.tsx') ||
+        file.name.endsWith('.jsx') ||
+        file.name.endsWith('.css') ||
+        file.name.endsWith('.html') ||
+        file.name.endsWith('.xml') ||
+        file.name.endsWith('.yaml') ||
+        file.name.endsWith('.yml') ||
+        file.name.endsWith('.py') ||
+        file.name.endsWith('.java') ||
+        file.name.endsWith('.c') ||
+        file.name.endsWith('.cpp') ||
+        file.name.endsWith('.h') ||
+        file.name.endsWith('.sh') ||
+        file.name.endsWith('.sql') ||
+        file.name.endsWith('.csv');
+
+      if (isTextFile) {
+        try {
+          const text = await file.text();
+          textContents.push(`📄 **${file.name}**\n\`\`\`\n${text}\n\`\`\``);
+        } catch (error) {
+          console.error(`Failed to read file ${file.name}:`, error);
+          setError(`파일을 읽는 중 오류가 발생했습니다: ${file.name}`);
+        }
+      } else if (file.type.startsWith('image/')) {
+        // 이미지 파일 처리
+        try {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            const newImage: ImageAttachment = {
+              id: `drop-${Date.now()}-${Math.random()}`,
+              path: '',
+              filename: file.name,
+              mimeType: file.type,
+              base64,
+            };
+            setSelectedImages((prev) => [...prev, newImage]);
+          };
+          reader.readAsDataURL(file);
+        } catch (error) {
+          console.error(`Failed to read image ${file.name}:`, error);
+        }
+      } else {
+        setError(`지원하지 않는 파일 형식입니다: ${file.name}`);
+      }
+    }
+
+    if (textContents.length > 0) {
+      const combinedText = textContents.join('\n\n');
+      setInput((prev) => (prev ? `${prev}\n\n${combinedText}` : combinedText));
     }
   };
 
@@ -650,8 +774,25 @@ export function InputBox() {
   };
 
   return (
-    <div className="shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto max-w-3xl px-4 py-4">
+    <div
+      ref={dropZoneRef}
+      className={`shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-colors ${
+        isDragging ? 'bg-primary/10 border-primary' : ''
+      }`}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="mx-auto max-w-3xl px-4 py-4 relative">
+        {isDragging && (
+          <div className="absolute inset-0 flex items-center justify-center bg-primary/5 border-2 border-dashed border-primary rounded-lg z-10 pointer-events-none">
+            <div className="text-center">
+              <p className="text-sm font-medium text-primary">텍스트 파일을 여기에 드롭하세요</p>
+              <p className="text-xs text-muted-foreground mt-1">.txt, .md, .json, .js, .ts 등</p>
+            </div>
+          </div>
+        )}
         {error && (
           <div className="mb-3 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive border border-destructive/20">
             {error}
