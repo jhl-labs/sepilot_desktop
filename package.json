@@ -21,7 +21,10 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix && prettier --write .",
     "type-check": "tsc --noEmit",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@langchain/core": "^1.0.6",
@@ -53,7 +56,11 @@
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
     "@tailwindcss/postcss": "^4.1.17",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/react-hooks": "^8.0.1",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.10.1",
     "@types/plotly.js": "^3.0.8",
     "@types/react": "^19.2.6",
@@ -75,6 +82,8 @@
     "electron-rebuild": "^3.2.9",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.3",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
     "node-gyp": "^12.1.0",
     "path-browserify": "^1.0.1",
     "png-to-ico": "^3.0.1",
@@ -82,6 +91,7 @@
     "prettier": "^3.6.2",
     "process": "^0.11.10",
     "tailwindcss": "^4.1.17",
+    "ts-jest": "^29.4.5",
     "typescript": "^5.9.3",
     "util": "^0.12.5",
     "wait-on": "^9.0.3"
