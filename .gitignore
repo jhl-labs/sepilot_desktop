@@ -17,9 +17,6 @@
 assets/icon.ico
 assets/icons/
 
-# monaco editor (copied from node_modules)
-/public/monaco-editor
-
 # misc
 .DS_Store
 *.pem

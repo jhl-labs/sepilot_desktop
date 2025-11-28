@@ -4,7 +4,6 @@
   "description": "SEPilot Desktop - LLM Desktop Application with LangGraph, RAG, and MCP",
   "main": "dist/electron/electron/main.js",
   "scripts": {
-    "postinstall": "node scripts/copy-monaco.js",
     "dev": "npm run clean:dev && npm run dev:electron-build-once && concurrently -n \"next,tsc,electron\" -c \"cyan,yellow,green\" \"npm run dev:next\" \"npm run dev:electron-build\" \"npm run dev:electron\"",
     "dev:next": "next dev --webpack",
     "clean:dev": "node scripts/clean-dev.js",

@@ -23,6 +23,14 @@ const nextConfig = {
       config.output = config.output || {};
       config.output.globalObject = 'globalThis';
 
+      // Monaco Editor webpack plugin
+      config.plugins.push(
+        new MonacoWebpackPlugin({
+          languages: ['javascript', 'typescript', 'css', 'html', 'json', 'markdown', 'python', 'java', 'cpp', 'csharp', 'go', 'rust', 'yaml', 'xml', 'sql', 'shell'],
+          filename: 'static/[name].worker.js',
+        })
+      );
+
       // Only exclude truly Node.js-only modules from client bundle
       // Do NOT exclude UI libraries that should work in browser
       const nodeOnlyModules = [

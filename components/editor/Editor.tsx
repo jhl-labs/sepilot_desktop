@@ -1,16 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Editor, { loader } from '@monaco-editor/react';
+import Editor from '@monaco-editor/react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
 import { X, Save, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { isElectron } from '@/lib/platform';
-
-// Configure Monaco to use local files instead of CDN
-loader.config({ paths: { vs: '/monaco-editor/min/vs' } });
 
 export function CodeEditor() {
   const {
