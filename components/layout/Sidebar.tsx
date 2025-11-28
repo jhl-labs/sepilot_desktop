@@ -44,7 +44,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
     }
   };
 
-  const modeLabel = appMode === 'chat' ? 'SEPilot Chat' : 'SEPilot Editor';
+  const modeLabel = appMode === 'chat' ? 'Chat' : 'Editor';
 
   return (
     <div className="flex h-full w-full flex-col border-r bg-background">
@@ -60,11 +60,11 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
           <DropdownMenuContent align="start">
             <DropdownMenuItem onClick={() => setAppMode('chat')}>
               <MessageSquare className="mr-2 h-4 w-4" />
-              SEPilot Chat
+              Chat
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setAppMode('editor')}>
               <Code className="mr-2 h-4 w-4" />
-              SEPilot Editor
+              Editor
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
