@@ -295,12 +295,9 @@ const electronAPI = {
   },
 
   // Quick Input operations
-  invoke: (channel: string, ...args: any[]) => {
-    const validChannels = ['quick-input-submit', 'quick-input-close'];
-    if (validChannels.includes(channel)) {
-      return ipcRenderer.invoke(channel, ...args);
-    }
-    return Promise.reject(new Error(`Invalid channel: ${channel}`));
+  quickInput: {
+    submit: (message: string) => ipcRenderer.invoke('quick-input-submit', message),
+    close: () => ipcRenderer.invoke('quick-input-close'),
   },
 };
 

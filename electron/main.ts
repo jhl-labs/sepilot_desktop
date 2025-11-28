@@ -8,7 +8,7 @@ const pathModule = require('path');
 // We need to point @ to resources/app.asar/dist/electron
 moduleAlias.addAlias('@', pathModule.join(__dirname, '..'));
 
-import { app, BrowserWindow, session } from 'electron';
+import { app, BrowserWindow, session, Tray, Menu, globalShortcut, nativeImage } from 'electron';
 import path from 'path';
 import serve from 'electron-serve';
 import { databaseService } from './services/database';
@@ -20,8 +20,17 @@ import { AppConfig } from '../types';
 import { initializeBuiltinTools } from '../lib/mcp/tools/executor';
 
 let mainWindow: BrowserWindow | null = null;
+let quickInputWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
 
 const isDev = !app.isPackaged;
+
+// app 객체에 isQuitting 플래그 추가
+declare module 'electron' {
+  interface App {
+    isQuitting?: boolean;
+  }
+}
 
 // Setup electron-serve for production
 if (!isDev) {
@@ -56,9 +65,125 @@ function createWindow() {
     logger.info('Loaded production build via app:// protocol');
   }
 
+  // 창 닫기 동작을 숨기기로 변경 (tray로 최소화)
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow?.hide();
+      logger.info('Main window hidden to tray');
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
     logger.info('Main window closed');
+  });
+}
+
+// Quick Input 창 생성
+function createQuickInputWindow() {
+  quickInputWindow = new BrowserWindow({
+    width: 600,
+    height: 80,
+    minWidth: 400,
+    minHeight: 60,
+    maxHeight: 100,
+    frame: false,
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+    },
+  });
+
+  if (isDev) {
+    quickInputWindow.loadURL('http://localhost:3000/quick-input');
+  } else {
+    quickInputWindow.loadURL('app://./quick-input.html');
+  }
+
+  // 포커스를 잃으면 창 숨기기
+  quickInputWindow.on('blur', () => {
+    quickInputWindow?.hide();
+  });
+
+  quickInputWindow.on('closed', () => {
+    quickInputWindow = null;
+    logger.info('Quick input window closed');
+  });
+
+  // 초기에는 숨김 상태
+  quickInputWindow.hide();
+}
+
+// Quick Input 창 표시
+function showQuickInputWindow() {
+  if (!quickInputWindow) {
+    createQuickInputWindow();
+  }
+
+  // 화면 중앙에 위치
+  const { screen } = require('electron');
+  const display = screen.getPrimaryDisplay();
+  const { width, height } = display.workAreaSize;
+  const windowBounds = quickInputWindow!.getBounds();
+
+  quickInputWindow!.setBounds({
+    x: Math.floor((width - windowBounds.width) / 2),
+    y: Math.floor(height / 3),
+    width: windowBounds.width,
+    height: windowBounds.height,
+  });
+
+  quickInputWindow!.show();
+  quickInputWindow!.focus();
+}
+
+// System Tray 생성
+function createTray() {
+  // 간단한 16x16 아이콘 생성 (임시)
+  const icon = nativeImage.createEmpty();
+  tray = new Tray(icon);
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '열기',
+      click: () => {
+        mainWindow?.show();
+        mainWindow?.focus();
+      },
+    },
+    {
+      label: 'Quick Input (Ctrl+Shift+Space)',
+      click: () => {
+        showQuickInputWindow();
+      },
+    },
+    { type: 'separator' },
+    {
+      label: '종료',
+      click: () => {
+        app.isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setContextMenu(contextMenu);
+  tray.setToolTip('SEPilot Desktop');
+
+  // 트레이 아이콘 클릭 시 메인 창 표시
+  tray.on('click', () => {
+    if (mainWindow?.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow?.show();
+      mainWindow?.focus();
+    }
   });
 }
 
@@ -169,6 +294,22 @@ app.whenReady().then(async () => {
   initializeBuiltinTools();
   logger.info('Builtin tools initialized');
 
+  // Create tray
+  createTray();
+  logger.info('Tray created');
+
+  // Register global shortcut (Ctrl+Shift+Space)
+  const shortcutRegistered = globalShortcut.register('CommandOrControl+Shift+Space', () => {
+    logger.info('Global shortcut triggered');
+    showQuickInputWindow();
+  });
+
+  if (!shortcutRegistered) {
+    logger.error('Failed to register global shortcut');
+  } else {
+    logger.info('Global shortcut registered: Ctrl+Shift+Space');
+  }
+
   // Create window
   createWindow();
 
@@ -224,7 +365,13 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  app.isQuitting = true;
   logger.info('App is quitting');
+
+  // Unregister all global shortcuts
+  globalShortcut.unregisterAll();
+
+  // Close database
   databaseService.close();
 });
 

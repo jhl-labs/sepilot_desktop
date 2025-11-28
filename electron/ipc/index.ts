@@ -16,6 +16,7 @@ import { setupGitHubHandlers } from './handlers/github';
 import { setupEmbeddingsHandlers } from './handlers/embeddings';
 import { setupComfyUIHandlers } from './handlers/comfyui';
 import { setupUpdateHandlers } from './handlers/update';
+import { setupQuickInputHandlers } from './handlers/quick-input';
 import { logger } from '../services/logger';
 
 /**
@@ -37,6 +38,7 @@ export function setupIpcHandlers() {
   setupEmbeddingsHandlers();
   setupComfyUIHandlers();
   setupUpdateHandlers();
+  setupQuickInputHandlers();
 
   logger.info('IPC handlers setup complete');
 }

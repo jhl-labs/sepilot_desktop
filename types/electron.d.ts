@@ -378,6 +378,11 @@ interface UpdateAPI {
   getVersion: () => Promise<IPCResponse<string>>;
 }
 
+interface QuickInputAPI {
+  submit: (message: string) => Promise<IPCResponse>;
+  close: () => Promise<IPCResponse>;
+}
+
 interface ElectronAPI {
   platform: string;
   chat: ChatAPI;
@@ -395,6 +400,7 @@ interface ElectronAPI {
   embeddings: EmbeddingsAPI;
   comfyui: ComfyUIAPI;
   update: UpdateAPI;
+  quickInput: QuickInputAPI;
   on: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => void;
 }

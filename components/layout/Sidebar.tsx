@@ -1,15 +1,19 @@
 'use client';
 
-import { Plus, Settings, Trash, FileText, Image } from 'lucide-react';
+import { Plus, Settings, Trash, FileText, Image, ChevronDown, MessageSquare, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
-import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ChatHistory } from './ChatHistory';
 import { FileExplorer } from './FileExplorer';
-import type { AppMode } from '@/lib/store/chat-store';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface SidebarProps {
   onDocumentsClick?: () => void;
@@ -40,53 +44,55 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
     }
   };
 
+  const modeLabel = appMode === 'chat' ? 'SEPilot Chat' : 'SEPilot Editor';
+
   return (
     <div className="flex h-full w-full flex-col border-r bg-background">
-      {/* Mode Selector Tabs */}
-      <div className="flex items-center border-b bg-muted/30">
-        <button
-          onClick={() => setAppMode('chat')}
-          className={cn(
-            'flex-1 px-4 py-3 text-sm font-semibold transition-colors border-r hover:bg-accent',
-            appMode === 'chat' && 'bg-background text-primary border-b-2 border-b-primary'
-          )}
-        >
-          SEPilot Chat
-        </button>
-        <button
-          onClick={() => setAppMode('editor')}
-          className={cn(
-            'flex-1 px-4 py-3 text-sm font-semibold transition-colors hover:bg-accent',
-            appMode === 'editor' && 'bg-background text-primary border-b-2 border-b-primary'
-          )}
-        >
-          SEPilot Editor
-        </button>
-      </div>
+      {/* Header with Mode Selector Dropdown */}
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-1 text-lg font-semibold hover:text-primary transition-colors">
+              {modeLabel}
+              <ChevronDown className="h-4 w-4 opacity-50" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setAppMode('chat')}>
+              <MessageSquare className="mr-2 h-4 w-4" />
+              SEPilot Chat
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAppMode('editor')}>
+              <Code className="mr-2 h-4 w-4" />
+              SEPilot Editor
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      {/* Action Bar (Chat mode only) */}
-      {appMode === 'chat' && (
-        <div className="flex items-center justify-end border-b px-4 py-2 gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={createConversation}
-            title="새 대화"
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleDeleteAll}
-            title="모든 대화 삭제"
-            disabled={conversations.length === 0}
-            className="text-muted-foreground hover:text-destructive disabled:opacity-30"
-          >
-            <Trash className="h-5 w-5" />
-          </Button>
-        </div>
-      )}
+        {/* Action Buttons (Chat mode only) */}
+        {appMode === 'chat' && (
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={createConversation}
+              title="새 대화"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDeleteAll}
+              title="모든 대화 삭제"
+              disabled={conversations.length === 0}
+              className="text-muted-foreground hover:text-destructive disabled:opacity-30"
+            >
+              <Trash className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Content Area - Conditionally render based on mode */}
       {appMode === 'chat' ? (
