@@ -253,6 +253,14 @@ interface FetchedUrl {
   url: string;
 }
 
+// File node type for directory tree
+interface FileNode {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  children?: FileNode[];
+}
+
 interface FileAPI {
   selectImages: () => Promise<IPCResponse<ImageAttachment[]>>;
   loadImage: (filePath: string) => Promise<IPCResponse<ImageAttachment>>;
@@ -260,6 +268,13 @@ interface FileAPI {
   selectDocument: () => Promise<IPCResponse<DocumentFile[]>>;
   read: (filePath: string) => Promise<string>;
   selectDirectory: () => Promise<IPCResponse<string | null>>;
+}
+
+// File System API (Editor용)
+interface FileSystemAPI {
+  readDirectory: (dirPath: string) => Promise<IPCResponse<FileNode[]>>;
+  readFile: (filePath: string) => Promise<IPCResponse<string>>;
+  writeFile: (filePath: string, content: string) => Promise<IPCResponse>;
 }
 
 interface GitHubAPI {
@@ -374,6 +389,7 @@ interface ElectronAPI {
   langgraph: LangGraphAPI;
   vectorDB: VectorDBAPI;
   file: FileAPI;
+  fs: FileSystemAPI;
   github: GitHubAPI;
   shell: ShellAPI;
   embeddings: EmbeddingsAPI;
@@ -415,6 +431,8 @@ export type {
   VectorDocument,
   VectorSearchResult,
   FileAPI,
+  FileNode,
+  FileSystemAPI,
   DocumentFile,
   FetchedUrl,
   GitHubAPI,

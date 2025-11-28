@@ -4,6 +4,18 @@ import { generateId } from '@/lib/utils';
 import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
 import { isElectron } from '@/lib/platform';
 
+// App mode types
+export type AppMode = 'chat' | 'editor';
+
+// Open file tab interface
+export interface OpenFile {
+  path: string;
+  filename: string;
+  content: string;
+  language?: string;
+  isDirty: boolean; // Has unsaved changes
+}
+
 // Web fallback: localStorage 헬퍼 함수들
 const STORAGE_KEYS = {
   CONVERSATIONS: 'sepilot_conversations',
@@ -42,6 +54,13 @@ interface ChatStore {
   messagesCache: Map<string, Message[]>; // conversationId -> messages cache (for background streaming)
   streamingConversations: Map<string, string>; // conversationId -> messageId mapping
   isLoading: boolean;
+
+  // App Mode (Chat vs Editor)
+  appMode: AppMode;
+
+  // Editor State
+  openFiles: OpenFile[];
+  activeFilePath: string | null;
 
   // New: Thinking Mode and Feature Toggles
   thinkingMode: ThinkingMode;
@@ -105,6 +124,17 @@ interface ChatStore {
   clearImageGenerationProgress: (conversationId: string) => void;
   getImageGenerationProgress: (conversationId: string) => ImageGenerationProgress | undefined;
 
+  // Actions - App Mode
+  setAppMode: (mode: AppMode) => void;
+
+  // Actions - Editor
+  openFile: (file: Omit<OpenFile, 'isDirty'>) => void;
+  closeFile: (path: string) => void;
+  setActiveFile: (path: string | null) => void;
+  updateFileContent: (path: string, content: string) => void;
+  markFileDirty: (path: string, isDirty: boolean) => void;
+  closeAllFiles: () => void;
+
   // Deprecated: kept for backward compatibility
   setGraphType: (type: GraphType) => void;
 }
@@ -117,6 +147,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   messagesCache: new Map<string, Message[]>(),
   streamingConversations: new Map<string, string>(),
   isLoading: false,
+
+  // App Mode
+  appMode: 'chat',
+
+  // Editor State
+  openFiles: [],
+  activeFilePath: null,
 
   // New: Graph Configuration
   thinkingMode: 'instant',
@@ -698,5 +735,76 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   getImageGenerationProgress: (conversationId: string) => {
     return get().imageGenerationProgress.get(conversationId);
+  },
+
+  // App Mode Actions
+  setAppMode: (mode: AppMode) => {
+    set({ appMode: mode });
+  },
+
+  // Editor Actions
+  openFile: (file: Omit<OpenFile, 'isDirty'>) => {
+    set((state) => {
+      // Check if file is already open
+      const existingFile = state.openFiles.find((f) => f.path === file.path);
+      if (existingFile) {
+        // File already open, just set it as active
+        return { activeFilePath: file.path };
+      }
+
+      // Add new file to open files
+      const newFile: OpenFile = {
+        ...file,
+        isDirty: false,
+      };
+
+      return {
+        openFiles: [...state.openFiles, newFile],
+        activeFilePath: file.path,
+      };
+    });
+  },
+
+  closeFile: (path: string) => {
+    set((state) => {
+      const filtered = state.openFiles.filter((f) => f.path !== path);
+      const newActiveFilePath =
+        state.activeFilePath === path
+          ? filtered[0]?.path || null
+          : state.activeFilePath;
+
+      return {
+        openFiles: filtered,
+        activeFilePath: newActiveFilePath,
+      };
+    });
+  },
+
+  setActiveFile: (path: string | null) => {
+    set({ activeFilePath: path });
+  },
+
+  updateFileContent: (path: string, content: string) => {
+    set((state) => {
+      const updatedFiles = state.openFiles.map((file) =>
+        file.path === path ? { ...file, content, isDirty: true } : file
+      );
+
+      return { openFiles: updatedFiles };
+    });
+  },
+
+  markFileDirty: (path: string, isDirty: boolean) => {
+    set((state) => {
+      const updatedFiles = state.openFiles.map((file) =>
+        file.path === path ? { ...file, isDirty } : file
+      );
+
+      return { openFiles: updatedFiles };
+    });
+  },
+
+  closeAllFiles: () => {
+    set({ openFiles: [], activeFilePath: null });
   },
 }));

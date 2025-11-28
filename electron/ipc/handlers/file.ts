@@ -331,6 +331,74 @@ export function registerFileHandlers() {
     }
   });
 
+  // 디렉토리 내용 읽기 (파일 탐색기용)
+  ipcMain.handle('fs:read-directory', async (_event, dirPath: string) => {
+    try {
+      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+
+      // 파일과 디렉토리 분류 및 정렬
+      const fileNodes = entries
+        .filter((entry) => !entry.name.startsWith('.')) // 숨김 파일 제외
+        .map((entry) => ({
+          name: entry.name,
+          path: path.join(dirPath, entry.name),
+          isDirectory: entry.isDirectory(),
+        }))
+        .sort((a, b) => {
+          // 디렉토리 우선, 그 다음 알파벳 순
+          if (a.isDirectory !== b.isDirectory) {
+            return a.isDirectory ? -1 : 1;
+          }
+          return a.name.localeCompare(b.name);
+        });
+
+      return {
+        success: true,
+        data: fileNodes,
+      };
+    } catch (error: any) {
+      console.error('[File] Error reading directory:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to read directory',
+      };
+    }
+  });
+
+  // 파일 읽기 (Editor용)
+  ipcMain.handle('fs:read-file', async (_event, filePath: string) => {
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      return {
+        success: true,
+        data: content,
+      };
+    } catch (error: any) {
+      console.error('[File] Error reading file:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to read file',
+      };
+    }
+  });
+
+  // 파일 쓰기 (Editor 저장용)
+  ipcMain.handle('fs:write-file', async (_event, filePath: string, content: string) => {
+    try {
+      await fs.writeFile(filePath, content, 'utf-8');
+      console.log('[File] File saved successfully:', filePath);
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error writing file:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to write file',
+      };
+    }
+  });
+
   console.log('[File] IPC handlers registered');
 }
 

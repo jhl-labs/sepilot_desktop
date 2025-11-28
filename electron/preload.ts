@@ -205,6 +205,13 @@ const electronAPI = {
     selectDirectory: () => ipcRenderer.invoke('file:select-directory'),
   },
 
+  // File System operations (Editor용)
+  fs: {
+    readDirectory: (dirPath: string) => ipcRenderer.invoke('fs:read-directory', dirPath),
+    readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
+    writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:write-file', filePath, content),
+  },
+
   // GitHub operations
   github: {
     setPrivateKey: (privateKey: string) =>
@@ -285,6 +292,15 @@ const electronAPI = {
   // 이벤트 리스너 제거
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => {
     ipcRenderer.removeListener(channel, callback);
+  },
+
+  // Quick Input operations
+  invoke: (channel: string, ...args: any[]) => {
+    const validChannels = ['quick-input-submit', 'quick-input-close'];
+    if (validChannels.includes(channel)) {
+      return ipcRenderer.invoke(channel, ...args);
+    }
+    return Promise.reject(new Error(`Invalid channel: ${channel}`));
   },
 };
 
