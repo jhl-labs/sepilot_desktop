@@ -234,11 +234,13 @@ export class LLMService {
     }
 
     // Check if messages contain images and use vision model if available
+    // NOTE: Don't use vision model when tools are provided (tool calling requires regular LLM)
     let provider = client.getProvider();
     const isMainProcess = typeof window === 'undefined';
     const containsImages = hasImages(messages);
+    const hasTools = options?.tools && options.tools.length > 0;
 
-    if (containsImages) {
+    if (containsImages && !hasTools) {
       console.log('[LLMService] Images detected in stream, attempting to use vision model');
 
       // Main Process에서는 databaseService에서 직접 설정 로드
@@ -253,6 +255,8 @@ export class LLMService {
         console.warn('[LLMService] Images present but vision model not configured');
         throw new Error('Vision model is not configured. Please enable and configure a vision model in Settings > LLM > Vision Model to analyze images.');
       }
+    } else if (containsImages && hasTools) {
+      console.log('[LLMService] Images detected but tools are provided - using regular LLM for tool calling (Vision models typically do not support tool calling)');
     }
 
     try {

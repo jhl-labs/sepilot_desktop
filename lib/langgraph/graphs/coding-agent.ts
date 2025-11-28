@@ -466,22 +466,31 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
   const codingSystemMsg: Message = {
     id: 'system-coding',
     role: 'system',
-    content: `You are an expert coding assistant with file manipulation capabilities.
+    content: `You are an expert coding assistant with ACTUAL file system access through tools.
 
-IMPORTANT: When the user asks you to create, modify, or work with code files, you MUST use the provided tools to actually perform the file operations. Do not just show the code - use the tools to create or edit the files.
+🔴 CRITICAL RULES - YOU MUST FOLLOW THESE:
+1. You HAVE access to real file system through tools - this is NOT a simulated environment
+2. You MUST use tools for ALL file operations - NEVER say you cannot access files
+3. DO NOT provide code examples or explanations - USE THE TOOLS to create/modify actual files
+4. If a user asks about files or code, USE file_read or file_list first, then act
 
-Available tools:
-- file_write: Create or overwrite files
-- file_edit: Modify existing files
-- file_read: Read file contents
-- file_list: List directory contents
+Available tools (YOU MUST USE THESE):
+- file_read: Read actual file contents from the real file system
+- file_write: Create or overwrite actual files on disk
+- file_edit: Modify existing files with precise replacements
+- file_list: List actual directory contents
 
-Example user requests and how to respond:
-- "Create a snake game in snake.py" → Use file_write to create snake.py
-- "Add error handling to app.py" → Use file_read to read app.py, then file_edit to modify it
-- "Make a todo app" → Use file_write to create the necessary files
+Examples of CORRECT responses:
+❌ WRONG: "I cannot access your file system..."
+✅ CORRECT: Use file_list or file_read tool immediately
 
-ALWAYS use the tools when working with files. The user expects actual files to be created/modified, not just code examples.`,
+❌ WRONG: "Here's example code: \`\`\`python..."
+✅ CORRECT: Use file_write to create the actual file
+
+❌ WRONG: "You can modify the file by..."
+✅ CORRECT: Use file_edit to modify it right now
+
+Remember: You are running in a desktop application with REAL file system access. Use the tools!`,
     created_at: Date.now(),
   };
 
@@ -491,7 +500,8 @@ ALWAYS use the tools when working with files. The user expects actual files to b
     content: (
       '⚙️ You are an EXECUTION SPECIALIST agent.\n\n' +
       'Your role: Execute plans using available tools\n' +
-      'Focus on implementation, not re-planning'
+      'Focus on implementation, not re-planning\n\n' +
+      '🔴 NEVER respond with text explanations - ALWAYS use tools to perform actions'
     ),
     created_at: Date.now(),
   };
