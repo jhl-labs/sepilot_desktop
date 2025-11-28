@@ -827,7 +827,8 @@ export function InputBox() {
 
                   if (nodeStatusMessage) {
                     console.log(`[InputBox] Node execution: ${event.node} - ${nodeStatusMessage}`);
-                    scheduleUpdate({ content: nodeStatusMessage });
+                    // Append to existing content instead of replacing it
+                    scheduleUpdate({ content: `${accumulatedMessage.content || ''}\n\n${nodeStatusMessage}` });
                   }
                 }
 
