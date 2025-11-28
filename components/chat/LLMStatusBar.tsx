@@ -49,11 +49,6 @@ export function LLMStatusBar({
     return groups;
   }, [tools]);
 
-  // Count MCP tools (excluding builtin)
-  const mcpToolCount = useMemo(() => {
-    return tools.filter((tool) => tool.serverName !== 'builtin').length;
-  }, [tools]);
-
   // Estimate token count for context usage display
   // Rough estimation: ~4 chars per token for English, ~2-3 for Korean
   const MAX_CONTEXT_TOKENS = 128000; // Default max context (can be model-specific)
@@ -189,7 +184,7 @@ export function LLMStatusBar({
                       title="사용 가능한 툴 목록 보기"
                     >
                       <Wrench className="h-3 w-3" />
-                      <span>{mcpToolCount} tools</span>
+                      <span>{tools.length} tools</span>
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 max-h-96 overflow-y-auto" side="top" align="start">
