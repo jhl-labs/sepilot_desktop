@@ -248,13 +248,59 @@ export function ChatArea() {
 
             // Handle node execution results
             if (event.type === 'node' && event.data?.messages) {
-              const newMessages = event.data.messages;
-              if (newMessages && newMessages.length > 0) {
-                const lastMessage = newMessages[newMessages.length - 1];
-                if (lastMessage.role === 'assistant') {
-                  const { content, referenced_documents } = lastMessage;
-                  scheduleUpdate({ content, referenced_documents });
+              const allMessages = event.data.messages;
+              if (allMessages && allMessages.length > 0) {
+                // Convert all messages to a single display content (Claude Code style)
+                let displayContent = '';
+
+                for (let i = 0; i < allMessages.length; i++) {
+                  const msg = allMessages[i];
+
+                  // Skip user messages (already displayed separately)
+                  if (msg.role === 'user') {
+                    continue;
+                  }
+
+                  // Assistant message with tool calls
+                  if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+                    if (msg.content) {
+                      displayContent += `🤔 **Thinking**\n\n${msg.content}\n\n`;
+                    }
+                    displayContent += `🔧 **Using tools:**\n`;
+                    for (const toolCall of msg.tool_calls) {
+                      displayContent += `- \`${toolCall.function.name}\`\n`;
+                    }
+                    displayContent += '\n';
+                    continue;
+                  }
+
+                  // Tool result messages
+                  if (msg.role === 'tool' && msg.tool_call_id) {
+                    const toolName = msg.name || 'tool';
+                    displayContent += `✅ **Tool result** (\`${toolName}\`)\n\n`;
+                    if (msg.content) {
+                      // Truncate long results
+                      const truncated = msg.content.length > 500
+                        ? msg.content.substring(0, 500) + '...\n\n*(truncated)*'
+                        : msg.content;
+                      displayContent += `\`\`\`\n${truncated}\n\`\`\`\n\n`;
+                    }
+                    continue;
+                  }
+
+                  // Final assistant message (no tool calls)
+                  if (msg.role === 'assistant' && (!msg.tool_calls || msg.tool_calls.length === 0)) {
+                    if (msg.content) {
+                      displayContent += `${msg.content}\n\n`;
+                    }
+                  }
                 }
+
+                // Update with formatted content
+                scheduleUpdate({
+                  content: displayContent.trim(),
+                  referenced_documents: allMessages[allMessages.length - 1]?.referenced_documents
+                });
               }
             }
 

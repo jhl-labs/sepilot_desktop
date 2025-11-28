@@ -974,7 +974,7 @@ export class CodingAgentGraph {
           ...state,
           messages: [...state.messages, ...(agentResult.messages || [])],
         };
-        yield { type: 'node', node: 'agent', data: agentResult };
+        yield { type: 'node', node: 'agent', data: { ...agentResult, messages: state.messages } };
 
         const lastMessage = state.messages[state.messages.length - 1];
 
@@ -1046,13 +1046,13 @@ export class CodingAgentGraph {
           modifiedFiles: toolsResult.modifiedFiles || state.modifiedFiles,
           fileChangesCount: (state.fileChangesCount || 0) + (toolsResult.fileChangesCount || 0),
         };
-        yield { type: 'node', node: 'tools', data: toolsResult };
+        yield { type: 'node', node: 'tools', data: { ...toolsResult, messages: state.messages } };
 
         // Verifier
         yield { type: 'node', node: 'verifier', data: { status: 'starting' } };
         const verifierResult = await verificationNode(state);
         state = { ...state, ...verifierResult };
-        yield { type: 'node', node: 'verifier', data: verifierResult };
+        yield { type: 'node', node: 'verifier', data: { ...verifierResult, messages: state.messages } };
 
         if (!state.needsAdditionalIteration) {
           continueLoop = false;
@@ -1063,7 +1063,7 @@ export class CodingAgentGraph {
       yield { type: 'node', node: 'reporter', data: { status: 'starting' } };
       const reportResult = await reporterNode(state);
       state = { ...state, ...reportResult };
-      yield { type: 'node', node: 'reporter', data: reportResult };
+      yield { type: 'node', node: 'reporter', data: { ...reportResult, messages: state.messages } };
 
     } catch (error: any) {
       console.error('[CodingAgentGraph] Stream error:', error);

@@ -807,29 +807,61 @@ export function InputBox() {
                 }
 
                 // 각 노드의 실행 결과에서 메시지 업데이트
-                // Coding Agent의 모든 노드 메시지를 누적 저장
+                // Coding Agent의 모든 과정을 Claude Code 스타일로 표시
                 if (event.type === 'node' && event.data?.messages) {
-                  const newMessages = event.data.messages;
-                  if (newMessages && newMessages.length > 0) {
-                    // Process all assistant messages from the node
-                    for (const message of newMessages) {
-                      if (message.role === 'assistant' && message.content) {
-                        // Accumulate content from all nodes (Planning, Agent, Reporter, etc.)
-                        const existingContent = accumulatedMessage.content || accumulatedContent || '';
+                  const allMessages = event.data.messages;
+                  if (allMessages && allMessages.length > 0) {
+                    // Convert all messages to a single display content (Claude Code style)
+                    let displayContent = '';
 
-                        // Avoid duplicating the same content
-                        if (!existingContent.includes(message.content)) {
-                          const newContent = existingContent
-                            ? `${existingContent}\n\n${message.content}`
-                            : message.content;
+                    for (let i = 0; i < allMessages.length; i++) {
+                      const msg = allMessages[i];
 
-                          scheduleUpdate({
-                            content: newContent,
-                            referenced_documents: message.referenced_documents
-                          });
+                      // Skip user messages (already displayed separately)
+                      if (msg.role === 'user') {
+                        continue;
+                      }
+
+                      // Assistant message with tool calls
+                      if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+                        if (msg.content) {
+                          displayContent += `🤔 **Thinking**\n\n${msg.content}\n\n`;
+                        }
+                        displayContent += `🔧 **Using tools:**\n`;
+                        for (const toolCall of msg.tool_calls) {
+                          displayContent += `- \`${toolCall.function.name}\`\n`;
+                        }
+                        displayContent += '\n';
+                        continue;
+                      }
+
+                      // Tool result messages
+                      if (msg.role === 'tool' && msg.tool_call_id) {
+                        const toolName = msg.name || 'tool';
+                        displayContent += `✅ **Tool result** (\`${toolName}\`)\n\n`;
+                        if (msg.content) {
+                          // Truncate long results
+                          const truncated = msg.content.length > 500
+                            ? msg.content.substring(0, 500) + '...\n\n*(truncated)*'
+                            : msg.content;
+                          displayContent += `\`\`\`\n${truncated}\n\`\`\`\n\n`;
+                        }
+                        continue;
+                      }
+
+                      // Final assistant message (no tool calls)
+                      if (msg.role === 'assistant' && (!msg.tool_calls || msg.tool_calls.length === 0)) {
+                        if (msg.content) {
+                          displayContent += `${msg.content}\n\n`;
                         }
                       }
                     }
+
+                    // Update with formatted content
+                    scheduleUpdate({
+                      content: displayContent.trim(),
+                      referenced_documents: allMessages[allMessages.length - 1]?.referenced_documents
+                    });
                   }
                 }
 
