@@ -263,6 +263,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <Sidebar
           onDocumentsClick={() => setViewMode('documents')}
           onGalleryClick={() => setViewMode('gallery')}
+          onConversationClick={() => setViewMode('chat')}
         />
 
         {/* Resize Handle */}

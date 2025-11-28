@@ -21,9 +21,10 @@ import type { Conversation, Message } from '@/types';
 interface SidebarProps {
   onDocumentsClick?: () => void;
   onGalleryClick?: () => void;
+  onConversationClick?: () => void;
 }
 
-export function Sidebar({ onDocumentsClick, onGalleryClick }: SidebarProps = {}) {
+export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick }: SidebarProps = {}) {
   const {
     conversations,
     activeConversationId,
@@ -121,6 +122,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick }: SidebarProps = {})
   const handleSearchResultClick = (conversationId: string) => {
     setActiveConversation(conversationId);
     handleClearSearch();
+    onConversationClick?.();
   };
 
   return (
@@ -261,7 +263,10 @@ export function Sidebar({ onDocumentsClick, onGalleryClick }: SidebarProps = {})
                 ) : (
                   <>
                     <button
-                      onClick={() => setActiveConversation(conversation.id)}
+                      onClick={() => {
+                        setActiveConversation(conversation.id);
+                        onConversationClick?.();
+                      }}
                       className="flex flex-1 flex-col items-start px-3 py-2 text-left"
                     >
                       <span className="text-sm font-medium line-clamp-1">
