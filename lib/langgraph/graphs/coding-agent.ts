@@ -445,6 +445,46 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
 
   const messages = state.messages || [];
 
+  // Debug: Log message count and sizes
+  console.log('[CodingAgent.Agent] Message summary:', {
+    totalMessages: messages.length,
+    roles: messages.map(m => m.role),
+    contentLengths: messages.map(m => m.content?.length || 0),
+    hasToolCalls: messages.map(m => !!m.tool_calls),
+  });
+
+  // Filter out messages with empty content (except tool messages which can have empty content)
+  // OpenAI API may reject assistant messages with empty content
+  const filteredMessages = messages.filter(m => {
+    // Keep tool messages (they can have empty content if they're just function results)
+    if (m.role === 'tool') return true;
+    // Keep messages with tool_calls (even if content is empty)
+    if (m.tool_calls && m.tool_calls.length > 0) return true;
+    // Filter out messages with empty or whitespace-only content
+    return m.content && m.content.trim().length > 0;
+  });
+
+  console.log('[CodingAgent.Agent] Filtered messages:', {
+    original: messages.length,
+    filtered: filteredMessages.length,
+    removed: messages.length - filteredMessages.length,
+  });
+
+  // Limit context length to prevent 500 errors from server
+  // Keep only the most recent messages to avoid context overflow
+  const MAX_CONTEXT_MESSAGES = 20;
+  const limitedMessages = filteredMessages.length > MAX_CONTEXT_MESSAGES
+    ? filteredMessages.slice(-MAX_CONTEXT_MESSAGES)
+    : filteredMessages;
+
+  if (filteredMessages.length > MAX_CONTEXT_MESSAGES) {
+    console.log('[CodingAgent.Agent] Context limited:', {
+      original: filteredMessages.length,
+      limited: limitedMessages.length,
+      dropped: filteredMessages.length - limitedMessages.length,
+    });
+  }
+
   // Get Built-in tools and convert to OpenAI format
   const builtinTools = getBuiltinTools();
   const toolsForLLM = builtinTools.map(tool => ({
@@ -506,7 +546,7 @@ Remember: You are running in a desktop application with REAL file system access.
     created_at: Date.now(),
   };
 
-  const messagesWithContext = [codingSystemMsg, executionSpecialistMsg, ...messages];
+  const messagesWithContext = [codingSystemMsg, executionSpecialistMsg, ...limitedMessages];
 
   try {
     // Call LLM with tools (streaming)
