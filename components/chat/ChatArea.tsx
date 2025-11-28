@@ -280,6 +280,19 @@ export function ChatArea() {
                   if (msg.role === 'tool' && msg.tool_call_id) {
                     const toolName = msg.name || 'tool';
 
+                    // Find the corresponding tool call to get arguments
+                    let toolArgs: any = null;
+                    for (let j = i - 1; j >= 0; j--) {
+                      const prevMsg = allMessages[j];
+                      if (prevMsg.role === 'assistant' && prevMsg.tool_calls) {
+                        const toolCall = prevMsg.tool_calls.find((tc: any) => tc.id === msg.tool_call_id);
+                        if (toolCall) {
+                          toolArgs = toolCall.arguments;
+                          break;
+                        }
+                      }
+                    }
+
                     // Check if there's an error in the content
                     const hasError = msg.content && (
                       msg.content.toLowerCase().includes('error:') ||
@@ -289,8 +302,21 @@ export function ChatArea() {
                     );
 
                     if (hasError) {
-                      // Show error details
-                      displayContent += `❌ ${toolName}\n`;
+                      // Show error details with arguments
+                      displayContent += `❌ ${toolName}`;
+
+                      // Show relevant arguments
+                      if (toolArgs) {
+                        if (toolArgs.command) {
+                          displayContent += ` \`${toolArgs.command}\``;
+                        } else if (toolArgs.path) {
+                          displayContent += ` \`${toolArgs.path}\``;
+                        } else if (toolArgs.pattern) {
+                          displayContent += ` \`${toolArgs.pattern}\``;
+                        }
+                      }
+                      displayContent += '\n';
+
                       // Extract and show only the error message (first line or first 200 chars)
                       const errorLines = msg.content.split('\n');
                       const errorMsg = errorLines[0].length > 200

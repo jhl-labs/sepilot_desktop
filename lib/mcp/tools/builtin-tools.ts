@@ -349,7 +349,9 @@ async function listFiles(dir: string, recursive: boolean): Promise<string[]> {
  */
 async function handleCommandExecute(args: { command: string; cwd?: string }): Promise<string> {
   try {
-    const workingDir = args.cwd || getCurrentWorkingDirectory() || process.cwd();
+    // Treat empty string as null/undefined
+    const cwdArg = args.cwd && args.cwd.trim() !== '' ? args.cwd : null;
+    const workingDir = cwdArg || getCurrentWorkingDirectory() || process.cwd();
     console.log(`[Builtin Tools] Executing command: ${args.command} in ${workingDir}`);
 
     const { stdout, stderr } = await execPromise(args.command, {

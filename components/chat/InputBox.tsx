@@ -391,6 +391,35 @@ export function InputBox() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isStreaming, handleStop]);
 
+  // Handle Quick Input message (from global shortcut)
+  useEffect(() => {
+    const handleQuickInputMessage = async (e: Event) => {
+      const customEvent = e as CustomEvent<{ message: string }>;
+      const message = customEvent.detail?.message;
+
+      if (message && message.trim()) {
+        // 입력창에 메시지 설정
+        setInput(message);
+
+        // 잠시 대기 후 전송 (상태 업데이트 보장)
+        setTimeout(() => {
+          // handleSend는 내부적으로 정의되어 있으므로 직접 호출할 수 없음
+          // 대신 input 상태가 업데이트되면 바로 전송을 트리거
+          const sendButton = document.querySelector('[data-send-button]') as HTMLButtonElement;
+          if (sendButton) {
+            sendButton.click();
+          }
+        }, 100);
+      }
+    };
+
+    window.addEventListener('sepilot:quick-input-message', handleQuickInputMessage);
+
+    return () => {
+      window.removeEventListener('sepilot:quick-input-message', handleQuickInputMessage);
+    };
+  }, []);
+
   // Handle image selection
   const handleImageSelect = async () => {
     if (!isElectron() || !window.electronAPI) {
@@ -867,6 +896,19 @@ export function InputBox() {
                       if (msg.role === 'tool' && msg.tool_call_id) {
                         const toolName = msg.name || 'tool';
 
+                        // Find the corresponding tool call to get arguments
+                        let toolArgs: any = null;
+                        for (let j = i - 1; j >= 0; j--) {
+                          const prevMsg = allMessages[j];
+                          if (prevMsg.role === 'assistant' && prevMsg.tool_calls) {
+                            const toolCall = prevMsg.tool_calls.find((tc: any) => tc.id === msg.tool_call_id);
+                            if (toolCall) {
+                              toolArgs = toolCall.arguments;
+                              break;
+                            }
+                          }
+                        }
+
                         // Check if there's an error in the content
                         const hasError = msg.content && (
                           msg.content.toLowerCase().includes('error:') ||
@@ -876,8 +918,21 @@ export function InputBox() {
                         );
 
                         if (hasError) {
-                          // Show error details
-                          displayContent += `❌ ${toolName}\n`;
+                          // Show error details with arguments
+                          displayContent += `❌ ${toolName}`;
+
+                          // Show relevant arguments
+                          if (toolArgs) {
+                            if (toolArgs.command) {
+                              displayContent += ` \`${toolArgs.command}\``;
+                            } else if (toolArgs.path) {
+                              displayContent += ` \`${toolArgs.path}\``;
+                            } else if (toolArgs.pattern) {
+                              displayContent += ` \`${toolArgs.pattern}\``;
+                            }
+                          }
+                          displayContent += '\n';
+
                           // Extract and show only the error message (first line or first 200 chars)
                           const errorLines = msg.content.split('\n');
                           const errorMsg = errorLines[0].length > 200
@@ -1550,6 +1605,7 @@ export function InputBox() {
                 size="icon"
                 className="h-9 w-9 rounded-xl shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-50"
                 title="전송 (Enter)"
+                data-send-button
               >
                 <Send className="h-4 w-4" />
               </Button>
