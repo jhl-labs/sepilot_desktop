@@ -630,8 +630,15 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
   console.log('[CodingAgent.Tools] Built-in tools available:', Array.from(builtinToolNames));
 
   // Execute tools
-  const results = await Promise.all(
-    lastMessage.tool_calls.map(async (call) => {
+  type ToolExecutionResult = {
+    toolCallId: string;
+    toolName: string;
+    result: string | null;
+    error?: string;
+  };
+
+  const results: ToolExecutionResult[] = await Promise.all(
+    lastMessage.tool_calls.map(async (call): Promise<ToolExecutionResult> => {
       try {
         // Check if it's a built-in tool
         if (builtinToolNames.has(call.name)) {
@@ -669,8 +676,38 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
   const filesAfter = await getWorkspaceFiles(workspacePath);
   const fileChanges = detectFileChanges(filesBefore, filesAfter);
 
+  // Convert tool results to messages (OpenAI compatible format)
+  const toolMessages: Message[] = results.map((result) => {
+    let content = '';
+
+    if (result.error) {
+      content = `Error: ${result.error}`;
+    } else if (result.result !== null && result.result !== undefined) {
+      content = typeof result.result === 'string' ? result.result : JSON.stringify(result.result);
+    } else {
+      content = 'No result';
+    }
+
+    console.log('[CodingAgent.Tools] Creating tool result message:', {
+      toolCallId: result.toolCallId,
+      toolName: result.toolName,
+      hasError: !!result.error,
+      contentLength: content.length,
+    });
+
+    return {
+      id: `tool-${result.toolCallId}`,
+      role: 'tool' as const,
+      content,
+      created_at: Date.now(),
+      tool_call_id: result.toolCallId,
+      name: result.toolName,
+    };
+  });
+
   const updates: Partial<CodingAgentState> = {
     toolResults: results,
+    messages: toolMessages, // Add tool result messages
   };
 
   // Track file changes if any
@@ -759,55 +796,45 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
 }
 
 /**
- * Reporter Node: Generate final summary
+ * Reporter Node: Generate final summary (only for errors or max iterations)
  */
 async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
-  console.log('[Reporter] Generating final report');
+  console.log('[Reporter] Checking if final report is needed');
 
-  const toolResults = state.toolResults || [];
-  const modifiedFiles = state.modifiedFiles || [];
-  const planSteps = state.planSteps || [];
+  const hasError = state.toolResults?.some(r => r.error);
+  const maxIterations = state.maxIterations || 10;
+  const iterationCount = state.iterationCount || 0;
 
-  // Build summary
-  const summaryParts: string[] = [];
+  // Only generate a report message for errors or max iterations reached
+  if (hasError) {
+    const errorMessage: Message = {
+      id: `report-${Date.now()}`,
+      role: 'assistant',
+      content: '❌ 작업 중 오류가 발생했습니다. 위의 툴 실행 결과를 확인해주세요.',
+      created_at: Date.now(),
+    };
 
-  summaryParts.push('📋 작업 요약');
-  summaryParts.push('');
+    console.log('[Reporter] Error detected, generating error report');
+    return {
+      messages: [errorMessage],
+    };
+  } else if (iterationCount >= maxIterations) {
+    const maxIterMessage: Message = {
+      id: `report-${Date.now()}`,
+      role: 'assistant',
+      content: `⚠️ 최대 반복 횟수(${maxIterations})에 도달했습니다. 작업이 복잡하여 완료하지 못했을 수 있습니다.`,
+      created_at: Date.now(),
+    };
 
-  if (planSteps.length > 0) {
-    summaryParts.push(`- 계획 단계: ${planSteps.length}개`);
+    console.log('[Reporter] Max iterations reached, generating warning');
+    return {
+      messages: [maxIterMessage],
+    };
   }
 
-  if (toolResults.length > 0) {
-    summaryParts.push(`- 도구 실행: ${toolResults.length}회`);
-  }
-
-  if (modifiedFiles.length > 0) {
-    summaryParts.push(`- 수정된 파일: ${modifiedFiles.length}개`);
-    summaryParts.push('');
-    summaryParts.push('수정된 파일 목록:');
-    for (const file of modifiedFiles.slice(0, 10)) {
-      summaryParts.push(`  • ${file}`);
-    }
-    if (modifiedFiles.length > 10) {
-      summaryParts.push(`  ... 외 ${modifiedFiles.length - 10}개`);
-    }
-  }
-
-  if (summaryParts.length === 2) {
-    summaryParts.push('작업이 완료되었습니다.');
-  }
-
-  const reportMessage: Message = {
-    id: `report-${Date.now()}`,
-    role: 'assistant',
-    content: summaryParts.join('\n'),
-    created_at: Date.now(),
-  };
-
-  return {
-    messages: [reportMessage],
-  };
+  // Normal completion - no additional message needed
+  console.log('[Reporter] Normal completion, no report message generated');
+  return {};
 }
 
 // ===========================
@@ -934,47 +961,15 @@ export class CodingAgentGraph {
     this.toolApprovalCallback = toolApprovalCallback;
     let state = { ...initialState };
 
-    console.log('[CodingAgentGraph] Starting stream');
+    console.log('[CodingAgentGraph] Starting stream (simplified Claude Code style)');
 
     try {
-      // Triage
-      yield { type: 'node', node: 'triage', data: { status: 'starting' } };
-      const triageResult = await triageNode(state);
-      state = { ...state, ...triageResult };
-      yield { type: 'node', node: 'triage', data: triageResult };
+      const maxIterations = state.maxIterations || 10;
+      let iterations = 0;
+      let hasError = false;
 
-      // Direct response path
-      if (state.triageDecision === 'direct_response') {
-        yield { type: 'node', node: 'direct_response', data: { status: 'starting' } };
-        const directResult = await directResponseNode(state);
-        state = { ...state, ...directResult };
-        yield { type: 'node', node: 'direct_response', data: directResult };
-        return;
-      }
-
-      // Full pipeline path
-      // Planning
-      yield { type: 'node', node: 'planner', data: { status: 'starting' } };
-      const planResult = await planningNode(state);
-      state = { ...state, ...planResult };
-      yield { type: 'node', node: 'planner', data: planResult };
-
-      // Main loop
-      let continueLoop = true;
-      while (continueLoop) {
-        // Iteration Guard
-        yield { type: 'node', node: 'iteration_guard', data: { status: 'starting' } };
-        const guardResult = await iterationGuardNode(state);
-        state = {
-          ...state,
-          ...guardResult,
-          iterationCount: (state.iterationCount || 0) + (guardResult.iterationCount || 0),
-        };
-        yield { type: 'node', node: 'iteration_guard', data: guardResult };
-
-        if (state.forceTermination || guardDecision(state) === 'stop') {
-          break;
-        }
+      // Main ReAct loop (simplified - no triage, no planner)
+      while (iterations < maxIterations) {
 
         // Agent (LLM with tools)
         yield { type: 'node', node: 'agent', data: { status: 'starting' } };
@@ -988,17 +983,10 @@ export class CodingAgentGraph {
         const lastMessage = state.messages[state.messages.length - 1];
 
         // Check if tools need to be called
-        if (shouldUseTool(state) === 'end') {
-          // No tools, go to verifier
-          yield { type: 'node', node: 'verifier', data: { status: 'starting' } };
-          const verifierResult = await verificationNode(state);
-          state = { ...state, ...verifierResult };
-          yield { type: 'node', node: 'verifier', data: verifierResult };
-
-          if (!state.needsAdditionalIteration) {
-            break;
-          }
-          continue;
+        if (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) {
+          // No tools - normal completion
+          console.log('[CodingAgentGraph] No tool calls, ending loop');
+          break;
         }
 
         // Tool approval (human-in-the-loop)
@@ -1049,29 +1037,41 @@ export class CodingAgentGraph {
         // Execute tools
         yield { type: 'node', node: 'tools', data: { status: 'starting' } };
         const toolsResult = await enhancedToolsNode(state);
+
+        // Check for errors
+        if (toolsResult.toolResults?.some(r => r.error)) {
+          hasError = true;
+        }
+
         state = {
           ...state,
-          ...toolsResult,
+          messages: [...state.messages, ...(toolsResult.messages || [])],
+          toolResults: toolsResult.toolResults || state.toolResults,
           modifiedFiles: toolsResult.modifiedFiles || state.modifiedFiles,
           fileChangesCount: (state.fileChangesCount || 0) + (toolsResult.fileChangesCount || 0),
         };
         yield { type: 'node', node: 'tools', data: { ...toolsResult, messages: state.messages } };
 
-        // Verifier
-        yield { type: 'node', node: 'verifier', data: { status: 'starting' } };
-        const verifierResult = await verificationNode(state);
-        state = { ...state, ...verifierResult };
-        yield { type: 'node', node: 'verifier', data: { ...verifierResult, messages: state.messages } };
-
-        if (!state.needsAdditionalIteration) {
-          continueLoop = false;
-        }
+        iterations++;
       }
 
-      // Reporter
+      console.log('[CodingAgentGraph] Stream completed, total iterations:', iterations);
+
+      // Reporter: Only for errors or max iterations
       yield { type: 'node', node: 'reporter', data: { status: 'starting' } };
-      const reportResult = await reporterNode(state);
-      state = { ...state, ...reportResult };
+      // Pass hasError and iterations through state
+      const stateForReporter = {
+        ...state,
+        toolResults: hasError ? state.toolResults : [],
+        iterationCount: iterations,
+      };
+      const reportResult = await reporterNode(stateForReporter);
+      if (reportResult.messages && reportResult.messages.length > 0) {
+        state = {
+          ...state,
+          messages: [...state.messages, ...reportResult.messages],
+        };
+      }
       yield { type: 'node', node: 'reporter', data: { ...reportResult, messages: state.messages } };
 
     } catch (error: any) {
