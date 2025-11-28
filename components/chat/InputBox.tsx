@@ -26,7 +26,7 @@ import { getWebLLMClient, configureWebLLMClient } from '@/lib/llm/web-client';
 import { ImageAttachment, Message, ToolCall, ComfyUIConfig, NetworkConfig, LLMConfig } from '@/types';
 import { ToolApprovalDialog } from './ToolApprovalDialog';
 import { ImageGenerationProgressBar } from './ImageGenerationProgressBar';
-import { LLMStatusBar } from './LLMStatusBar';
+import { LLMStatusBar, type ToolInfo } from './LLMStatusBar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +45,7 @@ export function InputBox() {
   const [mounted, setMounted] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [tools, setTools] = useState<ToolInfo[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingConversationIdRef = useRef<string | null>(null);
@@ -120,6 +121,42 @@ export function InputBox() {
   // Set mounted state to avoid hydration mismatch with Tooltip
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Load available tools (MCP + builtin)
+  useEffect(() => {
+    const loadTools = async () => {
+      if (!isElectron() || !window.electronAPI) {
+        return;
+      }
+
+      try {
+        // Get MCP tools
+        const mcpResult = await window.electronAPI.mcp.getAllTools();
+        const mcpTools: ToolInfo[] = mcpResult.success && mcpResult.data
+          ? mcpResult.data.map((tool: any) => ({
+              name: tool.name,
+              description: tool.description,
+              serverName: tool.serverName,
+            }))
+          : [];
+
+        // Get builtin tools
+        const builtinTools: ToolInfo[] = [
+          { name: 'file_read', description: 'Read file contents from the filesystem', serverName: 'builtin' },
+          { name: 'file_write', description: 'Write content to a file (overwrites existing content)', serverName: 'builtin' },
+          { name: 'file_edit', description: 'Edit a file by replacing old text with new text', serverName: 'builtin' },
+          { name: 'file_list', description: 'List files in a directory', serverName: 'builtin' },
+        ];
+
+        // Combine all tools
+        setTools([...mcpTools, ...builtinTools]);
+      } catch (error) {
+        console.error('[InputBox] Failed to load tools:', error);
+      }
+    };
+
+    loadTools();
   }, []);
 
   // Listen for file drop events from ChatArea
@@ -1432,6 +1469,7 @@ export function InputBox() {
           messages={messages}
           input={input}
           mounted={mounted}
+          tools={tools}
           onCompact={handleCompact}
           onConfigUpdate={handleConfigUpdate}
         />

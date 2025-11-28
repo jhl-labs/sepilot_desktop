@@ -1,10 +1,17 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Minimize2 } from 'lucide-react';
+import { Minimize2, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { LLMConfig, Message } from '@/types';
+
+export interface ToolInfo {
+  name: string;
+  description: string;
+  serverName: string;
+}
 
 interface LLMStatusBarProps {
   isStreaming: boolean;
@@ -12,6 +19,7 @@ interface LLMStatusBarProps {
   messages: Message[];
   input: string;
   mounted: boolean;
+  tools?: ToolInfo[];
   onCompact?: () => void;
   onConfigUpdate?: (config: LLMConfig) => void;
 }
@@ -22,11 +30,29 @@ export function LLMStatusBar({
   messages,
   input,
   mounted,
+  tools = [],
   onCompact,
   onConfigUpdate,
 }: LLMStatusBarProps) {
   const [editingField, setEditingField] = useState<'maxTokens' | 'temperature' | null>(null);
   const [editValue, setEditValue] = useState('');
+
+  // Group tools by server
+  const groupedTools = useMemo(() => {
+    const groups: Record<string, ToolInfo[]> = {};
+    tools.forEach((tool) => {
+      if (!groups[tool.serverName]) {
+        groups[tool.serverName] = [];
+      }
+      groups[tool.serverName].push(tool);
+    });
+    return groups;
+  }, [tools]);
+
+  // Count MCP tools (excluding builtin)
+  const mcpToolCount = useMemo(() => {
+    return tools.filter((tool) => tool.serverName !== 'builtin').length;
+  }, [tools]);
 
   // Estimate token count for context usage display
   // Rough estimation: ~4 chars per token for English, ~2-3 for Korean
@@ -152,6 +178,50 @@ export function LLMStatusBar({
               >
                 temp {llmConfig.temperature}
               </span>
+            )}
+            {tools.length > 0 && (
+              <>
+                <span className="text-muted-foreground/50">·</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors"
+                      title="사용 가능한 툴 목록 보기"
+                    >
+                      <Wrench className="h-3 w-3" />
+                      <span>{mcpToolCount} tools</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 max-h-96 overflow-y-auto" side="top" align="start">
+                    <div className="space-y-3">
+                      <div className="font-semibold text-sm border-b pb-2">
+                        사용 가능한 툴 ({tools.length}개)
+                      </div>
+                      {Object.entries(groupedTools).map(([serverName, serverTools]) => (
+                        <div key={serverName} className="space-y-1">
+                          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            {serverName === 'builtin' ? 'Built-in Tools' : serverName}
+                            <span className="ml-1 text-muted-foreground/70">({serverTools.length})</span>
+                          </div>
+                          <div className="space-y-1 pl-2">
+                            {serverTools.map((tool) => (
+                              <div
+                                key={`${tool.serverName}-${tool.name}`}
+                                className="text-xs py-1 border-l-2 border-muted pl-2"
+                              >
+                                <div className="font-mono font-medium">{tool.name}</div>
+                                <div className="text-muted-foreground text-[10px] mt-0.5">
+                                  {tool.description}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </>
             )}
           </>
         ) : (
