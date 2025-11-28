@@ -140,7 +140,7 @@ export const CodingAgentStateAnnotation = Annotation.Root({
   }),
   maxIterations: Annotation<number>({
     reducer: (_existing: number, update: number) => update,
-    default: () => 10,
+    default: () => 50,
   }),
   forceTermination: Annotation<boolean>({
     reducer: (_existing: boolean, update: boolean) => update,
@@ -228,7 +228,7 @@ export function createInitialAgentState(messages: Message[] = [], conversationId
 export function createInitialCodingAgentState(
   messages: Message[] = [],
   conversationId: string = '',
-  maxIterations: number = 10
+  maxIterations: number = 50
 ): CodingAgentState {
   return {
     messages,

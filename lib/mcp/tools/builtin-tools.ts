@@ -6,8 +6,12 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { MCPTool } from '../types';
 import { getCurrentWorkingDirectory } from '../../llm/streaming-callback';
+
+const execPromise = promisify(exec);
 
 /**
  * Resolve path relative to working directory
@@ -124,6 +128,62 @@ export const fileListTool: MCPTool = {
 };
 
 /**
+ * Command Execute Tool
+ */
+export const commandExecuteTool: MCPTool = {
+  name: 'command_execute',
+  description: 'Execute shell commands (npm, git, etc.). Be careful with destructive commands.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      command: {
+        type: 'string',
+        description: 'Shell command to execute (e.g., "npm install", "git status")',
+      },
+      cwd: {
+        type: 'string',
+        description: 'Working directory for command execution (optional, defaults to project root)',
+      },
+    },
+    required: ['command'],
+  },
+};
+
+/**
+ * Grep Search Tool
+ */
+export const grepSearchTool: MCPTool = {
+  name: 'grep_search',
+  description: 'Search for patterns in files using ripgrep (rg). Fast code search across the codebase.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      pattern: {
+        type: 'string',
+        description: 'Search pattern (regex supported)',
+      },
+      path: {
+        type: 'string',
+        description: 'Directory or file to search in (defaults to current directory)',
+        default: '.',
+      },
+      file_type: {
+        type: 'string',
+        description: 'File type filter (e.g., "ts", "js", "py")',
+      },
+      case_sensitive: {
+        type: 'boolean',
+        description: 'Case-sensitive search',
+        default: true,
+      },
+    },
+    required: ['pattern'],
+  },
+};
+
+/**
  * Execute built-in file tools
  */
 export async function executeBuiltinTool(
@@ -139,6 +199,15 @@ export async function executeBuiltinTool(
       return await handleFileEdit(args as { path: string; old_str: string; new_str: string });
     case 'file_list':
       return await handleFileList(args as { path?: string; recursive?: boolean });
+    case 'command_execute':
+      return await handleCommandExecute(args as { command: string; cwd?: string });
+    case 'grep_search':
+      return await handleGrepSearch(args as {
+        pattern: string;
+        path?: string;
+        file_type?: string;
+        case_sensitive?: boolean;
+      });
     default:
       throw new Error(`Unknown builtin tool: ${toolName}`);
   }
@@ -276,8 +345,115 @@ async function listFiles(dir: string, recursive: boolean): Promise<string[]> {
 }
 
 /**
+ * Handle command_execute
+ */
+async function handleCommandExecute(args: { command: string; cwd?: string }): Promise<string> {
+  try {
+    const workingDir = args.cwd || getCurrentWorkingDirectory() || process.cwd();
+    console.log(`[Builtin Tools] Executing command: ${args.command} in ${workingDir}`);
+
+    const { stdout, stderr } = await execPromise(args.command, {
+      cwd: workingDir,
+      maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+      timeout: 300000, // 5 minutes timeout
+    });
+
+    let result = '';
+    if (stdout) {
+      result += `stdout:\n${stdout}`;
+    }
+    if (stderr) {
+      result += `${result ? '\n\n' : ''}stderr:\n${stderr}`;
+    }
+
+    return result || 'Command executed successfully (no output)';
+  } catch (error: any) {
+    // Include both error message and stderr/stdout if available
+    let errorMsg = `Failed to execute command: ${error.message}`;
+    if (error.stdout) {
+      errorMsg += `\n\nstdout:\n${error.stdout}`;
+    }
+    if (error.stderr) {
+      errorMsg += `\n\nstderr:\n${error.stderr}`;
+    }
+    throw new Error(errorMsg);
+  }
+}
+
+/**
+ * Handle grep_search
+ */
+async function handleGrepSearch(args: {
+  pattern: string;
+  path?: string;
+  file_type?: string;
+  case_sensitive?: boolean;
+}): Promise<string> {
+  try {
+    const searchPath = args.path || '.';
+    const absolutePath = resolvePath(searchPath);
+    const caseSensitive = args.case_sensitive !== false; // default true
+
+    console.log(
+      `[Builtin Tools] Searching pattern: ${args.pattern} in ${searchPath} -> ${absolutePath}`
+    );
+
+    // Build rg command
+    let rgCommand = 'rg';
+
+    // Case sensitivity
+    if (!caseSensitive) {
+      rgCommand += ' -i';
+    }
+
+    // File type filter
+    if (args.file_type) {
+      rgCommand += ` -t ${args.file_type}`;
+    }
+
+    // Show line numbers and file names
+    rgCommand += ' -n';
+
+    // Pattern and path
+    rgCommand += ` "${args.pattern.replace(/"/g, '\\"')}" "${absolutePath}"`;
+
+    const { stdout, stderr } = await execPromise(rgCommand, {
+      maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+      timeout: 60000, // 1 minute timeout
+    });
+
+    if (!stdout && !stderr) {
+      return 'No matches found';
+    }
+
+    return stdout || stderr;
+  } catch (error: any) {
+    // rg returns exit code 1 when no matches found
+    if (error.code === 1 && !error.stdout && !error.stderr) {
+      return 'No matches found';
+    }
+
+    // If rg is not installed, provide helpful message
+    if (error.message.includes('rg') && error.code === 127) {
+      throw new Error(
+        'ripgrep (rg) is not installed. Please install it: https://github.com/BurntSushi/ripgrep#installation'
+      );
+    }
+
+    throw new Error(`Search failed: ${error.message}`);
+  }
+}
+
+/**
  * Get all builtin tools
  */
 export function getBuiltinTools(): MCPTool[] {
-  return [fileReadTool, fileWriteTool, fileEditTool, fileListTool];
+  return [
+    fileReadTool,
+    fileWriteTool,
+    fileEditTool,
+    fileListTool,
+    commandExecuteTool,
+    grepSearchTool,
+  ];
 }
