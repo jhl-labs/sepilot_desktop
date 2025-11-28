@@ -15,6 +15,14 @@ export interface ImageAttachment {
   base64?: string; // For display
 }
 
+export interface FileChange {
+  filePath: string;
+  changeType: 'created' | 'modified' | 'deleted';
+  oldContent?: string;
+  newContent?: string;
+  toolName: string; // file_write, file_edit, etc.
+}
+
 export interface Message {
   id: string;
   conversation_id?: string;
@@ -27,6 +35,7 @@ export interface Message {
   referenced_documents?: ReferencedDocument[];
   tool_call_id?: string; // For tool messages - links to the tool call that triggered this result
   name?: string; // For tool messages - the name of the tool
+  fileChanges?: FileChange[]; // File modifications from tool execution (for CodeDiffViewer)
 }
 
 export interface ToolCall {

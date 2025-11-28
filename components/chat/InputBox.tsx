@@ -72,6 +72,8 @@ export function InputBox() {
     pendingToolApproval,
     setPendingToolApproval,
     clearPendingToolApproval,
+    alwaysApproveToolsForSession,
+    setAlwaysApproveToolsForSession,
     imageGenerationProgress,
     setImageGenerationProgress,
     clearImageGenerationProgress,
@@ -718,6 +720,26 @@ export function InputBox() {
               // Handle tool approval request (Human-in-the-loop)
               if (event.type === 'tool_approval_request') {
                 console.log('[InputBox] Tool approval request received:', event.toolCalls);
+
+                // Auto-approve if session-wide approval is enabled (Claude Code style)
+                const currentStore = useChatStore.getState();
+                if (currentStore.alwaysApproveToolsForSession) {
+                  console.log('[InputBox] Auto-approving tools (session-wide approval enabled)');
+                  (async () => {
+                    try {
+                      if (isElectron() && window.electronAPI?.langgraph) {
+                        await window.electronAPI.langgraph.respondToolApproval(
+                          event.conversationId,
+                          true
+                        );
+                      }
+                    } catch (error) {
+                      console.error('[InputBox] Failed to auto-approve tools:', error);
+                    }
+                  })();
+                  return;
+                }
+
                 setPendingToolApproval({
                   conversationId: event.conversationId,
                   messageId: event.messageId,
@@ -1158,6 +1180,30 @@ export function InputBox() {
     clearPendingToolApproval();
   }, [pendingToolApproval, clearPendingToolApproval]);
 
+  // Handle always approve (session-wide)
+  const handleToolAlwaysApprove = useCallback(async (toolCalls: ToolCall[]) => {
+    if (!pendingToolApproval) return;
+
+    console.log('[InputBox] Always approving tools for session');
+
+    // Set session-wide auto-approval
+    setAlwaysApproveToolsForSession(true);
+
+    // Approve current tools
+    try {
+      if (isElectron() && window.electronAPI?.langgraph) {
+        await window.electronAPI.langgraph.respondToolApproval(
+          pendingToolApproval.conversationId,
+          true
+        );
+      }
+    } catch (error) {
+      console.error('[InputBox] Failed to respond to tool approval:', error);
+    }
+
+    clearPendingToolApproval();
+  }, [pendingToolApproval, clearPendingToolApproval, setAlwaysApproveToolsForSession]);
+
   return (
     <>
       {/* Tool Approval Dialog */}
@@ -1165,6 +1211,7 @@ export function InputBox() {
         <ToolApprovalDialog
           onApprove={handleToolApprove}
           onReject={handleToolReject}
+          onAlwaysApprove={handleToolAlwaysApprove}
         />
       )}
 

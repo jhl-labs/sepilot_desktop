@@ -52,6 +52,7 @@ interface ChatStore {
 
   // Tool Approval (Human-in-the-loop)
   pendingToolApproval: PendingToolApproval | null;
+  alwaysApproveToolsForSession: boolean; // Session-wide auto-approval (like Claude Code)
 
   // Image Generation Progress (per conversation)
   imageGenerationProgress: Map<string, ImageGenerationProgress>; // conversationId -> progress
@@ -96,6 +97,7 @@ interface ChatStore {
   // Actions - Tool Approval (Human-in-the-loop)
   setPendingToolApproval: (approval: PendingToolApproval) => void;
   clearPendingToolApproval: () => void;
+  setAlwaysApproveToolsForSession: (enable: boolean) => void;
 
   // Actions - Image Generation Progress
   setImageGenerationProgress: (progress: ImageGenerationProgress) => void;
@@ -125,6 +127,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Tool Approval (Human-in-the-loop)
   pendingToolApproval: null,
+  alwaysApproveToolsForSession: false,
 
   // Image Generation Progress
   imageGenerationProgress: new Map<string, ImageGenerationProgress>(),
@@ -659,6 +662,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   clearPendingToolApproval: () => {
     set({ pendingToolApproval: null });
+  },
+
+  setAlwaysApproveToolsForSession: (enable: boolean) => {
+    set({ alwaysApproveToolsForSession: enable });
   },
 
   // Image Generation Progress

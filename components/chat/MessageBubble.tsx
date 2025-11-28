@@ -1,14 +1,16 @@
 'use client';
 
-import { Message } from '@/types';
+import { Message, FileChange } from '@/types';
 import { cn } from '@/lib/utils';
 import { User, Bot, Edit2, RefreshCw, Copy, Check, X, FileText, ChevronDown, ChevronUp, ImageIcon } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useChatStore } from '@/lib/store/chat-store';
 import { ImageGenerationProgressBar } from './ImageGenerationProgressBar';
+import { CodeDiffViewer } from './CodeDiffViewer';
+import { isElectron } from '@/lib/platform';
 
 interface MessageBubbleProps {
   message: Message;
@@ -33,6 +35,8 @@ export function MessageBubble({
   const [isHovered, setIsHovered] = useState(false);
   const [copied, setCopied] = useState(false);
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
+  const [detectedFileChanges, setDetectedFileChanges] = useState<FileChange[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(false);
 
   const { addMessage, imageGenerationProgress } = useChatStore();
 
@@ -85,6 +89,73 @@ export function MessageBubble({
     }
     setExpandedDocs(newExpanded);
   };
+
+  // Auto-detect file changes from tool_calls (file_write, file_edit)
+  useEffect(() => {
+    if (!isAssistant || !message.tool_calls || message.tool_calls.length === 0) {
+      return;
+    }
+
+    if (!isElectron() || !window.electronAPI?.file) {
+      return;
+    }
+
+    const detectFileChanges = async () => {
+      setLoadingFiles(true);
+      const fileChanges: FileChange[] = [];
+
+      for (const toolCall of message.tool_calls || []) {
+        const isFileEditTool = toolCall.name === 'file_edit' || toolCall.name === 'file_write';
+        if (!isFileEditTool) continue;
+
+        try {
+          const args = toolCall.arguments as any;
+          const filePath = args.path;
+
+          if (!filePath) continue;
+
+          // Read existing file content (may fail if file doesn't exist)
+          let oldContent = '';
+          try {
+            oldContent = await window.electronAPI.file.read(filePath);
+          } catch {
+            // File doesn't exist yet (for file_write this is OK)
+            oldContent = '';
+          }
+
+          let newContent = '';
+          let changeType: 'created' | 'modified' | 'deleted' = 'modified';
+
+          if (toolCall.name === 'file_edit') {
+            // For file_edit, apply the edit
+            const oldStr = args.old_str || '';
+            const newStr = args.new_str || '';
+            newContent = oldContent.replace(oldStr, newStr);
+            changeType = oldContent ? 'modified' : 'created';
+          } else if (toolCall.name === 'file_write') {
+            // For file_write, use the provided content
+            newContent = args.content || '';
+            changeType = oldContent ? 'modified' : 'created';
+          }
+
+          fileChanges.push({
+            filePath,
+            changeType,
+            oldContent,
+            newContent,
+            toolName: toolCall.name,
+          });
+        } catch (error) {
+          console.error(`Failed to load file content for tool ${toolCall.name}:`, error);
+        }
+      }
+
+      setDetectedFileChanges(fileChanges);
+      setLoadingFiles(false);
+    };
+
+    detectFileChanges();
+  }, [message.tool_calls, isAssistant]);
 
   return (
     <div
@@ -185,6 +256,50 @@ export function MessageBubble({
             </>
           )}
         </div>
+
+        {/* File Changes - Git Diff Viewer (from message.fileChanges or auto-detected) */}
+        {isAssistant && !isEditing && (
+          <>
+            {/* Show auto-detected file changes */}
+            {detectedFileChanges.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-2">
+                  <FileText className="h-3 w-3" />
+                  파일 변경 ({detectedFileChanges.length}개)
+                </div>
+                <div className="space-y-2">
+                  {detectedFileChanges.map((fileChange, index) => (
+                    <CodeDiffViewer
+                      key={`${fileChange.filePath}-${index}`}
+                      filePath={fileChange.filePath}
+                      oldContent={fileChange.oldContent || ''}
+                      newContent={fileChange.newContent || ''}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Fallback: show message.fileChanges if provided and no auto-detected changes */}
+            {message.fileChanges && message.fileChanges.length > 0 && detectedFileChanges.length === 0 && (
+              <div className="mt-3 space-y-2">
+                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-2">
+                  <FileText className="h-3 w-3" />
+                  파일 변경 ({message.fileChanges.length}개)
+                </div>
+                <div className="space-y-2">
+                  {message.fileChanges.map((fileChange, index) => (
+                    <CodeDiffViewer
+                      key={`${fileChange.filePath}-${index}`}
+                      filePath={fileChange.filePath}
+                      oldContent={fileChange.oldContent || ''}
+                      newContent={fileChange.newContent || ''}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Referenced Documents */}
         {isAssistant && message.referenced_documents && message.referenced_documents.length > 0 && !isEditing && (

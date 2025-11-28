@@ -18,6 +18,7 @@ import { CodeDiffViewer } from './CodeDiffViewer';
 interface ToolApprovalDialogProps {
   onApprove: (toolCalls: ToolCall[]) => void;
   onReject: () => void;
+  onAlwaysApprove?: (toolCalls: ToolCall[]) => void; // Always approve for this session
 }
 
 interface FileToolContent {
@@ -26,7 +27,7 @@ interface FileToolContent {
   newContent: string;
 }
 
-export function ToolApprovalDialog({ onApprove, onReject }: ToolApprovalDialogProps) {
+export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: ToolApprovalDialogProps) {
   const { pendingToolApproval } = useChatStore();
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const [fileContents, setFileContents] = useState<Map<string, FileToolContent>>(new Map());
@@ -196,7 +197,7 @@ export function ToolApprovalDialog({ onApprove, onReject }: ToolApprovalDialogPr
           </div>
         </ScrollArea>
 
-        {/* Footer */}
+        {/* Footer - Claude Code style: No / Yes / Always Yes */}
         <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
           <Button
             variant="outline"
@@ -204,15 +205,25 @@ export function ToolApprovalDialog({ onApprove, onReject }: ToolApprovalDialogPr
             className="gap-2"
           >
             <X className="h-4 w-4" />
-            거부
+            아니오
           </Button>
           <Button
+            variant="outline"
             onClick={() => onApprove(toolCalls)}
-            className="gap-2 bg-green-600 hover:bg-green-700"
+            className="gap-2"
           >
             <Check className="h-4 w-4" />
-            승인
+            예
           </Button>
+          {onAlwaysApprove && (
+            <Button
+              onClick={() => onAlwaysApprove(toolCalls)}
+              className="gap-2 bg-green-600 hover:bg-green-700"
+            >
+              <Check className="h-4 w-4" />
+              항상 예 (이번 세션)
+            </Button>
+          )}
         </div>
       </div>
     </div>
