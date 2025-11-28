@@ -21,7 +21,7 @@ const FONT_SCALE_OPTIONS = [
 ];
 
 export function ChatArea() {
-  const { messages, activeConversationId, getGraphConfig, updateMessage, deleteMessage, addMessage, startStreaming, stopStreaming, streamingConversations } = useChatStore();
+  const { messages, activeConversationId, getGraphConfig, updateMessage, deleteMessage, addMessage, startStreaming, stopStreaming, streamingConversations, workingDirectory } = useChatStore();
 
   // Get streaming state for current conversation
   const streamingMessageId = activeConversationId ? streamingConversations.get(activeConversationId) || null : null;
@@ -264,26 +264,42 @@ export function ChatArea() {
                   // Assistant message with tool calls
                   if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
                     if (msg.content) {
-                      displayContent += `🤔 **Thinking**\n\n${msg.content}\n\n`;
+                      // Truncate long thinking content
+                      const thinkingContent = msg.content.length > 300
+                        ? msg.content.substring(0, 300) + '...'
+                        : msg.content;
+                      displayContent += `💭 ${thinkingContent}\n\n`;
                     }
-                    displayContent += `🔧 **Using tools:**\n`;
-                    for (const toolCall of msg.tool_calls) {
-                      displayContent += `- \`${toolCall.name}\`\n`;
-                    }
-                    displayContent += '\n';
+                    // Show tool calls in a compact format
+                    const toolNames = msg.tool_calls.map((tc: any) => tc.name).join(', ');
+                    displayContent += `🔧 ${toolNames}\n\n`;
                     continue;
                   }
 
                   // Tool result messages
                   if (msg.role === 'tool' && msg.tool_call_id) {
                     const toolName = msg.name || 'tool';
-                    displayContent += `✅ **Tool result** (\`${toolName}\`)\n\n`;
-                    if (msg.content) {
-                      // Truncate long results
-                      const truncated = msg.content.length > 500
-                        ? msg.content.substring(0, 500) + '...\n\n*(truncated)*'
-                        : msg.content;
-                      displayContent += `\`\`\`\n${truncated}\n\`\`\`\n\n`;
+
+                    // Check if there's an error in the content
+                    const hasError = msg.content && (
+                      msg.content.toLowerCase().includes('error:') ||
+                      msg.content.toLowerCase().includes('failed to') ||
+                      msg.content.toLowerCase().includes('enoent') ||
+                      msg.content.toLowerCase().includes('eacces')
+                    );
+
+                    if (hasError) {
+                      // Show error details
+                      displayContent += `❌ ${toolName}\n`;
+                      // Extract and show only the error message (first line or first 200 chars)
+                      const errorLines = msg.content.split('\n');
+                      const errorMsg = errorLines[0].length > 200
+                        ? errorLines[0].substring(0, 200) + '...'
+                        : errorLines[0];
+                      displayContent += `   ${errorMsg}\n\n`;
+                    } else {
+                      // Just show success indicator
+                      displayContent += `✅ ${toolName}\n\n`;
                     }
                     continue;
                   }
@@ -318,7 +334,10 @@ export function ChatArea() {
           await window.electronAPI.langgraph.stream(
             graphConfig,
             previousMessages,
-            conversationId
+            conversationId,
+            undefined, // comfyUIConfig
+            undefined, // networkConfig
+            workingDirectory || undefined // workingDirectory for Coding Agent
           );
         } finally {
           // Cleanup event listener
