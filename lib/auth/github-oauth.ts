@@ -22,7 +22,11 @@ export class GitHubOAuth {
    */
   private generateCodeVerifier(): string {
     const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
+    if (typeof window !== 'undefined' && window.crypto) {
+      window.crypto.getRandomValues(array);
+    } else if (typeof crypto !== 'undefined') {
+      crypto.getRandomValues(array);
+    }
     return this.base64URLEncode(array);
   }
 
@@ -32,7 +36,8 @@ export class GitHubOAuth {
   private async generateCodeChallenge(verifier: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(verifier);
-    const hash = await crypto.subtle.digest('SHA-256', data);
+    const cryptoObj = typeof window !== 'undefined' && window.crypto ? window.crypto : crypto;
+    const hash = await cryptoObj.subtle.digest('SHA-256', data);
     return this.base64URLEncode(new Uint8Array(hash));
   }
 
@@ -53,7 +58,7 @@ export class GitHubOAuth {
 
     // Code Verifier 저장 (나중에 토큰 교환 시 필요)
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('oauth_code_verifier', codeVerifier);
+      window.sessionStorage.setItem('oauth_code_verifier', codeVerifier);
     }
 
     // GitHub OAuth URL 생성
@@ -75,8 +80,8 @@ export class GitHubOAuth {
     // Code Verifier 가져오기
     let codeVerifier = '';
     if (typeof window !== 'undefined') {
-      codeVerifier = sessionStorage.getItem('oauth_code_verifier') || '';
-      sessionStorage.removeItem('oauth_code_verifier');
+      codeVerifier = window.sessionStorage.getItem('oauth_code_verifier') || '';
+      window.sessionStorage.removeItem('oauth_code_verifier');
     }
 
     // 토큰 교환 (Renderer에서는 IPC 통해 Main Process에서 처리)

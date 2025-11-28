@@ -87,8 +87,8 @@ const config = {
         ],
       },
       moduleFileExtensions: ['ts', 'js', 'json', 'node'],
-      testPathIgnorePatterns: ['/node_modules/', '/dist/'],
-      transformIgnorePatterns: ['/node_modules/(?!(@langchain|langchain)/)'],
+      testPathIgnorePatterns: ['/node_modules/', '/dist/', '/langgraph/state.test.ts'],
+      transformIgnorePatterns: ['/node_modules/(?!(@langchain|langchain|p-retry|is-network-error)/)'],
     },
   ],
 

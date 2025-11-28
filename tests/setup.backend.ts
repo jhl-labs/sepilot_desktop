@@ -18,26 +18,24 @@ global.fetch = jest.fn();
 
 // Mock crypto for UUID generation (Node.js environment)
 const crypto = require('crypto');
-if (!global.crypto) {
-  (global as any).crypto = {
-    randomUUID: () => crypto.randomUUID(),
-    getRandomValues: (arr: Uint8Array) => {
-      const bytes = crypto.randomBytes(arr.length);
-      arr.set(bytes);
-      return arr;
-    },
-    subtle: {
-      digest: jest.fn(),
-      encrypt: jest.fn(),
-      decrypt: jest.fn(),
-      importKey: jest.fn(),
-      exportKey: jest.fn(),
-      generateKey: jest.fn(),
-      deriveBits: jest.fn(),
-      deriveKey: jest.fn(),
-    },
-  };
-}
+(global as any).crypto = {
+  randomUUID: jest.fn(() => '12345678-1234-4567-8901-123456789012'),
+  getRandomValues: (arr: Uint8Array) => {
+    const bytes = crypto.randomBytes(arr.length);
+    arr.set(bytes);
+    return arr;
+  },
+  subtle: {
+    digest: jest.fn(),
+    encrypt: jest.fn(),
+    decrypt: jest.fn(),
+    importKey: jest.fn(),
+    exportKey: jest.fn(),
+    generateKey: jest.fn(),
+    deriveBits: jest.fn(),
+    deriveKey: jest.fn(),
+  },
+};
 
 // Mock window.electronAPI for backend tests that use it
 export const mockElectronAPI = {
@@ -151,6 +149,10 @@ const mockSessionStorage = {
   key: jest.fn(),
 };
 
+// Make localStorage and sessionStorage available globally for backend tests
+(global as any).localStorage = mockLocalStorage;
+(global as any).sessionStorage = mockSessionStorage;
+
 // Minimal window mock for backend tests that need it
 const eventListeners: Record<string, Array<(...args: any[]) => void>> = {};
 
@@ -230,4 +232,10 @@ beforeEach(() => {
   mockLocalStorage.setItem.mockReset();
   mockLocalStorage.removeItem.mockReset();
   mockLocalStorage.clear.mockReset();
+  // Reset crypto.randomUUID mock
+  if ((global as any).crypto && (global as any).crypto.randomUUID) {
+    ((global as any).crypto.randomUUID as jest.Mock).mockReturnValue(
+      '12345678-1234-4567-8901-123456789012'
+    );
+  }
 });
