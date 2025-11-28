@@ -163,6 +163,11 @@ export const CodingAgentStateAnnotation = Annotation.Root({
     reducer: (_existing: boolean, update: boolean) => update,
     default: () => false,
   }),
+  // Error Tracking
+  agentError: Annotation<string>({
+    reducer: (_existing: string, update: string) => update,
+    default: () => '',
+  }),
   // Token & Cost Tracking
   totalTokensUsed: Annotation<number>({
     reducer: (existing: number, update: number) => existing + update,
@@ -246,6 +251,7 @@ export function createInitialCodingAgentState(
     triageReason: '',
     lastApprovalStatus: '',
     needsAdditionalIteration: false,
+    agentError: '',
     totalTokensUsed: 0,
     estimatedCost: 0,
   };

@@ -573,12 +573,13 @@ Remember: You are running in a desktop application with REAL file system access.
     const errorMessage: Message = {
       id: `msg-${Date.now()}`,
       role: 'assistant',
-      content: `LLM error: ${error.message}`,
+      content: `❌ LLM 호출 오류: ${error.message}\n\n서버에서 500 Internal Server Error를 반환했습니다. LLM 서버 상태를 확인해주세요.`,
       created_at: Date.now(),
     };
 
     return {
       messages: [errorMessage],
+      agentError: error.message, // Add error flag for stream() to detect
     };
   }
 }
@@ -801,12 +802,17 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
 async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
   console.log('[Reporter] Checking if final report is needed');
 
-  const hasError = state.toolResults?.some(r => r.error);
+  const hasToolError = state.toolResults?.some(r => r.error);
+  const hasAgentError = state.agentError && state.agentError.length > 0;
   const maxIterations = state.maxIterations || 10;
   const iterationCount = state.iterationCount || 0;
 
   // Only generate a report message for errors or max iterations reached
-  if (hasError) {
+  if (hasAgentError) {
+    // Agent error already has user-friendly message, no need for additional report
+    console.log('[Reporter] Agent error already reported in messages');
+    return {};
+  } else if (hasToolError) {
     const errorMessage: Message = {
       id: `report-${Date.now()}`,
       role: 'assistant',
@@ -814,7 +820,7 @@ async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgen
       created_at: Date.now(),
     };
 
-    console.log('[Reporter] Error detected, generating error report');
+    console.log('[Reporter] Tool error detected, generating error report');
     return {
       messages: [errorMessage],
     };
@@ -977,8 +983,16 @@ export class CodingAgentGraph {
         state = {
           ...state,
           messages: [...state.messages, ...(agentResult.messages || [])],
+          agentError: agentResult.agentError || state.agentError,
         };
         yield { type: 'node', node: 'agent', data: { ...agentResult, messages: state.messages } };
+
+        // Check if agent encountered an error
+        if (agentResult.agentError) {
+          console.log('[CodingAgentGraph] Agent error detected, ending loop');
+          hasError = true;
+          break;
+        }
 
         const lastMessage = state.messages[state.messages.length - 1];
 
