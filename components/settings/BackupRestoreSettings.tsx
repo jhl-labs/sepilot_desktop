@@ -254,6 +254,10 @@ export function BackupRestoreSettings() {
    * Parse XML to backup data
    */
   const parseXML = (xml: string): BackupData => {
+    // Prevent parsing dangerous XML constructs (e.g., DOCTYPE, external entities)
+    if (/<!DOCTYPE/i.test(xml)) {
+      throw new Error('Unsafe XML: DOCTYPE is not allowed');
+    }
     const parser = new DOMParser();
     const doc = parser.parseFromString(xml, 'application/xml');
 
