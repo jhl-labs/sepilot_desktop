@@ -58,7 +58,7 @@
     "https-proxy-agent": "^7.0.6",
     "lucide-react": "^0.554.0",
     "mammoth": "^1.11.0",
-    "markdown-to-jsx": "^9.1.1",
+    "markdown-to-jsx": "^9.1.2",
     "mermaid": "^11.12.1",
     "module-alias": "^2.2.3",
     "next": "^16.0.3",
