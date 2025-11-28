@@ -84,8 +84,8 @@ importers:
         specifier: ^1.11.0
         version: 1.11.0
       markdown-to-jsx:
-        specifier: ^9.1.1
-        version: 9.1.1(react@19.2.0)
+        specifier: ^9.1.2
+        version: 9.1.2(react@19.2.0)
       mermaid:
         specifier: ^11.12.1
         version: 11.12.1
@@ -5365,8 +5365,8 @@ packages:
     resolution: {integrity: sha512-lgL7XpIwsgICiL82ITplfS7IGwrB1OJIw/pCvprDp2dhmSSEBgmPzYRvwYYYvJGJD7fxUv1Tvpih4nZ6VrLuaA==}
     engines: {node: '>=16.14.0', npm: '>=8.1.0'}
 
-  markdown-to-jsx@9.1.1:
-    resolution: {integrity: sha512-WaSfdSX+jg0zdei7OakNLhplH5zhXqrabTmy8sKkguwR2QgjvQEsKUPAEji859kVKaKtGyYcj2V0TUGKKdSA1g==}
+  markdown-to-jsx@9.1.2:
+    resolution: {integrity: sha512-bHBappSlwhloYlee+elyhy8A1yPjzUqTlphFUkG9khIdlJuUSUnPk2s2MkaUN5bfDqhOZEa3gSSjMvb4HahgfA==}
     engines: {node: '>= 18'}
     peerDependencies:
       react: '>= 16.0.0'
@@ -13636,7 +13636,7 @@ snapshots:
       tinyqueue: 3.0.0
       vt-pbf: 3.1.3
 
-  markdown-to-jsx@9.1.1(react@19.2.0):
+  markdown-to-jsx@9.1.2(react@19.2.0):
     optionalDependencies:
       react: 19.2.0
 
