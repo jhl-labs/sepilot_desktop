@@ -359,6 +359,15 @@ export function InputBox() {
     }
   }, [input]);
 
+  // Auto-switch to Instant mode when images are selected
+  // (Multimodal models require using agent.ts which works best with Instant mode)
+  useEffect(() => {
+    if (selectedImages.length > 0 && thinkingMode !== 'instant') {
+      console.log('[InputBox] Images detected, switching to Instant mode for multimodal support');
+      setThinkingMode('instant');
+    }
+  }, [selectedImages, thinkingMode, setThinkingMode]);
+
   // Stop streaming handler
   const handleStop = useCallback(async () => {
     console.log('[InputBox] handleStop called');
