@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
+
 const nextConfig = {
   output: 'export',
   distDir: 'out',

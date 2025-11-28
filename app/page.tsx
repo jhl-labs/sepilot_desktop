@@ -10,7 +10,7 @@ import { CodeEditor } from '@/components/editor/Editor';
 import { useChatStore } from '@/lib/store/chat-store';
 
 export default function Home() {
-  const { appMode, createConversation } = useChatStore();
+  const { appMode, createConversation, setActiveConversation } = useChatStore();
 
   // Quick Input에서 메시지를 받아 새 대화 생성 및 전송
   useEffect(() => {
@@ -35,15 +35,21 @@ export default function Home() {
         const conversationId = await createConversation();
         console.log('[Home] Created conversation:', conversationId);
 
-        // 메시지 전송을 위한 커스텀 이벤트 발생
-        // InputBox가 이를 수신하여 메시지를 전송할 것입니다
-        console.log('[Home] Dispatching custom event to InputBox');
-        window.dispatchEvent(
-          new CustomEvent('sepilot:quick-input-message', {
-            detail: { message },
-          })
-        );
-        console.log('[Home] Event dispatched successfully');
+        // 새 대화 활성화
+        console.log('[Home] Activating conversation:', conversationId);
+        await setActiveConversation(conversationId);
+        console.log('[Home] Conversation activated');
+
+        // UI가 업데이트될 시간을 주고 메시지 전송
+        setTimeout(() => {
+          console.log('[Home] Dispatching custom event to InputBox');
+          window.dispatchEvent(
+            new CustomEvent('sepilot:quick-input-message', {
+              detail: { message },
+            })
+          );
+          console.log('[Home] Event dispatched successfully');
+        }, 200);
       } catch (error) {
         console.error('[Home] Failed to handle quick input:', error);
       }
@@ -57,7 +63,7 @@ export default function Home() {
       console.log('[Home] Removing IPC event listener');
       window.electronAPI.removeListener('create-new-chat-with-message', handleQuickInput);
     };
-  }, [createConversation]);
+  }, [createConversation, setActiveConversation]);
 
   return (
     <MainLayout>

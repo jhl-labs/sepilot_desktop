@@ -406,19 +406,20 @@ export function InputBox() {
         console.log('[InputBox] Setting input to:', message);
         setInput(message);
 
-        // 잠시 대기 후 전송 (상태 업데이트 보장)
+        // 상태 업데이트 대기 후 send 버튼 클릭
         setTimeout(() => {
           console.log('[InputBox] Attempting to click send button');
-          // handleSend는 내부적으로 정의되어 있으므로 직접 호출할 수 없음
-          // 대신 input 상태가 업데이트되면 바로 전송을 트리거
           const sendButton = document.querySelector('[data-send-button]') as HTMLButtonElement;
-          if (sendButton) {
-            console.log('[InputBox] Send button found, clicking');
+          if (sendButton && !sendButton.disabled) {
+            console.log('[InputBox] Send button found and enabled, clicking');
             sendButton.click();
+            console.log('[InputBox] Send button clicked successfully');
+          } else if (sendButton) {
+            console.error('[InputBox] Send button found but disabled');
           } else {
             console.error('[InputBox] Send button not found');
           }
-        }, 100);
+        }, 200);
       } else {
         console.warn('[InputBox] Invalid or empty message:', message);
       }
