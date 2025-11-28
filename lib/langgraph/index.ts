@@ -226,9 +226,14 @@ export class GraphFactory {
   ): AsyncGenerator<StreamEvent> {
     const conversationId = options?.conversationId || '';
 
+    // Coding Agent의 경우 CodingAgentGraph 인스턴스를 직접 사용 (Human-in-the-loop 지원)
+    if (config.thinkingMode === 'coding') {
+      yield* this.streamCodingAgentGraph(config, messages, options);
+      return;
+    }
+
     // Agent 그래프의 경우 AgentGraph 인스턴스를 직접 사용 (Human-in-the-loop 지원)
-    // 단, Coding Agent는 별도 그래프 사용
-    if (config.enableTools && config.thinkingMode !== 'coding') {
+    if (config.enableTools) {
       yield* this.streamAgentGraph(config, messages, options);
       return;
     }
@@ -267,6 +272,82 @@ export class GraphFactory {
       yield {
         type: 'error',
         error: error.message || 'Graph execution failed',
+      };
+    }
+  }
+
+  /**
+   * Coding Agent 그래프 스트리밍 (Human-in-the-loop 지원)
+   * CodingAgentGraph 클래스의 stream 메서드를 직접 사용
+   */
+  private static async *streamCodingAgentGraph(
+    config: GraphConfig,
+    messages: Message[],
+    options?: GraphOptions
+  ): AsyncGenerator<StreamEvent> {
+    const conversationId = options?.conversationId || '';
+
+    try {
+      console.log('[GraphFactory] Starting coding agent stream with Human-in-the-loop support');
+
+      const { CodingAgentGraph } = await import('./graphs/coding-agent');
+      const { createInitialCodingAgentState } = await import('./state');
+
+      const codingAgentGraph = new CodingAgentGraph();
+      const initialState = createInitialCodingAgentState(messages, conversationId);
+
+      // Use the CodingAgentGraph's stream method with tool approval callback
+      for await (const event of codingAgentGraph.stream(
+        initialState,
+        options?.toolApprovalCallback
+      )) {
+        // Handle tool_approval_request and tool_approval_result events
+        if (event.type === 'tool_approval_request') {
+          yield {
+            type: 'tool_approval_request',
+            messageId: event.messageId,
+            toolCalls: event.toolCalls,
+          };
+          continue;
+        }
+
+        if (event.type === 'tool_approval_result') {
+          yield {
+            type: 'tool_approval_result',
+            approved: event.approved,
+          };
+          continue;
+        }
+
+        // Handle node events
+        if (event.type === 'node') {
+          yield {
+            type: 'node',
+            node: event.node,
+            data: event.data,
+          };
+          continue;
+        }
+
+        // Handle error events
+        if (event.type === 'error') {
+          yield {
+            type: 'error',
+            error: event.error,
+          };
+          continue;
+        }
+      }
+
+      yield {
+        type: 'end',
+      };
+    } catch (error: any) {
+      console.error('[GraphFactory] Coding agent stream error:', error);
+
+      yield {
+        type: 'error',
+        error: error.message || 'Coding agent graph execution failed',
       };
     }
   }

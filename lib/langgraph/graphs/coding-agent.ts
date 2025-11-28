@@ -910,3 +910,164 @@ export function createCodingAgentGraph() {
 
   return workflow.compile();
 }
+
+// ===========================
+// CodingAgentGraph Class (stream support)
+// ===========================
+
+export class CodingAgentGraph {
+  private toolApprovalCallback?: (toolCalls: any[]) => Promise<boolean>;
+
+  async *stream(
+    initialState: CodingAgentState,
+    toolApprovalCallback?: (toolCalls: any[]) => Promise<boolean>
+  ): AsyncGenerator<any> {
+    this.toolApprovalCallback = toolApprovalCallback;
+    let state = { ...initialState };
+
+    console.log('[CodingAgentGraph] Starting stream');
+
+    try {
+      // Triage
+      yield { type: 'node', node: 'triage', data: { status: 'starting' } };
+      const triageResult = await triageNode(state);
+      state = { ...state, ...triageResult };
+      yield { type: 'node', node: 'triage', data: triageResult };
+
+      // Direct response path
+      if (state.triageDecision === 'direct_response') {
+        yield { type: 'node', node: 'direct_response', data: { status: 'starting' } };
+        const directResult = await directResponseNode(state);
+        state = { ...state, ...directResult };
+        yield { type: 'node', node: 'direct_response', data: directResult };
+        return;
+      }
+
+      // Full pipeline path
+      // Planning
+      yield { type: 'node', node: 'planner', data: { status: 'starting' } };
+      const planResult = await planningNode(state);
+      state = { ...state, ...planResult };
+      yield { type: 'node', node: 'planner', data: planResult };
+
+      // Main loop
+      let continueLoop = true;
+      while (continueLoop) {
+        // Iteration Guard
+        yield { type: 'node', node: 'iteration_guard', data: { status: 'starting' } };
+        const guardResult = await iterationGuardNode(state);
+        state = {
+          ...state,
+          ...guardResult,
+          iterationCount: (state.iterationCount || 0) + (guardResult.iterationCount || 0),
+        };
+        yield { type: 'node', node: 'iteration_guard', data: guardResult };
+
+        if (state.forceTermination || guardDecision(state) === 'stop') {
+          break;
+        }
+
+        // Agent (LLM with tools)
+        yield { type: 'node', node: 'agent', data: { status: 'starting' } };
+        const agentResult = await agentNode(state);
+        state = {
+          ...state,
+          messages: [...state.messages, ...(agentResult.messages || [])],
+        };
+        yield { type: 'node', node: 'agent', data: agentResult };
+
+        const lastMessage = state.messages[state.messages.length - 1];
+
+        // Check if tools need to be called
+        if (shouldUseTool(state) === 'end') {
+          // No tools, go to verifier
+          yield { type: 'node', node: 'verifier', data: { status: 'starting' } };
+          const verifierResult = await verificationNode(state);
+          state = { ...state, ...verifierResult };
+          yield { type: 'node', node: 'verifier', data: verifierResult };
+
+          if (!state.needsAdditionalIteration) {
+            break;
+          }
+          continue;
+        }
+
+        // Tool approval (human-in-the-loop)
+        if (this.toolApprovalCallback && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+          console.log('[CodingAgentGraph] Requesting tool approval');
+
+          // Yield tool approval request
+          yield {
+            type: 'tool_approval_request',
+            messageId: lastMessage.id,
+            toolCalls: lastMessage.tool_calls,
+          };
+
+          try {
+            const approved = await this.toolApprovalCallback(lastMessage.tool_calls);
+
+            yield {
+              type: 'tool_approval_result',
+              approved,
+            };
+
+            if (!approved) {
+              console.log('[CodingAgentGraph] Tools rejected by user');
+              const rejectionMessage: Message = {
+                id: `msg-${Date.now()}`,
+                role: 'assistant',
+                content: '도구 실행이 사용자에 의해 거부되었습니다.',
+                created_at: Date.now(),
+              };
+              state = {
+                ...state,
+                messages: [...state.messages, rejectionMessage],
+                lastApprovalStatus: 'denied',
+              };
+              break;
+            }
+
+            state = { ...state, lastApprovalStatus: 'approved' };
+          } catch (error: any) {
+            console.error('[CodingAgentGraph] Tool approval error:', error);
+            break;
+          }
+        } else {
+          // Auto-approve if no callback
+          state = { ...state, lastApprovalStatus: 'approved' };
+        }
+
+        // Execute tools
+        yield { type: 'node', node: 'tools', data: { status: 'starting' } };
+        const toolsResult = await enhancedToolsNode(state);
+        state = {
+          ...state,
+          ...toolsResult,
+          modifiedFiles: toolsResult.modifiedFiles || state.modifiedFiles,
+          fileChangesCount: (state.fileChangesCount || 0) + (toolsResult.fileChangesCount || 0),
+        };
+        yield { type: 'node', node: 'tools', data: toolsResult };
+
+        // Verifier
+        yield { type: 'node', node: 'verifier', data: { status: 'starting' } };
+        const verifierResult = await verificationNode(state);
+        state = { ...state, ...verifierResult };
+        yield { type: 'node', node: 'verifier', data: verifierResult };
+
+        if (!state.needsAdditionalIteration) {
+          continueLoop = false;
+        }
+      }
+
+      // Reporter
+      yield { type: 'node', node: 'reporter', data: { status: 'starting' } };
+      const reportResult = await reporterNode(state);
+      state = { ...state, ...reportResult };
+      yield { type: 'node', node: 'reporter', data: reportResult };
+
+    } catch (error: any) {
+      console.error('[CodingAgentGraph] Stream error:', error);
+      yield { type: 'error', error: error.message || 'Graph execution failed' };
+    }
+  }
+}

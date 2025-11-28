@@ -23,7 +23,7 @@ import { initializeComfyUIClient } from '@/lib/comfyui/client';
 import { generateConversationTitle, shouldGenerateTitle } from '@/lib/chat/title-generator';
 import { isElectron } from '@/lib/platform';
 import { getWebLLMClient, configureWebLLMClient } from '@/lib/llm/web-client';
-import { ImageAttachment, Message, ToolCall, ImageGenerationProgress, ComfyUIConfig, NetworkConfig, LLMConfig } from '@/types';
+import { ImageAttachment, Message, ToolCall, ComfyUIConfig, NetworkConfig, LLMConfig } from '@/types';
 import { ToolApprovalDialog } from './ToolApprovalDialog';
 import { ImageGenerationProgressBar } from './ImageGenerationProgressBar';
 import { LLMStatusBar } from './LLMStatusBar';
@@ -73,7 +73,6 @@ export function InputBox() {
     clearPendingToolApproval,
     imageGenerationProgress,
     setImageGenerationProgress,
-    updateImageGenerationProgress,
     clearImageGenerationProgress,
     enableImageGeneration,
     setEnableImageGeneration,
