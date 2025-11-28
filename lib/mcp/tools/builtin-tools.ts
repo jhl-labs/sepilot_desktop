@@ -417,7 +417,11 @@ async function handleGrepSearch(args: {
     // Pattern and path
     rgCommand += ` "${args.pattern.replace(/"/g, '\\"')}" "${absolutePath}"`;
 
+    // Use working directory for execution
+    const workingDir = getCurrentWorkingDirectory() || process.cwd();
+
     const { stdout, stderr } = await execPromise(rgCommand, {
+      cwd: workingDir,
       maxBuffer: 1024 * 1024 * 10, // 10MB buffer
       timeout: 60000, // 1 minute timeout
     });
