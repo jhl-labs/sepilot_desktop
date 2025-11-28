@@ -890,7 +890,7 @@ export function InputBox() {
                         continue;
                       }
 
-                      // Assistant message with tool calls
+                      // Assistant message with tool calls - Only show thinking, not tool names
                       if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
                         if (msg.content) {
                           // Truncate long thinking content
@@ -899,13 +899,11 @@ export function InputBox() {
                             : msg.content;
                           displayContent += `💭 ${thinkingContent}\n\n`;
                         }
-                        // Show tool calls in a compact format
-                        const toolNames = msg.tool_calls.map((tc: any) => tc.name).join(', ');
-                        displayContent += `🔧 ${toolNames}\n\n`;
+                        // Don't show tool calls here - they'll be shown with results
                         continue;
                       }
 
-                      // Tool result messages
+                      // Tool result messages - Show tool call + result together
                       if (msg.role === 'tool' && msg.tool_call_id) {
                         const toolName = msg.name || 'tool';
 
@@ -930,40 +928,76 @@ export function InputBox() {
                           msg.content.toLowerCase().includes('eacces')
                         );
 
-                        if (hasError) {
-                          // Show error details with arguments
-                          displayContent += `❌ ${toolName}`;
-
-                          // Show relevant arguments
-                          if (toolArgs) {
-                            if (toolArgs.command) {
-                              displayContent += ` \`${toolArgs.command}\``;
-                            } else if (toolArgs.path) {
-                              displayContent += ` \`${toolArgs.path}\``;
-                            } else if (toolArgs.pattern) {
-                              displayContent += ` \`${toolArgs.pattern}\``;
-                            }
+                        // Start with tool name and args
+                        displayContent += `🔧 ${toolName}`;
+                        if (toolArgs) {
+                          if (toolArgs.command) {
+                            displayContent += ` \`${toolArgs.command}\``;
+                          } else if (toolArgs.path) {
+                            displayContent += ` \`${toolArgs.path}\``;
+                          } else if (toolArgs.pattern) {
+                            displayContent += ` \`${toolArgs.pattern}\``;
                           }
-                          displayContent += '\n';
+                        }
+                        displayContent += '\n';
 
-                          // Show first few lines of error (up to 10 lines or 800 chars)
+                        if (hasError) {
+                          // Show error details
                           const errorLines = msg.content.split('\n');
                           const linesToShow = errorLines.slice(0, 10);
                           let errorMsg = linesToShow.join('\n');
 
-                          // Truncate if too long
                           if (errorMsg.length > 800) {
                             errorMsg = errorMsg.substring(0, 800) + '\n... (truncated)';
                           }
 
-                          // Add indentation for better readability
                           const indentedError = errorMsg.split('\n')
-                            .map((line: string) => `   ${line}`)
+                            .map((line: string) => `   ❌ ${line}`)
                             .join('\n');
                           displayContent += `${indentedError}\n\n`;
                         } else {
-                          // Just show success indicator
-                          displayContent += `✅ ${toolName}\n\n`;
+                          // Show success with summary
+                          let summary = '';
+
+                          if (toolName === 'file_write' || toolName === 'file_edit') {
+                            // Show file modification summary
+                            if (toolArgs?.path) {
+                              const lines = msg.content.split('\n').length;
+                              summary = `Modified ${toolArgs.path}`;
+                              if (msg.content.includes('lines changed')) {
+                                const match = msg.content.match(/(\d+)\s+lines?\s+changed/);
+                                if (match) summary = `${match[1]} lines changed`;
+                              }
+                            } else {
+                              summary = msg.content.split('\n')[0].substring(0, 60);
+                            }
+                          } else if (toolName === 'file_read') {
+                            const lines = msg.content.split('\n').length;
+                            summary = `Read ${lines} lines`;
+                          } else if (toolName === 'file_list') {
+                            const files = msg.content.split('\n').filter((l: string) => l.trim()).length;
+                            summary = `Found ${files} items`;
+                          } else if (toolName === 'command_execute') {
+                            // Show stdout (first few lines)
+                            const lines = msg.content.split('\n').slice(0, 5);
+                            let output = lines.join('\n');
+                            if (output.length > 200) {
+                              output = output.substring(0, 200) + '...';
+                            }
+                            if (output.trim()) {
+                              summary = output;
+                            } else {
+                              summary = 'Success (no output)';
+                            }
+                          } else if (toolName === 'grep_search') {
+                            const matches = msg.content.split('\n').filter((l: string) => l.trim()).length;
+                            summary = `Found ${matches} matches`;
+                          } else {
+                            // Generic summary - first line
+                            summary = msg.content.split('\n')[0].substring(0, 60);
+                          }
+
+                          displayContent += `   ✅ ${summary}\n\n`;
                         }
                         continue;
                       }
