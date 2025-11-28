@@ -359,14 +359,15 @@ export function InputBox() {
     }
   }, [input]);
 
-  // Auto-switch to Instant mode when images are selected
-  // (Multimodal models require using agent.ts which works best with Instant mode)
+  // Auto-switch to Instant mode when images are selected or image generation is enabled
+  // (Multimodal models and image generation require using agent.ts which works best with Instant mode)
   useEffect(() => {
-    if (selectedImages.length > 0 && thinkingMode !== 'instant') {
-      console.log('[InputBox] Images detected, switching to Instant mode for multimodal support');
+    if ((selectedImages.length > 0 || enableImageGeneration) && thinkingMode !== 'instant') {
+      const reason = enableImageGeneration ? 'image generation enabled' : 'images detected';
+      console.log(`[InputBox] ${reason}, switching to Instant mode for multimodal support`);
       setThinkingMode('instant');
     }
-  }, [selectedImages, thinkingMode, setThinkingMode]);
+  }, [selectedImages, enableImageGeneration, thinkingMode, setThinkingMode]);
 
   // Stop streaming handler
   const handleStop = useCallback(async () => {
@@ -1279,18 +1280,22 @@ export function InputBox() {
                     variant="ghost"
                     size="icon"
                     className="h-9 w-9 rounded-xl shrink-0"
-                    title={`사고 모드: ${
-                      thinkingMode === 'instant'
-                        ? 'Instant'
-                        : thinkingMode === 'sequential'
-                          ? 'Sequential'
-                          : thinkingMode === 'tree-of-thought'
-                            ? 'Tree of Thought'
-                            : thinkingMode === 'deep'
-                              ? 'Deep Thinking'
-                              : 'Coding (beta)'
-                    }`}
-                    disabled={isStreaming}
+                    title={
+                      enableImageGeneration
+                        ? '이미지 생성 모드에서는 Instant 모드만 사용 가능합니다'
+                        : `사고 모드: ${
+                            thinkingMode === 'instant'
+                              ? 'Instant'
+                              : thinkingMode === 'sequential'
+                                ? 'Sequential'
+                                : thinkingMode === 'tree-of-thought'
+                                  ? 'Tree of Thought'
+                                  : thinkingMode === 'deep'
+                                    ? 'Deep Thinking'
+                                    : 'Coding (beta)'
+                          }`
+                    }
+                    disabled={isStreaming || enableImageGeneration}
                   >
                     {thinkingMode === 'instant' && <Zap className="h-4 w-4" />}
                     {thinkingMode === 'sequential' && <Brain className="h-4 w-4" />}
