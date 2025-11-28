@@ -17,6 +17,9 @@
 assets/icon.ico
 assets/icons/
 
+# monaco editor (copied by webpack)
+/public/monaco
+
 # misc
 .DS_Store
 *.pem

@@ -1,13 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Editor from '@monaco-editor/react';
+import dynamic from 'next/dynamic';
+import { loader } from '@monaco-editor/react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
 import { X, Save, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { isElectron } from '@/lib/platform';
+
+// Configure Monaco Editor to use local files instead of CDN
+loader.config({ paths: { vs: '/monaco/vs' } });
+
+// Load Editor component without SSR
+const Editor = dynamic(() => import('@monaco-editor/react'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full">Loading editor...</div>,
+});
 
 export function CodeEditor() {
   const {

@@ -282,7 +282,11 @@ const electronAPI = {
 
   // 이벤트 리스너
   on: (channel: string, callback: (...args: unknown[]) => void) => {
-    const validChannels = ['update-available', 'download-progress'];
+    const validChannels = [
+      'update-available',
+      'download-progress',
+      'create-new-chat-with-message',
+    ];
 
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_, ...args) => callback(...args));

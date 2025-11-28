@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
-const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const path = require('path');
 
 const nextConfig = {
   output: 'export',
@@ -23,11 +24,15 @@ const nextConfig = {
       config.output = config.output || {};
       config.output.globalObject = 'globalThis';
 
-      // Monaco Editor webpack plugin
+      // Copy Monaco Editor files to public directory
       config.plugins.push(
-        new MonacoWebpackPlugin({
-          languages: ['javascript', 'typescript', 'css', 'html', 'json', 'markdown', 'python', 'java', 'cpp', 'csharp', 'go', 'rust', 'yaml', 'xml', 'sql', 'shell'],
-          filename: 'static/[name].worker.js',
+        new CopyWebpackPlugin({
+          patterns: [
+            {
+              from: path.join(__dirname, 'node_modules/monaco-editor/min/vs'),
+              to: path.join(__dirname, 'public/monaco/vs'),
+            },
+          ],
         })
       );
 
