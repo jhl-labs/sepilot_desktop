@@ -829,7 +829,7 @@ export function InputBox() {
                         }
                         displayContent += `🔧 **Using tools:**\n`;
                         for (const toolCall of msg.tool_calls) {
-                          displayContent += `- \`${toolCall.function.name}\`\n`;
+                          displayContent += `- \`${toolCall.name}\`\n`;
                         }
                         displayContent += '\n';
                         continue;

@@ -535,7 +535,6 @@ ALWAYS use the tools when working with files. The user expects actual files to b
 
       return {
         id: toolCallId,
-        type: tc.type || 'function',
         name: tc.function.name,
         arguments: JSON.parse(tc.function.arguments),
       };
