@@ -21,35 +21,47 @@ export default function QuickInputPage() {
     e.preventDefault();
 
     if (!input.trim()) {
+      console.log('[QuickInput] Empty input, ignoring');
       return;
     }
+
+    console.log('[QuickInput] ===== Submitting message =====');
+    console.log('[QuickInput] Message:', input.trim());
 
     try {
       // IPC를 통해 메인 프로세스에 메시지 전송
       if (typeof window === 'undefined') {
+        console.error('[QuickInput] Window is undefined');
         setError('Window is undefined');
         return;
       }
 
       if (!window.electronAPI) {
+        console.error('[QuickInput] electronAPI not available');
         setError('Electron API not available');
         return;
       }
 
       if (!window.electronAPI.quickInput) {
+        console.error('[QuickInput] quickInput API not available');
         setError('Quick Input API not available');
         return;
       }
 
+      console.log('[QuickInput] Calling quickInput.submit...');
       const result = await window.electronAPI.quickInput.submit(input.trim());
+      console.log('[QuickInput] Submit result:', result);
 
       if (result.success) {
+        console.log('[QuickInput] Submit successful, clearing input');
         setInput('');
         setError(null);
       } else {
+        console.error('[QuickInput] Submit failed:', result.error);
         setError(result.error || 'Unknown error');
       }
     } catch (error) {
+      console.error('[QuickInput] Exception during submit:', error);
       setError(error instanceof Error ? error.message : String(error));
     }
   };
