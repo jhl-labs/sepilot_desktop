@@ -107,7 +107,6 @@
     "electron": "^39.2.4",
     "electron-builder": "^26.0.12",
     "electron-builder-squirrel-windows": "26.0.12",
-    "electron-icon-builder": "^2.0.1",
     "electron-rebuild": "^3.2.9",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.5",
