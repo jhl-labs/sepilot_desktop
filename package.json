@@ -34,7 +34,7 @@
     "test:coverage:backend": "jest --selectProjects backend --coverage"
   },
   "dependencies": {
-    "@langchain/core": "^1.0.6",
+    "@langchain/core": "^1.1.0",
     "@langchain/langgraph": "^1.0.2",
     "@octokit/rest": "^22.0.1",
     "@radix-ui/react-alert-dialog": "^1.1.15",
