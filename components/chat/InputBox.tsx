@@ -707,12 +707,14 @@ export function InputBox() {
 
                 // Update UI with progress status
                 if (progress.status === 'executing' || progress.status === 'queued') {
-                  scheduleUpdate({ content: progress.message });
+                  // Append progress message to existing content
+                  scheduleUpdate({ content: `${accumulatedMessage.content || ''}\n\n${progress.message}` });
                 } else if (progress.status === 'completed') {
                   clearImageGenerationProgress(conversationId);
                 } else if (progress.status === 'error') {
                   clearImageGenerationProgress(conversationId);
-                  scheduleUpdate({ content: `❌ 이미지 생성 오류: ${progress.message}` });
+                  // Append error message to existing content
+                  scheduleUpdate({ content: `${accumulatedMessage.content || ''}\n\n❌ 이미지 생성 오류: ${progress.message}` });
                 }
                 return;
               }
@@ -746,7 +748,8 @@ export function InputBox() {
                   toolCalls: event.toolCalls,
                   timestamp: Date.now(),
                 });
-                scheduleUpdate({ content: '🔔 도구 실행 승인을 기다리는 중...' });
+                // Append approval waiting message to existing content
+                scheduleUpdate({ content: `${accumulatedMessage.content || ''}\n\n🔔 도구 실행 승인을 기다리는 중...` });
                 return;
               }
 
@@ -906,7 +909,8 @@ export function InputBox() {
                   }
 
                   const statusMessage = `✅ 도구 실행 완료: ${toolNames}\n\n답변을 생성하고 있습니다...`;
-                  scheduleUpdate({ content: statusMessage });
+                  // Append to existing content instead of replacing it
+                  scheduleUpdate({ content: `${accumulatedMessage.content || ''}\n\n${statusMessage}` });
 
                   for (const toolResult of toolResults) {
                     if (toolResult.toolName === 'generate_image' && toolResult.result) {
