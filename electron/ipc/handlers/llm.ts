@@ -253,9 +253,13 @@ export function setupLLMHandlers() {
   /**
    * LLM 설정 초기화
    */
-  ipcMain.handle('llm-init', async (event, config: LLMConfig) => {
+  ipcMain.handle('llm-init', async (event, config: AppConfig) => {
     try {
-      initializeLLMClient(config);
+      // Extract LLM config from AppConfig
+      if (!config.llm) {
+        throw new Error('LLM config not found in AppConfig');
+      }
+      initializeLLMClient(config.llm);
       logger.info('LLM client initialized with config');
       return {
         success: true,
