@@ -25,8 +25,47 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
     try {
       const docs = await getAllDocuments();
-      setDocuments(docs);
-      console.log(`Loaded ${docs.length} documents`);
+
+      // 청크된 문서들을 원본 문서 단위로 그룹화
+      const groupedDocs = new Map<string, VectorDocument>();
+
+      for (const doc of docs) {
+        const originalId = doc.metadata?.originalId || doc.id;
+        const chunkIndex = doc.metadata?.chunkIndex ?? 0;
+
+        if (groupedDocs.has(originalId)) {
+          // 기존 그룹에 청크 추가
+          const existingDoc = groupedDocs.get(originalId)!;
+          const chunks = existingDoc.metadata._chunks || [];
+          chunks.push({ index: chunkIndex, content: doc.content });
+          chunks.sort((a: any, b: any) => a.index - b.index);
+          existingDoc.metadata._chunks = chunks;
+        } else {
+          // 새 그룹 생성
+          groupedDocs.set(originalId, {
+            ...doc,
+            id: originalId,
+            metadata: {
+              ...doc.metadata,
+              originalId,
+              _chunks: [{ index: chunkIndex, content: doc.content }],
+            },
+          });
+        }
+      }
+
+      // 청크들을 합쳐서 최종 문서 리스트 생성
+      const mergedDocs = Array.from(groupedDocs.values()).map((doc) => {
+        const chunks = doc.metadata._chunks || [];
+        const mergedContent = chunks.map((c: any) => c.content).join('\n');
+        return {
+          ...doc,
+          content: mergedContent,
+        };
+      });
+
+      setDocuments(mergedDocs);
+      console.log(`Loaded ${docs.length} chunks, grouped into ${mergedDocs.length} documents`);
     } catch (error: any) {
       console.error('Failed to load documents:', error);
       setMessage({ type: 'error', text: error.message || '문서 목록 로드 실패' });
@@ -47,7 +86,17 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     if (!confirm('이 문서를 삭제하시겠습니까?')) return;
 
     try {
-      await onDelete([id]);
+      // 원본 문서 ID와 매칭되는 모든 청크 ID 찾기
+      const allDocs = await getAllDocuments();
+      const chunkIdsToDelete = allDocs
+        .filter((doc) => {
+          const originalId = doc.metadata?.originalId || doc.id;
+          return originalId === id;
+        })
+        .map((doc) => doc.id);
+
+      // 모든 청크 삭제
+      await onDelete(chunkIdsToDelete.length > 0 ? chunkIdsToDelete : [id]);
       setMessage({ type: 'success', text: '문서가 삭제되었습니다.' });
       await loadDocuments(); // Reload list
     } catch (error: any) {

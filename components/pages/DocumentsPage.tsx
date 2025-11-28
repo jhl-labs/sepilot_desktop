@@ -5,7 +5,7 @@ import { DocumentList } from '@/components/rag/DocumentList';
 import { DocumentUploadDialog } from '@/components/rag/DocumentUploadDialog';
 import { DocumentEditDialog } from '@/components/rag/DocumentEditDialog';
 import { VectorDBConfig, EmbeddingConfig, VectorDocument } from '@/lib/vectordb/types';
-import { getVectorDB, getEmbeddingProvider, deleteDocuments } from '@/lib/vectordb';
+import { getVectorDB, getEmbeddingProvider, deleteDocuments, getAllDocuments } from '@/lib/vectordb';
 import { generateId } from '@/lib/utils';
 import { indexDocuments } from '@/lib/vectordb/indexing';
 import { isElectron } from '@/lib/platform';
@@ -215,10 +215,21 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         batchSize: 10,
       };
 
+      // 원본 문서 ID와 매칭되는 모든 청크 ID 찾기
+      const allDocs = await getAllDocuments();
+      const chunkIdsToDelete = allDocs
+        .filter((d) => {
+          const originalId = d.metadata?.originalId || d.id;
+          return originalId === doc.id;
+        })
+        .map((d) => d.id);
+
+      const idsToDelete = chunkIdsToDelete.length > 0 ? chunkIdsToDelete : [doc.id];
+
       // Electron 환경에서는 IPC를 통해 Main Process에서 처리
       if (isElectron() && window.electronAPI?.vectorDB) {
-        // 기존 문서 삭제
-        await deleteDocuments([doc.id]);
+        // 기존 문서의 모든 청크 삭제
+        await deleteDocuments(idsToDelete);
 
         // 새 문서 인덱싱 (같은 ID 사용)
         const result = await window.electronAPI.vectorDB.indexDocuments(rawDocs, indexingOptions);
@@ -235,8 +246,8 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
           throw new Error('VectorDB 또는 Embedding이 초기화되지 않았습니다.');
         }
 
-        // 기존 문서 삭제
-        await vectorDB.delete([doc.id]);
+        // 기존 문서의 모든 청크 삭제
+        await vectorDB.delete(idsToDelete);
 
         // 새 문서 인덱싱 (같은 ID 사용)
         await indexDocuments(vectorDB, embedder, rawDocs, indexingOptions);
