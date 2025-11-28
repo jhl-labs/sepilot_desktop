@@ -96,13 +96,17 @@ function createQuickInputWindow() {
 
   if (isDev) {
     quickInputWindow.loadURL('http://localhost:3000/quick-input');
+    // 개발 환경에서 개발자 도구 열기 (디버깅용)
+    quickInputWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     quickInputWindow.loadURL('app://./quick-input.html');
   }
 
-  // 포커스를 잃으면 창 숨기기
+  // 포커스를 잃으면 창 숨기기 (개발 모드에서는 비활성화)
   quickInputWindow.on('blur', () => {
-    quickInputWindow?.hide();
+    if (!isDev) {
+      quickInputWindow?.hide();
+    }
   });
 
   quickInputWindow.on('closed', () => {
