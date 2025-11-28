@@ -4,6 +4,7 @@
  */
 
 import { setupChatHandlers } from './handlers/chat';
+import { setupActivityHandlers } from './handlers/activity';
 import { setupConfigHandlers } from './handlers/config';
 import { setupMCPHandlers } from './handlers/mcp';
 import { setupAuthHandlers } from './handlers/auth';
@@ -24,6 +25,7 @@ export function setupIpcHandlers() {
   logger.info('Setting up IPC handlers');
 
   setupChatHandlers();
+  setupActivityHandlers();
   setupConfigHandlers();
   setupMCPHandlers();
   setupAuthHandlers();

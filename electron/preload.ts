@@ -26,6 +26,16 @@ const electronAPI = {
     deleteMessage: (id: string) => ipcRenderer.invoke('delete-message', id),
   },
 
+  // Activity operations (도구 실행 이력)
+  activity: {
+    saveActivity: (activity: any) => ipcRenderer.invoke('save-activity', activity),
+    loadActivities: (conversationId: string) =>
+      ipcRenderer.invoke('load-activities', conversationId),
+    deleteActivity: (id: string) => ipcRenderer.invoke('delete-activity', id),
+    deleteActivitiesByConversation: (conversationId: string) =>
+      ipcRenderer.invoke('delete-activities-by-conversation', conversationId),
+  },
+
   // Config operations
   config: {
     load: () => ipcRenderer.invoke('load-config'),

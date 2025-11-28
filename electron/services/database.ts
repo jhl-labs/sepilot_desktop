@@ -2,7 +2,7 @@ import initSqlJs, { Database } from 'sql.js';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
-import { Conversation, Message } from '../../types';
+import { Conversation, Message, Activity } from '../../types';
 
 class DatabaseService {
   private db: Database | null = null;
@@ -106,10 +106,30 @@ class DatabaseService {
       )
     `);
 
+    // Activities table (도구 실행 이력 - 컨텍스트와 분리)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS activities (
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL,
+        tool_name TEXT NOT NULL,
+        tool_args TEXT NOT NULL,
+        result TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        duration_ms INTEGER,
+        FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+      )
+    `);
+
     // Create indexes
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_messages_conversation
       ON messages(conversation_id, created_at DESC)
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_activities_conversation
+      ON activities(conversation_id, created_at DESC)
     `);
 
     // Add columns if they don't exist (for migration)
@@ -349,6 +369,84 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     this.db.run('DELETE FROM settings WHERE key = ?', [key]);
+    this.saveDatabase();
+  }
+
+  // Activities (도구 실행 이력)
+  saveActivity(activity: Activity): void {
+    if (!this.db) throw new Error('Database not initialized');
+
+    console.log('[Database] Saving activity:', {
+      id: activity.id,
+      tool_name: activity.tool_name,
+      status: activity.status,
+    });
+
+    this.db.run(
+      `INSERT OR REPLACE INTO activities (id, conversation_id, tool_name, tool_args, result, status, created_at, duration_ms)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        activity.id,
+        activity.conversation_id,
+        activity.tool_name,
+        JSON.stringify(activity.tool_args),
+        activity.result,
+        activity.status,
+        activity.created_at,
+        activity.duration_ms ?? null,
+      ]
+    );
+
+    this.saveDatabase();
+  }
+
+  getActivities(conversationId: string): Activity[] {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const result = this.db.exec(
+      `SELECT id, conversation_id, tool_name, tool_args, result, status, created_at, duration_ms
+       FROM activities
+       WHERE conversation_id = ?
+       ORDER BY created_at ASC`,
+      [conversationId]
+    );
+
+    if (result.length === 0) return [];
+
+    const activities: Activity[] = [];
+    for (const row of result[0].values) {
+      activities.push({
+        id: row[0] as string,
+        conversation_id: row[1] as string,
+        tool_name: row[2] as string,
+        tool_args: JSON.parse(row[3] as string),
+        result: row[4] as string,
+        status: row[5] as 'success' | 'error',
+        created_at: row[6] as number,
+        duration_ms: row[7] as number | undefined,
+      });
+    }
+
+    console.log('[Database] Loaded activities:', {
+      conversationId,
+      count: activities.length,
+    });
+
+    return activities;
+  }
+
+  deleteActivity(id: string): void {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run('DELETE FROM activities WHERE id = ?', [id]);
+    this.saveDatabase();
+  }
+
+  // 특정 conversation의 모든 activities 삭제
+  deleteActivitiesByConversation(conversationId: string): void {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run('DELETE FROM activities WHERE conversation_id = ?', [conversationId]);
     this.saveDatabase();
   }
 

@@ -177,3 +177,20 @@ export interface AppConfig {
   comfyUI?: ComfyUIConfig;
   github?: GitHubOAuthConfig;
 }
+
+/**
+ * Activity: Agent의 도구 실행 이력 (메시지와 분리하여 관리)
+ * - 컨텍스트 낭비 방지: conversation에 포함되지 않음
+ * - 영구 저장: 데이터베이스에 기록되어 프로그램 재시작 후에도 조회 가능
+ * - UI 표시: ChatArea에서 별도 패널로 표시
+ */
+export interface Activity {
+  id: string;
+  conversation_id: string;
+  tool_name: string; // file_read, file_write, command_execute, grep_search, etc.
+  tool_args: Record<string, unknown>; // Tool arguments
+  result: string; // Tool execution result (success or error message)
+  status: 'success' | 'error';
+  created_at: number;
+  duration_ms?: number; // Execution duration in milliseconds
+}

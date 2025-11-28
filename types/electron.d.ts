@@ -1,5 +1,5 @@
 // Electron API 타입 정의
-import type { Conversation, Message, AppConfig, MCPServerConfig, NetworkConfig, ImageAttachment, ComfyUIConfig } from './index';
+import type { Conversation, Message, Activity, AppConfig, MCPServerConfig, NetworkConfig, ImageAttachment, ComfyUIConfig } from './index';
 
 // IPC 응답 타입
 interface IPCResponse<T = void> {
@@ -16,6 +16,13 @@ interface ChatAPI {
   saveMessage: (message: Message) => Promise<IPCResponse>;
   loadMessages: (conversationId: string) => Promise<IPCResponse<Message[]>>;
   deleteMessage: (id: string) => Promise<IPCResponse>;
+}
+
+interface ActivityAPI {
+  saveActivity: (activity: Activity) => Promise<IPCResponse>;
+  loadActivities: (conversationId: string) => Promise<IPCResponse<Activity[]>>;
+  deleteActivity: (id: string) => Promise<IPCResponse>;
+  deleteActivitiesByConversation: (conversationId: string) => Promise<IPCResponse>;
 }
 
 interface ConfigAPI {
@@ -359,6 +366,7 @@ interface UpdateAPI {
 interface ElectronAPI {
   platform: string;
   chat: ChatAPI;
+  activity: ActivityAPI;
   config: ConfigAPI;
   mcp: MCPAPI;
   auth: AuthAPI;
@@ -385,6 +393,7 @@ declare global {
 export type {
   IPCResponse,
   ChatAPI,
+  ActivityAPI,
   ConfigAPI,
   MCPAPI,
   MCPTool,

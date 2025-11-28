@@ -3,13 +3,14 @@ import { CodingAgentStateAnnotation, CodingAgentState } from '../state';
 import { generateWithToolsNode } from '../nodes/generate';
 import { toolsNode, shouldUseTool } from '../nodes/tools';
 import { LLMService } from '@/lib/llm/service';
-import { Message } from '@/types';
+import { Message, Activity } from '@/types';
 import { createBaseSystemMessage } from '../utils/system-message';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
 import { executeBuiltinTool, getBuiltinTools } from '@/lib/mcp/tools/builtin-tools';
 import type { MCPTool } from '@/lib/mcp/types';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Coding Agent Graph
@@ -752,11 +753,33 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 
   const results: ToolExecutionResult[] = await Promise.all(
     lastMessage.tool_calls.map(async (call): Promise<ToolExecutionResult> => {
+      const startTime = Date.now();
+
       try {
         // Check if it's a built-in tool
         if (builtinToolNames.has(call.name)) {
           console.log(`[CodingAgent.Tools] Executing builtin tool: ${call.name}`);
           const result = await executeBuiltinTool(call.name, call.arguments);
+          const duration = Date.now() - startTime;
+
+          // Save activity to database (non-blocking)
+          if (state.conversationId && typeof window !== 'undefined' && window.electronAPI?.activity) {
+            const activity: Activity = {
+              id: uuidv4(),
+              conversation_id: state.conversationId,
+              tool_name: call.name,
+              tool_args: call.arguments as Record<string, unknown>,
+              result: result,
+              status: 'success',
+              created_at: Date.now(),
+              duration_ms: duration,
+            };
+
+            window.electronAPI.activity.saveActivity(activity).catch((error) => {
+              console.error('[CodingAgent.Tools] Failed to save activity:', error);
+            });
+          }
+
           return {
             toolCallId: call.id,
             toolName: call.name,
@@ -766,20 +789,63 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
           // Not a built-in tool, should not happen in Coding Agent
           // But if it does, log a warning
           console.warn(`[CodingAgent.Tools] Non-builtin tool called: ${call.name}`);
+
+          const errorMsg = `Tool '${call.name}' is not a built-in tool for Coding Agent`;
+          const duration = Date.now() - startTime;
+
+          // Save error activity
+          if (state.conversationId && typeof window !== 'undefined' && window.electronAPI?.activity) {
+            const activity: Activity = {
+              id: uuidv4(),
+              conversation_id: state.conversationId,
+              tool_name: call.name,
+              tool_args: call.arguments as Record<string, unknown>,
+              result: errorMsg,
+              status: 'error',
+              created_at: Date.now(),
+              duration_ms: duration,
+            };
+
+            window.electronAPI.activity.saveActivity(activity).catch((error) => {
+              console.error('[CodingAgent.Tools] Failed to save activity:', error);
+            });
+          }
+
           return {
             toolCallId: call.id,
             toolName: call.name,
             result: null,
-            error: `Tool '${call.name}' is not a built-in tool for Coding Agent`,
+            error: errorMsg,
           };
         }
       } catch (error: any) {
         console.error(`[CodingAgent.Tools] Error executing ${call.name}:`, error);
+        const duration = Date.now() - startTime;
+        const errorMsg = error.message || 'Tool execution failed';
+
+        // Save error activity
+        if (state.conversationId && typeof window !== 'undefined' && window.electronAPI?.activity) {
+          const activity: Activity = {
+            id: uuidv4(),
+            conversation_id: state.conversationId,
+            tool_name: call.name,
+            tool_args: call.arguments as Record<string, unknown>,
+            result: errorMsg,
+            status: 'error',
+            created_at: Date.now(),
+            duration_ms: duration,
+          };
+
+          window.electronAPI.activity.saveActivity(activity).catch((error) => {
+            console.error('[CodingAgent.Tools] Failed to save activity:', error);
+          });
+        }
+
         return {
           toolCallId: call.id,
           toolName: call.name,
           result: null,
-          error: error.message || 'Tool execution failed',
+          error: errorMsg,
         };
       }
     })
