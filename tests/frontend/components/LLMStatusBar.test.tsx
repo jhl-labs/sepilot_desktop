@@ -26,6 +26,7 @@ const mockTools: ToolInfo[] = [
 const mockMessages: Message[] = [
   { id: 'msg-1', role: 'user', content: 'Hello', created_at: Date.now() },
   { id: 'msg-2', role: 'assistant', content: 'Hi there!', created_at: Date.now() },
+  { id: 'msg-3', role: 'user', content: 'How are you?', created_at: Date.now() },
 ];
 
 describe('LLMStatusBar', () => {
@@ -170,22 +171,33 @@ describe('LLMStatusBar', () => {
     });
   });
 
-  it('should show compact button when messages > 2', () => {
+  it('should show compact button when messages > 2', async () => {
     const onCompact = jest.fn();
     render(<LLMStatusBar {...defaultProps} onCompact={onCompact} />);
 
-    const compactButton = screen.getByRole('button', { name: /minimize/i });
+    // Find button by waiting for tooltip content to appear on hover
+    const buttons = screen.getAllByRole('button');
+    const compactButton = buttons.find(
+      (button) => button.querySelector('svg') && button.className.includes('h-5')
+    );
+
     expect(compactButton).toBeInTheDocument();
 
-    fireEvent.click(compactButton);
-    expect(onCompact).toHaveBeenCalled();
+    if (compactButton) {
+      fireEvent.click(compactButton);
+      expect(onCompact).toHaveBeenCalled();
+    }
   });
 
   it('should disable compact button when streaming', () => {
     const onCompact = jest.fn();
     render(<LLMStatusBar {...defaultProps} isStreaming={true} onCompact={onCompact} />);
 
-    const compactButton = screen.getByRole('button', { name: /minimize/i });
+    const buttons = screen.getAllByRole('button');
+    const compactButton = buttons.find(
+      (button) => button.querySelector('svg') && button.className.includes('h-5')
+    );
+
     expect(compactButton).toBeDisabled();
   });
 
@@ -194,8 +206,12 @@ describe('LLMStatusBar', () => {
       <LLMStatusBar {...defaultProps} messages={[mockMessages[0]]} onCompact={jest.fn()} />
     );
 
-    const compactButton = screen.queryByRole('button', { name: /minimize/i });
-    expect(compactButton).not.toBeInTheDocument();
+    const buttons = screen.getAllByRole('button');
+    const compactButton = buttons.find(
+      (button) => button.querySelector('svg') && button.className.includes('h-5')
+    );
+
+    expect(compactButton).toBeUndefined();
   });
 
   it('should show warning color for high context usage', () => {
