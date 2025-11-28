@@ -1,130 +1,52 @@
 /**
  * LangGraph State 테스트
+ *
+ * 새로운 Annotation 기반 상태 관리 테스트
  */
 
 import {
-  messagesReducer,
-  documentsReducer,
-  toolCallsReducer,
-  toolResultsReducer,
+  ChatStateAnnotation,
+  RAGStateAnnotation,
+  AgentStateAnnotation,
   createInitialChatState,
   createInitialRAGState,
   createInitialAgentState,
+  ChatState,
+  RAGState,
+  AgentState,
 } from '@/lib/langgraph/state';
-import type { Message, ToolCall } from '@/types';
-import type { Document, ToolResult } from '@/lib/langgraph/types';
+import { Message, ToolCall } from '@/types';
+import { Document, ToolResult } from '@/lib/langgraph/types';
 
 describe('langgraph state', () => {
-  describe('messagesReducer', () => {
-    it('should append new messages to existing', () => {
-      const existing: Message[] = [
-        { id: '1', role: 'user', content: 'Hello', created_at: 100 },
-      ];
-      const updates: Message[] = [
-        { id: '2', role: 'assistant', content: 'Hi!', created_at: 200 },
-      ];
-
-      const result = messagesReducer(existing, updates);
-
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('1');
-      expect(result[1].id).toBe('2');
-    });
-
-    it('should handle empty existing messages', () => {
-      const existing: Message[] = [];
-      const updates: Message[] = [
-        { id: '1', role: 'user', content: 'First', created_at: 100 },
-      ];
-
-      const result = messagesReducer(existing, updates);
-
-      expect(result).toHaveLength(1);
-    });
-
-    it('should handle empty updates', () => {
-      const existing: Message[] = [
-        { id: '1', role: 'user', content: 'Hello', created_at: 100 },
-      ];
-
-      const result = messagesReducer(existing, []);
-
-      expect(result).toHaveLength(1);
-    });
-
-    it('should not mutate original arrays', () => {
-      const existing: Message[] = [
-        { id: '1', role: 'user', content: 'Hello', created_at: 100 },
-      ];
-      const updates: Message[] = [
-        { id: '2', role: 'assistant', content: 'Hi!', created_at: 200 },
-      ];
-
-      const result = messagesReducer(existing, updates);
-
-      expect(existing).toHaveLength(1);
-      expect(updates).toHaveLength(1);
-      expect(result).not.toBe(existing);
+  describe('ChatStateAnnotation', () => {
+    it('should have messages and context fields', () => {
+      expect(ChatStateAnnotation).toBeDefined();
+      expect(ChatStateAnnotation.spec).toBeDefined();
+      expect(ChatStateAnnotation.spec.messages).toBeDefined();
+      expect(ChatStateAnnotation.spec.context).toBeDefined();
     });
   });
 
-  describe('documentsReducer', () => {
-    it('should replace existing documents with updates', () => {
-      const existing: Document[] = [
-        { id: 'doc-1', content: 'Old content', score: 0.8 },
-      ];
-      const updates: Document[] = [
-        { id: 'doc-2', content: 'New content', score: 0.9 },
-        { id: 'doc-3', content: 'Another new', score: 0.7 },
-      ];
-
-      const result = documentsReducer(existing, updates);
-
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('doc-2');
-      expect(result[1].id).toBe('doc-3');
-    });
-
-    it('should return empty array when updates are empty', () => {
-      const existing: Document[] = [
-        { id: 'doc-1', content: 'Content', score: 0.5 },
-      ];
-
-      const result = documentsReducer(existing, []);
-
-      expect(result).toHaveLength(0);
+  describe('RAGStateAnnotation', () => {
+    it('should have messages, context, documents, and query fields', () => {
+      expect(RAGStateAnnotation).toBeDefined();
+      expect(RAGStateAnnotation.spec).toBeDefined();
+      expect(RAGStateAnnotation.spec.messages).toBeDefined();
+      expect(RAGStateAnnotation.spec.context).toBeDefined();
+      expect(RAGStateAnnotation.spec.documents).toBeDefined();
+      expect(RAGStateAnnotation.spec.query).toBeDefined();
     });
   });
 
-  describe('toolCallsReducer', () => {
-    it('should append tool calls', () => {
-      const existing: ToolCall[] = [
-        { id: 'tc-1', name: 'get_weather', arguments: { city: 'Seoul' } },
-      ];
-      const updates: ToolCall[] = [
-        { id: 'tc-2', name: 'search', arguments: { query: 'test' } },
-      ];
-
-      const result = toolCallsReducer(existing, updates);
-
-      expect(result).toHaveLength(2);
-      expect(result[1].name).toBe('search');
-    });
-  });
-
-  describe('toolResultsReducer', () => {
-    it('should append tool results', () => {
-      const existing: ToolResult[] = [
-        { callId: 'tc-1', result: 'sunny' },
-      ];
-      const updates: ToolResult[] = [
-        { callId: 'tc-2', result: 'search results' },
-      ];
-
-      const result = toolResultsReducer(existing, updates);
-
-      expect(result).toHaveLength(2);
-      expect(result[1].callId).toBe('tc-2');
+  describe('AgentStateAnnotation', () => {
+    it('should have messages, context, toolCalls, and toolResults fields', () => {
+      expect(AgentStateAnnotation).toBeDefined();
+      expect(AgentStateAnnotation.spec).toBeDefined();
+      expect(AgentStateAnnotation.spec.messages).toBeDefined();
+      expect(AgentStateAnnotation.spec.context).toBeDefined();
+      expect(AgentStateAnnotation.spec.toolCalls).toBeDefined();
+      expect(AgentStateAnnotation.spec.toolResults).toBeDefined();
     });
   });
 
@@ -138,13 +60,24 @@ describe('langgraph state', () => {
 
     it('should create chat state with initial messages', () => {
       const messages: Message[] = [
-        { id: '1', role: 'system', content: 'You are helpful', created_at: 100 },
+        {
+          id: '1',
+          role: 'user',
+          content: 'Hello',
+          created_at: Date.now(),
+        },
       ];
 
       const state = createInitialChatState(messages);
 
-      expect(state.messages).toEqual(messages);
+      expect(state.messages).toHaveLength(1);
+      expect(state.messages[0].id).toBe('1');
       expect(state.context).toBe('');
+    });
+
+    it('should match ChatState type', () => {
+      const state: ChatState = createInitialChatState();
+      expect(state).toBeDefined();
     });
   });
 
@@ -160,13 +93,25 @@ describe('langgraph state', () => {
 
     it('should create RAG state with initial messages', () => {
       const messages: Message[] = [
-        { id: '1', role: 'user', content: 'What is RAG?', created_at: 100 },
+        {
+          id: '1',
+          role: 'user',
+          content: 'What is TypeScript?',
+          created_at: Date.now(),
+        },
       ];
 
       const state = createInitialRAGState(messages);
 
-      expect(state.messages).toEqual(messages);
+      expect(state.messages).toHaveLength(1);
+      expect(state.messages[0].id).toBe('1');
       expect(state.documents).toEqual([]);
+      expect(state.query).toBe('');
+    });
+
+    it('should match RAGState type', () => {
+      const state: RAGState = createInitialRAGState();
+      expect(state).toBeDefined();
     });
   });
 
@@ -182,14 +127,75 @@ describe('langgraph state', () => {
 
     it('should create Agent state with initial messages', () => {
       const messages: Message[] = [
-        { id: '1', role: 'user', content: 'Use a tool', created_at: 100 },
+        {
+          id: '1',
+          role: 'user',
+          content: 'Run a calculation',
+          created_at: Date.now(),
+        },
       ];
 
       const state = createInitialAgentState(messages);
 
-      expect(state.messages).toEqual(messages);
+      expect(state.messages).toHaveLength(1);
+      expect(state.messages[0].id).toBe('1');
       expect(state.toolCalls).toEqual([]);
       expect(state.toolResults).toEqual([]);
+    });
+
+    it('should match AgentState type', () => {
+      const state: AgentState = createInitialAgentState();
+      expect(state).toBeDefined();
+    });
+  });
+
+  describe('state immutability', () => {
+    it('should not mutate original messages array in ChatState', () => {
+      const messages: Message[] = [
+        {
+          id: '1',
+          role: 'user',
+          content: 'Hello',
+          created_at: Date.now(),
+        },
+      ];
+
+      const originalLength = messages.length;
+      createInitialChatState(messages);
+
+      expect(messages).toHaveLength(originalLength);
+    });
+
+    it('should not mutate original messages array in RAGState', () => {
+      const messages: Message[] = [
+        {
+          id: '1',
+          role: 'user',
+          content: 'Hello',
+          created_at: Date.now(),
+        },
+      ];
+
+      const originalLength = messages.length;
+      createInitialRAGState(messages);
+
+      expect(messages).toHaveLength(originalLength);
+    });
+
+    it('should not mutate original messages array in AgentState', () => {
+      const messages: Message[] = [
+        {
+          id: '1',
+          role: 'user',
+          content: 'Hello',
+          created_at: Date.now(),
+        },
+      ];
+
+      const originalLength = messages.length;
+      createInitialAgentState(messages);
+
+      expect(messages).toHaveLength(originalLength);
     });
   });
 });

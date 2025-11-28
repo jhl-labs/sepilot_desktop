@@ -55,13 +55,27 @@ export function VectorDBSettings({
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // 모델 목록 관리
-  const [availableModels, setAvailableModels] = useState<string[]>([
-    'text-embedding-3-small',
-    'text-embedding-3-large',
-  ]);
+  // 모델 목록 관리 - 저장된 모델이 있으면 포함
+  const getInitialModels = () => {
+    const defaultModels = ['text-embedding-3-small', 'text-embedding-3-large'];
+    const savedModel = initialEmbeddingConfig?.model;
+    if (savedModel && !defaultModels.includes(savedModel)) {
+      return [savedModel, ...defaultModels];
+    }
+    return defaultModels;
+  };
+
+  const [availableModels, setAvailableModels] = useState<string[]>(getInitialModels());
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelError, setModelError] = useState<string | null>(null);
+
+  // initialEmbeddingConfig가 변경되면 모델 목록도 업데이트
+  useEffect(() => {
+    const savedModel = initialEmbeddingConfig?.model;
+    if (savedModel && !availableModels.includes(savedModel)) {
+      setAvailableModels((prev) => [savedModel, ...prev]);
+    }
+  }, [initialEmbeddingConfig?.model]);
 
   // 모델 목록 가져오기
   const fetchAvailableModels = async () => {

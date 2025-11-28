@@ -1,6 +1,12 @@
-import { RAGState, Document } from '../types';
-import { VectorDBClient } from '@/lib/vectordb/client';
-import { EmbeddingClient } from '@/lib/vectordb/embeddings/client';
+import { RAGState } from '../state';
+import { Document } from '../types';
+
+/**
+ * Main Process 환경인지 확인
+ */
+function isMainProcess(): boolean {
+  return typeof window === 'undefined';
+}
 
 /**
  * 벡터 검색 노드
@@ -11,21 +17,40 @@ export async function retrieveNode(state: RAGState): Promise<Partial<RAGState>> 
     const lastMessage = state.messages[state.messages.length - 1];
     const query = lastMessage?.content || '';
 
-    console.log('Retrieving documents for query:', query);
+    console.log('[RetrieveNode] Retrieving documents for query:', query);
 
     let documents: Document[] = [];
 
-    // VectorDB가 설정되어 있으면 실제 검색 수행
-    if (VectorDBClient.isConfigured() && EmbeddingClient.isConfigured()) {
+    // Main Process 환경에서는 vectorDBService와 EmbeddingClient 사용
+    if (isMainProcess()) {
       try {
-        const vectorDB = VectorDBClient.getDB();
-        const embedder = EmbeddingClient.getProvider();
+        // Dynamic import to avoid bundling in renderer process
+        const { vectorDBService } = await import('../../../electron/services/vectordb');
+        const { databaseService } = await import('../../../electron/services/database');
+        const { initializeEmbedding, getEmbeddingProvider } = await import('@/lib/vectordb/embeddings/client');
+
+        console.log('[RetrieveNode] Using vectorDBService in Main Process');
+
+        // Embedding config 로드 및 초기화
+        const configStr = databaseService.getSetting('app_config');
+        if (!configStr) {
+          throw new Error('App config not found');
+        }
+
+        const appConfig = JSON.parse(configStr);
+        if (!appConfig.embedding) {
+          throw new Error('Embedding config not found');
+        }
+
+        // Embedding 초기화 (이미 초기화되어 있으면 무시됨)
+        initializeEmbedding(appConfig.embedding);
 
         // 쿼리 임베딩
+        const embedder = getEmbeddingProvider();
         const queryEmbedding = await embedder.embed(query);
 
         // 벡터 검색 (상위 5개)
-        const results = await vectorDB.searchByVector(queryEmbedding, 5);
+        const results = await vectorDBService.searchByVector(queryEmbedding, 5);
 
         // Document 형식으로 변환
         documents = results.map((result) => ({
@@ -35,15 +60,15 @@ export async function retrieveNode(state: RAGState): Promise<Partial<RAGState>> 
           score: result.score,
         }));
 
-        console.log(`Found ${documents.length} documents`);
+        console.log(`[RetrieveNode] Found ${documents.length} documents in Main Process`);
       } catch (error: any) {
-        console.error('Vector search error:', error);
+        console.error('[RetrieveNode] Vector search error:', error);
         // 에러 시 더미 문서 반환
         documents = getDummyDocuments(query);
       }
     } else {
-      // VectorDB가 설정되지 않았으면 더미 문서 반환
-      console.log('VectorDB not configured, using dummy documents');
+      // Renderer Process는 이 코드에 도달하지 않아야 함
+      console.error('[RetrieveNode] Renderer Process should not call retrieveNode directly');
       documents = getDummyDocuments(query);
     }
 
@@ -52,7 +77,7 @@ export async function retrieveNode(state: RAGState): Promise<Partial<RAGState>> 
       query,
     };
   } catch (error: any) {
-    console.error('Retrieve node error:', error);
+    console.error('[RetrieveNode] Retrieve node error:', error);
     return {
       documents: getDummyDocuments(''),
       query: state.query,

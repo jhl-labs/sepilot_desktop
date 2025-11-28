@@ -60,6 +60,9 @@ next-env.d.ts
 config.json
 secrets/
 
+# Claude Code personal settings
+.claude/settings.local.json
+
 # IDE
 .vscode/*
 !.vscode/settings.json

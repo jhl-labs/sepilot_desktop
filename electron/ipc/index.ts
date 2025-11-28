@@ -8,11 +8,13 @@ import { setupConfigHandlers } from './handlers/config';
 import { setupMCPHandlers } from './handlers/mcp';
 import { setupAuthHandlers } from './handlers/auth';
 import { setupLLMHandlers } from './handlers/llm';
+import { setupLangGraphHandlers } from './handlers/langgraph';
 import { setupVectorDBHandlers } from './handlers/vectordb';
 import { registerFileHandlers } from './handlers/file';
 import { setupGitHubHandlers } from './handlers/github';
 import { setupEmbeddingsHandlers } from './handlers/embeddings';
 import { setupComfyUIHandlers } from './handlers/comfyui';
+import { setupUpdateHandlers } from './handlers/update';
 import { logger } from '../services/logger';
 
 /**
@@ -26,11 +28,13 @@ export function setupIpcHandlers() {
   setupMCPHandlers();
   setupAuthHandlers();
   setupLLMHandlers();
+  setupLangGraphHandlers();
   setupVectorDBHandlers();
   registerFileHandlers();
   setupGitHubHandlers();
   setupEmbeddingsHandlers();
   setupComfyUIHandlers();
+  setupUpdateHandlers();
 
   logger.info('IPC handlers setup complete');
 }

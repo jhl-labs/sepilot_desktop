@@ -40,6 +40,7 @@ export interface LLMResponse {
 export interface StreamChunk {
   content: string;
   done: boolean;
+  toolCalls?: ToolCall[]; // Tool calls accumulated during streaming
 }
 
 export abstract class BaseLLMProvider {
@@ -160,20 +161,38 @@ export abstract class BaseLLMProvider {
 
         // Add all images in OpenAI format
         for (const image of msg.images) {
-          const base64 = image.base64 || '';
+          let imageUrl = image.base64 || '';
+
+          // Ensure the base64 data has proper data URL prefix
+          // API requires "data:image/..." format, not raw base64
+          if (imageUrl && !imageUrl.startsWith('data:')) {
+            // If no data prefix, add one based on mimeType or default to jpeg
+            const mimeType = image.mimeType || 'image/jpeg';
+            imageUrl = `data:${mimeType};base64,${imageUrl}`;
+            console.log('[LLM] Added data URL prefix to image');
+          }
 
           console.log('[LLM] Image for OpenAI format:', {
             filename: image.filename,
             mimeType: image.mimeType,
-            hasDataPrefix: base64.startsWith('data:'),
-            length: base64.length,
-            preview: base64.substring(0, 60) + '...'
+            hasDataPrefix: imageUrl.startsWith('data:'),
+            length: imageUrl.length,
+            preview: imageUrl.substring(0, 60) + '...'
           });
+
+          // Skip if no valid image data
+          if (!imageUrl || imageUrl.length < 50) {
+            console.warn('[LLM] Skipping invalid image:', {
+              filename: image.filename,
+              urlLength: imageUrl.length
+            });
+            continue;
+          }
 
           content.push({
             type: 'image_url',
             image_url: {
-              url: base64,
+              url: imageUrl,
               // Note: 'detail' field removed for Ollama compatibility
             },
           });

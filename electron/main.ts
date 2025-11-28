@@ -1,3 +1,6 @@
+// Load module aliases for path resolution (@/ -> dist/electron)
+import 'module-alias/register';
+
 import { app, BrowserWindow, session } from 'electron';
 import path from 'path';
 import serve from 'electron-serve';
@@ -5,7 +8,9 @@ import { databaseService } from './services/database';
 import { setupIpcHandlers } from './ipc';
 import { logger } from './services/logger';
 import { initializeLLMClient } from '../lib/llm/client';
+import { vectorDBService } from './services/vectordb';
 import { AppConfig } from '../types';
+import { initializeBuiltinTools } from '../lib/mcp/tools/executor';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -121,9 +126,23 @@ app.whenReady().then(async () => {
         } else {
           logger.info('No LLM config found or API key missing');
         }
+
+        // Initialize VectorDB from saved config
+        if (config.vectorDB) {
+          try {
+            await vectorDBService.initialize({
+              indexName: config.vectorDB.indexName,
+              dimension: config.vectorDB.dimension,
+            });
+            logger.info('VectorDB initialized from saved config');
+          } catch (vectorDBError) {
+            logger.error('Failed to initialize VectorDB:', vectorDBError);
+            // Non-critical error, continue app initialization
+          }
+        }
       }
     } catch (configError) {
-      logger.error('Failed to load LLM config:', configError);
+      logger.error('Failed to load config:', configError);
       // Non-critical error, continue app initialization
     }
   } catch (error) {
@@ -138,6 +157,10 @@ app.whenReady().then(async () => {
 
   // Setup IPC handlers
   setupIpcHandlers();
+
+  // Initialize builtin tools (file_read, file_write, file_edit, file_list)
+  initializeBuiltinTools();
+  logger.info('Builtin tools initialized');
 
   // Create window
   createWindow();

@@ -1,0 +1,37 @@
+{
+  "model": "claude-sonnet-4-5-20250929",
+  "permissions": {
+    "allow": [
+      "Read:*",
+      "Grep:*",
+      "Glob:*",
+      "Write:app/**",
+      "Write:components/**",
+      "Write:lib/**",
+      "Write:electron/**",
+      "Write:scripts/**",
+      "Write:.claude/**",
+      "Bash:pnpm run *",
+      "Bash:git status",
+      "Bash:git diff",
+      "Bash:git log",
+      "Bash:git add",
+      "Bash:git commit"
+    ],
+    "deny": [
+      "Write:.env*",
+      "Write:**/*.secrets",
+      "Write:**/.secrets/**",
+      "Bash:git push",
+      "Bash:npm install",
+      "Bash:rm -rf"
+    ],
+    "ask": [
+      "Write:CLAUDE.md",
+      "Write:package.json",
+      "Write:tsconfig.json",
+      "Bash:git rebase",
+      "Bash:git reset"
+    ]
+  }
+}

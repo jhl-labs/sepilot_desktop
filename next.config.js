@@ -31,6 +31,9 @@ const nextConfig = {
         'crypto',
         'stream',
         'child_process',
+        '@langchain/langgraph',
+        '@langchain/core',
+        'sharp',
       ];
 
       // Add as externals to prevent bundling

@@ -44,6 +44,7 @@ const electronAPI = {
     callTool: (serverName: string, toolName: string, args: any) =>
       ipcRenderer.invoke('mcp-call-tool', serverName, toolName, args),
     toggleServer: (name: string) => ipcRenderer.invoke('mcp-toggle-server', name),
+    getServerStatus: (name: string) => ipcRenderer.invoke('mcp-get-server-status', name),
   },
 
   // Auth operations
@@ -82,10 +83,12 @@ const electronAPI = {
     chat: (messages: any[], options?: any) => ipcRenderer.invoke('llm-chat', messages, options),
     init: (config: any) => ipcRenderer.invoke('llm-init', config),
     validate: () => ipcRenderer.invoke('llm-validate'),
+    generateTitle: (messages: any[]) => ipcRenderer.invoke('llm-generate-title', messages),
     fetchModels: (config: {
       provider: any;
       baseURL?: string;
       apiKey: string;
+      customHeaders?: Record<string, string>;
       networkConfig?: any;
     }) => ipcRenderer.invoke('llm-fetch-models', config),
     onStreamChunk: (callback: (chunk: string) => void) => {
@@ -94,7 +97,7 @@ const electronAPI = {
       return handler;
     },
     onStreamDone: (callback: () => void) => {
-      const handler = () => callback();
+      const handler = (_: any) => callback();
       ipcRenderer.on('llm-stream-done', handler);
       return handler;
     },
@@ -105,6 +108,56 @@ const electronAPI = {
     },
     removeStreamListener: (event: string, handler: any) => {
       ipcRenderer.removeListener(event, handler);
+    },
+    removeAllStreamListeners: () => {
+      ipcRenderer.removeAllListeners('llm-stream-chunk');
+      ipcRenderer.removeAllListeners('llm-stream-done');
+      ipcRenderer.removeAllListeners('llm-stream-error');
+    },
+  },
+
+  // LangGraph operations (CORS 문제 해결)
+  // conversationId를 통해 각 대화별로 스트리밍을 격리
+  langgraph: {
+    stream: (graphConfig: any, messages: any[], conversationId?: string, comfyUIConfig?: any, networkConfig?: any, workingDirectory?: string) =>
+      ipcRenderer.invoke('langgraph-stream', graphConfig, messages, conversationId, comfyUIConfig, networkConfig, workingDirectory),
+    onStreamEvent: (callback: (event: any) => void) => {
+      const handler = (_: any, event: any) => callback(event);
+      ipcRenderer.on('langgraph-stream-event', handler);
+      return handler;
+    },
+    onStreamDone: (callback: (data?: { conversationId?: string }) => void) => {
+      const handler = (_: any, data?: { conversationId?: string }) => callback(data);
+      ipcRenderer.on('langgraph-stream-done', handler);
+      return handler;
+    },
+    onStreamError: (callback: (data: { error: string; conversationId?: string }) => void) => {
+      const handler = (_: any, data: { error: string; conversationId?: string }) => callback(data);
+      ipcRenderer.on('langgraph-stream-error', handler);
+      return handler;
+    },
+    // Tool Approval (Human-in-the-loop)
+    onToolApprovalRequest: (callback: (data: {
+      conversationId: string;
+      messageId: string;
+      toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+    }) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('langgraph-tool-approval-request', handler);
+      return handler;
+    },
+    respondToolApproval: (conversationId: string, approved: boolean) =>
+      ipcRenderer.invoke('langgraph-tool-approval-response', conversationId, approved),
+    abort: (conversationId: string) =>
+      ipcRenderer.invoke('langgraph-abort', conversationId),
+    removeStreamListener: (event: string, handler: any) => {
+      ipcRenderer.removeListener(event, handler);
+    },
+    removeAllStreamListeners: () => {
+      ipcRenderer.removeAllListeners('langgraph-stream-event');
+      ipcRenderer.removeAllListeners('langgraph-stream-done');
+      ipcRenderer.removeAllListeners('langgraph-stream-error');
+      ipcRenderer.removeAllListeners('langgraph-tool-approval-request');
     },
   },
 
@@ -128,12 +181,18 @@ const electronAPI = {
       ipcRenderer.invoke('vectordb-count'),
     getAll: () =>
       ipcRenderer.invoke('vectordb-get-all'),
+    indexDocuments: (documents: Array<{ id: string; content: string; metadata: Record<string, any> }>, options: { chunkSize: number; chunkOverlap: number; batchSize: number }) =>
+      ipcRenderer.invoke('vectordb-index-documents', documents, options),
   },
 
   // File operations
   file: {
     selectImages: () => ipcRenderer.invoke('file:select-images'),
     loadImage: (filePath: string) => ipcRenderer.invoke('file:load-image', filePath),
+    fetchUrl: (url: string) => ipcRenderer.invoke('file:fetch-url', url),
+    selectDocument: () => ipcRenderer.invoke('file:select-document'),
+    read: (filePath: string) => ipcRenderer.invoke('file:read', filePath),
+    selectDirectory: () => ipcRenderer.invoke('file:select-directory'),
   },
 
   // GitHub operations
@@ -196,6 +255,12 @@ const electronAPI = {
       apiKey: string | undefined,
       networkConfig: any
     ) => ipcRenderer.invoke('comfyui-fetch-image', httpUrl, filename, subfolder, type, apiKey, networkConfig),
+  },
+
+  // Update operations
+  update: {
+    check: () => ipcRenderer.invoke('update:check'),
+    getVersion: () => ipcRenderer.invoke('update:get-version'),
   },
 
   // 이벤트 리스너

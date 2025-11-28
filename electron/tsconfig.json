@@ -21,11 +21,19 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["**/*.ts", "../types/**/*.ts"],
+  "include": [
+    "**/*.ts",
+    "../types/**/*.ts",
+    "../lib/langgraph/**/*.ts",
+    "../lib/llm/**/*.ts",
+    "../lib/mcp/**/*.ts",
+    "../lib/vectordb/**/*.ts",
+    "../lib/comfyui/**/*.ts",
+    "../lib/platform.ts"
+  ],
   "exclude": [
     "node_modules",
     "**/*.spec.ts",
-    "../lib/**/*",
     "../components/**/*",
     "../app/**/*"
   ]

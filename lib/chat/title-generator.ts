@@ -1,10 +1,10 @@
 import { Message } from '@/types';
-import { getLLMClient } from '@/lib/llm/client';
 
 /**
  * 대화 제목 자동 생성
  *
  * 첫 몇 개의 메시지를 기반으로 LLM에게 간결한 제목을 요청합니다.
+ * Electron IPC를 통해 Main Process에서 실행하여 CORS 문제를 회피합니다.
  */
 export async function generateConversationTitle(
   messages: Array<Pick<Message, 'role' | 'content'>>
@@ -13,46 +13,26 @@ export async function generateConversationTitle(
     // 첫 2-3개 메시지만 사용 (너무 많으면 비효율적)
     const contextMessages = messages.slice(0, 3);
 
-    // 제목 생성을 위한 프롬프트
-    const titlePrompt: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      {
-        role: 'system',
-        content: `You are a helpful assistant that generates concise, descriptive titles for conversations.
-Generate a short title (max 5-7 words) that captures the main topic of the conversation.
-Return ONLY the title, without quotes or additional text.`,
-      },
-      {
-        role: 'user',
-        content: `Based on this conversation, generate a concise title:\n\n${contextMessages
-          .map((m) => `${m.role}: ${m.content}`)
-          .join('\n\n')}`,
-      },
-    ];
+    // Electron 환경인 경우 IPC를 통해 Main Process에서 제목 생성
+    if (typeof window !== 'undefined' && window.electronAPI?.llm?.generateTitle) {
+      const result = await window.electronAPI.llm.generateTitle(contextMessages);
 
-    const client = getLLMClient();
-    const provider = client.getProvider();
-
-    // LLM 호출
-    let generatedTitle = '';
-    for await (const chunk of provider.stream(titlePrompt as any)) {
-      if (chunk.content) {
-        generatedTitle += chunk.content;
+      if (result.success && result.data?.title) {
+        const generatedTitle = result.data.title.trim();
+        // 생성된 제목이 너무 짧거나 비어있으면 기본값 사용
+        if (generatedTitle && generatedTitle.length >= 3) {
+          return generatedTitle;
+        }
       }
-    }
 
-    // 제목 정제 (따옴표 제거, 길이 제한 등)
-    generatedTitle = generatedTitle
-      .trim()
-      .replace(/^["']|["']$/g, '') // 시작/끝의 따옴표 제거
-      .replace(/\n/g, ' ') // 개행 제거
-      .slice(0, 100); // 최대 100자
-
-    // 생성된 제목이 너무 짧거나 비어있으면 기본값 사용
-    if (!generatedTitle || generatedTitle.length < 3) {
+      // IPC 호출 실패 시 fallback
+      console.warn('IPC title generation failed, using fallback');
       return generateFallbackTitle(messages);
     }
 
-    return generatedTitle;
+    // 브라우저 환경에서는 fallback 사용 (CORS 문제 회피)
+    console.warn('Not in Electron environment, using fallback title generation');
+    return generateFallbackTitle(messages);
   } catch (error) {
     console.error('Failed to generate conversation title:', error);
     return generateFallbackTitle(messages);

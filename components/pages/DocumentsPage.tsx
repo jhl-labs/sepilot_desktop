@@ -5,7 +5,7 @@ import { DocumentList } from '@/components/rag/DocumentList';
 import { DocumentUploadDialog } from '@/components/rag/DocumentUploadDialog';
 import { DocumentEditDialog } from '@/components/rag/DocumentEditDialog';
 import { VectorDBConfig, EmbeddingConfig, VectorDocument } from '@/lib/vectordb/types';
-import { getVectorDB, getEmbeddingProvider } from '@/lib/vectordb';
+import { getVectorDB, getEmbeddingProvider, deleteDocuments } from '@/lib/vectordb';
 import { generateId } from '@/lib/utils';
 import { indexDocuments } from '@/lib/vectordb/indexing';
 import { isElectron } from '@/lib/platform';
@@ -24,50 +24,107 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
   const [editingDocument, setEditingDocument] = useState<VectorDocument | null>(null);
   const [refreshDocuments, setRefreshDocuments] = useState<(() => Promise<void>) | null>(null);
 
-  useEffect(() => {
-    // VectorDB 설정 로드
-    const savedVectorDBConfig = localStorage.getItem('sepilot_vectordb_config');
-    if (savedVectorDBConfig) {
-      setVectorDBConfig(JSON.parse(savedVectorDBConfig));
+  // VectorDB 설정 로드 함수
+  const loadConfigs = async () => {
+    console.log('[DocumentsPage] Loading VectorDB and Embedding configs...');
+    console.log('[DocumentsPage] isElectron:', isElectron());
+
+    // Electron 환경에서는 DB에서 먼저 시도
+    if (isElectron() && window.electronAPI) {
+      try {
+        const result = await window.electronAPI.config.load();
+        console.log('[DocumentsPage] Loaded from DB:', result);
+        if (result.success && result.data) {
+          if (result.data.vectorDB) {
+            console.log('[DocumentsPage] VectorDB config from DB:', result.data.vectorDB);
+            setVectorDBConfig(result.data.vectorDB);
+          }
+          if (result.data.embedding) {
+            console.log('[DocumentsPage] Embedding config from DB:', result.data.embedding);
+            setEmbeddingConfig(result.data.embedding);
+          }
+          return; // DB에서 로드 성공하면 종료
+        }
+      } catch (error) {
+        console.error('[DocumentsPage] Failed to load from DB:', error);
+      }
     }
 
-    // Embedding 설정 로드
-    const savedEmbeddingConfig = localStorage.getItem('sepilot_embedding_config');
-    if (savedEmbeddingConfig) {
-      setEmbeddingConfig(JSON.parse(savedEmbeddingConfig));
+    // Web 환경 또는 DB 로드 실패 시 localStorage에서 로드
+    const savedVectorDBConfig = localStorage.getItem('sepilot_vectordb_config');
+    console.log('[DocumentsPage] savedVectorDBConfig from localStorage:', savedVectorDBConfig);
+    if (savedVectorDBConfig) {
+      const parsed = JSON.parse(savedVectorDBConfig);
+      console.log('[DocumentsPage] Parsed VectorDB config:', parsed);
+      setVectorDBConfig(parsed);
+    } else {
+      console.log('[DocumentsPage] No VectorDB config found in localStorage');
     }
+
+    const savedEmbeddingConfig = localStorage.getItem('sepilot_embedding_config');
+    console.log('[DocumentsPage] savedEmbeddingConfig from localStorage:', savedEmbeddingConfig);
+    if (savedEmbeddingConfig) {
+      const parsed = JSON.parse(savedEmbeddingConfig);
+      console.log('[DocumentsPage] Parsed Embedding config:', parsed);
+      setEmbeddingConfig(parsed);
+    } else {
+      console.log('[DocumentsPage] No Embedding config found in localStorage');
+    }
+  };
+
+  useEffect(() => {
+    // 초기 로드 (async)
+    (async () => {
+      await loadConfigs();
+    })();
+
+    // 설정 업데이트 이벤트 리스너
+    const handleConfigUpdate = (event: CustomEvent) => {
+      console.log('[DocumentsPage] Config updated event received:', event.detail);
+      if (event.detail.vectorDB) {
+        console.log('[DocumentsPage] Updating VectorDB config from event:', event.detail.vectorDB);
+        setVectorDBConfig(event.detail.vectorDB);
+      }
+      if (event.detail.embedding) {
+        console.log('[DocumentsPage] Updating Embedding config from event:', event.detail.embedding);
+        setEmbeddingConfig(event.detail.embedding);
+      }
+    };
+
+    window.addEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
+    };
   }, []);
 
   const isConfigured = vectorDBConfig && embeddingConfig;
   const isDisabled = !isElectron() && vectorDBConfig?.type === 'sqlite-vec';
 
+  // 디버깅을 위한 로그
+  useEffect(() => {
+    console.log('[DocumentsPage] Configuration status:', {
+      vectorDBConfig,
+      embeddingConfig,
+      isConfigured,
+      isDisabled,
+      isElectronEnv: isElectron(),
+    });
+  }, [vectorDBConfig, embeddingConfig, isConfigured, isDisabled]);
+
   const handleDocumentUpload = async (
     documents: { content: string; metadata: Record<string, any> }[]
   ) => {
     try {
+      console.log('[DocumentsPage] Starting document upload...', {
+        count: documents.length,
+        isElectronEnv: isElectron(),
+        vectorDBType: vectorDBConfig?.type,
+      });
+
       // 브라우저 환경에서 SQLite-vec 사용 시 경고
       if (!isElectron() && vectorDBConfig?.type === 'sqlite-vec') {
         throw new Error('SQLite-vec는 Electron 환경에서만 사용 가능합니다. 웹 브라우저에서는 문서를 업로드할 수 없습니다.');
-      }
-
-      // Embedding이 초기화되었는지 확인
-      let embedder;
-      try {
-        embedder = getEmbeddingProvider();
-      } catch (error) {
-        throw new Error('Embedding이 초기화되지 않았습니다. 먼저 설정에서 Embedding 설정을 완료해주세요.');
-      }
-
-      // VectorDB가 초기화되었는지 확인
-      let vectorDB;
-      try {
-        vectorDB = getVectorDB();
-      } catch (error) {
-        throw new Error('VectorDB가 초기화되지 않았습니다. 먼저 설정에서 VectorDB 설정을 완료해주세요.');
-      }
-
-      if (!vectorDB || !embedder) {
-        throw new Error('VectorDB 또는 Embedding이 초기화되지 않았습니다.');
       }
 
       // Raw documents 생성
@@ -77,19 +134,57 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         metadata: doc.metadata,
       }));
 
-      // 인덱싱
-      await indexDocuments(vectorDB, embedder, rawDocs, {
+      const indexingOptions = {
         chunkSize: 500,
         chunkOverlap: 50,
         batchSize: 10,
-      });
+      };
+
+      // Electron 환경에서는 IPC를 통해 Main Process에서 인덱싱
+      if (isElectron() && window.electronAPI?.vectorDB) {
+        console.log('[DocumentsPage] Using IPC for indexing in Electron');
+        const result = await window.electronAPI.vectorDB.indexDocuments(rawDocs, indexingOptions);
+
+        if (!result.success) {
+          throw new Error(result.error || '문서 인덱싱 실패');
+        }
+
+        console.log('[DocumentsPage] Documents indexed successfully via IPC');
+      } else {
+        // Web 환경에서는 직접 인덱싱
+        console.log('[DocumentsPage] Using direct indexing in Web');
+
+        // Embedding이 초기화되었는지 확인
+        let embedder;
+        try {
+          embedder = getEmbeddingProvider();
+        } catch {
+          throw new Error('Embedding이 초기화되지 않았습니다. 먼저 설정에서 Embedding 설정을 완료해주세요.');
+        }
+
+        // VectorDB가 초기화되었는지 확인
+        let vectorDB;
+        try {
+          vectorDB = getVectorDB();
+        } catch {
+          throw new Error('VectorDB가 초기화되지 않았습니다. 먼저 설정에서 VectorDB 설정을 완료해주세요.');
+        }
+
+        if (!vectorDB || !embedder) {
+          throw new Error('VectorDB 또는 Embedding이 초기화되지 않았습니다.');
+        }
+
+        // 인덱싱
+        await indexDocuments(vectorDB, embedder, rawDocs, indexingOptions);
+        console.log('[DocumentsPage] Documents indexed successfully');
+      }
 
       // 리스트 새로고침
       if (refreshDocuments) {
         await refreshDocuments();
       }
     } catch (error: any) {
-      console.error('Failed to upload documents:', error);
+      console.error('[DocumentsPage] Failed to upload documents:', error);
       throw error;
     }
   };
@@ -100,17 +195,12 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
     metadata: Record<string, any>;
   }) => {
     try {
-      const vectorDB = getVectorDB();
-      const embedder = getEmbeddingProvider();
-
-      if (!vectorDB || !embedder) {
-        throw new Error('VectorDB 또는 Embedding이 초기화되지 않았습니다.');
+      // 브라우저 환경에서 SQLite-vec 사용 시 경고
+      if (!isElectron() && vectorDBConfig?.type === 'sqlite-vec') {
+        throw new Error('SQLite-vec는 Electron 환경에서만 사용 가능합니다. 웹 브라우저에서는 문서를 편집할 수 없습니다.');
       }
 
-      // 기존 문서 삭제
-      await vectorDB.delete([doc.id]);
-
-      // 새 문서 인덱싱 (같은 ID 사용)
+      // 새 문서 데이터
       const rawDocs = [
         {
           id: doc.id,
@@ -119,11 +209,38 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         },
       ];
 
-      await indexDocuments(vectorDB, embedder, rawDocs, {
+      const indexingOptions = {
         chunkSize: 500,
         chunkOverlap: 50,
         batchSize: 10,
-      });
+      };
+
+      // Electron 환경에서는 IPC를 통해 Main Process에서 처리
+      if (isElectron() && window.electronAPI?.vectorDB) {
+        // 기존 문서 삭제
+        await deleteDocuments([doc.id]);
+
+        // 새 문서 인덱싱 (같은 ID 사용)
+        const result = await window.electronAPI.vectorDB.indexDocuments(rawDocs, indexingOptions);
+
+        if (!result.success) {
+          throw new Error(result.error || '문서 편집 실패');
+        }
+      } else {
+        // Web 환경에서는 직접 처리
+        const vectorDB = getVectorDB();
+        const embedder = getEmbeddingProvider();
+
+        if (!vectorDB || !embedder) {
+          throw new Error('VectorDB 또는 Embedding이 초기화되지 않았습니다.');
+        }
+
+        // 기존 문서 삭제
+        await vectorDB.delete([doc.id]);
+
+        // 새 문서 인덱싱 (같은 ID 사용)
+        await indexDocuments(vectorDB, embedder, rawDocs, indexingOptions);
+      }
 
       // 리스트 새로고침
       if (refreshDocuments) {
@@ -221,10 +338,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
           {/* Document List */}
           <div className="rounded-lg border p-6">
             <DocumentList
-              onDelete={async (ids) => {
-                const vectorDB = getVectorDB();
-                await vectorDB.delete(ids);
-              }}
+              onDelete={deleteDocuments}
               onEdit={handleEdit}
               onRefresh={(fn) => setRefreshDocuments(() => fn)}
               disabled={isDisabled}

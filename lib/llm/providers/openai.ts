@@ -85,6 +85,7 @@ export class OpenAIProvider extends BaseLLMProvider {
           headers: {
             'Content-Type': 'application/json',
             ...authHeaders,
+            ...(this.config.customHeaders || {}),
           },
           body: JSON.stringify(requestBody),
         }
@@ -195,6 +196,13 @@ export class OpenAIProvider extends BaseLLMProvider {
         requestBody.top_p = mergedOptions.topP;
       }
 
+      // Add tools if provided (for tool calling support)
+      if (mergedOptions.tools && mergedOptions.tools.length > 0) {
+        requestBody.tools = mergedOptions.tools;
+        requestBody.tool_choice = 'auto';
+        log.info('[OpenAI] Stream request with tools:', mergedOptions.tools.length);
+      }
+
       const requestUrl = `${this.baseURL}/chat/completions`;
 
       log.info('[OpenAI] Stream request:', {
@@ -240,6 +248,7 @@ export class OpenAIProvider extends BaseLLMProvider {
           headers: {
             'Content-Type': 'application/json',
             ...authHeaders,
+            ...(this.config.customHeaders || {}),
           },
           body: JSON.stringify(requestBody),
         }
@@ -269,11 +278,26 @@ export class OpenAIProvider extends BaseLLMProvider {
       const decoder = new TextDecoder();
       let buffer = '';
 
+      // Tool calls accumulator (for streaming tool calls)
+      const toolCallsAccumulator: Map<number, any> = new Map();
+
       while (true) {
         const { done, value } = await reader.read();
 
         if (done) {
-          yield { content: '', done: true };
+          // Convert accumulated tool calls to array
+          const toolCalls = toolCallsAccumulator.size > 0
+            ? Array.from(toolCallsAccumulator.values()).map((tc: any) => ({
+                id: tc.id,
+                type: tc.type || 'function',
+                function: {
+                  name: tc.function.name,
+                  arguments: tc.function.arguments,
+                },
+              }))
+            : undefined;
+
+          yield { content: '', done: true, toolCalls };
           break;
         }
 
@@ -295,10 +319,49 @@ export class OpenAIProvider extends BaseLLMProvider {
 
             try {
               const data = JSON.parse(jsonStr);
-              const content = data.choices?.[0]?.delta?.content;
+              const delta = data.choices?.[0]?.delta;
 
+              // Handle content chunks
+              const content = delta?.content;
               if (content) {
                 yield { content, done: false };
+              }
+
+              // Handle tool_calls delta (OpenAI streaming format)
+              const toolCallsDeltas = delta?.tool_calls;
+              if (toolCallsDeltas && Array.isArray(toolCallsDeltas)) {
+                for (const tcDelta of toolCallsDeltas) {
+                  const index = tcDelta.index;
+                  if (index === undefined) continue;
+
+                  // Get or create tool call accumulator for this index
+                  let toolCall = toolCallsAccumulator.get(index);
+                  if (!toolCall) {
+                    toolCall = {
+                      id: tcDelta.id || '',
+                      type: tcDelta.type || 'function',
+                      function: {
+                        name: '',
+                        arguments: '',
+                      },
+                    };
+                    toolCallsAccumulator.set(index, toolCall);
+                  }
+
+                  // Accumulate delta fields
+                  if (tcDelta.id) {
+                    toolCall.id = tcDelta.id;
+                  }
+                  if (tcDelta.type) {
+                    toolCall.type = tcDelta.type;
+                  }
+                  if (tcDelta.function?.name) {
+                    toolCall.function.name += tcDelta.function.name;
+                  }
+                  if (tcDelta.function?.arguments) {
+                    toolCall.function.arguments += tcDelta.function.arguments;
+                  }
+                }
               }
             } catch (e) {
               log.error('Failed to parse SSE data:', e, 'Raw line:', trimmed);

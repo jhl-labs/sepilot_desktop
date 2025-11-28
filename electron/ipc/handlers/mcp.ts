@@ -2,10 +2,12 @@ import { ipcMain } from 'electron';
 import { spawn } from 'child_process';
 import { MCPServerManager } from '../../../lib/mcp/server-manager';
 import { StdioMCPClient } from '../../../lib/mcp/transport/stdio';
+import { SSEMCPClient } from '../../../lib/mcp/transport/sse';
 import { MCPServerConfig } from '../../../lib/mcp/types';
 import { ToolRegistry } from '../../../lib/mcp/tools/registry';
 import { databaseService } from '../../services/database';
 import { AppConfig } from '../../../types';
+import { MCPClient } from '../../../lib/mcp/client';
 
 /**
  * Load MCP configs from database
@@ -65,11 +67,30 @@ async function initializeMCPServers(): Promise<void> {
     try {
       console.log(`[MCP] Starting server: ${config.name}`);
 
-      // Stdio MCP Client 생성
-      const client = new StdioMCPClient(config);
+      let client: MCPClient;
 
-      // Main Process에서 연결
-      await client.connectInMainProcess(spawn);
+      // Transport type에 따라 클라이언트 생성
+      if (config.transport === 'sse') {
+        // Validate SSE config
+        if (!config.url) {
+          console.error(`[MCP] Invalid SSE config for ${config.name}: missing url`);
+          continue;
+        }
+
+        client = new SSEMCPClient(config);
+        await client.connect();
+      } else {
+        // stdio transport (default)
+        // Validate stdio config
+        if (!config.command || !config.args || config.args.length === 0) {
+          console.error(`[MCP] Invalid stdio config for ${config.name}: missing command or args`);
+          continue;
+        }
+
+        const stdioClient = new StdioMCPClient(config);
+        await stdioClient.connectInMainProcess(spawn);
+        client = stdioClient;
+      }
 
       // 초기화
       await client.initialize();
@@ -86,7 +107,7 @@ async function initializeMCPServers(): Promise<void> {
       // Config 저장
       serverConfigs.set(config.name, config);
 
-      console.log(`[MCP] Server initialized: ${config.name} (${tools.length} tools)`);
+      console.log(`[MCP] Server initialized: ${config.name} (${tools.length} tools, transport: ${config.transport})`);
     } catch (error: any) {
       console.error(`[MCP] Failed to initialize server ${config.name}:`, error);
       // 실패해도 계속 진행 (다른 서버들은 시작)
@@ -109,11 +130,29 @@ export function setupMCPHandlers() {
    */
   ipcMain.handle('mcp-add-server', async (_event, config: MCPServerConfig) => {
     try {
-      // Stdio MCP Client 생성
-      const client = new StdioMCPClient(config);
+      let client: MCPClient;
 
-      // Main Process에서 연결
-      await client.connectInMainProcess(spawn);
+      // Validate config and create client based on transport type
+      if (config.transport === 'sse') {
+        if (!config.url) {
+          throw new Error('SSE transport requires "url" field');
+        }
+
+        client = new SSEMCPClient(config);
+        await client.connect();
+      } else {
+        // stdio transport (default)
+        if (!config.command) {
+          throw new Error('stdio transport requires "command" field');
+        }
+        if (!config.args || config.args.length === 0) {
+          throw new Error('stdio transport requires "args" field');
+        }
+
+        const stdioClient = new StdioMCPClient(config);
+        await stdioClient.connectInMainProcess(spawn);
+        client = stdioClient;
+      }
 
       // 초기화
       await client.initialize();
@@ -131,7 +170,7 @@ export function setupMCPHandlers() {
       serverConfigs.set(config.name, config);
       saveMCPConfigs(Array.from(serverConfigs.values()));
 
-      console.log(`[MCP] Server added: ${config.name} (${tools.length} tools)`);
+      console.log(`[MCP] Server added: ${config.name} (${tools.length} tools, transport: ${config.transport})`);
 
       return {
         success: true,
@@ -256,14 +295,33 @@ export function setupMCPHandlers() {
       saveMCPConfigs(Array.from(serverConfigs.values()));
 
       if (newConfig.enabled) {
+        let client: MCPClient;
+
+        // Transport type에 따라 클라이언트 생성
+        if (newConfig.transport === 'sse') {
+          if (!newConfig.url) {
+            throw new Error('Invalid SSE config: missing url');
+          }
+
+          client = new SSEMCPClient(newConfig);
+          await client.connect();
+        } else {
+          // stdio transport (default)
+          if (!newConfig.command || !newConfig.args || newConfig.args.length === 0) {
+            throw new Error('Invalid stdio config: missing command or args');
+          }
+
+          const stdioClient = new StdioMCPClient(newConfig);
+          await stdioClient.connectInMainProcess(spawn);
+          client = stdioClient;
+        }
+
         // 활성화: 서버 재시작
-        const client = new StdioMCPClient(newConfig);
-        await client.connectInMainProcess(spawn);
         await client.initialize();
         const tools = await client.listTools();
         await MCPServerManager.addServerInMainProcess(client);
         ToolRegistry.registerTools(tools);
-        console.log(`[MCP] Server enabled: ${name}`);
+        console.log(`[MCP] Server enabled: ${name} (transport: ${newConfig.transport})`);
       } else {
         // 비활성화: 서버 중지
         await MCPServerManager.removeServerInMainProcess(name);
@@ -279,6 +337,74 @@ export function setupMCPHandlers() {
       return {
         success: false,
         error: error.message || 'Failed to toggle server',
+      };
+    }
+  });
+
+  /**
+   * MCP 서버 상태 가져오기
+   */
+  ipcMain.handle('mcp-get-server-status', async (_event, name: string) => {
+    try {
+      const config = serverConfigs.get(name);
+      if (!config) {
+        return {
+          success: true,
+          data: {
+            status: 'disconnected' as const,
+            toolCount: 0,
+            tools: [],
+          },
+        };
+      }
+
+      // 비활성화된 서버
+      if (config.enabled === false) {
+        return {
+          success: true,
+          data: {
+            status: 'disconnected' as const,
+            toolCount: 0,
+            tools: [],
+          },
+        };
+      }
+
+      // Server Manager에서 서버 가져오기
+      const server = MCPServerManager.getServerInMainProcess(name);
+
+      if (!server) {
+        return {
+          success: true,
+          data: {
+            status: 'disconnected' as const,
+            toolCount: 0,
+            tools: [],
+          },
+        };
+      }
+
+      // 도구 목록 가져오기
+      const tools = ToolRegistry.getToolsByServer(name);
+
+      return {
+        success: true,
+        data: {
+          status: 'connected' as const,
+          toolCount: tools.length,
+          tools: tools.map((t) => t.name),
+        },
+      };
+    } catch (error: any) {
+      console.error('[MCP] Failed to get server status:', error);
+      return {
+        success: true,
+        data: {
+          status: 'error' as const,
+          toolCount: 0,
+          tools: [],
+          errorMessage: error.message,
+        },
       };
     }
   });

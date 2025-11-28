@@ -21,9 +21,9 @@ export function createFetchOptions(
 
   const headers = options.headers as Record<string, string>;
 
-  // 커스텀 헤더 추가
-  if (config.network?.customHeaders) {
-    Object.entries(config.network.customHeaders).forEach(([key, value]) => {
+  // 커스텀 헤더 추가 (LLM API 전용)
+  if (config.customHeaders) {
+    Object.entries(config.customHeaders).forEach(([key, value]) => {
       headers[key] = value;
     });
   }
@@ -45,8 +45,11 @@ export async function fetchWithConfig(
   options: RequestInit = {},
   timeout: number = 300000 // 5 minutes default for vision models
 ): Promise<Response> {
-  // 브라우저 환경
-  if (typeof window !== 'undefined') {
+  // Check if running in Electron (both Main and Renderer process)
+  const isElectron = typeof process !== 'undefined' && process.versions?.electron;
+
+  // Pure browser environment (not Electron Renderer)
+  if (typeof window !== 'undefined' && !isElectron) {
     const fetchOptions = createFetchOptions(config, options);
 
     // Add timeout using AbortController
@@ -63,13 +66,14 @@ export async function fetchWithConfig(
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
-        throw new Error(`Request timeout after ${timeout}ms`);
+        throw new Error(`Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`);
       }
-      throw error;
+      // Provide more helpful error message
+      throw new Error(`Failed to fetch from ${url}: ${error.message || error}. Check your network connection and server status.`);
     }
   }
 
-  // Node.js/Electron 환경
+  // Node.js/Electron 환경 (including Electron Renderer)
   // 동적 import로 https-proxy-agent와 node:https 로드
   try {
     const fetchOptions = createFetchOptions(config, options);
@@ -124,9 +128,10 @@ export async function fetchWithConfig(
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
-        throw new Error(`Request timeout after ${timeout}ms`);
+        throw new Error(`Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`);
       }
-      throw error;
+      // Provide more helpful error message
+      throw new Error(`Failed to fetch from ${url}: ${error.message || error}. Check your network connection and server status.`);
     }
   } catch (error) {
     console.error('Error creating fetch with config:', error);
@@ -145,9 +150,10 @@ export async function fetchWithConfig(
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        throw new Error(`Request timeout after ${timeout}ms`);
+        throw new Error(`Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`);
       }
-      throw fetchError;
+      // Provide more helpful error message
+      throw new Error(`Failed to fetch from ${url}: ${fetchError.message || fetchError}. Check your network connection and server status.`);
     }
   }
 }

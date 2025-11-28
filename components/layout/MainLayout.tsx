@@ -6,6 +6,7 @@ import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { useChatStore } from '@/lib/store/chat-store';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { DocumentsPage } from '@/components/pages/DocumentsPage';
+import { GalleryView } from '@/components/gallery/GalleryView';
 import { initializeVectorDB } from '@/lib/vectordb/client';
 import { initializeEmbedding } from '@/lib/vectordb/embeddings/client';
 import { isElectron } from '@/lib/platform';
@@ -18,7 +19,7 @@ const MIN_SIDEBAR_WIDTH = 200;
 const MAX_SIDEBAR_WIDTH = 500;
 const DEFAULT_SIDEBAR_WIDTH = 260;
 
-type ViewMode = 'chat' | 'documents';
+type ViewMode = 'chat' | 'documents' | 'gallery';
 
 export function MainLayout({ children }: MainLayoutProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -170,17 +171,67 @@ export function MainLayout({ children }: MainLayoutProps) {
     const autoInitialize = async () => {
       if (typeof window === 'undefined') return;
 
-      const savedVectorDBConfig = localStorage.getItem('sepilot_vectordb_config');
-      const savedEmbeddingConfig = localStorage.getItem('sepilot_embedding_config');
+      try {
+        let vectorDBConfig = null;
+        let embeddingConfig = null;
 
-      const vectorDBConfig = savedVectorDBConfig ? JSON.parse(savedVectorDBConfig) : null;
-      const embeddingConfig = savedEmbeddingConfig ? JSON.parse(savedEmbeddingConfig) : null;
+        // Electron 환경에서는 SQLite에서, 웹에서는 localStorage에서 설정 로드
+        if (isElectron() && window.electronAPI) {
+          // Electron: SQLite에서 로드
+          const result = await window.electronAPI.config.load();
+          if (result.success && result.data) {
+            vectorDBConfig = result.data.vectorDB;
+            embeddingConfig = result.data.embedding;
+            console.log('[MainLayout] Loaded config from SQLite');
+          }
+        } else {
+          // Web: localStorage에서 로드
+          const savedVectorDBConfig = localStorage.getItem('sepilot_vectordb_config');
+          if (savedVectorDBConfig) {
+            vectorDBConfig = JSON.parse(savedVectorDBConfig);
+          }
 
-      if (!vectorDBConfig) {
-        console.log('[MainLayout] No VectorDB config in localStorage');
+          const savedEmbeddingConfig = localStorage.getItem('sepilot_embedding_config');
+          if (savedEmbeddingConfig) {
+            embeddingConfig = JSON.parse(savedEmbeddingConfig);
+          }
+        }
+
+        // VectorDB 초기화
+        if (vectorDBConfig) {
+          console.log('[MainLayout] VectorDB type:', vectorDBConfig.type);
+
+          // SQLite-vec는 브라우저에서 건너뛰기
+          if (vectorDBConfig.type === 'sqlite-vec' && !isElectron()) {
+            console.log('⊘ Skipping SQLite-vec in browser environment');
+          } else {
+            try {
+              await initializeVectorDB(vectorDBConfig);
+              console.log('✓ VectorDB auto-initialized:', vectorDBConfig.type);
+            } catch (error) {
+              console.error('✗ Failed to auto-initialize VectorDB:', error);
+            }
+          }
+        } else {
+          console.log('[MainLayout] No VectorDB config found');
+        }
+
+        // Embedding 초기화
+        if (embeddingConfig) {
+          try {
+            initializeEmbedding(embeddingConfig);
+            console.log('✓ Embedding auto-initialized:', embeddingConfig.provider);
+          } catch (error) {
+            console.error('✗ Failed to auto-initialize Embedding:', error);
+          }
+        } else {
+          console.log('[MainLayout] No Embedding config found');
+        }
+
+        await initializeFromConfig(vectorDBConfig, embeddingConfig);
+      } catch (error) {
+        console.error('Auto-initialization error:', error);
       }
-
-      await initializeFromConfig(vectorDBConfig, embeddingConfig);
     };
 
     autoInitialize();
@@ -209,7 +260,10 @@ export function MainLayout({ children }: MainLayoutProps) {
     <div className="flex h-screen w-screen overflow-hidden bg-background">
       {/* Sidebar */}
       <div style={{ width: sidebarWidth }} className="relative flex-shrink-0">
-        <Sidebar onDocumentsClick={() => setViewMode('documents')} />
+        <Sidebar
+          onDocumentsClick={() => setViewMode('documents')}
+          onGalleryClick={() => setViewMode('gallery')}
+        />
 
         {/* Resize Handle */}
         <div
@@ -222,10 +276,12 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {viewMode === 'chat' ? (
-          children
-        ) : (
+        {viewMode === 'chat' && children}
+        {viewMode === 'documents' && (
           <DocumentsPage onBack={() => setViewMode('chat')} />
+        )}
+        {viewMode === 'gallery' && (
+          <GalleryView onClose={() => setViewMode('chat')} />
         )}
       </div>
 

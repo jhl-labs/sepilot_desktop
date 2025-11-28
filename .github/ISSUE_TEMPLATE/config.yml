@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Documentation
-    url: https://github.com/vtopia-dev/sepilot_desktop/blob/main/README.md
+    url: https://github.com/jhl-lab/sepilot_desktop/blob/main/README.md
     about: Read the documentation for setup and usage guides
   - name: Security Issue
-    url: https://github.com/vtopia-dev/sepilot_desktop/blob/main/SECURITY.md
+    url: https://github.com/jhl-lab/sepilot_desktop/blob/main/SECURITY.md
     about: Please report security vulnerabilities privately

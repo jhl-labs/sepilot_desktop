@@ -135,6 +135,17 @@ class MCPServerManagerClass {
   getAllServersInMainProcess(): MCPClient[] {
     return Array.from(this.servers.values());
   }
+
+  /**
+   * Main Process용 - 도구 호출
+   */
+  async callToolInMainProcess(serverName: string, toolName: string, args: any): Promise<any> {
+    const client = this.servers.get(serverName);
+    if (!client) {
+      throw new Error(`Server '${serverName}' not found`);
+    }
+    return await client.callTool(toolName, args);
+  }
 }
 
 export const MCPServerManager = new MCPServerManagerClass();

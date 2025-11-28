@@ -84,9 +84,9 @@ export class SQLiteVecAdapter extends VectorDB {
     // Convert VectorDocument to Electron API format
     const electronDocs = documents.map(doc => ({
       id: doc.id,
-      text: doc.content,
+      content: doc.content,
       embedding: doc.embedding || [],
-      metadata: doc.metadata,
+      metadata: doc.metadata || {},
     }));
 
     const result = await window.electronAPI.vectorDB.insert(electronDocs);
@@ -158,7 +158,7 @@ export class SQLiteVecAdapter extends VectorDB {
     // Convert Electron API format to VectorDocument
     const documents = (result.data || []).map(doc => ({
       id: doc.id,
-      content: doc.text || '',
+      content: doc.content || '',
       metadata: doc.metadata ?? {},
       embedding: doc.embedding,
     }));

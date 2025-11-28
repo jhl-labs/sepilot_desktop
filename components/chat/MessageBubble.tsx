@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useChatStore } from '@/lib/store/chat-store';
+import { ImageGenerationProgressBar } from './ImageGenerationProgressBar';
 
 interface MessageBubbleProps {
   message: Message;
@@ -33,7 +34,12 @@ export function MessageBubble({
   const [copied, setCopied] = useState(false);
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
 
-  const { addMessage } = useChatStore();
+  const { addMessage, imageGenerationProgress } = useChatStore();
+
+  // Check if this message has image generation in progress
+  const messageImageGenProgress = Array.from(imageGenerationProgress.values()).find(
+    (progress) => progress.messageId === message.id && progress.status !== 'completed'
+  );
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -84,7 +90,7 @@ export function MessageBubble({
     <div
       className={cn(
         'group relative flex gap-4 py-6 px-4 transition-colors',
-        isUser ? 'flex-row-reverse' : 'flex-row',
+        isUser ? 'flex-row' : 'flex-row',
         !isUser && 'hover:bg-muted/30'
       )}
       onMouseEnter={() => setIsHovered(true)}
@@ -95,7 +101,7 @@ export function MessageBubble({
         className={cn(
           'flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-2 ring-background shadow-sm',
           isUser
-            ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground'
+            ? 'bg-gradient-to-br from-blue-600 to-blue-500 dark:from-blue-500 dark:to-blue-400 text-white'
             : 'bg-gradient-to-br from-secondary to-secondary/80 text-secondary-foreground'
         )}
       >
@@ -105,7 +111,10 @@ export function MessageBubble({
       {/* Message Content */}
       <div className="flex flex-col gap-2 flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className={cn('text-sm font-semibold', isUser ? 'text-right' : 'text-left')}>
+          <span className={cn(
+            'text-sm font-semibold',
+            isUser ? 'text-blue-700 dark:text-blue-400' : 'text-left'
+          )}>
             {isUser ? 'You' : 'Assistant'}
           </span>
         </div>
@@ -153,6 +162,14 @@ export function MessageBubble({
                 </div>
               )}
 
+              {/* Image Generation Progress */}
+              {messageImageGenProgress && (
+                <ImageGenerationProgressBar
+                  progress={messageImageGenProgress}
+                  className="mb-3"
+                />
+              )}
+
               {isAssistant ? (
                 <MarkdownRenderer
                   content={message.content}
@@ -161,7 +178,7 @@ export function MessageBubble({
                   onSourceClick={(doc) => handleViewDocument(doc.id, doc.title, doc.content)}
                 />
               ) : (
-                <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-blue-700 dark:text-blue-400">
                   {message.content}
                 </div>
               )}
@@ -236,58 +253,49 @@ export function MessageBubble({
           </div>
         )}
 
-        {/* Action Buttons */}
-        {!isEditing && isHovered && (
-          <div className={cn('flex gap-1 mt-1', isUser ? 'justify-end' : 'justify-start')}>
-            {isUser && onEdit && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setIsEditing(true)}
-                className="h-8 px-3 text-xs rounded-lg hover:bg-muted"
-              >
-                <Edit2 className="h-3 w-3 mr-1.5" />
-                편집
-              </Button>
-            )}
-
-            {isAssistant && (
-              <>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleCopy}
-                  className="h-8 px-3 text-xs rounded-lg hover:bg-muted"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-3 w-3 mr-1.5" />
-                      복사됨
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3 w-3 mr-1.5" />
-                      복사
-                    </>
-                  )}
-                </Button>
-
-                {isLastAssistantMessage && onRegenerate && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleRegenerate}
-                    className="h-8 px-3 text-xs rounded-lg hover:bg-muted"
-                  >
-                    <RefreshCw className="h-3 w-3 mr-1.5" />
-                    재생성
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* Action Buttons - Float on top right */}
+      {!isEditing && isHovered && (
+        <div className="absolute top-4 right-4 flex gap-1 bg-background/80 backdrop-blur-sm rounded-lg border shadow-sm p-0.5">
+          {/* 복사 버튼 - 모든 메시지에 표시 */}
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleCopy}
+            className="h-7 w-7 rounded-md hover:bg-muted"
+            title={copied ? '복사됨' : '복사'}
+          >
+            {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+          </Button>
+
+          {/* 편집 버튼 - 사용자 메시지에 표시 */}
+          {isUser && onEdit && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setIsEditing(true)}
+              className="h-7 w-7 rounded-md hover:bg-muted"
+              title="편집"
+            >
+              <Edit2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
+          {/* 재생성 버튼 - 마지막 assistant 메시지에 표시 */}
+          {isAssistant && isLastAssistantMessage && onRegenerate && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleRegenerate}
+              className="h-7 w-7 rounded-md hover:bg-muted"
+              title="재생성"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

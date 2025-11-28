@@ -1,15 +1,15 @@
-import { AgentState } from '../types';
+import { StateGraph, END } from '@langchain/langgraph';
+import { AgentStateAnnotation, AgentState } from '../state';
 import { generateWithToolsNode } from '../nodes/generate';
 import { toolsNode, shouldUseTool } from '../nodes/tools';
-import { LLMService } from '@/lib/llm/service';
-import { Message } from '@/types';
-import { createBaseSystemMessage } from '../utils/system-message';
+import type { Message } from '@/types';
+import type { ToolApprovalCallback } from '../types';
 
 /**
- * Tool-Using Agent 그래프 - 간단한 구현
+ * Tool-Using Agent 그래프 - LangGraph StateGraph 사용
  */
 export class AgentGraph {
-  async invoke(initialState: AgentState, maxIterations = 50): Promise<AgentState> {
+  async invoke(initialState: AgentState, maxIterations = 10): Promise<AgentState> {
     let state = { ...initialState };
     let iterations = 0;
 
@@ -34,17 +34,31 @@ export class AgentGraph {
         toolResults: [...state.toolResults, ...(toolsResult.toolResults || [])],
       };
 
+      // 이미지 생성 도구가 성공적으로 실행되었으면 루프 종료
+      const hasSuccessfulImageGeneration = toolsResult.toolResults?.some(
+        (result) => result.toolName === 'generate_image' && !result.error
+      );
+      if (hasSuccessfulImageGeneration) {
+        console.log('[AgentGraph.invoke] Image generation completed, ending loop');
+        break;
+      }
+
       iterations++;
     }
 
     return state;
   }
 
-  async *stream(initialState: AgentState, maxIterations = 50): AsyncGenerator<any> {
+  async *stream(
+    initialState: AgentState,
+    maxIterations = 10,
+    toolApprovalCallback?: ToolApprovalCallback
+  ): AsyncGenerator<any> {
     let state = { ...initialState };
     let iterations = 0;
 
     console.log('[AgentGraph] Starting stream with initial state');
+    console.log('[AgentGraph] Tool approval callback:', toolApprovalCallback ? 'provided' : 'not provided');
 
     let hasError = false;
     let errorMessage = '';
@@ -104,7 +118,59 @@ export class AgentGraph {
         break;
       }
 
-      // 3. tools 노드 실행
+      // 3. Human-in-the-loop: Tool approval
+      const lastMessage = state.messages[state.messages.length - 1];
+      if (toolApprovalCallback && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+        console.log('[AgentGraph] Requesting tool approval for:', lastMessage.tool_calls.map(tc => tc.name));
+
+        // Yield tool approval request event
+        yield {
+          type: 'tool_approval_request',
+          messageId: lastMessage.id,
+          toolCalls: lastMessage.tool_calls,
+        };
+
+        try {
+          // Wait for user approval
+          const approved = await toolApprovalCallback(lastMessage.tool_calls);
+
+          // Yield approval result
+          yield {
+            type: 'tool_approval_result',
+            approved,
+          };
+
+          if (!approved) {
+            console.log('[AgentGraph] Tools rejected by user');
+            // Add a message indicating tools were rejected
+            const rejectionMessage: Message = {
+              id: `msg-${Date.now()}`,
+              role: 'assistant',
+              content: '도구 실행이 사용자에 의해 거부되었습니다.',
+              created_at: Date.now(),
+            };
+            state = {
+              ...state,
+              messages: [...state.messages, rejectionMessage],
+            };
+            yield {
+              generate: {
+                messages: [rejectionMessage],
+              },
+            };
+            break; // End the loop
+          }
+
+          console.log('[AgentGraph] Tools approved by user');
+        } catch (approvalError: any) {
+          console.error('[AgentGraph] Tool approval error:', approvalError);
+          hasError = true;
+          errorMessage = approvalError.message || 'Tool approval failed';
+          break;
+        }
+      }
+
+      // 4. tools 노드 실행
       console.log('[AgentGraph] Executing tools node');
       const toolsResult = await toolsNode(state);
 
@@ -127,6 +193,16 @@ export class AgentGraph {
       console.log('[AgentGraph] Tool results:', toolsResult.toolResults);
 
       yield { tools: toolsResult };
+
+      // 이미지 생성 도구가 성공적으로 실행되었으면 루프 종료
+      // (이미지 생성은 일회성 작업이므로 추가 반복 불필요)
+      const hasSuccessfulImageGeneration = toolsResult.toolResults?.some(
+        (result) => result.toolName === 'generate_image' && !result.error
+      );
+      if (hasSuccessfulImageGeneration) {
+        console.log('[AgentGraph] Image generation completed successfully, ending loop');
+        break;
+      }
 
       iterations++;
     }
@@ -167,5 +243,21 @@ export class AgentGraph {
 }
 
 export function createAgentGraph() {
-  return new AgentGraph();
+  // StateGraph 생성
+  const workflow = new StateGraph(AgentStateAnnotation)
+    // 노드 추가
+    .addNode('generate', generateWithToolsNode)
+    .addNode('tools', toolsNode)
+    // 엔트리 포인트 설정
+    .addEdge('__start__', 'generate')
+    // 조건부 엣지: generate 후 도구 사용 여부 결정
+    .addConditionalEdges('generate', shouldUseTool, {
+      tools: 'tools',
+      end: END,
+    })
+    // tools 실행 후 다시 generate로 (순환)
+    .addEdge('tools', 'generate');
+
+  // 컴파일된 그래프 반환
+  return workflow.compile();
 }

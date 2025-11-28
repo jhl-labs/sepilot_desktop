@@ -2,7 +2,9 @@ import initSqlJs, { Database } from 'sql.js';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
-import { VectorDocument, SearchResult } from '../../lib/vectordb/types';
+import { VectorDocument, SearchResult, RawDocument, IndexingOptions } from '../../lib/vectordb/types';
+import { chunkDocuments } from '../../lib/vectordb/indexing';
+import { getEmbeddingProvider } from '../../lib/vectordb/embeddings/client';
 
 interface VectorDBServiceConfig {
   indexName: string;
@@ -234,6 +236,55 @@ class VectorDBService {
     }
 
     return documents;
+  }
+
+  /**
+   * 문서 인덱싱 (청킹 + 임베딩 + 삽입)
+   */
+  async indexDocuments(
+    documents: RawDocument[],
+    options: IndexingOptions
+  ): Promise<void> {
+    console.log(`[VectorDB] Indexing ${documents.length} documents...`);
+
+    // Embedding Provider 가져오기
+    const embedder = getEmbeddingProvider();
+
+    // 1. 문서 청킹
+    const chunkedDocs = chunkDocuments(documents, options);
+    console.log(`[VectorDB] Created ${chunkedDocs.length} chunks`);
+
+    // 2. 배치 처리
+    const batches: RawDocument[][] = [];
+    for (let i = 0; i < chunkedDocs.length; i += options.batchSize) {
+      batches.push(chunkedDocs.slice(i, i + options.batchSize));
+    }
+
+    console.log(`[VectorDB] Processing ${batches.length} batches...`);
+
+    // 3. 각 배치 임베딩 및 삽입
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+
+      console.log(`[VectorDB] Processing batch ${i + 1}/${batches.length} (${batch.length} chunks)...`);
+
+      // 임베딩 생성
+      const texts = batch.map((doc) => doc.content);
+      const embeddings = await embedder.embedBatch(texts);
+
+      // VectorDocument 생성
+      const vectorDocs: VectorDocument[] = batch.map((doc, index) => ({
+        id: doc.id,
+        content: doc.content,
+        metadata: doc.metadata,
+        embedding: embeddings[index],
+      }));
+
+      // 삽입
+      await this.insert(vectorDocs);
+    }
+
+    console.log('[VectorDB] Indexing complete!');
   }
 
   /**

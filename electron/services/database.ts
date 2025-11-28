@@ -239,7 +239,7 @@ class DatabaseService {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         message.id,
-        message.conversation_id,
+        message.conversation_id ?? '',
         message.role,
         message.content,
         message.created_at,

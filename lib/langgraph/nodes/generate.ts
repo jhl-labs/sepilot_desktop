@@ -1,9 +1,8 @@
-import { ChatState, RAGState, AgentState } from '../types';
+import { ChatState, RAGState, AgentState } from '../state';
 import { LLMService } from '@/lib/llm/service';
 import { Message } from '@/types';
 import { MCPServerManager } from '@/lib/mcp/server-manager';
-import { isComfyUIEnabled } from '@/lib/comfyui/client';
-import { ToolMessage } from '@langchain/core/messages';
+import { getCurrentGraphConfig, emitStreamingChunk } from '@/lib/llm/streaming-callback';
 
 /**
  * LLM 생성 노드 - 기본 Chat용 (스트리밍)
@@ -150,8 +149,10 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       toolResultsCount: state.toolResults.length,
     });
 
-    // MCP Tools 가져오기 (IPC를 통해 Main Process에서)
-    const availableTools = await MCPServerManager.getAllTools();
+    // MCP 도구 가져오기 (Built-in tools는 Coding Agent에서만 사용)
+    // Note: generateWithToolsNode는 Electron Main Process에서 실행되므로
+    // IPC가 아닌 직접 메서드를 사용해야 함
+    const availableTools = MCPServerManager.getAllToolsInMainProcess();
     console.log(`[Agent] Available MCP tools: ${availableTools.length}`);
 
     if (availableTools.length > 0) {
@@ -175,8 +176,11 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       },
     }));
 
-    // ComfyUI가 활성화되어 있으면 이미지 생성 도구 추가
-    if (isComfyUIEnabled()) {
+    // GraphConfig를 통해 이미지 생성이 활성화되어 있으면 도구 추가
+    // Note: isComfyUIEnabled()는 Renderer Process에서만 동작하므로,
+    // Main Process에서는 GraphConfig를 통해 전달된 값을 사용
+    const graphConfig = getCurrentGraphConfig();
+    if (graphConfig?.enableImageGeneration) {
       toolsForLLM.push({
         type: 'function' as const,
         function: {
@@ -250,7 +254,7 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
         content = 'No result';
       }
 
-      console.log('[Agent] Creating ToolMessage:', {
+      console.log('[Agent] Creating tool result message:', {
         toolCallId: result.toolCallId,
         toolName: result.toolName,
         hasError: !!result.error,
@@ -258,17 +262,17 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
         contentLength: content.length,
       });
 
-      // LangChain의 ToolMessage 사용 (tool_call_id 필수)
-      return new ToolMessage({
+      // Create plain tool message object (OpenAI compatible)
+      return {
         content,
         tool_call_id: result.toolCallId,
         name: result.toolName,
         status: result.error ? 'error' : 'success',
-      });
+      };
     });
 
-    // ToolMessage를 일반 메시지 형식으로 변환
-    const convertedToolMessages: Message[] = toolMessages.map((toolMsg: ToolMessage) => ({
+    // Convert tool messages to Message format
+    const convertedToolMessages: Message[] = toolMessages.map((toolMsg: any) => ({
       id: `tool-${toolMsg.tool_call_id}`,
       role: 'tool' as const,
       content: typeof toolMsg.content === 'string' ? toolMsg.content : JSON.stringify(toolMsg.content),
@@ -286,35 +290,46 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       tool_call_id: (m as any).tool_call_id,
     })));
 
-    // LLM 호출 (tools 포함)
-    const response = await LLMService.chat(messages, {
+    // LLM 호출 (스트리밍, tools 포함)
+    let accumulatedContent = '';
+    let finalToolCalls: any[] | undefined = undefined;
+
+    console.log('[Agent] Starting streaming with tools...');
+
+    for await (const chunk of LLMService.streamChatWithChunks(messages, {
       tools: toolsForLLM.length > 0 ? toolsForLLM : undefined,
-    });
+    })) {
+      // Accumulate content and emit to renderer
+      if (!chunk.done && chunk.content) {
+        accumulatedContent += chunk.content;
+        // Send each chunk to renderer via callback (conversationId로 격리)
+        emitStreamingChunk(chunk.content, state.conversationId);
+      }
 
-    console.log('[Agent] LLM raw response:', response);
-
-    if (!response) {
-      throw new Error('LLM returned no response');
+      // Last chunk contains tool calls (if any)
+      if (chunk.done && chunk.toolCalls) {
+        finalToolCalls = chunk.toolCalls;
+        console.log('[Agent] Received tool calls from stream:', finalToolCalls);
+      }
     }
 
-    console.log('[Agent] LLM response:', {
-      hasContent: !!response.content,
-      contentLength: response.content?.length,
-      hasToolCalls: !!response.toolCalls,
-      toolCallsCount: response.toolCalls?.length,
-    });
+    console.log('[Agent] Streaming complete. Content length:', accumulatedContent.length);
 
     // Tool calls 파싱
-    const toolCalls = response.toolCalls?.map((tc: any) => {
+    const toolCalls = finalToolCalls?.map((tc: any, index: number) => {
+      // LLM이 id를 제공하지 않을 경우 자동 생성
+      const toolCallId = tc.id || `call_${Date.now()}_${index}`;
+
       console.log('[Agent] Tool call:', {
-        id: tc.id,
+        id: toolCallId,
+        originalId: tc.id,
         name: tc.function.name,
         arguments: tc.function.arguments,
       });
 
       return {
-        id: tc.id,
-        type: tc.type,
+        id: toolCallId,
+        type: tc.type || 'function',
         name: tc.function.name,
         arguments: JSON.parse(tc.function.arguments),
       };
@@ -323,7 +338,7 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
     const assistantMessage: Message = {
       id: `msg-${Date.now()}`,
       role: 'assistant',
-      content: response.content || '',
+      content: accumulatedContent || '',
       created_at: Date.now(),
       tool_calls: toolCalls,
     };

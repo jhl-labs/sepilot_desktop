@@ -210,7 +210,7 @@ describe('BaseLLMProvider', () => {
               path: '/path/to/image.png',
               filename: 'image.png',
               mimeType: 'image/png',
-              base64: 'data:image/png;base64,iVBORw0KGgo...',
+              base64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
             },
           ],
           created_at: Date.now(),
@@ -229,7 +229,7 @@ describe('BaseLLMProvider', () => {
       expect(formatted[0].content[1]).toEqual({
         type: 'image_url',
         image_url: {
-          url: 'data:image/png;base64,iVBORw0KGgo...',
+          url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
         },
       });
     });
@@ -246,14 +246,14 @@ describe('BaseLLMProvider', () => {
               path: '/path/1.png',
               filename: '1.png',
               mimeType: 'image/png',
-              base64: 'data:image/png;base64,abc...',
+              base64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
             },
             {
               id: 'img_2',
               path: '/path/2.jpg',
               filename: '2.jpg',
               mimeType: 'image/jpeg',
-              base64: 'data:image/jpeg;base64,xyz...',
+              base64: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMDAwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8AH//Z',
             },
           ],
           created_at: Date.now(),

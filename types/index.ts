@@ -35,6 +35,13 @@ export interface ToolCall {
   arguments: Record<string, unknown>;
 }
 
+export interface PendingToolApproval {
+  conversationId: string;
+  messageId: string;
+  toolCalls: ToolCall[];
+  timestamp: number;
+}
+
 export interface Conversation {
   id: string;
   title: string;
@@ -73,17 +80,36 @@ export interface LLMConfig {
   maxTokens: number;
   vision?: VisionModelConfig; // Optional vision model configuration
   network?: NetworkConfig; // Network settings (proxy, SSL, headers)
+  customHeaders?: Record<string, string>; // Custom HTTP headers for LLM API calls only
 }
 
 export interface VectorDBConfig {
   type: 'opensearch' | 'elasticsearch' | 'sqlite-vec' | 'pgvector';
+
+  // SQLite-vec용
+  dbPath?: string;
+
+  // OpenSearch/Elasticsearch용
   host?: string;
   port?: number;
-  auth?: {
-    username: string;
-    password: string;
-  };
-  index: string;
+  username?: string;
+  password?: string;
+
+  // pgvector용
+  connectionString?: string;
+
+  // 공통
+  indexName: string;
+  dimension: number;
+}
+
+export interface EmbeddingConfig {
+  provider: 'openai' | 'local';
+  apiKey?: string;
+  baseURL?: string;
+  model?: string;
+  dimension: number;
+  networkConfig?: NetworkConfig;
 }
 
 export interface ComfyUIConfig {
@@ -100,13 +126,29 @@ export interface ComfyUIConfig {
   seed?: number;
 }
 
+export interface ImageGenerationProgress {
+  conversationId: string;
+  messageId: string;
+  status: 'queued' | 'executing' | 'completed' | 'error';
+  message: string;
+  progress: number; // 0-100
+  currentStep?: number;
+  totalSteps?: number;
+}
+
 export interface MCPServerConfig {
   name: string;
-  command: string;
-  args: string[];
-  env?: Record<string, string>;
   transport: 'stdio' | 'sse';
   enabled?: boolean; // Default: true
+
+  // stdio 전송 방식용
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+
+  // SSE 전송 방식용
+  url?: string; // SSE endpoint URL
+  headers?: Record<string, string>; // Custom headers (e.g., Authorization, API keys)
 }
 
 export interface GitHubOAuthConfig {
@@ -121,6 +163,7 @@ export interface AppConfig {
   llm: LLMConfig;
   network?: NetworkConfig;
   vectorDB?: VectorDBConfig;
+  embedding?: EmbeddingConfig;
   mcp: MCPServerConfig[];
   comfyUI?: ComfyUIConfig;
   github?: GitHubOAuthConfig;

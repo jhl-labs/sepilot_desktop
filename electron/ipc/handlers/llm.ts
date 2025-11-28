@@ -15,14 +15,18 @@ import { databaseService } from '../../services/database';
  */
 function getVisionProviderFromDB() {
   try {
+    logger.info('[LLM IPC] getVisionProviderFromDB called');
+
     const configStr = databaseService.getSetting('app_config');
     if (!configStr) {
+      logger.info('[LLM IPC] No app_config found in database');
       return null;
     }
 
     const config = JSON.parse(configStr) as AppConfig;
 
     if (!config?.llm) {
+      logger.info('[LLM IPC] No LLM config found in app_config');
       return null;
     }
 
@@ -30,19 +34,25 @@ function getVisionProviderFromDB() {
       baseURL: config.llm.vision?.baseURL || config.llm.baseURL,
       model: config.llm.vision?.model,
       provider: config.llm.vision?.provider,
+      enabled: config.llm.vision?.enabled,
       enableStreaming: config.llm.vision?.enableStreaming ?? false,
     });
 
+    logger.info('[LLM IPC] Calling createVisionProvider...');
     const provider = createVisionProvider(config.llm, {
       enableStreaming: config.llm.vision?.enableStreaming ?? false,
       maxImageTokens: 4096, // Ollama 호환을 위해 제한
     });
 
     if (provider) {
+      logger.info('[LLM IPC] Vision provider created successfully');
+      logger.info('[LLM IPC] Provider type:', provider.constructor.name);
       logger.info('[LLM IPC] Vision max_tokens:', {
         original: config.llm.vision?.maxImageTokens || config.llm.maxTokens,
         limited: Math.min(config.llm.vision?.maxImageTokens || config.llm.maxTokens, 4096),
       });
+    } else {
+      logger.info('[LLM IPC] createVisionProvider returned null');
     }
 
     return provider;
@@ -59,6 +69,7 @@ export function setupLLMHandlers() {
   ipcMain.removeHandler('llm-init');
   ipcMain.removeHandler('llm-validate');
   ipcMain.removeHandler('llm-fetch-models');
+  ipcMain.removeHandler('llm-generate-title');
 
   /**
    * LLM 스트리밍 채팅
@@ -299,11 +310,12 @@ export function setupLLMHandlers() {
         provider: LLMConfig['provider'];
         baseURL?: string;
         apiKey: string;
+        customHeaders?: Record<string, string>;
         networkConfig?: LLMConfig['network'];
       }
     ) => {
       try {
-        const { provider, baseURL, apiKey, networkConfig } = config;
+        const { provider, baseURL, apiKey, customHeaders, networkConfig } = config;
 
         if (!apiKey.trim()) {
           return {
@@ -333,9 +345,9 @@ export function setupLLMHandlers() {
           headers.Authorization = `Bearer ${apiKey}`;
         }
 
-        // Add custom headers from network config
-        if (networkConfig?.customHeaders) {
-          Object.entries(networkConfig.customHeaders).forEach(([key, value]) => {
+        // Add custom headers for LLM API (separate from network config)
+        if (customHeaders) {
+          Object.entries(customHeaders).forEach(([key, value]) => {
             headers[key] = value;
           });
         }
@@ -387,6 +399,71 @@ export function setupLLMHandlers() {
       }
     }
   );
+
+  /**
+   * LLM 대화 제목 생성 (CORS 없이 Main Process에서 실행)
+   */
+  ipcMain.handle('llm-generate-title', async (_event, messages: Message[]) => {
+    try {
+      const client = getLLMClient();
+
+      if (!client.isConfigured()) {
+        throw new Error('LLM client is not configured');
+      }
+
+      const provider = client.getProvider();
+
+      // 제목 생성을 위한 프롬프트
+      const titlePrompt: Message[] = [
+        {
+          id: 'system',
+          role: 'system',
+          content: `You are a helpful assistant that generates concise, descriptive titles for conversations.
+Generate a short title (max 5-7 words) that captures the main topic of the conversation.
+Return ONLY the title, without quotes or additional text.`,
+          created_at: Date.now(),
+        },
+        {
+          id: 'user',
+          role: 'user',
+          content: `Based on this conversation, generate a concise title:\n\n${messages
+            .map((m) => `${m.role}: ${m.content}`)
+            .join('\n\n')}`,
+          created_at: Date.now(),
+        },
+      ];
+
+      // LLM 호출 (스트리밍)
+      let generatedTitle = '';
+      for await (const chunk of provider.stream(titlePrompt)) {
+        if (chunk.content) {
+          generatedTitle += chunk.content;
+        }
+      }
+
+      // 제목 정제
+      generatedTitle = generatedTitle
+        .trim()
+        .replace(/^["']|["']$/g, '') // 시작/끝의 따옴표 제거
+        .replace(/\n/g, ' ') // 개행 제거
+        .slice(0, 100); // 최대 100자
+
+      logger.info('[LLM IPC] Generated title:', generatedTitle);
+
+      return {
+        success: true,
+        data: {
+          title: generatedTitle,
+        },
+      };
+    } catch (error: any) {
+      logger.error('[LLM IPC] Generate title error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to generate title',
+      };
+    }
+  });
 
   logger.info('LLM IPC handlers registered');
 }

@@ -1,33 +1,30 @@
-import { Message, ToolCall } from '@/types';
+/**
+ * Thinking Mode 타입 정의
+ */
+export type ThinkingMode = 'instant' | 'sequential' | 'tree-of-thought' | 'deep' | 'coding';
 
 /**
- * Graph 타입 정의
+ * 기능 토글 옵션
  */
+export interface FeatureToggles {
+  enableRAG: boolean;
+  enableTools: boolean;
+  enableImageGeneration?: boolean; // ComfyUI 이미지 생성 활성화
+}
+
+/**
+ * 그래프 설정
+ */
+export interface GraphConfig extends FeatureToggles {
+  thinkingMode: ThinkingMode;
+}
+
+// State 타입은 client-types.ts에 정의됨 (state.ts는 런타임 코드 포함)
+// 브라우저 환경에서는 client-types에서 import하세요
+
+// 하위 호환성을 위한 deprecated 타입
+/** @deprecated Use ThinkingMode and FeatureToggles instead */
 export type GraphType = 'chat' | 'rag' | 'agent';
-
-/**
- * 기본 채팅 상태
- */
-export interface ChatState {
-  messages: Message[];
-  context?: string;
-}
-
-/**
- * RAG 상태 (문서 검색 포함)
- */
-export interface RAGState extends ChatState {
-  documents: Document[];
-  query?: string;
-}
-
-/**
- * Agent 상태 (도구 사용 포함)
- */
-export interface AgentState extends ChatState {
-  toolCalls: ToolCall[];
-  toolResults: ToolResult[];
-}
 
 /**
  * 검색된 문서
@@ -60,20 +57,34 @@ export type NodeFunction<T> = (state: T) => Promise<Partial<T>>;
 export type ConditionalEdgeFunction<T> = (state: T) => string;
 
 /**
+ * Tool Approval Callback (Human-in-the-loop)
+ * Returns true if approved, false if rejected
+ */
+export type ToolApprovalCallback = (
+  toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>
+) => Promise<boolean>;
+
+/**
  * 그래프 실행 옵션
  */
 export interface GraphOptions {
   streaming?: boolean;
   maxIterations?: number;
   timeout?: number;
+  toolApprovalCallback?: ToolApprovalCallback;
+  conversationId?: string; // 동시 대화 시 스트리밍 격리용
 }
 
 /**
  * 스트리밍 이벤트
  */
 export interface StreamEvent {
-  type: 'node' | 'edge' | 'end' | 'error';
+  type: 'node' | 'edge' | 'end' | 'error' | 'tool_approval_request' | 'tool_approval_result';
   node?: string;
   data?: any;
   error?: string;
+  // Tool approval specific fields
+  messageId?: string;
+  toolCalls?: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+  approved?: boolean;
 }

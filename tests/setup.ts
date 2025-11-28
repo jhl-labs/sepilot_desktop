@@ -1,9 +1,13 @@
 import '@testing-library/jest-dom';
 import { TextEncoder, TextDecoder } from 'util';
+import { ReadableStream } from 'stream/web';
 
 // Polyfill TextEncoder/TextDecoder for JSDOM
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder as any;
+
+// Polyfill ReadableStream for LangChain/LangGraph
+(global as any).ReadableStream = ReadableStream;
 
 // Mock window.electronAPI
 export const mockElectronAPI = {
@@ -52,6 +56,7 @@ export const mockElectronAPI = {
     init: jest.fn(),
     validate: jest.fn(),
     fetchModels: jest.fn(),
+    generateTitle: jest.fn(),
     onStreamChunk: jest.fn(),
     onStreamDone: jest.fn(),
     onStreamError: jest.fn(),

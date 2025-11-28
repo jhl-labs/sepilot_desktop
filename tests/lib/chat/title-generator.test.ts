@@ -4,22 +4,23 @@
 
 import { generateConversationTitle, shouldGenerateTitle } from '@/lib/chat/title-generator';
 import type { Message } from '@/types';
-
-// Mock LLMClient
-jest.mock('@/lib/llm/client', () => ({
-  getLLMClient: jest.fn(() => ({
-    getProvider: jest.fn(() => ({
-      stream: jest.fn(async function* () {
-        yield { content: 'Generated ' };
-        yield { content: 'Title' };
-      }),
-    })),
-  })),
-}));
+import { enableElectronMode, disableElectronMode, mockElectronAPI } from '../../setup';
 
 describe('title-generator', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('generateConversationTitle', () => {
-    it('should generate title from LLM', async () => {
+    it('should generate title from LLM via Electron IPC', async () => {
+      enableElectronMode();
+
+      // Mock IPC response
+      (mockElectronAPI.llm.generateTitle as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { title: 'Generated Title' },
+      });
+
       const messages: Pick<Message, 'role' | 'content'>[] = [
         { role: 'user', content: 'How do I implement a binary search?' },
         { role: 'assistant', content: 'Binary search is an efficient algorithm...' },
@@ -28,9 +29,17 @@ describe('title-generator', () => {
       const title = await generateConversationTitle(messages);
 
       expect(title).toBe('Generated Title');
+      expect(mockElectronAPI.llm.generateTitle).toHaveBeenCalledWith(messages.slice(0, 3));
     });
 
     it('should use first 3 messages only', async () => {
+      enableElectronMode();
+
+      (mockElectronAPI.llm.generateTitle as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { title: 'First Messages Title' },
+      });
+
       const messages: Pick<Message, 'role' | 'content'>[] = [
         { role: 'user', content: 'First message' },
         { role: 'assistant', content: 'Response 1' },
@@ -41,18 +50,17 @@ describe('title-generator', () => {
 
       const title = await generateConversationTitle(messages);
 
-      // Should succeed using first 3 messages
       expect(title).toBeDefined();
+      // Should only pass first 3 messages to IPC
+      expect(mockElectronAPI.llm.generateTitle).toHaveBeenCalledWith(messages.slice(0, 3));
     });
 
-    it('should clean title by removing quotes', async () => {
-      const { getLLMClient } = require('@/lib/llm/client');
-      getLLMClient.mockReturnValue({
-        getProvider: () => ({
-          stream: async function* () {
-            yield { content: '"Quoted Title"' };
-          },
-        }),
+    it('should use generated title as-is (no quote cleaning)', async () => {
+      enableElectronMode();
+
+      (mockElectronAPI.llm.generateTitle as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { title: 'Clean Title' },
       });
 
       const messages: Pick<Message, 'role' | 'content'>[] = [
@@ -61,17 +69,15 @@ describe('title-generator', () => {
 
       const title = await generateConversationTitle(messages);
 
-      expect(title).toBe('Quoted Title');
+      expect(title).toBe('Clean Title');
     });
 
     it('should use fallback title on LLM error', async () => {
-      const { getLLMClient } = require('@/lib/llm/client');
-      getLLMClient.mockReturnValue({
-        getProvider: () => ({
-          stream: async function* () {
-            throw new Error('LLM error');
-          },
-        }),
+      enableElectronMode();
+
+      (mockElectronAPI.llm.generateTitle as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'LLM error',
       });
 
       const messages: Pick<Message, 'role' | 'content'>[] = [
@@ -85,13 +91,11 @@ describe('title-generator', () => {
     });
 
     it('should use fallback when title is too short', async () => {
-      const { getLLMClient } = require('@/lib/llm/client');
-      getLLMClient.mockReturnValue({
-        getProvider: () => ({
-          stream: async function* () {
-            yield { content: 'AB' }; // Too short
-          },
-        }),
+      enableElectronMode();
+
+      (mockElectronAPI.llm.generateTitle as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { title: 'AB' }, // Too short (< 3 chars)
       });
 
       const messages: Pick<Message, 'role' | 'content'>[] = [
@@ -104,13 +108,11 @@ describe('title-generator', () => {
     });
 
     it('should handle empty generated title', async () => {
-      const { getLLMClient } = require('@/lib/llm/client');
-      getLLMClient.mockReturnValue({
-        getProvider: () => ({
-          stream: async function* () {
-            yield { content: '' };
-          },
-        }),
+      enableElectronMode();
+
+      (mockElectronAPI.llm.generateTitle as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { title: '' },
       });
 
       const messages: Pick<Message, 'role' | 'content'>[] = [
@@ -121,19 +123,30 @@ describe('title-generator', () => {
 
       expect(title).toBe('Short question');
     });
+
+    it('should use fallback in non-Electron environment', async () => {
+      disableElectronMode();
+
+      const messages: Pick<Message, 'role' | 'content'>[] = [
+        { role: 'user', content: 'Browser environment test' },
+      ];
+
+      const title = await generateConversationTitle(messages);
+
+      // Should use fallback in browser
+      expect(title).toBe('Browser environment test');
+    });
   });
 
   describe('fallback title generation', () => {
-    it('should use first user message content', async () => {
-      const { getLLMClient } = require('@/lib/llm/client');
-      getLLMClient.mockReturnValue({
-        getProvider: () => ({
-          stream: async function* () {
-            throw new Error('Error');
-          },
-        }),
-      });
+    beforeEach(() => {
+      enableElectronMode();
+      (mockElectronAPI.llm.generateTitle as jest.Mock).mockRejectedValue(
+        new Error('IPC Error')
+      );
+    });
 
+    it('should use first user message content', async () => {
       const messages: Pick<Message, 'role' | 'content'>[] = [
         { role: 'system', content: 'You are helpful' },
         { role: 'user', content: 'What is TypeScript?' },
@@ -145,15 +158,6 @@ describe('title-generator', () => {
     });
 
     it('should truncate long messages with ellipsis', async () => {
-      const { getLLMClient } = require('@/lib/llm/client');
-      getLLMClient.mockReturnValue({
-        getProvider: () => ({
-          stream: async function* () {
-            throw new Error('Error');
-          },
-        }),
-      });
-
       const longMessage = 'This is a very long message that should be truncated because it exceeds the maximum length for a conversation title';
       const messages: Pick<Message, 'role' | 'content'>[] = [
         { role: 'user', content: longMessage },
@@ -166,15 +170,6 @@ describe('title-generator', () => {
     });
 
     it('should return default title when no user message', async () => {
-      const { getLLMClient } = require('@/lib/llm/client');
-      getLLMClient.mockReturnValue({
-        getProvider: () => ({
-          stream: async function* () {
-            throw new Error('Error');
-          },
-        }),
-      });
-
       const messages: Pick<Message, 'role' | 'content'>[] = [
         { role: 'system', content: 'System message only' },
       ];
@@ -185,15 +180,6 @@ describe('title-generator', () => {
     });
 
     it('should return default title for empty messages', async () => {
-      const { getLLMClient } = require('@/lib/llm/client');
-      getLLMClient.mockReturnValue({
-        getProvider: () => ({
-          stream: async function* () {
-            throw new Error('Error');
-          },
-        }),
-      });
-
       const title = await generateConversationTitle([]);
 
       expect(title).toBe('새 대화');

@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, MessageSquare, Settings, MoreHorizontal, Pencil, Trash2, Trash, FileText, Search, X } from 'lucide-react';
+import { Plus, MessageSquare, Settings, MoreHorizontal, Pencil, Trash2, Trash, FileText, Search, X, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -20,9 +20,10 @@ import type { Conversation, Message } from '@/types';
 
 interface SidebarProps {
   onDocumentsClick?: () => void;
+  onGalleryClick?: () => void;
 }
 
-export function Sidebar({ onDocumentsClick }: SidebarProps = {}) {
+export function Sidebar({ onDocumentsClick, onGalleryClick }: SidebarProps = {}) {
   const {
     conversations,
     activeConversationId,
@@ -87,6 +88,8 @@ export function Sidebar({ onDocumentsClick }: SidebarProps = {}) {
       for (const conversation of conversations) {
         await deleteConversation(conversation.id);
       }
+      // 모든 대화 삭제 후 새 대화 자동 생성
+      await createConversation();
     }
   };
 
@@ -315,6 +318,15 @@ export function Sidebar({ onDocumentsClick }: SidebarProps = {}) {
             className="flex-1"
           >
             <FileText className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onGalleryClick}
+            title="이미지 갤러리"
+            className="flex-1"
+          >
+            <Image className="h-5 w-5" />
           </Button>
           <Button
             variant="ghost"

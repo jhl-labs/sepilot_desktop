@@ -60,7 +60,7 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
       if (typeof window !== 'undefined' && window.electronAPI) {
         const result = await window.electronAPI.github.hasPrivateKey();
         if (result.success) {
-          setPrivateKeyUploaded(Boolean(result.data));
+          setPrivateKeyUploaded(result.data ?? false);
         }
       }
     };

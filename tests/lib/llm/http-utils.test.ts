@@ -42,11 +42,9 @@ describe('http-utils', () => {
     it('should add custom headers from config', () => {
       const configWithHeaders: LLMConfig = {
         ...baseConfig,
-        network: {
-          customHeaders: {
-            'X-Custom-Header': 'custom-value',
-            'X-Another': 'another-value',
-          },
+        customHeaders: {
+          'X-Custom-Header': 'custom-value',
+          'X-Another': 'another-value',
         },
       };
 
@@ -66,10 +64,8 @@ describe('http-utils', () => {
 
       const configWithHeaders: LLMConfig = {
         ...baseConfig,
-        network: {
-          customHeaders: {
-            'X-Custom': 'value',
-          },
+        customHeaders: {
+          'X-Custom': 'value',
         },
       };
 
@@ -133,10 +129,8 @@ describe('http-utils', () => {
 
       const configWithHeaders: LLMConfig = {
         ...baseConfig,
-        network: {
-          customHeaders: {
-            'X-Custom': 'test-value',
-          },
+        customHeaders: {
+          'X-Custom': 'test-value',
         },
       };
 

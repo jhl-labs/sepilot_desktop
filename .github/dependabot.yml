@@ -9,10 +9,8 @@ updates:
       time: "09:00"
       timezone: "Asia/Seoul"
     open-pull-requests-limit: 10
-    reviewers:
-      - "vtopia-dev"
     assignees:
-      - "vtopia-dev"
+      - "declue"
     labels:
       - "dependencies"
       - "npm"

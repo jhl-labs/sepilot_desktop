@@ -1,7 +1,5 @@
 // Electron API 타입 정의
-import type { Conversation, Message, AppConfig, MCPServerConfig, NetworkConfig, ImageAttachment } from './index';
-import type { MCPTool } from '../lib/mcp/types';
-import type { GitHubUser, GitHubRepository, OAuthToken } from '../lib/auth/types';
+import type { Conversation, Message, AppConfig, MCPServerConfig, NetworkConfig, ImageAttachment, ComfyUIConfig } from './index';
 
 // IPC 응답 타입
 interface IPCResponse<T = void> {
@@ -27,13 +25,43 @@ interface ConfigAPI {
   getSetting: (key: string) => Promise<IPCResponse<unknown>>;
 }
 
+// MCP 관련 타입
+interface MCPTool {
+  name: string;
+  description: string;
+  inputSchema: {
+    type: 'object';
+    properties: Record<string, any>;
+    required?: string[];
+  };
+  serverName: string;
+}
+
+// MCP 서버 상태 타입
+interface MCPServerStatus {
+  status: 'connected' | 'disconnected' | 'connecting' | 'error';
+  toolCount?: number;
+  tools?: string[];
+  errorMessage?: string;
+}
+
 interface MCPAPI {
-  addServer: (config: MCPServerConfig) => Promise<IPCResponse<MCPTool[]>>;
+  addServer: (config: MCPServerConfig) => Promise<IPCResponse<MCPServerConfig>>;
   removeServer: (name: string) => Promise<IPCResponse>;
   listServers: () => Promise<IPCResponse<MCPServerConfig[]>>;
   getAllTools: () => Promise<IPCResponse<MCPTool[]>>;
   callTool: (serverName: string, toolName: string, args: Record<string, unknown>) => Promise<IPCResponse<unknown>>;
   toggleServer: (name: string) => Promise<IPCResponse>;
+  getServerStatus: (name: string) => Promise<IPCResponse<MCPServerStatus>>;
+}
+
+// GitHub 사용자 정보 타입
+interface GitHubUser {
+  login: string;
+  id: number;
+  avatar_url: string;
+  name?: string;
+  email?: string;
 }
 
 // OAuth 로그인 정보 타입
@@ -45,7 +73,7 @@ interface OAuthLoginInfo {
 interface AuthAPI {
   initiateLogin: () => Promise<OAuthLoginInfo>;
   githubLogin: (authUrl: string) => Promise<IPCResponse>;
-  exchangeCode: (code: string, codeVerifier: string) => Promise<IPCResponse<OAuthToken>>;
+  exchangeCode: (code: string, codeVerifier: string) => Promise<IPCResponse<{ access_token: string; token_type: string; scope: string }>>;
   saveToken: (token: string) => Promise<IPCResponse>;
   getUserInfo: (token: string) => Promise<IPCResponse<GitHubUser>>;
   getToken: () => Promise<IPCResponse<string | null>>;
@@ -83,6 +111,7 @@ interface LLMFetchModelsConfig {
   provider: 'openai' | 'anthropic' | 'custom';
   baseURL?: string;
   apiKey: string;
+  customHeaders?: Record<string, string>;
   networkConfig?: NetworkConfig;
 }
 
@@ -92,18 +121,79 @@ interface LLMAPI {
   init: (config: AppConfig) => Promise<IPCResponse>;
   validate: () => Promise<IPCResponse>;
   fetchModels: (config: LLMFetchModelsConfig) => Promise<IPCResponse<string[]>>;
-  onStreamChunk: (callback: (chunk: string) => void) => (event: Event, chunk: string) => void;
-  onStreamDone: (callback: () => void) => () => void;
-  onStreamError: (callback: (error: string) => void) => (event: Event, error: string) => void;
+  generateTitle: (messages: Array<Pick<Message, 'role' | 'content'>>) => Promise<IPCResponse<{ title: string }>>;
+  onStreamChunk: (callback: (chunk: string) => void) => (...args: unknown[]) => void;
+  onStreamDone: (callback: () => void) => (...args: unknown[]) => void;
+  onStreamError: (callback: (error: string) => void) => (...args: unknown[]) => void;
   removeStreamListener: (event: string, handler: (...args: unknown[]) => void) => void;
+  removeAllStreamListeners?: () => void;
+}
+
+// LangGraph 관련 타입
+interface GraphConfig {
+  thinkingMode: 'instant' | 'sequential' | 'tree-of-thought' | 'deep' | 'coding';
+  enableRAG: boolean;
+  enableTools: boolean;
+}
+
+// LangGraph 스트리밍 이벤트 타입 (conversationId 포함)
+interface LangGraphStreamEvent {
+  type: string;
+  conversationId?: string;
+  chunk?: string;
+  node?: string;
+  data?: any;
+  progress?: any;
+  error?: string;
+  // Tool approval specific fields
+  messageId?: string;
+  toolCalls?: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+  approved?: boolean;
+}
+
+// Tool approval request data type
+interface LangGraphToolApprovalRequest {
+  conversationId: string;
+  messageId: string;
+  toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+}
+
+interface LangGraphStreamDoneData {
+  conversationId?: string;
+}
+
+interface LangGraphStreamErrorData {
+  error: string;
+  conversationId?: string;
+}
+
+interface LangGraphAPI {
+  stream: (
+    graphConfig: GraphConfig,
+    messages: Message[],
+    conversationId?: string,
+    comfyUIConfig?: ComfyUIConfig,
+    networkConfig?: NetworkConfig,
+    workingDirectory?: string
+  ) => Promise<IPCResponse<{ conversationId?: string }>>;
+  onStreamEvent: (callback: (event: LangGraphStreamEvent) => void) => (...args: unknown[]) => void;
+  onStreamDone: (callback: (data?: LangGraphStreamDoneData) => void) => (...args: unknown[]) => void;
+  onStreamError: (callback: (data: LangGraphStreamErrorData) => void) => (...args: unknown[]) => void;
+  // Tool Approval (Human-in-the-loop)
+  onToolApprovalRequest: (callback: (data: LangGraphToolApprovalRequest) => void) => (...args: unknown[]) => void;
+  respondToolApproval: (conversationId: string, approved: boolean) => Promise<IPCResponse>;
+  // Abort streaming
+  abort: (conversationId: string) => Promise<IPCResponse>;
+  removeStreamListener: (event: string, handler: (...args: unknown[]) => void) => void;
+  removeAllStreamListeners: () => void;
 }
 
 // VectorDB 문서 타입
 interface VectorDocument {
   id: string;
-  text: string;
-  embedding: number[];
-  metadata?: Record<string, unknown>;
+  content: string;
+  embedding?: number[];
+  metadata: Record<string, any>;
 }
 
 // VectorDB 검색 결과 타입
@@ -124,11 +214,45 @@ interface VectorDBAPI {
   delete: (ids: string[]) => Promise<IPCResponse>;
   count: () => Promise<IPCResponse<number>>;
   getAll: () => Promise<IPCResponse<VectorDocument[]>>;
+  indexDocuments: (
+    documents: Array<{ id: string; content: string; metadata: Record<string, any> }>,
+    options: { chunkSize: number; chunkOverlap: number; batchSize: number }
+  ) => Promise<IPCResponse>;
+}
+
+// GitHub 저장소 타입
+interface GitHubRepository {
+  id: number;
+  name: string;
+  full_name: string;
+  private: boolean;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+  description?: string;
+}
+
+interface DocumentFile {
+  path: string;
+  filename: string;
+  title: string;
+  content: string;
+}
+
+interface FetchedUrl {
+  content: string;
+  title: string;
+  url: string;
 }
 
 interface FileAPI {
   selectImages: () => Promise<IPCResponse<ImageAttachment[]>>;
   loadImage: (filePath: string) => Promise<IPCResponse<ImageAttachment>>;
+  fetchUrl: (url: string) => Promise<IPCResponse<FetchedUrl>>;
+  selectDocument: () => Promise<IPCResponse<DocumentFile[]>>;
+  read: (filePath: string) => Promise<string>;
+  selectDirectory: () => Promise<IPCResponse<string | null>>;
 }
 
 interface GitHubAPI {
@@ -210,6 +334,28 @@ interface ComfyUIAPI {
   ) => Promise<IPCResponse<string>>;
 }
 
+// Update 관련 타입
+interface ReleaseInfo {
+  version: string;
+  name: string;
+  publishedAt: string;
+  htmlUrl: string;
+  body: string;
+  downloadUrl?: string;
+}
+
+interface UpdateCheckResult {
+  hasUpdate: boolean;
+  currentVersion: string;
+  latestVersion?: string;
+  releaseInfo?: ReleaseInfo;
+}
+
+interface UpdateAPI {
+  check: () => Promise<IPCResponse<UpdateCheckResult>>;
+  getVersion: () => Promise<IPCResponse<string>>;
+}
+
 interface ElectronAPI {
   platform: string;
   chat: ChatAPI;
@@ -217,12 +363,14 @@ interface ElectronAPI {
   mcp: MCPAPI;
   auth: AuthAPI;
   llm: LLMAPI;
+  langgraph: LangGraphAPI;
   vectorDB: VectorDBAPI;
   file: FileAPI;
   github: GitHubAPI;
   shell: ShellAPI;
   embeddings: EmbeddingsAPI;
   comfyui: ComfyUIAPI;
+  update: UpdateAPI;
   on: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => void;
 }
@@ -240,6 +388,7 @@ export type {
   ConfigAPI,
   MCPAPI,
   MCPTool,
+  MCPServerStatus,
   AuthAPI,
   GitHubUser,
   OAuthLoginInfo,
@@ -247,10 +396,18 @@ export type {
   LLMChatResponse,
   LLMChatOptions,
   LLMFetchModelsConfig,
+  GraphConfig,
+  LangGraphAPI,
+  LangGraphStreamEvent,
+  LangGraphStreamDoneData,
+  LangGraphStreamErrorData,
+  LangGraphToolApprovalRequest,
   VectorDBAPI,
   VectorDocument,
   VectorSearchResult,
   FileAPI,
+  DocumentFile,
+  FetchedUrl,
   GitHubAPI,
   GitHubRepository,
   ShellAPI,
@@ -259,5 +416,8 @@ export type {
   ComfyUIAPI,
   ComfyUIWorkflow,
   ComfyUIPromptResult,
+  UpdateAPI,
+  UpdateCheckResult,
+  ReleaseInfo,
   ElectronAPI,
 };

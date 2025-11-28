@@ -2,6 +2,8 @@ import { ipcMain, dialog, BrowserWindow } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import sharp from 'sharp';
+import TurndownService from 'turndown';
+import mammoth from 'mammoth';
 
 /**
  * File IPC Handlers
@@ -140,6 +142,191 @@ export function registerFileHandlers() {
       return {
         success: false,
         error: error.message || 'Failed to load image',
+      };
+    }
+  });
+
+  // URL에서 콘텐츠 가져오기
+  ipcMain.handle('file:fetch-url', async (_event, url: string) => {
+    try {
+      console.log('[File] Fetching URL:', url);
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+
+      if (!contentType.includes('text/html')) {
+        console.warn('[File] Content is not HTML:', contentType);
+      }
+
+      const html = await response.text();
+
+      // HTML을 마크다운으로 변환
+      const turndownService = new TurndownService({
+        headingStyle: 'atx',
+        codeBlockStyle: 'fenced',
+      });
+
+      const markdown = turndownService.turndown(html);
+
+      // 제목 추출 (title 태그에서)
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const title = titleMatch ? titleMatch[1].trim() : '';
+
+      console.log('[File] Fetched and converted to markdown');
+
+      return {
+        success: true,
+        data: {
+          content: markdown,
+          title,
+          url,
+        },
+      };
+    } catch (error: any) {
+      console.error('[File] Error fetching URL:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch URL',
+      };
+    }
+  });
+
+  // 문서 파일 선택 및 읽기
+  ipcMain.handle('file:select-document', async () => {
+    try {
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      if (!focusedWindow) {
+        return {
+          success: false,
+          error: 'No focused window found',
+        };
+      }
+
+      const result = await dialog.showOpenDialog(focusedWindow, {
+        title: '문서 파일 선택',
+        filters: [
+          {
+            name: 'Documents',
+            extensions: ['txt', 'md', 'pdf', 'docx'],
+          },
+        ],
+        properties: ['openFile'],
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return {
+          success: true,
+          data: [],
+        };
+      }
+
+      const filePath = result.filePaths[0];
+      const filename = path.basename(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+
+      console.log('[File] Reading document:', filename);
+
+      let content = '';
+
+      // 파일 형식에 따라 읽기
+      if (ext === '.txt' || ext === '.md') {
+        // 텍스트 파일
+        content = await fs.readFile(filePath, 'utf-8');
+      } else if (ext === '.pdf') {
+        // PDF 파일
+        const dataBuffer = await fs.readFile(filePath);
+        const pdfParse = require('pdf-parse');
+        const pdfData = await pdfParse(dataBuffer);
+        content = pdfData.text;
+      } else if (ext === '.docx') {
+        // DOCX 파일
+        const dataBuffer = await fs.readFile(filePath);
+        const docxResult = await mammoth.extractRawText({ buffer: dataBuffer });
+        content = docxResult.value;
+      } else {
+        throw new Error(`Unsupported file format: ${ext}`);
+      }
+
+      console.log('[File] Document read successfully, length:', content.length);
+
+      return {
+        success: true,
+        data: [
+          {
+            path: filePath,
+            filename,
+            title: path.basename(filePath, ext),
+            content,
+          },
+        ],
+      };
+    } catch (error: any) {
+      console.error('[File] Error selecting document:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to select document',
+      };
+    }
+  });
+
+  // 텍스트 파일 읽기 (코딩 에이전트용)
+  ipcMain.handle('file:read', async (_event, filePath: string) => {
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      return content;
+    } catch (error: any) {
+      // If file doesn't exist (ENOENT), return empty string for CodeDiffViewer
+      // This allows diffing for new files in file_write operations
+      if (error.code === 'ENOENT') {
+        console.log(`[File] File does not exist (will be created): ${filePath}`);
+        return '';
+      }
+      // For other errors, throw
+      console.error('[File] Error reading file:', error);
+      throw new Error(`Failed to read file: ${error.message}`);
+    }
+  });
+
+  // 디렉토리 선택 다이얼로그 (코딩 에이전트용)
+  ipcMain.handle('file:select-directory', async () => {
+    try {
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      if (!focusedWindow) {
+        return {
+          success: false,
+          error: 'No focused window found',
+        };
+      }
+
+      const result = await dialog.showOpenDialog(focusedWindow, {
+        title: '작업 디렉토리 선택',
+        properties: ['openDirectory'],
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return {
+          success: true,
+          data: null,
+        };
+      }
+
+      const selectedPath = result.filePaths[0];
+      console.log('[File] Selected directory:', selectedPath);
+
+      return {
+        success: true,
+        data: selectedPath,
+      };
+    } catch (error: any) {
+      console.error('[File] Error selecting directory:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to select directory',
       };
     }
   });

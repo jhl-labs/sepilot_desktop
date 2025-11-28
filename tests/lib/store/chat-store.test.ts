@@ -146,12 +146,25 @@ describe('ChatStore', () => {
 
     it('should load messages from Electron in electron mode', async () => {
       enableElectronMode();
+
+      // Reset localStorage mock to avoid interference from previous test
+      (localStorage.getItem as jest.Mock).mockReset();
+      (localStorage.getItem as jest.Mock).mockReturnValue(null);
+
       const mockMessages: Message[] = [
         { id: 'msg-1', role: 'user', content: 'Test', created_at: 100 },
       ];
       mockElectronAPI.chat.loadMessages.mockResolvedValue({
         success: true,
         data: mockMessages,
+      });
+
+      // Clear store state completely including cache
+      useChatStore.setState({
+        conversations: [{ id: 'conv-1', title: 'Test', created_at: 100, updated_at: 100 }],
+        messages: [],
+        messagesCache: new Map(), // Clear cache to avoid interference
+        activeConversationId: null,
       });
 
       await useChatStore.getState().setActiveConversation('conv-1');

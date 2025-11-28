@@ -1,12 +1,26 @@
 import { MCPServerManager } from '../server-manager';
 import { ToolRegistry } from './registry';
 import { ToolCallResult } from '../types';
+import { executeBuiltinTool, getBuiltinTools } from './builtin-tools';
 
 /**
  * Tool Executor
  *
  * MCP 도구를 실행하는 유틸리티
  */
+
+/**
+ * Initialize builtin tools (call this once on startup)
+ */
+export function initializeBuiltinTools(): void {
+  const builtinTools = getBuiltinTools();
+  for (const tool of builtinTools) {
+    if (!ToolRegistry.hasTool(tool.name)) {
+      ToolRegistry.registerTool(tool);
+    }
+  }
+  console.log(`[ToolExecutor] Registered ${builtinTools.length} builtin tools`);
+}
 
 /**
  * 도구 실행
@@ -31,6 +45,21 @@ export async function executeTool(
   }
 
   try {
+    // Check if it's a builtin tool
+    if (tool.serverName === 'builtin') {
+      console.log(`[ToolExecutor] Executing builtin tool: ${toolName}`);
+      const result = await executeBuiltinTool(toolName, args);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: result,
+          },
+        ],
+        isError: false,
+      };
+    }
+
     // MCP 서버를 통해 도구 호출
     const result = await MCPServerManager.callTool(tool.serverName, toolName, args);
 

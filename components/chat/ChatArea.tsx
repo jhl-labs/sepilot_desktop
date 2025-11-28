@@ -4,12 +4,24 @@ import { useEffect, useRef, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './MessageBubble';
 import { useChatStore } from '@/lib/store/chat-store';
-import { MessageSquare } from 'lucide-react';
-import { GraphFactory } from '@/lib/langgraph';
+import { MessageSquare, ZoomIn } from 'lucide-react';
 import { Message } from '@/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const FONT_SCALE_KEY = 'sepilot-chat-font-scale';
+const DEFAULT_FONT_SCALE = '100';
+const FONT_SCALE_OPTIONS = [
+  '50', '60', '70', '80', '90', '100', '110', '120', '130', '140', '150', '160', '170', '180', '190', '200'
+];
 
 export function ChatArea() {
-  const { messages, activeConversationId, graphType, updateMessage, deleteMessage, addMessage, startStreaming, stopStreaming, streamingConversations } = useChatStore();
+  const { messages, activeConversationId, getGraphConfig, updateMessage, deleteMessage, addMessage, startStreaming, stopStreaming, streamingConversations } = useChatStore();
 
   // Get streaming state for current conversation
   const streamingMessageId = activeConversationId ? streamingConversations.get(activeConversationId) || null : null;
@@ -113,6 +125,23 @@ export function ChatArea() {
     }
   };
 
+  // Font scale state with localStorage persistence
+  const [fontScale, setFontScale] = useState<string>(DEFAULT_FONT_SCALE);
+
+  // Load font scale from localStorage on mount
+  useEffect(() => {
+    const savedScale = localStorage.getItem(FONT_SCALE_KEY);
+    if (savedScale && FONT_SCALE_OPTIONS.includes(savedScale)) {
+      setFontScale(savedScale);
+    }
+  }, []);
+
+  // Handle font scale change
+  const handleFontScaleChange = (value: string) => {
+    setFontScale(value);
+    localStorage.setItem(FONT_SCALE_KEY, value);
+  };
+
   // Handle message edit
   const handleEdit = async (messageId: string, newContent: string) => {
     // Update message content in store and database
@@ -136,6 +165,9 @@ export function ChatArea() {
   // Handle message regeneration
   const handleRegenerate = async (messageId: string) => {
     if (!activeConversationId) return;
+
+    // Capture conversationId at function start to prevent race conditions
+    const conversationId = activeConversationId;
 
     // Variables for streaming animation
     let accumulatedContent = '';
@@ -190,26 +222,63 @@ export function ChatArea() {
         });
       };
 
-      startStreaming(activeConversationId, assistantMessageId);
+      startStreaming(conversationId, assistantMessageId);
 
-      // 5. Stream response from LangGraph
-      for await (const event of GraphFactory.stream(graphType, previousMessages)) {
-        // 각 노드의 실행 결과에서 메시지 업데이트
-        if (event.type === 'node' && event.data?.messages) {
-          const newMessages = event.data.messages;
-          if (newMessages && newMessages.length > 0) {
-            const lastMessage = newMessages[newMessages.length - 1];
-            if (lastMessage.role === 'assistant') {
-              // 전체 메시지 객체에서 필요한 필드만 추출하여 업데이트
-              const { content, referenced_documents } = lastMessage;
-              scheduleUpdate({ content, referenced_documents });
+      // 5. Stream response from LangGraph via IPC
+      if (window.electronAPI?.langgraph) {
+        const graphConfig = getGraphConfig();
+
+        // Setup stream event listener
+        const eventHandler = window.electronAPI.langgraph.onStreamEvent((event: any) => {
+          try {
+            // Guard: Check if event exists
+            if (!event) return;
+
+            // Filter events by conversationId
+            if (event.conversationId && event.conversationId !== conversationId) {
+              return;
             }
-          }
-        }
 
-        // 에러 처리
-        if (event.type === 'error') {
-          throw new Error(event.error || 'Regeneration failed');
+            // Handle real-time streaming chunks from LLM
+            if (event.type === 'streaming' && event.chunk) {
+              accumulatedContent += event.chunk;
+              scheduleUpdate({ content: accumulatedContent });
+              return;
+            }
+
+            // Handle node execution results
+            if (event.type === 'node' && event.data?.messages) {
+              const newMessages = event.data.messages;
+              if (newMessages && newMessages.length > 0) {
+                const lastMessage = newMessages[newMessages.length - 1];
+                if (lastMessage.role === 'assistant') {
+                  const { content, referenced_documents } = lastMessage;
+                  scheduleUpdate({ content, referenced_documents });
+                }
+              }
+            }
+
+            // Handle errors
+            if (event.type === 'error') {
+              throw new Error(event.error || 'Regeneration failed');
+            }
+          } catch (error) {
+            console.error('[ChatArea] Stream event error:', error);
+          }
+        });
+
+        try {
+          // Start streaming via IPC
+          await window.electronAPI.langgraph.stream(
+            graphConfig,
+            previousMessages,
+            conversationId
+          );
+        } finally {
+          // Cleanup event listener
+          if (eventHandler) {
+            eventHandler();
+          }
         }
       }
 
@@ -220,7 +289,7 @@ export function ChatArea() {
       if (window.electronAPI) {
         const finalMessage: Message = {
           id: assistantMessageId,
-          conversation_id: activeConversationId,
+          conversation_id: conversationId,
           role: 'assistant',
           content: accumulatedMessage.content || accumulatedContent,
           created_at: Date.now(),
@@ -235,7 +304,7 @@ export function ChatArea() {
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
       }
-      stopStreaming(activeConversationId);
+      stopStreaming(conversationId);
     }
   };
 
@@ -261,7 +330,7 @@ export function ChatArea() {
   return (
     <div
       ref={dropZoneRef}
-      className={`flex flex-1 flex-col overflow-hidden relative transition-colors ${
+      className={`relative flex flex-1 flex-col overflow-hidden transition-colors ${
         isDragging ? 'bg-primary/5' : ''
       }`}
       onDragOver={handleDragOver}
@@ -269,6 +338,23 @@ export function ChatArea() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Floating Font Scale Selector */}
+      <div className="absolute right-4 bottom-4 z-10">
+        <Select value={fontScale} onValueChange={handleFontScaleChange}>
+          <SelectTrigger className="h-8 w-[90px] bg-background/80 backdrop-blur-sm text-xs">
+            <ZoomIn className="h-3.5 w-3.5 mr-1 opacity-60" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FONT_SCALE_OPTIONS.map((scale) => (
+              <SelectItem key={scale} value={scale} className="text-xs">
+                {scale}%
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {isDragging && (
         <div className="absolute inset-0 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg z-10 pointer-events-none m-4">
           <div className="text-center">
@@ -278,6 +364,7 @@ export function ChatArea() {
           </div>
         </div>
       )}
+
       <ScrollArea ref={scrollRef} className="flex-1 overflow-y-auto">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-muted-foreground px-4">
@@ -286,7 +373,10 @@ export function ChatArea() {
             <p className="text-xs mt-1 opacity-60">AI 어시스턴트가 도와드리겠습니다</p>
           </div>
         ) : (
-          <div className="mx-auto max-w-4xl">
+          <div
+            className="mx-auto max-w-4xl"
+            style={{ fontSize: `${parseInt(fontScale) / 100}rem` }}
+          >
             {messages.map((message, index) => {
               // Determine if this is the last assistant message
               const isLastAssistantMessage =

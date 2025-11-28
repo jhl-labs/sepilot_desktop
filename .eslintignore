@@ -1,8 +1,0 @@
-node_modules
-.next
-out
-dist
-build
-electron/**/*.ts
-*.config.js
-*.config.ts
