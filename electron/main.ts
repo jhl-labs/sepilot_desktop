@@ -22,15 +22,9 @@ import { initializeBuiltinTools } from '../lib/mcp/tools/executor';
 let mainWindow: BrowserWindow | null = null;
 let quickInputWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let isQuitting = false;
 
 const isDev = !app.isPackaged;
-
-// app 객체에 isQuitting 플래그 추가
-declare module 'electron' {
-  interface App {
-    isQuitting?: boolean;
-  }
-}
 
 // Setup electron-serve for production
 if (!isDev) {
@@ -67,7 +61,7 @@ function createWindow() {
 
   // 창 닫기 동작을 숨기기로 변경 (tray로 최소화)
   mainWindow.on('close', (event) => {
-    if (!app.isQuitting) {
+    if (!isQuitting) {
       event.preventDefault();
       mainWindow?.hide();
       logger.info('Main window hidden to tray');
@@ -167,7 +161,7 @@ function createTray() {
     {
       label: '종료',
       click: () => {
-        app.isQuitting = true;
+        isQuitting = true;
         app.quit();
       },
     },
@@ -365,7 +359,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
-  app.isQuitting = true;
+  isQuitting = true;
   logger.info('App is quitting');
 
   // Unregister all global shortcuts
