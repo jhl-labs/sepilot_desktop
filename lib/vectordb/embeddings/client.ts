@@ -19,7 +19,7 @@ class EmbeddingClientClass {
     });
 
     switch (config.provider) {
-      case 'openai':
+      case 'openai': {
         if (!config.apiKey) {
           throw new Error('OpenAI API key is required');
         }
@@ -28,8 +28,6 @@ class EmbeddingClientClass {
         const model = config.model && config.model.trim() ? config.model : 'text-embedding-3-small';
         const baseURL = config.baseURL && config.baseURL.trim() ? config.baseURL : 'https://api.openai.com/v1';
 
-        console.log('[EmbeddingClient] Creating OpenAI embeddings with:', { model, baseURL, hasNetworkConfig: !!config.networkConfig });
-
         this.provider = new OpenAIEmbeddings({
           apiKey: config.apiKey,
           model,
@@ -37,6 +35,7 @@ class EmbeddingClientClass {
           networkConfig: config.networkConfig, // Network Config 전달 (proxy, SSL, headers)
         });
         break;
+      }
 
       case 'local':
         // TODO: 로컬 임베딩 모델 구현 (예: transformers.js)

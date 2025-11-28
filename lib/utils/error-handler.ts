@@ -155,7 +155,9 @@ export function isAbortError(error: unknown): boolean {
  * 네트워크 에러인지 확인
  */
 export function isNetworkError(error: unknown): boolean {
-  if (!isError(error)) return false;
+  if (!isError(error)) {
+    return false;
+  }
 
   return (
     error.name === 'NetworkError' ||

@@ -60,8 +60,8 @@ export function generateImageId(source: 'clipboard' | 'file' = 'file'): string {
  * 브라우저 환경에서만 사용 가능
  */
 export function generateUUID(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
+  if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.randomUUID) {
+    return globalThis.crypto.randomUUID();
   }
 
   // Fallback: 간단한 UUID v4 구현

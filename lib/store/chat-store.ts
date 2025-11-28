@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Conversation, Message, PendingToolApproval, ToolCall, ImageGenerationProgress } from '@/types';
+import { Conversation, Message, PendingToolApproval, ImageGenerationProgress } from '@/types';
 import { generateId } from '@/lib/utils';
 import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
 import { isElectron } from '@/lib/platform';
@@ -544,7 +544,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   updateMessage: (id: string, updates: Partial<Message>, conversationId) => {
     set((state) => {
       const targetConvId = conversationId || state.activeConversationId;
-      if (!targetConvId) return state;
+      if (!targetConvId) {
+        return state;
+      }
 
       // Always update the cache for this conversation
       const newCache = new Map(state.messagesCache);
