@@ -135,8 +135,8 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
       }));
 
       const indexingOptions = {
-        chunkSize: 500,
-        chunkOverlap: 50,
+        chunkSize: 2500,      // 2500자 (약 600-750 토큰): 적절한 맥락 유지
+        chunkOverlap: 250,     // 10% 오버랩: 경계 부분 맥락 보존
         batchSize: 10,
       };
 
@@ -210,8 +210,8 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
       ];
 
       const indexingOptions = {
-        chunkSize: 500,
-        chunkOverlap: 50,
+        chunkSize: 2500,      // 2500자 (약 600-750 토큰): 적절한 맥락 유지
+        chunkOverlap: 250,     // 10% 오버랩: 경계 부분 맥락 보존
         batchSize: 10,
       };
 
