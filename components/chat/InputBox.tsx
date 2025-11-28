@@ -946,12 +946,21 @@ export function InputBox() {
                           }
                           displayContent += '\n';
 
-                          // Extract and show only the error message (first line or first 200 chars)
+                          // Show first few lines of error (up to 10 lines or 800 chars)
                           const errorLines = msg.content.split('\n');
-                          const errorMsg = errorLines[0].length > 200
-                            ? errorLines[0].substring(0, 200) + '...'
-                            : errorLines[0];
-                          displayContent += `   ${errorMsg}\n\n`;
+                          const linesToShow = errorLines.slice(0, 10);
+                          let errorMsg = linesToShow.join('\n');
+
+                          // Truncate if too long
+                          if (errorMsg.length > 800) {
+                            errorMsg = errorMsg.substring(0, 800) + '\n... (truncated)';
+                          }
+
+                          // Add indentation for better readability
+                          const indentedError = errorMsg.split('\n')
+                            .map((line: string) => `   ${line}`)
+                            .join('\n');
+                          displayContent += `${indentedError}\n\n`;
                         } else {
                           // Just show success indicator
                           displayContent += `✅ ${toolName}\n\n`;
