@@ -1,5 +1,12 @@
-// Load module aliases for path resolution (@/ -> dist/electron)
-import 'module-alias/register';
+// Load module aliases for path resolution (@/ -> dist/electron or app root in production)
+// Must use require() to ensure it's executed before other imports
+const moduleAlias = require('module-alias');
+const pathModule = require('path');
+
+// Configure module alias before any other imports
+// In production (packaged), __dirname is in resources/app.asar/dist/electron/electron
+// We need to point @ to resources/app.asar/dist/electron
+moduleAlias.addAlias('@', pathModule.join(__dirname, '..'));
 
 import { app, BrowserWindow, session } from 'electron';
 import path from 'path';
