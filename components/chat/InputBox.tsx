@@ -47,10 +47,13 @@ export function InputBox() {
   const [isDragging, setIsDragging] = useState(false);
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [quickSystemMessage, setQuickSystemMessage] = useState<string | null>(null);
+  const [showPersonaAutocomplete, setShowPersonaAutocomplete] = useState(false);
+  const [personaAutocompleteIndex, setPersonaAutocompleteIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingConversationIdRef = useRef<string | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
 
   const {
     addMessage,
@@ -82,11 +85,21 @@ export function InputBox() {
     setEnableImageGeneration,
     personas,
     activePersonaId,
+    setActivePersona,
   } = useChatStore();
 
   // Get active persona's system prompt
   const activePersona = personas.find(p => p.id === activePersonaId);
   const personaSystemPrompt = activePersona?.systemPrompt || null;
+
+  // Detect slash command for persona switching
+  const personaCommand = input.match(/^\/persona\s+(.*)$/);
+  const filteredPersonas = personaCommand
+    ? personas.filter(p =>
+        p.name.toLowerCase().includes(personaCommand[1].toLowerCase()) ||
+        p.description.toLowerCase().includes(personaCommand[1].toLowerCase())
+      )
+    : [];
 
   // Determine if any conversation is currently streaming
   const isStreaming = activeConversationId ? streamingConversations.has(activeConversationId) : false;
@@ -347,6 +360,16 @@ export function InputBox() {
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [input]);
+
+  // Show/hide persona autocomplete based on input
+  useEffect(() => {
+    if (personaCommand && filteredPersonas.length > 0) {
+      setShowPersonaAutocomplete(true);
+      setPersonaAutocompleteIndex(0);
+    } else {
+      setShowPersonaAutocomplete(false);
+    }
+  }, [input, personaCommand, filteredPersonas.length]);
 
   // Auto-switch to Instant mode when images are selected or image generation is enabled
   // (Multimodal models and image generation require using agent.ts which works best with Instant mode)
@@ -1309,6 +1332,40 @@ export function InputBox() {
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle persona autocomplete navigation
+    if (showPersonaAutocomplete && filteredPersonas.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setPersonaAutocompleteIndex((prev) =>
+          prev < filteredPersonas.length - 1 ? prev + 1 : 0
+        );
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setPersonaAutocompleteIndex((prev) =>
+          prev > 0 ? prev - 1 : filteredPersonas.length - 1
+        );
+        return;
+      }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const selectedPersona = filteredPersonas[personaAutocompleteIndex];
+        if (selectedPersona) {
+          setActivePersona(selectedPersona.id);
+          setInput('');
+          setShowPersonaAutocomplete(false);
+        }
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowPersonaAutocomplete(false);
+        setInput('');
+        return;
+      }
+    }
+
     // IME composition 중일 때는 Enter 키를 무시 (Mac 한글 입력 문제 해결)
     if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
       e.preventDefault();
