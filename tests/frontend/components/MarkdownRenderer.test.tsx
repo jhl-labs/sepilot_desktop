@@ -270,4 +270,117 @@ describe('MarkdownRenderer', () => {
 
     expect(screen.getByText(/Special:/)).toBeInTheDocument();
   });
+
+  describe('Streaming mode', () => {
+    it('should render mermaid content during streaming', () => {
+      const mermaidContent = ['```mermaid', 'graph TD', 'A-->B', '```'].join('\n');
+      const { container } = render(<MarkdownRenderer content={mermaidContent} isStreaming={true} />);
+
+      // Content should be rendered (either as CodeBlock or in code element)
+      expect(screen.getByText(/graph TD/)).toBeInTheDocument();
+      expect(screen.getByText(/A-->B/)).toBeInTheDocument();
+    });
+
+    it('should render plotly content during streaming', () => {
+      const plotlyContent = ['```plotly', '{"data": []}', '```'].join('\n');
+      const { container } = render(<MarkdownRenderer content={plotlyContent} isStreaming={true} />);
+
+      // Content should be rendered
+      expect(screen.getByText(/data/)).toBeInTheDocument();
+    });
+
+    it('should handle regular code blocks during streaming', () => {
+      const codeContent = ['```javascript', 'console.log("test");', '```'].join('\n');
+      const { container } = render(<MarkdownRenderer content={codeContent} isStreaming={true} />);
+
+      expect(screen.getByText('console.log("test");')).toBeInTheDocument();
+      const codeElement = container.querySelector('code');
+      expect(codeElement).toBeInTheDocument();
+    });
+
+    it('should handle plain text during streaming', () => {
+      render(<MarkdownRenderer content="Streaming text..." isStreaming={true} />);
+
+      expect(screen.getByText('Streaming text...')).toBeInTheDocument();
+    });
+  });
+
+  describe('Code block rendering', () => {
+    it('should render code block with language', () => {
+      const codeContent = ['```python', 'print("hello")', '```'].join('\n');
+      const { container } = render(<MarkdownRenderer content={codeContent} />);
+
+      // Check code content is rendered
+      expect(screen.getByText('print("hello")')).toBeInTheDocument();
+
+      // Check either CodeBlock or standard code element is present
+      const hasCodeBlock = container.querySelector('[data-testid="code-block"]');
+      const hasCodeElement = container.querySelector('code');
+      expect(hasCodeBlock || hasCodeElement).toBeTruthy();
+    });
+
+    it('should render TypeScript code block', () => {
+      const codeContent = ['```typescript', 'const x: number = 10;', '```'].join('\n');
+      const { container } = render(<MarkdownRenderer content={codeContent} />);
+
+      expect(screen.getByText('const x: number = 10;')).toBeInTheDocument();
+      const codeElement = container.querySelector('code');
+      expect(codeElement).toBeInTheDocument();
+    });
+
+    it('should render JSON code block', () => {
+      const codeContent = ['```json', '{"key": "value"}', '```'].join('\n');
+      const { container } = render(<MarkdownRenderer content={codeContent} />);
+
+      expect(screen.getByText('{"key": "value"}')).toBeInTheDocument();
+      const codeElement = container.querySelector('code');
+      expect(codeElement).toBeInTheDocument();
+    });
+
+    it('should handle multiline code blocks', () => {
+      const codeContent = ['```javascript', 'function test() {', '  return true;', '}', '```'].join('\n');
+      const { container } = render(<MarkdownRenderer content={codeContent} />);
+
+      const codeElement = container.querySelector('code');
+      expect(codeElement).toBeInTheDocument();
+      // Content should be rendered
+      expect(codeElement?.textContent).toContain('function test()');
+      expect(codeElement?.textContent).toContain('return true');
+    });
+  });
+
+  describe('Link rendering', () => {
+    it('should open links in new tab', () => {
+      render(<MarkdownRenderer content="[External](https://example.com)" />);
+
+      const link = screen.getByRole('link', { name: 'External' });
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+
+    it('should render multiple links', () => {
+      const content = '[Link 1](https://example1.com) and [Link 2](https://example2.com)';
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByRole('link', { name: 'Link 1' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Link 2' })).toBeInTheDocument();
+    });
+  });
+
+  describe('Heading levels', () => {
+    it('should render h4 heading', () => {
+      render(<MarkdownRenderer content="#### Heading 4" />);
+      expect(screen.getByRole('heading', { level: 4, name: 'Heading 4' })).toBeInTheDocument();
+    });
+
+    it('should render h5 heading', () => {
+      render(<MarkdownRenderer content="##### Heading 5" />);
+      expect(screen.getByRole('heading', { level: 5, name: 'Heading 5' })).toBeInTheDocument();
+    });
+
+    it('should render h6 heading', () => {
+      render(<MarkdownRenderer content="###### Heading 6" />);
+      expect(screen.getByRole('heading', { level: 6, name: 'Heading 6' })).toBeInTheDocument();
+    });
+  });
 });
