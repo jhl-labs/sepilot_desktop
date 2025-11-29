@@ -15,7 +15,7 @@ export function setupBrowserViewHandlers() {
       // 기존 BrowserView가 있으면 제거
       if (browserView) {
         mainWindow.removeBrowserView(browserView);
-        browserView.webContents.destroy();
+        // @ts-ignore - BrowserView는 자동으로 정리됨
         browserView = null;
       }
 
@@ -83,7 +83,6 @@ export function setupBrowserViewHandlers() {
       }
 
       mainWindow.removeBrowserView(browserView);
-      browserView.webContents.destroy();
       browserView = null;
 
       logger.info('BrowserView destroyed successfully');
@@ -228,7 +227,6 @@ export function setupBrowserViewHandlers() {
 // Clean up on app quit
 export function cleanupBrowserView() {
   if (browserView) {
-    browserView.webContents.destroy();
     browserView = null;
   }
 }
