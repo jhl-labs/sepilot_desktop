@@ -46,7 +46,18 @@ export function SidebarChat({
           <Button
             variant="ghost"
             size="icon"
-            onClick={onDocumentsClick}
+            onClick={() => {
+              console.log('[SidebarChat] Documents button clicked - hiding BrowserView');
+              // Documents 열기 전에 BrowserView 숨김
+              if (isElectron() && window.electronAPI) {
+                window.electronAPI.browserView.hideAll().then(() => {
+                  console.log('[SidebarChat] BrowserView hidden before opening Documents');
+                }).catch((err) => {
+                  console.error('[SidebarChat] Failed to hide BrowserView:', err);
+                });
+              }
+              onDocumentsClick?.();
+            }}
             title="문서 관리"
             className="flex-1"
           >
@@ -55,7 +66,18 @@ export function SidebarChat({
           <Button
             variant="ghost"
             size="icon"
-            onClick={onGalleryClick}
+            onClick={() => {
+              console.log('[SidebarChat] Gallery button clicked - hiding BrowserView');
+              // Gallery 열기 전에 BrowserView 숨김
+              if (isElectron() && window.electronAPI) {
+                window.electronAPI.browserView.hideAll().then(() => {
+                  console.log('[SidebarChat] BrowserView hidden before opening Gallery');
+                }).catch((err) => {
+                  console.error('[SidebarChat] Failed to hide BrowserView:', err);
+                });
+              }
+              onGalleryClick?.();
+            }}
             title="이미지 갤러리"
             className="flex-1"
           >

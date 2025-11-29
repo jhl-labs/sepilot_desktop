@@ -3,6 +3,7 @@ import { Conversation, Message, PendingToolApproval, ImageGenerationProgress } f
 import { generateId } from '@/lib/utils';
 import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
 import { isElectron } from '@/lib/platform';
+import type { BrowserAgentLogEntry } from '@/types/browser-agent';
 
 // App mode types
 export type AppMode = 'chat' | 'editor' | 'browser';
@@ -86,6 +87,11 @@ interface ChatStore {
   browserChatMessages: Message[];
   browserViewMode: 'chat' | 'snapshots' | 'bookmarks' | 'settings';
 
+  // Browser Agent Logs (실행 과정 가시성)
+  browserAgentLogs: BrowserAgentLogEntry[];
+  browserAgentIsRunning: boolean;
+  showBrowserAgentLogs: boolean; // 로그 패널 표시 여부
+
   // Deprecated: kept for backward compatibility
   graphType: GraphType;
   isStreaming: boolean;
@@ -140,6 +146,12 @@ interface ChatStore {
   clearBrowserChat: () => void;
   setBrowserViewMode: (mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings') => void;
 
+  // Actions - Browser Agent Logs
+  addBrowserAgentLog: (log: Omit<BrowserAgentLogEntry, 'id' | 'timestamp'>) => void;
+  clearBrowserAgentLogs: () => void;
+  setBrowserAgentIsRunning: (isRunning: boolean) => void;
+  setShowBrowserAgentLogs: (show: boolean) => void;
+
   // Actions - App Mode
   setAppMode: (mode: AppMode) => void;
   setActiveEditorTab: (tab: 'files' | 'search') => void;
@@ -193,6 +205,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Browser Chat
   browserChatMessages: [],
   browserViewMode: 'chat',
+
+  // Browser Agent Logs
+  browserAgentLogs: [],
+  browserAgentIsRunning: false,
+  showBrowserAgentLogs: false,
 
   // Deprecated
   graphType: 'chat',
@@ -824,6 +841,30 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setBrowserViewMode: (mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings') => {
     set({ browserViewMode: mode });
+  },
+
+  // Browser Agent Logs Actions
+  addBrowserAgentLog: (log: Omit<BrowserAgentLogEntry, 'id' | 'timestamp'>) => {
+    const newLog: BrowserAgentLogEntry = {
+      ...log,
+      id: generateId(),
+      timestamp: Date.now(),
+    };
+    set((state) => ({
+      browserAgentLogs: [...state.browserAgentLogs, newLog],
+    }));
+  },
+
+  clearBrowserAgentLogs: () => {
+    set({ browserAgentLogs: [] });
+  },
+
+  setBrowserAgentIsRunning: (isRunning: boolean) => {
+    set({ browserAgentIsRunning: isRunning });
+  },
+
+  setShowBrowserAgentLogs: (show: boolean) => {
+    set({ showBrowserAgentLogs: show });
   },
 
   // Editor Actions
