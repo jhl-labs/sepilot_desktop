@@ -9,8 +9,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal, Plus, X, ChevronLeft, ChevronRight, MoreVertical, Bookmark, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal, Plus, X, ChevronLeft, ChevronRight, MoreVertical, Bookmark, Save, Compass, Eye, MousePointer, Keyboard, ArrowDown, Tabs, Camera, FileText, Search } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
 import { useChatStore } from '@/lib/store/chat-store';
 
@@ -386,7 +390,7 @@ export function BrowserPanel() {
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem>
               <Bookmark className="mr-2 h-4 w-4" />
               <span>북마크 관리</span>
@@ -396,7 +400,85 @@ export function BrowserPanel() {
               <span>세션 저장</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+
+            {/* Browser Agent 도구 목록 */}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Terminal className="mr-2 h-4 w-4" />
+                <span>Browser Agent 도구</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-64">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Navigation (1)
+                </DropdownMenuLabel>
+                <DropdownMenuItem disabled>
+                  <Compass className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_navigate - URL 직접 이동</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Page Inspection (4)
+                </DropdownMenuLabel>
+                <DropdownMenuItem disabled>
+                  <FileText className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_get_page_content - 페이지 내용</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <Search className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_get_interactive_elements - 요소 찾기</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <Eye className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_get_selected_text - 선택 텍스트</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <Camera className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_take_screenshot - 스크린샷</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Page Interaction (3)
+                </DropdownMenuLabel>
+                <DropdownMenuItem disabled>
+                  <MousePointer className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_click_element - 요소 클릭</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <Keyboard className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_type_text - 텍스트 입력</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <ArrowDown className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_scroll - 페이지 스크롤</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Tab Management (4)
+                </DropdownMenuLabel>
+                <DropdownMenuItem disabled>
+                  <Tabs className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_list_tabs - 탭 목록</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <Plus className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_create_tab - 새 탭 열기</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <ChevronRight className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_switch_tab - 탭 전환</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <X className="mr-2 h-3 w-3" />
+                  <span className="text-xs">browser_close_tab - 탭 닫기</span>
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleToggleDevTools}>
               <Terminal className="mr-2 h-4 w-4" />
               <span>개발자 도구</span>
             </DropdownMenuItem>
