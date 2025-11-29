@@ -237,6 +237,37 @@ describe('SnapshotsList', () => {
     });
   });
 
+  it('should handle delete exception', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+      success: true,
+      data: mockSnapshots,
+    });
+    (mockElectronAPI.browserView.deleteSnapshot as jest.Mock).mockRejectedValue(
+      new Error('Network error')
+    );
+
+    render(<SnapshotsList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Example Page')).toBeInTheDocument();
+    });
+
+    const allButtons = screen.getAllByRole('button');
+    const deleteButton = allButtons[allButtons.length - 2];
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(window.alert).toHaveBeenCalledWith('스냅샷 삭제 중 오류가 발생했습니다.');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[SnapshotsList] Error deleting snapshot:',
+        expect.any(Error)
+      );
+    });
+
+    consoleSpy.mockRestore();
+  });
+
   it('should open snapshot when clicked', async () => {
     (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
       success: true,
@@ -291,6 +322,36 @@ describe('SnapshotsList', () => {
     });
   });
 
+  it('should handle open snapshot exception', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+      success: true,
+      data: mockSnapshots,
+    });
+    (mockElectronAPI.browserView.openSnapshot as jest.Mock).mockRejectedValue(
+      new Error('Network error')
+    );
+
+    render(<SnapshotsList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Example Page')).toBeInTheDocument();
+    });
+
+    const snapshotCard = screen.getByText('Example Page').closest('div');
+    fireEvent.click(snapshotCard as HTMLElement);
+
+    await waitFor(() => {
+      expect(window.alert).toHaveBeenCalledWith('스냅샷 열기 중 오류가 발생했습니다.');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[SnapshotsList] Error opening snapshot:',
+        expect.any(Error)
+      );
+    });
+
+    consoleSpy.mockRestore();
+  });
+
   it('should handle load result without success flag', async () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
@@ -309,5 +370,52 @@ describe('SnapshotsList', () => {
     });
 
     consoleSpy.mockRestore();
+  });
+
+  it('should not delete when not in Electron', async () => {
+    enableElectronMode();
+    (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+      success: true,
+      data: mockSnapshots,
+    });
+
+    render(<SnapshotsList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Example Page')).toBeInTheDocument();
+    });
+
+    // Disable Electron mode after loading
+    (window as any).electronAPI = undefined;
+
+    const allButtons = screen.getAllByRole('button');
+    const deleteButton = allButtons[allButtons.length - 2];
+    fireEvent.click(deleteButton);
+
+    // Should not call delete API in non-Electron environment
+    expect(mockElectronAPI.browserView.deleteSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('should not open when not in Electron', async () => {
+    enableElectronMode();
+    (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+      success: true,
+      data: mockSnapshots,
+    });
+
+    render(<SnapshotsList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Example Page')).toBeInTheDocument();
+    });
+
+    // Disable Electron mode after loading
+    (window as any).electronAPI = undefined;
+
+    const snapshotCard = screen.getByText('Example Page').closest('div');
+    fireEvent.click(snapshotCard as HTMLElement);
+
+    // Should not call open API in non-Electron environment
+    expect(mockElectronAPI.browserView.openSnapshot).not.toHaveBeenCalled();
   });
 });

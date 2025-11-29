@@ -53,6 +53,16 @@ jest.mock('@/components/browser/SimpleChatInput', () => ({
   SimpleChatInput: () => <div data-testid="simple-chat-input">Simple Chat Input</div>,
 }));
 
+// Mock EditorChatArea
+jest.mock('@/components/editor/EditorChatArea', () => ({
+  EditorChatArea: () => <div data-testid="editor-chat-area">Editor Chat Area</div>,
+}));
+
+// Mock BrowserAgentLog
+jest.mock('@/components/browser/BrowserAgentLog', () => ({
+  BrowserAgentLog: () => <div data-testid="browser-agent-log">Browser Agent Log</div>,
+}));
+
 // Mock window.confirm
 global.confirm = jest.fn(() => true);
 
@@ -72,6 +82,8 @@ describe('Sidebar', () => {
     setAppMode: jest.fn(),
     activeEditorTab: 'files' as const,
     setActiveEditorTab: jest.fn(),
+    editorViewMode: 'files' as const,
+    setEditorViewMode: jest.fn(),
     browserViewMode: 'chat' as const,
     setBrowserViewMode: jest.fn(),
     browserChatMessages: [],
@@ -312,16 +324,19 @@ describe('Sidebar', () => {
     });
 
     it('should switch to search tab', () => {
+      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
+      (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
+
       render(<Sidebar />);
 
       const searchButton = screen.getByRole('button', { name: /전체 검색/i });
       fireEvent.click(searchButton);
 
-      expect(mockChatStore.setActiveEditorTab).toHaveBeenCalledWith('search');
+      expect(editorMockStore.setEditorViewMode).toHaveBeenCalledWith('search');
     });
 
     it('should switch to files tab', () => {
-      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const, activeEditorTab: 'search' as const };
+      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const, editorViewMode: 'search' as const };
       (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
 
       render(<Sidebar />);
@@ -329,10 +344,13 @@ describe('Sidebar', () => {
       const filesButton = screen.getByRole('button', { name: /파일 탐색기/i });
       fireEvent.click(filesButton);
 
-      expect(mockChatStore.setActiveEditorTab).toHaveBeenCalledWith('files');
+      expect(editorMockStore.setEditorViewMode).toHaveBeenCalledWith('files');
     });
 
     it('should highlight active tab', () => {
+      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
+      (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
+
       render(<Sidebar />);
 
       const filesButton = screen.getByRole('button', { name: /파일 탐색기/i });
@@ -340,7 +358,7 @@ describe('Sidebar', () => {
     });
 
     it('should show search panel when search tab is active', () => {
-      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const, activeEditorTab: 'search' as const };
+      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const, editorViewMode: 'search' as const };
       (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
 
       render(<Sidebar />);
