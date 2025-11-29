@@ -49,26 +49,26 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     if (theme === 'light') {
       return {
         background: '#ffffff',
-        foreground: '#333333',
+        foreground: '#1a1a1a', // 훨씬 더 진한 검정색
         cursor: '#0066cc',
         cursorAccent: '#ffffff',
         selectionBackground: '#add6ff80',
         black: '#000000',
         red: '#cd3131',
-        green: '#00BC00',
-        yellow: '#949800',
+        green: '#008000', // 더 진한 녹색
+        yellow: '#7a6300', // 더 진한 노란색
         blue: '#0451a5',
         magenta: '#bc05bc',
         cyan: '#0598bc',
-        white: '#555555',
+        white: '#3d3d3d', // 더 진한 회색
         brightBlack: '#666666',
         brightRed: '#cd3131',
-        brightGreen: '#14CE14',
-        brightYellow: '#b5ba00',
+        brightGreen: '#008000',
+        brightYellow: '#7a6300',
         brightBlue: '#0451a5',
         brightMagenta: '#bc05bc',
         brightCyan: '#0598bc',
-        brightWhite: '#a5a5a5',
+        brightWhite: '#666666', // 더 진한 밝은 회색
       };
     } else {
       return {
