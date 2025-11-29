@@ -26,7 +26,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
-  const { createConversation, messages, activeConversationId, streamingConversations, loadConversations, setAppMode, appMode } = useChatStore();
+  const { createConversation, messages, activeConversationId, streamingConversations, loadConversations, setAppMode, appMode, activeEditorTab } = useChatStore();
 
   // Determine if current conversation is streaming
   const isStreaming = activeConversationId ? streamingConversations.has(activeConversationId) : false;
@@ -261,24 +261,49 @@ export function MainLayout({ children }: MainLayoutProps) {
     };
   }, [initializeFromConfig]);
 
-  // Handle BrowserView visibility when Settings/Documents/Gallery opens
+  // Handle BrowserView visibility
   useEffect(() => {
     if (!isElectron() || !window.electronAPI) {
       return;
     }
 
+    // Settings/Documents/Gallery가 열려있으면 항상 숨김
     if (settingsOpen || viewMode === 'documents' || viewMode === 'gallery') {
-      // Settings/Documents/Gallery 열릴 때 BrowserView 숨김 (browser 모드여도)
-      window.electronAPI.browserView.hideAll().catch((err) => {
+      console.log('[MainLayout] Hiding BrowserView for overlay (settingsOpen:', settingsOpen, 'viewMode:', viewMode, ')');
+      window.electronAPI.browserView.hideAll().then(() => {
+        console.log('[MainLayout] BrowserView hidden successfully');
+      }).catch((err) => {
         console.error('[MainLayout] Failed to hide BrowserView for overlay:', err);
       });
-    } else if (appMode === 'browser' && viewMode === 'chat') {
-      // Chat 모드로 돌아가고 browser 모드이면 BrowserView 다시 표시
-      window.electronAPI.browserView.showActive().catch((err) => {
+      return;
+    }
+
+    // Editor 모드이고 Browser 탭이 활성화되어 있으면 표시
+    if (appMode === 'editor' && activeEditorTab === 'browser') {
+      console.log('[MainLayout] Showing BrowserView (appMode:', appMode, 'activeEditorTab:', activeEditorTab, ')');
+      window.electronAPI.browserView.showActive().then(() => {
+        console.log('[MainLayout] BrowserView shown successfully');
+      }).catch((err) => {
         console.error('[MainLayout] Failed to show BrowserView:', err);
       });
     }
-  }, [settingsOpen, viewMode, appMode]);
+    // Browser 모드 (standalone)일 때도 표시
+    else if (appMode === 'browser' && viewMode === 'chat') {
+      console.log('[MainLayout] Showing BrowserView (appMode:', appMode, 'viewMode:', viewMode, ')');
+      window.electronAPI.browserView.showActive().then(() => {
+        console.log('[MainLayout] BrowserView shown successfully');
+      }).catch((err) => {
+        console.error('[MainLayout] Failed to show BrowserView:', err);
+      });
+    }
+    // 그 외의 경우 숨김
+    else {
+      console.log('[MainLayout] Hiding BrowserView (appMode:', appMode, 'activeEditorTab:', activeEditorTab, ')');
+      window.electronAPI.browserView.hideAll().catch((err) => {
+        console.error('[MainLayout] Failed to hide BrowserView:', err);
+      });
+    }
+  }, [settingsOpen, viewMode, appMode, activeEditorTab]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">

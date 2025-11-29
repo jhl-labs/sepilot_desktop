@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal, Plus, X } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
-import { useChatStore } from '@/lib/store/chat-store';
 
 interface Tab {
   id: string;
@@ -15,7 +14,6 @@ interface Tab {
 }
 
 export function BrowserPanel() {
-  const { appMode } = useChatStore();
   const [url, setUrl] = useState('https://www.google.com');
   const [currentUrl, setCurrentUrl] = useState(url);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -125,24 +123,8 @@ export function BrowserPanel() {
     }
   };
 
-  // appMode 변경 시 BrowserView 숨김/표시 처리
-  useEffect(() => {
-    if (!isElectron() || !window.electronAPI) {
-      return;
-    }
-
-    if (appMode === 'browser') {
-      // Browser 모드로 전환 시 BrowserView 표시
-      window.electronAPI.browserView.showActive().catch((err) => {
-        console.error('[BrowserPanel] Failed to show BrowserView:', err);
-      });
-    } else {
-      // 다른 모드로 전환 시 BrowserView 숨김
-      window.electronAPI.browserView.hideAll().catch((err) => {
-        console.error('[BrowserPanel] Failed to hide BrowserView:', err);
-      });
-    }
-  }, [appMode]);
+  // Note: BrowserView의 표시/숨김은 MainLayout에서 관리됨
+  // BrowserPanel은 UI와 이벤트 리스너만 담당
 
   // 이벤트 리스너 등록 (한 번만 실행)
   useEffect(() => {
@@ -182,43 +164,33 @@ export function BrowserPanel() {
       }
     });
 
-    // Cleanup
+    // Cleanup: 이벤트 리스너만 제거 (BrowserView 숨김은 MainLayout에서 관리)
     return () => {
       window.electronAPI.browserView.removeListener('browser-view:did-navigate', didNavigateHandler);
       window.electronAPI.browserView.removeListener('browser-view:loading-state', loadingStateHandler);
       window.electronAPI.browserView.removeListener('browser-view:title-updated', titleUpdatedHandler);
       window.electronAPI.browserView.removeListener('browser-view:tab-created', tabCreatedHandler);
-
-      // BrowserPanel 언마운트 시 BrowserView 숨김
-      if (window.electronAPI) {
-        window.electronAPI.browserView.hideAll();
-      }
     };
   }, []);
 
-  // 초기 탭 생성
+  // 초기 탭 생성 (BrowserPanel이 렌더링되면 탭 생성)
   useEffect(() => {
     if (!isElectron() || !window.electronAPI) {
       return;
     }
 
-    // Browser 모드이고 탭이 없을 때만 탭 생성
-    if (appMode === 'browser' && tabs.length === 0) {
-      // 첫 탭 생성
+    // 탭이 없을 때만 첫 탭 생성
+    if (tabs.length === 0) {
+      console.log('[BrowserPanel] Creating initial tab');
       window.electronAPI.browserView.createTab(currentUrl).then(() => {
         loadTabs();
       });
     }
-  }, [appMode, tabs.length, currentUrl]);
+  }, [tabs.length, currentUrl]);
 
   // BrowserView bounds 설정 (컨테이너 크기에 맞춤)
   useEffect(() => {
     if (!isElectron() || !window.electronAPI || !containerRef.current) {
-      return;
-    }
-
-    // Browser 모드가 아니면 bounds 설정 안 함
-    if (appMode !== 'browser') {
       return;
     }
 
@@ -252,7 +224,7 @@ export function BrowserPanel() {
       resizeObserver.disconnect();
       window.removeEventListener('resize', updateBounds);
     };
-  }, [appMode]);
+  }, []); // BrowserPanel이 렌더링되면 bounds 설정
 
   if (!isElectron()) {
     return (
