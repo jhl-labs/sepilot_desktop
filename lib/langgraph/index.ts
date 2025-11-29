@@ -49,8 +49,8 @@ export class GraphFactory {
 
   private static async getAgentGraph() {
     if (!this._agentGraph) {
-      const { createAgentGraph } = await import('./graphs/agent');
-      this._agentGraph = createAgentGraph();
+      const { createChatAgentGraph } = await import('./graphs/chat-agent');
+      this._agentGraph = createChatAgentGraph();
     }
     return this._agentGraph;
   }
@@ -470,10 +470,10 @@ export class GraphFactory {
     try {
       console.log('[GraphFactory] Starting agent stream with Human-in-the-loop support');
 
-      const { AgentGraph } = await import('./graphs/agent');
+      const { ChatAgentGraph } = await import('./graphs/chat-agent');
       const { createInitialAgentState } = await import('./state');
 
-      const agentGraph = new AgentGraph();
+      const agentGraph = new ChatAgentGraph();
       const initialState = createInitialAgentState(messages, conversationId);
 
       // Use the AgentGraph's stream method with tool approval callback

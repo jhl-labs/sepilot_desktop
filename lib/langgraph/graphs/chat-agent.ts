@@ -6,9 +6,13 @@ import type { Message } from '@/types';
 import type { ToolApprovalCallback } from '../types';
 
 /**
- * Tool-Using Agent 그래프 - LangGraph StateGraph 사용
+ * Chat Agent 그래프 - MCP Tools와 이미지 생성 도구 지원
+ *
+ * Built-in Browser Control Tools나 Editor Tools는 사용하지 않음
+ * - MCP 서버의 도구들만 사용
+ * - ComfyUI 이미지 생성 도구 (enableImageGeneration 플래그로 제어)
  */
-export class AgentGraph {
+export class ChatAgentGraph {
   async invoke(initialState: AgentState, maxIterations = 10): Promise<AgentState> {
     let state = { ...initialState };
     let iterations = 0;
@@ -242,7 +246,7 @@ export class AgentGraph {
   }
 }
 
-export function createAgentGraph() {
+export function createChatAgentGraph() {
   // StateGraph 생성
   const workflow = new StateGraph(AgentStateAnnotation)
     // 노드 추가
