@@ -352,6 +352,20 @@ const electronAPI = {
     // Show/Hide
     hideAll: () => ipcRenderer.invoke('browser-view:hide-all'),
     showActive: () => ipcRenderer.invoke('browser-view:show-active'),
+    // Snapshot operations
+    capturePage: () => ipcRenderer.invoke('browser-view:capture-page'),
+    getSnapshots: () => ipcRenderer.invoke('browser-view:get-snapshots'),
+    deleteSnapshot: (snapshotId: string) => ipcRenderer.invoke('browser-view:delete-snapshot', snapshotId),
+    openSnapshot: (snapshotId: string) => ipcRenderer.invoke('browser-view:open-snapshot', snapshotId),
+    // Bookmark operations
+    addBookmark: (options?: { url?: string; title?: string; folderId?: string }) =>
+      ipcRenderer.invoke('browser-view:add-bookmark', options),
+    getBookmarks: () => ipcRenderer.invoke('browser-view:get-bookmarks'),
+    deleteBookmark: (bookmarkId: string) => ipcRenderer.invoke('browser-view:delete-bookmark', bookmarkId),
+    openBookmark: (bookmarkId: string) => ipcRenderer.invoke('browser-view:open-bookmark', bookmarkId),
+    addBookmarkFolder: (name: string) => ipcRenderer.invoke('browser-view:add-bookmark-folder', name),
+    getBookmarkFolders: () => ipcRenderer.invoke('browser-view:get-bookmark-folders'),
+    deleteBookmarkFolder: (folderId: string) => ipcRenderer.invoke('browser-view:delete-bookmark-folder', folderId),
     // Event listeners
     onDidNavigate: (callback: (data: { tabId: string; url: string; canGoBack: boolean; canGoForward: boolean }) => void) => {
       const handler = (_: any, data: any) => callback(data);

@@ -442,6 +442,32 @@ interface BrowserTab {
   isActive: boolean;
 }
 
+// Snapshot 타입
+interface Snapshot {
+  id: string;
+  url: string;
+  title: string;
+  thumbnail: string;
+  createdAt: number;
+  screenshotPath: string;
+}
+
+// Bookmark 타입
+interface Bookmark {
+  id: string;
+  url: string;
+  title: string;
+  folderId?: string;
+  createdAt: number;
+}
+
+// Bookmark Folder 타입
+interface BookmarkFolder {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
 interface BrowserViewAPI {
   // Tab management
   createTab: (url?: string) => Promise<IPCResponse<{ tabId: string; url: string }>>;
@@ -472,6 +498,19 @@ interface BrowserViewAPI {
   // Show/Hide
   hideAll: () => Promise<IPCResponse>;
   showActive: () => Promise<IPCResponse>;
+  // Snapshot operations
+  capturePage: () => Promise<IPCResponse<Snapshot>>;
+  getSnapshots: () => Promise<IPCResponse<Snapshot[]>>;
+  deleteSnapshot: (snapshotId: string) => Promise<IPCResponse>;
+  openSnapshot: (snapshotId: string) => Promise<IPCResponse>;
+  // Bookmark operations
+  addBookmark: (options?: { url?: string; title?: string; folderId?: string }) => Promise<IPCResponse<Bookmark>>;
+  getBookmarks: () => Promise<IPCResponse<Bookmark[]>>;
+  deleteBookmark: (bookmarkId: string) => Promise<IPCResponse>;
+  openBookmark: (bookmarkId: string) => Promise<IPCResponse>;
+  addBookmarkFolder: (name: string) => Promise<IPCResponse<BookmarkFolder>>;
+  getBookmarkFolders: () => Promise<IPCResponse<BookmarkFolder[]>>;
+  deleteBookmarkFolder: (folderId: string) => Promise<IPCResponse>;
   // Event listeners
   onDidNavigate: (callback: (data: { tabId: string; url: string; canGoBack: boolean; canGoForward: boolean }) => void) => (...args: unknown[]) => void;
   onLoadingState: (callback: (data: { tabId: string; isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => (...args: unknown[]) => void;
@@ -611,5 +650,10 @@ export type {
   ReleaseInfo,
   TerminalAPI,
   TerminalSession,
+  BrowserViewAPI,
+  BrowserTab,
+  Snapshot,
+  Bookmark,
+  BookmarkFolder,
   ElectronAPI,
 };

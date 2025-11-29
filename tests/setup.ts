@@ -83,6 +83,10 @@ export const mockElectronAPI = {
     readDirectory: jest.fn(),
     readFile: jest.fn(),
     writeFile: jest.fn(),
+    createFile: jest.fn(),
+    createDirectory: jest.fn(),
+    delete: jest.fn(),
+    rename: jest.fn(),
   },
   github: {
     setPrivateKey: jest.fn(),

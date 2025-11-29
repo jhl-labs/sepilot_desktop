@@ -167,9 +167,27 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => {
-                // TODO: 페이지 캡처 기능
-                console.log('[Sidebar] Page capture clicked');
+              onClick={async () => {
+                if (!isElectron() || !window.electronAPI) {
+                  console.warn('[Sidebar] Not in Electron environment');
+                  return;
+                }
+
+                try {
+                  console.log('[Sidebar] Capturing current page...');
+                  const result = await window.electronAPI.browserView.capturePage();
+
+                  if (result.success) {
+                    console.log('[Sidebar] Page captured successfully:', result.data);
+                    alert('페이지가 스냅샷으로 저장되었습니다.');
+                  } else {
+                    console.error('[Sidebar] Failed to capture page:', result.error);
+                    alert(`페이지 캡처 실패: ${result.error}`);
+                  }
+                } catch (error) {
+                  console.error('[Sidebar] Error capturing page:', error);
+                  alert('페이지 캡처 중 오류가 발생했습니다.');
+                }
               }}
               title="페이지 캡처"
               className="flex-1"

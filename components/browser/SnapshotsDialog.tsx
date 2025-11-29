@@ -1,15 +1,18 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Trash } from 'lucide-react';
+import { isElectron } from '@/lib/platform';
 
 interface Snapshot {
   id: string;
   url: string;
   title: string;
-  thumbnail?: string;
+  thumbnail: string;
   createdAt: number;
+  screenshotPath: string;
 }
 
 interface SnapshotsDialogProps {
@@ -18,20 +21,68 @@ interface SnapshotsDialogProps {
 }
 
 export function SnapshotsDialog({ open, onOpenChange }: SnapshotsDialogProps) {
-  // TODO: 실제 스냅샷 데이터 로드
-  const snapshots: Snapshot[] = [];
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleDelete = (id: string) => {
-    if (confirm('이 스냅샷을 삭제하시겠습니까?')) {
-      // TODO: 스냅샷 삭제 구현
-      console.log('[SnapshotsDialog] Delete snapshot:', id);
+  // Load snapshots when dialog opens
+  useEffect(() => {
+    if (!open || !isElectron() || !window.electronAPI) return;
+
+    const loadSnapshots = async () => {
+      setIsLoading(true);
+      try {
+        const result = await window.electronAPI.browserView.getSnapshots();
+        if (result.success && result.data) {
+          setSnapshots(result.data);
+        } else {
+          console.error('[SnapshotsDialog] Failed to load snapshots:', result.error);
+        }
+      } catch (error) {
+        console.error('[SnapshotsDialog] Error loading snapshots:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSnapshots();
+  }, [open]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('이 스냅샷을 삭제하시겠습니까?')) return;
+
+    if (!isElectron() || !window.electronAPI) return;
+
+    try {
+      const result = await window.electronAPI.browserView.deleteSnapshot(id);
+      if (result.success) {
+        // Remove from local state
+        setSnapshots((prev) => prev.filter((s) => s.id !== id));
+      } else {
+        console.error('[SnapshotsDialog] Failed to delete snapshot:', result.error);
+        alert(`스냅샷 삭제 실패: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('[SnapshotsDialog] Error deleting snapshot:', error);
+      alert('스냅샷 삭제 중 오류가 발생했습니다.');
     }
   };
 
-  const handleOpen = (snapshot: Snapshot) => {
-    // TODO: 스냅샷 열기 구현
-    console.log('[SnapshotsDialog] Open snapshot:', snapshot);
-    onOpenChange(false);
+  const handleOpen = async (snapshot: Snapshot) => {
+    if (!isElectron() || !window.electronAPI) return;
+
+    try {
+      const result = await window.electronAPI.browserView.openSnapshot(snapshot.id);
+      if (result.success) {
+        console.log('[SnapshotsDialog] Snapshot opened:', snapshot.id);
+        onOpenChange(false);
+      } else {
+        console.error('[SnapshotsDialog] Failed to open snapshot:', result.error);
+        alert(`스냅샷 열기 실패: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('[SnapshotsDialog] Error opening snapshot:', error);
+      alert('스냅샷 열기 중 오류가 발생했습니다.');
+    }
   };
 
   return (
@@ -41,7 +92,11 @@ export function SnapshotsDialog({ open, onOpenChange }: SnapshotsDialogProps) {
           <DialogTitle>스냅샷 관리</DialogTitle>
         </DialogHeader>
 
-        {snapshots.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <p className="text-sm">로딩 중...</p>
+          </div>
+        ) : snapshots.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <p className="text-sm">저장된 스냅샷이 없습니다</p>
             <p className="mt-2 text-xs">페이지 캡처 버튼을 눌러 현재 페이지를 저장하세요</p>
@@ -54,15 +109,13 @@ export function SnapshotsDialog({ open, onOpenChange }: SnapshotsDialogProps) {
                 className="group relative cursor-pointer rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
                 onClick={() => handleOpen(snapshot)}
               >
-                {snapshot.thumbnail && (
-                  <div className="mb-2 aspect-video overflow-hidden rounded bg-muted">
-                    <img
-                      src={snapshot.thumbnail}
-                      alt={snapshot.title}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                )}
+                <div className="mb-2 aspect-video overflow-hidden rounded bg-muted">
+                  <img
+                    src={`file://${snapshot.thumbnail}`}
+                    alt={snapshot.title}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
                 <h3 className="text-sm font-medium truncate">{snapshot.title}</h3>
                 <p className="mt-1 text-xs text-muted-foreground truncate">{snapshot.url}</p>
                 <p className="mt-1 text-xs text-muted-foreground">

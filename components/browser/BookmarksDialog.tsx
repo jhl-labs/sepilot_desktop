@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash, Folder, Globe, Edit } from 'lucide-react';
+import { Plus, Trash, Folder, Globe } from 'lucide-react';
+import { isElectron } from '@/lib/platform';
 
 interface Bookmark {
   id: string;
@@ -26,45 +27,140 @@ interface BookmarksDialogProps {
 }
 
 export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
-  // TODO: 실제 북마크 데이터 로드
-  const [bookmarks] = useState<Bookmark[]>([]);
-  const [folders] = useState<BookmarkFolder[]>([]);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [folders, setFolders] = useState<BookmarkFolder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleAddFolder = () => {
-    if (!newFolderName.trim()) return;
+  // Load bookmarks and folders when dialog opens
+  useEffect(() => {
+    if (!open || !isElectron() || !window.electronAPI) return;
 
-    // TODO: 폴더 추가 구현
-    console.log('[BookmarksDialog] Add folder:', newFolderName);
-    setNewFolderName('');
-    setIsAddingFolder(false);
-  };
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const [bookmarksResult, foldersResult] = await Promise.all([
+          window.electronAPI.browserView.getBookmarks(),
+          window.electronAPI.browserView.getBookmarkFolders(),
+        ]);
 
-  const handleDeleteFolder = (id: string) => {
-    if (confirm('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?')) {
-      // TODO: 폴더 삭제 구현
-      console.log('[BookmarksDialog] Delete folder:', id);
+        if (bookmarksResult.success && bookmarksResult.data) {
+          setBookmarks(bookmarksResult.data);
+        }
+
+        if (foldersResult.success && foldersResult.data) {
+          setFolders(foldersResult.data);
+        }
+      } catch (error) {
+        console.error('[BookmarksDialog] Error loading data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [open]);
+
+  const handleAddFolder = async () => {
+    if (!newFolderName.trim() || !isElectron() || !window.electronAPI) return;
+
+    try {
+      const result = await window.electronAPI.browserView.addBookmarkFolder(newFolderName);
+      if (result.success && result.data) {
+        const newFolder = result.data;
+        setFolders((prev) => [...prev, newFolder]);
+        setNewFolderName('');
+        setIsAddingFolder(false);
+      } else {
+        console.error('[BookmarksDialog] Failed to add folder:', result.error);
+        alert(`폴더 추가 실패: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('[BookmarksDialog] Error adding folder:', error);
+      alert('폴더 추가 중 오류가 발생했습니다.');
     }
   };
 
-  const handleDeleteBookmark = (id: string) => {
-    if (confirm('이 북마크를 삭제하시겠습니까?')) {
-      // TODO: 북마크 삭제 구현
-      console.log('[BookmarksDialog] Delete bookmark:', id);
+  const handleDeleteFolder = async (id: string) => {
+    if (!confirm('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?')) return;
+    if (!isElectron() || !window.electronAPI) return;
+
+    try {
+      const result = await window.electronAPI.browserView.deleteBookmarkFolder(id);
+      if (result.success) {
+        setFolders((prev) => prev.filter((f) => f.id !== id));
+        setBookmarks((prev) => prev.filter((b) => b.folderId !== id));
+        if (selectedFolderId === id) {
+          setSelectedFolderId(null);
+        }
+      } else {
+        console.error('[BookmarksDialog] Failed to delete folder:', result.error);
+        alert(`폴더 삭제 실패: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('[BookmarksDialog] Error deleting folder:', error);
+      alert('폴더 삭제 중 오류가 발생했습니다.');
     }
   };
 
-  const handleOpenBookmark = (bookmark: Bookmark) => {
-    // TODO: 북마크 열기 구현 (BrowserPanel에서 로드)
-    console.log('[BookmarksDialog] Open bookmark:', bookmark);
-    onOpenChange(false);
+  const handleDeleteBookmark = async (id: string) => {
+    if (!confirm('이 북마크를 삭제하시겠습니까?')) return;
+    if (!isElectron() || !window.electronAPI) return;
+
+    try {
+      const result = await window.electronAPI.browserView.deleteBookmark(id);
+      if (result.success) {
+        setBookmarks((prev) => prev.filter((b) => b.id !== id));
+      } else {
+        console.error('[BookmarksDialog] Failed to delete bookmark:', result.error);
+        alert(`북마크 삭제 실패: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('[BookmarksDialog] Error deleting bookmark:', error);
+      alert('북마크 삭제 중 오류가 발생했습니다.');
+    }
   };
 
-  const handleAddCurrentPage = () => {
-    // TODO: 현재 페이지를 북마크에 추가
-    console.log('[BookmarksDialog] Add current page');
+  const handleOpenBookmark = async (bookmark: Bookmark) => {
+    if (!isElectron() || !window.electronAPI) return;
+
+    try {
+      const result = await window.electronAPI.browserView.openBookmark(bookmark.id);
+      if (result.success) {
+        console.log('[BookmarksDialog] Bookmark opened:', bookmark.id);
+        onOpenChange(false);
+      } else {
+        console.error('[BookmarksDialog] Failed to open bookmark:', result.error);
+        alert(`북마크 열기 실패: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('[BookmarksDialog] Error opening bookmark:', error);
+      alert('북마크 열기 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleAddCurrentPage = async () => {
+    if (!isElectron() || !window.electronAPI) return;
+
+    try {
+      const result = await window.electronAPI.browserView.addBookmark({
+        folderId: selectedFolderId || undefined,
+      });
+
+      if (result.success && result.data) {
+        const newBookmark = result.data;
+        setBookmarks((prev) => [...prev, newBookmark]);
+        alert('현재 페이지가 북마크에 추가되었습니다.');
+      } else {
+        console.error('[BookmarksDialog] Failed to add bookmark:', result.error);
+        alert(`북마크 추가 실패: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('[BookmarksDialog] Error adding bookmark:', error);
+      alert('북마크 추가 중 오류가 발생했습니다.');
+    }
   };
 
   const filteredBookmarks = selectedFolderId
@@ -169,7 +265,11 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
               </Button>
             </div>
 
-            {filteredBookmarks.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <p className="text-sm">로딩 중...</p>
+              </div>
+            ) : filteredBookmarks.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <p className="text-sm">북마크가 없습니다</p>
                 <p className="mt-2 text-xs">현재 페이지를 북마크에 추가하세요</p>

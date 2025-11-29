@@ -83,7 +83,7 @@ describe('FileExplorer', () => {
 
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith(
-          'Failed to select directory:',
+          '[FileExplorer] Failed to select directory:',
           expect.any(Error)
         );
       });
@@ -396,7 +396,9 @@ describe('FileExplorer', () => {
       await user.click(fileButton);
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to read file:', expect.any(Error));
+        // useFileSystem logs first, then FileExplorer
+        expect(consoleSpy).toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalledWith('[FileExplorer] Failed to read file');
       });
 
       consoleSpy.mockRestore();
@@ -468,7 +470,7 @@ describe('FileExplorer', () => {
       await user.click(folderButton);
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to load directory:', expect.any(Error));
+        expect(consoleSpy).toHaveBeenCalledWith('[FileExplorer] Failed to load directory:', expect.any(Error));
       });
 
       consoleSpy.mockRestore();
@@ -494,7 +496,7 @@ describe('FileExplorer', () => {
       render(<FileExplorer />);
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith('Failed to load file tree:', expect.any(Error));
+        expect(consoleSpy).toHaveBeenCalledWith('[FileExplorer] Failed to load file tree:', expect.any(Error));
       });
 
       // Loading should be cleared even after error

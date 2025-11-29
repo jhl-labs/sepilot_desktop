@@ -1,7 +1,9 @@
-import { ipcMain, BrowserWindow, BrowserView } from 'electron';
+import { ipcMain, BrowserWindow, BrowserView, app, nativeImage } from 'electron';
 import { logger } from '../../services/logger';
 import { randomUUID } from 'crypto';
 import { setActiveBrowserView } from './browser-control';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 interface BrowserTab {
   id: string;
@@ -10,9 +12,56 @@ interface BrowserTab {
   title: string;
 }
 
+interface Snapshot {
+  id: string;
+  url: string;
+  title: string;
+  thumbnail: string; // path to thumbnail image
+  createdAt: number;
+  screenshotPath: string; // path to full screenshot
+}
+
+interface Bookmark {
+  id: string;
+  url: string;
+  title: string;
+  folderId?: string;
+  createdAt: number;
+}
+
+interface BookmarkFolder {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
 const tabs = new Map<string, BrowserTab>();
 let activeTabId: string | null = null;
 let mainWindowRef: BrowserWindow | null = null;
+
+// Snapshots directory
+function getSnapshotsDir() {
+  const userDataPath = app.getPath('userData');
+  return path.join(userDataPath, 'snapshots');
+}
+
+function getSnapshotsMetaPath() {
+  return path.join(getSnapshotsDir(), 'snapshots.json');
+}
+
+// Bookmarks directory
+function getBookmarksDir() {
+  const userDataPath = app.getPath('userData');
+  return path.join(userDataPath, 'bookmarks');
+}
+
+function getBookmarksMetaPath() {
+  return path.join(getBookmarksDir(), 'bookmarks.json');
+}
+
+function getFoldersMetaPath() {
+  return path.join(getBookmarksDir(), 'folders.json');
+}
 
 function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserView {
   const view = new BrowserView({
@@ -540,6 +589,436 @@ export function setupBrowserViewHandlers() {
       return { success: true };
     } catch (error) {
       logger.error('[BrowserView] Failed to show active BrowserView:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Capture current page as snapshot
+  ipcMain.handle('browser-view:capture-page', async () => {
+    try {
+      if (!activeTabId) {
+        return { success: false, error: 'No active tab' };
+      }
+
+      const tab = tabs.get(activeTabId);
+      if (!tab) {
+        return { success: false, error: 'Active tab not found' };
+      }
+
+      // Ensure snapshots directory exists
+      const snapshotsDir = getSnapshotsDir();
+      await fs.mkdir(snapshotsDir, { recursive: true });
+
+      // Generate snapshot ID
+      const snapshotId = randomUUID();
+      const timestamp = Date.now();
+
+      // Capture screenshot
+      const image = await tab.view.webContents.capturePage();
+      const screenshotBuffer = image.toPNG();
+      const screenshotPath = path.join(snapshotsDir, `${snapshotId}.png`);
+      await fs.writeFile(screenshotPath, screenshotBuffer);
+
+      // Create thumbnail (resize to 400x300)
+      const thumbnail = image.resize({ width: 400, height: 300 });
+      const thumbnailBuffer = thumbnail.toPNG();
+      const thumbnailPath = path.join(snapshotsDir, `${snapshotId}_thumb.png`);
+      await fs.writeFile(thumbnailPath, thumbnailBuffer);
+
+      // Get page info
+      const url = tab.view.webContents.getURL();
+      const title = tab.view.webContents.getTitle() || 'Untitled';
+
+      // Create snapshot metadata
+      const snapshot: Snapshot = {
+        id: snapshotId,
+        url,
+        title,
+        thumbnail: thumbnailPath,
+        createdAt: timestamp,
+        screenshotPath,
+      };
+
+      // Load existing snapshots
+      let snapshots: Snapshot[] = [];
+      try {
+        const metaPath = getSnapshotsMetaPath();
+        const data = await fs.readFile(metaPath, 'utf-8');
+        snapshots = JSON.parse(data);
+      } catch (error) {
+        // File doesn't exist yet, start with empty array
+        logger.info('[Snapshot] Creating new snapshots metadata file');
+      }
+
+      // Add new snapshot
+      snapshots.unshift(snapshot); // Add to beginning
+
+      // Save updated metadata
+      await fs.writeFile(getSnapshotsMetaPath(), JSON.stringify(snapshots, null, 2));
+
+      logger.info(`Snapshot created: ${snapshotId}`);
+      return {
+        success: true,
+        data: snapshot,
+      };
+    } catch (error) {
+      logger.error('Failed to capture page:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Get all snapshots
+  ipcMain.handle('browser-view:get-snapshots', async () => {
+    try {
+      const metaPath = getSnapshotsMetaPath();
+
+      try {
+        const data = await fs.readFile(metaPath, 'utf-8');
+        const snapshots: Snapshot[] = JSON.parse(data);
+        return {
+          success: true,
+          data: snapshots,
+        };
+      } catch (error) {
+        // File doesn't exist, return empty array
+        return {
+          success: true,
+          data: [],
+        };
+      }
+    } catch (error) {
+      logger.error('Failed to get snapshots:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Delete snapshot
+  ipcMain.handle('browser-view:delete-snapshot', async (event, snapshotId: string) => {
+    try {
+      const metaPath = getSnapshotsMetaPath();
+
+      // Load snapshots
+      const data = await fs.readFile(metaPath, 'utf-8');
+      let snapshots: Snapshot[] = JSON.parse(data);
+
+      // Find snapshot to delete
+      const snapshot = snapshots.find((s) => s.id === snapshotId);
+      if (!snapshot) {
+        return { success: false, error: 'Snapshot not found' };
+      }
+
+      // Delete files
+      try {
+        await fs.unlink(snapshot.screenshotPath);
+      } catch (error) {
+        logger.warn('Failed to delete screenshot:', error);
+      }
+
+      try {
+        await fs.unlink(snapshot.thumbnail);
+      } catch (error) {
+        logger.warn('Failed to delete thumbnail:', error);
+      }
+
+      // Remove from metadata
+      snapshots = snapshots.filter((s) => s.id !== snapshotId);
+      await fs.writeFile(metaPath, JSON.stringify(snapshots, null, 2));
+
+      logger.info(`Snapshot deleted: ${snapshotId}`);
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to delete snapshot:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Open snapshot in new tab
+  ipcMain.handle('browser-view:open-snapshot', async (event, snapshotId: string) => {
+    try {
+      const mainWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!mainWindow) {
+        return { success: false, error: 'Main window not found' };
+      }
+
+      const metaPath = getSnapshotsMetaPath();
+      const data = await fs.readFile(metaPath, 'utf-8');
+      const snapshots: Snapshot[] = JSON.parse(data);
+
+      const snapshot = snapshots.find((s) => s.id === snapshotId);
+      if (!snapshot) {
+        return { success: false, error: 'Snapshot not found' };
+      }
+
+      // Load the original URL in a new tab or current tab
+      if (!activeTabId) {
+        // Create new tab
+        const tabId = randomUUID();
+        const view = createBrowserView(mainWindow, tabId);
+
+        const tab: BrowserTab = {
+          id: tabId,
+          view,
+          url: snapshot.url,
+          title: snapshot.title,
+        };
+
+        tabs.set(tabId, tab);
+        activeTabId = tabId;
+        mainWindow.addBrowserView(view);
+        setActiveBrowserView(view);
+
+        await view.webContents.loadURL(snapshot.url);
+      } else {
+        // Load in active tab
+        const tab = tabs.get(activeTabId);
+        if (tab) {
+          await tab.view.webContents.loadURL(snapshot.url);
+        }
+      }
+
+      logger.info(`Snapshot opened: ${snapshotId}`);
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to open snapshot:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // ===== Bookmarks Management =====
+
+  // Add bookmark (current page or specific URL)
+  ipcMain.handle('browser-view:add-bookmark', async (event, options?: { url?: string; title?: string; folderId?: string }) => {
+    try {
+      // Ensure bookmarks directory exists
+      const bookmarksDir = getBookmarksDir();
+      await fs.mkdir(bookmarksDir, { recursive: true });
+
+      // Get current page info if not provided
+      let url = options?.url;
+      let title = options?.title;
+
+      if (!url && activeTabId) {
+        const tab = tabs.get(activeTabId);
+        if (tab) {
+          url = tab.view.webContents.getURL();
+          title = title || tab.view.webContents.getTitle() || 'Untitled';
+        }
+      }
+
+      if (!url) {
+        return { success: false, error: 'No URL provided and no active tab' };
+      }
+
+      // Create bookmark
+      const bookmark: Bookmark = {
+        id: randomUUID(),
+        url,
+        title: title || 'Untitled',
+        folderId: options?.folderId,
+        createdAt: Date.now(),
+      };
+
+      // Load existing bookmarks
+      let bookmarks: Bookmark[] = [];
+      try {
+        const data = await fs.readFile(getBookmarksMetaPath(), 'utf-8');
+        bookmarks = JSON.parse(data);
+      } catch (error) {
+        logger.info('[Bookmark] Creating new bookmarks file');
+      }
+
+      // Add new bookmark
+      bookmarks.push(bookmark);
+
+      // Save updated bookmarks
+      await fs.writeFile(getBookmarksMetaPath(), JSON.stringify(bookmarks, null, 2));
+
+      logger.info(`Bookmark added: ${bookmark.id}`);
+      return {
+        success: true,
+        data: bookmark,
+      };
+    } catch (error) {
+      logger.error('Failed to add bookmark:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Get all bookmarks
+  ipcMain.handle('browser-view:get-bookmarks', async () => {
+    try {
+      const metaPath = getBookmarksMetaPath();
+
+      try {
+        const data = await fs.readFile(metaPath, 'utf-8');
+        const bookmarks: Bookmark[] = JSON.parse(data);
+        return {
+          success: true,
+          data: bookmarks,
+        };
+      } catch (error) {
+        return {
+          success: true,
+          data: [],
+        };
+      }
+    } catch (error) {
+      logger.error('Failed to get bookmarks:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Delete bookmark
+  ipcMain.handle('browser-view:delete-bookmark', async (event, bookmarkId: string) => {
+    try {
+      const metaPath = getBookmarksMetaPath();
+      const data = await fs.readFile(metaPath, 'utf-8');
+      let bookmarks: Bookmark[] = JSON.parse(data);
+
+      bookmarks = bookmarks.filter((b) => b.id !== bookmarkId);
+      await fs.writeFile(metaPath, JSON.stringify(bookmarks, null, 2));
+
+      logger.info(`Bookmark deleted: ${bookmarkId}`);
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to delete bookmark:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Add bookmark folder
+  ipcMain.handle('browser-view:add-bookmark-folder', async (event, name: string) => {
+    try {
+      const bookmarksDir = getBookmarksDir();
+      await fs.mkdir(bookmarksDir, { recursive: true });
+
+      const folder: BookmarkFolder = {
+        id: randomUUID(),
+        name,
+        createdAt: Date.now(),
+      };
+
+      // Load existing folders
+      let folders: BookmarkFolder[] = [];
+      try {
+        const data = await fs.readFile(getFoldersMetaPath(), 'utf-8');
+        folders = JSON.parse(data);
+      } catch (error) {
+        logger.info('[Bookmark] Creating new folders file');
+      }
+
+      // Add new folder
+      folders.push(folder);
+
+      // Save updated folders
+      await fs.writeFile(getFoldersMetaPath(), JSON.stringify(folders, null, 2));
+
+      logger.info(`Bookmark folder added: ${folder.id}`);
+      return {
+        success: true,
+        data: folder,
+      };
+    } catch (error) {
+      logger.error('Failed to add bookmark folder:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Get all bookmark folders
+  ipcMain.handle('browser-view:get-bookmark-folders', async () => {
+    try {
+      const metaPath = getFoldersMetaPath();
+
+      try {
+        const data = await fs.readFile(metaPath, 'utf-8');
+        const folders: BookmarkFolder[] = JSON.parse(data);
+        return {
+          success: true,
+          data: folders,
+        };
+      } catch (error) {
+        return {
+          success: true,
+          data: [],
+        };
+      }
+    } catch (error) {
+      logger.error('Failed to get bookmark folders:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Delete bookmark folder and all bookmarks in it
+  ipcMain.handle('browser-view:delete-bookmark-folder', async (event, folderId: string) => {
+    try {
+      // Delete folder
+      const foldersPath = getFoldersMetaPath();
+      const foldersData = await fs.readFile(foldersPath, 'utf-8');
+      let folders: BookmarkFolder[] = JSON.parse(foldersData);
+      folders = folders.filter((f) => f.id !== folderId);
+      await fs.writeFile(foldersPath, JSON.stringify(folders, null, 2));
+
+      // Delete bookmarks in folder
+      const bookmarksPath = getBookmarksMetaPath();
+      const bookmarksData = await fs.readFile(bookmarksPath, 'utf-8');
+      let bookmarks: Bookmark[] = JSON.parse(bookmarksData);
+      bookmarks = bookmarks.filter((b) => b.folderId !== folderId);
+      await fs.writeFile(bookmarksPath, JSON.stringify(bookmarks, null, 2));
+
+      logger.info(`Bookmark folder deleted: ${folderId}`);
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to delete bookmark folder:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Open bookmark
+  ipcMain.handle('browser-view:open-bookmark', async (event, bookmarkId: string) => {
+    try {
+      const mainWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!mainWindow) {
+        return { success: false, error: 'Main window not found' };
+      }
+
+      const metaPath = getBookmarksMetaPath();
+      const data = await fs.readFile(metaPath, 'utf-8');
+      const bookmarks: Bookmark[] = JSON.parse(data);
+
+      const bookmark = bookmarks.find((b) => b.id === bookmarkId);
+      if (!bookmark) {
+        return { success: false, error: 'Bookmark not found' };
+      }
+
+      // Load the URL in active tab or create new tab
+      if (!activeTabId) {
+        const tabId = randomUUID();
+        const view = createBrowserView(mainWindow, tabId);
+
+        const tab: BrowserTab = {
+          id: tabId,
+          view,
+          url: bookmark.url,
+          title: bookmark.title,
+        };
+
+        tabs.set(tabId, tab);
+        activeTabId = tabId;
+        mainWindow.addBrowserView(view);
+        setActiveBrowserView(view);
+
+        await view.webContents.loadURL(bookmark.url);
+      } else {
+        const tab = tabs.get(activeTabId);
+        if (tab) {
+          await tab.view.webContents.loadURL(bookmark.url);
+        }
+      }
+
+      logger.info(`Bookmark opened: ${bookmarkId}`);
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to open bookmark:', error);
       return { success: false, error: String(error) };
     }
   });
