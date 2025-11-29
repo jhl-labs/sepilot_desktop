@@ -65,29 +65,31 @@ export function SidebarBrowser() {
       )}
 
       {/* Content Area */}
-      {browserViewMode === 'chat' ? (
-        <>
-          <SimpleChatArea />
-          <SimpleChatInput />
-        </>
-      ) : browserViewMode === 'snapshots' ? (
-        <SnapshotsList />
-      ) : browserViewMode === 'bookmarks' ? (
-        <BookmarksList />
-      ) : browserViewMode === 'settings' ? (
-        <BrowserSettings />
-      ) : browserViewMode === 'logs' ? (
-        <BrowserAgentLogsView />
-      ) : browserViewMode === 'tools' ? (
-        <BrowserToolsList />
-      ) : null}
+      <div className="flex-1 overflow-y-auto flex flex-col">
+        {browserViewMode === 'chat' ? (
+          <>
+            <SimpleChatArea />
+            <SimpleChatInput />
+          </>
+        ) : browserViewMode === 'snapshots' ? (
+          <SnapshotsList />
+        ) : browserViewMode === 'bookmarks' ? (
+          <BookmarksList />
+        ) : browserViewMode === 'settings' ? (
+          <BrowserSettings />
+        ) : browserViewMode === 'logs' ? (
+          <BrowserAgentLogsView />
+        ) : browserViewMode === 'tools' ? (
+          <BrowserToolsList />
+        ) : null}
 
-      {/* Agent Log Panel (chat 모드에서만 표시) */}
-      {browserViewMode === 'chat' && <BrowserAgentLog />}
+        {/* Agent Log Panel (chat 모드에서만 표시) */}
+        {browserViewMode === 'chat' && <BrowserAgentLog />}
+      </div>
 
       {/* Footer (logs, tools 모드에서는 숨김) */}
       {browserViewMode !== 'logs' && browserViewMode !== 'tools' && (
-        <div className="border-t p-2">
+        <div className="shrink-0 border-t p-2">
         <div className="flex gap-1">
           <Button
             variant="ghost"

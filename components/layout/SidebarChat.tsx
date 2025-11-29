@@ -1,11 +1,13 @@
 'use client';
 
-import { Image, Settings } from 'lucide-react';
+import { useState } from 'react';
+import { Image, Settings, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ChatHistory } from './ChatHistory';
 import { ChatChatArea } from '@/components/chat/ChatChatArea';
 import { DocumentList } from '@/components/rag/DocumentList';
+import { PersonaDialog } from '@/components/persona/PersonaDialog';
 import { isElectron } from '@/lib/platform';
 import { useChatStore } from '@/lib/store/chat-store';
 
@@ -21,22 +23,36 @@ export function SidebarChat({
   onSettingsClick,
 }: SidebarChatProps) {
   const { chatViewMode } = useChatStore();
+  const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
 
   return (
     <div className="flex h-full w-full flex-col">
       {/* Content Area */}
-      {chatViewMode === 'history' ? (
-        <ChatHistory onConversationClick={onConversationClick} />
-      ) : chatViewMode === 'chat' ? (
-        <ChatChatArea />
-      ) : (
-        <DocumentList />
-      )}
+      <div className="flex-1 overflow-y-auto">
+        {chatViewMode === 'history' ? (
+          <ChatHistory onConversationClick={onConversationClick} />
+        ) : chatViewMode === 'chat' ? (
+          <ChatChatArea />
+        ) : (
+          <DocumentList />
+        )}
+      </div>
 
       {/* Footer */}
-      <div className="border-t p-2">
+      <div className="shrink-0 border-t p-2">
         <div className="flex gap-1">
           <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setPersonaDialogOpen(true);
+            }}
+            title="AI 페르소나 관리"
+            className="flex-1"
+          >
+            <User className="h-5 w-5" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -79,6 +95,9 @@ export function SidebarChat({
           </Button>
         </div>
       </div>
+
+      {/* Persona Dialog */}
+      <PersonaDialog open={personaDialogOpen} onOpenChange={setPersonaDialogOpen} />
     </div>
   );
 }

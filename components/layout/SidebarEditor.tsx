@@ -27,19 +27,21 @@ export function SidebarEditor({ onSettingsClick }: SidebarEditorProps) {
   return (
     <div className="flex h-full w-full flex-col">
       {/* Content Area */}
-      {editorViewMode === 'files' ? (
-        <FileExplorer />
-      ) : editorViewMode === 'search' ? (
-        <SearchPanel />
-      ) : (
-        <>
-          <EditorChatArea />
-          <EditorChatInput />
-        </>
-      )}
+      <div className="flex-1 overflow-y-auto">
+        {editorViewMode === 'files' ? (
+          <FileExplorer />
+        ) : editorViewMode === 'search' ? (
+          <SearchPanel />
+        ) : (
+          <>
+            <EditorChatArea />
+            <EditorChatInput />
+          </>
+        )}
+      </div>
 
       {/* Footer */}
-      <div className="border-t p-2">
+      <div className="shrink-0 border-t p-2">
         <div className="flex gap-1">
           <ThemeToggle />
           <Button
