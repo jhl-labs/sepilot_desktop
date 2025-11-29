@@ -504,4 +504,151 @@ describe('FileExplorer', () => {
     });
   });
 
+  describe('새 파일/폴더 버튼', () => {
+    it('working directory가 없으면 버튼이 비활성화되어야 함', () => {
+      render(<FileExplorer />);
+
+      const newFileButton = screen.getByTitle('새 파일');
+      const newFolderButton = screen.getByTitle('새 폴더');
+
+      expect(newFileButton).toBeDisabled();
+      expect(newFolderButton).toBeDisabled();
+    });
+
+    it('working directory가 있으면 버튼이 활성화되어야 함', () => {
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+      });
+
+      render(<FileExplorer />);
+
+      const newFileButton = screen.getByTitle('새 파일');
+      const newFolderButton = screen.getByTitle('새 폴더');
+
+      expect(newFileButton).toBeEnabled();
+      expect(newFolderButton).toBeEnabled();
+    });
+
+    it('새 파일 버튼 클릭 시 dialog가 열려야 함', async () => {
+      const user = userEvent.setup();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+      });
+
+      render(<FileExplorer />);
+
+      const newFileButton = screen.getByTitle('새 파일');
+      await user.click(newFileButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('새 파일 생성')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('예: example.txt')).toBeInTheDocument();
+      });
+    });
+
+    it('새 폴더 버튼 클릭 시 dialog가 열려야 함', async () => {
+      const user = userEvent.setup();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+      });
+
+      render(<FileExplorer />);
+
+      const newFolderButton = screen.getByTitle('새 폴더');
+      await user.click(newFolderButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('새 폴더 생성')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('예: my-folder')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('다양한 파일 확장자 언어 감지', () => {
+    beforeEach(() => {
+      (mockElectronAPI.fs.readFile as jest.Mock).mockResolvedValue({
+        success: true,
+        data: 'test content',
+      });
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+      });
+    });
+
+    const testLanguageDetection = async (filename: string, expectedLanguage: string) => {
+      const user = userEvent.setup();
+
+      (mockElectronAPI.fs.readDirectory as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [{ name: filename, path: `/test/${filename}`, isDirectory: false }],
+      });
+
+      render(<FileExplorer />);
+
+      await waitFor(() => {
+        expect(screen.getByText(filename)).toBeInTheDocument();
+      });
+
+      const fileButton = screen.getByText(filename);
+      await user.click(fileButton);
+
+      await waitFor(() => {
+        expect(mockOpenFile).toHaveBeenCalledWith(
+          expect.objectContaining({
+            language: expectedLanguage,
+          })
+        );
+      });
+    };
+
+    it('Python 파일', async () => {
+      await testLanguageDetection('script.py', 'python');
+    });
+
+    it('Java 파일', async () => {
+      await testLanguageDetection('Main.java', 'java');
+    });
+
+    it('C 파일', async () => {
+      await testLanguageDetection('program.c', 'c');
+    });
+
+    it('C++ 파일', async () => {
+      await testLanguageDetection('program.cpp', 'cpp');
+    });
+
+    it('Shell 파일', async () => {
+      await testLanguageDetection('script.sh', 'shell');
+    });
+
+    it('CSS 파일', async () => {
+      await testLanguageDetection('styles.css', 'css');
+    });
+
+    it('HTML 파일', async () => {
+      await testLanguageDetection('index.html', 'html');
+    });
+
+    it('알 수 없는 확장자는 plaintext로 감지', async () => {
+      await testLanguageDetection('unknown.xyz', 'plaintext');
+    });
+
+    it('확장자가 없는 파일은 plaintext로 감지', async () => {
+      await testLanguageDetection('README', 'plaintext');
+    });
+  });
+
 });
