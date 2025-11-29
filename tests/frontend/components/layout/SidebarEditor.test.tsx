@@ -25,6 +25,14 @@ jest.mock('@/components/theme/ThemeToggle', () => ({
   ThemeToggle: () => <button data-testid="theme-toggle">Theme Toggle</button>,
 }));
 
+jest.mock('@/components/editor/EditorChatArea', () => ({
+  EditorChatArea: () => <div data-testid="editor-chat-area">Editor Chat Area</div>,
+}));
+
+jest.mock('@/components/editor/EditorChatInput', () => ({
+  EditorChatInput: () => <div data-testid="editor-chat-input">Editor Chat Input</div>,
+}));
+
 describe('SidebarEditor', () => {
   const mockOnSettingsClick = jest.fn();
   const mockSetShowTerminalPanel = jest.fn();
@@ -33,10 +41,12 @@ describe('SidebarEditor', () => {
     jest.clearAllMocks();
 
     (useChatStore as unknown as jest.Mock).mockReturnValue({
-      activeEditorTab: 'files',
+      editorViewMode: 'files',
+      setEditorViewMode: jest.fn(),
       showTerminalPanel: false,
       setShowTerminalPanel: mockSetShowTerminalPanel,
       workingDirectory: '/home/user/project',
+      clearEditorChat: jest.fn(),
     });
   });
 
@@ -45,19 +55,21 @@ describe('SidebarEditor', () => {
   });
 
   describe('Content Area Rendering', () => {
-    it('should render FileExplorer when activeEditorTab is files', () => {
+    it('should render FileExplorer when editorViewMode is files', () => {
       render(<SidebarEditor />);
 
       expect(screen.getByTestId('file-explorer')).toBeInTheDocument();
       expect(screen.queryByTestId('search-panel')).not.toBeInTheDocument();
     });
 
-    it('should render SearchPanel when activeEditorTab is search', () => {
+    it('should render SearchPanel when editorViewMode is search', () => {
       (useChatStore as unknown as jest.Mock).mockReturnValue({
-        activeEditorTab: 'search',
+        editorViewMode: 'search',
+        setEditorViewMode: jest.fn(),
         showTerminalPanel: false,
         setShowTerminalPanel: mockSetShowTerminalPanel,
         workingDirectory: '/home/user/project',
+        clearEditorChat: jest.fn(),
       });
 
       render(<SidebarEditor />);
@@ -270,6 +282,75 @@ describe('SidebarEditor', () => {
       );
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('AI Assistant Button', () => {
+    it('should switch to chat mode when not in chat mode', () => {
+      const mockSetEditorViewMode = jest.fn();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        editorViewMode: 'files',
+        setEditorViewMode: mockSetEditorViewMode,
+        showTerminalPanel: false,
+        setShowTerminalPanel: mockSetShowTerminalPanel,
+        workingDirectory: '/home/user/project',
+        clearEditorChat: jest.fn(),
+      });
+
+      render(<SidebarEditor />);
+
+      const aiButton = screen.getByTitle('AI 코딩 어시스턴트');
+      fireEvent.click(aiButton);
+
+      expect(mockSetEditorViewMode).toHaveBeenCalledWith('chat');
+    });
+
+    it('should show confirmation dialog when in chat mode', () => {
+      global.confirm = jest.fn(() => true);
+      const mockClearEditorChat = jest.fn();
+      const mockSetEditorViewMode = jest.fn();
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        editorViewMode: 'chat',
+        setEditorViewMode: mockSetEditorViewMode,
+        showTerminalPanel: false,
+        setShowTerminalPanel: mockSetShowTerminalPanel,
+        workingDirectory: '/home/user/project',
+        clearEditorChat: mockClearEditorChat,
+      });
+
+      render(<SidebarEditor />);
+
+      const newChatButton = screen.getByTitle('새 대화');
+      fireEvent.click(newChatButton);
+
+      expect(global.confirm).toHaveBeenCalledWith('현재 대화 내역을 모두 삭제하시겠습니까?');
+      expect(mockClearEditorChat).toHaveBeenCalled();
+      expect(mockSetEditorViewMode).toHaveBeenCalledWith('chat');
+    });
+
+    it('should not clear chat when user cancels confirmation', () => {
+      global.confirm = jest.fn(() => false);
+      const mockClearEditorChat = jest.fn();
+      const mockSetEditorViewMode = jest.fn();
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        editorViewMode: 'chat',
+        setEditorViewMode: mockSetEditorViewMode,
+        showTerminalPanel: false,
+        setShowTerminalPanel: mockSetShowTerminalPanel,
+        workingDirectory: '/home/user/project',
+        clearEditorChat: mockClearEditorChat,
+      });
+
+      render(<SidebarEditor />);
+
+      const newChatButton = screen.getByTitle('새 대화');
+      fireEvent.click(newChatButton);
+
+      expect(global.confirm).toHaveBeenCalled();
+      expect(mockClearEditorChat).not.toHaveBeenCalled();
+      expect(mockSetEditorViewMode).not.toHaveBeenCalled();
     });
   });
 });
