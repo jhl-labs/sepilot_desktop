@@ -6,9 +6,15 @@
 
 'use client';
 
+import dynamic from 'next/dynamic';
 import { CodeEditor } from './Editor';
-import { TerminalPanel } from './TerminalPanel';
 import { useChatStore } from '@/lib/store/chat-store';
+
+// TerminalPanel은 xterm을 사용하므로 SSR 비활성화
+const TerminalPanel = dynamic(() => import('./TerminalPanel').then(mod => ({ default: mod.TerminalPanel })), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full">Loading terminal...</div>,
+});
 
 export function EditorWithTerminal() {
   const { showTerminalPanel, workingDirectory } = useChatStore();
