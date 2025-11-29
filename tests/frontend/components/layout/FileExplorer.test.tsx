@@ -20,6 +20,7 @@ jest.mock('@/lib/platform', () => ({
 describe('FileExplorer', () => {
   const mockSetWorkingDirectory = jest.fn();
   const mockOpenFile = jest.fn();
+  const mockLoadWorkingDirectory = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -30,6 +31,7 @@ describe('FileExplorer', () => {
       setWorkingDirectory: mockSetWorkingDirectory,
       openFile: mockOpenFile,
       activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
     });
   });
 

@@ -98,6 +98,11 @@ describe('사용자 플로우 테스트', () => {
       setEnableImageGeneration: jest.fn(),
       appMode: 'chat',
       setAppMode: jest.fn(),
+      personas: [],
+      activePersonaId: null,
+      workingDirectory: null,
+      alwaysApproveToolsForSession: false,
+      setAlwaysApproveToolsForSession: jest.fn(),
     };
 
     (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
@@ -152,6 +157,11 @@ describe('사용자 플로우 테스트', () => {
         (useChatStore as jest.Mock).mockReturnValue({
           ...useChatStore(),
           activeConversationId: 'new-conv-id',
+          personas: [],
+          activePersonaId: null,
+          workingDirectory: null,
+          alwaysApproveToolsForSession: false,
+          setAlwaysApproveToolsForSession: jest.fn(),
         });
         return 'new-conv-id';
       });
@@ -316,6 +326,11 @@ describe('사용자 플로우 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
       });
       render(<InputBox />);
 
@@ -444,6 +459,11 @@ describe('사용자 플로우 테스트', () => {
       (useChatStore as jest.Mock).mockReturnValue({
         ...useChatStore(),
         searchConversations: mockSearchConversations,
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
       });
 
       render(<Sidebar />);

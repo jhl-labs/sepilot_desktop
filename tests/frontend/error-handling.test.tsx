@@ -173,6 +173,11 @@ describe('에러 처리 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
       });
 
       render(<InputBox />);
@@ -362,6 +367,11 @@ describe('에러 처리 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
       });
 
       render(<InputBox />);
