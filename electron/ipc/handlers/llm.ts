@@ -469,6 +469,183 @@ Return ONLY the title, without quotes or additional text.`,
     }
   });
 
+  /**
+   * 에디터 자동완성 (Autocomplete 모델 사용)
+   */
+  ipcMain.handle(
+    'llm-editor-autocomplete',
+    async (
+      _event,
+      context: {
+        code: string;
+        cursorPosition: number;
+        language?: string;
+      }
+    ) => {
+      try {
+        // Get autocomplete config from database
+        const configStr = databaseService.getSetting('app_config');
+        if (!configStr) {
+          throw new Error('App config not found');
+        }
+
+        const config = JSON.parse(configStr) as AppConfig;
+        if (!config.llm?.autocomplete?.enabled) {
+          return {
+            success: false,
+            error: 'Autocomplete is not enabled',
+          };
+        }
+
+        const autocompleteConfig = config.llm.autocomplete;
+        const baseConfig = config.llm;
+
+        // Create autocomplete provider
+        const providerConfig: LLMConfig = {
+          provider: autocompleteConfig.provider || baseConfig.provider,
+          baseURL: autocompleteConfig.baseURL || baseConfig.baseURL,
+          apiKey: autocompleteConfig.apiKey || baseConfig.apiKey,
+          model: autocompleteConfig.model,
+          temperature: autocompleteConfig.temperature || 0.3,
+          maxTokens: autocompleteConfig.maxTokens || 100,
+        };
+
+        // Initialize temporary client for autocomplete
+        const { createProvider } = await import('../../../lib/llm/client');
+        const provider = createProvider(providerConfig);
+
+        if (!provider) {
+          throw new Error('Failed to create autocomplete provider');
+        }
+
+        // Create prompt for autocomplete
+        const messages: Message[] = [
+          {
+            id: 'system',
+            role: 'system',
+            content: `You are a code completion assistant. Complete the code based on the context.
+Return ONLY the completion text without any explanations or markdown.`,
+            created_at: Date.now(),
+          },
+          {
+            id: 'user',
+            role: 'user',
+            content: `Complete the following ${context.language || 'code'}:
+
+${context.code.substring(0, context.cursorPosition)}█${context.code.substring(context.cursorPosition)}
+
+Complete from the cursor position (█). Return only the completion text.`,
+            created_at: Date.now(),
+          },
+        ];
+
+        const response = await provider.chat(messages);
+
+        return {
+          success: true,
+          data: {
+            completion: response.content.trim(),
+          },
+        };
+      } catch (error: any) {
+        logger.error('[LLM IPC] Autocomplete error:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to generate autocomplete',
+        };
+      }
+    }
+  );
+
+  /**
+   * 에디터 액션 (요약, 번역, 완성 등 - 기본 모델 사용)
+   */
+  ipcMain.handle(
+    'llm-editor-action',
+    async (
+      _event,
+      params: {
+        action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve';
+        text: string;
+        language?: string;
+        targetLanguage?: string; // for translate
+      }
+    ) => {
+      try {
+        const client = getLLMClient();
+
+        if (!client.isConfigured()) {
+          throw new Error('LLM client is not configured');
+        }
+
+        const provider = client.getProvider();
+
+        // Create prompt based on action
+        let systemPrompt = '';
+        let userPrompt = '';
+
+        switch (params.action) {
+          case 'summarize':
+            systemPrompt = 'You are a helpful assistant that summarizes text concisely.';
+            userPrompt = `Summarize the following text:\n\n${params.text}`;
+            break;
+          case 'translate':
+            systemPrompt = 'You are a professional translator.';
+            userPrompt = `Translate the following text to ${params.targetLanguage || 'English'}:\n\n${params.text}`;
+            break;
+          case 'complete':
+            systemPrompt = 'You are a code completion assistant. Complete the code naturally.';
+            userPrompt = `Complete the following ${params.language || 'code'}:\n\n${params.text}`;
+            break;
+          case 'explain':
+            systemPrompt = 'You are a helpful assistant that explains code clearly and concisely.';
+            userPrompt = `Explain what the following ${params.language || 'code'} does:\n\n${params.text}`;
+            break;
+          case 'fix':
+            systemPrompt = 'You are a helpful assistant that fixes code issues and errors.';
+            userPrompt = `Fix any issues in the following ${params.language || 'code'}:\n\n${params.text}`;
+            break;
+          case 'improve':
+            systemPrompt = 'You are a helpful assistant that improves code quality and readability.';
+            userPrompt = `Improve the following ${params.language || 'code'}:\n\n${params.text}`;
+            break;
+          default:
+            throw new Error(`Unknown action: ${params.action}`);
+        }
+
+        const messages: Message[] = [
+          {
+            id: 'system',
+            role: 'system',
+            content: systemPrompt,
+            created_at: Date.now(),
+          },
+          {
+            id: 'user',
+            role: 'user',
+            content: userPrompt,
+            created_at: Date.now(),
+          },
+        ];
+
+        const response = await provider.chat(messages);
+
+        return {
+          success: true,
+          data: {
+            result: response.content,
+          },
+        };
+      } catch (error: any) {
+        logger.error('[LLM IPC] Editor action error:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to perform editor action',
+        };
+      }
+    }
+  );
+
   logger.info('LLM IPC handlers registered');
 }
 
