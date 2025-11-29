@@ -26,7 +26,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
-  const { createConversation, messages, activeConversationId, streamingConversations, loadConversations, setAppMode } = useChatStore();
+  const { createConversation, messages, activeConversationId, streamingConversations, loadConversations, setAppMode, appMode } = useChatStore();
 
   // Determine if current conversation is streaming
   const isStreaming = activeConversationId ? streamingConversations.has(activeConversationId) : false;
@@ -260,6 +260,25 @@ export function MainLayout({ children }: MainLayoutProps) {
       window.removeEventListener('sepilot:config-updated', handleConfigUpdate);
     };
   }, [initializeFromConfig]);
+
+  // Handle BrowserView visibility when Settings/Documents/Gallery opens
+  useEffect(() => {
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    if (settingsOpen || viewMode === 'documents' || viewMode === 'gallery') {
+      // Settings/Documents/Gallery 열릴 때 BrowserView 숨김 (browser 모드여도)
+      window.electronAPI.browserView.hideAll().catch((err) => {
+        console.error('[MainLayout] Failed to hide BrowserView for overlay:', err);
+      });
+    } else if (appMode === 'browser' && viewMode === 'chat') {
+      // Chat 모드로 돌아가고 browser 모드이면 BrowserView 다시 표시
+      window.electronAPI.browserView.showActive().catch((err) => {
+        console.error('[MainLayout] Failed to show BrowserView:', err);
+      });
+    }
+  }, [settingsOpen, viewMode, appMode]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
