@@ -6,7 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Check, Copy } from 'lucide-react';
 
 // Dynamically import Plotly to avoid SSR issues
-const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
+// Using factory pattern to bind plotly.js-dist-min
+const Plot = dynamic(
+  () => import('react-plotly.js/factory').then((mod) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Plotly = require('plotly.js-dist-min');
+    return mod.default(Plotly);
+  }),
+  { ssr: false }
+);
 
 interface PlotlyChartProps {
   data: string;
