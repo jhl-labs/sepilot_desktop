@@ -381,4 +381,84 @@ describe('VectorDBSettings', () => {
       });
     });
   });
+
+  describe('모델 목록 가져오기 - 다양한 API 형식', () => {
+    it('should handle Ollama API format (models array)', async () => {
+      const user = userEvent.setup();
+      const mockModels = {
+        models: [
+          { name: 'nomic-embed-text' },
+          { name: 'all-minilm' },
+          { name: 'mxbai-embed-large' },
+        ],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockModels,
+      });
+
+      render(<VectorDBSettings onSave={mockOnSave} />);
+
+      const apiKey = screen.getByLabelText('API Key') as HTMLInputElement;
+      await user.type(apiKey, 'sk-test-key');
+
+      const refreshButton = screen.getByTitle('사용 가능한 모델 목록 가져오기');
+      await user.click(refreshButton);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle array response format', async () => {
+      const user = userEvent.setup();
+      const mockModels = [
+        { id: 'text-embedding-3-small' },
+        { id: 'text-embedding-3-large' },
+      ];
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockModels,
+      });
+
+      render(<VectorDBSettings onSave={mockOnSave} />);
+
+      const apiKey = screen.getByLabelText('API Key') as HTMLInputElement;
+      await user.type(apiKey, 'sk-test-key');
+
+      const refreshButton = screen.getByTitle('사용 가능한 모델 목록 가져오기');
+      await user.click(refreshButton);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalled();
+      });
+    });
+
+    it('should show error when no models found', async () => {
+      const user = userEvent.setup();
+      const mockModels = {
+        data: [],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockModels,
+      });
+
+      render(<VectorDBSettings onSave={mockOnSave} />);
+
+      const apiKey = screen.getByLabelText('API Key') as HTMLInputElement;
+      await user.type(apiKey, 'sk-test-key');
+
+      const refreshButton = screen.getByTitle('사용 가능한 모델 목록 가져오기');
+      await user.click(refreshButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('사용 가능한 모델을 찾을 수 없습니다.')).toBeInTheDocument();
+      });
+    });
+
+  });
 });
