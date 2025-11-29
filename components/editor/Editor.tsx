@@ -142,9 +142,6 @@ export function CodeEditor() {
   useEffect(() => {
     if (!editor) return;
 
-    const model = editor.getModel();
-    if (!model) return;
-
     // Get monaco instance from the editor
     const monacoInstance = (window as any).monaco;
     if (!monacoInstance) {
@@ -155,8 +152,9 @@ export function CodeEditor() {
     let debounceTimer: NodeJS.Timeout | null = null;
     const DEBOUNCE_MS = 300;
 
+    // Register provider for ALL languages (not just current file's language)
     const provider = monacoInstance.languages.registerInlineCompletionsProvider(
-      model.getLanguageId(),
+      '*',  // All languages
       {
         provideInlineCompletions: async (model: any, position: any, context: any, token: any) => {
           // Return empty if autocomplete is not available
@@ -230,7 +228,7 @@ export function CodeEditor() {
       }
     );
 
-    console.log('Inline completion provider registered for', model.getLanguageId());
+    console.log('Inline completion provider registered for all languages');
 
     return () => {
       if (debounceTimer) {

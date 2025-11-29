@@ -372,20 +372,27 @@ app.on('before-quit', () => {
   databaseService.close();
 });
 
-// 보안: 외부 네비게이션 차단
+// 보안: 외부 네비게이션 차단 (메인 윈도우만)
 app.on('web-contents-created', (_, contents) => {
-  contents.on('will-navigate', (event, navigationUrl) => {
-    const parsedUrl = new URL(navigationUrl);
+  // BrowserView의 webContents는 허용 (자유로운 브라우징을 위해)
+  // BrowserView는 별도의 보안 정책을 가짐
+  const isBrowserView = contents.getType() === 'browserView';
 
-    // localhost만 허용 (개발 환경)
-    if (isDev && parsedUrl.origin !== 'http://localhost:3000') {
-      event.preventDefault();
-      logger.warn('Blocked navigation to', navigationUrl);
-    }
-  });
+  if (!isBrowserView) {
+    // 메인 윈도우에만 네비게이션 제한 적용
+    contents.on('will-navigate', (event, navigationUrl) => {
+      const parsedUrl = new URL(navigationUrl);
 
-  // 새 윈도우 열기 방지
-  contents.setWindowOpenHandler(() => {
-    return { action: 'deny' };
-  });
+      // localhost만 허용 (개발 환경)
+      if (isDev && parsedUrl.origin !== 'http://localhost:3000') {
+        event.preventDefault();
+        logger.warn('Blocked navigation to', navigationUrl);
+      }
+    });
+
+    // 메인 윈도우에서만 새 윈도우 열기 방지
+    contents.setWindowOpenHandler(() => {
+      return { action: 'deny' };
+    });
+  }
 });
