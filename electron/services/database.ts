@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
 import { Conversation, Message, Activity } from '../../types';
+import { Persona } from '../../types/persona';
 
 class DatabaseService {
   private db: Database | null = null;
@@ -118,6 +119,21 @@ class DatabaseService {
         created_at INTEGER NOT NULL,
         duration_ms INTEGER,
         FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Personas table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS personas (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        systemPrompt TEXT NOT NULL,
+        avatar TEXT,
+        color TEXT,
+        isBuiltin INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
       )
     `);
 
@@ -447,6 +463,83 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     this.db.run('DELETE FROM activities WHERE conversation_id = ?', [conversationId]);
+    this.saveDatabase();
+  }
+
+  // Persona Operations
+  getAllPersonas(): Persona[] {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const stmt = this.db.prepare('SELECT * FROM personas ORDER BY created_at ASC');
+    const personas: Persona[] = [];
+
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      personas.push({
+        id: row.id as string,
+        name: row.name as string,
+        description: row.description as string,
+        systemPrompt: row.systemPrompt as string,
+        avatar: row.avatar as string | undefined,
+        color: row.color as string | undefined,
+        isBuiltin: (row.isBuiltin as number) === 1,
+        created_at: row.created_at as number,
+        updated_at: row.updated_at as number,
+      });
+    }
+    stmt.free();
+
+    return personas;
+  }
+
+  savePersona(persona: Persona) {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run(
+      `INSERT OR REPLACE INTO personas
+       (id, name, description, systemPrompt, avatar, color, isBuiltin, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        persona.id,
+        persona.name,
+        persona.description,
+        persona.systemPrompt,
+        persona.avatar || null,
+        persona.color || null,
+        persona.isBuiltin ? 1 : 0,
+        persona.created_at,
+        persona.updated_at,
+      ]
+    );
+
+    this.saveDatabase();
+  }
+
+  updatePersona(persona: Persona) {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run(
+      `UPDATE personas
+       SET name = ?, description = ?, systemPrompt = ?, avatar = ?, color = ?, updated_at = ?
+       WHERE id = ? AND isBuiltin = 0`,
+      [
+        persona.name,
+        persona.description,
+        persona.systemPrompt,
+        persona.avatar || null,
+        persona.color || null,
+        persona.updated_at,
+        persona.id,
+      ]
+    );
+
+    this.saveDatabase();
+  }
+
+  deletePersona(id: string) {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run('DELETE FROM personas WHERE id = ? AND isBuiltin = 0', [id]);
     this.saveDatabase();
   }
 

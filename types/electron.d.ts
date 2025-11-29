@@ -1,5 +1,6 @@
 // Electron API 타입 정의
 import type { Conversation, Message, Activity, AppConfig, MCPServerConfig, NetworkConfig, ImageAttachment, ComfyUIConfig } from './index';
+import type { Persona } from './persona';
 
 // IPC 응답 타입
 interface IPCResponse<T = void> {
@@ -23,6 +24,13 @@ interface ActivityAPI {
   loadActivities: (conversationId: string) => Promise<IPCResponse<Activity[]>>;
   deleteActivity: (id: string) => Promise<IPCResponse>;
   deleteActivitiesByConversation: (conversationId: string) => Promise<IPCResponse>;
+}
+
+interface PersonaAPI {
+  loadAll: () => Promise<Persona[]>;
+  save: (persona: Persona) => Promise<void>;
+  update: (persona: Persona) => Promise<void>;
+  delete: (id: string) => Promise<void>;
 }
 
 interface ConfigAPI {
@@ -585,6 +593,7 @@ interface ElectronAPI {
   platform: string;
   chat: ChatAPI;
   activity: ActivityAPI;
+  persona: PersonaAPI;
   config: ConfigAPI;
   mcp: MCPAPI;
   auth: AuthAPI;

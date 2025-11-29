@@ -1102,11 +1102,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     try {
       if (isElectron() && window.electronAPI) {
-        // TODO: Electron SQLite에서 로드
-        // const result = await window.electronAPI.persona.loadAll();
-        // if (result.success && result.data) {
-        //   set({ personas: [...BUILTIN_PERSONAS, ...result.data] });
-        // }
+        // Electron: SQLite에서 로드
+        const userPersonas = await window.electronAPI.persona.loadAll();
+        set({ personas: [...BUILTIN_PERSONAS, ...userPersonas] });
       } else {
         // Web: localStorage에서 로드
         const savedPersonas = localStorage.getItem('sepilot_personas');
@@ -1131,8 +1129,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     try {
       if (isElectron() && window.electronAPI) {
-        // TODO: Electron SQLite에 저장
-        // await window.electronAPI.persona.save(newPersona);
+        // Electron: SQLite에 저장
+        await window.electronAPI.persona.save(newPersona);
       } else {
         // Web: localStorage에 저장
         const currentState = get();
@@ -1169,8 +1167,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     try {
       if (isElectron() && window.electronAPI) {
-        // TODO: Electron SQLite에 업데이트
-        // await window.electronAPI.persona.update(updatedPersona);
+        // Electron: SQLite에 업데이트
+        await window.electronAPI.persona.update(updatedPersona);
       } else {
         // Web: localStorage에 업데이트
         const userPersonas = currentState.personas
@@ -1202,8 +1200,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     try {
       if (isElectron() && window.electronAPI) {
-        // TODO: Electron SQLite에서 삭제
-        // await window.electronAPI.persona.delete(id);
+        // Electron: SQLite에서 삭제
+        await window.electronAPI.persona.delete(id);
       } else {
         // Web: localStorage에서 삭제
         const userPersonas = currentState.personas

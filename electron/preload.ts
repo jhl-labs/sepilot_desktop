@@ -36,6 +36,14 @@ const electronAPI = {
       ipcRenderer.invoke('delete-activities-by-conversation', conversationId),
   },
 
+  // Persona operations
+  persona: {
+    loadAll: () => ipcRenderer.invoke('persona-load-all'),
+    save: (persona: any) => ipcRenderer.invoke('persona-save', persona),
+    update: (persona: any) => ipcRenderer.invoke('persona-update', persona),
+    delete: (id: string) => ipcRenderer.invoke('persona-delete', id),
+  },
+
   // Config operations
   config: {
     load: () => ipcRenderer.invoke('load-config'),
