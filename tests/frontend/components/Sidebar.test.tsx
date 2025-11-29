@@ -274,14 +274,17 @@ describe('Sidebar', () => {
       expect(mockChatStore.setAppMode).toHaveBeenCalledWith('browser');
     });
 
-    it('should not show chat action buttons in browser mode', () => {
+    it('should show browser toolbar buttons in browser mode', () => {
       const browserMockStore = { ...mockChatStore, appMode: 'browser' as const };
       (useChatStore as unknown as jest.Mock).mockReturnValue(browserMockStore);
 
       render(<Sidebar />);
 
-      expect(screen.queryByRole('button', { name: /새 대화/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /모든 대화 삭제/i })).not.toBeInTheDocument();
+      // Browser 모드에는 Footer에 "새 대화" 버튼이 있음 (clearBrowserChat)
+      expect(screen.getByTitle('새 대화')).toBeInTheDocument();
+      expect(screen.getByTitle('페이지 캡처')).toBeInTheDocument();
+      expect(screen.getByTitle('스냅샷 관리')).toBeInTheDocument();
+      expect(screen.getByTitle('북마크')).toBeInTheDocument();
     });
   });
 
