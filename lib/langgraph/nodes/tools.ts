@@ -1,6 +1,7 @@
 import { AgentState } from '../state';
 import { ToolResult } from '../types';
 import { MCPServerManager } from '@/lib/mcp/server-manager';
+import { executeBuiltinTool } from '@/lib/mcp/tools/builtin-tools';
 import {
   emitImageProgress,
   getCurrentComfyUIConfig,
@@ -316,13 +317,28 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
             }
           }
 
-          // Main Process에서 직접 MCP 도구 실행 (generate_image는 이미 위에서 처리했으므로 여기 도달하지 않음)
+          // Built-in tools 먼저 확인 (파일 작업, 브라우저 제어 등)
+          try {
+            const builtinResult = await executeBuiltinTool(call.name, call.arguments);
+            console.log(`[Tools] Built-in tool result:`, builtinResult);
+
+            return {
+              toolCallId: call.id,
+              toolName: call.name,
+              result: builtinResult,
+            };
+          } catch (builtinError: any) {
+            // Built-in tool이 아니면 에러 발생 - MCP tool 확인으로 넘어감
+            console.log(`[Tools] Not a built-in tool (${call.name}), checking MCP tools...`);
+          }
+
+          // Main Process에서 직접 MCP 도구 실행
           // Note: toolsNode는 Electron Main Process에서 실행되므로 직접 메서드 사용
           const allTools = MCPServerManager.getAllToolsInMainProcess();
           const tool = allTools.find(t => t.name === call.name);
 
           if (!tool) {
-            console.warn(`[Tools] Tool not found: ${call.name}`);
+            console.warn(`[Tools] Tool not found in MCP servers: ${call.name}`);
             return {
               toolCallId: call.id,
               toolName: call.name,
