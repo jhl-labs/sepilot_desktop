@@ -152,6 +152,7 @@ interface ChatStore {
   deleteConversation: (id: string) => Promise<void>;
   setActiveConversation: (id: string) => Promise<void>;
   updateConversationTitle: (id: string, title: string) => Promise<void>;
+  updateConversationPersona: (id: string, personaId: string | null) => Promise<void>;
   loadConversations: () => Promise<void>;
   searchConversations: (
     query: string
@@ -543,6 +544,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       if (!updated) {
         saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, updatedConversations);
       }
+      return { conversations: updatedConversations };
+    });
+  },
+
+  updateConversationPersona: async (id: string, personaId: string | null) => {
+    set((state) => {
+      const updatedConversations = state.conversations.map((c) =>
+        c.id === id ? { ...c, personaId: personaId || undefined, updated_at: Date.now() } : c
+      );
+
+      // localStorage에 저장 (Electron DB는 personaId 필드를 아직 지원하지 않으므로)
+      saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, updatedConversations);
+
       return { conversations: updatedConversations };
     });
   },

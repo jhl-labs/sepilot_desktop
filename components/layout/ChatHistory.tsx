@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageSquare, Pencil, Trash2, Search, X } from 'lucide-react';
+import { MessageSquare, Pencil, Trash2, Search, X, User, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -12,6 +12,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import type { Conversation, Message } from '@/types';
@@ -28,7 +32,9 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     setActiveConversation,
     deleteConversation,
     updateConversationTitle,
+    updateConversationPersona,
     searchConversations,
+    personas,
   } = useChatStore();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -68,6 +74,10 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     if (confirm('이 대화를 삭제하시겠습니까?')) {
       await deleteConversation(id);
     }
+  };
+
+  const handleSetPersona = async (conversationId: string, personaId: string | null) => {
+    await updateConversationPersona(conversationId, personaId);
   };
 
   const handleSearch = async (query: string) => {
@@ -147,9 +157,17 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium line-clamp-1">
-                        {conversation.title}
-                      </h3>
+                      <div className="flex items-center gap-1.5">
+                        {conversation.personaId && (() => {
+                          const persona = personas.find(p => p.id === conversation.personaId);
+                          return persona?.avatar ? (
+                            <span className="text-sm flex-shrink-0">{persona.avatar}</span>
+                          ) : null;
+                        })()}
+                        <h3 className="text-sm font-medium line-clamp-1">
+                          {conversation.title}
+                        </h3>
+                      </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {formatDate(conversation.updated_at)}
                       </p>
@@ -219,9 +237,17 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                       }}
                       className="flex flex-1 flex-col items-start px-3 py-2 text-left"
                     >
-                      <span className="text-sm font-medium line-clamp-1">
-                        {conversation.title}
-                      </span>
+                      <div className="flex items-center gap-1.5 w-full">
+                        {conversation.personaId && (() => {
+                          const persona = personas.find(p => p.id === conversation.personaId);
+                          return persona?.avatar ? (
+                            <span className="text-sm flex-shrink-0">{persona.avatar}</span>
+                          ) : null;
+                        })()}
+                        <span className="text-sm font-medium line-clamp-1">
+                          {conversation.title}
+                        </span>
+                      </div>
                       <span className="text-xs text-muted-foreground">
                         {formatDate(conversation.updated_at)}
                       </span>
@@ -244,6 +270,41 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                           <Pencil className="mr-2 h-4 w-4" />
                           이름 변경
                         </DropdownMenuItem>
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <User className="mr-2 h-4 w-4" />
+                            Persona 지정
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            <DropdownMenuItem
+                              onClick={() => handleSetPersona(conversation.id, null)}
+                            >
+                              {!conversation.personaId && (
+                                <Check className="mr-2 h-4 w-4" />
+                              )}
+                              {conversation.personaId && (
+                                <span className="mr-2 h-4 w-4 inline-block" />
+                              )}
+                              없음
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {personas.map((persona) => (
+                              <DropdownMenuItem
+                                key={persona.id}
+                                onClick={() => handleSetPersona(conversation.id, persona.id)}
+                              >
+                                {conversation.personaId === persona.id && (
+                                  <Check className="mr-2 h-4 w-4" />
+                                )}
+                                {conversation.personaId !== persona.id && (
+                                  <span className="mr-2 h-4 w-4 inline-block" />
+                                )}
+                                <span className="mr-2">{persona.avatar || '🤖'}</span>
+                                {persona.name}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
                         <DropdownMenuItem
                           onClick={() => handleDelete(conversation.id)}
                           className="text-destructive focus:text-destructive"

@@ -56,6 +56,7 @@ export interface Conversation {
   title: string;
   created_at: number;
   updated_at: number;
+  personaId?: string; // 대화에 지정된 페르소나 ID
 }
 
 export interface VisionModelConfig {
