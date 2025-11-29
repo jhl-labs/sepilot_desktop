@@ -106,12 +106,21 @@ function toggleMenuVisibility() {
 }
 
 function createWindow() {
-  // Set window icon based on platform
-  const iconPath = isDev
-    ? path.join(__dirname, '..', '..', 'public', 'images', 'sepilot_256x256.png')
-    : process.platform === 'win32'
-    ? path.join(process.resourcesPath, 'assets', 'icon.ico')
-    : path.join(process.resourcesPath, 'assets', 'icon.png');
+  // Set window icon based on platform and environment
+  let iconPath: string;
+  const isWindows = process.platform === 'win32';
+
+  if (isDev) {
+    // Development: use icon from assets directory
+    iconPath = isWindows
+      ? path.join(app.getAppPath(), 'assets', 'icon.ico')
+      : path.join(app.getAppPath(), 'assets', 'icon.png');
+  } else {
+    // Production: use packaged icon
+    iconPath = isWindows
+      ? path.join(process.resourcesPath, 'assets', 'icon.ico')
+      : path.join(process.resourcesPath, 'assets', 'icon.png');
+  }
 
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -333,11 +342,18 @@ export function getMainWindow(): BrowserWindow | null {
 // System Tray 생성
 function createTray() {
   // Set tray icon based on platform and environment
-  const trayIconPath = isDev
-    ? path.join(__dirname, '..', '..', 'public', 'images', 'sepilot_16x16.png')
-    : process.platform === 'win32'
-    ? path.join(process.resourcesPath, 'assets', 'icons', 'icon_16.png')
-    : path.join(process.resourcesPath, 'assets', 'icons', 'icon_16x16.png');
+  let trayIconPath: string;
+  const isWindows = process.platform === 'win32';
+
+  if (isDev) {
+    // Development: use small icon from assets directory
+    trayIconPath = path.join(app.getAppPath(), 'assets', 'icons', 'icon_16x16.png');
+  } else {
+    // Production: use packaged icon
+    trayIconPath = isWindows
+      ? path.join(process.resourcesPath, 'assets', 'icons', 'icon_16.png')
+      : path.join(process.resourcesPath, 'assets', 'icons', 'icon_16x16.png');
+  }
 
   const icon = nativeImage.createFromPath(trayIconPath);
   tray = new Tray(icon);
