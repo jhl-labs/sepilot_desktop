@@ -482,7 +482,7 @@ export function setupBrowserViewHandlers() {
         return { success: false, error: 'Main window not found' };
       }
 
-      logger.info('[BrowserView] Hiding all BrowserViews (total:', tabs.size, ')');
+      logger.info(`[BrowserView] Hiding all BrowserViews (total: ${tabs.size})`);
 
       // 1. Move all BrowserViews off-screen first (for extra safety)
       tabs.forEach((tab) => {

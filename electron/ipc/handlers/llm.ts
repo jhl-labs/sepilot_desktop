@@ -640,7 +640,14 @@ Return ONLY the title, without quotes or additional text.`,
       }
     ) => {
       try {
-        const config = await loadConfig();
+        // Get config from database
+        const configStr = databaseService.getSetting('app_config');
+        if (!configStr) {
+          logger.error('[EditorAgent/Action] App config not found in database');
+          throw new Error('App config not found');
+        }
+
+        const config = JSON.parse(configStr) as AppConfig;
 
         // Initialize LLM client with main config (not autocomplete)
         const { initializeLLMClient } = await import('../../../lib/llm/client');
