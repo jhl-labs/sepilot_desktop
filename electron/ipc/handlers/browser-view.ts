@@ -677,10 +677,11 @@ export function setupBrowserViewHandlers() {
         const snapshots: Snapshot[] = JSON.parse(data);
 
         // Convert file paths to sepilot-file:// protocol URLs
+        // Windows paths need to be converted: C:\path -> C:/path
         const snapshotsWithProtocol = snapshots.map((snapshot) => ({
           ...snapshot,
-          thumbnail: `sepilot-file://${snapshot.thumbnail}`,
-          screenshotPath: `sepilot-file://${snapshot.screenshotPath}`,
+          thumbnail: `sepilot-file://${snapshot.thumbnail.replace(/\\/g, '/')}`,
+          screenshotPath: `sepilot-file://${snapshot.screenshotPath.replace(/\\/g, '/')}`,
         }));
 
         return {
@@ -757,7 +758,101 @@ export function setupBrowserViewHandlers() {
         return { success: false, error: 'Snapshot not found' };
       }
 
-      // Load the original URL in a new tab or current tab
+      // Read screenshot file and convert to base64
+      const screenshotBuffer = await fs.readFile(snapshot.screenshotPath);
+      const base64Image = screenshotBuffer.toString('base64');
+
+      // Create HTML page to display the screenshot with original URL link
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${snapshot.title} - Snapshot</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .header {
+      background: #2a2a2a;
+      padding: 12px 20px;
+      border-bottom: 1px solid #3a3a3a;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .info {
+      flex: 1;
+      min-width: 0;
+    }
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .url {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .link {
+      color: #4a9eff;
+      text-decoration: none;
+    }
+    .link:hover {
+      text-decoration: underline;
+    }
+    .date {
+      font-size: 11px;
+      color: #666;
+      white-space: nowrap;
+    }
+    .content {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="info">
+      <div class="title">${snapshot.title}</div>
+      <div class="url">
+        <a href="${snapshot.url}" class="link" target="_blank">${snapshot.url}</a>
+      </div>
+    </div>
+    <div class="date">${new Date(snapshot.createdAt).toLocaleString('ko-KR')}</div>
+  </div>
+  <div class="content">
+    <img src="data:image/png;base64,${base64Image}" alt="${snapshot.title}">
+  </div>
+</body>
+</html>
+      `;
+
+      // Load the HTML content in a new tab or current tab
       if (!activeTabId) {
         // Create new tab
         const tabId = randomUUID();
@@ -766,8 +861,8 @@ export function setupBrowserViewHandlers() {
         const tab: BrowserTab = {
           id: tabId,
           view,
-          url: snapshot.url,
-          title: snapshot.title,
+          url: `snapshot://${snapshotId}`,
+          title: `${snapshot.title} - Snapshot`,
         };
 
         tabs.set(tabId, tab);
@@ -775,12 +870,14 @@ export function setupBrowserViewHandlers() {
         mainWindow.addBrowserView(view);
         setActiveBrowserView(view);
 
-        await view.webContents.loadURL(snapshot.url);
+        await view.webContents.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
       } else {
         // Load in active tab
         const tab = tabs.get(activeTabId);
         if (tab) {
-          await tab.view.webContents.loadURL(snapshot.url);
+          tab.url = `snapshot://${snapshotId}`;
+          tab.title = `${snapshot.title} - Snapshot`;
+          await tab.view.webContents.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
         }
       }
 
