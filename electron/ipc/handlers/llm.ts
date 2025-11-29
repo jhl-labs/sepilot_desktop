@@ -566,14 +566,15 @@ Return ONLY the title, without quotes or additional text.`,
         const contextBefore = lines.slice(startLine, currentLineNumber).join('\n');
         const contextAfter = lines.slice(currentLineNumber + 1, endLine).join('\n');
 
-        // Create concise prompt to reduce token usage
-        const systemPrompt = `Code completion AI. Complete from cursor. Return ONLY completion text, no explanations or markdown.`;
+        // Create clear and direct prompt
+        const systemPrompt = `You are a code/text completion assistant. Complete the text from the cursor position. Return ONLY the completion text without any explanations, markdown, or quotes.`;
 
-        const userPrompt = `${contextBefore ? `Before:\n${contextBefore}\n` : ''}
-Current: ${currentLine}█
-${contextAfter ? `After:\n${contextAfter}` : ''}
+        const userPrompt = `Complete the following text from the cursor (█):
 
-Complete from █:`;
+${contextBefore ? `Context:\n${contextBefore}\n\n` : ''}Text to complete: ${currentLine}█
+${contextAfter ? `\nNext line: ${contextAfter.split('\n')[0]}` : ''}
+
+Your completion:`;
 
         const messages: Message[] = [
           {
@@ -599,6 +600,7 @@ Complete from █:`;
           importsCount: imports.split('\n').filter(l => l.trim()).length,
         });
         logger.info('[Autocomplete] User prompt preview:', userPrompt.substring(0, 500));
+        logger.info('[Autocomplete] Full user prompt:', userPrompt);
         logger.info('[Autocomplete] Calling LLM API...');
         const response = await provider.chat(messages);
         logger.info('[Autocomplete] LLM response received:', {
