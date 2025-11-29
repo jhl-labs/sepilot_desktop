@@ -64,7 +64,11 @@ export function CodeEditor() {
   };
 
   const handleEditorAction = useCallback(async (
-    action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve',
+    action:
+      | 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve'
+      | 'continue' | 'make-shorter' | 'make-longer' | 'simplify' | 'fix-grammar'
+      | 'change-tone-professional' | 'change-tone-casual' | 'change-tone-friendly'
+      | 'find-action-items' | 'create-outline',
     selectedText: string,
     targetLanguage?: string
   ) => {
@@ -267,28 +271,173 @@ export function CodeEditor() {
   useEffect(() => {
     if (!editor) return;
 
-    // Register context menu actions
-    const explainAction = editor.addAction({
-      id: 'llm-explain',
-      label: 'AI: Explain Code',
-      contextMenuGroupId: 'llm',
+    // === Writing Tools (Notion style) ===
+    const continueAction = editor.addAction({
+      id: 'llm-continue',
+      label: 'Writing: Continue writing',
+      contextMenuGroupId: 'writing',
       contextMenuOrder: 1,
       run: async (ed) => {
         const selection = ed.getSelection();
         if (selection && !selection.isEmpty()) {
           const selectedText = ed.getModel()?.getValueInRange(selection);
           if (selectedText) {
-            await handleEditorAction('explain', selectedText);
+            await handleEditorAction('continue', selectedText);
           }
         }
       },
     });
 
+    const makeShorterAction = editor.addAction({
+      id: 'llm-make-shorter',
+      label: 'Writing: Make shorter',
+      contextMenuGroupId: 'writing',
+      contextMenuOrder: 2,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('make-shorter', selectedText);
+          }
+        }
+      },
+    });
+
+    const makeLongerAction = editor.addAction({
+      id: 'llm-make-longer',
+      label: 'Writing: Make longer',
+      contextMenuGroupId: 'writing',
+      contextMenuOrder: 3,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('make-longer', selectedText);
+          }
+        }
+      },
+    });
+
+    const simplifyAction = editor.addAction({
+      id: 'llm-simplify',
+      label: 'Writing: Simplify',
+      contextMenuGroupId: 'writing',
+      contextMenuOrder: 4,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('simplify', selectedText);
+          }
+        }
+      },
+    });
+
+    const fixGrammarAction = editor.addAction({
+      id: 'llm-fix-grammar',
+      label: 'Writing: Fix spelling & grammar',
+      contextMenuGroupId: 'writing',
+      contextMenuOrder: 5,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('fix-grammar', selectedText);
+          }
+        }
+      },
+    });
+
+    const toneProfessionalAction = editor.addAction({
+      id: 'llm-tone-professional',
+      label: 'Writing: Change tone → Professional',
+      contextMenuGroupId: 'writing',
+      contextMenuOrder: 6,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('change-tone-professional', selectedText);
+          }
+        }
+      },
+    });
+
+    const toneCasualAction = editor.addAction({
+      id: 'llm-tone-casual',
+      label: 'Writing: Change tone → Casual',
+      contextMenuGroupId: 'writing',
+      contextMenuOrder: 7,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('change-tone-casual', selectedText);
+          }
+        }
+      },
+    });
+
+    const toneFriendlyAction = editor.addAction({
+      id: 'llm-tone-friendly',
+      label: 'Writing: Change tone → Friendly',
+      contextMenuGroupId: 'writing',
+      contextMenuOrder: 8,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('change-tone-friendly', selectedText);
+          }
+        }
+      },
+    });
+
+    const findActionItemsAction = editor.addAction({
+      id: 'llm-find-action-items',
+      label: 'Writing: Find action items',
+      contextMenuGroupId: 'writing',
+      contextMenuOrder: 9,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('find-action-items', selectedText);
+          }
+        }
+      },
+    });
+
+    const createOutlineAction = editor.addAction({
+      id: 'llm-create-outline',
+      label: 'Writing: Create outline',
+      contextMenuGroupId: 'writing',
+      contextMenuOrder: 10,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('create-outline', selectedText);
+          }
+        }
+      },
+    });
+
+    // === AI Actions ===
     const summarizeAction = editor.addAction({
       id: 'llm-summarize',
       label: 'AI: Summarize',
-      contextMenuGroupId: 'llm',
-      contextMenuOrder: 2,
+      contextMenuGroupId: 'ai',
+      contextMenuOrder: 1,
       run: async (ed) => {
         const selection = ed.getSelection();
         if (selection && !selection.isEmpty()) {
@@ -303,8 +452,8 @@ export function CodeEditor() {
     const translateAction = editor.addAction({
       id: 'llm-translate',
       label: 'AI: Translate to Korean',
-      contextMenuGroupId: 'llm',
-      contextMenuOrder: 3,
+      contextMenuGroupId: 'ai',
+      contextMenuOrder: 2,
       run: async (ed) => {
         const selection = ed.getSelection();
         if (selection && !selection.isEmpty()) {
@@ -316,10 +465,26 @@ export function CodeEditor() {
       },
     });
 
+    const explainAction = editor.addAction({
+      id: 'llm-explain',
+      label: 'AI: Explain Code',
+      contextMenuGroupId: 'ai',
+      contextMenuOrder: 3,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('explain', selectedText);
+          }
+        }
+      },
+    });
+
     const fixAction = editor.addAction({
       id: 'llm-fix',
       label: 'AI: Fix Code',
-      contextMenuGroupId: 'llm',
+      contextMenuGroupId: 'ai',
       contextMenuOrder: 4,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -335,7 +500,7 @@ export function CodeEditor() {
     const improveAction = editor.addAction({
       id: 'llm-improve',
       label: 'AI: Improve Code',
-      contextMenuGroupId: 'llm',
+      contextMenuGroupId: 'ai',
       contextMenuOrder: 5,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -351,7 +516,7 @@ export function CodeEditor() {
     const completeAction = editor.addAction({
       id: 'llm-complete',
       label: 'AI: Complete Code',
-      contextMenuGroupId: 'llm',
+      contextMenuGroupId: 'ai',
       contextMenuOrder: 6,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -365,9 +530,21 @@ export function CodeEditor() {
     });
 
     return () => {
-      explainAction.dispose();
+      // Writing Tools
+      continueAction.dispose();
+      makeShorterAction.dispose();
+      makeLongerAction.dispose();
+      simplifyAction.dispose();
+      fixGrammarAction.dispose();
+      toneProfessionalAction.dispose();
+      toneCasualAction.dispose();
+      toneFriendlyAction.dispose();
+      findActionItemsAction.dispose();
+      createOutlineAction.dispose();
+      // AI Actions
       summarizeAction.dispose();
       translateAction.dispose();
+      explainAction.dispose();
       fixAction.dispose();
       improveAction.dispose();
       completeAction.dispose();

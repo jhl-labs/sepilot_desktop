@@ -628,7 +628,11 @@ Complete from the cursor (█). Return ONLY the completion code, no explanations
     async (
       _event,
       params: {
-        action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve';
+        action:
+          | 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve'
+          | 'continue' | 'make-shorter' | 'make-longer' | 'simplify' | 'fix-grammar'
+          | 'change-tone-professional' | 'change-tone-casual' | 'change-tone-friendly'
+          | 'find-action-items' | 'create-outline';
         text: string;
         language?: string;
         targetLanguage?: string; // for translate
@@ -724,6 +728,137 @@ Rules:
 
             userPrompt = `Improve this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
             returnCodeOnly = true;
+            break;
+
+          // === Writing Tools (Notion style) ===
+          case 'continue':
+            systemPrompt = `You are a writing assistant that continues text naturally.
+
+Rules:
+- Continue the text maintaining the same style, tone, and voice
+- Write 2-4 additional sentences that flow naturally
+- Match the subject matter and context
+- DO NOT repeat what's already written
+- Keep it relevant and coherent`;
+
+            userPrompt = `Continue this text:\n\n${params.text}`;
+            break;
+
+          case 'make-shorter':
+            systemPrompt = `You are a writing assistant that makes text more concise.
+
+Rules:
+- Reduce length by 30-50% while preserving key information
+- Remove redundancy and unnecessary details
+- Keep the main message and tone
+- Maintain clarity and readability
+- Return ONLY the shortened text, no explanations`;
+
+            userPrompt = `Make this text shorter:\n\n${params.text}`;
+            break;
+
+          case 'make-longer':
+            systemPrompt = `You are a writing assistant that expands text.
+
+Rules:
+- Add relevant details, examples, or elaboration
+- Increase length by 30-50% naturally
+- Maintain the original tone and style
+- Add substance, not just filler
+- Keep it coherent and well-structured`;
+
+            userPrompt = `Make this text longer:\n\n${params.text}`;
+            break;
+
+          case 'simplify':
+            systemPrompt = `You are a writing assistant that simplifies complex text.
+
+Rules:
+- Use simpler words and shorter sentences
+- Break down complex ideas into clear explanations
+- Maintain the original meaning
+- Make it accessible to a general audience
+- Keep it concise and easy to understand`;
+
+            userPrompt = `Simplify this text:\n\n${params.text}`;
+            break;
+
+          case 'fix-grammar':
+            systemPrompt = `You are a grammar and spelling expert.
+
+Rules:
+- Fix all spelling, grammar, and punctuation errors
+- Improve sentence structure where needed
+- Preserve the original meaning and tone
+- Keep technical terms and proper nouns unchanged
+- Return ONLY the corrected text, no explanations`;
+
+            userPrompt = `Fix spelling and grammar:\n\n${params.text}`;
+            break;
+
+          case 'change-tone-professional':
+            systemPrompt = `You are a writing assistant that adjusts tone to be professional.
+
+Rules:
+- Rewrite in a formal, business-appropriate tone
+- Use professional language and vocabulary
+- Remove casual expressions and slang
+- Maintain clarity and directness
+- Keep the core message intact`;
+
+            userPrompt = `Change tone to professional:\n\n${params.text}`;
+            break;
+
+          case 'change-tone-casual':
+            systemPrompt = `You are a writing assistant that adjusts tone to be casual.
+
+Rules:
+- Rewrite in a friendly, conversational tone
+- Use everyday language and expressions
+- Make it approachable and relatable
+- Avoid overly formal language
+- Keep the core message intact`;
+
+            userPrompt = `Change tone to casual:\n\n${params.text}`;
+            break;
+
+          case 'change-tone-friendly':
+            systemPrompt = `You are a writing assistant that adjusts tone to be friendly.
+
+Rules:
+- Rewrite in a warm, welcoming tone
+- Use positive and encouraging language
+- Make it personable and empathetic
+- Add warmth without being overly casual
+- Keep the core message intact`;
+
+            userPrompt = `Change tone to friendly:\n\n${params.text}`;
+            break;
+
+          case 'find-action-items':
+            systemPrompt = `You are an assistant that extracts action items from text.
+
+Rules:
+- Identify all tasks, to-dos, and action items
+- Present as a clear bulleted list
+- Use action verbs (e.g., "Create", "Review", "Send")
+- Be specific and concise
+- If no action items found, say "No action items found"`;
+
+            userPrompt = `Find action items in this text:\n\n${params.text}`;
+            break;
+
+          case 'create-outline':
+            systemPrompt = `You are an assistant that creates structured outlines.
+
+Rules:
+- Create a hierarchical outline with main points and sub-points
+- Use clear headings and nested structure
+- Capture all key topics and ideas
+- Organize logically and coherently
+- Keep it concise but comprehensive`;
+
+            userPrompt = `Create an outline for this text:\n\n${params.text}`;
             break;
 
           default:

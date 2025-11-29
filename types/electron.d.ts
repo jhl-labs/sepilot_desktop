@@ -140,7 +140,11 @@ interface LLMAPI {
     language?: string;
   }) => Promise<IPCResponse<{ completion: string }>>;
   editorAction: (params: {
-    action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve';
+    action:
+      | 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve'
+      | 'continue' | 'make-shorter' | 'make-longer' | 'simplify' | 'fix-grammar'
+      | 'change-tone-professional' | 'change-tone-casual' | 'change-tone-friendly'
+      | 'find-action-items' | 'create-outline';
     text: string;
     language?: string;
     targetLanguage?: string;
