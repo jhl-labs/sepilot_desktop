@@ -36,6 +36,7 @@ export function BrowserPanel() {
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
 
@@ -285,6 +286,18 @@ export function BrowserPanel() {
 
       const rect = containerRef.current.getBoundingClientRect();
 
+      // 드롭다운 메뉴가 열려있으면 BrowserView를 화면 밖으로 이동
+      if (dropdownOpen) {
+        console.log('[BrowserPanel] Dropdown open, hiding BrowserView');
+        window.electronAPI.browserView.setBounds({
+          x: 0,
+          y: -10000, // 화면 밖으로 이동
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        });
+        return;
+      }
+
       // BrowserView의 위치를 컨테이너에 맞춤
       // Note: BrowserView 좌표는 윈도우 기준이므로 rect의 x, y를 사용
       console.log('[BrowserPanel] Setting bounds:', { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
@@ -312,7 +325,7 @@ export function BrowserPanel() {
       resizeObserver.disconnect();
       window.removeEventListener('resize', updateBounds);
     };
-  }, [appMode, activeEditorTab, activeTabId]); // appMode, activeEditorTab, activeTabId 변경 시 bounds 재설정
+  }, [appMode, activeEditorTab, activeTabId, dropdownOpen]); // appMode, activeEditorTab, activeTabId, dropdownOpen 변경 시 bounds 재설정
 
   if (!isElectron()) {
     return (
@@ -396,7 +409,7 @@ export function BrowserPanel() {
         </Button>
 
         {/* Settings 드롭다운 메뉴 */}
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={setDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"

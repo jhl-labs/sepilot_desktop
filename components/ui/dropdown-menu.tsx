@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 
 interface DropdownMenuProps {
   children: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface DropdownMenuTriggerProps {
@@ -34,11 +35,16 @@ const DropdownMenuContext = React.createContext<{
   setIsOpen: () => {},
 });
 
-export function DropdownMenu({ children }: DropdownMenuProps) {
+export function DropdownMenu({ children, onOpenChange }: DropdownMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
+  const handleOpenChange = React.useCallback((open: boolean) => {
+    setIsOpen(open);
+    onOpenChange?.(open);
+  }, [onOpenChange]);
+
   return (
-    <DropdownMenuContext.Provider value={{ isOpen, setIsOpen }}>
+    <DropdownMenuContext.Provider value={{ isOpen, setIsOpen: handleOpenChange }}>
       <div className="relative inline-block">{children}</div>
     </DropdownMenuContext.Provider>
   );
