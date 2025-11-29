@@ -13,6 +13,7 @@ interface Snapshot {
   thumbnail: string;
   createdAt: number;
   screenshotPath: string;
+  mhtmlPath: string;
 }
 
 export function SnapshotsList() {
