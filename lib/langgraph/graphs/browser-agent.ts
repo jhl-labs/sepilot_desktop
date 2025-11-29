@@ -18,6 +18,11 @@ import {
   browserTakeScreenshotTool,
   browserGetSelectedTextTool,
   browserSearchElementsTool,
+  browserCaptureAnnotatedScreenshotTool,
+  browserClickCoordinateTool,
+  browserClickMarkerTool,
+  browserGetClickableCoordinateTool,
+  browserAnalyzeWithVisionTool,
 } from '@/lib/mcp/tools/builtin-tools';
 
 /**
@@ -32,7 +37,7 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
       toolResultsCount: state.toolResults.length,
     });
 
-    // Browser Control Tools (13개 도구 - 개선됨)
+    // Browser Control Tools (18개 도구 - Vision 포함)
     const browserTools = [
       // Navigation
       browserNavigateTool, // URL 직접 이동 (최우선)
@@ -51,6 +56,12 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
       browserCreateTabTool,
       browserSwitchTabTool,
       browserCloseTabTool,
+      // Vision-based tools (NEW)
+      browserCaptureAnnotatedScreenshotTool, // Set-of-Mark 스크린샷
+      browserClickCoordinateTool, // 좌표 기반 클릭
+      browserClickMarkerTool, // 마커 라벨로 클릭
+      browserGetClickableCoordinateTool, // 요소의 클릭 가능 좌표
+      browserAnalyzeWithVisionTool, // Vision 모델 분석 (향후)
     ];
 
     console.log(`[BrowserAgent.Generate] Available Browser Control tools: ${browserTools.length}`);
@@ -202,6 +213,38 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
   - Cannot close the last remaining tab
   - Example: browser_close_tab({ tabId: "tab-123" })
 
+## Vision-Based Tools (NEW - Hybrid DOM + Vision)
+
+- **browser_capture_annotated_screenshot**: Capture screenshot with labeled elements (Set-of-Mark)
+  - Overlays markers (A, B, C...) on top 30 interactive elements
+  - Returns base64 image + marker mapping (label → element info)
+  - Use when: Need visual confirmation, elements are hard to identify by DOM alone
+  - Example: browser_capture_annotated_screenshot({ max_markers: 30, include_overlay: true })
+
+- **browser_click_coordinate**: Click at exact pixel coordinates
+  - Direct coordinate-based clicking (x, y)
+  - Use when: DOM-based clicking fails, elements are dynamically positioned, canvas/SVG elements
+  - Automatically finds element at coordinates and dispatches click event
+  - Example: browser_click_coordinate({ x: 350, y: 120 })
+
+- **browser_click_marker**: Click element by its marker label from screenshot
+  - Use marker labels (A, B, C...) from browser_capture_annotated_screenshot
+  - Automatically calculates center point and clicks
+  - Use when: You've captured annotated screenshot and identified target visually
+  - Example: browser_click_marker({ marker_label: "A" })
+
+- **browser_get_clickable_coordinate**: Get exact clickable coordinates for an element
+  - Takes element ID, returns center point coordinates + bounding box
+  - Verifies that center point is actually clickable (not obscured)
+  - Use when: Need to convert element ID to coordinates for precise clicking
+  - Example: browser_get_clickable_coordinate({ element_id: "ai-element-5" })
+
+- **browser_analyze_with_vision**: Analyze page with LLM vision model (FUTURE)
+  - Captures annotated screenshot and analyzes with vision-capable LLM
+  - Provides AI understanding of page layout and suggested actions
+  - Currently returns prompt only (vision API integration pending)
+  - Example: browser_analyze_with_vision({ user_query: "Find the login button" })
+
 # ENHANCED WORKFLOW
 
 For URL navigation ("go to naver.com", "네이버 접속해줘"):
@@ -231,6 +274,18 @@ For complex tasks ("Search for X on naver"):
 3. Type query: browser_type_text({ element_id: "...", text: "X" })
 4. Find and click search button: browser_search_elements + browser_click_element
 5. Verify results loaded
+
+For vision-based interaction (when DOM fails or visual confirmation needed):
+1. Capture annotated screenshot: browser_capture_annotated_screenshot({ max_markers: 30 })
+2. Review markers and identify target element (e.g., marker "B" is the login button)
+3. Click by marker: browser_click_marker({ marker_label: "B" })
+4. Or get coordinates: browser_get_clickable_coordinate + browser_click_coordinate
+
+For challenging elements (canvas, SVG, dynamic overlays):
+1. Try DOM first: browser_get_interactive_elements
+2. If element not found or click fails: browser_capture_annotated_screenshot
+3. Identify target visually, then: browser_click_marker or browser_click_coordinate
+4. Verify action succeeded
 
 # IMPORTANT - SEMANTIC UNDERSTANDING
 

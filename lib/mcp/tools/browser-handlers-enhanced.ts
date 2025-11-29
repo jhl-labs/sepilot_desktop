@@ -11,7 +11,7 @@ import { filterRelevantElements, searchElements, generatePageSummary } from '../
 /**
  * 브라우저에서 접근성 트리 기반 DOM 분석 실행
  */
-async function analyzePage(browserView: any): Promise<DOMAnalysis> {
+export async function analyzePage(browserView: any): Promise<DOMAnalysis> {
   const result = await browserView.webContents.executeJavaScript(`
     (function() {
       // Utility: Get computed styles for visibility check

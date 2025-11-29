@@ -141,6 +141,35 @@ describe('ChatArea', () => {
     expect(screen.getByText('Hello! How can I help you?')).toBeInTheDocument();
   });
 
+  it('should render font scale selector', () => {
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      ...mockChatStore,
+      activeConversationId: 'conv-1',
+      messages: mockMessages,
+    });
+
+    render(<ChatArea />);
+
+    const scaleSelect = screen.getByTestId('font-scale-select');
+    expect(scaleSelect).toBeInTheDocument();
+  });
+
+  it('should change font scale when selector is used', () => {
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      ...mockChatStore,
+      activeConversationId: 'conv-1',
+      messages: mockMessages,
+    });
+
+    render(<ChatArea />);
+
+    const changeButton = screen.getByText('Change Scale');
+    fireEvent.click(changeButton);
+
+    // Font scale should be saved to localStorage
+    expect(localStorage.setItem).toHaveBeenCalledWith('sepilot-chat-font-scale', '120');
+  });
+
   it('should mark last assistant message', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       ...mockChatStore,
