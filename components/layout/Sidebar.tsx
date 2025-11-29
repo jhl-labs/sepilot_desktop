@@ -133,17 +133,19 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
       </div>
 
       {/* Render mode-specific component */}
-      {appMode === 'chat' && (
-        <SidebarChat
-          onGalleryClick={onGalleryClick}
-          onConversationClick={onConversationClick}
-          onSettingsClick={() => setSettingsOpen(true)}
-        />
-      )}
-      {appMode === 'editor' && (
-        <SidebarEditor onSettingsClick={() => setSettingsOpen(true)} />
-      )}
-      {appMode === 'browser' && <SidebarBrowser />}
+      <div className="flex-1 min-h-0">
+        {appMode === 'chat' && (
+          <SidebarChat
+            onGalleryClick={onGalleryClick}
+            onConversationClick={onConversationClick}
+            onSettingsClick={() => setSettingsOpen(true)}
+          />
+        )}
+        {appMode === 'editor' && (
+          <SidebarEditor onSettingsClick={() => setSettingsOpen(true)} />
+        )}
+        {appMode === 'browser' && <SidebarBrowser />}
+      </div>
 
       {/* Settings Dialog */}
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
