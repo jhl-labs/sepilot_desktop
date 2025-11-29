@@ -45,7 +45,7 @@
     };
   }
 
-  // Fix: require is not defined
+  // Fix: require is not defined (AMD-compatible for Monaco Editor)
   if (typeof require === 'undefined') {
     window.require = function(id) {
       // Special cases for polyfilled modules
@@ -61,6 +61,42 @@
     };
     window.require.resolve = function(id) { return id; };
     window.require.cache = {};
+
+    // AMD-style config for Monaco Editor
+    window.require.config = function(config) {
+      console.log('[Polyfill] AMD require.config called with:', config);
+      // Store config but don't actually apply it - Monaco will use CDN
+      window.require._config = config;
+    };
+
+    // AMD-style define for Monaco Editor
+    if (typeof define === 'undefined') {
+      window.define = function(id, dependencies, factory) {
+        console.log('[Polyfill] AMD define called:', id);
+        // Minimal AMD define implementation
+        if (typeof id === 'function') {
+          // define(factory)
+          factory = id;
+          id = null;
+        } else if (Array.isArray(id)) {
+          // define(dependencies, factory)
+          factory = dependencies;
+          dependencies = id;
+          id = null;
+        }
+        // Execute factory if it's a function
+        if (typeof factory === 'function') {
+          try {
+            var module = { exports: {} };
+            var result = factory(window.require, module.exports, module);
+            return result || module.exports;
+          } catch (e) {
+            console.warn('[Polyfill] AMD define execution failed:', e);
+          }
+        }
+      };
+      window.define.amd = true;
+    }
   }
 
   // Fix: module is not defined
