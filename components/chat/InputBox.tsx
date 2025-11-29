@@ -16,6 +16,7 @@ import {
   Database,
   Wrench,
   Code,
+  Check,
 } from 'lucide-react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { initializeLLMClient } from '@/lib/llm/client';
@@ -1534,6 +1535,42 @@ export function InputBox() {
           </div>
         )}
         <div className="relative flex items-end gap-2 rounded-2xl border border-input bg-background shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 transition-all">
+          {/* Persona Autocomplete Dropdown */}
+          {showPersonaAutocomplete && filteredPersonas.length > 0 && (
+            <div
+              ref={autocompleteRef}
+              className="absolute bottom-full left-0 right-0 mb-2 max-h-[300px] overflow-y-auto rounded-lg border border-input bg-popover shadow-lg z-50"
+            >
+              <div className="p-2 space-y-1">
+                {filteredPersonas.map((persona, index) => (
+                  <button
+                    key={persona.id}
+                    onClick={() => {
+                      setActivePersona(persona.id);
+                      setInput('');
+                      setShowPersonaAutocomplete(false);
+                    }}
+                    className={`w-full flex items-center gap-3 p-3 rounded-md text-left transition-colors ${
+                      index === personaAutocompleteIndex
+                        ? 'bg-accent'
+                        : 'hover:bg-accent/50'
+                    }`}
+                  >
+                    <span className="text-2xl flex-shrink-0">{persona.avatar || '🤖'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{persona.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {persona.description}
+                      </div>
+                    </div>
+                    {activePersonaId === persona.id && (
+                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <Textarea
             ref={textareaRef}
             value={input}
