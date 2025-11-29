@@ -641,6 +641,8 @@ describe('경계 케이스 테스트', () => {
         deleteConversation: jest.fn(),
         updateConversationTitle: jest.fn(),
         searchConversations: jest.fn(),
+        appMode: 'chat',
+        setAppMode: jest.fn(),
       });
 
       render(<Sidebar />);

@@ -88,6 +88,8 @@ describe('사용자 플로우 테스트', () => {
       clearImageGenerationProgress: jest.fn(),
       enableImageGeneration: false,
       setEnableImageGeneration: jest.fn(),
+      appMode: 'chat',
+      setAppMode: jest.fn(),
     };
 
     (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
@@ -393,6 +395,8 @@ describe('사용자 플로우 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
+        appMode: 'chat',
+        setAppMode: jest.fn(),
       };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
@@ -400,7 +404,7 @@ describe('사용자 플로우 테스트', () => {
 
       render(<Sidebar />);
 
-      const searchInput = screen.getByPlaceholderText(/검색/i);
+      const searchInput = screen.getByPlaceholderText('대화 검색...');
       await user.type(searchInput, '검색어');
 
       // Sidebar는 내부적으로 debounce를 사용할 수 있으므로 waitFor 사용
