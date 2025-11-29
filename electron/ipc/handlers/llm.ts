@@ -608,30 +608,61 @@ Complete from the cursor (█). Return ONLY the completion code, no explanations
         logger.info('[Autocomplete] LLM response received:', {
           contentLength: response.content?.length || 0,
           contentPreview: response.content?.substring(0, 100),
+          rawContent: response.content,
         });
 
         // Parse and clean the response
         let completion = response.content.trim();
+        logger.info('[Autocomplete] After trim:', {
+          length: completion.length,
+          preview: completion.substring(0, 100),
+        });
 
         // Remove markdown code blocks
+        const beforeMarkdown = completion;
         completion = completion.replace(/```[\w]*\n?/g, '').replace(/```$/g, '');
+        logger.info('[Autocomplete] After markdown removal:', {
+          removed: beforeMarkdown !== completion,
+          length: completion.length,
+          preview: completion.substring(0, 100),
+        });
 
         // Remove leading/trailing quotes if present
+        const beforeQuotes = completion;
         if ((completion.startsWith('"') && completion.endsWith('"')) ||
             (completion.startsWith("'") && completion.endsWith("'"))) {
           completion = completion.slice(1, -1);
         }
+        logger.info('[Autocomplete] After quote removal:', {
+          removed: beforeQuotes !== completion,
+          length: completion.length,
+          preview: completion.substring(0, 100),
+        });
 
         // If completion starts with the current line, remove it
+        const beforeDuplicate = completion;
         if (currentLine && completion.startsWith(currentLine.trim())) {
           completion = completion.substring(currentLine.trim().length).trimStart();
         }
+        logger.info('[Autocomplete] After duplicate removal:', {
+          removed: beforeDuplicate !== completion,
+          currentLine,
+          length: completion.length,
+          preview: completion.substring(0, 100),
+        });
 
         // Limit to first 3 lines
+        const beforeLineLimit = completion;
         const completionLines = completion.split('\n');
         if (completionLines.length > 3) {
           completion = completionLines.slice(0, 3).join('\n');
         }
+        logger.info('[Autocomplete] After line limit:', {
+          limited: beforeLineLimit !== completion,
+          totalLines: completionLines.length,
+          length: completion.length,
+          preview: completion.substring(0, 100),
+        });
 
         logger.info('[Autocomplete] Final completion:', {
           length: completion.length,
