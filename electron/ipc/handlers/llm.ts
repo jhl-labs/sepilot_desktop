@@ -511,12 +511,9 @@ Return ONLY the title, without quotes or additional text.`,
         };
 
         // Initialize temporary client for autocomplete
-        const { createProvider } = await import('../../../lib/llm/client');
-        const provider = createProvider(providerConfig);
-
-        if (!provider) {
-          throw new Error('Failed to create autocomplete provider');
-        }
+        const { LLMClient } = await import('../../../lib/llm/client');
+        const autocompleteClient = new LLMClient(providerConfig);
+        const provider = autocompleteClient.getProvider();
 
         // Create prompt for autocomplete
         const messages: Message[] = [
