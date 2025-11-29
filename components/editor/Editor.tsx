@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import type monaco from 'monaco-editor';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
-import { X, Save, FileText } from 'lucide-react';
+import { X, Save, FileText, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { isElectron } from '@/lib/platform';
@@ -31,6 +31,7 @@ export function CodeEditor() {
 
   const { theme } = useTheme();
   const [isSaving, setIsSaving] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null);
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath);
@@ -62,16 +63,18 @@ export function CodeEditor() {
     }
   };
 
-  const handleEditorAction = async (
+  const handleEditorAction = useCallback(async (
     action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve',
     selectedText: string,
     targetLanguage?: string
   ) => {
     if (!window.electronAPI?.llm) {
-      console.error('LLM API not available');
+      console.error('LLM API is not available. Please check your settings.');
+      alert('LLM API is not available. Please check your settings.');
       return;
     }
 
+    setIsProcessing(true);
     try {
       const result = await window.electronAPI.llm.editorAction({
         action,
@@ -92,15 +95,20 @@ export function CodeEditor() {
                 forceMoveMarkers: true,
               },
             ]);
+            console.log(`${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully`);
           }
         }
       } else {
         console.error('Editor action failed:', result.error);
+        alert(`Failed: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Editor action error:', error);
+      alert(`Error: ${error instanceof Error ? error.message : 'An unexpected error occurred'}`);
+    } finally {
+      setIsProcessing(false);
     }
-  };
+  }, [editor, activeFile?.language]);
 
   const handleCloseFile = (path: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -129,6 +137,67 @@ export function CodeEditor() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeFile]);
+
+  // Register inline completion provider for autocomplete
+  useEffect(() => {
+    if (!editor) return;
+
+    const model = editor.getModel();
+    if (!model) return;
+
+    // Register inline completion provider
+    const { monaco } = editor as any;
+    if (!monaco) return;
+
+    const provider = monaco.languages.registerInlineCompletionsProvider(
+      model.getLanguageId(),
+      {
+        provideInlineCompletions: async (model: any, position: any) => {
+          // Check if autocomplete is enabled
+          if (!window.electronAPI?.llm?.editorAutocomplete) {
+            return { items: [] };
+          }
+
+          try {
+            const code = model.getValue();
+            const offset = model.getOffsetAt(position);
+            const language = model.getLanguageId();
+
+            const result = await window.electronAPI.llm.editorAutocomplete({
+              code,
+              cursorPosition: offset,
+              language,
+            });
+
+            if (result.success && result.data?.completion) {
+              return {
+                items: [
+                  {
+                    insertText: result.data.completion,
+                    range: {
+                      startLineNumber: position.lineNumber,
+                      startColumn: position.column,
+                      endLineNumber: position.lineNumber,
+                      endColumn: position.column,
+                    },
+                  },
+                ],
+              };
+            }
+          } catch (error) {
+            console.error('Autocomplete error:', error);
+          }
+
+          return { items: [] };
+        },
+        freeInlineCompletions: () => {},
+      }
+    );
+
+    return () => {
+      provider.dispose();
+    };
+  }, [editor]);
 
   // Register Monaco context menu actions
   useEffect(() => {
@@ -310,6 +379,12 @@ export function CodeEditor() {
             {activeFile.path}
           </div>
           <div className="flex items-center gap-2">
+            {isProcessing && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Processing...</span>
+              </div>
+            )}
             {activeFile.isDirty && (
               <span className="text-xs text-orange-500">Unsaved changes</span>
             )}
