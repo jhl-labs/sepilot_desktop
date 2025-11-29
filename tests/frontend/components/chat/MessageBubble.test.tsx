@@ -574,4 +574,247 @@ describe('MessageBubble', () => {
       expect(screen.getByTestId('markdown-renderer')).toBeInTheDocument();
     });
   });
+
+  describe('Auto-detect file changes from tool_calls', () => {
+    beforeEach(() => {
+      enableElectronMode();
+    });
+
+    afterEach(() => {
+      disableElectronMode();
+    });
+
+    it('should auto-detect file changes from file_edit tool', async () => {
+      const messageWithToolCalls: Message = {
+        ...assistantMessage,
+        tool_calls: [
+          {
+            id: 'tool-1',
+            name: 'file_edit',
+            arguments: {
+              path: '/test/file.ts',
+              old_str: 'old text',
+              new_str: 'new text',
+            },
+          },
+        ],
+      };
+
+      (mockElectronAPI.file.read as jest.Mock).mockResolvedValue('This is old text content');
+
+      render(<MessageBubble message={messageWithToolCalls} />);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.file.read).toHaveBeenCalledWith('/test/file.ts');
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/파일 변경/)).toBeInTheDocument();
+        expect(screen.getByTestId('code-diff-viewer')).toBeInTheDocument();
+      });
+    });
+
+    it('should auto-detect file changes from file_write tool', async () => {
+      const messageWithToolCalls: Message = {
+        ...assistantMessage,
+        tool_calls: [
+          {
+            id: 'tool-1',
+            name: 'file_write',
+            arguments: {
+              path: '/test/newfile.ts',
+              content: 'New file content',
+            },
+          },
+        ],
+      };
+
+      (mockElectronAPI.file.read as jest.Mock).mockRejectedValue(new Error('File not found'));
+
+      render(<MessageBubble message={messageWithToolCalls} />);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.file.read).toHaveBeenCalledWith('/test/newfile.ts');
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/파일 변경/)).toBeInTheDocument();
+      });
+    });
+
+    it('should handle multiple file tool_calls', async () => {
+      const messageWithMultipleTools: Message = {
+        ...assistantMessage,
+        tool_calls: [
+          {
+            id: 'tool-1',
+            name: 'file_edit',
+            arguments: {
+              path: '/test/file1.ts',
+              old_str: 'old',
+              new_str: 'new',
+            },
+          },
+          {
+            id: 'tool-2',
+            name: 'file_write',
+            arguments: {
+              path: '/test/file2.ts',
+              content: 'content',
+            },
+          },
+        ],
+      };
+
+      (mockElectronAPI.file.read as jest.Mock).mockResolvedValue('old content');
+
+      render(<MessageBubble message={messageWithMultipleTools} />);
+
+      await waitFor(() => {
+        const diffViewers = screen.getAllByTestId('code-diff-viewer');
+        expect(diffViewers.length).toBe(2);
+      });
+    });
+
+    it('should skip non-file-edit tools', async () => {
+      const messageWithBashTool: Message = {
+        ...assistantMessage,
+        tool_calls: [
+          {
+            id: 'tool-1',
+            name: 'bash',
+            arguments: {
+              command: 'ls -la',
+            },
+          },
+        ],
+      };
+
+      render(<MessageBubble message={messageWithBashTool} />);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.file.read).not.toHaveBeenCalled();
+      });
+    });
+
+    it('should skip tool_calls without path', async () => {
+      const messageWithInvalidTool: Message = {
+        ...assistantMessage,
+        tool_calls: [
+          {
+            id: 'tool-1',
+            name: 'file_edit',
+            arguments: {
+              // Missing path
+              old_str: 'old',
+              new_str: 'new',
+            },
+          },
+        ],
+      };
+
+      render(<MessageBubble message={messageWithInvalidTool} />);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.file.read).not.toHaveBeenCalled();
+      });
+    });
+
+    it('should not auto-detect in non-Electron environment', () => {
+      disableElectronMode();
+
+      const messageWithToolCalls: Message = {
+        ...assistantMessage,
+        tool_calls: [
+          {
+            id: 'tool-1',
+            name: 'file_edit',
+            arguments: {
+              path: '/test/file.ts',
+              old_str: 'old',
+              new_str: 'new',
+            },
+          },
+        ],
+      };
+
+      render(<MessageBubble message={messageWithToolCalls} />);
+
+      expect(mockElectronAPI.file.read).not.toHaveBeenCalled();
+    });
+
+    it('should handle file read errors gracefully', async () => {
+      const messageWithToolCalls: Message = {
+        ...assistantMessage,
+        tool_calls: [
+          {
+            id: 'tool-1',
+            name: 'file_edit',
+            arguments: {
+              path: '/test/file.ts',
+              old_str: 'old',
+              new_str: 'new',
+            },
+          },
+        ],
+      };
+
+      // Mock file.read to throw an error during the edit content processing
+      (mockElectronAPI.file.read as jest.Mock).mockImplementation(() => {
+        throw new Error('Permission denied');
+      });
+
+      render(<MessageBubble message={messageWithToolCalls} />);
+
+      // Component should not crash even when file read fails
+      await waitFor(() => {
+        expect(screen.getByTestId('markdown-renderer')).toBeInTheDocument();
+      });
+    });
+
+    it('should determine changeType as created when oldContent is empty', async () => {
+      const messageWithToolCalls: Message = {
+        ...assistantMessage,
+        tool_calls: [
+          {
+            id: 'tool-1',
+            name: 'file_write',
+            arguments: {
+              path: '/test/newfile.ts',
+              content: 'New content',
+            },
+          },
+        ],
+      };
+
+      (mockElectronAPI.file.read as jest.Mock).mockResolvedValue('');
+
+      render(<MessageBubble message={messageWithToolCalls} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/파일 변경/)).toBeInTheDocument();
+      });
+    });
+
+    it('should not show auto-detected changes when user message', async () => {
+      const userMessageWithToolCalls: Message = {
+        ...userMessage,
+        tool_calls: [
+          {
+            id: 'tool-1',
+            name: 'file_edit',
+            arguments: {
+              path: '/test/file.ts',
+              old_str: 'old',
+              new_str: 'new',
+            },
+          },
+        ],
+      };
+
+      render(<MessageBubble message={userMessageWithToolCalls} />);
+
+      expect(mockElectronAPI.file.read).not.toHaveBeenCalled();
+    });
+  });
 });
