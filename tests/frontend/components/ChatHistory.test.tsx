@@ -493,4 +493,245 @@ describe('ChatHistory', () => {
     // Should not call search for whitespace
     expect(mockChatStore.searchConversations).toHaveBeenCalledTimes(1);
   });
+
+  describe('Persona 기능', () => {
+    const mockPersonas = [
+      { id: 'p1', name: '번역가', avatar: '🌐', systemPrompt: 'Translator' },
+      { id: 'p2', name: '개발자', avatar: '👨‍💻', systemPrompt: 'Developer' },
+    ];
+
+    const mockConversationsWithPersona: Conversation[] = [
+      { id: 'conv-1', title: 'First Chat', created_at: Date.now(), updated_at: Date.now(), personaId: 'p1' },
+      { id: 'conv-2', title: 'Second Chat', created_at: Date.now(), updated_at: Date.now() },
+    ];
+
+    beforeEach(() => {
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        ...mockChatStore,
+        conversations: mockConversationsWithPersona,
+        personas: mockPersonas,
+        updateConversationPersona: jest.fn(),
+      });
+    });
+
+    it('should display persona avatar for conversation with persona', () => {
+      render(<ChatHistory />);
+
+      expect(screen.getByText('🌐')).toBeInTheDocument();
+    });
+
+    it('should not display persona avatar for conversation without persona', () => {
+      const { container } = render(<ChatHistory />);
+
+      const secondConv = screen.getByText('Second Chat').closest('div');
+      const avatar = secondConv?.querySelector('span.text-sm.flex-shrink-0');
+
+      // Second Chat should not have persona avatar in its button
+      expect(avatar).toBeFalsy();
+    });
+
+    it('should open persona dialog when Persona menu item clicked', async () => {
+      render(<ChatHistory />);
+
+      const firstConv = screen.getByText('First Chat').closest('div');
+      const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+
+      if (menuButton) {
+        fireEvent.click(menuButton);
+
+        await waitFor(() => {
+          const personaMenuItem = screen.getByText('Persona');
+          expect(personaMenuItem).toBeInTheDocument();
+          fireEvent.click(personaMenuItem);
+        });
+
+        await waitFor(() => {
+          expect(screen.getByText('Persona 선택')).toBeInTheDocument();
+          expect(screen.getByText('이 대화에 적용할 페르소나를 선택하세요')).toBeInTheDocument();
+        });
+      }
+    });
+
+    it('should display persona options in dialog', async () => {
+      render(<ChatHistory />);
+
+      const firstConv = screen.getByText('First Chat').closest('div');
+      const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+
+      if (menuButton) {
+        fireEvent.click(menuButton);
+
+        await waitFor(() => {
+          const personaMenuItem = screen.getByText('Persona');
+          fireEvent.click(personaMenuItem);
+        });
+
+        await waitFor(() => {
+          expect(screen.getByText('없음')).toBeInTheDocument();
+          expect(screen.getByText('번역가')).toBeInTheDocument();
+          expect(screen.getByText('개발자')).toBeInTheDocument();
+        });
+      }
+    });
+
+    it('should show check mark for current persona', async () => {
+      render(<ChatHistory />);
+
+      const firstConv = screen.getByText('First Chat').closest('div');
+      const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+
+      if (menuButton) {
+        fireEvent.click(menuButton);
+
+        await waitFor(() => {
+          const personaMenuItem = screen.getByText('Persona');
+          fireEvent.click(personaMenuItem);
+        });
+
+        await waitFor(() => {
+          // First Chat has personaId='p1', so 번역가 should have check mark
+          const translatorButton = screen.getByText('번역가').closest('button');
+          expect(translatorButton).toHaveClass('bg-accent');
+        });
+      }
+    });
+
+    it('should show check mark for "없음" when conversation has no persona', async () => {
+      render(<ChatHistory />);
+
+      const secondConv = screen.getByText('Second Chat').closest('div');
+      const menuButton = secondConv?.querySelector('button[class*="opacity-0"]');
+
+      if (menuButton) {
+        fireEvent.click(menuButton);
+
+        await waitFor(() => {
+          const personaMenuItem = screen.getByText('Persona');
+          fireEvent.click(personaMenuItem);
+        });
+
+        await waitFor(() => {
+          // Second Chat has no personaId, so "없음" should have check mark
+          const noneButton = screen.getByText('없음').closest('button');
+          expect(noneButton).toHaveClass('bg-accent');
+        });
+      }
+    });
+
+    it('should call updateConversationPersona when persona selected', async () => {
+      const mockUpdateConversationPersona = jest.fn();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        ...mockChatStore,
+        conversations: mockConversationsWithPersona,
+        personas: mockPersonas,
+        updateConversationPersona: mockUpdateConversationPersona,
+      });
+
+      render(<ChatHistory />);
+
+      const firstConv = screen.getByText('First Chat').closest('div');
+      const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+
+      if (menuButton) {
+        fireEvent.click(menuButton);
+
+        await waitFor(() => {
+          const personaMenuItem = screen.getByText('Persona');
+          fireEvent.click(personaMenuItem);
+        });
+
+        await waitFor(() => {
+          const developerButton = screen.getByText('개발자');
+          fireEvent.click(developerButton);
+        });
+
+        await waitFor(() => {
+          expect(mockUpdateConversationPersona).toHaveBeenCalledWith('conv-1', 'p2');
+        });
+      }
+    });
+
+    it('should call updateConversationPersona with null when "없음" selected', async () => {
+      const mockUpdateConversationPersona = jest.fn();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        ...mockChatStore,
+        conversations: mockConversationsWithPersona,
+        personas: mockPersonas,
+        updateConversationPersona: mockUpdateConversationPersona,
+      });
+
+      render(<ChatHistory />);
+
+      const firstConv = screen.getByText('First Chat').closest('div');
+      const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+
+      if (menuButton) {
+        fireEvent.click(menuButton);
+
+        await waitFor(() => {
+          const personaMenuItem = screen.getByText('Persona');
+          fireEvent.click(personaMenuItem);
+        });
+
+        await waitFor(() => {
+          const noneButton = screen.getByText('없음');
+          fireEvent.click(noneButton);
+        });
+
+        await waitFor(() => {
+          expect(mockUpdateConversationPersona).toHaveBeenCalledWith('conv-1', null);
+        });
+      }
+    });
+
+    it('should close dialog after persona selection', async () => {
+      render(<ChatHistory />);
+
+      const firstConv = screen.getByText('First Chat').closest('div');
+      const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+
+      if (menuButton) {
+        fireEvent.click(menuButton);
+
+        await waitFor(() => {
+          const personaMenuItem = screen.getByText('Persona');
+          fireEvent.click(personaMenuItem);
+        });
+
+        await waitFor(() => {
+          expect(screen.getByText('Persona 선택')).toBeInTheDocument();
+        });
+
+        const developerButton = screen.getByText('개발자');
+        fireEvent.click(developerButton);
+
+        await waitFor(() => {
+          expect(screen.queryByText('Persona 선택')).not.toBeInTheDocument();
+        });
+      }
+    });
+  });
+
+  describe('Edit Input Focus', () => {
+    it('should focus and select input when entering edit mode', async () => {
+      render(<ChatHistory />);
+
+      const firstConv = screen.getByText('First Chat').closest('div');
+      const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+
+      if (menuButton) {
+        fireEvent.click(menuButton);
+
+        await waitFor(() => {
+          const editButton = screen.getByText('이름 변경');
+          fireEvent.click(editButton);
+        });
+
+        await waitFor(() => {
+          const input = screen.getByDisplayValue('First Chat') as HTMLInputElement;
+          expect(document.activeElement).toBe(input);
+        });
+      }
+    });
+  });
 });
