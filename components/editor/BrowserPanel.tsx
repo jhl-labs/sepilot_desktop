@@ -239,7 +239,7 @@ export function BrowserPanel() {
       resizeObserver.disconnect();
       window.removeEventListener('resize', updateBounds);
     };
-  }, [appMode, activeEditorTab]); // appMode나 activeEditorTab이 변경될 때마다 bounds 재설정
+  }, [appMode, activeEditorTab, activeTabId]); // appMode, activeEditorTab, activeTabId 변경 시 bounds 재설정
 
   if (!isElectron()) {
     return (
