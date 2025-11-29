@@ -130,6 +130,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       rerender(<FileExplorer />);
@@ -154,6 +155,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       rerender(<FileExplorer />);
@@ -178,6 +180,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       rerender(<FileExplorer />);
@@ -193,6 +196,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -228,6 +232,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
     });
 
@@ -275,6 +280,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
     });
 
@@ -421,6 +427,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: '/test/active.ts',
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -459,6 +466,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -493,6 +501,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -526,6 +535,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -544,6 +554,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -564,6 +575,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -590,6 +602,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
       });
     });
 
