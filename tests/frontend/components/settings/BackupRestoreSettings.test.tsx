@@ -146,7 +146,6 @@ describe('BackupRestoreSettings', () => {
 
     it('should initiate export when export button is clicked', async () => {
       const user = userEvent.setup();
-      (isElectron as jest.Mock).mockReturnValue(true);
 
       const mockLoadConversations = jest.fn().mockResolvedValue({
         success: true,
@@ -178,20 +177,6 @@ describe('BackupRestoreSettings', () => {
         },
       };
 
-      // Mock document methods
-      const mockClick = jest.fn();
-      const mockCreateElement = jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-        if (tag === 'a') {
-          const a = document.createElement('a') as HTMLAnchorElement;
-          a.click = mockClick;
-          return a;
-        }
-        return document.createElement(tag);
-      });
-
-      const mockCreateObjectURL = jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
-      const mockRevokeObjectURL = jest.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-
       render(<BackupRestoreSettings />);
 
       const exportButton = screen.getByRole('button', { name: /XML로 내보내기/ });
@@ -204,15 +189,10 @@ describe('BackupRestoreSettings', () => {
       await waitFor(() => {
         expect(screen.getByText(/2개의 대화와 2개의 메시지를 내보냈습니다/)).toBeInTheDocument();
       });
-
-      mockCreateElement.mockRestore();
-      mockCreateObjectURL.mockRestore();
-      mockRevokeObjectURL.mockRestore();
     });
 
     it('should show error when export fails', async () => {
       const user = userEvent.setup();
-      (isElectron as jest.Mock).mockReturnValue(true);
 
       const mockLoadConversations = jest.fn().mockResolvedValue({
         success: false,
@@ -241,7 +221,6 @@ describe('BackupRestoreSettings', () => {
 
     it('should disable buttons during export', async () => {
       const user = userEvent.setup();
-      (isElectron as jest.Mock).mockReturnValue(true);
 
       let resolveExport: any;
       const mockLoadConversations = jest.fn().mockImplementation(() => {
@@ -292,29 +271,8 @@ describe('BackupRestoreSettings', () => {
       });
     });
 
-    it('should create file input when import button is clicked', async () => {
+    it('should show info message when import button is clicked', async () => {
       const user = userEvent.setup();
-      (isElectron as jest.Mock).mockReturnValue(true);
-
-      (window as any).electronAPI = {
-        chat: {
-          loadConversations: jest.fn(),
-          loadMessages: jest.fn(),
-        },
-        config: {
-          load: jest.fn(),
-        },
-      };
-
-      const mockClick = jest.fn();
-      const mockCreateElement = jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-        if (tag === 'input') {
-          const input = document.createElement('input') as HTMLInputElement;
-          input.click = mockClick;
-          return input;
-        }
-        return document.createElement(tag);
-      });
 
       render(<BackupRestoreSettings />);
 
@@ -322,17 +280,14 @@ describe('BackupRestoreSettings', () => {
       await user.click(importButton);
 
       await waitFor(() => {
-        expect(mockClick).toHaveBeenCalled();
+        expect(screen.getByText('백업 파일을 선택하세요...')).toBeInTheDocument();
       });
-
-      mockCreateElement.mockRestore();
     });
   });
 
   describe('Status messages', () => {
     it('should show info status message', async () => {
       const user = userEvent.setup();
-      (isElectron as jest.Mock).mockReturnValue(true);
 
       let resolveExport: any;
       const mockLoadConversations = jest.fn().mockImplementation(() => {
@@ -364,9 +319,8 @@ describe('BackupRestoreSettings', () => {
       resolveExport({ success: true, data: [] });
     });
 
-    it('should show success status message icon', async () => {
+    it('should show success status message', async () => {
       const user = userEvent.setup();
-      (isElectron as jest.Mock).mockReturnValue(true);
 
       const mockLoadConversations = jest.fn().mockResolvedValue({
         success: true,
@@ -393,20 +347,6 @@ describe('BackupRestoreSettings', () => {
         },
       };
 
-      // Mock document methods
-      const mockClick = jest.fn();
-      const mockCreateElement = jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-        if (tag === 'a') {
-          const a = document.createElement('a') as HTMLAnchorElement;
-          a.click = mockClick;
-          return a;
-        }
-        return document.createElement(tag);
-      });
-
-      const mockCreateObjectURL = jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
-      const mockRevokeObjectURL = jest.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-
       render(<BackupRestoreSettings />);
 
       const exportButton = screen.getByRole('button', { name: /XML로 내보내기/ });
@@ -415,15 +355,10 @@ describe('BackupRestoreSettings', () => {
       await waitFor(() => {
         expect(screen.getByText(/0개의 대화와 0개의 메시지를 내보냈습니다/)).toBeInTheDocument();
       });
-
-      mockCreateElement.mockRestore();
-      mockCreateObjectURL.mockRestore();
-      mockRevokeObjectURL.mockRestore();
     });
 
-    it('should show error status message icon', async () => {
+    it('should show error status message', async () => {
       const user = userEvent.setup();
-      (isElectron as jest.Mock).mockReturnValue(true);
 
       const mockLoadConversations = jest.fn().mockRejectedValue(new Error('Network error'));
 
@@ -451,7 +386,6 @@ describe('BackupRestoreSettings', () => {
   describe('Loading states', () => {
     it('should show exporting state on button', async () => {
       const user = userEvent.setup();
-      (isElectron as jest.Mock).mockReturnValue(true);
 
       let resolveExport: any;
       const mockLoadConversations = jest.fn().mockImplementation(() => {
