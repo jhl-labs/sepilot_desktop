@@ -417,4 +417,269 @@ describe('BackupRestoreSettings', () => {
       resolveExport({ success: true, data: [] });
     });
   });
+
+  describe('XML generation (convertToXML)', () => {
+    it('should generate valid XML with conversations and messages', async () => {
+      const user = userEvent.setup();
+
+      const mockConversations = [
+        { id: 'conv1', title: 'Test & Conv', created_at: 1234567890, updated_at: 1234567891 },
+      ];
+
+      const mockMessages = [
+        {
+          id: 'msg1',
+          conversation_id: 'conv1',
+          role: 'user',
+          content: 'Hello <world>',
+          created_at: 1234567890,
+        },
+      ];
+
+      const mockLoadConversations = jest.fn().mockResolvedValue({
+        success: true,
+        data: mockConversations,
+      });
+
+      const mockLoadMessages = jest.fn().mockResolvedValue({
+        success: true,
+        data: mockMessages,
+      });
+
+      const mockConfigLoad = jest.fn().mockResolvedValue({
+        success: false,
+      });
+
+      // Mock Blob and URL
+      let capturedBlob: Blob | null = null;
+      global.Blob = jest.fn((content, options) => {
+        capturedBlob = { content, options } as any;
+        return capturedBlob as any;
+      }) as any;
+
+      (window as any).electronAPI = {
+        chat: {
+          loadConversations: mockLoadConversations,
+          loadMessages: mockLoadMessages,
+        },
+        config: {
+          load: mockConfigLoad,
+        },
+      };
+
+      render(<BackupRestoreSettings />);
+
+      const exportButton = screen.getByRole('button', { name: /XML로 내보내기/ });
+      await user.click(exportButton);
+
+      await waitFor(() => {
+        expect(capturedBlob).not.toBeNull();
+      });
+
+      // Check that XML was generated with proper escaping
+      const xmlContent = (capturedBlob as any).content[0];
+      expect(xmlContent).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+      expect(xmlContent).toContain('<sepilot-backup>');
+      expect(xmlContent).toContain('<version>1.0</version>');
+      expect(xmlContent).toContain('<id>conv1</id>');
+      expect(xmlContent).toContain('<title>Test &amp; Conv</title>');
+      expect(xmlContent).toContain('<content>Hello &lt;world&gt;</content>');
+    });
+
+    it('should include images in XML when present', async () => {
+      const user = userEvent.setup();
+
+      const mockConversations = [
+        { id: 'conv1', title: 'Test Conv', created_at: 1234567890, updated_at: 1234567891 },
+      ];
+
+      const mockMessages = [
+        {
+          id: 'msg1',
+          conversation_id: 'conv1',
+          role: 'user',
+          content: 'Image message',
+          created_at: 1234567890,
+          images: [
+            {
+              id: 'img1',
+              filename: 'test.png',
+              mimeType: 'image/png',
+              base64: 'base64data',
+            },
+          ],
+        },
+      ];
+
+      const mockLoadConversations = jest.fn().mockResolvedValue({
+        success: true,
+        data: mockConversations,
+      });
+
+      const mockLoadMessages = jest.fn().mockResolvedValue({
+        success: true,
+        data: mockMessages,
+      });
+
+      const mockConfigLoad = jest.fn().mockResolvedValue({
+        success: false,
+      });
+
+      let capturedBlob: Blob | null = null;
+      global.Blob = jest.fn((content, options) => {
+        capturedBlob = { content, options } as any;
+        return capturedBlob as any;
+      }) as any;
+
+      (window as any).electronAPI = {
+        chat: {
+          loadConversations: mockLoadConversations,
+          loadMessages: mockLoadMessages,
+        },
+        config: {
+          load: mockConfigLoad,
+        },
+      };
+
+      render(<BackupRestoreSettings />);
+
+      const exportButton = screen.getByRole('button', { name: /XML로 내보내기/ });
+      await user.click(exportButton);
+
+      await waitFor(() => {
+        expect(capturedBlob).not.toBeNull();
+      });
+
+      const xmlContent = (capturedBlob as any).content[0];
+      expect(xmlContent).toContain('<images>');
+      expect(xmlContent).toContain('<image>');
+      expect(xmlContent).toContain('<filename>test.png</filename>');
+      expect(xmlContent).toContain('<mime-type>image/png</mime-type>');
+      expect(xmlContent).toContain('<base64>base64data</base64>');
+    });
+
+    it('should include referenced documents in XML when present', async () => {
+      const user = userEvent.setup();
+
+      const mockConversations = [
+        { id: 'conv1', title: 'Test Conv', created_at: 1234567890, updated_at: 1234567891 },
+      ];
+
+      const mockMessages = [
+        {
+          id: 'msg1',
+          conversation_id: 'conv1',
+          role: 'user',
+          content: 'Doc message',
+          created_at: 1234567890,
+          referenced_documents: [
+            {
+              id: 'doc1',
+              title: 'Test Doc',
+              source: 'github',
+              content: 'Document content',
+            },
+          ],
+        },
+      ];
+
+      const mockLoadConversations = jest.fn().mockResolvedValue({
+        success: true,
+        data: mockConversations,
+      });
+
+      const mockLoadMessages = jest.fn().mockResolvedValue({
+        success: true,
+        data: mockMessages,
+      });
+
+      const mockConfigLoad = jest.fn().mockResolvedValue({
+        success: false,
+      });
+
+      let capturedBlob: Blob | null = null;
+      global.Blob = jest.fn((content, options) => {
+        capturedBlob = { content, options } as any;
+        return capturedBlob as any;
+      }) as any;
+
+      (window as any).electronAPI = {
+        chat: {
+          loadConversations: mockLoadConversations,
+          loadMessages: mockLoadMessages,
+        },
+        config: {
+          load: mockConfigLoad,
+        },
+      };
+
+      render(<BackupRestoreSettings />);
+
+      const exportButton = screen.getByRole('button', { name: /XML로 내보내기/ });
+      await user.click(exportButton);
+
+      await waitFor(() => {
+        expect(capturedBlob).not.toBeNull();
+      });
+
+      const xmlContent = (capturedBlob as any).content[0];
+      expect(xmlContent).toContain('<referenced-documents>');
+      expect(xmlContent).toContain('<document>');
+      expect(xmlContent).toContain('<title>Test Doc</title>');
+      expect(xmlContent).toContain('<source>github</source>');
+    });
+
+    it('should include settings in XML when present', async () => {
+      const user = userEvent.setup();
+
+      const mockSettings = { theme: 'dark', fontSize: 14 };
+
+      const mockLoadConversations = jest.fn().mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      const mockLoadMessages = jest.fn().mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      const mockConfigLoad = jest.fn().mockResolvedValue({
+        success: true,
+        data: mockSettings,
+      });
+
+      let capturedBlob: Blob | null = null;
+      global.Blob = jest.fn((content, options) => {
+        capturedBlob = { content, options } as any;
+        return capturedBlob as any;
+      }) as any;
+
+      (window as any).electronAPI = {
+        chat: {
+          loadConversations: mockLoadConversations,
+          loadMessages: mockLoadMessages,
+        },
+        config: {
+          load: mockConfigLoad,
+        },
+      };
+
+      render(<BackupRestoreSettings />);
+
+      const exportButton = screen.getByRole('button', { name: /XML로 내보내기/ });
+      await user.click(exportButton);
+
+      await waitFor(() => {
+        expect(capturedBlob).not.toBeNull();
+      });
+
+      const xmlContent = (capturedBlob as any).content[0];
+      expect(xmlContent).toContain('<settings>');
+      expect(xmlContent).toContain('<![CDATA[');
+      expect(xmlContent).toContain('"theme"');
+      expect(xmlContent).toContain('"dark"');
+    });
+  });
+
 });
