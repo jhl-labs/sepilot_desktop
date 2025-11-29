@@ -131,6 +131,7 @@ export const mockElectronAPI = {
     getSnapshots: jest.fn(),
     deleteSnapshot: jest.fn(),
     openSnapshot: jest.fn(),
+    getBrowserSettings: jest.fn(),
   },
   on: jest.fn(),
   removeListener: jest.fn(),
