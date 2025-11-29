@@ -134,29 +134,38 @@ export function InputBox() {
       }
 
       try {
-        // Get MCP tools
-        const mcpResult = await window.electronAPI.mcp.getAllTools();
-        const mcpTools: ToolInfo[] = mcpResult.success && mcpResult.data
-          ? mcpResult.data.map((tool: any) => ({
+        // Get all tools from ToolRegistry
+        const allToolsResult = await window.electronAPI.mcp.getAllTools();
+        const allTools: ToolInfo[] = allToolsResult.success && allToolsResult.data
+          ? allToolsResult.data.map((tool: any) => ({
               name: tool.name,
               description: tool.description,
               serverName: tool.serverName,
             }))
           : [];
 
-        // Chat-specific builtin tools (Coding Agent)
-        // Exclude Browser Agent tools (browser_*) and Editor Agent tools (get_file_context, search_similar_code, get_documentation)
-        const builtinTools: ToolInfo[] = [
-          { name: 'file_read', description: 'Read file contents from the filesystem', serverName: 'builtin' },
-          { name: 'file_write', description: 'Write content to a file (overwrites existing content)', serverName: 'builtin' },
-          { name: 'file_edit', description: 'Edit a file by replacing old text with new text', serverName: 'builtin' },
-          { name: 'file_list', description: 'List files in a directory', serverName: 'builtin' },
-          { name: 'command_execute', description: 'Execute shell commands (npm, git, etc.)', serverName: 'builtin' },
-          { name: 'grep_search', description: 'Search for patterns in files using ripgrep', serverName: 'builtin' },
-        ];
+        // Chat-specific tool names (Coding Agent only)
+        const chatToolNames = new Set([
+          'file_read',
+          'file_write',
+          'file_edit',
+          'file_list',
+          'command_execute',
+          'grep_search',
+        ]);
 
-        // Combine all tools
-        setTools([...mcpTools, ...builtinTools]);
+        // Filter: MCP tools + Chat-specific builtin tools only
+        // Exclude Browser Agent tools (browser_*) and Editor Agent tools
+        const filteredTools = allTools.filter((tool) => {
+          // Include all MCP tools (non-builtin)
+          if (tool.serverName !== 'builtin') {
+            return true;
+          }
+          // Include only Chat-specific builtin tools
+          return chatToolNames.has(tool.name);
+        });
+
+        setTools(filteredTools);
       } catch (error) {
         console.error('[InputBox] Failed to load tools:', error);
       }
