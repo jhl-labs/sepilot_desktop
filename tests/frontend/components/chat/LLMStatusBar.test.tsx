@@ -331,4 +331,40 @@ describe('LLMStatusBar', () => {
       expect(screen.queryByText(/tools/)).not.toBeInTheDocument();
     });
   });
+
+  describe('엣지 케이스', () => {
+    it('llmConfig가 null일 때 편집 시도해도 아무 일도 일어나지 않아야 함', async () => {
+      const user = userEvent.setup();
+      const mockOnConfigUpdate = jest.fn();
+
+      render(
+        <LLMStatusBar
+          isStreaming={false}
+          llmConfig={null}
+          messages={[]}
+          input=""
+          mounted={true}
+          onConfigUpdate={mockOnConfigUpdate}
+        />
+      );
+
+      // null config일 때는 편집 가능한 요소가 없음
+      expect(screen.getByText('모델 설정 필요')).toBeInTheDocument();
+      expect(mockOnConfigUpdate).not.toHaveBeenCalled();
+    });
+
+    it('mounted가 false일 때도 렌더링되어야 함', () => {
+      render(
+        <LLMStatusBar
+          isStreaming={false}
+          llmConfig={defaultConfig}
+          messages={[]}
+          input=""
+          mounted={false}
+        />
+      );
+
+      expect(screen.getByText('gpt-4')).toBeInTheDocument();
+    });
+  });
 });
