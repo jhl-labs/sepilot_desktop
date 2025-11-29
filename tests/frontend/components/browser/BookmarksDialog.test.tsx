@@ -420,4 +420,383 @@ describe('BookmarksDialog', () => {
       expect(screen.queryByText('Test')).not.toBeInTheDocument(); // Test is in folder, not in "전체"
     });
   });
+
+  describe('에러 처리', () => {
+    beforeEach(() => {
+      window.alert = jest.fn();
+    });
+
+    it('should handle addFolder error (success: false)', async () => {
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.addBookmarkFolder as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Add folder failed',
+      });
+
+      const { container } = render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('폴더')).toBeInTheDocument();
+      });
+
+      // Click folder add button
+      const plusButtons = container.querySelectorAll('button');
+      const folderAddButton = Array.from(plusButtons).find((btn) =>
+        btn.parentElement?.textContent?.includes('폴더')
+      );
+      fireEvent.click(folderAddButton as HTMLElement);
+
+      const input = await screen.findByPlaceholderText('폴더 이름');
+      fireEvent.change(input, { target: { value: 'Test Folder' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('폴더 추가 실패: Add folder failed');
+      });
+    });
+
+    it('should handle addFolder exception', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.addBookmarkFolder as jest.Mock).mockRejectedValue(
+        new Error('Network error')
+      );
+
+      const { container } = render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('폴더')).toBeInTheDocument();
+      });
+
+      const plusButtons = container.querySelectorAll('button');
+      const folderAddButton = Array.from(plusButtons).find((btn) =>
+        btn.parentElement?.textContent?.includes('폴더')
+      );
+      fireEvent.click(folderAddButton as HTMLElement);
+
+      const input = await screen.findByPlaceholderText('폴더 이름');
+      fireEvent.change(input, { target: { value: 'Test Folder' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('폴더 추가 중 오류가 발생했습니다.');
+        expect(consoleSpy).toHaveBeenCalled();
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle deleteFolder error (success: false)', async () => {
+      const mockFolders = [{ id: 'f1', name: 'Work', createdAt: Date.now() }];
+
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: mockFolders,
+      });
+      (mockElectronAPI.browserView.deleteBookmarkFolder as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Delete folder failed',
+      });
+
+      window.confirm = jest.fn(() => true);
+
+      const { container } = render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Work')).toBeInTheDocument();
+      });
+
+      // Find delete button (last button in folder item with Trash icon)
+      const allButtons = container.querySelectorAll('button');
+      // Find button that contains Trash icon (h-3 w-3 class)
+      let deleteButton = null;
+      for (const btn of Array.from(allButtons)) {
+        const svg = btn.querySelector('svg.h-3.w-3');
+        if (svg) {
+          deleteButton = btn;
+          break;
+        }
+      }
+
+      if (deleteButton) {
+        fireEvent.click(deleteButton);
+
+        await waitFor(() => {
+          expect(window.alert).toHaveBeenCalledWith('폴더 삭제 실패: Delete folder failed');
+        });
+      }
+    });
+
+    it('should handle deleteFolder exception', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const mockFolders = [{ id: 'f1', name: 'Work', createdAt: Date.now() }];
+
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: mockFolders,
+      });
+      (mockElectronAPI.browserView.deleteBookmarkFolder as jest.Mock).mockRejectedValue(
+        new Error('Network error')
+      );
+
+      window.confirm = jest.fn(() => true);
+
+      const { container } = render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Work')).toBeInTheDocument();
+      });
+
+      // Find delete button with Trash icon
+      const allButtons = container.querySelectorAll('button');
+      let deleteButton = null;
+      for (const btn of Array.from(allButtons)) {
+        const svg = btn.querySelector('svg.h-3.w-3');
+        if (svg) {
+          deleteButton = btn;
+          break;
+        }
+      }
+
+      if (deleteButton) {
+        fireEvent.click(deleteButton);
+
+        await waitFor(() => {
+          expect(window.alert).toHaveBeenCalledWith('폴더 삭제 중 오류가 발생했습니다.');
+          expect(consoleSpy).toHaveBeenCalled();
+        });
+      }
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle deleteBookmark error (success: false)', async () => {
+      const mockBookmarks = [
+        { id: '1', url: 'https://example.com', title: 'Example', createdAt: Date.now() },
+      ];
+
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: mockBookmarks,
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.deleteBookmark as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Delete bookmark failed',
+      });
+
+      window.confirm = jest.fn(() => true);
+
+      const { container } = render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Example')).toBeInTheDocument();
+      });
+
+      const deleteButtons = container.querySelectorAll('button');
+      const deleteButton = deleteButtons[deleteButtons.length - 1];
+      fireEvent.click(deleteButton);
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('북마크 삭제 실패: Delete bookmark failed');
+      });
+    });
+
+    it('should handle deleteBookmark exception', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const mockBookmarks = [
+        { id: '1', url: 'https://example.com', title: 'Example', createdAt: Date.now() },
+      ];
+
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: mockBookmarks,
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.deleteBookmark as jest.Mock).mockRejectedValue(
+        new Error('Network error')
+      );
+
+      window.confirm = jest.fn(() => true);
+
+      const { container } = render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Example')).toBeInTheDocument();
+      });
+
+      const deleteButtons = container.querySelectorAll('button');
+      const deleteButton = deleteButtons[deleteButtons.length - 1];
+      fireEvent.click(deleteButton);
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('북마크 삭제 중 오류가 발생했습니다.');
+        expect(consoleSpy).toHaveBeenCalled();
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle openBookmark error (success: false)', async () => {
+      const mockBookmark = {
+        id: '1',
+        url: 'https://example.com',
+        title: 'Example',
+        createdAt: Date.now(),
+      };
+
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [mockBookmark],
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.openBookmark as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Open bookmark failed',
+      });
+
+      render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Example')).toBeInTheDocument();
+      });
+
+      const bookmark = screen.getByText('Example').closest('div');
+      fireEvent.click(bookmark as HTMLElement);
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('북마크 열기 실패: Open bookmark failed');
+      });
+    });
+
+    it('should handle openBookmark exception', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const mockBookmark = {
+        id: '1',
+        url: 'https://example.com',
+        title: 'Example',
+        createdAt: Date.now(),
+      };
+
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [mockBookmark],
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.openBookmark as jest.Mock).mockRejectedValue(
+        new Error('Network error')
+      );
+
+      render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Example')).toBeInTheDocument();
+      });
+
+      const bookmark = screen.getByText('Example').closest('div');
+      fireEvent.click(bookmark as HTMLElement);
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('북마크 열기 중 오류가 발생했습니다.');
+        expect(consoleSpy).toHaveBeenCalled();
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle addCurrentPage error (success: false)', async () => {
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.addBookmark as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Add bookmark failed',
+      });
+
+      render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('현재 페이지 추가')).toBeInTheDocument();
+      });
+
+      const addButton = screen.getByText('현재 페이지 추가');
+      fireEvent.click(addButton);
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('북마크 추가 실패: Add bookmark failed');
+      });
+    });
+
+    it('should handle addCurrentPage exception', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.addBookmark as jest.Mock).mockRejectedValue(
+        new Error('Network error')
+      );
+
+      render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('현재 페이지 추가')).toBeInTheDocument();
+      });
+
+      const addButton = screen.getByText('현재 페이지 추가');
+      fireEvent.click(addButton);
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('북마크 추가 중 오류가 발생했습니다.');
+        expect(consoleSpy).toHaveBeenCalled();
+      });
+
+      consoleSpy.mockRestore();
+    });
+  });
 });
