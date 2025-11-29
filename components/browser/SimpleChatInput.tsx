@@ -300,7 +300,11 @@ export function SimpleChatInput() {
           onKeyDown={handleKeyDown}
           onCompositionStart={() => setIsComposing(true)}
           onCompositionEnd={() => setIsComposing(false)}
-          placeholder="메시지를 입력하세요..."
+          placeholder={`사용 가능한 Browser Agent 도구:
+• 페이지 이동 • 페이지 내용 읽기 • 클릭 가능 요소 찾기
+• 요소 클릭 • 텍스트 입력 • 스크롤
+• 새 탭 열기 • 탭 전환 • 탭 닫기 • 탭 목록
+• 스크린샷 + 텍스트 요약 • 선택 텍스트 읽기`}
           className="flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent px-3 py-2 text-xs focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
           disabled={isStreaming}
           rows={1}
