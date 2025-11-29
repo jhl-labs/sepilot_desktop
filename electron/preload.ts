@@ -313,6 +313,38 @@ const electronAPI = {
     submit: (message: string) => ipcRenderer.invoke('quick-input-submit', message),
     close: () => ipcRenderer.invoke('quick-input-close'),
   },
+
+  // BrowserView operations
+  browserView: {
+    create: () => ipcRenderer.invoke('browser-view:create'),
+    destroy: () => ipcRenderer.invoke('browser-view:destroy'),
+    loadURL: (url: string) => ipcRenderer.invoke('browser-view:load-url', url),
+    goBack: () => ipcRenderer.invoke('browser-view:go-back'),
+    goForward: () => ipcRenderer.invoke('browser-view:go-forward'),
+    reload: () => ipcRenderer.invoke('browser-view:reload'),
+    setBounds: (bounds: { x: number; y: number; width: number; height: number }) =>
+      ipcRenderer.invoke('browser-view:set-bounds', bounds),
+    setVisible: (visible: boolean) => ipcRenderer.invoke('browser-view:set-visible', visible),
+    getState: () => ipcRenderer.invoke('browser-view:get-state'),
+    onDidNavigate: (callback: (data: { url: string; canGoBack: boolean; canGoForward: boolean }) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('browser-view:did-navigate', handler);
+      return handler;
+    },
+    onLoadingState: (callback: (data: { isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('browser-view:loading-state', handler);
+      return handler;
+    },
+    onTitleUpdated: (callback: (data: { title: string }) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('browser-view:title-updated', handler);
+      return handler;
+    },
+    removeListener: (event: string, handler: any) => {
+      ipcRenderer.removeListener(event, handler);
+    },
+  },
 };
 
 // Context Bridge를 통해 안전하게 노출

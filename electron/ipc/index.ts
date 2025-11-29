@@ -17,6 +17,7 @@ import { setupEmbeddingsHandlers } from './handlers/embeddings';
 import { setupComfyUIHandlers } from './handlers/comfyui';
 import { setupUpdateHandlers } from './handlers/update';
 import { setupQuickInputHandlers } from './handlers/quick-input';
+import { setupBrowserViewHandlers } from './handlers/browser-view';
 import { logger } from '../services/logger';
 
 /**
@@ -39,6 +40,7 @@ export function setupIpcHandlers() {
   setupComfyUIHandlers();
   setupUpdateHandlers();
   setupQuickInputHandlers();
+  setupBrowserViewHandlers();
 
   logger.info('IPC handlers setup complete');
 }

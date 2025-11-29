@@ -414,6 +414,28 @@ interface QuickInputAPI {
   close: () => Promise<IPCResponse>;
 }
 
+interface BrowserViewAPI {
+  create: () => Promise<IPCResponse>;
+  destroy: () => Promise<IPCResponse>;
+  loadURL: (url: string) => Promise<IPCResponse>;
+  goBack: () => Promise<IPCResponse>;
+  goForward: () => Promise<IPCResponse>;
+  reload: () => Promise<IPCResponse>;
+  setBounds: (bounds: { x: number; y: number; width: number; height: number }) => Promise<IPCResponse>;
+  setVisible: (visible: boolean) => Promise<IPCResponse>;
+  getState: () => Promise<IPCResponse<{
+    url: string;
+    title: string;
+    canGoBack: boolean;
+    canGoForward: boolean;
+    isLoading: boolean;
+  }>>;
+  onDidNavigate: (callback: (data: { url: string; canGoBack: boolean; canGoForward: boolean }) => void) => (...args: unknown[]) => void;
+  onLoadingState: (callback: (data: { isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => (...args: unknown[]) => void;
+  onTitleUpdated: (callback: (data: { title: string }) => void) => (...args: unknown[]) => void;
+  removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
+}
+
 interface ElectronAPI {
   platform: string;
   chat: ChatAPI;
@@ -432,6 +454,7 @@ interface ElectronAPI {
   comfyui: ComfyUIAPI;
   update: UpdateAPI;
   quickInput: QuickInputAPI;
+  browserView: BrowserViewAPI;
   on: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => void;
 }
@@ -439,32 +462,6 @@ interface ElectronAPI {
 declare global {
   interface Window {
     electronAPI: ElectronAPI;
-  }
-
-  // Webview element type definition for React/JSX
-  namespace JSX {
-    interface IntrinsicElements {
-      webview: React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement> & {
-          src?: string;
-          autosize?: string;
-          nodeintegration?: string;
-          nodeintegrationinsubframes?: string;
-          plugins?: string;
-          preload?: string;
-          httpreferrer?: string;
-          useragent?: string;
-          disablewebsecurity?: string;
-          partition?: string;
-          allowpopups?: string;
-          webpreferences?: string;
-          enableblinkfeatures?: string;
-          disableblinkfeatures?: string;
-          allowfullscreen?: string;
-        },
-        HTMLElement
-      >;
-    }
   }
 }
 

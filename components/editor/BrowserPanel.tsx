@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, ArrowRight, RotateCw, Home, Globe } from 'lucide-react';
+import { isElectron } from '@/lib/platform';
 
 export function BrowserPanel() {
   const [url, setUrl] = useState('https://www.google.com');
@@ -11,89 +12,132 @@ export function BrowserPanel() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const webviewRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleNavigate = () => {
-    if (webviewRef.current && url) {
-      // Ensure URL has protocol
-      let validUrl = url;
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        validUrl = 'https://' + url;
-      }
-      webviewRef.current.loadURL(validUrl);
-    }
+    if (!isElectron() || !window.electronAPI) return;
+
+    window.electronAPI.browserView.loadURL(url);
   };
 
   const handleBack = () => {
-    if (webviewRef.current && canGoBack) {
-      webviewRef.current.goBack();
-    }
+    if (!isElectron() || !window.electronAPI) return;
+
+    window.electronAPI.browserView.goBack();
   };
 
   const handleForward = () => {
-    if (webviewRef.current && canGoForward) {
-      webviewRef.current.goForward();
-    }
+    if (!isElectron() || !window.electronAPI) return;
+
+    window.electronAPI.browserView.goForward();
   };
 
   const handleReload = () => {
-    if (webviewRef.current) {
-      webviewRef.current.reload();
-    }
+    if (!isElectron() || !window.electronAPI) return;
+
+    window.electronAPI.browserView.reload();
   };
 
   const handleHome = () => {
     const homeUrl = 'https://www.google.com';
     setUrl(homeUrl);
     setCurrentUrl(homeUrl);
-    if (webviewRef.current) {
-      webviewRef.current.loadURL(homeUrl);
+
+    if (isElectron() && window.electronAPI) {
+      window.electronAPI.browserView.loadURL(homeUrl);
     }
   };
 
+  // BrowserView 생성 및 초기 설정
   useEffect(() => {
-    const webview = webviewRef.current;
-    if (!webview) return;
+    if (!isElectron() || !window.electronAPI) return;
 
-    // URL 변경 감지
-    const handleDidNavigate = (e: any) => {
-      setCurrentUrl(e.url);
-      setUrl(e.url);
-      setCanGoBack(webview.canGoBack());
-      setCanGoForward(webview.canGoForward());
-    };
+    // BrowserView 생성
+    window.electronAPI.browserView.create().then(() => {
+      // 초기 URL 로드
+      window.electronAPI.browserView.loadURL(currentUrl);
+    });
 
-    const handleDidNavigateInPage = (e: any) => {
-      if (e.isMainFrame) {
-        setCurrentUrl(e.url);
-        setUrl(e.url);
-        setCanGoBack(webview.canGoBack());
-        setCanGoForward(webview.canGoForward());
-      }
-    };
+    // 이벤트 리스너 등록
+    const didNavigateHandler = window.electronAPI.browserView.onDidNavigate((data) => {
+      setCurrentUrl(data.url);
+      setUrl(data.url);
+      setCanGoBack(data.canGoBack);
+      setCanGoForward(data.canGoForward);
+    });
 
-    const handleDidStartLoading = () => {
-      setIsLoading(true);
-    };
+    const loadingStateHandler = window.electronAPI.browserView.onLoadingState((data) => {
+      setIsLoading(data.isLoading);
+      if (data.canGoBack !== undefined) setCanGoBack(data.canGoBack);
+      if (data.canGoForward !== undefined) setCanGoForward(data.canGoForward);
+    });
 
-    const handleDidStopLoading = () => {
-      setIsLoading(false);
-      setCanGoBack(webview.canGoBack());
-      setCanGoForward(webview.canGoForward());
-    };
-
-    webview.addEventListener('did-navigate', handleDidNavigate);
-    webview.addEventListener('did-navigate-in-page', handleDidNavigateInPage);
-    webview.addEventListener('did-start-loading', handleDidStartLoading);
-    webview.addEventListener('did-stop-loading', handleDidStopLoading);
-
+    // Cleanup
     return () => {
-      webview.removeEventListener('did-navigate', handleDidNavigate);
-      webview.removeEventListener('did-navigate-in-page', handleDidNavigateInPage);
-      webview.removeEventListener('did-start-loading', handleDidStartLoading);
-      webview.removeEventListener('did-stop-loading', handleDidStopLoading);
+      window.electronAPI.browserView.removeListener('browser-view:did-navigate', didNavigateHandler);
+      window.electronAPI.browserView.removeListener('browser-view:loading-state', loadingStateHandler);
+      window.electronAPI.browserView.destroy();
     };
   }, []);
+
+  // BrowserView bounds 설정 (컨테이너 크기에 맞춤)
+  useEffect(() => {
+    if (!isElectron() || !window.electronAPI || !containerRef.current) return;
+
+    const updateBounds = () => {
+      if (!containerRef.current) return;
+
+      const rect = containerRef.current.getBoundingClientRect();
+
+      // BrowserView의 위치를 컨테이너에 맞춤
+      // Note: BrowserView 좌표는 윈도우 기준이므로 rect의 x, y를 사용
+      window.electronAPI.browserView.setBounds({
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      });
+    };
+
+    // 초기 bounds 설정
+    updateBounds();
+
+    // 윈도우 리사이즈 시 bounds 업데이트
+    const resizeObserver = new ResizeObserver(updateBounds);
+    resizeObserver.observe(containerRef.current);
+
+    window.addEventListener('resize', updateBounds);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateBounds);
+    };
+  }, []);
+
+  // 탭 표시/숨김 처리
+  useEffect(() => {
+    if (!isElectron() || !window.electronAPI) return;
+
+    // 탭이 활성화될 때 BrowserView 표시
+    window.electronAPI.browserView.setVisible(true);
+
+    return () => {
+      // 탭이 비활성화될 때 BrowserView 숨김
+      window.electronAPI.browserView.setVisible(false);
+    };
+  }, []);
+
+  if (!isElectron()) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center p-4 text-muted-foreground">
+        <Globe className="mb-2 h-12 w-12 opacity-20" />
+        <p className="text-center text-sm font-medium">브라우저 기능</p>
+        <p className="mt-2 text-center text-xs">
+          Electron 환경에서만 사용 가능합니다
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -148,15 +192,8 @@ export function BrowserPanel() {
         </div>
       </div>
 
-      {/* webview 영역 */}
-      <webview
-        ref={webviewRef}
-        src={currentUrl}
-        style={{ width: '100%', height: '100%' }}
-        allowpopups="false"
-        nodeintegration="false"
-        webpreferences="contextIsolation=yes"
-      />
+      {/* BrowserView 컨테이너 */}
+      <div ref={containerRef} className="flex-1" />
     </div>
   );
 }
