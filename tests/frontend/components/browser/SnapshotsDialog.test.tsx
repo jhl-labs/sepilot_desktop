@@ -170,4 +170,209 @@ describe('SnapshotsDialog', () => {
       expect(mockElectronAPI.browserView.getSnapshots).not.toHaveBeenCalled();
     });
   });
+
+  describe('에러 처리', () => {
+    beforeEach(() => {
+      window.alert = jest.fn();
+    });
+
+    it('should handle loadSnapshots error (success: false)', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Load failed',
+      });
+
+      render(<SnapshotsDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          '[SnapshotsDialog] Failed to load snapshots:',
+          'Load failed'
+        );
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle deleteSnapshot error (success: false)', async () => {
+      const mockSnapshots = [
+        {
+          id: '1',
+          url: 'https://example.com',
+          title: 'Example',
+          createdAt: Date.now(),
+          imagePath: '/path/to/image.png',
+        },
+      ];
+
+      (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+        success: true,
+        data: mockSnapshots,
+      });
+      (mockElectronAPI.browserView.deleteSnapshot as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Delete failed',
+      });
+
+      window.confirm = jest.fn(() => true);
+
+      const { container } = render(<SnapshotsDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Example')).toBeInTheDocument();
+      });
+
+      // Find delete button
+      const allButtons = container.querySelectorAll('button');
+      const deleteButton = allButtons[allButtons.length - 1];
+      fireEvent.click(deleteButton);
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('스냅샷 삭제 실패: Delete failed');
+      });
+    });
+
+    it('should handle deleteSnapshot exception', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const mockSnapshots = [
+        {
+          id: '1',
+          url: 'https://example.com',
+          title: 'Example',
+          createdAt: Date.now(),
+          imagePath: '/path/to/image.png',
+        },
+      ];
+
+      (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+        success: true,
+        data: mockSnapshots,
+      });
+      (mockElectronAPI.browserView.deleteSnapshot as jest.Mock).mockRejectedValue(
+        new Error('Network error')
+      );
+
+      window.confirm = jest.fn(() => true);
+
+      const { container } = render(<SnapshotsDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Example')).toBeInTheDocument();
+      });
+
+      const allButtons = container.querySelectorAll('button');
+      const deleteButton = allButtons[allButtons.length - 1];
+      fireEvent.click(deleteButton);
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('스냅샷 삭제 중 오류가 발생했습니다.');
+        expect(consoleSpy).toHaveBeenCalled();
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should open snapshot when clicked', async () => {
+      const mockSnapshot = {
+        id: '1',
+        url: 'https://example.com',
+        title: 'Example',
+        createdAt: Date.now(),
+        imagePath: '/path/to/image.png',
+      };
+
+      (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [mockSnapshot],
+      });
+      (mockElectronAPI.browserView.openSnapshot as jest.Mock).mockResolvedValue({
+        success: true,
+      });
+
+      const onOpenChange = jest.fn();
+
+      render(<SnapshotsDialog open={true} onOpenChange={onOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Example')).toBeInTheDocument();
+      });
+
+      const snapshot = screen.getByText('Example').closest('div[class*="cursor-pointer"]');
+      fireEvent.click(snapshot as HTMLElement);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.browserView.openSnapshot).toHaveBeenCalledWith('1');
+        expect(onOpenChange).toHaveBeenCalledWith(false);
+      });
+    });
+
+    it('should handle openSnapshot error (success: false)', async () => {
+      const mockSnapshot = {
+        id: '1',
+        url: 'https://example.com',
+        title: 'Example',
+        createdAt: Date.now(),
+        imagePath: '/path/to/image.png',
+      };
+
+      (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [mockSnapshot],
+      });
+      (mockElectronAPI.browserView.openSnapshot as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Open failed',
+      });
+
+      render(<SnapshotsDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Example')).toBeInTheDocument();
+      });
+
+      const snapshot = screen.getByText('Example').closest('div[class*="cursor-pointer"]');
+      fireEvent.click(snapshot as HTMLElement);
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('스냅샷 열기 실패: Open failed');
+      });
+    });
+
+    it('should handle openSnapshot exception', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const mockSnapshot = {
+        id: '1',
+        url: 'https://example.com',
+        title: 'Example',
+        createdAt: Date.now(),
+        imagePath: '/path/to/image.png',
+      };
+
+      (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [mockSnapshot],
+      });
+      (mockElectronAPI.browserView.openSnapshot as jest.Mock).mockRejectedValue(
+        new Error('Network error')
+      );
+
+      render(<SnapshotsDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Example')).toBeInTheDocument();
+      });
+
+      const snapshot = screen.getByText('Example').closest('div[class*="cursor-pointer"]');
+      fireEvent.click(snapshot as HTMLElement);
+
+      await waitFor(() => {
+        expect(window.alert).toHaveBeenCalledWith('스냅샷 열기 중 오류가 발생했습니다.');
+        expect(consoleSpy).toHaveBeenCalled();
+      });
+
+      consoleSpy.mockRestore();
+    });
+  });
 });
