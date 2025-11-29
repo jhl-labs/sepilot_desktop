@@ -133,6 +133,10 @@ export const mockElectronAPI = {
     openSnapshot: jest.fn(),
     getBrowserSettings: jest.fn(),
   },
+  activity: {
+    loadActivities: jest.fn(),
+    saveActivity: jest.fn(),
+  },
   on: jest.fn(),
   removeListener: jest.fn(),
 };
