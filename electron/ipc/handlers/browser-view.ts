@@ -25,9 +25,17 @@ export function setupBrowserViewHandlers() {
           nodeIntegration: false,
           contextIsolation: true,
           sandbox: true,
-          webSecurity: true,
+          // Allow loading external resources (CSS, JS, images)
+          webSecurity: false,
+          // Allow running insecure content only for development
+          allowRunningInsecureContent: false,
         },
       });
+
+      // Set User-Agent to standard Chrome to avoid detection
+      browserView.webContents.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      );
 
       mainWindow.addBrowserView(browserView);
 
