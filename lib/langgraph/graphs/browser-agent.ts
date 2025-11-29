@@ -4,6 +4,7 @@ import { toolsNode, shouldUseTool } from '../nodes/tools';
 import type { Message } from '@/types';
 import { LLMService } from '@/lib/llm/service';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import { useChatStore } from '@/lib/store/chat-store';
 import {
   browserGetInteractiveElementsTool,
   browserGetPageContentTool,
@@ -454,6 +455,20 @@ export class BrowserAgentGraph {
     console.log('[BrowserAgent] Starting stream with initial state');
     console.log('[BrowserAgent] Available browser tools: get_page_content, get_interactive_elements, click_element, type_text, scroll');
 
+    // Agent 로그 시작
+    const { addBrowserAgentLog, setBrowserAgentIsRunning, clearBrowserAgentLogs } = useChatStore.getState();
+    clearBrowserAgentLogs();
+    setBrowserAgentIsRunning(true);
+
+    addBrowserAgentLog({
+      level: 'info',
+      phase: 'thinking',
+      message: 'Browser Agent 시작',
+      details: {
+        maxIterations,
+      },
+    });
+
     let hasError = false;
     let errorMessage = '';
 
@@ -464,6 +479,17 @@ export class BrowserAgentGraph {
 
     while (iterations < maxIterations && !this.shouldStop) {
       console.log(`[BrowserAgent] ===== Iteration ${iterations + 1}/${maxIterations} =====`);
+
+      // 로그: 반복 시작
+      addBrowserAgentLog({
+        level: 'info',
+        phase: 'thinking',
+        message: `반복 ${iterations + 1}/${maxIterations} 시작`,
+        details: {
+          iteration: iterations + 1,
+          maxIterations,
+        },
+      });
 
       // Emit progress event
       yield {
@@ -479,10 +505,32 @@ export class BrowserAgentGraph {
       let generateResult;
       try {
         console.log('[BrowserAgent] Calling generateWithBrowserToolsNode...');
+
+        addBrowserAgentLog({
+          level: 'thinking',
+          phase: 'thinking',
+          message: 'LLM이 다음 동작을 계획하고 있습니다...',
+          details: {
+            iteration: iterations + 1,
+            maxIterations,
+          },
+        });
+
         generateResult = await generateWithBrowserToolsNode(state);
         console.log('[BrowserAgent] generateWithBrowserToolsNode completed');
       } catch (error: any) {
         console.error('[BrowserAgent] Generate node error:', error);
+
+        addBrowserAgentLog({
+          level: 'error',
+          phase: 'error',
+          message: `생성 노드 오류: ${error.message}`,
+          details: {
+            iteration: iterations + 1,
+            maxIterations,
+          },
+        });
+
         hasError = true;
         errorMessage = error.message || 'Failed to generate response';
         break;
@@ -518,12 +566,41 @@ export class BrowserAgentGraph {
 
       if (decision === 'end') {
         console.log('[BrowserAgent] Ending - no more tools to call');
+
+        addBrowserAgentLog({
+          level: 'success',
+          phase: 'decision',
+          message: '더 이상 실행할 도구가 없습니다. 작업 완료.',
+          details: {
+            decision: 'end',
+            iteration: iterations + 1,
+            maxIterations,
+          },
+        });
+
         break;
       }
 
       // Get tool calls for progress message and loop detection
       const lastMessage = state.messages[state.messages.length - 1];
       const toolCalls = lastMessage.tool_calls || [];
+
+      // 로그: 도구 호출 계획
+      if (toolCalls.length > 0) {
+        for (const toolCall of toolCalls) {
+          addBrowserAgentLog({
+            level: 'info',
+            phase: 'tool_call',
+            message: `도구 호출: ${toolCall.name}`,
+            details: {
+              toolName: toolCall.name,
+              toolArgs: toolCall.arguments,
+              iteration: iterations + 1,
+              maxIterations,
+            },
+          });
+        }
+      }
 
       // Emit tool execution progress
       if (toolCalls.length > 0) {
@@ -541,6 +618,37 @@ export class BrowserAgentGraph {
       // 3. tools 노드 실행 (자동 실행, 승인 불필요)
       console.log('[BrowserAgent] Executing browser tools node');
       const toolsResult = await toolsNode(state);
+
+      // 로그: 도구 결과
+      if (toolsResult.toolResults) {
+        for (const result of toolsResult.toolResults) {
+          if (result.error) {
+            addBrowserAgentLog({
+              level: 'error',
+              phase: 'tool_result',
+              message: `도구 실행 실패: ${result.toolName}`,
+              details: {
+                toolName: result.toolName,
+                toolError: result.error,
+                iteration: iterations + 1,
+                maxIterations,
+              },
+            });
+          } else {
+            addBrowserAgentLog({
+              level: 'success',
+              phase: 'tool_result',
+              message: `도구 실행 성공: ${result.toolName}`,
+              details: {
+                toolName: result.toolName,
+                toolResult: typeof result.result === 'string' ? result.result : JSON.stringify(result.result),
+                iteration: iterations + 1,
+                maxIterations,
+              },
+            });
+          }
+        }
+      }
 
       // 반복 감지: 도구 호출 히스토리에 추가
       for (const toolCall of toolCalls) {
@@ -593,9 +701,22 @@ export class BrowserAgentGraph {
 
     console.log('[BrowserAgent] Stream completed, total iterations:', iterations);
 
+    // Agent 로그 종료
+    setBrowserAgentIsRunning(false);
+
     // Final report message
     const finalReportMessage: Message = (() => {
       if (this.shouldStop) {
+        addBrowserAgentLog({
+          level: 'warning',
+          phase: 'completion',
+          message: '사용자가 작업을 중단했습니다',
+          details: {
+            iteration: iterations,
+            maxIterations,
+          },
+        });
+
         return {
           id: `msg-${Date.now()}`,
           role: 'assistant',
@@ -603,6 +724,16 @@ export class BrowserAgentGraph {
           created_at: Date.now(),
         };
       } else if (hasError) {
+        addBrowserAgentLog({
+          level: 'error',
+          phase: 'error',
+          message: `브라우저 작업 오류: ${errorMessage}`,
+          details: {
+            iteration: iterations,
+            maxIterations,
+          },
+        });
+
         return {
           id: `msg-${Date.now()}`,
           role: 'assistant',
@@ -610,6 +741,16 @@ export class BrowserAgentGraph {
           created_at: Date.now(),
         };
       } else if (iterations >= maxIterations) {
+        addBrowserAgentLog({
+          level: 'warning',
+          phase: 'completion',
+          message: '최대 반복 횟수에 도달했습니다',
+          details: {
+            iteration: iterations,
+            maxIterations,
+          },
+        });
+
         return {
           id: `msg-${Date.now()}`,
           role: 'assistant',
@@ -617,6 +758,16 @@ export class BrowserAgentGraph {
           created_at: Date.now(),
         };
       } else {
+        addBrowserAgentLog({
+          level: 'success',
+          phase: 'completion',
+          message: 'Browser Agent 작업 완료',
+          details: {
+            iteration: iterations,
+            maxIterations,
+          },
+        });
+
         // Normal completion - no additional message needed
         return null as any;
       }

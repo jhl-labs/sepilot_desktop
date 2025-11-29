@@ -8,6 +8,7 @@ import { SimpleChatInput } from '@/components/browser/SimpleChatInput';
 import { SnapshotsList } from '@/components/browser/SnapshotsList';
 import { BookmarksList } from '@/components/browser/BookmarksList';
 import { BrowserSettings } from '@/components/browser/BrowserSettings';
+import { BrowserAgentLog } from '@/components/browser/BrowserAgentLog';
 import { isElectron } from '@/lib/platform';
 
 export function SidebarBrowser() {
@@ -32,6 +33,9 @@ export function SidebarBrowser() {
       ) : browserViewMode === 'settings' ? (
         <BrowserSettings />
       ) : null}
+
+      {/* Agent Log Panel (chat 모드에서만 표시) */}
+      {browserViewMode === 'chat' && <BrowserAgentLog />}
 
       {/* Footer */}
       <div className="border-t p-2">
