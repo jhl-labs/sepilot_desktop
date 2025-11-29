@@ -26,7 +26,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
-  const { createConversation, messages, activeConversationId, streamingConversations } = useChatStore();
+  const { createConversation, messages, activeConversationId, streamingConversations, loadConversations } = useChatStore();
 
   // Determine if current conversation is streaming
   const isStreaming = activeConversationId ? streamingConversations.has(activeConversationId) : false;
@@ -236,6 +236,11 @@ export function MainLayout({ children }: MainLayoutProps) {
 
     autoInitialize();
   }, [initializeFromConfig]);
+
+  // Load conversations on app start
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
 
   // Listen for config updates from SettingsDialog
   useEffect(() => {
