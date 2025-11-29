@@ -1,9 +1,228 @@
 import { StateGraph, END } from '@langchain/langgraph';
 import { AgentStateAnnotation, AgentState } from '../state';
-import { generateWithToolsNode } from '../nodes/generate';
 import { toolsNode, shouldUseTool } from '../nodes/tools';
 import type { Message } from '@/types';
 import type { ToolApprovalCallback } from '../types';
+import { LLMService } from '@/lib/llm/service';
+import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import {
+  browserGetInteractiveElementsTool,
+  browserGetPageContentTool,
+  browserClickElementTool,
+  browserTypeTextTool,
+  browserScrollTool,
+} from '@/lib/mcp/tools/builtin-tools';
+
+/**
+ * Browser Agent용 generate 노드 - Browser Control Tools 포함
+ */
+async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<AgentState>> {
+  try {
+    console.log('[BrowserAgent.Generate] ===== generateWithBrowserToolsNode called =====');
+    console.log('[BrowserAgent.Generate] Current state:', {
+      messageCount: state.messages.length,
+      lastMessageRole: state.messages[state.messages.length - 1]?.role,
+      toolResultsCount: state.toolResults.length,
+    });
+
+    // Browser Control Tools만 포함 (5개 도구)
+    const browserTools = [
+      browserGetInteractiveElementsTool,
+      browserGetPageContentTool,
+      browserClickElementTool,
+      browserTypeTextTool,
+      browserScrollTool,
+    ];
+
+    console.log(`[BrowserAgent.Generate] Available Browser Control tools: ${browserTools.length}`);
+    console.log('[BrowserAgent.Generate] Tool details:', browserTools.map(t => t.name));
+
+    // OpenAI compatible tools 형식으로 변환
+    const toolsForLLM = browserTools.map(tool => ({
+      type: 'function' as const,
+      function: {
+        name: tool.name,
+        description: tool.description || `Tool: ${tool.name}`,
+        parameters: tool.inputSchema || {
+          type: 'object',
+          properties: {},
+        },
+      },
+    }));
+
+    // Tool 결과가 있으면 메시지에 추가
+    const toolMessages: Message[] = state.toolResults.map((result) => {
+      let content = '';
+
+      if (result.error) {
+        content = `Error: ${result.error}`;
+      } else if (result.result !== null && result.result !== undefined) {
+        content = typeof result.result === 'string' ? result.result : JSON.stringify(result.result);
+      } else {
+        content = 'No result';
+      }
+
+      console.log('[BrowserAgent.Generate] Creating tool result message:', {
+        toolCallId: result.toolCallId,
+        toolName: result.toolName,
+        hasError: !!result.error,
+        contentPreview: content.substring(0, 100),
+      });
+
+      return {
+        id: `tool-${result.toolCallId}`,
+        role: 'tool' as const,
+        content,
+        created_at: Date.now(),
+        tool_call_id: result.toolCallId,
+        name: result.toolName,
+      };
+    });
+
+    // Browser-specific 시스템 프롬프트
+    const systemMessage: Message = {
+      id: 'system-browser',
+      role: 'system',
+      content: `You are a browser automation assistant with REAL access to control a web browser.
+
+# CRITICAL RULES
+
+1. **You HAVE REAL BROWSER ACCESS** - This is NOT a simulation. You can actually see and control the browser.
+2. **ALWAYS USE TOOLS** - Never say you cannot access the browser. Use tools immediately for ALL browser operations.
+3. **ACTION OVER EXPLANATION** - Don't just explain what you see. DO IT using browser tools.
+4. **CHECK FIRST** - Always use browser_get_page_content to see what's on the page before taking action.
+5. **VERIFY YOUR WORK** - After clicking or typing, check the page again to confirm success.
+
+# AVAILABLE TOOLS
+
+## Page Inspection
+- **browser_get_page_content**: Get the current page's URL, title, and text content
+  - Use this FIRST to understand what page you're on
+  - Returns: { url, title, text, html }
+  - Example: "현재 접속한 주소가?" → Use this tool immediately!
+
+- **browser_get_interactive_elements**: Find all clickable/interactive elements
+  - Returns buttons, links, inputs, textareas with IDs
+  - Use this to find what you can click or type into
+
+## Page Interaction
+- **browser_click_element**: Click an element by its ID
+  - Get element IDs from browser_get_interactive_elements
+  - Example: browser_click_element({ element_id: "ai-element-5" })
+
+- **browser_type_text**: Type text into an input field
+  - Get element IDs from browser_get_interactive_elements
+  - Example: browser_type_text({ element_id: "ai-element-10", text: "search query" })
+
+- **browser_scroll**: Scroll the page up or down
+  - Directions: "up" or "down"
+  - Example: browser_scroll({ direction: "down", amount: 500 })
+
+# WORKFLOW
+
+For "현재 접속한 주소가?" or similar questions:
+1. **Immediately** call browser_get_page_content (no thinking needed)
+2. Report the URL, title, and brief page description
+
+For navigation tasks:
+1. Use browser_get_page_content to see current page
+2. Use browser_get_interactive_elements to find clickable elements
+3. Click or type as needed
+4. Verify with browser_get_page_content again
+
+# IMPORTANT
+
+- You have ACTUAL browser access - use it!
+- ALWAYS use tools for browser questions - never guess or say you can't access
+- The user is looking at the same browser - help them navigate it
+- Be concise but thorough in your responses
+
+Remember: This is a REAL browser. Use the tools!`,
+      created_at: Date.now(),
+    };
+
+    const messages = [systemMessage, ...state.messages, ...toolMessages];
+
+    console.log('[BrowserAgent.Generate] Messages to LLM:', messages.map(m => ({
+      role: m.role,
+      contentPreview: m.content?.substring(0, 50),
+    })));
+
+    // LLM 호출 (스트리밍, tools 포함)
+    let accumulatedContent = '';
+    let finalToolCalls: any[] | undefined = undefined;
+
+    console.log('[BrowserAgent.Generate] Starting streaming with browser tools...');
+
+    for await (const chunk of LLMService.streamChatWithChunks(messages, {
+      tools: toolsForLLM,
+    })) {
+      // Accumulate content and emit to renderer
+      if (!chunk.done && chunk.content) {
+        accumulatedContent += chunk.content;
+        emitStreamingChunk(chunk.content, state.conversationId);
+      }
+
+      // Last chunk contains tool calls (if any)
+      if (chunk.done && chunk.toolCalls) {
+        finalToolCalls = chunk.toolCalls;
+        console.log('[BrowserAgent.Generate] Received tool calls from stream:', finalToolCalls);
+      }
+    }
+
+    console.log('[BrowserAgent.Generate] Streaming complete. Content length:', accumulatedContent.length);
+
+    // Tool calls 파싱
+    const toolCalls = finalToolCalls?.map((tc: any, index: number) => {
+      const toolCallId = tc.id || `call_${Date.now()}_${index}`;
+
+      console.log('[BrowserAgent.Generate] Tool call:', {
+        id: toolCallId,
+        name: tc.function.name,
+        arguments: tc.function.arguments,
+      });
+
+      return {
+        id: toolCallId,
+        type: tc.type || 'function',
+        name: tc.function.name,
+        arguments: JSON.parse(tc.function.arguments),
+      };
+    });
+
+    const assistantMessage: Message = {
+      id: `msg-${Date.now()}`,
+      role: 'assistant',
+      content: accumulatedContent || '',
+      created_at: Date.now(),
+      tool_calls: toolCalls,
+    };
+
+    console.log('[BrowserAgent.Generate] Assistant message created:', {
+      hasContent: !!assistantMessage.content,
+      hasToolCalls: !!assistantMessage.tool_calls,
+      toolCallsCount: assistantMessage.tool_calls?.length,
+    });
+
+    return {
+      messages: [assistantMessage],
+      toolResults: [], // 다음 iteration을 위해 초기화
+    };
+  } catch (error: any) {
+    console.error('[BrowserAgent.Generate] Error:', error);
+
+    const errorMessage: Message = {
+      id: `msg-${Date.now()}`,
+      role: 'assistant',
+      content: `Error: ${error.message || 'Failed to generate response'}`,
+      created_at: Date.now(),
+    };
+
+    return {
+      messages: [errorMessage],
+    };
+  }
+}
 
 /**
  * Browser Agent 그래프
@@ -21,8 +240,8 @@ export class BrowserAgentGraph {
     let iterations = 0;
 
     while (iterations < maxIterations) {
-      // 1. generate 노드 실행
-      const generateResult = await generateWithToolsNode(state);
+      // 1. generate 노드 실행 (Browser Tools 포함)
+      const generateResult = await generateWithBrowserToolsNode(state);
       state = {
         ...state,
         messages: [...state.messages, ...(generateResult.messages || [])],
@@ -64,12 +283,12 @@ export class BrowserAgentGraph {
     while (iterations < maxIterations) {
       console.log(`[BrowserAgent] ===== Iteration ${iterations + 1}/${maxIterations} =====`);
 
-      // 1. generate with tools
+      // 1. generate with Browser Control Tools
       let generateResult;
       try {
-        console.log('[BrowserAgent] Calling generateWithToolsNode...');
-        generateResult = await generateWithToolsNode(state);
-        console.log('[BrowserAgent] generateWithToolsNode completed');
+        console.log('[BrowserAgent] Calling generateWithBrowserToolsNode...');
+        generateResult = await generateWithBrowserToolsNode(state);
+        console.log('[BrowserAgent] generateWithBrowserToolsNode completed');
       } catch (error: any) {
         console.error('[BrowserAgent] Generate node error:', error);
         hasError = true;
@@ -226,8 +445,8 @@ export class BrowserAgentGraph {
 export function createBrowserAgentGraph() {
   // StateGraph 생성
   const workflow = new StateGraph(AgentStateAnnotation)
-    // 노드 추가
-    .addNode('generate', generateWithToolsNode)
+    // 노드 추가 (Browser-specific generate 노드 사용)
+    .addNode('generate', generateWithBrowserToolsNode)
     .addNode('tools', toolsNode)
     // 엔트리 포인트 설정
     .addEdge('__start__', 'generate')
