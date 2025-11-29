@@ -433,6 +433,8 @@ interface UpdateAPI {
 interface QuickInputAPI {
   submit: (message: string) => Promise<IPCResponse>;
   close: () => Promise<IPCResponse>;
+  executeQuestion: (prompt: string) => Promise<IPCResponse>;
+  reloadShortcuts: () => Promise<IPCResponse>;
 }
 
 interface BrowserTab {

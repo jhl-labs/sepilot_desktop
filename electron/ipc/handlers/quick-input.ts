@@ -1,5 +1,6 @@
 import { ipcMain, BrowserWindow, clipboard } from 'electron';
 import { logger } from '../../services/logger';
+import { registerShortcuts } from '../../main';
 
 export function setupQuickInputHandlers() {
   // Quick Input 제출 핸들러
@@ -91,6 +92,19 @@ export function setupQuickInputHandlers() {
       return { success: true };
     } catch (error) {
       logger.error('[QuickQuestion Handler] Failed to execute quick question:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Reload shortcuts 핸들러 (설정 변경 시 호출)
+  ipcMain.handle('quick-input:reload-shortcuts', async () => {
+    try {
+      logger.info('[QuickInput Handler] Reloading shortcuts...');
+      await registerShortcuts();
+      logger.info('[QuickInput Handler] Shortcuts reloaded successfully');
+      return { success: true };
+    } catch (error) {
+      logger.error('[QuickInput Handler] Failed to reload shortcuts:', error);
       return { success: false, error: String(error) };
     }
   });

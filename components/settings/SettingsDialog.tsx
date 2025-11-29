@@ -427,6 +427,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         detail: { quickInput: quickInputConfig }
       }));
 
+      // Reload shortcuts in Main Process
+      if (isElectron() && window.electronAPI) {
+        try {
+          await window.electronAPI.quickInput.reloadShortcuts();
+          console.log('[QuickInputSettings] Shortcuts reloaded');
+        } catch (error) {
+          console.error('[QuickInputSettings] Failed to reload shortcuts:', error);
+        }
+      }
+
       setMessage({ type: 'success', text: 'Quick Input 설정이 저장되었습니다!' });
     } catch (error: any) {
       console.error('Failed to save QuickInput config:', error);

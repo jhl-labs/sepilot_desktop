@@ -24,6 +24,7 @@ let mainWindow: BrowserWindow | null = null;
 let quickInputWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
+let registeredShortcuts: string[] = []; // Track registered shortcuts
 
 const isDev = !app.isPackaged;
 
@@ -139,6 +140,83 @@ function showQuickInputWindow() {
   quickInputWindow!.show();
   quickInputWindow!.focus();
 }
+
+// Unregister all shortcuts
+function unregisterAllShortcuts() {
+  registeredShortcuts.forEach((shortcut) => {
+    globalShortcut.unregister(shortcut);
+    logger.info(`[Shortcuts] Unregistered: ${shortcut}`);
+  });
+  registeredShortcuts = [];
+}
+
+// Register shortcuts from config
+async function registerShortcuts() {
+  try {
+    // Unregister existing shortcuts first
+    unregisterAllShortcuts();
+
+    // Load config from database
+    const result = await databaseService.getConfig();
+    const config = result as AppConfig | null;
+    const quickInputConfig = config?.quickInput;
+
+    // Register Quick Input shortcut
+    const quickInputShortcut = quickInputConfig?.quickInputShortcut || 'CommandOrControl+Shift+Space';
+    const quickInputRegistered = globalShortcut.register(quickInputShortcut, () => {
+      logger.info(`[Shortcuts] Quick Input triggered: ${quickInputShortcut}`);
+      showQuickInputWindow();
+    });
+
+    if (quickInputRegistered) {
+      registeredShortcuts.push(quickInputShortcut);
+      logger.info(`[Shortcuts] Registered Quick Input: ${quickInputShortcut}`);
+    } else {
+      logger.error(`[Shortcuts] Failed to register Quick Input: ${quickInputShortcut}`);
+    }
+
+    // Register Quick Questions
+    const quickQuestions = quickInputConfig?.quickQuestions || [];
+    for (const question of quickQuestions) {
+      if (!question.enabled || !question.shortcut) {
+        continue;
+      }
+
+      const registered = globalShortcut.register(question.shortcut, () => {
+        logger.info(`[Shortcuts] Quick Question triggered: ${question.name}`);
+        // Find main window and execute question
+        const allWindows = BrowserWindow.getAllWindows();
+        const mainWin = allWindows.find((win) => !win.isDestroyed() && win.webContents.getURL().includes('localhost'));
+
+        if (mainWin) {
+          mainWin.show();
+          mainWin.focus();
+
+          // Read clipboard and replace {{clipboard}} in prompt
+          const { clipboard } = require('electron');
+          const clipboardContent = clipboard.readText();
+          const finalMessage = question.prompt.replace(/\{\{clipboard\}\}/g, clipboardContent);
+
+          mainWin.webContents.send('create-new-chat-with-message', finalMessage);
+        }
+      });
+
+      if (registered) {
+        registeredShortcuts.push(question.shortcut);
+        logger.info(`[Shortcuts] Registered Quick Question: ${question.name} (${question.shortcut})`);
+      } else {
+        logger.error(`[Shortcuts] Failed to register Quick Question: ${question.name} (${question.shortcut})`);
+      }
+    }
+
+    logger.info(`[Shortcuts] Total registered: ${registeredShortcuts.length}`);
+  } catch (error) {
+    logger.error('[Shortcuts] Failed to register shortcuts:', error);
+  }
+}
+
+// Export for use in IPC handlers
+export { registerShortcuts };
 
 // System Tray 생성
 function createTray() {
@@ -296,17 +374,8 @@ app.whenReady().then(async () => {
   createTray();
   logger.info('Tray created');
 
-  // Register global shortcut (Ctrl+Shift+Space)
-  const shortcutRegistered = globalShortcut.register('CommandOrControl+Shift+Space', () => {
-    logger.info('Global shortcut triggered');
-    showQuickInputWindow();
-  });
-
-  if (!shortcutRegistered) {
-    logger.error('Failed to register global shortcut');
-  } else {
-    logger.info('Global shortcut registered: Ctrl+Shift+Space');
-  }
+  // Register global shortcuts from config
+  await registerShortcuts();
 
   // Create window
   createWindow();
