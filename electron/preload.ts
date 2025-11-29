@@ -289,13 +289,20 @@ const electronAPI = {
     ];
 
     if (validChannels.includes(channel)) {
-      ipcRenderer.on(channel, (_, ...args) => callback(...args));
+      // wrapper 함수 없이 직접 등록 (removeListener와 호환)
+      const wrappedCallback = (_: unknown, ...args: unknown[]) => callback(...args);
+      ipcRenderer.on(channel, wrappedCallback);
+      // Store mapping for removeListener
+      (callback as any).__ipcWrapper = wrappedCallback;
     }
   },
 
   // 이벤트 리스너 제거
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => {
-    ipcRenderer.removeListener(channel, callback);
+    // Use stored wrapper if available
+    const wrappedCallback = (callback as any).__ipcWrapper || callback;
+    ipcRenderer.removeListener(channel, wrappedCallback);
+    delete (callback as any).__ipcWrapper;
   },
 
   // Quick Input operations
