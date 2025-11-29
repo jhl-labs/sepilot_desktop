@@ -703,4 +703,178 @@ describe('ComfyUISettingsTab', () => {
       expect(message.className).toContain('text-destructive');
     });
   });
+
+  describe('브라우저 환경에서의 연결 테스트', () => {
+    const originalFetch = global.fetch;
+
+    beforeEach(() => {
+      // Ensure Electron mode is disabled
+      disableElectronMode();
+    });
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('should test connection using fetch in browser mode', async () => {
+      const user = userEvent.setup();
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+      });
+      global.fetch = mockFetch;
+
+      render(
+        <ComfyUISettingsTab
+          comfyConfig={defaultConfig}
+          setComfyConfig={mockSetComfyConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+          setMessage={mockSetMessage}
+        />
+      );
+
+      const testButton = screen.getByRole('button', { name: /연결 테스트/i });
+      await user.click(testButton);
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith('http://127.0.0.1:8188/system_stats', {
+          headers: {
+            Authorization: 'Bearer test-key',
+          },
+        });
+        expect(mockSetMessage).toHaveBeenCalledWith({
+          type: 'success',
+          text: 'ComfyUI 서버와 연결되었습니다.',
+        });
+      });
+    });
+
+    it('should test connection without API key in browser mode', async () => {
+      const user = userEvent.setup();
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+      });
+      global.fetch = mockFetch;
+
+      render(
+        <ComfyUISettingsTab
+          comfyConfig={{ ...defaultConfig, apiKey: '' }}
+          setComfyConfig={mockSetComfyConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+          setMessage={mockSetMessage}
+        />
+      );
+
+      const testButton = screen.getByRole('button', { name: /연결 테스트/i });
+      await user.click(testButton);
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith('http://127.0.0.1:8188/system_stats', {
+          headers: undefined,
+        });
+        expect(mockSetMessage).toHaveBeenCalledWith({
+          type: 'success',
+          text: 'ComfyUI 서버와 연결되었습니다.',
+        });
+      });
+    });
+
+    it('should handle HTTP error in browser mode', async () => {
+      const user = userEvent.setup();
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+      });
+      global.fetch = mockFetch;
+
+      render(
+        <ComfyUISettingsTab
+          comfyConfig={defaultConfig}
+          setComfyConfig={mockSetComfyConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+          setMessage={mockSetMessage}
+        />
+      );
+
+      const testButton = screen.getByRole('button', { name: /연결 테스트/i });
+      await user.click(testButton);
+
+      await waitFor(() => {
+        expect(mockSetMessage).toHaveBeenCalledWith({
+          type: 'error',
+          text: 'ComfyUI 서버 응답이 올바르지 않습니다. (HTTP 404)',
+        });
+      });
+    });
+
+    it('should normalize URL by removing trailing slash in browser mode', async () => {
+      const user = userEvent.setup();
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+      });
+      global.fetch = mockFetch;
+
+      render(
+        <ComfyUISettingsTab
+          comfyConfig={{ ...defaultConfig, httpUrl: 'http://127.0.0.1:8188/' }}
+          setComfyConfig={mockSetComfyConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+          setMessage={mockSetMessage}
+        />
+      );
+
+      const testButton = screen.getByRole('button', { name: /연결 테스트/i });
+      await user.click(testButton);
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith('http://127.0.0.1:8188/system_stats', {
+          headers: {
+            Authorization: 'Bearer test-key',
+          },
+        });
+      });
+    });
+
+    it('should handle network error in browser mode', async () => {
+      const user = userEvent.setup();
+      const mockFetch = jest.fn().mockRejectedValue(new Error('Network error'));
+      global.fetch = mockFetch;
+
+      render(
+        <ComfyUISettingsTab
+          comfyConfig={defaultConfig}
+          setComfyConfig={mockSetComfyConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+          setMessage={mockSetMessage}
+        />
+      );
+
+      const testButton = screen.getByRole('button', { name: /연결 테스트/i });
+      await user.click(testButton);
+
+      await waitFor(() => {
+        expect(mockSetMessage).toHaveBeenCalledWith({
+          type: 'error',
+          text: 'Network error',
+        });
+      });
+    });
+  });
 });
