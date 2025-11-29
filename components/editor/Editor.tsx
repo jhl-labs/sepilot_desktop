@@ -38,8 +38,12 @@ export function CodeEditor() {
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath);
 
-  // Markdown 파일인지 확인
-  const isMarkdownFile = activeFile && ['markdown', 'md', 'mdx'].includes(activeFile.language || '');
+  // Markdown 파일인지 확인 (language가 'markdown'이거나 확장자가 .md, .mdx인 경우)
+  const isMarkdownFile = activeFile && (
+    activeFile.language === 'markdown' ||
+    activeFile.path.toLowerCase().endsWith('.md') ||
+    activeFile.path.toLowerCase().endsWith('.mdx')
+  );
 
   const handleEditorChange = (value: string | undefined) => {
     if (activeFilePath && value !== undefined) {
