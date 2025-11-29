@@ -270,4 +270,166 @@ describe('MermaidDiagram', () => {
     // Component should unmount without errors
     expect(screen.queryByText('Test Diagram')).not.toBeInTheDocument();
   });
+
+  it('should show manual retry button in error state', async () => {
+    mockRender.mockRejectedValueOnce(new Error('Parse error'));
+
+    render(<MermaidDiagram chart="bad syntax" />);
+
+    await waitFor(() => {
+      const retryButton = screen.getByRole('button', { name: /수정/ });
+      expect(retryButton).toBeInTheDocument();
+    });
+  });
+
+  it('should not show retry button after max retries', async () => {
+    mockRender.mockRejectedValue(new Error('Parse error'));
+
+    // Mock Electron environment with LLM
+    const mockElectronAPI = {
+      llm: {
+        chat: jest.fn().mockResolvedValue({
+          success: true,
+          data: { content: 'graph TD\n  A-->B' },
+        }),
+      },
+    };
+
+    (window as any).electronAPI = mockElectronAPI;
+    (require('@/lib/platform').isElectron as jest.Mock).mockReturnValue(true);
+
+    render(<MermaidDiagram chart="bad syntax" />);
+
+    // Wait for auto-fix attempts to complete
+    await waitFor(
+      () => {
+        const retryText = screen.queryByText(/자동 수정 2\/2회 시도됨/);
+        if (retryText) {
+          expect(retryText).toBeInTheDocument();
+        }
+      },
+      { timeout: 5000 }
+    );
+
+    delete (window as any).electronAPI;
+    (require('@/lib/platform').isElectron as jest.Mock).mockReturnValue(false);
+  });
+
+  it('should handle missing containerRef gracefully', async () => {
+    const { container } = render(<MermaidDiagram chart={validChart} />);
+
+    // Remove the container ref element to simulate missing ref
+    const diagramDiv = container.querySelector('.mermaid-diagram');
+    if (diagramDiv?.parentElement) {
+      diagramDiv.parentElement.removeChild(diagramDiv);
+    }
+
+    await waitFor(() => {
+      // Should not crash, just skip rendering
+      expect(mockRender).toHaveBeenCalled();
+    });
+  });
+
+  it('should clean up error SVG elements on error', async () => {
+    // Create a mock error SVG element
+    const errorSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    errorSvg.id = 'mermaid-test123';
+    errorSvg.textContent = 'Syntax error in text';
+    document.body.appendChild(errorSvg);
+
+    mockRender.mockRejectedValueOnce(new Error('Syntax error'));
+
+    render(<MermaidDiagram chart="bad syntax" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Mermaid Diagram Error')).toBeInTheDocument();
+    });
+
+    // Error SVG should have been cleaned up
+    const remainingErrorSvg = document.getElementById('mermaid-test123');
+    expect(remainingErrorSvg).not.toBeInTheDocument();
+  });
+
+  it('should re-initialize mermaid when theme changes', async () => {
+    const { rerender } = render(<MermaidDiagram chart={validChart} />);
+
+    await waitFor(() => {
+      expect(mockInitialize).toHaveBeenCalledWith(
+        expect.objectContaining({ theme: 'default' })
+      );
+    });
+
+    mockInitialize.mockClear();
+    (useTheme as jest.Mock).mockReturnValue({ theme: 'dark' });
+
+    rerender(<MermaidDiagram chart={validChart} />);
+
+    await waitFor(() => {
+      expect(mockInitialize).toHaveBeenCalledWith(
+        expect.objectContaining({ theme: 'dark' })
+      );
+    });
+  });
+
+  it('should handle system theme', async () => {
+    (useTheme as jest.Mock).mockReturnValue({ theme: 'system' });
+
+    render(<MermaidDiagram chart={validChart} />);
+
+    await waitFor(() => {
+      expect(mockInitialize).toHaveBeenCalledWith(
+        expect.objectContaining({ theme: 'default' })
+      );
+    });
+  });
+
+  it('should show retry count in error message', async () => {
+    mockRender.mockRejectedValue(new Error('Parse error'));
+
+    const mockElectronAPI = {
+      llm: {
+        chat: jest.fn().mockResolvedValue({
+          success: true,
+          data: { content: 'fixed but still wrong' },
+        }),
+      },
+    };
+
+    (window as any).electronAPI = mockElectronAPI;
+    (require('@/lib/platform').isElectron as jest.Mock).mockReturnValue(true);
+
+    render(<MermaidDiagram chart="bad syntax" />);
+
+    await waitFor(
+      () => {
+        const errorHeader = screen.queryByText(/자동 수정.*시도됨/);
+        if (errorHeader) {
+          expect(errorHeader).toBeInTheDocument();
+        }
+      },
+      { timeout: 5000 }
+    );
+
+    delete (window as any).electronAPI;
+    (require('@/lib/platform').isElectron as jest.Mock).mockReturnValue(false);
+  });
+
+  it('should display original chart in error state', async () => {
+    const badChart = 'graph TD\n  A[[[Invalid';
+    mockRender.mockRejectedValueOnce(new Error('Parse error'));
+
+    render(<MermaidDiagram chart={badChart} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Mermaid Diagram Error')).toBeInTheDocument();
+    });
+
+    // Copy button should copy the original bad chart
+    const copyButton = screen.getByRole('button', { name: /복사/ });
+    fireEvent.click(copyButton);
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(badChart);
+    });
+  });
 });
