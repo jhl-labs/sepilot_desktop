@@ -506,4 +506,134 @@ describe('SearchPanel', () => {
       }
     });
   });
+
+  describe('Non-Electron 환경', () => {
+    beforeEach(() => {
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test/project',
+        openFile: mockOpenFile,
+      });
+    });
+
+    it('Non-Electron 환경에서 검색이 실행되지 않아야 함', async () => {
+      // Disable Electron mode
+      delete (window as any).electronAPI;
+      const { isElectron: originalIsElectron } = require('@/lib/platform');
+      require('@/lib/platform').isElectron = jest.fn(() => false);
+
+      const user = userEvent.setup();
+      render(<SearchPanel />);
+
+      const searchInput = screen.getByPlaceholderText('검색어 입력...');
+      await user.type(searchInput, 'test');
+      await user.keyboard('{Enter}');
+
+      // 검색이 실행되지 않아야 함
+      expect((mockElectronAPI.fs as any).searchFiles).not.toHaveBeenCalled();
+
+      // Restore
+      require('@/lib/platform').isElectron = originalIsElectron;
+      enableElectronMode();
+    });
+
+    it('Non-Electron 환경에서 매치 클릭이 동작하지 않아야 함', async () => {
+      const user = userEvent.setup();
+
+      // 먼저 검색 실행 (Electron 환경)
+      (mockElectronAPI.fs as any).searchFiles.mockResolvedValue({
+        success: true,
+        data: {
+          query: 'test',
+          totalFiles: 1,
+          totalMatches: 1,
+          results: [
+            {
+              file: '/test/project/test.ts',
+              matches: [{ line: 10, column: 5, text: 'test function' }],
+            },
+          ],
+        },
+      });
+
+      render(<SearchPanel />);
+
+      const searchInput = screen.getByPlaceholderText('검색어 입력...');
+      await user.type(searchInput, 'test');
+      await user.keyboard('{Enter}');
+
+      await waitFor(() => {
+        expect(screen.getByText('test function')).toBeInTheDocument();
+      });
+
+      // Electron 모드 비활성화 후 클릭
+      delete (window as any).electronAPI;
+      const { isElectron: originalIsElectron } = require('@/lib/platform');
+      require('@/lib/platform').isElectron = jest.fn(() => false);
+
+      const matchText = screen.getByText('test function');
+      await user.click(matchText);
+
+      // 파일이 열리지 않아야 함
+      expect(mockOpenFile).not.toHaveBeenCalled();
+
+      // Restore
+      require('@/lib/platform').isElectron = originalIsElectron;
+      enableElectronMode();
+    });
+  });
+
+  describe('파일 열기 에러', () => {
+    beforeEach(() => {
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test/project',
+        openFile: mockOpenFile,
+      });
+    });
+
+    it('파일 열기 실패 시 에러를 처리해야 함', async () => {
+      const user = userEvent.setup();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      (mockElectronAPI.fs as any).searchFiles.mockResolvedValue({
+        success: true,
+        data: {
+          query: 'test',
+          totalFiles: 1,
+          totalMatches: 1,
+          results: [
+            {
+              file: '/test/project/test.ts',
+              matches: [{ line: 10, column: 5, text: 'test function' }],
+            },
+          ],
+        },
+      });
+
+      (mockElectronAPI.fs.readFile as jest.Mock).mockRejectedValue(
+        new Error('File read error')
+      );
+
+      render(<SearchPanel />);
+
+      const searchInput = screen.getByPlaceholderText('검색어 입력...');
+      await user.type(searchInput, 'test');
+      await user.keyboard('{Enter}');
+
+      await waitFor(() => {
+        expect(screen.getByText('test function')).toBeInTheDocument();
+      });
+
+      const matchText = screen.getByText('test function');
+      await user.click(matchText);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          '[SearchPanel] Error opening file:',
+          expect.any(Error)
+        );
+      });
+
+      consoleSpy.mockRestore();
+    });
+  });
 });
