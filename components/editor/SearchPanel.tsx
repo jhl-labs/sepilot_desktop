@@ -35,6 +35,7 @@ export function SearchPanel() {
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
   const [useRegex, setUseRegex] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSearch = async () => {
     if (!query.trim() || !workingDirectory || !isElectron() || !window.electronAPI) {
@@ -42,6 +43,7 @@ export function SearchPanel() {
     }
 
     setSearching(true);
+    setError(null);
     try {
       const result = await window.electronAPI.fs.searchFiles(query, workingDirectory, {
         caseSensitive,
@@ -51,15 +53,18 @@ export function SearchPanel() {
 
       if (result.success && result.data) {
         setResults(result.data);
+        setError(null);
         // 자동으로 모든 파일 펼치기
         const allFiles = new Set(result.data.results.map((r) => r.file));
         setExpandedFiles(allFiles);
       } else {
         console.error('[SearchPanel] Search failed:', result.error);
+        setError(result.error || 'Search failed');
         setResults(null);
       }
     } catch (error) {
       console.error('[SearchPanel] Error searching:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error occurred');
       setResults(null);
     } finally {
       setSearching(false);
@@ -123,7 +128,12 @@ export function SearchPanel() {
     return (
       <div className="flex h-full flex-col items-center justify-center p-4 text-muted-foreground">
         <Search className="mb-2 h-12 w-12 opacity-20" />
-        <p className="text-center text-sm">작업 디렉토리를 먼저 설정하세요</p>
+        <p className="text-center text-sm font-medium">작업 디렉토리를 먼저 설정하세요</p>
+        <p className="mt-2 text-center text-xs">
+          Files 탭에서 폴더 아이콘을 클릭하여
+          <br />
+          작업 디렉토리를 선택하세요
+        </p>
       </div>
     );
   }
@@ -196,7 +206,22 @@ export function SearchPanel() {
           </div>
         )}
 
-        {results && !searching && (
+        {error && !searching && (
+          <div className="m-2 rounded border border-destructive bg-destructive/10 p-3">
+            <p className="text-sm font-medium text-destructive">검색 실패</p>
+            <p className="mt-1 text-xs text-destructive/80">{error}</p>
+            {error.includes('ripgrep') && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                ripgrep 설치 방법:
+                <br />- Ubuntu/Debian: sudo apt install ripgrep
+                <br />- macOS: brew install ripgrep
+                <br />- Windows: winget install BurntSushi.ripgrep.MSVC
+              </p>
+            )}
+          </div>
+        )}
+
+        {results && !searching && !error && (
           <div className="p-2">
             <div className="mb-2 text-xs text-muted-foreground">
               {results.totalFiles}개 파일에서 {results.totalMatches}개 결과 발견

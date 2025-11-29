@@ -421,6 +421,20 @@ export function registerFileHandlers() {
       try {
         console.log('[File] Searching files:', { query, dirPath, options });
 
+        // .gitignore 파일 읽기
+        const gitignorePath = path.join(dirPath, '.gitignore');
+        let gitignorePatterns: string[] = [];
+        try {
+          const gitignoreContent = await fs.readFile(gitignorePath, 'utf-8');
+          gitignorePatterns = gitignoreContent
+            .split('\n')
+            .map((line) => line.trim())
+            .filter((line) => line && !line.startsWith('#')); // 빈 줄과 주석 제외
+          console.log(`[File] Loaded ${gitignorePatterns.length} patterns from .gitignore`);
+        } catch (error) {
+          console.log('[File] No .gitignore file found or failed to read');
+        }
+
         // ripgrep 명령 구성
         const args: string[] = [
           '--line-number', // 라인 번호 표시
@@ -447,13 +461,13 @@ export function registerFileHandlers() {
           args.push('--glob', `!${options.excludePattern}`);
         }
 
-        // 기본 제외 패턴
-        args.push('--glob', '!node_modules/**');
+        // .gitignore 패턴 추가
+        for (const pattern of gitignorePatterns) {
+          args.push('--glob', `!${pattern}`);
+        }
+
+        // 기본 제외 패턴 (gitignore에 없을 경우 대비)
         args.push('--glob', '!.git/**');
-        args.push('--glob', '!dist/**');
-        args.push('--glob', '!build/**');
-        args.push('--glob', '!.next/**');
-        args.push('--glob', '!out/**');
 
         // 검색어와 경로 추가
         args.push('--', query, dirPath);
@@ -464,6 +478,7 @@ export function registerFileHandlers() {
         const { stdout } = await execAsync(command, {
           maxBuffer: 10 * 1024 * 1024, // 10MB
           encoding: 'utf-8',
+          cwd: dirPath, // working directory에서 실행
         });
 
         // 결과 파싱
