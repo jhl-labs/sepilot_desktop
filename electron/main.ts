@@ -25,12 +25,84 @@ let quickInputWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
 let registeredShortcuts: string[] = []; // Track registered shortcuts
+let isMenuVisible = false; // Track menu visibility state
 
 const isDev = !app.isPackaged;
 
 // Setup electron-serve for production
 if (!isDev) {
   serve({ directory: 'out' });
+}
+
+// Toggle menu visibility
+function toggleMenuVisibility() {
+  if (!mainWindow) return;
+
+  isMenuVisible = !isMenuVisible;
+
+  if (isMenuVisible) {
+    // Show default menu
+    Menu.setApplicationMenu(Menu.buildFromTemplate([
+      {
+        label: 'File',
+        submenu: [
+          { role: 'quit' }
+        ]
+      },
+      {
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { role: 'selectAll' }
+        ]
+      },
+      {
+        label: 'View',
+        submenu: [
+          { role: 'reload' },
+          { role: 'forceReload' },
+          { role: 'toggleDevTools' },
+          { type: 'separator' },
+          { role: 'resetZoom' },
+          { role: 'zoomIn' },
+          { role: 'zoomOut' },
+          { type: 'separator' },
+          { role: 'togglefullscreen' }
+        ]
+      },
+      {
+        label: 'Window',
+        submenu: [
+          { role: 'minimize' },
+          { role: 'zoom' },
+          { type: 'separator' },
+          { role: 'close' }
+        ]
+      },
+      {
+        label: 'Help',
+        submenu: [
+          {
+            label: 'About SEPilot',
+            click: async () => {
+              const { shell } = require('electron');
+              await shell.openExternal('https://github.com/yourusername/sepilot_desktop');
+            }
+          }
+        ]
+      }
+    ]));
+    logger.info('Menu bar shown');
+  } else {
+    // Hide menu
+    Menu.setApplicationMenu(null);
+    logger.info('Menu bar hidden');
+  }
 }
 
 function createWindow() {
@@ -48,6 +120,18 @@ function createWindow() {
     },
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 10, y: 10 },
+  });
+
+  // Hide menu by default
+  Menu.setApplicationMenu(null);
+  isMenuVisible = false;
+
+  // Register F10 key to toggle menu
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown' && input.key === 'F10') {
+      event.preventDefault();
+      toggleMenuVisibility();
+    }
   });
 
   if (isDev) {
