@@ -134,6 +134,17 @@ interface LLMAPI {
   onStreamError: (callback: (error: string) => void) => (...args: unknown[]) => void;
   removeStreamListener: (event: string, handler: (...args: unknown[]) => void) => void;
   removeAllStreamListeners?: () => void;
+  editorAutocomplete: (context: {
+    code: string;
+    cursorPosition: number;
+    language?: string;
+  }) => Promise<IPCResponse<{ completion: string }>>;
+  editorAction: (params: {
+    action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve';
+    text: string;
+    language?: string;
+    targetLanguage?: string;
+  }) => Promise<IPCResponse<{ result: string }>>;
 }
 
 // LangGraph 관련 타입

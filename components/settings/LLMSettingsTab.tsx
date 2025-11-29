@@ -493,6 +493,215 @@ export function LLMSettingsTab({
         )}
       </div>
 
+      {/* Autocomplete Settings */}
+      <div className="pt-6 border-t space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <Label className="text-base font-semibold">자동완성 모델</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              에디터에서 코드 자동완성에 사용할 모델을 별도로 지정할 수 있습니다. (빠른 응답을 위해 가벼운 모델 권장)
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={config.autocomplete?.enabled ?? false}
+              onChange={(e) => updateAutocompleteConfig({ enabled: e.target.checked })}
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+          </label>
+        </div>
+
+        {config.autocomplete?.enabled && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="autocompleteProvider">Provider</Label>
+              <select
+                id="autocompleteProvider"
+                value={config.autocomplete?.provider || config.provider}
+                onChange={(e) =>
+                  updateAutocompleteConfig({
+                    provider: e.target.value as LLMConfig['provider'],
+                  })
+                }
+                className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
+              >
+                <option value="openai" className="bg-background text-foreground">OpenAI</option>
+                <option value="anthropic" className="bg-background text-foreground">Anthropic (Claude)</option>
+                <option value="custom" className="bg-background text-foreground">Custom (OpenAI Compatible)</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="autocompleteBaseUrl">Base URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="autocompleteBaseUrl"
+                  value={config.autocomplete?.baseURL || ''}
+                  onChange={(e) =>
+                    updateAutocompleteConfig({
+                      baseURL: e.target.value,
+                    })
+                  }
+                  placeholder={config.baseURL}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefreshAutocompleteModels}
+                  disabled={isAutocompleteModelLoading || (!config.autocomplete?.apiKey && !config.apiKey.trim())}
+                  title="자동완성 모델 목록 새로고침"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isAutocompleteModelLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="autocompleteApiKey">API Key (선택사항)</Label>
+              <Input
+                id="autocompleteApiKey"
+                type="password"
+                value={config.autocomplete?.apiKey || ''}
+                onChange={(e) =>
+                  updateAutocompleteConfig({
+                    apiKey: e.target.value,
+                  })
+                }
+                placeholder="비워두면 기본 API 키 사용"
+              />
+              <p className="text-xs text-muted-foreground">
+                자동완성 모델에 다른 API 키를 사용하려면 입력하세요. 비워두면 기본 LLM API 키를 사용합니다.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="autocompleteModelSelect">Model</Label>
+              <select
+                id="autocompleteModelSelect"
+                value={autocompleteModelSelectValue}
+                onChange={(e) => {
+                  if (e.target.value === '__autocomplete_custom__') {
+                    updateAutocompleteConfig({ model: '' });
+                  } else {
+                    updateAutocompleteConfig({ model: e.target.value });
+                  }
+                }}
+                className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
+              >
+                {autocompleteModelOptions.length > 0 ? (
+                  <>
+                    <option value="" disabled className="bg-background text-foreground">
+                      자동완성 모델을 선택하세요
+                    </option>
+                    {autocompleteModelOptions.map((modelId) => (
+                      <option key={modelId} value={modelId} className="bg-background text-foreground">
+                        {modelId}
+                      </option>
+                    ))}
+                  </>
+                ) : (
+                  <option value="" disabled className="bg-background text-foreground">
+                    자동완성 모델 목록을 불러오려면 API 키가 필요합니다
+                  </option>
+                )}
+                <option value="__autocomplete_custom__" className="bg-background text-foreground">직접 입력</option>
+              </select>
+              {isAutocompleteModelLoading && (
+                <p className="text-xs text-muted-foreground">자동완성 모델 목록을 불러오는 중입니다...</p>
+              )}
+              {autocompleteModelFetchError && (
+                <p className="text-xs text-destructive">{autocompleteModelFetchError}</p>
+              )}
+              {!config.autocomplete?.apiKey && !config.apiKey.trim() && !isAutocompleteModelLoading && (
+                <p className="text-xs text-muted-foreground">
+                  API 키를 입력한 후 새로고침 버튼을 클릭하면 자동완성 모델 목록을 가져옵니다.
+                </p>
+              )}
+              {(config.autocomplete?.apiKey || config.apiKey.trim()) && autocompleteModelOptions.length === 0 && !isAutocompleteModelLoading && !autocompleteModelFetchError && (
+                <p className="text-xs text-muted-foreground">
+                  새로고침 버튼을 클릭하여 자동완성 모델 목록을 불러오세요.
+                </p>
+              )}
+              {showCustomAutocompleteModelInput && (
+                <Input
+                  id="autocompleteModel"
+                  value={config.autocomplete?.model || ''}
+                  onChange={(e) =>
+                    updateAutocompleteConfig({
+                      model: e.target.value,
+                    })
+                  }
+                  placeholder="gpt-4o-mini, claude-3-5-haiku 등"
+                />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="autocompleteMaxTokens">Max Tokens</Label>
+              <Input
+                id="autocompleteMaxTokens"
+                type="number"
+                value={config.autocomplete?.maxTokens ?? 100}
+                onChange={(e) => {
+                  const parsed = parseInt(e.target.value, 10);
+                  updateAutocompleteConfig({
+                    maxTokens: Number.isNaN(parsed) ? undefined : parsed,
+                  });
+                }}
+                placeholder="100"
+              />
+              <p className="text-xs text-muted-foreground">
+                자동완성 응답에서 사용할 최대 토큰 수를 지정합니다.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="autocompleteTemperature">
+                Temperature ({config.autocomplete?.temperature ?? 0.3})
+              </Label>
+              <input
+                id="autocompleteTemperature"
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={config.autocomplete?.temperature ?? 0.3}
+                onChange={(e) =>
+                  updateAutocompleteConfig({ temperature: parseFloat(e.target.value) })
+                }
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                자동완성에는 낮은 temperature(0.1~0.3) 권장
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="autocompleteDebounce">Debounce (ms)</Label>
+              <Input
+                id="autocompleteDebounce"
+                type="number"
+                value={config.autocomplete?.debounceMs ?? 300}
+                onChange={(e) => {
+                  const parsed = parseInt(e.target.value, 10);
+                  updateAutocompleteConfig({
+                    debounceMs: Number.isNaN(parsed) ? undefined : parsed,
+                  });
+                }}
+                placeholder="300"
+              />
+              <p className="text-xs text-muted-foreground">
+                타이핑 후 자동완성 요청까지의 대기 시간 (밀리초)
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Custom Headers for LLM API */}
       <div className="pt-6 border-t space-y-4">
         <div>

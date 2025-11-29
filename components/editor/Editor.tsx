@@ -62,6 +62,46 @@ export function CodeEditor() {
     }
   };
 
+  const handleEditorAction = async (
+    action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve',
+    selectedText: string,
+    targetLanguage?: string
+  ) => {
+    if (!window.electronAPI?.llm) {
+      console.error('LLM API not available');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.llm.editorAction({
+        action,
+        text: selectedText,
+        language: activeFile?.language,
+        targetLanguage,
+      });
+
+      if (result.success && result.data) {
+        // Insert or replace result in editor
+        if (editor) {
+          const selection = editor.getSelection();
+          if (selection) {
+            editor.executeEdits('', [
+              {
+                range: selection,
+                text: result.data.result,
+                forceMoveMarkers: true,
+              },
+            ]);
+          }
+        }
+      } else {
+        console.error('Editor action failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Editor action error:', error);
+    }
+  };
+
   const handleCloseFile = (path: string, e: React.MouseEvent) => {
     e.stopPropagation();
 
@@ -89,6 +129,117 @@ export function CodeEditor() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeFile]);
+
+  // Register Monaco context menu actions
+  useEffect(() => {
+    if (!editor) return;
+
+    // Register context menu actions
+    const explainAction = editor.addAction({
+      id: 'llm-explain',
+      label: 'AI: Explain Code',
+      contextMenuGroupId: 'llm',
+      contextMenuOrder: 1,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('explain', selectedText);
+          }
+        }
+      },
+    });
+
+    const summarizeAction = editor.addAction({
+      id: 'llm-summarize',
+      label: 'AI: Summarize',
+      contextMenuGroupId: 'llm',
+      contextMenuOrder: 2,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('summarize', selectedText);
+          }
+        }
+      },
+    });
+
+    const translateAction = editor.addAction({
+      id: 'llm-translate',
+      label: 'AI: Translate to Korean',
+      contextMenuGroupId: 'llm',
+      contextMenuOrder: 3,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('translate', selectedText, 'Korean');
+          }
+        }
+      },
+    });
+
+    const fixAction = editor.addAction({
+      id: 'llm-fix',
+      label: 'AI: Fix Code',
+      contextMenuGroupId: 'llm',
+      contextMenuOrder: 4,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('fix', selectedText);
+          }
+        }
+      },
+    });
+
+    const improveAction = editor.addAction({
+      id: 'llm-improve',
+      label: 'AI: Improve Code',
+      contextMenuGroupId: 'llm',
+      contextMenuOrder: 5,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('improve', selectedText);
+          }
+        }
+      },
+    });
+
+    const completeAction = editor.addAction({
+      id: 'llm-complete',
+      label: 'AI: Complete Code',
+      contextMenuGroupId: 'llm',
+      contextMenuOrder: 6,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('complete', selectedText);
+          }
+        }
+      },
+    });
+
+    return () => {
+      explainAction.dispose();
+      summarizeAction.dispose();
+      translateAction.dispose();
+      fixAction.dispose();
+      improveAction.dispose();
+      completeAction.dispose();
+    };
+  }, [editor, handleEditorAction]);
 
   // Navigate to initialPosition when file is opened
   useEffect(() => {

@@ -124,6 +124,17 @@ const electronAPI = {
       ipcRenderer.removeAllListeners('llm-stream-done');
       ipcRenderer.removeAllListeners('llm-stream-error');
     },
+    editorAutocomplete: (context: {
+      code: string;
+      cursorPosition: number;
+      language?: string;
+    }) => ipcRenderer.invoke('llm-editor-autocomplete', context),
+    editorAction: (params: {
+      action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve';
+      text: string;
+      language?: string;
+      targetLanguage?: string;
+    }) => ipcRenderer.invoke('llm-editor-action', params),
   },
 
   // LangGraph operations (CORS 문제 해결)
@@ -316,28 +327,32 @@ const electronAPI = {
 
   // BrowserView operations
   browserView: {
-    create: () => ipcRenderer.invoke('browser-view:create'),
-    destroy: () => ipcRenderer.invoke('browser-view:destroy'),
+    // Tab management
+    createTab: (url?: string) => ipcRenderer.invoke('browser-view:create-tab', url),
+    switchTab: (tabId: string) => ipcRenderer.invoke('browser-view:switch-tab', tabId),
+    closeTab: (tabId: string) => ipcRenderer.invoke('browser-view:close-tab', tabId),
+    getTabs: () => ipcRenderer.invoke('browser-view:get-tabs'),
+    // Navigation (operates on active tab)
     loadURL: (url: string) => ipcRenderer.invoke('browser-view:load-url', url),
     goBack: () => ipcRenderer.invoke('browser-view:go-back'),
     goForward: () => ipcRenderer.invoke('browser-view:go-forward'),
     reload: () => ipcRenderer.invoke('browser-view:reload'),
     setBounds: (bounds: { x: number; y: number; width: number; height: number }) =>
       ipcRenderer.invoke('browser-view:set-bounds', bounds),
-    setVisible: (visible: boolean) => ipcRenderer.invoke('browser-view:set-visible', visible),
     getState: () => ipcRenderer.invoke('browser-view:get-state'),
     toggleDevTools: () => ipcRenderer.invoke('browser-view:toggle-devtools'),
-    onDidNavigate: (callback: (data: { url: string; canGoBack: boolean; canGoForward: boolean }) => void) => {
+    // Event listeners
+    onDidNavigate: (callback: (data: { tabId: string; url: string; canGoBack: boolean; canGoForward: boolean }) => void) => {
       const handler = (_: any, data: any) => callback(data);
       ipcRenderer.on('browser-view:did-navigate', handler);
       return handler;
     },
-    onLoadingState: (callback: (data: { isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => {
+    onLoadingState: (callback: (data: { tabId: string; isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => {
       const handler = (_: any, data: any) => callback(data);
       ipcRenderer.on('browser-view:loading-state', handler);
       return handler;
     },
-    onTitleUpdated: (callback: (data: { title: string }) => void) => {
+    onTitleUpdated: (callback: (data: { tabId: string; title: string }) => void) => {
       const handler = (_: any, data: any) => callback(data);
       ipcRenderer.on('browser-view:title-updated', handler);
       return handler;
