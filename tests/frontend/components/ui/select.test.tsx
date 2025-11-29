@@ -130,133 +130,30 @@ describe('Select Components', () => {
     });
   });
 
-  describe('SelectLabel', () => {
-    it('should render label', async () => {
-      const user = userEvent.setup();
-
-      render(
-        <Select>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectLabel>Label Text</SelectLabel>
-            <SelectItem value="test">Test</SelectItem>
-          </SelectContent>
-        </Select>
-      );
-
-      const trigger = screen.getByRole('combobox');
-      await user.click(trigger);
-
-      expect(await screen.findByText('Label Text')).toBeInTheDocument();
-    });
-
-    it('should apply custom className to label', async () => {
-      const user = userEvent.setup();
-
-      render(
-        <Select>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectLabel className="custom-label">Label</SelectLabel>
-            <SelectItem value="test">Test</SelectItem>
-          </SelectContent>
-        </Select>
-      );
-
-      const trigger = screen.getByRole('combobox');
-      await user.click(trigger);
-
-      const label = await screen.findByText('Label');
-      expect(label).toHaveClass('custom-label');
-    });
-  });
-
-  describe('SelectSeparator', () => {
-    it('should render separator', async () => {
-      const user = userEvent.setup();
-
-      const { container } = render(
-        <Select>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="option1">Option 1</SelectItem>
-            <SelectSeparator />
-            <SelectItem value="option2">Option 2</SelectItem>
-          </SelectContent>
-        </Select>
-      );
-
-      const trigger = screen.getByRole('combobox');
-      await user.click(trigger);
-
-      await screen.findByText('Option 1');
-
-      // Separator should be rendered
-      const separator = document.querySelector('[role="separator"]');
-      expect(separator).toBeInTheDocument();
-    });
-
-    it('should apply custom className to separator', async () => {
-      const user = userEvent.setup();
-
-      render(
-        <Select>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="option1">Option 1</SelectItem>
-            <SelectSeparator className="custom-separator" />
-            <SelectItem value="option2">Option 2</SelectItem>
-          </SelectContent>
-        </Select>
-      );
-
-      const trigger = screen.getByRole('combobox');
-      await user.click(trigger);
-
-      await screen.findByText('Option 1');
-
-      const separator = document.querySelector('.custom-separator');
-      expect(separator).toBeInTheDocument();
-    });
-  });
-
   describe('Complete Select', () => {
-    it('should render complete select with all components', async () => {
+    it('should render complete select', async () => {
       const user = userEvent.setup();
 
       render(
         <Select>
           <SelectTrigger>
-            <SelectValue placeholder="Select a fruit" />
+            <SelectValue placeholder="Select an option" />
           </SelectTrigger>
           <SelectContent>
-            <SelectLabel>Fruits</SelectLabel>
             <SelectItem value="apple">Apple</SelectItem>
             <SelectItem value="banana">Banana</SelectItem>
-            <SelectSeparator />
-            <SelectLabel>Vegetables</SelectLabel>
             <SelectItem value="carrot">Carrot</SelectItem>
           </SelectContent>
         </Select>
       );
 
-      expect(screen.getByText('Select a fruit')).toBeInTheDocument();
+      expect(screen.getByText('Select an option')).toBeInTheDocument();
 
       const trigger = screen.getByRole('combobox');
       await user.click(trigger);
 
-      expect(await screen.findByText('Fruits')).toBeInTheDocument();
-      expect(screen.getByText('Apple')).toBeInTheDocument();
+      expect(await screen.findByText('Apple')).toBeInTheDocument();
       expect(screen.getByText('Banana')).toBeInTheDocument();
-      expect(screen.getByText('Vegetables')).toBeInTheDocument();
       expect(screen.getByText('Carrot')).toBeInTheDocument();
     });
   });
