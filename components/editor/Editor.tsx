@@ -10,9 +10,6 @@ import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { isElectron } from '@/lib/platform';
 
-// Configure Monaco Editor to use local files instead of CDN
-loader.config({ paths: { vs: '/monaco/vs' } });
-
 // Load Editor component without SSR
 const Editor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
@@ -31,6 +28,19 @@ export function CodeEditor() {
 
   const { theme } = useTheme();
   const [isSaving, setIsSaving] = useState(false);
+  const [monacoLoaded, setMonacoLoaded] = useState(false);
+
+  // Configure Monaco Editor to use local files instead of CDN
+  useEffect(() => {
+    try {
+      loader.config({ paths: { vs: '/monaco/vs' } });
+      // Monaco will be loaded automatically when Editor component mounts
+      setMonacoLoaded(true);
+    } catch (error) {
+      console.error('Failed to configure Monaco loader:', error);
+      setMonacoLoaded(true); // Still try to load the editor
+    }
+  }, []);
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath);
 
@@ -156,22 +166,28 @@ export function CodeEditor() {
       {/* Monaco Editor */}
       {activeFile && (
         <div className="flex-1 overflow-hidden">
-          <Editor
-            height="100%"
-            language={activeFile.language || 'plaintext'}
-            value={activeFile.content}
-            onChange={handleEditorChange}
-            theme={theme === 'dark' ? 'vs-dark' : 'light'}
-            options={{
-              fontSize: 14,
-              minimap: { enabled: true },
-              scrollBeyondLastLine: false,
-              wordWrap: 'on',
-              automaticLayout: true,
-              tabSize: 2,
-              insertSpaces: true,
-            }}
-          />
+          {monacoLoaded ? (
+            <Editor
+              height="100%"
+              language={activeFile.language || 'plaintext'}
+              value={activeFile.content}
+              onChange={handleEditorChange}
+              theme={theme === 'dark' ? 'vs-dark' : 'light'}
+              options={{
+                fontSize: 14,
+                minimap: { enabled: true },
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                automaticLayout: true,
+                tabSize: 2,
+                insertSpaces: true,
+              }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-muted-foreground">Loading Monaco Editor...</div>
+            </div>
+          )}
         </div>
       )}
     </div>

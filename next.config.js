@@ -1,7 +1,4 @@
 /** @type {import('next').NextConfig} */
-const CopyWebpackPlugin = require('copy-webpack-plugin');
-const path = require('path');
-
 const nextConfig = {
   output: 'export',
   distDir: 'out',
@@ -23,18 +20,6 @@ const nextConfig = {
       // webpack output configuration
       config.output = config.output || {};
       config.output.globalObject = 'globalThis';
-
-      // Copy Monaco Editor files to public directory
-      config.plugins.push(
-        new CopyWebpackPlugin({
-          patterns: [
-            {
-              from: path.join(__dirname, 'node_modules/monaco-editor/min/vs'),
-              to: path.join(__dirname, 'public/monaco/vs'),
-            },
-          ],
-        })
-      );
 
       // Only exclude truly Node.js-only modules from client bundle
       // Do NOT exclude UI libraries that should work in browser
