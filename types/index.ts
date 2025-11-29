@@ -184,13 +184,18 @@ export interface QuickQuestion {
   id: string;
   name: string; // 사용자 친화적인 이름
   shortcut: string; // 예: "CommandOrControl+Shift+1"
-  prompt: string; // 질문 템플릿, {{clipboard}} 플레이스홀더 사용 가능
+  prompt: string; // 시스템 프롬프트 (LLM의 system 메시지로 전송됨, 클립보드 내용은 user 메시지로 전송됨)
   enabled: boolean;
 }
 
 export interface QuickInputConfig {
   quickInputShortcut: string; // 기본값: "CommandOrControl+Shift+Space"
   quickQuestions: QuickQuestion[]; // 최대 5개
+}
+
+export interface QuickInputMessageData {
+  systemMessage?: string; // Quick Question의 프롬프트 (시스템 메시지로 전송)
+  userMessage: string; // 사용자 입력 또는 클립보드 내용 (사용자 메시지로 전송)
 }
 
 export interface AppConfig {

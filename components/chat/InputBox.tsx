@@ -23,7 +23,7 @@ import { initializeComfyUIClient } from '@/lib/comfyui/client';
 import { generateConversationTitle, shouldGenerateTitle } from '@/lib/chat/title-generator';
 import { isElectron } from '@/lib/platform';
 import { getWebLLMClient, configureWebLLMClient } from '@/lib/llm/web-client';
-import { ImageAttachment, Message, ToolCall, ComfyUIConfig, NetworkConfig, LLMConfig } from '@/types';
+import { ImageAttachment, Message, ToolCall, ComfyUIConfig, NetworkConfig, LLMConfig, QuickInputMessageData } from '@/types';
 import { ToolApprovalDialog } from './ToolApprovalDialog';
 import { ImageGenerationProgressBar } from './ImageGenerationProgressBar';
 import { LLMStatusBar, type ToolInfo } from './LLMStatusBar';
@@ -46,6 +46,7 @@ export function InputBox() {
   const [isComposing, setIsComposing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [tools, setTools] = useState<ToolInfo[]>([]);
+  const [quickSystemMessage, setQuickSystemMessage] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingConversationIdRef = useRef<string | null>(null);
@@ -394,12 +395,17 @@ export function InputBox() {
   // Handle Quick Input message (from global shortcut)
   useEffect(() => {
     const handleQuickInputMessage = async (e: Event) => {
-      const customEvent = e as CustomEvent<{ message: string }>;
-      const message = customEvent.detail?.message;
+      const customEvent = e as CustomEvent<QuickInputMessageData>;
+      const messageData = customEvent.detail;
 
-      if (message && message.trim()) {
-        // 입력창에 메시지 설정
-        setInput(message);
+      if (messageData && messageData.userMessage.trim()) {
+        // Save system message if present (for Quick Question)
+        if (messageData.systemMessage) {
+          setQuickSystemMessage(messageData.systemMessage);
+        }
+
+        // 입력창에 사용자 메시지 설정
+        setInput(messageData.userMessage);
 
         // 상태 업데이트 대기 후 send 버튼 클릭
         setTimeout(() => {
@@ -630,6 +636,17 @@ export function InputBox() {
 
       // Prepare messages for LLM (include history)
       const allMessages = [
+        // Add system message from Quick Question if present
+        ...(quickSystemMessage
+          ? [
+              {
+                id: 'system-quick',
+                role: 'system' as const,
+                content: quickSystemMessage,
+                created_at: Date.now(),
+              },
+            ]
+          : []),
         ...messages,
         {
           id: 'temp',
@@ -1237,6 +1254,9 @@ export function InputBox() {
       stopStreaming(conversationId);
       streamingConversationIdRef.current = null;
       abortControllerRef.current = null;
+
+      // Clear Quick Question system message
+      setQuickSystemMessage(null);
 
       // Only restore focus if still on the same conversation
       // (user might have switched to another conversation)

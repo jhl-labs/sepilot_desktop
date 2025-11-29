@@ -123,9 +123,12 @@ export function QuickInputSettingsTab({
           <p className="text-xs text-muted-foreground">
             클립보드 내용을 기반으로 즉시 질문하고 답변을 받는 기능입니다.
             <br />
-            • 클립보드 내용은 <strong>항상 자동으로 포함</strong>됩니다.
+            • <strong>프롬프트</strong>: LLM의 시스템 메시지로 전송되어 역할/지시사항을 정의합니다.
             <br />
-            • 프롬프트에 {'{'}{'{'} clipboard {'}'}{'}'}를 사용하면 원하는 위치에 삽입할 수 있습니다.
+            • <strong>클립보드 내용</strong>: 사용자 메시지로 전송되어 처리할 대상이 됩니다.
+            <br />
+            <br />
+            예: 프롬프트 "한국어를 영어로, 영어는 한국어로" → 클립보드의 텍스트를 번역합니다.
           </p>
 
           {config.quickQuestions.length === 0 ? (
@@ -204,20 +207,22 @@ export function QuickInputSettingsTab({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor={`qq-prompt-${question.id}`}>프롬프트</Label>
+                    <Label htmlFor={`qq-prompt-${question.id}`}>
+                      프롬프트 (시스템 메시지)
+                    </Label>
                     <textarea
                       id={`qq-prompt-${question.id}`}
                       value={question.prompt}
                       onChange={(e) =>
                         handleUpdateQuestion(question.id, { prompt: e.target.value })
                       }
-                      placeholder="예: 이 코드를 설명해줘 (클립보드 내용이 자동으로 추가됨)"
+                      placeholder="예: 한국어를 영어로, 영어는 한국어로"
                       className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     <p className="text-xs text-muted-foreground">
-                      클립보드 내용이 프롬프트 뒤에 코드 블록으로 자동 추가됩니다.
+                      LLM에게 역할이나 지시사항을 정의하는 시스템 메시지입니다.
                       <br />
-                      특정 위치에 삽입하려면: "이걸 번역해줘: {'{{'}clipboard{'}}'}"
+                      클립보드의 내용은 별도의 사용자 메시지로 전송되어 처리 대상이 됩니다.
                     </p>
                   </div>
                 </div>

@@ -9,6 +9,7 @@ import { UpdateNotificationDialog } from '@/components/UpdateNotificationDialog'
 import { EditorWithTerminal } from '@/components/editor/EditorWithTerminal';
 import { BrowserPanel } from '@/components/editor/BrowserPanel';
 import { useChatStore } from '@/lib/store/chat-store';
+import { QuickInputMessageData } from '@/types';
 
 export default function Home() {
   const { appMode, createConversation, setActiveConversation, setAppMode, setActiveEditorTab } = useChatStore();
@@ -19,8 +20,18 @@ export default function Home() {
       return;
     }
 
-    const handleQuickInput = async (message: unknown) => {
-      if (typeof message !== 'string') {
+    const handleQuickInput = async (data: unknown) => {
+      // Support both string (legacy Quick Input) and object (Quick Question with system message)
+      let messageData: QuickInputMessageData;
+
+      if (typeof data === 'string') {
+        // Legacy Quick Input: just user message
+        messageData = { userMessage: data };
+      } else if (typeof data === 'object' && data !== null && 'userMessage' in data) {
+        // Quick Question: system message + user message
+        messageData = data as QuickInputMessageData;
+      } else {
+        console.warn('[Home] Invalid quick input data:', data);
         return;
       }
 
@@ -35,7 +46,7 @@ export default function Home() {
         setTimeout(() => {
           window.dispatchEvent(
             new CustomEvent('sepilot:quick-input-message', {
-              detail: { message },
+              detail: messageData,
             })
           );
         }, 200);

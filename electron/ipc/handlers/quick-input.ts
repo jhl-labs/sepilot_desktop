@@ -62,18 +62,13 @@ export function setupQuickInputHandlers() {
       const clipboardContent = clipboard.readText();
       logger.info('[QuickQuestion Handler] Clipboard content:', clipboardContent.substring(0, 100));
 
-      // 클립보드 내용을 메시지에 포함
-      let finalMessage: string;
-      if (prompt.includes('{{clipboard}}')) {
-        // {{clipboard}} 플레이스홀더 치환
-        finalMessage = prompt.replace(/\{\{clipboard\}\}/g, clipboardContent);
-      } else {
-        // 플레이스홀더가 없으면 클립보드 내용을 뒤에 추가
-        finalMessage = clipboardContent.trim()
-          ? `${prompt}\n\n\`\`\`\n${clipboardContent}\n\`\`\``
-          : prompt;
-      }
-      logger.info('[QuickQuestion Handler] Final message:', finalMessage.substring(0, 100));
+      // Send prompt as system message, clipboard as user message
+      const messageData = {
+        systemMessage: prompt,
+        userMessage: clipboardContent.trim() || '(클립보드가 비어있습니다)',
+      };
+      logger.info('[QuickQuestion Handler] System message:', prompt.substring(0, 50));
+      logger.info('[QuickQuestion Handler] User message:', messageData.userMessage.substring(0, 50));
 
       // 메인 창 가져오기
       const mainWindow = getMainWindow();
@@ -87,7 +82,7 @@ export function setupQuickInputHandlers() {
         mainWindow.focus();
 
         // 메인 창에 새 대화 생성 및 메시지 전송 이벤트 발생
-        mainWindow.webContents.send('create-new-chat-with-message', finalMessage);
+        mainWindow.webContents.send('create-new-chat-with-message', messageData);
         logger.info('[QuickQuestion Handler] Message sent to main window');
       } else {
         logger.error('[QuickQuestion Handler] Main window not found');
