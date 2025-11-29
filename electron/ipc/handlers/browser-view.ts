@@ -675,9 +675,17 @@ export function setupBrowserViewHandlers() {
       try {
         const data = await fs.readFile(metaPath, 'utf-8');
         const snapshots: Snapshot[] = JSON.parse(data);
+
+        // Convert file paths to sepilot-file:// protocol URLs
+        const snapshotsWithProtocol = snapshots.map((snapshot) => ({
+          ...snapshot,
+          thumbnail: `sepilot-file://${snapshot.thumbnail}`,
+          screenshotPath: `sepilot-file://${snapshot.screenshotPath}`,
+        }));
+
         return {
           success: true,
-          data: snapshots,
+          data: snapshotsWithProtocol,
         };
       } catch (error) {
         // File doesn't exist, return empty array

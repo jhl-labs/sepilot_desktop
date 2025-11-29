@@ -8,7 +8,7 @@ const pathModule = require('path');
 // We need to point @ to resources/app.asar/dist/electron
 moduleAlias.addAlias('@', pathModule.join(__dirname, '..'));
 
-import { app, BrowserWindow, session, Tray, Menu, globalShortcut, nativeImage } from 'electron';
+import { app, BrowserWindow, session, Tray, Menu, globalShortcut, nativeImage, protocol } from 'electron';
 import path from 'path';
 import serve from 'electron-serve';
 import { databaseService } from './services/database';
@@ -276,6 +276,17 @@ function createTray() {
 app.whenReady().then(async () => {
   logger.info('App is ready');
 
+  // Register custom file protocol for local file access
+  protocol.registerFileProtocol('sepilot-file', (request, callback) => {
+    const url = request.url.replace('sepilot-file://', '');
+    try {
+      return callback(decodeURIComponent(url));
+    } catch (error) {
+      logger.error('Failed to register file protocol:', error);
+      return callback({ error: -2 });
+    }
+  });
+
   // Register custom protocol for OAuth
   if (process.defaultApp) {
     if (process.argv.length >= 2) {
@@ -300,7 +311,7 @@ app.whenReady().then(async () => {
           "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* ws://localhost:* wss://localhost:* data: blob:",
           "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* https://cdn.jsdelivr.net",
           "style-src 'self' 'unsafe-inline' http://localhost:* https://cdn.jsdelivr.net",
-          "img-src 'self' data: blob: http://localhost:*",
+          "img-src 'self' data: blob: http://localhost:* sepilot-file:",
           "font-src 'self' data: https://cdn.jsdelivr.net",
           "connect-src 'self' http: https: ws: wss: data: blob:",
           "frame-src 'none'",
@@ -311,7 +322,7 @@ app.whenReady().then(async () => {
           "default-src 'self' data: blob:",
           "script-src 'self' 'unsafe-inline'",
           "style-src 'self' 'unsafe-inline'",
-          "img-src 'self' data: blob:",
+          "img-src 'self' data: blob: sepilot-file:",
           "font-src 'self' data:",
           "connect-src 'self' http: https: ws: wss: data: blob:",
           "frame-src 'none'",

@@ -117,7 +117,7 @@ export function SnapshotsList() {
               >
                 <div className="mb-2 aspect-video overflow-hidden rounded bg-muted">
                   <img
-                    src={`file://${snapshot.thumbnail}`}
+                    src={snapshot.thumbnail}
                     alt={snapshot.title}
                     className="h-full w-full object-cover"
                   />
