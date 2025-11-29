@@ -126,7 +126,7 @@ export function InputBox() {
     setMounted(true);
   }, []);
 
-  // Load available tools (MCP + builtin)
+  // Load available tools (MCP + Chat-specific builtin tools only)
   useEffect(() => {
     const loadTools = async () => {
       if (!isElectron() || !window.electronAPI) {
@@ -144,12 +144,15 @@ export function InputBox() {
             }))
           : [];
 
-        // Get builtin tools
+        // Chat-specific builtin tools (Coding Agent)
+        // Exclude Browser Agent tools (browser_*) and Editor Agent tools (get_file_context, search_similar_code, get_documentation)
         const builtinTools: ToolInfo[] = [
           { name: 'file_read', description: 'Read file contents from the filesystem', serverName: 'builtin' },
           { name: 'file_write', description: 'Write content to a file (overwrites existing content)', serverName: 'builtin' },
           { name: 'file_edit', description: 'Edit a file by replacing old text with new text', serverName: 'builtin' },
           { name: 'file_list', description: 'List files in a directory', serverName: 'builtin' },
+          { name: 'command_execute', description: 'Execute shell commands (npm, git, etc.)', serverName: 'builtin' },
+          { name: 'grep_search', description: 'Search for patterns in files using ripgrep', serverName: 'builtin' },
         ];
 
         // Combine all tools
