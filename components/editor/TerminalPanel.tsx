@@ -44,13 +44,15 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     tabsRef.current = tabs;
   }, [tabs]);
 
-  // 테마별 설정
+  // 테마별 설정 (VS Code 터미널 테마 기반)
   const getTerminalTheme = useCallback(() => {
     if (theme === 'light') {
       return {
         background: '#ffffff',
-        foreground: '#000000',
-        cursor: '#000000',
+        foreground: '#333333',
+        cursor: '#0066cc',
+        cursorAccent: '#ffffff',
+        selectionBackground: '#add6ff80',
         black: '#000000',
         red: '#cd3131',
         green: '#00BC00',
@@ -71,8 +73,10 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     } else {
       return {
         background: '#1e1e1e',
-        foreground: '#d4d4d4',
+        foreground: '#cccccc',
         cursor: '#ffffff',
+        cursorAccent: '#1e1e1e',
+        selectionBackground: '#264f78',
         black: '#000000',
         red: '#cd3131',
         green: '#0dbc79',

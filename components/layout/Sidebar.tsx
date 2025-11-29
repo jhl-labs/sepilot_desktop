@@ -42,6 +42,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
     setShowTerminalPanel,
     browserViewMode,
     setBrowserViewMode,
+    workingDirectory,
   } = useChatStore();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -248,9 +249,18 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
               variant="ghost"
               size="icon"
               onClick={() => {
-                setShowTerminalPanel(!showTerminalPanel);
+                if (workingDirectory) {
+                  setShowTerminalPanel(!showTerminalPanel);
+                }
               }}
-              title={showTerminalPanel ? '터미널 숨기기' : '터미널 열기'}
+              title={
+                !workingDirectory
+                  ? 'Working Directory를 먼저 설정해주세요'
+                  : showTerminalPanel
+                  ? '터미널 숨기기'
+                  : '터미널 열기'
+              }
+              disabled={!workingDirectory}
               className={`flex-1 ${showTerminalPanel ? 'bg-accent' : ''}`}
             >
               <Terminal className="h-5 w-5" />
