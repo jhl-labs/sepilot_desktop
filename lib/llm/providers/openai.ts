@@ -71,6 +71,16 @@ export class OpenAIProvider extends BaseLLMProvider {
         stream: false,
       };
 
+      // Debug: Log request details for autocomplete
+      log.info('[OpenAI] Request body:', {
+        model: requestBody.model,
+        messageCount: requestBody.messages.length,
+        temperature: requestBody.temperature,
+        max_tokens: requestBody.max_tokens,
+        systemMessageLength: requestBody.messages[0]?.content?.length || 0,
+        userMessageLength: requestBody.messages[1]?.content?.length || 0,
+      });
+
       // Add tools if provided
       if (mergedOptions.tools && mergedOptions.tools.length > 0) {
         requestBody.tools = mergedOptions.tools;
