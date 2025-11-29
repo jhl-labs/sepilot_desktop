@@ -42,9 +42,24 @@ export function setupBrowserViewHandlers() {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       );
 
+      // Handle new window/popup requests - load in the same BrowserView instead of opening new window
+      browserView.webContents.setWindowOpenHandler(({ url }) => {
+        logger.info('[BrowserView] Window open request:', url);
+        // Load the URL in the current BrowserView instead of opening new window
+        browserView?.webContents.loadURL(url);
+        return { action: 'deny' }; // Deny opening new window
+      });
+
       // Handle console messages for debugging
       browserView.webContents.on('console-message', (_, level, message) => {
         logger.info(`[BrowserView Console] ${message}`);
+      });
+
+      // Handle navigation errors
+      browserView.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+        if (errorCode !== -3) { // -3 is ERR_ABORTED which is normal for user navigation
+          logger.error(`[BrowserView] Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`);
+        }
       });
 
       mainWindow.addBrowserView(browserView);
