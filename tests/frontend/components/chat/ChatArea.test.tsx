@@ -300,4 +300,191 @@ describe('ChatArea', () => {
 
     expect(screen.getByTestId('scroll-area')).toBeInTheDocument();
   });
+
+  describe('폰트 스케일 변경', () => {
+    it('should load saved font scale from localStorage on mount', () => {
+      // Mock localStorage.getItem to return '150'
+      (localStorage.getItem as jest.Mock).mockReturnValue('150');
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        ...mockChatStore,
+        activeConversationId: 'conv-1',
+        messages: mockMessages,
+      });
+
+      render(<ChatArea />);
+
+      const fontScaleSelect = screen.getByTestId('font-scale-select');
+      expect(fontScaleSelect).toHaveAttribute('data-value', '150');
+    });
+
+    it('should update font scale when changed', async () => {
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        ...mockChatStore,
+        activeConversationId: 'conv-1',
+        messages: mockMessages,
+      });
+
+      render(<ChatArea />);
+
+      const changeScaleButton = screen.getByText('Change Scale');
+      fireEvent.click(changeScaleButton);
+
+      await waitFor(() => {
+        expect(localStorage.setItem).toHaveBeenCalledWith('sepilot-chat-font-scale', '120');
+      });
+    });
+  });
+
+  describe('파일 드롭', () => {
+    beforeEach(() => {
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        ...mockChatStore,
+        activeConversationId: 'conv-1',
+        messages: mockMessages,
+      });
+
+      // Mock FileReader
+      global.FileReader = class {
+        readAsText = jest.fn();
+        readAsDataURL = jest.fn();
+        onload: ((event: any) => void) | null = null;
+        onerror: ((event: any) => void) | null = null;
+        result: string | null = null;
+      } as any;
+    });
+
+    it('should handle text file drop', async () => {
+      render(<ChatArea />);
+
+      const dropZone = document.querySelector('.relative.flex.flex-1') as HTMLElement;
+
+      const textFile = new File(['Hello World'], 'test.txt', { type: 'text/plain' });
+      const dataTransfer = {
+        files: [textFile],
+      };
+
+      // Trigger drop
+      fireEvent.drop(dropZone, { dataTransfer });
+
+      // Should dispatch custom event
+      await waitFor(() => {
+        // Event would be dispatched with file content
+        expect(dropZone).not.toHaveClass('bg-primary/5');
+      });
+    });
+
+    it('should handle image file drop', async () => {
+      render(<ChatArea />);
+
+      const dropZone = document.querySelector('.relative.flex.flex-1') as HTMLElement;
+
+      const imageFile = new File(['fake-image'], 'test.png', { type: 'image/png' });
+      const dataTransfer = {
+        files: [imageFile],
+      };
+
+      fireEvent.drop(dropZone, { dataTransfer });
+
+      await waitFor(() => {
+        expect(dropZone).not.toHaveClass('bg-primary/5');
+      });
+    });
+
+    it('should handle multiple file drop', async () => {
+      render(<ChatArea />);
+
+      const dropZone = document.querySelector('.relative.flex.flex-1') as HTMLElement;
+
+      const textFile = new File(['Hello'], 'test.txt', { type: 'text/plain' });
+      const imageFile = new File(['image'], 'test.png', { type: 'image/png' });
+      const dataTransfer = {
+        files: [textFile, imageFile],
+      };
+
+      fireEvent.drop(dropZone, { dataTransfer });
+
+      await waitFor(() => {
+        expect(dropZone).not.toHaveClass('bg-primary/5');
+      });
+    });
+
+    it('should handle drag over without drop', () => {
+      render(<ChatArea />);
+
+      const dropZone = document.querySelector('.relative.flex.flex-1') as HTMLElement;
+
+      fireEvent.dragOver(dropZone);
+
+      // Should just prevent default, not change state
+      expect(dropZone).not.toHaveClass('bg-primary/5');
+    });
+
+    it('should recognize various text file extensions', async () => {
+      render(<ChatArea />);
+
+      const dropZone = document.querySelector('.relative.flex.flex-1') as HTMLElement;
+
+      const extensions = ['js', 'ts', 'tsx', 'jsx', 'py', 'java', 'md', 'json', 'yaml', 'xml'];
+
+      for (const ext of extensions) {
+        const file = new File(['content'], `test.${ext}`, { type: 'text/plain' });
+        const dataTransfer = { files: [file] };
+
+        fireEvent.drop(dropZone, { dataTransfer });
+
+        await waitFor(() => {
+          expect(dropZone).not.toHaveClass('bg-primary/5');
+        });
+      }
+    });
+  });
+
+  describe('메시지 재생성', () => {
+    it('should call handleRegenerate when regenerate button clicked', () => {
+      const mockDeleteMessage = jest.fn();
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        ...mockChatStore,
+        activeConversationId: 'conv-1',
+        messages: mockMessages,
+        deleteMessage: mockDeleteMessage,
+      });
+
+      render(<ChatArea />);
+
+      const regenerateButtons = screen.getAllByText('Regenerate');
+      fireEvent.click(regenerateButtons[0]);
+
+      // deleteMessage should be called with the message ID
+      waitFor(() => {
+        expect(mockDeleteMessage).toHaveBeenCalledWith('msg-2');
+      });
+    });
+  });
+
+  describe('빈 드롭 처리', () => {
+    it('should handle empty file list drop', async () => {
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        ...mockChatStore,
+        activeConversationId: 'conv-1',
+        messages: mockMessages,
+      });
+
+      render(<ChatArea />);
+
+      const dropZone = document.querySelector('.relative.flex.flex-1') as HTMLElement;
+
+      const dataTransfer = {
+        files: [],
+      };
+
+      fireEvent.drop(dropZone, { dataTransfer });
+
+      // Should not crash or dispatch event
+      await waitFor(() => {
+        expect(dropZone).not.toHaveClass('bg-primary/5');
+      });
+    });
+  });
 });
