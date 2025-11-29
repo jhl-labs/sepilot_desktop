@@ -29,10 +29,11 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
     deleteConversation,
     appMode,
     setAppMode,
+    activeEditorTab,
+    setActiveEditorTab,
   } = useChatStore();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activeEditorTab, setActiveEditorTab] = useState<'files' | 'search'>('files');
 
   const handleDeleteAll = async () => {
     if (conversations.length === 0) return;

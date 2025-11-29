@@ -10,7 +10,7 @@ import { CodeEditor } from '@/components/editor/Editor';
 import { useChatStore } from '@/lib/store/chat-store';
 
 export default function Home() {
-  const { appMode, createConversation, setActiveConversation } = useChatStore();
+  const { appMode, createConversation, setActiveConversation, setAppMode, setActiveEditorTab } = useChatStore();
 
   // Quick Input에서 메시지를 받아 새 대화 생성 및 전송
   useEffect(() => {
@@ -50,6 +50,22 @@ export default function Home() {
       window.electronAPI.removeListener('create-new-chat-with-message', handleQuickInput);
     };
   }, [createConversation, setActiveConversation]);
+
+  // Ctrl+Shift+F to open search in Editor mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+        e.preventDefault();
+
+        // Switch to Editor mode and activate Search tab
+        setAppMode('editor');
+        setActiveEditorTab('search');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setAppMode, setActiveEditorTab]);
 
   return (
     <MainLayout>
