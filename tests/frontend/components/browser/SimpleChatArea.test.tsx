@@ -58,7 +58,7 @@ describe('SimpleChatArea', () => {
 
     render(<SimpleChatArea />);
 
-    expect(screen.getByText('브라우저와 함께 채팅을 시작하세요')).toBeInTheDocument();
+    expect(screen.getByText('사용 가능한 Browser Agent 도구')).toBeInTheDocument();
   });
 
   it('should render message icon in empty state', () => {
@@ -171,7 +171,7 @@ describe('SimpleChatArea', () => {
       browserChatMessages: [],
     });
     rerender(<SimpleChatArea />);
-    expect(screen.getByText('브라우저와 함께 채팅을 시작하세요')).toBeInTheDocument();
+    expect(screen.getByText('사용 가능한 Browser Agent 도구')).toBeInTheDocument();
 
     // Add messages
     (useChatStore as unknown as jest.Mock).mockReturnValue({

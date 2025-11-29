@@ -20,7 +20,21 @@ export function SimpleChatArea() {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground px-4">
         <MessageSquare className="mb-4 h-12 w-12 opacity-10" />
-        <p className="text-xs font-medium text-center">브라우저와 함께 채팅을 시작하세요</p>
+        <div className="text-xs font-medium text-center space-y-2">
+          <p className="text-sm mb-3">사용 가능한 Browser Agent 도구</p>
+          <p>• 페이지 이동</p>
+          <p>• 페이지 내용 읽기</p>
+          <p>• 클릭 가능 요소 찾기</p>
+          <p>• 요소 클릭</p>
+          <p>• 텍스트 입력</p>
+          <p>• 스크롤</p>
+          <p>• 새 탭 열기</p>
+          <p>• 탭 전환</p>
+          <p>• 탭 닫기</p>
+          <p>• 탭 목록</p>
+          <p>• 스크린샷 + 텍스트 요약</p>
+          <p>• 선택 텍스트 읽기</p>
+        </div>
       </div>
     );
   }

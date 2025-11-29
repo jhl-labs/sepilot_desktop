@@ -62,7 +62,7 @@ describe('SimpleChatInput', () => {
   it('should render input textarea', () => {
     render(<SimpleChatInput />);
 
-    const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+    const textarea = screen.getByRole('textbox');
     expect(textarea).toBeInTheDocument();
   });
 
@@ -77,7 +77,7 @@ describe('SimpleChatInput', () => {
     const user = userEvent.setup();
     render(<SimpleChatInput />);
 
-    const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+    const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Hello World');
 
     expect(textarea).toHaveValue('Hello World');
@@ -94,7 +94,7 @@ describe('SimpleChatInput', () => {
     const user = userEvent.setup();
     render(<SimpleChatInput />);
 
-    const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+    const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test message');
 
     const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -105,7 +105,7 @@ describe('SimpleChatInput', () => {
     const user = userEvent.setup();
     render(<SimpleChatInput />);
 
-    const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+    const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test message');
     await user.keyboard('{Enter}');
 
@@ -121,7 +121,7 @@ describe('SimpleChatInput', () => {
     const user = userEvent.setup();
     render(<SimpleChatInput />);
 
-    const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+    const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Line 1');
     await user.keyboard('{Shift>}{Enter}{/Shift}');
 
@@ -133,7 +133,7 @@ describe('SimpleChatInput', () => {
     const user = userEvent.setup();
     render(<SimpleChatInput />);
 
-    const textarea = screen.getByPlaceholderText('메시지를 입력하세요...') as HTMLTextAreaElement;
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     await user.type(textarea, 'Test message');
 
     const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -148,7 +148,7 @@ describe('SimpleChatInput', () => {
     const user = userEvent.setup();
     render(<SimpleChatInput />);
 
-    const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+    const textarea = screen.getByRole('textbox');
     await user.type(textarea, '   '); // Only whitespace
 
     const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -161,7 +161,7 @@ describe('SimpleChatInput', () => {
     const user = userEvent.setup();
     render(<SimpleChatInput />);
 
-    const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+    const textarea = screen.getByRole('textbox');
     await user.type(textarea, '  Test message  ');
 
     const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -179,7 +179,7 @@ describe('SimpleChatInput', () => {
   it('should handle composition events', async () => {
     render(<SimpleChatInput />);
 
-    const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+    const textarea = screen.getByRole('textbox');
 
     // Start composition (IME input)
     fireEvent.compositionStart(textarea);
@@ -198,7 +198,7 @@ describe('SimpleChatInput', () => {
     const user = userEvent.setup();
     render(<SimpleChatInput />);
 
-    const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+    const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test');
 
     const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -217,7 +217,7 @@ describe('SimpleChatInput', () => {
     const user = userEvent.setup();
     render(<SimpleChatInput />);
 
-    const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+    const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test');
 
     const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -247,7 +247,7 @@ describe('SimpleChatInput', () => {
       const user = userEvent.setup();
       render(<SimpleChatInput />);
 
-      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
 
       const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -267,7 +267,7 @@ describe('SimpleChatInput', () => {
       const user = userEvent.setup();
       render(<SimpleChatInput />);
 
-      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
 
       const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -294,7 +294,7 @@ describe('SimpleChatInput', () => {
       const user = userEvent.setup();
       render(<SimpleChatInput />);
 
-      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
 
       const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -324,7 +324,7 @@ describe('SimpleChatInput', () => {
       const user = userEvent.setup();
       render(<SimpleChatInput />);
 
-      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'First message');
 
       const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -364,7 +364,7 @@ describe('SimpleChatInput', () => {
       const user = userEvent.setup();
       render(<SimpleChatInput />);
 
-      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
 
       const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -390,7 +390,7 @@ describe('SimpleChatInput', () => {
       const user = userEvent.setup();
       render(<SimpleChatInput />);
 
-      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
 
       const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -411,7 +411,7 @@ describe('SimpleChatInput', () => {
       const user = userEvent.setup();
       render(<SimpleChatInput />);
 
-      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
 
       const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -439,7 +439,7 @@ describe('SimpleChatInput', () => {
       const user = userEvent.setup();
       render(<SimpleChatInput />);
 
-      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
 
       const sendButton = screen.getByRole('button', { name: /전송/ });
@@ -465,7 +465,7 @@ describe('SimpleChatInput', () => {
       const user = userEvent.setup();
       render(<SimpleChatInput />);
 
-      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
 
       // Mock scrollHeight
       Object.defineProperty(textarea, 'scrollHeight', {
@@ -487,7 +487,7 @@ describe('SimpleChatInput', () => {
       const user = userEvent.setup();
       render(<SimpleChatInput />);
 
-      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...') as HTMLTextAreaElement;
+      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
       const focusSpy = jest.spyOn(textarea, 'focus');
 
       await user.type(textarea, 'Test');
