@@ -33,6 +33,14 @@ jest.mock('@/components/rag/DocumentList', () => ({
   DocumentList: () => <div data-testid="document-list">Document List</div>,
 }));
 
+jest.mock('@/components/persona/PersonaDialog', () => ({
+  PersonaDialog: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+    <div data-testid="persona-dialog" data-open={open} onClick={() => onOpenChange(false)}>
+      Persona Dialog
+    </div>
+  ),
+}));
+
 describe('SidebarChat', () => {
   const mockOnDocumentsClick = jest.fn();
   const mockOnGalleryClick = jest.fn();

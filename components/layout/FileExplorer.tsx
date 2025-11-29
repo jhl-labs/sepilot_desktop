@@ -32,13 +32,18 @@ import { isElectron } from '@/lib/platform';
 import path from 'path-browserify';
 
 export function FileExplorer() {
-  const { workingDirectory, setWorkingDirectory, openFile, activeFilePath } = useChatStore();
+  const { workingDirectory, setWorkingDirectory, openFile, activeFilePath, loadWorkingDirectory } = useChatStore();
   const [fileTree, setFileTree] = useState<FileNode[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showNewFileDialog, setShowNewFileDialog] = useState(false);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const { readDirectory, readFile, createFile, createDirectory } = useFileSystem();
+
+  // Restore saved working directory on mount
+  useEffect(() => {
+    loadWorkingDirectory();
+  }, [loadWorkingDirectory]);
 
   // Load file tree when working directory changes
   useEffect(() => {

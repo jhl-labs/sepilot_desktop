@@ -26,6 +26,14 @@ jest.mock('next-themes', () => ({
     setTheme: jest.fn(),
   })),
 }));
+jest.mock('@/components/persona/PersonaDialog', () => ({
+  PersonaDialog: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+    <div data-testid="persona-dialog" data-open={open} onClick={() => onOpenChange(false)}>
+      Persona Dialog
+    </div>
+  ),
+}));
+
 
 describe('사용자 플로우 테스트', () => {
   const mockCreateConversation = jest.fn();

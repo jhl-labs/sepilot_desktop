@@ -85,6 +85,9 @@ describe('InputBox', () => {
     clearImageGenerationProgress: jest.fn(),
     enableImageGeneration: false,
     setEnableImageGeneration: jest.fn(),
+    personas: [],
+    activePersonaId: null,
+    workingDirectory: null,
   };
 
   beforeEach(() => {

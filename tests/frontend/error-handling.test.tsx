@@ -25,6 +25,14 @@ jest.mock('next-themes', () => ({
     setTheme: jest.fn(),
   })),
 }));
+jest.mock('@/components/persona/PersonaDialog', () => ({
+  PersonaDialog: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+    <div data-testid="persona-dialog" data-open={open} onClick={() => onOpenChange(false)}>
+      Persona Dialog
+    </div>
+  ),
+}));
+
 
 describe('에러 처리 테스트', () => {
   beforeEach(() => {
@@ -60,6 +68,11 @@ describe('에러 처리 테스트', () => {
       clearImageGenerationProgress: jest.fn(),
       enableImageGeneration: false,
       setEnableImageGeneration: jest.fn(),
+      personas: [],
+      activePersonaId: null,
+      workingDirectory: null,
+      alwaysApproveToolsForSession: false,
+      setAlwaysApproveToolsForSession: jest.fn(),
     };
 
     (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -99,7 +112,12 @@ describe('에러 처리 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      };
+      personas: [],
+      activePersonaId: null,
+      workingDirectory: null,
+      alwaysApproveToolsForSession: false,
+      setAlwaysApproveToolsForSession: jest.fn(),
+          };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -197,7 +215,12 @@ describe('에러 처리 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      };
+      personas: [],
+      activePersonaId: null,
+      workingDirectory: null,
+      alwaysApproveToolsForSession: false,
+      setAlwaysApproveToolsForSession: jest.fn(),
+          };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -240,7 +263,12 @@ describe('에러 처리 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      };
+      personas: [],
+      activePersonaId: null,
+      workingDirectory: null,
+      alwaysApproveToolsForSession: false,
+      setAlwaysApproveToolsForSession: jest.fn(),
+          };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -284,7 +312,12 @@ describe('에러 처리 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      };
+      personas: [],
+      activePersonaId: null,
+      workingDirectory: null,
+      alwaysApproveToolsForSession: false,
+      setAlwaysApproveToolsForSession: jest.fn(),
+          };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -418,6 +451,11 @@ describe('로딩 상태 테스트', () => {
       clearImageGenerationProgress: jest.fn(),
       enableImageGeneration: false,
       setEnableImageGeneration: jest.fn(),
+      personas: [],
+      activePersonaId: null,
+      workingDirectory: null,
+      alwaysApproveToolsForSession: false,
+      setAlwaysApproveToolsForSession: jest.fn(),
     };
 
     (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -457,7 +495,12 @@ describe('로딩 상태 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      };
+      personas: [],
+      activePersonaId: null,
+      workingDirectory: null,
+      alwaysApproveToolsForSession: false,
+      setAlwaysApproveToolsForSession: jest.fn(),
+          };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -497,7 +540,12 @@ describe('로딩 상태 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      };
+      personas: [],
+      activePersonaId: null,
+      workingDirectory: null,
+      alwaysApproveToolsForSession: false,
+      setAlwaysApproveToolsForSession: jest.fn(),
+          };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -692,7 +740,12 @@ describe('경계 케이스 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      };
+      personas: [],
+      activePersonaId: null,
+      workingDirectory: null,
+      alwaysApproveToolsForSession: false,
+      setAlwaysApproveToolsForSession: jest.fn(),
+          };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -736,7 +789,12 @@ describe('경계 케이스 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      };
+      personas: [],
+      activePersonaId: null,
+      workingDirectory: null,
+      alwaysApproveToolsForSession: false,
+      setAlwaysApproveToolsForSession: jest.fn(),
+          };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);

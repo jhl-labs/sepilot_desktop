@@ -53,6 +53,43 @@ function saveToLocalStorage<T>(key: string, value: T): void {
   }
 }
 
+// Load working directory from localStorage and verify it exists
+async function loadWorkingDirectory(): Promise<string | null> {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    const savedDir = localStorage.getItem('sepilot_working_directory');
+    if (!savedDir) {
+      return null;
+    }
+
+    // Verify directory exists (only in Electron)
+    if (window.electronAPI?.fs) {
+      try {
+        const result = await window.electronAPI.fs.readDirectory(savedDir);
+        if (result.success) {
+          return savedDir;
+        } else {
+          // Directory no longer exists, remove from localStorage
+          localStorage.removeItem('sepilot_working_directory');
+          return null;
+        }
+      } catch (error) {
+        console.error('Failed to verify directory:', error);
+        localStorage.removeItem('sepilot_working_directory');
+        return null;
+      }
+    }
+
+    // Web environment or no fs API, return saved directory
+    return savedDir;
+  } catch (error) {
+    console.error('Failed to load working directory:', error);
+    return null;
+  }
+}
+
 interface ChatStore {
   // State
   conversations: Conversation[];
@@ -173,6 +210,9 @@ interface ChatStore {
 
   // Actions - Chat Mode View
   setChatViewMode: (mode: 'history' | 'documents' | 'chat') => void;
+
+  // Actions - Initialization
+  loadWorkingDirectory: () => Promise<void>;
 
   // Actions - Persona
   loadPersonas: () => Promise<void>;
@@ -767,6 +807,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setWorkingDirectory: (directory: string | null) => {
     set({ workingDirectory: directory });
+    // Save to localStorage for persistence
+    if (directory) {
+      localStorage.setItem('sepilot_working_directory', directory);
+    } else {
+      localStorage.removeItem('sepilot_working_directory');
+    }
   },
 
   getGraphConfig: (): GraphConfig => {
@@ -940,6 +986,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Chat Mode View Actions
   setChatViewMode: (mode: 'history' | 'documents' | 'chat') => {
     set({ chatViewMode: mode });
+  },
+
+  // Initialization Actions
+  loadWorkingDirectory: async () => {
+    const savedDir = await loadWorkingDirectory();
+    if (savedDir) {
+      set({ workingDirectory: savedDir });
+    }
   },
 
   // Editor Actions
