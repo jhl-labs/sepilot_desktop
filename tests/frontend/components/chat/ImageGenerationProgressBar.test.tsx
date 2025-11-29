@@ -1,0 +1,206 @@
+/**
+ * ImageGenerationProgressBar 컴포넌트 테스트
+ */
+
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import { ImageGenerationProgressBar } from '@/components/chat/ImageGenerationProgressBar';
+import { ImageGenerationProgress } from '@/types';
+
+describe('ImageGenerationProgressBar', () => {
+  it('should render queued status', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'queued',
+      progress: 0,
+      message: '대기 중...',
+    };
+
+    render(<ImageGenerationProgressBar progress={progress} />);
+
+    expect(screen.getByText('이미지 생성 대기 중...')).toBeInTheDocument();
+    expect(screen.getByText('대기 중...')).toBeInTheDocument();
+    expect(screen.getByText('0%')).toBeInTheDocument();
+  });
+
+  it('should render executing status', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'executing',
+      progress: 50,
+      message: '생성 중...',
+    };
+
+    render(<ImageGenerationProgressBar progress={progress} />);
+
+    expect(screen.getByText('이미지 생성 중...')).toBeInTheDocument();
+    expect(screen.getByText('생성 중...')).toBeInTheDocument();
+    expect(screen.getByText('50%')).toBeInTheDocument();
+  });
+
+  it('should render completed status', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'completed',
+      progress: 100,
+      message: '완료!',
+    };
+
+    render(<ImageGenerationProgressBar progress={progress} />);
+
+    expect(screen.getByText('이미지 생성 완료!')).toBeInTheDocument();
+    expect(screen.getByText('완료!')).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
+  });
+
+  it('should render error status', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'error',
+      progress: 0,
+      message: '오류가 발생했습니다',
+    };
+
+    render(<ImageGenerationProgressBar progress={progress} />);
+
+    expect(screen.getByText('이미지 생성 실패')).toBeInTheDocument();
+    expect(screen.getByText('오류가 발생했습니다')).toBeInTheDocument();
+  });
+
+  it('should show step info when provided', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'executing',
+      progress: 30,
+      message: '처리 중...',
+      currentStep: 2,
+      totalSteps: 5,
+    };
+
+    render(<ImageGenerationProgressBar progress={progress} />);
+
+    expect(screen.getByText('단계: 2 / 5')).toBeInTheDocument();
+  });
+
+  it('should not show step info when not provided', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'executing',
+      progress: 30,
+      message: '처리 중...',
+    };
+
+    render(<ImageGenerationProgressBar progress={progress} />);
+
+    expect(screen.queryByText(/단계:/)).not.toBeInTheDocument();
+  });
+
+  it('should apply custom className', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'queued',
+      progress: 0,
+      message: '대기 중',
+    };
+
+    const { container } = render(
+      <ImageGenerationProgressBar progress={progress} className="custom-class" />
+    );
+
+    const progressBar = container.firstChild as HTMLElement;
+    expect(progressBar).toHaveClass('custom-class');
+  });
+
+  it('should show progress bar at correct width', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'executing',
+      progress: 75,
+      message: '진행 중',
+    };
+
+    const { container } = render(<ImageGenerationProgressBar progress={progress} />);
+
+    const progressBar = container.querySelector('[style*="width"]');
+    expect(progressBar).toHaveStyle({ width: '75%' });
+  });
+
+  it('should render all statuses correctly', () => {
+    const statuses: Array<ImageGenerationProgress['status']> = ['queued', 'executing', 'completed', 'error'];
+
+    statuses.forEach((status) => {
+      const progress: ImageGenerationProgress = {
+        status,
+        progress: 50,
+        message: 'Test message',
+      };
+
+      const { unmount } = render(<ImageGenerationProgressBar progress={progress} />);
+
+      // Verify that component renders without errors
+      expect(screen.getByText('Test message')).toBeInTheDocument();
+
+      unmount();
+    });
+  });
+
+  it('should handle zero progress', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'queued',
+      progress: 0,
+      message: '시작 전',
+    };
+
+    const { container } = render(<ImageGenerationProgressBar progress={progress} />);
+
+    const progressBar = container.querySelector('[style*="width"]');
+    expect(progressBar).toHaveStyle({ width: '0%' });
+  });
+
+  it('should handle full progress', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'completed',
+      progress: 100,
+      message: '완료',
+    };
+
+    const { container } = render(<ImageGenerationProgressBar progress={progress} />);
+
+    const progressBar = container.querySelector('[style*="width"]');
+    expect(progressBar).toHaveStyle({ width: '100%' });
+  });
+
+  it('should display message correctly', () => {
+    const message = 'Custom progress message';
+    const progress: ImageGenerationProgress = {
+      status: 'executing',
+      progress: 45,
+      message,
+    };
+
+    render(<ImageGenerationProgressBar progress={progress} />);
+
+    expect(screen.getByText(message)).toBeInTheDocument();
+  });
+
+  it('should show step 1 of 3', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'executing',
+      progress: 33,
+      message: '첫 단계',
+      currentStep: 1,
+      totalSteps: 3,
+    };
+
+    render(<ImageGenerationProgressBar progress={progress} />);
+
+    expect(screen.getByText('단계: 1 / 3')).toBeInTheDocument();
+  });
+
+  it('should show final step', () => {
+    const progress: ImageGenerationProgress = {
+      status: 'executing',
+      progress: 90,
+      message: '마지막 단계',
+      currentStep: 5,
+      totalSteps: 5,
+    };
+
+    render(<ImageGenerationProgressBar progress={progress} />);
+
+    expect(screen.getByText('단계: 5 / 5')).toBeInTheDocument();
+  });
+});

@@ -97,6 +97,19 @@ export const mockElectronAPI = {
     queuePrompt: jest.fn(),
     fetchImage: jest.fn(),
   },
+  browserView: {
+    create: jest.fn(() => Promise.resolve()),
+    loadURL: jest.fn(),
+    goBack: jest.fn(),
+    goForward: jest.fn(),
+    reload: jest.fn(),
+    setBounds: jest.fn(),
+    setVisible: jest.fn(),
+    destroy: jest.fn(),
+    onDidNavigate: jest.fn(() => jest.fn()),
+    onLoadingState: jest.fn(() => jest.fn()),
+    removeListener: jest.fn(),
+  },
   on: jest.fn(),
   removeListener: jest.fn(),
 };
@@ -198,6 +211,13 @@ Object.defineProperty(window, 'crypto', {
   writable: true,
   configurable: true,
 });
+
+// Mock ResizeObserver
+global.ResizeObserver = class ResizeObserver {
+  observe = jest.fn();
+  unobserve = jest.fn();
+  disconnect = jest.fn();
+};
 
 // Export localStorage mock for direct access
 export { mockLocalStorage, mockSessionStorage };
