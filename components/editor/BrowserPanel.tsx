@@ -27,7 +27,7 @@ interface Tab {
 
 export function BrowserPanel() {
   const { appMode, activeEditorTab } = useChatStore();
-  const [url, setUrl] = useState('https://www.google.com');
+  const [url, setUrl] = useState('https://euno.news');
   const [currentUrl, setCurrentUrl] = useState(url);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
@@ -74,7 +74,7 @@ export function BrowserPanel() {
   };
 
   const handleHome = () => {
-    const homeUrl = 'https://www.google.com';
+    const homeUrl = 'https://euno.news';
     setUrl(homeUrl);
     setCurrentUrl(homeUrl);
 
@@ -96,7 +96,7 @@ export function BrowserPanel() {
       return;
     }
 
-    const result = await window.electronAPI.browserView.createTab('https://www.google.com');
+    const result = await window.electronAPI.browserView.createTab('https://euno.news');
     if (result.success && result.data) {
       await loadTabs();
       await switchToTab(result.data.tabId);

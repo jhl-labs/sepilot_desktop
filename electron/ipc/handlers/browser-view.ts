@@ -219,7 +219,7 @@ export function setupBrowserViewHandlers() {
 
       mainWindowRef = mainWindow;
       const tabId = randomUUID();
-      const defaultUrl = url || 'https://www.google.com';
+      const defaultUrl = url || 'https://euno.news';
 
       const view = createBrowserView(mainWindow, tabId);
 
@@ -1101,7 +1101,7 @@ export async function browserCreateTab(url?: string) {
 
   try {
     const tabId = randomUUID();
-    const defaultUrl = url || 'https://www.google.com';
+    const defaultUrl = url || 'https://euno.news';
 
     const view = createBrowserView(mainWindowRef, tabId);
 
