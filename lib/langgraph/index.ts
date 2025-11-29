@@ -375,7 +375,7 @@ export class GraphFactory {
   }
 
   /**
-   * Browser Agent 그래프 스트리밍 (Human-in-the-loop 지원)
+   * Browser Agent 그래프 스트리밍 (자동 도구 실행)
    * BrowserAgentGraph 클래스의 stream 메서드를 직접 사용
    */
   private static async *streamBrowserAgentGraph(
@@ -386,7 +386,7 @@ export class GraphFactory {
     const conversationId = options?.conversationId || '';
 
     try {
-      console.log('[GraphFactory] Starting browser agent stream with Human-in-the-loop support');
+      console.log('[GraphFactory] Starting browser agent stream (automatic tool execution)');
 
       const { BrowserAgentGraph } = await import('./graphs/browser-agent');
       const { createInitialAgentState } = await import('./state');
@@ -394,30 +394,11 @@ export class GraphFactory {
       const browserAgentGraph = new BrowserAgentGraph();
       const initialState = createInitialAgentState(messages, conversationId);
 
-      // Use the BrowserAgentGraph's stream method with tool approval callback
+      // Use the BrowserAgentGraph's stream method (no tool approval needed)
       for await (const event of browserAgentGraph.stream(
         initialState,
-        options?.maxIterations || 15, // Browser tasks often need more iterations
-        options?.toolApprovalCallback
+        options?.maxIterations || 15 // Browser tasks often need more iterations
       )) {
-        // Handle tool_approval_request and tool_approval_result events
-        if (event.type === 'tool_approval_request') {
-          yield {
-            type: 'tool_approval_request',
-            messageId: event.messageId,
-            toolCalls: event.toolCalls,
-          };
-          continue;
-        }
-
-        if (event.type === 'tool_approval_result') {
-          yield {
-            type: 'tool_approval_result',
-            approved: event.approved,
-          };
-          continue;
-        }
-
         // Handle regular node events
         const entries = Object.entries(event);
         if (entries.length > 0) {

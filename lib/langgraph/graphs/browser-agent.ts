@@ -2,7 +2,6 @@ import { StateGraph, END } from '@langchain/langgraph';
 import { AgentStateAnnotation, AgentState } from '../state';
 import { toolsNode, shouldUseTool } from '../nodes/tools';
 import type { Message } from '@/types';
-import type { ToolApprovalCallback } from '../types';
 import { LLMService } from '@/lib/llm/service';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
 import {
@@ -268,8 +267,7 @@ export class BrowserAgentGraph {
 
   async *stream(
     initialState: AgentState,
-    maxIterations = 15,
-    toolApprovalCallback?: ToolApprovalCallback
+    maxIterations = 15
   ): AsyncGenerator<any> {
     let state = { ...initialState };
     let iterations = 0;
@@ -329,58 +327,7 @@ export class BrowserAgentGraph {
         break;
       }
 
-      // 3. Human-in-the-loop: Tool approval (선택적)
-      const lastMessage = state.messages[state.messages.length - 1];
-      if (toolApprovalCallback && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
-        console.log('[BrowserAgent] Requesting tool approval for:', lastMessage.tool_calls.map(tc => tc.name));
-
-        // Yield tool approval request event
-        yield {
-          type: 'tool_approval_request',
-          messageId: lastMessage.id,
-          toolCalls: lastMessage.tool_calls,
-        };
-
-        try {
-          // Wait for user approval
-          const approved = await toolApprovalCallback(lastMessage.tool_calls);
-
-          // Yield approval result
-          yield {
-            type: 'tool_approval_result',
-            approved,
-          };
-
-          if (!approved) {
-            console.log('[BrowserAgent] Tools rejected by user');
-            const rejectionMessage: Message = {
-              id: `msg-${Date.now()}`,
-              role: 'assistant',
-              content: '브라우저 작업이 사용자에 의해 취소되었습니다.',
-              created_at: Date.now(),
-            };
-            state = {
-              ...state,
-              messages: [...state.messages, rejectionMessage],
-            };
-            yield {
-              generate: {
-                messages: [rejectionMessage],
-              },
-            };
-            break;
-          }
-
-          console.log('[BrowserAgent] Tools approved by user');
-        } catch (approvalError: any) {
-          console.error('[BrowserAgent] Tool approval error:', approvalError);
-          hasError = true;
-          errorMessage = approvalError.message || 'Tool approval failed';
-          break;
-        }
-      }
-
-      // 4. tools 노드 실행
+      // 3. tools 노드 실행 (자동 실행, 승인 불필요)
       console.log('[BrowserAgent] Executing browser tools node');
       const toolsResult = await toolsNode(state);
 
