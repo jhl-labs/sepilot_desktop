@@ -425,16 +425,33 @@ interface QuickInputAPI {
   close: () => Promise<IPCResponse>;
 }
 
+interface BrowserTab {
+  id: string;
+  url: string;
+  title: string;
+  isActive: boolean;
+}
+
 interface BrowserViewAPI {
-  create: () => Promise<IPCResponse>;
-  destroy: () => Promise<IPCResponse>;
+  // Tab management
+  createTab: (url?: string) => Promise<IPCResponse<{ tabId: string; url: string }>>;
+  switchTab: (tabId: string) => Promise<IPCResponse<{
+    tabId: string;
+    url: string;
+    title: string;
+    canGoBack: boolean;
+    canGoForward: boolean;
+  }>>;
+  closeTab: (tabId: string) => Promise<IPCResponse<{ activeTabId: string | null }>>;
+  getTabs: () => Promise<IPCResponse<{ tabs: BrowserTab[]; activeTabId: string | null }>>;
+  // Navigation (operates on active tab)
   loadURL: (url: string) => Promise<IPCResponse>;
   goBack: () => Promise<IPCResponse>;
   goForward: () => Promise<IPCResponse>;
   reload: () => Promise<IPCResponse>;
   setBounds: (bounds: { x: number; y: number; width: number; height: number }) => Promise<IPCResponse>;
-  setVisible: (visible: boolean) => Promise<IPCResponse>;
   getState: () => Promise<IPCResponse<{
+    tabId: string;
     url: string;
     title: string;
     canGoBack: boolean;
@@ -442,9 +459,10 @@ interface BrowserViewAPI {
     isLoading: boolean;
   }>>;
   toggleDevTools: () => Promise<IPCResponse>;
-  onDidNavigate: (callback: (data: { url: string; canGoBack: boolean; canGoForward: boolean }) => void) => (...args: unknown[]) => void;
-  onLoadingState: (callback: (data: { isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => (...args: unknown[]) => void;
-  onTitleUpdated: (callback: (data: { title: string }) => void) => (...args: unknown[]) => void;
+  // Event listeners
+  onDidNavigate: (callback: (data: { tabId: string; url: string; canGoBack: boolean; canGoForward: boolean }) => void) => (...args: unknown[]) => void;
+  onLoadingState: (callback: (data: { tabId: string; isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => (...args: unknown[]) => void;
+  onTitleUpdated: (callback: (data: { tabId: string; title: string }) => void) => (...args: unknown[]) => void;
   removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
 }
 

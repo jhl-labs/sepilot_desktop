@@ -3,8 +3,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal, Plus, X } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
+
+interface Tab {
+  id: string;
+  url: string;
+  title: string;
+  isActive: boolean;
+}
 
 export function BrowserPanel() {
   const [url, setUrl] = useState('https://www.google.com');
@@ -12,28 +19,38 @@ export function BrowserPanel() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [tabs, setTabs] = useState<Tab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleNavigate = () => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     window.electronAPI.browserView.loadURL(url);
   };
 
   const handleBack = () => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     window.electronAPI.browserView.goBack();
   };
 
   const handleForward = () => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     window.electronAPI.browserView.goForward();
   };
 
   const handleReload = () => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     window.electronAPI.browserView.reload();
   };
@@ -49,19 +66,72 @@ export function BrowserPanel() {
   };
 
   const handleToggleDevTools = () => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     window.electronAPI.browserView.toggleDevTools();
   };
 
-  // BrowserView 생성 및 초기 설정
-  useEffect(() => {
-    if (!isElectron() || !window.electronAPI) {return;}
+  const handleNewTab = async () => {
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
-    // BrowserView 생성
-    window.electronAPI.browserView.create().then(() => {
-      // 초기 URL 로드
-      window.electronAPI.browserView.loadURL(currentUrl);
+    const result = await window.electronAPI.browserView.createTab('https://www.google.com');
+    if (result.success && result.data) {
+      await loadTabs();
+      await switchToTab(result.data.tabId);
+    }
+  };
+
+  const handleCloseTab = async (tabId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    await window.electronAPI.browserView.closeTab(tabId);
+    await loadTabs();
+  };
+
+  const switchToTab = async (tabId: string) => {
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    const result = await window.electronAPI.browserView.switchTab(tabId);
+    if (result.success && result.data) {
+      setActiveTabId(tabId);
+      setCurrentUrl(result.data.url);
+      setUrl(result.data.url);
+      setCanGoBack(result.data.canGoBack);
+      setCanGoForward(result.data.canGoForward);
+    }
+    await loadTabs();
+  };
+
+  const loadTabs = async () => {
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    const result = await window.electronAPI.browserView.getTabs();
+    if (result.success && result.data) {
+      setTabs(result.data.tabs);
+      setActiveTabId(result.data.activeTabId);
+    }
+  };
+
+  // 초기 탭 생성 및 이벤트 리스너 등록
+  useEffect(() => {
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    // 첫 탭 생성
+    window.electronAPI.browserView.createTab(currentUrl).then(() => {
+      loadTabs();
     });
 
     // 이벤트 리스너 등록
@@ -70,28 +140,41 @@ export function BrowserPanel() {
       setUrl(data.url);
       setCanGoBack(data.canGoBack);
       setCanGoForward(data.canGoForward);
+      loadTabs(); // Update tab titles
     });
 
     const loadingStateHandler = window.electronAPI.browserView.onLoadingState((data) => {
       setIsLoading(data.isLoading);
-      if (data.canGoBack !== undefined) {setCanGoBack(data.canGoBack);}
-      if (data.canGoForward !== undefined) {setCanGoForward(data.canGoForward);}
+      if (data.canGoBack !== undefined) {
+        setCanGoBack(data.canGoBack);
+      }
+      if (data.canGoForward !== undefined) {
+        setCanGoForward(data.canGoForward);
+      }
+    });
+
+    const titleUpdatedHandler = window.electronAPI.browserView.onTitleUpdated(() => {
+      loadTabs(); // Reload tabs to update titles
     });
 
     // Cleanup
     return () => {
       window.electronAPI.browserView.removeListener('browser-view:did-navigate', didNavigateHandler);
       window.electronAPI.browserView.removeListener('browser-view:loading-state', loadingStateHandler);
-      window.electronAPI.browserView.destroy();
+      window.electronAPI.browserView.removeListener('browser-view:title-updated', titleUpdatedHandler);
     };
   }, []);
 
   // BrowserView bounds 설정 (컨테이너 크기에 맞춤)
   useEffect(() => {
-    if (!isElectron() || !window.electronAPI || !containerRef.current) {return;}
+    if (!isElectron() || !window.electronAPI || !containerRef.current) {
+      return;
+    }
 
     const updateBounds = () => {
-      if (!containerRef.current) {return;}
+      if (!containerRef.current) {
+        return;
+      }
 
       const rect = containerRef.current.getBoundingClientRect();
 
@@ -120,33 +203,55 @@ export function BrowserPanel() {
     };
   }, []);
 
-  // 탭 표시/숨김 처리
-  useEffect(() => {
-    if (!isElectron() || !window.electronAPI) {return;}
-
-    // 탭이 활성화될 때 BrowserView 표시
-    window.electronAPI.browserView.setVisible(true);
-
-    return () => {
-      // 탭이 비활성화될 때 BrowserView 숨김
-      window.electronAPI.browserView.setVisible(false);
-    };
-  }, []);
-
   if (!isElectron()) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-4 text-muted-foreground">
         <Globe className="mb-2 h-12 w-12 opacity-20" />
         <p className="text-center text-sm font-medium">브라우저 기능</p>
-        <p className="mt-2 text-center text-xs">
-          Electron 환경에서만 사용 가능합니다
-        </p>
+        <p className="mt-2 text-center text-xs">Electron 환경에서만 사용 가능합니다</p>
       </div>
     );
   }
 
   return (
     <div className="flex h-full flex-col">
+      {/* 탭 바 */}
+      <div className="flex items-center gap-1 border-b bg-muted/30 px-2 py-1">
+        <div className="flex flex-1 items-center gap-1 overflow-x-auto">
+          {tabs.map((tab) => (
+            <div
+              key={tab.id}
+              onClick={() => switchToTab(tab.id)}
+              className={`group flex min-w-[120px] max-w-[200px] cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors ${
+                tab.isActive
+                  ? 'bg-background shadow-sm'
+                  : 'hover:bg-background/50'
+              }`}
+            >
+              <Globe className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <span className="flex-1 truncate">{tab.title || 'New Tab'}</span>
+              {tabs.length > 1 && (
+                <button
+                  onClick={(e) => handleCloseTab(tab.id, e)}
+                  className="shrink-0 rounded p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleNewTab}
+          title="새 탭"
+          className="h-7 w-7 shrink-0"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+
       {/* 브라우저 컨트롤 */}
       <div className="flex items-center gap-2 border-b p-2">
         <Button
@@ -176,12 +281,7 @@ export function BrowserPanel() {
         >
           <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleHome}
-          title="홈"
-        >
+        <Button variant="ghost" size="icon" onClick={handleHome} title="홈">
           <Home className="h-4 w-4" />
         </Button>
 
@@ -201,7 +301,7 @@ export function BrowserPanel() {
           variant="ghost"
           size="icon"
           onClick={handleToggleDevTools}
-          title="개발자 도구 (CSS 로딩 문제 디버깅)"
+          title="개발자 도구"
         >
           <Terminal className="h-4 w-4" />
         </Button>

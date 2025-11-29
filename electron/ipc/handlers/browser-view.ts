@@ -1,145 +1,288 @@
 import { ipcMain, BrowserWindow, BrowserView } from 'electron';
 import { logger } from '../../services/logger';
+import { randomUUID } from 'crypto';
 
-let browserView: BrowserView | null = null;
+interface BrowserTab {
+  id: string;
+  view: BrowserView;
+  url: string;
+  title: string;
+}
+
+const tabs = new Map<string, BrowserTab>();
+let activeTabId: string | null = null;
+let mainWindowRef: BrowserWindow | null = null;
+
+function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserView {
+  const view = new BrowserView({
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false,
+      webSecurity: false,
+      allowRunningInsecureContent: true,
+      javascript: true,
+      images: true,
+      partition: 'persist:browser',
+    },
+  });
+
+  // Set User-Agent to standard Chrome
+  view.webContents.setUserAgent(
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  );
+
+  // Handle new window/popup requests
+  view.webContents.setWindowOpenHandler(({ url }) => {
+    logger.info('[BrowserView] Window open request:', url);
+    view.webContents.loadURL(url);
+    return { action: 'deny' };
+  });
+
+  // Handle console messages for debugging
+  view.webContents.on('console-message', (_, level, message) => {
+    logger.info(`[BrowserView Console] ${message}`);
+  });
+
+  // Handle navigation errors
+  view.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    if (errorCode !== -3) {
+      logger.error(`[BrowserView] Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`);
+    }
+  });
+
+  // Navigation events
+  view.webContents.on('did-navigate', (_, url) => {
+    const tab = tabs.get(tabId);
+    if (tab) {
+      tab.url = url;
+      mainWindow.webContents.send('browser-view:did-navigate', {
+        tabId,
+        url,
+        canGoBack: view.webContents.canGoBack(),
+        canGoForward: view.webContents.canGoForward(),
+      });
+    }
+  });
+
+  view.webContents.on('did-navigate-in-page', (_, url, isMainFrame) => {
+    if (isMainFrame) {
+      const tab = tabs.get(tabId);
+      if (tab) {
+        tab.url = url;
+        mainWindow.webContents.send('browser-view:did-navigate', {
+          tabId,
+          url,
+          canGoBack: view.webContents.canGoBack(),
+          canGoForward: view.webContents.canGoForward(),
+        });
+      }
+    }
+  });
+
+  view.webContents.on('did-start-loading', () => {
+    mainWindow.webContents.send('browser-view:loading-state', {
+      tabId,
+      isLoading: true,
+    });
+  });
+
+  view.webContents.on('did-stop-loading', () => {
+    mainWindow.webContents.send('browser-view:loading-state', {
+      tabId,
+      isLoading: false,
+      canGoBack: view.webContents.canGoBack(),
+      canGoForward: view.webContents.canGoForward(),
+    });
+  });
+
+  view.webContents.on('page-title-updated', (_, title) => {
+    const tab = tabs.get(tabId);
+    if (tab) {
+      tab.title = title;
+      mainWindow.webContents.send('browser-view:title-updated', {
+        tabId,
+        title,
+      });
+    }
+  });
+
+  return view;
+}
 
 export function setupBrowserViewHandlers() {
-  // BrowserView 생성
-  ipcMain.handle('browser-view:create', async (event) => {
+  // Create new tab
+  ipcMain.handle('browser-view:create-tab', async (event, url?: string) => {
     try {
       const mainWindow = BrowserWindow.fromWebContents(event.sender);
       if (!mainWindow) {
         return { success: false, error: 'Main window not found' };
       }
 
-      // 기존 BrowserView가 있으면 제거
-      if (browserView) {
-        mainWindow.removeBrowserView(browserView);
-        // @ts-ignore - BrowserView는 자동으로 정리됨
-        browserView = null;
+      mainWindowRef = mainWindow;
+      const tabId = randomUUID();
+      const defaultUrl = url || 'https://www.google.com';
+
+      const view = createBrowserView(mainWindow, tabId);
+
+      const tab: BrowserTab = {
+        id: tabId,
+        view,
+        url: defaultUrl,
+        title: 'New Tab',
+      };
+
+      tabs.set(tabId, tab);
+
+      // If this is the first tab, make it active
+      if (!activeTabId) {
+        activeTabId = tabId;
+        mainWindow.addBrowserView(view);
       }
 
-      // 새 BrowserView 생성
-      browserView = new BrowserView({
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-          sandbox: false, // Disable sandbox to allow proper resource loading
-          // Allow loading external resources (CSS, JS, images)
-          webSecurity: false,
-          // Allow running insecure content
-          allowRunningInsecureContent: true,
-          // Enable web APIs
-          javascript: true,
-          images: true,
-          // Session partition for isolation
-          partition: 'persist:browser',
+      // Load URL
+      await view.webContents.loadURL(defaultUrl);
+
+      logger.info(`Tab created: ${tabId}`);
+      return {
+        success: true,
+        data: {
+          tabId,
+          url: defaultUrl,
         },
-      });
-
-      // Set User-Agent to standard Chrome to avoid detection
-      browserView.webContents.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      );
-
-      // Handle new window/popup requests - load in the same BrowserView instead of opening new window
-      browserView.webContents.setWindowOpenHandler(({ url }) => {
-        logger.info('[BrowserView] Window open request:', url);
-        // Load the URL in the current BrowserView instead of opening new window
-        browserView?.webContents.loadURL(url);
-        return { action: 'deny' }; // Deny opening new window
-      });
-
-      // Handle console messages for debugging
-      browserView.webContents.on('console-message', (_, level, message) => {
-        logger.info(`[BrowserView Console] ${message}`);
-      });
-
-      // Handle navigation errors
-      browserView.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-        if (errorCode !== -3) { // -3 is ERR_ABORTED which is normal for user navigation
-          logger.error(`[BrowserView] Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`);
-        }
-      });
-
-      mainWindow.addBrowserView(browserView);
-
-      // BrowserView 이벤트 리스너
-      browserView.webContents.on('did-navigate', (_, url) => {
-        mainWindow.webContents.send('browser-view:did-navigate', {
-          url,
-          canGoBack: browserView?.webContents.canGoBack() || false,
-          canGoForward: browserView?.webContents.canGoForward() || false,
-        });
-      });
-
-      browserView.webContents.on('did-navigate-in-page', (_, url, isMainFrame) => {
-        if (isMainFrame) {
-          mainWindow.webContents.send('browser-view:did-navigate', {
-            url,
-            canGoBack: browserView?.webContents.canGoBack() || false,
-            canGoForward: browserView?.webContents.canGoForward() || false,
-          });
-        }
-      });
-
-      browserView.webContents.on('did-start-loading', () => {
-        mainWindow.webContents.send('browser-view:loading-state', { isLoading: true });
-      });
-
-      browserView.webContents.on('did-stop-loading', () => {
-        mainWindow.webContents.send('browser-view:loading-state', {
-          isLoading: false,
-          canGoBack: browserView?.webContents.canGoBack() || false,
-          canGoForward: browserView?.webContents.canGoForward() || false,
-        });
-      });
-
-      browserView.webContents.on('page-title-updated', (_, title) => {
-        mainWindow.webContents.send('browser-view:title-updated', { title });
-      });
-
-      logger.info('BrowserView created successfully');
-      return { success: true };
+      };
     } catch (error) {
-      logger.error('Failed to create BrowserView:', error);
+      logger.error('Failed to create tab:', error);
       return { success: false, error: String(error) };
     }
   });
 
-  // BrowserView 제거
-  ipcMain.handle('browser-view:destroy', async (event) => {
+  // Switch to tab
+  ipcMain.handle('browser-view:switch-tab', async (event, tabId: string) => {
     try {
       const mainWindow = BrowserWindow.fromWebContents(event.sender);
-      if (!mainWindow || !browserView) {
-        return { success: true };
+      if (!mainWindow) {
+        return { success: false, error: 'Main window not found' };
       }
 
-      mainWindow.removeBrowserView(browserView);
-      browserView = null;
+      const tab = tabs.get(tabId);
+      if (!tab) {
+        return { success: false, error: 'Tab not found' };
+      }
 
-      logger.info('BrowserView destroyed successfully');
-      return { success: true };
+      // Remove current active view
+      if (activeTabId) {
+        const currentTab = tabs.get(activeTabId);
+        if (currentTab) {
+          mainWindow.removeBrowserView(currentTab.view);
+        }
+      }
+
+      // Add new active view
+      mainWindow.addBrowserView(tab.view);
+      activeTabId = tabId;
+
+      logger.info(`Switched to tab: ${tabId}`);
+      return {
+        success: true,
+        data: {
+          tabId,
+          url: tab.url,
+          title: tab.title,
+          canGoBack: tab.view.webContents.canGoBack(),
+          canGoForward: tab.view.webContents.canGoForward(),
+        },
+      };
     } catch (error) {
-      logger.error('Failed to destroy BrowserView:', error);
+      logger.error('Failed to switch tab:', error);
       return { success: false, error: String(error) };
     }
   });
 
-  // URL 로드
-  ipcMain.handle('browser-view:load-url', async (event, url: string) => {
+  // Close tab
+  ipcMain.handle('browser-view:close-tab', async (event, tabId: string) => {
     try {
-      if (!browserView) {
-        return { success: false, error: 'BrowserView not created' };
+      const mainWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!mainWindow) {
+        return { success: false, error: 'Main window not found' };
       }
 
-      // Ensure URL has protocol
+      const tab = tabs.get(tabId);
+      if (!tab) {
+        return { success: false, error: 'Tab not found' };
+      }
+
+      // Remove from window if it's active
+      if (activeTabId === tabId) {
+        mainWindow.removeBrowserView(tab.view);
+        activeTabId = null;
+
+        // Switch to another tab if available
+        const remainingTabs = Array.from(tabs.values()).filter((t) => t.id !== tabId);
+        if (remainingTabs.length > 0) {
+          const nextTab = remainingTabs[0];
+          mainWindow.addBrowserView(nextTab.view);
+          activeTabId = nextTab.id;
+        }
+      }
+
+      // Clean up
+      tabs.delete(tabId);
+
+      logger.info(`Tab closed: ${tabId}`);
+      return {
+        success: true,
+        data: {
+          activeTabId,
+        },
+      };
+    } catch (error) {
+      logger.error('Failed to close tab:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Get all tabs
+  ipcMain.handle('browser-view:get-tabs', async () => {
+    try {
+      const tabList = Array.from(tabs.values()).map((tab) => ({
+        id: tab.id,
+        url: tab.url,
+        title: tab.title,
+        isActive: tab.id === activeTabId,
+      }));
+
+      return {
+        success: true,
+        data: {
+          tabs: tabList,
+          activeTabId,
+        },
+      };
+    } catch (error) {
+      logger.error('Failed to get tabs:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Navigation - operates on active tab
+  ipcMain.handle('browser-view:load-url', async (event, url: string) => {
+    try {
+      if (!activeTabId) {
+        return { success: false, error: 'No active tab' };
+      }
+
+      const tab = tabs.get(activeTabId);
+      if (!tab) {
+        return { success: false, error: 'Active tab not found' };
+      }
+
       let validUrl = url;
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         validUrl = 'https://' + url;
       }
 
-      await browserView.webContents.loadURL(validUrl);
+      await tab.view.webContents.loadURL(validUrl);
       logger.info('BrowserView loaded URL:', validUrl);
       return { success: true };
     } catch (error) {
@@ -148,15 +291,19 @@ export function setupBrowserViewHandlers() {
     }
   });
 
-  // 뒤로 가기
   ipcMain.handle('browser-view:go-back', async () => {
     try {
-      if (!browserView) {
-        return { success: false, error: 'BrowserView not created' };
+      if (!activeTabId) {
+        return { success: false, error: 'No active tab' };
       }
 
-      if (browserView.webContents.canGoBack()) {
-        browserView.webContents.goBack();
+      const tab = tabs.get(activeTabId);
+      if (!tab) {
+        return { success: false, error: 'Active tab not found' };
+      }
+
+      if (tab.view.webContents.canGoBack()) {
+        tab.view.webContents.goBack();
       }
       return { success: true };
     } catch (error) {
@@ -165,15 +312,19 @@ export function setupBrowserViewHandlers() {
     }
   });
 
-  // 앞으로 가기
   ipcMain.handle('browser-view:go-forward', async () => {
     try {
-      if (!browserView) {
-        return { success: false, error: 'BrowserView not created' };
+      if (!activeTabId) {
+        return { success: false, error: 'No active tab' };
       }
 
-      if (browserView.webContents.canGoForward()) {
-        browserView.webContents.goForward();
+      const tab = tabs.get(activeTabId);
+      if (!tab) {
+        return { success: false, error: 'Active tab not found' };
+      }
+
+      if (tab.view.webContents.canGoForward()) {
+        tab.view.webContents.goForward();
       }
       return { success: true };
     } catch (error) {
@@ -182,14 +333,18 @@ export function setupBrowserViewHandlers() {
     }
   });
 
-  // 새로고침
   ipcMain.handle('browser-view:reload', async () => {
     try {
-      if (!browserView) {
-        return { success: false, error: 'BrowserView not created' };
+      if (!activeTabId) {
+        return { success: false, error: 'No active tab' };
       }
 
-      browserView.webContents.reload();
+      const tab = tabs.get(activeTabId);
+      if (!tab) {
+        return { success: false, error: 'Active tab not found' };
+      }
+
+      tab.view.webContents.reload();
       return { success: true };
     } catch (error) {
       logger.error('Failed to reload:', error);
@@ -197,14 +352,18 @@ export function setupBrowserViewHandlers() {
     }
   });
 
-  // 위치 및 크기 설정
   ipcMain.handle('browser-view:set-bounds', async (event, bounds: { x: number; y: number; width: number; height: number }) => {
     try {
-      if (!browserView) {
-        return { success: false, error: 'BrowserView not created' };
+      if (!activeTabId) {
+        return { success: false, error: 'No active tab' };
       }
 
-      browserView.setBounds(bounds);
+      const tab = tabs.get(activeTabId);
+      if (!tab) {
+        return { success: false, error: 'Active tab not found' };
+      }
+
+      tab.view.setBounds(bounds);
       return { success: true };
     } catch (error) {
       logger.error('Failed to set bounds:', error);
@@ -212,42 +371,25 @@ export function setupBrowserViewHandlers() {
     }
   });
 
-  // 표시/숨김
-  ipcMain.handle('browser-view:set-visible', async (event, visible: boolean) => {
-    try {
-      const mainWindow = BrowserWindow.fromWebContents(event.sender);
-      if (!mainWindow || !browserView) {
-        return { success: false, error: 'Main window or BrowserView not found' };
-      }
-
-      if (visible) {
-        mainWindow.addBrowserView(browserView);
-      } else {
-        mainWindow.removeBrowserView(browserView);
-      }
-
-      return { success: true };
-    } catch (error) {
-      logger.error('Failed to set visibility:', error);
-      return { success: false, error: String(error) };
-    }
-  });
-
-  // 현재 상태 가져오기
   ipcMain.handle('browser-view:get-state', async () => {
     try {
-      if (!browserView) {
-        return { success: false, error: 'BrowserView not created' };
+      if (!activeTabId) {
+        return { success: false, error: 'No active tab' };
+      }
+
+      const tab = tabs.get(activeTabId);
+      if (!tab) {
+        return { success: false, error: 'Active tab not found' };
       }
 
       return {
         success: true,
         data: {
-          url: browserView.webContents.getURL(),
-          title: browserView.webContents.getTitle(),
-          canGoBack: browserView.webContents.canGoBack(),
-          canGoForward: browserView.webContents.canGoForward(),
-          isLoading: browserView.webContents.isLoading(),
+          url: tab.view.webContents.getURL(),
+          title: tab.view.webContents.getTitle(),
+          canGoBack: tab.view.webContents.canGoBack(),
+          canGoForward: tab.view.webContents.canGoForward(),
+          isLoading: tab.view.webContents.isLoading(),
         },
       };
     } catch (error) {
@@ -255,11 +397,39 @@ export function setupBrowserViewHandlers() {
       return { success: false, error: String(error) };
     }
   });
+
+  ipcMain.handle('browser-view:toggle-devtools', async () => {
+    try {
+      if (!activeTabId) {
+        return { success: false, error: 'No active tab' };
+      }
+
+      const tab = tabs.get(activeTabId);
+      if (!tab) {
+        return { success: false, error: 'Active tab not found' };
+      }
+
+      if (tab.view.webContents.isDevToolsOpened()) {
+        tab.view.webContents.closeDevTools();
+      } else {
+        tab.view.webContents.openDevTools();
+      }
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to toggle DevTools:', error);
+      return { success: false, error: String(error) };
+    }
+  });
 }
 
 // Clean up on app quit
 export function cleanupBrowserView() {
-  if (browserView) {
-    browserView = null;
+  if (mainWindowRef) {
+    tabs.forEach((tab) => {
+      mainWindowRef!.removeBrowserView(tab.view);
+    });
   }
+  tabs.clear();
+  activeTabId = null;
+  mainWindowRef = null;
 }
