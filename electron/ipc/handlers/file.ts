@@ -475,18 +475,21 @@ export function registerFileHandlers() {
         // 기본 제외 패턴 (gitignore에 없을 경우 대비)
         args.push('--glob', '!.git/**');
 
-        // 검색어와 경로 추가
-        args.push('--', query, dirPath);
+        // 검색어 추가
+        args.push('--', query);
 
         // 내장된 ripgrep 바이너리 사용
-        const command = `"${rgPath}" ${args.join(' ')}`;
+        // 현재 디렉토리(.)에서 검색하도록 변경 (cwd 설정으로 인해)
+        const command = `"${rgPath}" ${args.join(' ')} .`;
         console.log('[File] Running command:', command);
         console.log('[File] Using bundled ripgrep at:', rgPath);
+        console.log('[File] Working directory:', dirPath);
 
         const { stdout, stderr } = await execAsync(command, {
           maxBuffer: 10 * 1024 * 1024, // 10MB
           encoding: 'utf-8',
           cwd: dirPath, // working directory에서 실행
+          windowsHide: true,
         });
 
         console.log('[File] Search stdout length:', stdout.length);
