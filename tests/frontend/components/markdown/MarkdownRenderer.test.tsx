@@ -195,9 +195,8 @@ const code = "test";
 
     expect(screen.getByText('Title')).toBeInTheDocument();
     expect(screen.getByText('List item 1')).toBeInTheDocument();
-
-    const codeBlock = container.querySelector('code.lang-javascript');
-    expect(codeBlock).toHaveTextContent('const code = "test";');
+    expect(screen.getByText('javascript')).toBeInTheDocument();
+    expect(screen.getByText('const code = "test";')).toBeInTheDocument();
   });
 
   it('should render bold text', () => {

@@ -7,6 +7,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { SidebarChat } from '@/components/layout/SidebarChat';
 import { enableElectronMode, disableElectronMode, mockElectronAPI } from '../../../setup';
+import { useChatStore } from '@/lib/store/chat-store';
+
+// Mock chat store
+jest.mock('@/lib/store/chat-store');
 
 // Mock child components
 jest.mock('@/components/theme/ThemeToggle', () => ({
@@ -21,6 +25,14 @@ jest.mock('@/components/layout/ChatHistory', () => ({
   ),
 }));
 
+jest.mock('@/components/chat/ChatChatArea', () => ({
+  ChatChatArea: () => <div data-testid="chat-chat-area">Chat Chat Area</div>,
+}));
+
+jest.mock('@/components/rag/DocumentList', () => ({
+  DocumentList: () => <div data-testid="document-list">Document List</div>,
+}));
+
 describe('SidebarChat', () => {
   const mockOnDocumentsClick = jest.fn();
   const mockOnGalleryClick = jest.fn();
@@ -30,6 +42,11 @@ describe('SidebarChat', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default mock: chatViewMode = 'history'
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      chatViewMode: 'history',
+    });
   });
 
   afterEach(() => {
@@ -49,12 +66,6 @@ describe('SidebarChat', () => {
       expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
     });
 
-    it('should render Documents button', () => {
-      render(<SidebarChat />);
-
-      expect(screen.getByTitle('문서 관리')).toBeInTheDocument();
-    });
-
     it('should render Gallery button', () => {
       render(<SidebarChat />);
 
@@ -66,30 +77,9 @@ describe('SidebarChat', () => {
 
       expect(screen.getByTitle('설정')).toBeInTheDocument();
     });
-
-    it('should not render Editor Chat button by default', () => {
-      render(<SidebarChat />);
-
-      expect(screen.queryByTitle('Editor Chat (AI 도우미)')).not.toBeInTheDocument();
-    });
-
-    it('should render Editor Chat button when showEditorChat is true', () => {
-      render(<SidebarChat showEditorChat={true} />);
-
-      expect(screen.getByTitle('Editor Chat (AI 도우미)')).toBeInTheDocument();
-    });
   });
 
   describe('Button Click Handlers', () => {
-    it('should call onDocumentsClick when Documents button is clicked', () => {
-      render(<SidebarChat onDocumentsClick={mockOnDocumentsClick} />);
-
-      const documentsButton = screen.getByTitle('문서 관리');
-      fireEvent.click(documentsButton);
-
-      expect(mockOnDocumentsClick).toHaveBeenCalled();
-    });
-
     it('should call onGalleryClick when Gallery button is clicked', () => {
       render(<SidebarChat onGalleryClick={mockOnGalleryClick} />);
 
@@ -108,17 +98,6 @@ describe('SidebarChat', () => {
       expect(mockOnSettingsClick).toHaveBeenCalled();
     });
 
-    it('should call onEditorChatClick when Editor Chat button is clicked', () => {
-      render(
-        <SidebarChat showEditorChat={true} onEditorChatClick={mockOnEditorChatClick} />
-      );
-
-      const editorChatButton = screen.getByTitle('Editor Chat (AI 도우미)');
-      fireEvent.click(editorChatButton);
-
-      expect(mockOnEditorChatClick).toHaveBeenCalled();
-    });
-
     it('should call onConversationClick when ChatHistory is clicked', () => {
       render(<SidebarChat onConversationClick={mockOnConversationClick} />);
 
@@ -132,82 +111,9 @@ describe('SidebarChat', () => {
       render(<SidebarChat />);
 
       expect(() => {
-        fireEvent.click(screen.getByTitle('문서 관리'));
         fireEvent.click(screen.getByTitle('이미지 갤러리'));
         fireEvent.click(screen.getByTitle('설정'));
       }).not.toThrow();
-    });
-  });
-
-  describe('BrowserView Hiding - Documents Button', () => {
-    beforeEach(() => {
-      enableElectronMode();
-    });
-
-    it('should hide BrowserView before opening Documents in Electron', async () => {
-      (mockElectronAPI.browserView.hideAll as jest.Mock).mockResolvedValue(undefined);
-
-      render(<SidebarChat onDocumentsClick={mockOnDocumentsClick} />);
-
-      const documentsButton = screen.getByTitle('문서 관리');
-      fireEvent.click(documentsButton);
-
-      await waitFor(() => {
-        expect(mockElectronAPI.browserView.hideAll).toHaveBeenCalled();
-        expect(mockOnDocumentsClick).toHaveBeenCalled();
-      });
-    });
-
-    it('should handle BrowserView.hideAll error gracefully for Documents', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-
-      (mockElectronAPI.browserView.hideAll as jest.Mock).mockRejectedValue(
-        new Error('Hide failed')
-      );
-
-      render(<SidebarChat onDocumentsClick={mockOnDocumentsClick} />);
-
-      const documentsButton = screen.getByTitle('문서 관리');
-      fireEvent.click(documentsButton);
-
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
-          '[SidebarChat] Failed to hide BrowserView:',
-          expect.any(Error)
-        );
-      });
-
-      // Should still call onDocumentsClick even if hideAll fails
-      expect(mockOnDocumentsClick).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
-    });
-
-    it('should not call hideAll in non-Electron environment for Documents', () => {
-      disableElectronMode();
-
-      render(<SidebarChat onDocumentsClick={mockOnDocumentsClick} />);
-
-      const documentsButton = screen.getByTitle('문서 관리');
-      fireEvent.click(documentsButton);
-
-      expect(mockElectronAPI.browserView.hideAll).not.toHaveBeenCalled();
-      expect(mockOnDocumentsClick).toHaveBeenCalled();
-    });
-
-    it('should log when Documents button is clicked', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-      render(<SidebarChat onDocumentsClick={mockOnDocumentsClick} />);
-
-      const documentsButton = screen.getByTitle('문서 관리');
-      fireEvent.click(documentsButton);
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[SidebarChat] Documents button clicked - hiding BrowserView'
-      );
-
-      consoleSpy.mockRestore();
     });
   });
 
