@@ -76,6 +76,13 @@ export const mockElectronAPI = {
   file: {
     selectImages: jest.fn(),
     loadImage: jest.fn(),
+    selectDirectory: jest.fn(),
+    read: jest.fn(),
+  },
+  fs: {
+    readDirectory: jest.fn(),
+    readFile: jest.fn(),
+    writeFile: jest.fn(),
   },
   github: {
     setPrivateKey: jest.fn(),

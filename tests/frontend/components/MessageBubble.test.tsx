@@ -231,7 +231,13 @@ describe('MessageBubble', () => {
     const messageWithImages: Message = {
       ...userMessage,
       images: [
-        { id: 'img-1', url: 'data:image/png;base64,abc', filename: 'test.png' },
+        {
+          id: 'img-1',
+          path: '/test/test.png',
+          filename: 'test.png',
+          mimeType: 'image/png',
+          base64: 'data:image/png;base64,abc'
+        },
       ],
     };
 
@@ -306,5 +312,298 @@ describe('MessageBubble', () => {
     fireEvent.mouseEnter(messageElement);
 
     expect(screen.queryByRole('button', { name: /regenerate/i })).not.toBeInTheDocument();
+  });
+
+  describe('참조 문서 기능', () => {
+    it('should display referenced documents', () => {
+      const messageWithDocs: Message = {
+        ...assistantMessage,
+        referenced_documents: [
+          {
+            id: 'doc-1',
+            title: 'Test Document',
+            content: 'This is a test document content',
+            source: 'test.md',
+            similarity: 0.95,
+          },
+        ],
+      };
+
+      render(<MessageBubble message={messageWithDocs} />);
+
+      expect(screen.getByText(/참조 문서/)).toBeInTheDocument();
+      expect(screen.getByText(/【출처: test.md - Test Document】/)).toBeInTheDocument();
+    });
+
+    it('should show document preview by default', () => {
+      const messageWithDocs: Message = {
+        ...assistantMessage,
+        referenced_documents: [
+          {
+            id: 'doc-1',
+            title: 'Test Document',
+            content: 'This is a very long test document content that should be truncated in preview mode',
+            source: 'test.md',
+            similarity: 0.95,
+          },
+        ],
+      };
+
+      render(<MessageBubble message={messageWithDocs} />);
+
+      // Should show preview (first 100 chars)
+      expect(screen.getByText(/This is a very long test document/)).toBeInTheDocument();
+    });
+
+    it('should toggle document expansion', async () => {
+      const messageWithDocs: Message = {
+        ...assistantMessage,
+        referenced_documents: [
+          {
+            id: 'doc-1',
+            title: 'Test Document',
+            content: 'Full document content',
+            source: 'test.md',
+            similarity: 0.95,
+          },
+        ],
+      };
+
+      render(<MessageBubble message={messageWithDocs} />);
+
+      const expandButton = screen.getByRole('button', { name: /펼치기/ });
+      fireEvent.click(expandButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Full document content')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /접기/ })).toBeInTheDocument();
+      });
+
+      const collapseButton = screen.getByRole('button', { name: /접기/ });
+      fireEvent.click(collapseButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /펼치기/ })).toBeInTheDocument();
+      });
+    });
+
+    it('should add document to chat when clicked', () => {
+      const addMessageMock = jest.fn();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        ...mockChatStore,
+        addMessage: addMessageMock,
+      });
+
+      const messageWithDocs: Message = {
+        ...assistantMessage,
+        referenced_documents: [
+          {
+            id: 'doc-1',
+            title: 'Test Doc',
+            content: 'Document content',
+            source: 'test.md',
+            similarity: 0.95,
+          },
+        ],
+      };
+
+      render(<MessageBubble message={messageWithDocs} />);
+
+      const docElement = screen.getByText(/【출처: test.md - Test Doc】/).closest('div');
+      fireEvent.click(docElement!);
+
+      expect(addMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringContaining('📄 참조 문서: Test Doc'),
+        })
+      );
+    });
+  });
+
+  describe('파일 변경 사항 표시', () => {
+    it('should display file changes from message.fileChanges', () => {
+      const messageWithFileChanges: Message = {
+        ...assistantMessage,
+        fileChanges: [
+          {
+            filePath: '/test/file.ts',
+            changeType: 'modified',
+            oldContent: 'old code',
+            newContent: 'new code',
+            toolName: 'file_edit',
+          },
+        ],
+      };
+
+      render(<MessageBubble message={messageWithFileChanges} />);
+
+      expect(screen.getByText(/파일 변경/)).toBeInTheDocument();
+      expect(screen.getByTestId('code-diff')).toBeInTheDocument();
+    });
+
+    it('should display multiple file changes', () => {
+      const messageWithMultipleChanges: Message = {
+        ...assistantMessage,
+        fileChanges: [
+          {
+            filePath: '/test/file1.ts',
+            changeType: 'modified',
+            oldContent: 'old',
+            newContent: 'new',
+            toolName: 'file_edit',
+          },
+          {
+            filePath: '/test/file2.js',
+            changeType: 'created',
+            oldContent: '',
+            newContent: 'content',
+            toolName: 'file_write',
+          },
+        ],
+      };
+
+      render(<MessageBubble message={messageWithMultipleChanges} />);
+
+      expect(screen.getByText(/파일 변경 \(2개\)/)).toBeInTheDocument();
+      const diffs = screen.getAllByTestId('code-diff');
+      expect(diffs).toHaveLength(2);
+    });
+  });
+
+  describe('이미지 기능', () => {
+    it('should display multiple images', () => {
+      const messageWithMultipleImages: Message = {
+        ...userMessage,
+        images: [
+          {
+            id: 'img-1',
+            path: '/test/test1.png',
+            filename: 'test1.png',
+            mimeType: 'image/png',
+            base64: 'data:image/png;base64,abc'
+          },
+          {
+            id: 'img-2',
+            path: '/test/test2.jpg',
+            filename: 'test2.jpg',
+            mimeType: 'image/jpeg',
+            base64: 'data:image/jpeg;base64,def'
+          },
+        ],
+      };
+
+      render(<MessageBubble message={messageWithMultipleImages} />);
+
+      expect(screen.getByAltText('test1.png')).toBeInTheDocument();
+      expect(screen.getByAltText('test2.jpg')).toBeInTheDocument();
+    });
+
+    it('should open image in new window when clicked', () => {
+      const windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+
+      const messageWithImage: Message = {
+        ...userMessage,
+        images: [
+          {
+            id: 'img-1',
+            path: '/test/test.png',
+            filename: 'test.png',
+            mimeType: 'image/png',
+            base64: 'data:image/png;base64,abc'
+          },
+        ],
+      };
+
+      render(<MessageBubble message={messageWithImage} />);
+
+      const image = screen.getByAltText('test.png');
+      fireEvent.click(image);
+
+      expect(windowOpenSpy).toHaveBeenCalledWith('data:image/png;base64,abc', '_blank');
+      windowOpenSpy.mockRestore();
+    });
+
+    it('should show image generation progress', () => {
+      const progressMap = new Map();
+      progressMap.set('gen-1', {
+        messageId: assistantMessage.id,
+        status: 'executing',
+        progress: 50,
+        message: 'Generating...',
+      });
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        ...mockChatStore,
+        imageGenerationProgress: progressMap,
+      });
+
+      render(<MessageBubble message={assistantMessage} />);
+
+      expect(screen.getByTestId('image-progress')).toBeInTheDocument();
+    });
+
+    it('should not show completed image generation progress', () => {
+      const progressMap = new Map();
+      progressMap.set('gen-1', {
+        messageId: assistantMessage.id,
+        status: 'completed',
+        progress: 100,
+      });
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        ...mockChatStore,
+        imageGenerationProgress: progressMap,
+      });
+
+      render(<MessageBubble message={assistantMessage} />);
+
+      expect(screen.queryByTestId('image-progress')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('버튼 표시 조건', () => {
+    it('should not show edit button when onEdit is not provided', () => {
+      render(<MessageBubble message={userMessage} />);
+
+      const messageElement = screen.getByText('Hello, how are you?').closest('div')!.parentElement!;
+      fireEvent.mouseEnter(messageElement);
+
+      expect(screen.queryByRole('button', { name: /편집/ })).not.toBeInTheDocument();
+    });
+
+    it('should not show regenerate button for non-last assistant messages', () => {
+      const onRegenerate = jest.fn();
+      render(
+        <MessageBubble
+          message={assistantMessage}
+          onRegenerate={onRegenerate}
+          isLastAssistantMessage={false}
+        />
+      );
+
+      const messageElement = screen.getByText('I am doing well, thank you!').closest('div')!.parentElement!;
+      fireEvent.mouseEnter(messageElement);
+
+      expect(screen.queryByRole('button', { name: /재생성/ })).not.toBeInTheDocument();
+    });
+
+    it('should not show action buttons during editing', () => {
+      const onEdit = jest.fn();
+      render(<MessageBubble message={userMessage} onEdit={onEdit} />);
+
+      const messageElement = screen.getByText('Hello, how are you?').closest('div')!.parentElement!;
+      fireEvent.mouseEnter(messageElement);
+
+      const editButton = screen.getByRole('button', { name: /편집/ });
+      fireEvent.click(editButton);
+
+      // Hover should not show action buttons while editing
+      fireEvent.mouseEnter(messageElement);
+
+      // Edit and copy buttons should not be visible during edit mode
+      expect(screen.queryByTitle('복사')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('편집')).not.toBeInTheDocument();
+    });
   });
 });
