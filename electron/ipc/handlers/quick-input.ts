@@ -1,6 +1,6 @@
 import { ipcMain, BrowserWindow, clipboard } from 'electron';
 import { logger } from '../../services/logger';
-import { registerShortcuts } from '../../main';
+import { registerShortcuts, getMainWindow } from '../../main';
 
 export function setupQuickInputHandlers() {
   // Quick Input 제출 핸들러
@@ -13,15 +13,11 @@ export function setupQuickInputHandlers() {
       logger.info('[QuickInput Handler] Quick Input window:', quickInputWindow?.id);
       quickInputWindow?.hide();
 
-      // 메인 창 찾기
-      const allWindows = BrowserWindow.getAllWindows();
-      logger.info('[QuickInput Handler] Total windows:', allWindows.length);
+      // 메인 창 가져오기
+      const mainWindow = getMainWindow();
+      logger.info('[QuickInput Handler] Main window from getMainWindow():', mainWindow?.id);
 
-      const mainWindow = allWindows.find(
-        (win) => win !== quickInputWindow && !win.isDestroyed()
-      );
-
-      if (mainWindow) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
         logger.info('[QuickInput Handler] Main window found:', mainWindow.id);
 
         // 메인 창 표시 및 포커스
@@ -79,11 +75,11 @@ export function setupQuickInputHandlers() {
       }
       logger.info('[QuickQuestion Handler] Final message:', finalMessage.substring(0, 100));
 
-      // 메인 창 찾기
-      const allWindows = BrowserWindow.getAllWindows();
-      const mainWindow = allWindows.find((win) => !win.isDestroyed() && win.webContents.getURL().includes('localhost'));
+      // 메인 창 가져오기
+      const mainWindow = getMainWindow();
+      logger.info('[QuickQuestion Handler] Main window from getMainWindow():', mainWindow?.id);
 
-      if (mainWindow) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
         logger.info('[QuickQuestion Handler] Main window found:', mainWindow.id);
 
         // 메인 창 표시 및 포커스

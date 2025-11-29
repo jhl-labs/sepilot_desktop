@@ -184,17 +184,22 @@ async function registerShortcuts() {
 
       const registered = globalShortcut.register(question.shortcut, () => {
         logger.info(`[Shortcuts] Quick Question triggered: ${question.name}`);
-        // Find main window and execute question
-        const allWindows = BrowserWindow.getAllWindows();
-        const mainWin = allWindows.find((win) => !win.isDestroyed() && win.webContents.getURL().includes('localhost'));
 
-        if (mainWin) {
-          mainWin.show();
-          mainWin.focus();
+        // Ensure main window exists
+        if (!mainWindow || mainWindow.isDestroyed()) {
+          logger.info('[Shortcuts] Main window not found, creating new window');
+          createWindow();
+        }
+
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+          logger.info('[Shortcuts] Main window shown and focused');
 
           // Read clipboard and include in message
           const { clipboard } = require('electron');
           const clipboardContent = clipboard.readText();
+          logger.info(`[Shortcuts] Clipboard content length: ${clipboardContent.length}`);
 
           let finalMessage: string;
           if (question.prompt.includes('{{clipboard}}')) {
@@ -207,8 +212,11 @@ async function registerShortcuts() {
               : question.prompt;
           }
 
-          logger.info(`[Shortcuts] Final message: ${finalMessage.substring(0, 100)}...`);
-          mainWin.webContents.send('create-new-chat-with-message', finalMessage);
+          logger.info(`[Shortcuts] Sending message to main window: ${finalMessage.substring(0, 100)}...`);
+          mainWindow.webContents.send('create-new-chat-with-message', finalMessage);
+          logger.info('[Shortcuts] Message sent successfully');
+        } else {
+          logger.error('[Shortcuts] Failed to create/access main window');
         }
       });
 
@@ -228,6 +236,11 @@ async function registerShortcuts() {
 
 // Export for use in IPC handlers
 export { registerShortcuts };
+
+// Get main window
+export function getMainWindow(): BrowserWindow | null {
+  return mainWindow;
+}
 
 // System Tray 생성
 function createTray() {
