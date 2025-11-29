@@ -282,4 +282,264 @@ const code = "test";
     const pre = container.querySelector('pre');
     expect(pre).toBeInTheDocument();
   });
+
+  describe('Streaming mode', () => {
+    it('should accept isStreaming prop', () => {
+      const content = 'Test content';
+
+      const { container: container1 } = render(<MarkdownRenderer content={content} isStreaming={true} />);
+      const { container: container2 } = render(<MarkdownRenderer content={content} isStreaming={false} />);
+
+      // Both should render the content
+      expect(container1.textContent).toContain('Test content');
+      expect(container2.textContent).toContain('Test content');
+    });
+
+    it('should render code blocks with isStreaming=true', () => {
+      const content = '```javascript\nconst x = 10;\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} isStreaming={true} />);
+
+      const codeBlock = container.querySelector('code.lang-javascript');
+      expect(codeBlock).toBeInTheDocument();
+    });
+
+    it('should render code blocks with isStreaming=false', () => {
+      const content = '```javascript\nconst y = 20;\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} isStreaming={false} />);
+
+      const codeBlock = container.querySelector('code.lang-javascript');
+      expect(codeBlock).toBeInTheDocument();
+    });
+  });
+
+  describe('Code block edge cases', () => {
+    it('should handle code blocks with multiple languages', () => {
+      const content = `\`\`\`javascript
+const x = 10;
+\`\`\`
+
+\`\`\`python
+def hello():
+    print("Hello")
+\`\`\``;
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const jsBlock = container.querySelector('code.lang-javascript');
+      const pyBlock = container.querySelector('code.lang-python');
+
+      expect(jsBlock).toBeInTheDocument();
+      expect(pyBlock).toBeInTheDocument();
+    });
+
+    it('should handle code blocks with special characters', () => {
+      const content = '```bash\necho "Hello $USER"\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const codeBlock = container.querySelector('code.lang-bash');
+      expect(codeBlock).toBeInTheDocument();
+      expect(codeBlock).toHaveTextContent('echo "Hello $USER"');
+    });
+
+    it('should handle empty code blocks', () => {
+      const content = '```javascript\n\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const codeBlock = container.querySelector('code.lang-javascript');
+      expect(codeBlock).toBeInTheDocument();
+    });
+  });
+
+  describe('HTML elements styling', () => {
+    it('should apply correct styles to h4', () => {
+      const content = '#### Heading 4';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const h4 = container.querySelector('h4');
+      expect(h4).toBeInTheDocument();
+      expect(h4).toHaveClass('text-base', 'font-semibold', 'mt-3', 'mb-2', 'scroll-m-20');
+    });
+
+    it('should apply correct styles to h5', () => {
+      const content = '##### Heading 5';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const h5 = container.querySelector('h5');
+      expect(h5).toBeInTheDocument();
+      expect(h5).toHaveClass('text-sm', 'font-semibold', 'mt-2', 'mb-1', 'scroll-m-20');
+    });
+
+    it('should apply correct styles to h6', () => {
+      const content = '###### Heading 6';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const h6 = container.querySelector('h6');
+      expect(h6).toBeInTheDocument();
+      expect(h6).toHaveClass('text-xs', 'font-semibold', 'mt-2', 'mb-1', 'scroll-m-20');
+    });
+
+    it('should apply correct styles to unordered lists', () => {
+      const content = `- Item 1
+- Item 2`;
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const ul = container.querySelector('ul');
+      expect(ul).toBeInTheDocument();
+      expect(ul).toHaveClass('my-3', 'ml-6', 'list-disc');
+    });
+
+    it('should apply correct styles to ordered lists', () => {
+      const content = `1. First
+2. Second`;
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const ol = container.querySelector('ol');
+      expect(ol).toBeInTheDocument();
+      expect(ol).toHaveClass('my-3', 'ml-6', 'list-decimal');
+    });
+
+    it('should apply correct styles to table headers', () => {
+      const content = `| Header 1 | Header 2 |
+|----------|----------|
+| Cell 1   | Cell 2   |`;
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const th = container.querySelector('th');
+      expect(th).toBeInTheDocument();
+      expect(th).toHaveClass('border', 'border-border', 'bg-muted', 'px-4', 'py-2', 'text-left', 'font-semibold');
+    });
+
+    it('should apply correct styles to table cells', () => {
+      const content = `| Header 1 | Header 2 |
+|----------|----------|
+| Cell 1   | Cell 2   |`;
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const td = container.querySelector('td');
+      expect(td).toBeInTheDocument();
+      expect(td).toHaveClass('border', 'border-border', 'px-4', 'py-2');
+    });
+
+    it('should apply correct styles to blockquotes', () => {
+      const content = '> This is a quote';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const blockquote = container.querySelector('blockquote');
+      expect(blockquote).toBeInTheDocument();
+      expect(blockquote).toHaveClass('border-l-4', 'border-primary/30', 'pl-4', 'italic', 'text-muted-foreground', 'my-4');
+    });
+
+    it('should apply correct styles to paragraphs', () => {
+      const content = `First paragraph.
+
+Second paragraph.`;
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const paragraphs = container.querySelectorAll('p');
+      expect(paragraphs.length).toBeGreaterThan(0);
+      expect(paragraphs[0]).toHaveClass('leading-7');
+    });
+
+    it('should render inline code element', () => {
+      const content = 'Use `inline code` here';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const code = container.querySelector('code');
+      expect(code).toBeInTheDocument();
+      expect(code).toHaveTextContent('inline code');
+    });
+  });
+
+  describe('Content extraction', () => {
+    it('should handle code blocks with numeric content', () => {
+      const content = '```javascript\n12345\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const codeBlock = container.querySelector('code.lang-javascript');
+      expect(codeBlock).toBeInTheDocument();
+      expect(codeBlock).toHaveTextContent('12345');
+    });
+
+    it('should handle nested code content', () => {
+      const content = '```json\n{"key": "value", "nested": {"deep": "data"}}\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const codeBlock = container.querySelector('code.lang-json');
+      expect(codeBlock).toBeInTheDocument();
+      expect(codeBlock).toHaveTextContent('{"key": "value"');
+    });
+  });
+
+  describe('Mixed markdown content', () => {
+    it('should handle markdown with multiple element types', () => {
+      const content = `# Title
+
+This is a paragraph with **bold**, *italic*, and \`code\`.
+
+> A quote
+
+- List item 1
+- List item 2
+
+\`\`\`javascript
+const x = 10;
+\`\`\`
+
+[A link](https://example.com)
+
+| Col 1 | Col 2 |
+|-------|-------|
+| A     | B     |
+
+---`;
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      expect(container.querySelector('h1')).toHaveTextContent('Title');
+      expect(container.querySelector('strong')).toHaveTextContent('bold');
+      expect(container.querySelector('em')).toHaveTextContent('italic');
+      expect(container.querySelector('blockquote')).toBeInTheDocument();
+      expect(container.querySelector('ul')).toBeInTheDocument();
+      expect(container.querySelector('code.lang-javascript')).toBeInTheDocument();
+      expect(container.querySelector('a')).toHaveAttribute('href', 'https://example.com');
+      expect(container.querySelector('table')).toBeInTheDocument();
+      expect(container.querySelector('hr')).toBeInTheDocument();
+    });
+
+    it('should handle consecutive code blocks', () => {
+      const content = `\`\`\`javascript
+const x = 10;
+\`\`\`
+
+\`\`\`typescript
+const y: number = 20;
+\`\`\`
+
+\`\`\`python
+z = 30
+\`\`\``;
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      expect(container.querySelector('code.lang-javascript')).toBeInTheDocument();
+      expect(container.querySelector('code.lang-typescript')).toBeInTheDocument();
+      expect(container.querySelector('code.lang-python')).toBeInTheDocument();
+    });
+  });
 });
