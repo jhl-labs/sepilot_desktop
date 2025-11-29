@@ -39,6 +39,7 @@ export function BrowserPanel() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const isInitializedRef = useRef(false);
 
   const handleNavigate = () => {
     if (!isElectron() || !window.electronAPI) {
@@ -218,8 +219,15 @@ export function BrowserPanel() {
       return;
     }
 
+    // React Strict Mode에서 중복 실행 방지
+    if (isInitializedRef.current) {
+      console.log('[BrowserPanel] Already initialized, skipping');
+      return;
+    }
+
     const initializeTabs = async () => {
       console.log('[BrowserPanel] Initializing tabs...');
+      isInitializedRef.current = true;
 
       // 먼저 기존 탭 목록 확인
       const result = await window.electronAPI.browserView.getTabs();
