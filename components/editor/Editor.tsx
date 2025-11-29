@@ -145,57 +145,99 @@ export function CodeEditor() {
     const model = editor.getModel();
     if (!model) return;
 
-    // Register inline completion provider
-    const { monaco } = editor as any;
-    if (!monaco) return;
+    // Get monaco instance from the editor
+    const monacoInstance = (window as any).monaco;
+    if (!monacoInstance) {
+      console.warn('Monaco instance not available');
+      return;
+    }
 
-    const provider = monaco.languages.registerInlineCompletionsProvider(
+    let debounceTimer: NodeJS.Timeout | null = null;
+    const DEBOUNCE_MS = 300;
+
+    const provider = monacoInstance.languages.registerInlineCompletionsProvider(
       model.getLanguageId(),
       {
-        provideInlineCompletions: async (model: any, position: any) => {
-          // Check if autocomplete is enabled
+        provideInlineCompletions: async (model: any, position: any, context: any, token: any) => {
+          // Return empty if autocomplete is not available
           if (!window.electronAPI?.llm?.editorAutocomplete) {
             return { items: [] };
           }
 
-          try {
-            const code = model.getValue();
-            const offset = model.getOffsetAt(position);
-            const language = model.getLanguageId();
-
-            const result = await window.electronAPI.llm.editorAutocomplete({
-              code,
-              cursorPosition: offset,
-              language,
-            });
-
-            if (result.success && result.data?.completion) {
-              return {
-                items: [
-                  {
-                    insertText: result.data.completion,
-                    range: {
-                      startLineNumber: position.lineNumber,
-                      startColumn: position.column,
-                      endLineNumber: position.lineNumber,
-                      endColumn: position.column,
-                    },
-                  },
-                ],
-              };
+          // Debounce to avoid too many requests
+          return new Promise((resolve) => {
+            if (debounceTimer) {
+              clearTimeout(debounceTimer);
             }
-          } catch (error) {
-            console.error('Autocomplete error:', error);
-          }
 
-          return { items: [] };
+            debounceTimer = setTimeout(async () => {
+              try {
+                const code = model.getValue();
+                const offset = model.getOffsetAt(position);
+                const language = model.getLanguageId();
+
+                // Get text before cursor for context
+                const textBeforeCursor = code.substring(0, offset);
+                const lines = textBeforeCursor.split('\n');
+                const currentLine = lines[lines.length - 1];
+
+                // Don't autocomplete if line is empty or just whitespace
+                if (!currentLine.trim()) {
+                  resolve({ items: [] });
+                  return;
+                }
+
+                console.log('Requesting autocomplete for:', { language, offset, currentLine });
+
+                const result = await window.electronAPI.llm.editorAutocomplete({
+                  code,
+                  cursorPosition: offset,
+                  language,
+                });
+
+                if (result.success && result.data?.completion) {
+                  const completion = result.data.completion.trim();
+
+                  if (completion) {
+                    console.log('Autocomplete suggestion:', completion);
+
+                    resolve({
+                      items: [
+                        {
+                          insertText: completion,
+                          range: new monacoInstance.Range(
+                            position.lineNumber,
+                            position.column,
+                            position.lineNumber,
+                            position.column
+                          ),
+                          command: undefined,
+                        },
+                      ],
+                    });
+                    return;
+                  }
+                }
+              } catch (error) {
+                console.error('Autocomplete error:', error);
+              }
+
+              resolve({ items: [] });
+            }, DEBOUNCE_MS);
+          });
         },
         freeInlineCompletions: () => {},
       }
     );
 
+    console.log('Inline completion provider registered for', model.getLanguageId());
+
     return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
       provider.dispose();
+      console.log('Inline completion provider disposed');
     };
   }, [editor]);
 
@@ -410,7 +452,14 @@ export function CodeEditor() {
             language={activeFile.language || 'plaintext'}
             value={activeFile.content}
             onChange={handleEditorChange}
-            onMount={(editor) => setEditor(editor)}
+            onMount={(editor, monaco) => {
+              setEditor(editor);
+              // Store monaco instance globally for InlineCompletionProvider
+              if (!((window as any).monaco)) {
+                (window as any).monaco = monaco;
+                console.log('Monaco instance stored globally');
+              }
+            }}
             theme={theme === 'dark' ? 'vs-dark' : 'light'}
             options={{
               fontSize: 14,
@@ -420,6 +469,28 @@ export function CodeEditor() {
               automaticLayout: true,
               tabSize: 2,
               insertSpaces: true,
+              // Enable inline suggestions (like GitHub Copilot)
+              inlineSuggest: {
+                enabled: true,
+                mode: 'prefix',
+              },
+              // Quick suggestions configuration
+              quickSuggestions: {
+                other: true,
+                comments: false,
+                strings: false,
+              },
+              // Suggest configuration
+              suggest: {
+                preview: true,
+                showInlineDetails: true,
+              },
+              // Accept suggestion on commit character
+              acceptSuggestionOnCommitCharacter: true,
+              // Accept suggestion on enter
+              acceptSuggestionOnEnter: 'on',
+              // Show suggestion delay
+              quickSuggestionsDelay: 100,
             }}
           />
         </div>
