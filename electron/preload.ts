@@ -367,6 +367,8 @@ const electronAPI = {
     addBookmarkFolder: (name: string) => ipcRenderer.invoke('browser-view:add-bookmark-folder', name),
     getBookmarkFolders: () => ipcRenderer.invoke('browser-view:get-bookmark-folders'),
     deleteBookmarkFolder: (folderId: string) => ipcRenderer.invoke('browser-view:delete-bookmark-folder', folderId),
+    // Browser settings
+    getBrowserSettings: () => ipcRenderer.invoke('browser-view:get-browser-settings'),
     // Event listeners
     onDidNavigate: (callback: (data: { tabId: string; url: string; canGoBack: boolean; canGoForward: boolean }) => void) => {
       const handler = (_: any, data: any) => callback(data);

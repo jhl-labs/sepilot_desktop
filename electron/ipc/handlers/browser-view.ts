@@ -1022,6 +1022,25 @@ export function setupBrowserViewHandlers() {
       return { success: false, error: String(error) };
     }
   });
+
+  // Get browser settings (paths)
+  ipcMain.handle('browser-view:get-browser-settings', async () => {
+    try {
+      const snapshotsPath = getSnapshotsDir();
+      const bookmarksPath = getBookmarksDir();
+
+      return {
+        success: true,
+        data: {
+          snapshotsPath,
+          bookmarksPath,
+        },
+      };
+    } catch (error) {
+      logger.error('Failed to get browser settings:', error);
+      return { success: false, error: String(error) };
+    }
+  });
 }
 
 // Clean up on app quit

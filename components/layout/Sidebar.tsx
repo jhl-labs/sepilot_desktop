@@ -13,6 +13,7 @@ import { SimpleChatArea } from '@/components/browser/SimpleChatArea';
 import { SimpleChatInput } from '@/components/browser/SimpleChatInput';
 import { SnapshotsDialog } from '@/components/browser/SnapshotsDialog';
 import { BookmarksDialog } from '@/components/browser/BookmarksDialog';
+import { BrowserSettingDialog } from '@/components/browser/BrowserSettingDialog';
 import { isElectron } from '@/lib/platform';
 import {
   DropdownMenu,
@@ -42,6 +43,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [snapshotsOpen, setSnapshotsOpen] = useState(false);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
+  const [browserSettingsOpen, setBrowserSettingsOpen] = useState(false);
 
   const handleDeleteAll = async () => {
     if (conversations.length === 0) {return;}
@@ -216,6 +218,17 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
             >
               <Bookmark className="h-5 w-5" />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setBrowserSettingsOpen(true);
+              }}
+              title="Browser 설정"
+              className="flex-1"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
           </div>
         ) : (
           // 기본 툴바 (Chat, Editor 모드)
@@ -269,6 +282,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
       {/* Browser 모드 전용 다이얼로그 */}
       <SnapshotsDialog open={snapshotsOpen} onOpenChange={setSnapshotsOpen} />
       <BookmarksDialog open={bookmarksOpen} onOpenChange={setBookmarksOpen} />
+      <BrowserSettingDialog open={browserSettingsOpen} onOpenChange={setBrowserSettingsOpen} />
     </div>
   );
 }

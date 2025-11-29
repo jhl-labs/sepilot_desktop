@@ -511,6 +511,8 @@ interface BrowserViewAPI {
   addBookmarkFolder: (name: string) => Promise<IPCResponse<BookmarkFolder>>;
   getBookmarkFolders: () => Promise<IPCResponse<BookmarkFolder[]>>;
   deleteBookmarkFolder: (folderId: string) => Promise<IPCResponse>;
+  // Browser settings
+  getBrowserSettings: () => Promise<IPCResponse<{ snapshotsPath: string; bookmarksPath: string }>>;
   // Event listeners
   onDidNavigate: (callback: (data: { tabId: string; url: string; canGoBack: boolean; canGoForward: boolean }) => void) => (...args: unknown[]) => void;
   onLoadingState: (callback: (data: { tabId: string; isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => (...args: unknown[]) => void;
