@@ -1,33 +1,41 @@
 'use client';
 
-import { Settings, Terminal, MessageSquare } from 'lucide-react';
+import { Settings, Terminal, MessageSquare, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { FileExplorer } from './FileExplorer';
 import { SearchPanel } from '@/components/editor/SearchPanel';
+import { EditorChatArea } from '@/components/editor/EditorChatArea';
+import { EditorChatInput } from '@/components/editor/EditorChatInput';
 import { isElectron } from '@/lib/platform';
 
 interface SidebarEditorProps {
   onSettingsClick?: () => void;
-  onEditorChatClick?: () => void;
 }
 
-export function SidebarEditor({ onSettingsClick, onEditorChatClick }: SidebarEditorProps) {
+export function SidebarEditor({ onSettingsClick }: SidebarEditorProps) {
   const {
-    activeEditorTab,
+    editorViewMode,
+    setEditorViewMode,
     showTerminalPanel,
     setShowTerminalPanel,
     workingDirectory,
+    clearEditorChat,
   } = useChatStore();
 
   return (
     <div className="flex h-full w-full flex-col">
       {/* Content Area */}
-      {activeEditorTab === 'files' ? (
+      {editorViewMode === 'files' ? (
         <FileExplorer />
-      ) : (
+      ) : editorViewMode === 'search' ? (
         <SearchPanel />
+      ) : (
+        <>
+          <EditorChatArea />
+          <EditorChatInput />
+        </>
       )}
 
       {/* Footer */}
@@ -37,11 +45,24 @@ export function SidebarEditor({ onSettingsClick, onEditorChatClick }: SidebarEdi
           <Button
             variant="ghost"
             size="icon"
-            onClick={onEditorChatClick}
-            title="Editor Chat (AI 코딩 어시스턴트)"
+            onClick={() => {
+              if (editorViewMode === 'chat') {
+                if (confirm('현재 대화 내역을 모두 삭제하시겠습니까?')) {
+                  clearEditorChat();
+                  setEditorViewMode('chat');
+                }
+              } else {
+                setEditorViewMode('chat');
+              }
+            }}
+            title={editorViewMode === 'chat' ? '새 대화' : 'AI 코딩 어시스턴트'}
             className="flex-1"
           >
-            <MessageSquare className="h-5 w-5" />
+            {editorViewMode === 'chat' ? (
+              <Plus className="h-5 w-5" />
+            ) : (
+              <MessageSquare className="h-5 w-5" />
+            )}
           </Button>
           <Button
             variant="ghost"

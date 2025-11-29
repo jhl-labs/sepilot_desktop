@@ -97,8 +97,8 @@ export class GraphFactory {
 
   private static async getEditorAgentGraph() {
     if (!this._editorAgentGraph) {
-      const { createEditorAgentGraph } = await import('./graphs/editor-agent');
-      this._editorAgentGraph = createEditorAgentGraph();
+      const { createAdvancedEditorAgentGraph } = await import('./graphs/editor-agent');
+      this._editorAgentGraph = createAdvancedEditorAgentGraph(50); // Max 50 iterations for complex tasks
     }
     return this._editorAgentGraph;
   }
@@ -158,6 +158,11 @@ export class GraphFactory {
         baseState = 'browser-agent';
         break;
 
+      case 'editor-agent':
+        baseGraph = await this.getEditorAgentGraph();
+        baseState = 'editor-agent';
+        break;
+
       default:
         baseGraph = await this.getChatGraph();
         baseState = 'chat';
@@ -215,6 +220,8 @@ export class GraphFactory {
       case 'coding-agent':
         return createInitialCodingAgentState(messages, conversationId);
       case 'browser-agent':
+        return createInitialAgentState(messages, conversationId);
+      case 'editor-agent':
         return createInitialAgentState(messages, conversationId);
       default:
         return createInitialChatState(messages, conversationId);

@@ -92,6 +92,10 @@ interface ChatStore {
   browserAgentIsRunning: boolean;
   showBrowserAgentLogs: boolean; // 로그 패널 표시 여부
 
+  // Editor Mode Chat (simple side chat for AI coding assistant)
+  editorChatMessages: Message[];
+  editorViewMode: 'files' | 'search' | 'chat'; // files, search, or chat view in Editor sidebar
+
   // Deprecated: kept for backward compatibility
   graphType: GraphType;
   isStreaming: boolean;
@@ -152,6 +156,12 @@ interface ChatStore {
   setBrowserAgentIsRunning: (isRunning: boolean) => void;
   setShowBrowserAgentLogs: (show: boolean) => void;
 
+  // Actions - Editor Chat
+  addEditorChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => void;
+  updateEditorChatMessage: (id: string, updates: Partial<Message>) => void;
+  clearEditorChat: () => void;
+  setEditorViewMode: (mode: 'files' | 'search' | 'chat') => void;
+
   // Actions - App Mode
   setAppMode: (mode: AppMode) => void;
   setActiveEditorTab: (tab: 'files' | 'search') => void;
@@ -210,6 +220,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   browserAgentLogs: [],
   browserAgentIsRunning: false,
   showBrowserAgentLogs: false,
+
+  // Editor Chat
+  editorChatMessages: [],
+  editorViewMode: 'files',
 
   // Deprecated
   graphType: 'chat',
@@ -865,6 +879,36 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setShowBrowserAgentLogs: (show: boolean) => {
     set({ showBrowserAgentLogs: show });
+  },
+
+  // Editor Chat Actions
+  addEditorChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => {
+    const newMessage: Message = {
+      ...message,
+      id: generateId(),
+      conversation_id: 'editor-chat',
+      created_at: Date.now(),
+    };
+
+    set((state) => ({
+      editorChatMessages: [...state.editorChatMessages, newMessage],
+    }));
+  },
+
+  updateEditorChatMessage: (id: string, updates: Partial<Message>) => {
+    set((state) => ({
+      editorChatMessages: state.editorChatMessages.map((m) =>
+        m.id === id ? { ...m, ...updates } : m
+      ),
+    }));
+  },
+
+  clearEditorChat: () => {
+    set({ editorChatMessages: [] });
+  },
+
+  setEditorViewMode: (mode: 'files' | 'search' | 'chat') => {
+    set({ editorViewMode: mode });
   },
 
   // Editor Actions

@@ -28,8 +28,8 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
     conversations,
     createConversation,
     deleteConversation,
-    activeEditorTab,
-    setActiveEditorTab,
+    editorViewMode,
+    setEditorViewMode,
   } = useChatStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -102,18 +102,18 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setActiveEditorTab('files')}
+              onClick={() => setEditorViewMode('files')}
               title="파일 탐색기"
-              className={activeEditorTab === 'files' ? 'bg-accent' : ''}
+              className={editorViewMode === 'files' ? 'bg-accent' : ''}
             >
               <FileText className="h-5 w-5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setActiveEditorTab('search')}
+              onClick={() => setEditorViewMode('search')}
               title="전체 검색"
-              className={activeEditorTab === 'search' ? 'bg-accent' : ''}
+              className={editorViewMode === 'search' ? 'bg-accent' : ''}
             >
               <Search className="h-5 w-5" />
             </Button>

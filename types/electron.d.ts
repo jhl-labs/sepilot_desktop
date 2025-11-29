@@ -153,7 +153,7 @@ interface LLMAPI {
 
 // LangGraph 관련 타입
 interface GraphConfig {
-  thinkingMode: 'instant' | 'sequential' | 'tree-of-thought' | 'deep' | 'coding' | 'browser-agent';
+  thinkingMode: 'instant' | 'sequential' | 'tree-of-thought' | 'deep' | 'coding' | 'browser-agent' | 'editor-agent';
   enableRAG: boolean;
   enableTools: boolean;
 }

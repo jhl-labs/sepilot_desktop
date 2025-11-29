@@ -465,3 +465,6 @@ This would fetch documentation from:
 export function createEditorAgentGraph(maxIterations = 10): EditorAgentGraph {
   return new EditorAgentGraph(maxIterations);
 }
+
+// Export Advanced Editor Agent for Chat mode
+export { AdvancedEditorAgentGraph, createAdvancedEditorAgentGraph } from './editor-agent-advanced';
