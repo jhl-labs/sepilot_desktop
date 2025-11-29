@@ -76,6 +76,16 @@ body {
   background-color: color-mix(in srgb, var(--color-muted-foreground) 50%, transparent);
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Prose (Markdown) 스타일 */
 .prose {
   color: var(--color-foreground);

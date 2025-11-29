@@ -1,17 +1,21 @@
+/**
+ * File Explorer Component
+ *
+ * Main file explorer UI for Editor mode with:
+ * - Directory selection
+ * - File tree browsing with lazy loading
+ * - File/folder creation via toolbar
+ * - Context menu actions (rename, delete)
+ * - File opening in Monaco Editor
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Folder, FolderOpen, File, ChevronRight, ChevronDown, FolderPlus, FilePlus, Trash2, Edit3 } from 'lucide-react';
+import { Folder, FolderPlus, FilePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
 import {
   Dialog,
   DialogContent,
@@ -21,185 +25,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useChatStore } from '@/lib/store/chat-store';
+import { useFileSystem } from '@/hooks/use-file-system';
+import { getLanguageFromFilename } from '@/lib/utils/file-language';
+import { FileTreeItem, type FileNode } from './FileTreeItem';
 import { isElectron } from '@/lib/platform';
-import { cn } from '@/lib/utils';
 import path from 'path-browserify';
 
-interface FileNode {
-  name: string;
-  path: string;
-  isDirectory: boolean;
-  children?: FileNode[];
-}
-
-interface FileTreeItemProps {
-  node: FileNode;
-  level: number;
-  onFileClick: (path: string, filename: string) => void;
-  onRefresh: () => void;
-  parentPath: string;
-}
-
-function FileTreeItem({ node, level, onFileClick, onRefresh, parentPath }: FileTreeItemProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [newName, setNewName] = useState(node.name);
-  const { activeFilePath } = useChatStore();
-
-  const handleClick = async () => {
-    if (node.isDirectory) {
-      setIsExpanded(!isExpanded);
-
-      // Lazy load children if not loaded yet
-      if (!node.children && isElectron() && window.electronAPI) {
-        try {
-          const result = await window.electronAPI.fs.readDirectory(node.path);
-          if (result.success && result.data) {
-            node.children = result.data;
-            setIsExpanded(true);
-          }
-        } catch (error) {
-          console.error('Failed to load directory:', error);
-        }
-      }
-    } else {
-      onFileClick(node.path, node.name);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!isElectron() || !window.electronAPI) {return;}
-
-    const confirmed = confirm(
-      `"${node.name}"${node.isDirectory ? ' 폴더와 내용' : ''}을(를) 삭제하시겠습니까?`
-    );
-    if (!confirmed) {return;}
-
-    try {
-      const result = await window.electronAPI.fs.delete(node.path);
-      if (result.success) {
-        onRefresh();
-      } else {
-        alert(`삭제 실패: ${result.error}`);
-      }
-    } catch (error: any) {
-      alert(`삭제 실패: ${error.message}`);
-    }
-  };
-
-  const handleRename = async () => {
-    if (!newName || newName === node.name) {
-      setIsRenaming(false);
-      return;
-    }
-
-    if (!isElectron() || !window.electronAPI) {return;}
-
-    try {
-      const newPath = path.join(parentPath, newName);
-      const result = await window.electronAPI.fs.rename(node.path, newPath);
-      if (result.success) {
-        setIsRenaming(false);
-        onRefresh();
-      } else {
-        alert(`이름 변경 실패: ${result.error}`);
-      }
-    } catch (error: any) {
-      alert(`이름 변경 실패: ${error.message}`);
-    }
-  };
-
-  const isActive = !node.isDirectory && activeFilePath === node.path;
-
-  return (
-    <div>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          {isRenaming ? (
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onBlur={handleRename}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {handleRename();}
-                if (e.key === 'Escape') {
-                  setIsRenaming(false);
-                  setNewName(node.name);
-                }
-              }}
-              className="h-auto px-2 py-1 text-sm"
-              style={{ marginLeft: `${level * 12 + 8}px` }}
-              autoFocus
-            />
-          ) : (
-            <button
-              onClick={handleClick}
-              className={cn(
-                'flex w-full items-center gap-1 px-2 py-1 text-sm hover:bg-accent rounded transition-colors text-left',
-                isActive && 'bg-accent text-accent-foreground font-medium'
-              )}
-              style={{ paddingLeft: `${level * 12 + 8}px` }}
-            >
-              {node.isDirectory ? (
-                <>
-                  {isExpanded ? (
-                    <ChevronDown className="h-3 w-3 shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3 shrink-0" />
-                  )}
-                  {isExpanded ? (
-                    <FolderOpen className="h-4 w-4 shrink-0 text-blue-500" />
-                  ) : (
-                    <Folder className="h-4 w-4 shrink-0 text-blue-500" />
-                  )}
-                </>
-              ) : (
-                <>
-                  <span className="w-3 shrink-0" />
-                  <File className="h-4 w-4 shrink-0 text-muted-foreground" />
-                </>
-              )}
-              <span className="truncate">{node.name}</span>
-            </button>
-          )}
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem onClick={() => setIsRenaming(true)}>
-            <Edit3 className="mr-2 h-4 w-4" />
-            이름 변경
-          </ContextMenuItem>
-          <ContextMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
-            <Trash2 className="mr-2 h-4 w-4" />
-            삭제
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
-
-      {node.isDirectory && isExpanded && node.children && (
-        <div>
-          {node.children.map((child) => (
-            <FileTreeItem
-              key={child.path}
-              node={child}
-              level={level + 1}
-              onFileClick={onFileClick}
-              onRefresh={onRefresh}
-              parentPath={node.path}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function FileExplorer() {
-  const { workingDirectory, setWorkingDirectory, openFile } = useChatStore();
+  const { workingDirectory, setWorkingDirectory, openFile, activeFilePath } = useChatStore();
   const [fileTree, setFileTree] = useState<FileNode[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showNewFileDialog, setShowNewFileDialog] = useState(false);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [newItemName, setNewItemName] = useState('');
+  const { readDirectory, readFile, createFile, createDirectory } = useFileSystem();
 
   // Load file tree when working directory changes
   useEffect(() => {
@@ -212,18 +51,15 @@ export function FileExplorer() {
   }, [workingDirectory]);
 
   const loadFileTree = async (dirPath: string) => {
-    if (!isElectron() || !window.electronAPI) {
-      return;
-    }
-
+    console.log(`[FileExplorer] Loading file tree: ${dirPath}`);
     setIsLoading(true);
     try {
-      const result = await window.electronAPI.fs.readDirectory(dirPath);
-      if (result.success && result.data) {
-        setFileTree(result.data);
+      const data = await readDirectory(dirPath);
+      if (data) {
+        setFileTree(data);
       }
     } catch (error) {
-      console.error('Failed to load file tree:', error);
+      console.error('[FileExplorer] Failed to load file tree:', error);
     } finally {
       setIsLoading(false);
     }
@@ -231,99 +67,74 @@ export function FileExplorer() {
 
   const handleSelectDirectory = async () => {
     if (!isElectron() || !window.electronAPI) {
-      console.warn('Directory selection is only available in Electron');
+      console.warn('[FileExplorer] Directory selection is only available in Electron');
       return;
     }
 
     try {
       const result = await window.electronAPI.file.selectDirectory();
       if (result.success && result.data) {
+        console.log(`[FileExplorer] Directory selected: ${result.data}`);
         setWorkingDirectory(result.data);
       }
     } catch (error) {
-      console.error('Failed to select directory:', error);
+      console.error('[FileExplorer] Failed to select directory:', error);
     }
   };
 
-  const handleFileClick = async (path: string, filename: string) => {
-    if (!isElectron() || !window.electronAPI) {
-      return;
-    }
+  const handleFileClick = async (filePath: string, filename: string) => {
+    console.log(`[FileExplorer] Opening file: ${filePath}`);
+    const content = await readFile(filePath);
+    if (content !== null) {
+      const language = getLanguageFromFilename(filename);
+      console.log(`[FileExplorer] File loaded with language: ${language}`);
 
-    try {
-      const result = await window.electronAPI.fs.readFile(path);
-      if (result.success && result.data) {
-        // Determine language from file extension
-        const ext = filename.split('.').pop()?.toLowerCase();
-        const languageMap: Record<string, string> = {
-          ts: 'typescript',
-          tsx: 'typescript',
-          js: 'javascript',
-          jsx: 'javascript',
-          json: 'json',
-          md: 'markdown',
-          css: 'css',
-          html: 'html',
-          py: 'python',
-          java: 'java',
-          c: 'c',
-          cpp: 'cpp',
-          h: 'c',
-          sh: 'shell',
-          txt: 'plaintext',
-        };
-
-        const language = ext ? languageMap[ext] || 'plaintext' : 'plaintext';
-
-        openFile({
-          path,
-          filename,
-          content: result.data,
-          language,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to read file:', error);
+      openFile({
+        path: filePath,
+        filename,
+        content,
+        language,
+      });
+    } else {
+      console.error('[FileExplorer] Failed to read file');
     }
   };
 
   const handleCreateFile = async () => {
-    if (!newItemName || !workingDirectory || !isElectron() || !window.electronAPI) {
+    if (!newItemName || !workingDirectory) {
+      console.warn('[FileExplorer] Cannot create file - missing name or working directory');
       return;
     }
 
-    try {
-      const filePath = path.join(workingDirectory, newItemName);
-      const result = await window.electronAPI.fs.createFile(filePath, '');
-      if (result.success) {
-        setShowNewFileDialog(false);
-        setNewItemName('');
-        loadFileTree(workingDirectory);
-      } else {
-        alert(`파일 생성 실패: ${result.error}`);
-      }
-    } catch (error: any) {
-      alert(`파일 생성 실패: ${error.message}`);
+    const filePath = path.join(workingDirectory, newItemName);
+    console.log(`[FileExplorer] Creating file: ${filePath}`);
+    const success = await createFile(filePath, '');
+
+    if (success) {
+      setShowNewFileDialog(false);
+      setNewItemName('');
+      loadFileTree(workingDirectory);
+    } else {
+      alert(`파일 생성 실패`);
     }
   };
 
   const handleCreateFolder = async () => {
-    if (!newItemName || !workingDirectory || !isElectron() || !window.electronAPI) {
+    if (!newItemName || !workingDirectory) {
+      console.warn('[FileExplorer] Cannot create folder - missing name or working directory');
       return;
     }
 
-    try {
-      const dirPath = path.join(workingDirectory, newItemName);
-      const result = await window.electronAPI.fs.createDirectory(dirPath);
-      if (result.success) {
-        setShowNewFolderDialog(false);
-        setNewItemName('');
-        loadFileTree(workingDirectory);
-      } else {
-        alert(`폴더 생성 실패: ${result.error}`);
-      }
-    } catch (error: any) {
-      alert(`폴더 생성 실패: ${error.message}`);
+    const dirPath = path.join(workingDirectory, newItemName);
+    console.log(`[FileExplorer] Creating folder: ${dirPath}`);
+    const success = await createDirectory(dirPath);
+
+    if (success) {
+      setShowNewFolderDialog(false);
+      setNewItemName('');
+      loadFileTree(workingDirectory);
+    } else {
+      alert(`폴더 생성 실패`);
     }
   };
 
@@ -399,6 +210,7 @@ export function FileExplorer() {
                 key={node.path}
                 node={node}
                 level={0}
+                isActive={activeFilePath === node.path}
                 onFileClick={handleFileClick}
                 onRefresh={() => loadFileTree(workingDirectory!)}
                 parentPath={workingDirectory!}

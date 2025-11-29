@@ -3,7 +3,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal, Plus, X } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal, Plus, X, ChevronLeft, ChevronRight, MoreVertical, Bookmark, Save } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
 import { useChatStore } from '@/lib/store/chat-store';
 
@@ -23,7 +30,10 @@ export function BrowserPanel() {
   const [isLoading, setIsLoading] = useState(false);
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
 
   const handleNavigate = () => {
     if (!isElectron() || !window.electronAPI) {
@@ -125,6 +135,28 @@ export function BrowserPanel() {
     }
   };
 
+  // 탭 스크롤 핸들러
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (!tabsContainerRef.current) return;
+
+    const scrollAmount = 200;
+    const newScrollLeft = tabsContainerRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+
+    tabsContainerRef.current.scrollTo({
+      left: newScrollLeft,
+      behavior: 'smooth',
+    });
+  };
+
+  // 스크롤 상태 업데이트
+  const updateScrollState = () => {
+    if (!tabsContainerRef.current) return;
+
+    const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
+    setCanScrollLeft(scrollLeft > 0);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+  };
+
   // Note: BrowserView의 표시/숨김은 MainLayout에서 관리됨
   // BrowserPanel은 UI와 이벤트 리스너만 담당
 
@@ -190,6 +222,26 @@ export function BrowserPanel() {
     }
   }, [tabs.length, currentUrl]);
 
+  // 탭 변경 시 스크롤 상태 업데이트
+  useEffect(() => {
+    if (!tabsContainerRef.current) return;
+
+    updateScrollState();
+
+    const handleScroll = () => updateScrollState();
+    const container = tabsContainerRef.current;
+    container.addEventListener('scroll', handleScroll);
+
+    // ResizeObserver로 컨테이너 크기 변경 감지
+    const resizeObserver = new ResizeObserver(updateScrollState);
+    resizeObserver.observe(container);
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      resizeObserver.disconnect();
+    };
+  }, [tabs]);
+
   // BrowserView bounds 설정 (컨테이너 크기에 맞춤)
   useEffect(() => {
     if (!isElectron() || !window.electronAPI || !containerRef.current) {
@@ -253,14 +305,32 @@ export function BrowserPanel() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* 탭 바 */}
-      <div className="flex items-center gap-1 border-b bg-muted/30 px-2 py-1">
-        <div className="flex flex-1 items-center gap-1 overflow-x-auto">
+      {/* 탭 바 - 크롬 스타일 */}
+      <div className="flex items-center border-b bg-muted/30 px-1 py-1">
+        {/* 좌측 스크롤 버튼 */}
+        {canScrollLeft && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => scrollTabs('left')}
+            className="h-7 w-7 shrink-0"
+            title="왼쪽으로 스크롤"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        )}
+
+        {/* 탭 영역 */}
+        <div
+          ref={tabsContainerRef}
+          className="flex flex-1 items-center gap-1 overflow-x-auto scrollbar-hide"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {tabs.map((tab) => (
             <div
               key={tab.id}
               onClick={() => switchToTab(tab.id)}
-              className={`group flex min-w-[120px] max-w-[200px] cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors ${
+              className={`group flex min-w-[140px] max-w-[200px] cursor-pointer items-center gap-2 rounded-t-md px-3 py-1.5 text-xs transition-colors ${
                 tab.isActive
                   ? 'bg-background shadow-sm'
                   : 'hover:bg-background/50'
@@ -271,7 +341,7 @@ export function BrowserPanel() {
               {tabs.length > 1 && (
                 <button
                   onClick={(e) => handleCloseTab(tab.id, e)}
-                  className="shrink-0 rounded p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100"
+                  className="shrink-0 rounded p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100 transition-opacity"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -279,6 +349,21 @@ export function BrowserPanel() {
             </div>
           ))}
         </div>
+
+        {/* 우측 스크롤 버튼 */}
+        {canScrollRight && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => scrollTabs('right')}
+            className="h-7 w-7 shrink-0"
+            title="오른쪽으로 스크롤"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
+
+        {/* 새 탭 버튼 */}
         <Button
           variant="ghost"
           size="icon"
@@ -288,6 +373,35 @@ export function BrowserPanel() {
         >
           <Plus className="h-4 w-4" />
         </Button>
+
+        {/* Settings 드롭다운 메뉴 */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              title="브라우저 설정"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem>
+              <Bookmark className="mr-2 h-4 w-4" />
+              <span>북마크 관리</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Save className="mr-2 h-4 w-4" />
+              <span>세션 저장</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <Terminal className="mr-2 h-4 w-4" />
+              <span>개발자 도구</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* 브라우저 컨트롤 */}

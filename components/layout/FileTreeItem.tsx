@@ -21,7 +21,6 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
-import { isElectron } from '@/lib/platform';
 import { useFileSystem } from '@/hooks/use-file-system';
 import path from 'path-browserify';
 
@@ -52,22 +51,19 @@ export function FileTreeItem({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(node.name);
-  const { deleteItem, renameItem, readDirectory } = useFileSystem();
+  const { deleteItem, renameItem, readDirectory, isAvailable } = useFileSystem();
 
   const handleClick = async () => {
     if (node.isDirectory) {
       setIsExpanded(!isExpanded);
 
       // Lazy load children if not loaded yet
-      if (!node.children && isElectron() && window.electronAPI) {
-        try {
-          const children = await readDirectory(node.path);
-          if (children) {
-            node.children = children;
-            setIsExpanded(true);
-          }
-        } catch (error) {
-          console.error('[FileTreeItem] Failed to load directory:', error);
+      if (!node.children && isAvailable) {
+        console.log(`[FileTreeItem] Lazy loading directory: ${node.path}`);
+        const children = await readDirectory(node.path);
+        if (children) {
+          node.children = children;
+          setIsExpanded(true);
         }
       }
     } else {
@@ -78,8 +74,12 @@ export function FileTreeItem({
   const handleDelete = async () => {
     const itemType = node.isDirectory ? '폴더와 내용' : '파일';
     const confirmed = confirm(`"${node.name}" ${itemType}을(를) 삭제하시겠습니까?`);
-    if (!confirmed) {return;}
+    if (!confirmed) {
+      console.log('[FileTreeItem] Delete cancelled by user');
+      return;
+    }
 
+    console.log(`[FileTreeItem] Deleting: ${node.path}`);
     const success = await deleteItem(node.path);
     if (success) {
       onRefresh();
@@ -90,12 +90,14 @@ export function FileTreeItem({
 
   const handleRename = async () => {
     if (!newName || newName === node.name) {
+      console.log('[FileTreeItem] Rename cancelled - no change or empty name');
       setIsRenaming(false);
       setNewName(node.name);
       return;
     }
 
     const newPath = path.join(parentPath, newName);
+    console.log(`[FileTreeItem] Renaming: ${node.path} -> ${newPath}`);
     const success = await renameItem(node.path, newPath);
 
     if (success) {
@@ -181,7 +183,7 @@ export function FileTreeItem({
               key={child.path}
               node={child}
               level={level + 1}
-              isActive={!child.isDirectory && isActive && child.path === node.path}
+              isActive={isActive}
               onFileClick={onFileClick}
               onRefresh={onRefresh}
               parentPath={node.path}
