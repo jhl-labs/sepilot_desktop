@@ -36,7 +36,7 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
 
   // Load bookmarks and folders when dialog opens
   useEffect(() => {
-    if (!open || !isElectron() || !window.electronAPI) return;
+    if (!open || !isElectron() || !window.electronAPI) {return;}
 
     const loadData = async () => {
       setIsLoading(true);
@@ -64,7 +64,7 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
   }, [open]);
 
   const handleAddFolder = async () => {
-    if (!newFolderName.trim() || !isElectron() || !window.electronAPI) return;
+    if (!newFolderName.trim() || !isElectron() || !window.electronAPI) {return;}
 
     try {
       const result = await window.electronAPI.browserView.addBookmarkFolder(newFolderName);
@@ -84,8 +84,8 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
   };
 
   const handleDeleteFolder = async (id: string) => {
-    if (!confirm('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?')) return;
-    if (!isElectron() || !window.electronAPI) return;
+    if (!confirm('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?')) {return;}
+    if (!isElectron() || !window.electronAPI) {return;}
 
     try {
       const result = await window.electronAPI.browserView.deleteBookmarkFolder(id);
@@ -106,8 +106,8 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
   };
 
   const handleDeleteBookmark = async (id: string) => {
-    if (!confirm('이 북마크를 삭제하시겠습니까?')) return;
-    if (!isElectron() || !window.electronAPI) return;
+    if (!confirm('이 북마크를 삭제하시겠습니까?')) {return;}
+    if (!isElectron() || !window.electronAPI) {return;}
 
     try {
       const result = await window.electronAPI.browserView.deleteBookmark(id);
@@ -124,7 +124,7 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
   };
 
   const handleOpenBookmark = async (bookmark: Bookmark) => {
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     try {
       const result = await window.electronAPI.browserView.openBookmark(bookmark.id);
@@ -142,7 +142,7 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
   };
 
   const handleAddCurrentPage = async () => {
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     try {
       const result = await window.electronAPI.browserView.addBookmark({
@@ -237,8 +237,8 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAddFolder();
-                    if (e.key === 'Escape') setIsAddingFolder(false);
+                    if (e.key === 'Enter') {handleAddFolder();}
+                    if (e.key === 'Escape') {setIsAddingFolder(false);}
                   }}
                   className="h-8 text-sm"
                   autoFocus

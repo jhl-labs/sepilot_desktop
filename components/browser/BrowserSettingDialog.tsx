@@ -19,7 +19,7 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
 
   // Load paths when dialog opens
   useEffect(() => {
-    if (!open || !isElectron() || !window.electronAPI) return;
+    if (!open || !isElectron() || !window.electronAPI) {return;}
 
     const loadPaths = async () => {
       setIsLoading(true);
@@ -40,7 +40,7 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
   }, [open]);
 
   const handleOpenSnapshotsFolder = async () => {
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     try {
       await window.electronAPI.shell.openExternal(`file://${snapshotsPath}`);
@@ -50,7 +50,7 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
   };
 
   const handleOpenBookmarksFolder = async () => {
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     try {
       await window.electronAPI.shell.openExternal(`file://${bookmarksPath}`);

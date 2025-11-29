@@ -26,7 +26,7 @@ export function SnapshotsDialog({ open, onOpenChange }: SnapshotsDialogProps) {
 
   // Load snapshots when dialog opens
   useEffect(() => {
-    if (!open || !isElectron() || !window.electronAPI) return;
+    if (!open || !isElectron() || !window.electronAPI) {return;}
 
     const loadSnapshots = async () => {
       setIsLoading(true);
@@ -48,9 +48,9 @@ export function SnapshotsDialog({ open, onOpenChange }: SnapshotsDialogProps) {
   }, [open]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('이 스냅샷을 삭제하시겠습니까?')) return;
+    if (!confirm('이 스냅샷을 삭제하시겠습니까?')) {return;}
 
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     try {
       const result = await window.electronAPI.browserView.deleteSnapshot(id);
@@ -68,7 +68,7 @@ export function SnapshotsDialog({ open, onOpenChange }: SnapshotsDialogProps) {
   };
 
   const handleOpen = async (snapshot: Snapshot) => {
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     try {
       const result = await window.electronAPI.browserView.openSnapshot(snapshot.id);

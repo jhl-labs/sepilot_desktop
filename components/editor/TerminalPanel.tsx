@@ -129,7 +129,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 탭 스크롤 상태 업데이트
   const updateScrollState = useCallback(() => {
-    if (!tabListRef.current) return;
+    if (!tabListRef.current) {return;}
 
     const { scrollLeft, scrollWidth, clientWidth } = tabListRef.current;
     setCanScrollLeft(scrollLeft > 0);
@@ -138,7 +138,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 탭 스크롤
   const scrollTabs = useCallback((direction: 'left' | 'right') => {
-    if (!tabListRef.current) return;
+    if (!tabListRef.current) {return;}
 
     const scrollAmount = 200;
     const newScrollLeft =
@@ -154,7 +154,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 새 탭 생성
   const handleNewTab = useCallback(async () => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {return;}
 
     console.log('[TerminalPanel] handleNewTab called with workingDirectory:', workingDirectory);
 
@@ -217,7 +217,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       prevTabs.forEach((tab) => {
         tab.isActive = false;
         const div = terminalsRef.current.get(tab.id);
-        if (div) div.style.display = 'none';
+        if (div) {div.style.display = 'none';}
       });
 
       terminalsRef.current.set(tabId, terminalDiv);
@@ -261,7 +261,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       event.stopPropagation();
 
       const tab = tabs.find((t) => t.id === tabId);
-      if (!tab) return;
+      if (!tab) {return;}
 
       // PTY 세션 종료
       await killSession(tab.sessionId);
@@ -336,7 +336,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 탭 리스트 스크롤 감지
   useEffect(() => {
-    if (!tabListRef.current) return;
+    if (!tabListRef.current) {return;}
 
     const handleScroll = () => updateScrollState();
     tabListRef.current.addEventListener('scroll', handleScroll);

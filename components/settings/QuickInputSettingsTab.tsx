@@ -24,7 +24,7 @@ export function QuickInputSettingsTab({
 }: QuickInputSettingsTabProps) {
   // Check for shortcut conflicts
   const getShortcutConflict = (shortcut: string, excludeId?: string): string | null => {
-    if (!shortcut.trim()) return null;
+    if (!shortcut.trim()) {return null;}
 
     // Check against Quick Input shortcut
     if (shortcut === config.quickInputShortcut) {

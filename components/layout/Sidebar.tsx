@@ -36,7 +36,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
   const modeLabel = appMode === 'chat' ? 'Chat' : appMode === 'editor' ? 'Editor' : 'Browser';
 
   const handleDeleteAll = async () => {
-    if (conversations.length === 0) return;
+    if (conversations.length === 0) {return;}
 
     if (confirm(`모든 대화(${conversations.length}개)를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`)) {
       for (const conversation of conversations) {
