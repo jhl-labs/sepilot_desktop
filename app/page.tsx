@@ -6,7 +6,7 @@ import { ChatArea } from '@/components/chat/ChatArea';
 import { InputBox } from '@/components/chat/InputBox';
 import { WorkingDirectoryIndicator } from '@/components/chat/WorkingDirectoryIndicator';
 import { UpdateNotificationDialog } from '@/components/UpdateNotificationDialog';
-import { CodeEditor } from '@/components/editor/Editor';
+import { EditorWithTerminal } from '@/components/editor/EditorWithTerminal';
 import { BrowserPanel } from '@/components/editor/BrowserPanel';
 import { useChatStore } from '@/lib/store/chat-store';
 
@@ -78,7 +78,7 @@ export default function Home() {
             <InputBox />
           </>
         ) : appMode === 'editor' ? (
-          <CodeEditor />
+          <EditorWithTerminal />
         ) : (
           <BrowserPanel />
         )}

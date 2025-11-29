@@ -66,6 +66,7 @@ interface ChatStore {
   openFiles: OpenFile[];
   activeFilePath: string | null;
   activeEditorTab: 'files' | 'search' | 'browser'; // Files, Search, or Browser tab in Editor mode
+  showTerminalPanel: boolean; // Show/hide terminal panel in Editor mode
 
   // New: Thinking Mode and Feature Toggles
   thinkingMode: ThinkingMode;
@@ -140,6 +141,7 @@ interface ChatStore {
   // Actions - App Mode
   setAppMode: (mode: AppMode) => void;
   setActiveEditorTab: (tab: 'files' | 'search') => void;
+  setShowTerminalPanel: (show: boolean) => void;
 
   // Actions - Editor
   openFile: (file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }) => void;
@@ -170,6 +172,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   openFiles: [],
   activeFilePath: null,
   activeEditorTab: 'files',
+  showTerminalPanel: false,
 
   // New: Graph Configuration
   thinkingMode: 'instant',
@@ -765,6 +768,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setActiveEditorTab: (tab: 'files' | 'search' | 'browser') => {
     set({ activeEditorTab: tab });
+  },
+
+  setShowTerminalPanel: (show: boolean) => {
+    set({ showTerminalPanel: show });
   },
 
   // Browser Chat Actions
