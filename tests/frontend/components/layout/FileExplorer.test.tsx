@@ -433,4 +433,74 @@ describe('FileExplorer', () => {
       expect(inactiveFileButton).not.toHaveClass('bg-accent');
     });
   });
+
+  describe('Lazy loading 폴더', () => {
+    it('lazy load 실패 시 에러를 처리해야 함', async () => {
+      const user = userEvent.setup();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      (mockElectronAPI.fs.readDirectory as jest.Mock).mockImplementation((path: string) => {
+        if (path === '/test') {
+          return Promise.resolve({
+            success: true,
+            data: [
+              { name: 'error-folder', path: '/test/error-folder', isDirectory: true },
+            ],
+          });
+        }
+        return Promise.reject(new Error('Permission denied'));
+      });
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+      });
+
+      render(<FileExplorer />);
+
+      await waitFor(() => {
+        expect(screen.getByText('error-folder')).toBeInTheDocument();
+      });
+
+      const folderButton = screen.getByText('error-folder');
+      await user.click(folderButton);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to load directory:', expect.any(Error));
+      });
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+
+  describe('에러 처리', () => {
+    it('loadFileTree 에러 시 로딩 상태가 해제되어야 함', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      (mockElectronAPI.fs.readDirectory as jest.Mock).mockRejectedValue(
+        new Error('Network error')
+      );
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+      });
+
+      render(<FileExplorer />);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to load file tree:', expect.any(Error));
+      });
+
+      // Loading should be cleared even after error
+      expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+
+      consoleSpy.mockRestore();
+    });
+  });
 });
