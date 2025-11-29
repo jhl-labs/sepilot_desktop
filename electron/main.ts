@@ -18,6 +18,7 @@ import { initializeLLMClient } from '../lib/llm/client';
 import { vectorDBService } from './services/vectordb';
 import { AppConfig } from '../types';
 import { initializeBuiltinTools } from '../lib/mcp/tools/executor';
+import { getPTYManager } from './services/pty-manager';
 
 let mainWindow: BrowserWindow | null = null;
 let quickInputWindow: BrowserWindow | null = null;
@@ -367,6 +368,14 @@ app.on('before-quit', () => {
 
   // Unregister all global shortcuts
   globalShortcut.unregisterAll();
+
+  // Cleanup PTY sessions
+  try {
+    const ptyManager = getPTYManager();
+    ptyManager.cleanup();
+  } catch (error) {
+    logger.error('Error cleaning up PTY sessions:', error);
+  }
 
   // Close database
   databaseService.close();
