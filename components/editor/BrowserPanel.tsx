@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -127,7 +127,7 @@ export function BrowserPanel() {
     await loadTabs();
   };
 
-  const loadTabs = async () => {
+  const loadTabs = useCallback(async () => {
     if (!isElectron() || !window.electronAPI) {
       return;
     }
@@ -137,7 +137,7 @@ export function BrowserPanel() {
       setTabs(result.data.tabs);
       setActiveTabId(result.data.activeTabId);
     }
-  };
+  }, []);
 
   // 탭 스크롤 핸들러
   const scrollTabs = (direction: 'left' | 'right') => {
@@ -211,20 +211,37 @@ export function BrowserPanel() {
     };
   }, []);
 
-  // 초기 탭 생성 (BrowserPanel이 렌더링되면 탭 생성)
+  // 초기 탭 로드 및 생성 (마운트 시 한 번만 실행)
   useEffect(() => {
     if (!isElectron() || !window.electronAPI) {
       return;
     }
 
-    // 탭이 없을 때만 첫 탭 생성
-    if (tabs.length === 0) {
-      console.log('[BrowserPanel] Creating initial tab');
-      window.electronAPI.browserView.createTab(currentUrl).then(() => {
-        loadTabs();
-      });
-    }
-  }, [tabs.length, currentUrl]);
+    const initializeTabs = async () => {
+      console.log('[BrowserPanel] Initializing tabs...');
+
+      // 먼저 기존 탭 목록 확인
+      const result = await window.electronAPI.browserView.getTabs();
+
+      if (result.success && result.data) {
+        const existingTabs = result.data.tabs;
+
+        if (existingTabs.length === 0) {
+          // 탭이 없을 때만 새로 생성
+          console.log('[BrowserPanel] No existing tabs, creating initial tab');
+          await window.electronAPI.browserView.createTab(currentUrl);
+        } else {
+          console.log('[BrowserPanel] Found existing tabs:', existingTabs.length);
+        }
+
+        // 탭 목록 로드하여 상태 업데이트
+        await loadTabs();
+      }
+    };
+
+    initializeTabs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // currentUrl은 상수, loadTabs는 마운트 후 변경되지 않음
 
   // 탭 변경 시 스크롤 상태 업데이트
   useEffect(() => {
