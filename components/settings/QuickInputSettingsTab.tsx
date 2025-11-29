@@ -22,6 +22,25 @@ export function QuickInputSettingsTab({
   isSaving,
   message,
 }: QuickInputSettingsTabProps) {
+  // Check for shortcut conflicts
+  const getShortcutConflict = (shortcut: string, excludeId?: string): string | null => {
+    if (!shortcut.trim()) return null;
+
+    // Check against Quick Input shortcut
+    if (shortcut === config.quickInputShortcut) {
+      return 'Quick Input 단축키와 중복됩니다';
+    }
+
+    // Check against other Quick Questions
+    for (const q of config.quickQuestions) {
+      if (q.id !== excludeId && q.shortcut === shortcut) {
+        return `"${q.name}"과(와) 중복됩니다`;
+      }
+    }
+
+    return null;
+  };
+
   const handleAddQuestion = () => {
     if (config.quickQuestions.length >= 5) {
       alert('최대 5개의 Quick Question만 등록할 수 있습니다.');
@@ -168,7 +187,17 @@ export function QuickInputSettingsTab({
                         handleUpdateQuestion(question.id, { shortcut: e.target.value })
                       }
                       placeholder="CommandOrControl+Shift+1"
+                      className={
+                        getShortcutConflict(question.shortcut, question.id)
+                          ? 'border-destructive focus-visible:ring-destructive'
+                          : ''
+                      }
                     />
+                    {getShortcutConflict(question.shortcut, question.id) && (
+                      <p className="text-xs text-destructive">
+                        ⚠️ {getShortcutConflict(question.shortcut, question.id)}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">

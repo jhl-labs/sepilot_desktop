@@ -391,6 +391,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       }
 
       // Validate Quick Questions
+      const usedShortcuts = new Set<string>();
+      usedShortcuts.add(quickInputConfig.quickInputShortcut);
+
       for (const question of quickInputConfig.quickQuestions) {
         if (!question.name.trim()) {
           setMessage({ type: 'error', text: 'Quick Question의 이름을 입력해주세요.' });
@@ -407,6 +410,17 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           setIsSaving(false);
           return;
         }
+
+        // Check for shortcut conflicts
+        if (usedShortcuts.has(question.shortcut)) {
+          setMessage({
+            type: 'error',
+            text: `"${question.name}"의 단축키가 다른 단축키와 중복됩니다.`,
+          });
+          setIsSaving(false);
+          return;
+        }
+        usedShortcuts.add(question.shortcut);
       }
 
       let savedConfig: AppConfig | null = null;
