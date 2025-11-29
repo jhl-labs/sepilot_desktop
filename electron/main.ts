@@ -106,11 +106,19 @@ function toggleMenuVisibility() {
 }
 
 function createWindow() {
+  // Set window icon based on platform
+  const iconPath = isDev
+    ? path.join(__dirname, '..', '..', 'public', 'images', 'sepilot_256x256.png')
+    : process.platform === 'win32'
+    ? path.join(process.resourcesPath, 'assets', 'icon.ico')
+    : path.join(process.resourcesPath, 'assets', 'icon.png');
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -324,8 +332,14 @@ export function getMainWindow(): BrowserWindow | null {
 
 // System Tray 생성
 function createTray() {
-  // 간단한 16x16 아이콘 생성 (임시)
-  const icon = nativeImage.createEmpty();
+  // Set tray icon based on platform and environment
+  const trayIconPath = isDev
+    ? path.join(__dirname, '..', '..', 'public', 'images', 'sepilot_16x16.png')
+    : process.platform === 'win32'
+    ? path.join(process.resourcesPath, 'assets', 'icons', 'icon_16.png')
+    : path.join(process.resourcesPath, 'assets', 'icons', 'icon_16x16.png');
+
+  const icon = nativeImage.createFromPath(trayIconPath);
   tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([

@@ -6,6 +6,10 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 export const metadata: Metadata = {
   title: 'SEPilot Desktop',
   description: 'LLM Desktop Application with LangGraph, RAG, and MCP',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/icon.png',
+  },
 };
 
 export default function RootLayout({

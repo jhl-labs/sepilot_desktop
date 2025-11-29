@@ -38,6 +38,7 @@
   },
   "win": {
     "target": ["nsis", "portable"],
+    "icon": "assets/icon.ico",
     "signAndEditExecutable": false,
     "verifyUpdateCodeSignature": false
   },
