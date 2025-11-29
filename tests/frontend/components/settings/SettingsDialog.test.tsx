@@ -247,7 +247,8 @@ describe('SettingsDialog', () => {
     const llmTab = screen.getByRole('button', { name: /^LLM$/i });
 
     // Check that LLM tab has active styling
-    expect(llmTab).toHaveClass('border-primary');
+    expect(llmTab).toHaveClass('bg-accent');
+    expect(llmTab).toHaveClass('text-accent-foreground');
   });
 
   it('should handle dialog close', () => {

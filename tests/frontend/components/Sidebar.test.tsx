@@ -63,6 +63,30 @@ jest.mock('@/components/browser/BrowserAgentLog', () => ({
   BrowserAgentLog: () => <div data-testid="browser-agent-log">Browser Agent Log</div>,
 }));
 
+// Mock SidebarChat, SidebarEditor, SidebarBrowser
+jest.mock('@/components/layout/SidebarChat', () => ({
+  SidebarChat: ({ onGalleryClick, onConversationClick, onSettingsClick }: any) => (
+    <div data-testid="sidebar-chat">
+      <div data-testid="chat-history">Chat History</div>
+      <button onClick={onGalleryClick}>Gallery</button>
+      <button onClick={onConversationClick}>Conversation</button>
+      <button onClick={onSettingsClick}>Settings</button>
+    </div>
+  ),
+}));
+
+jest.mock('@/components/layout/SidebarEditor', () => ({
+  SidebarEditor: ({ onSettingsClick }: any) => (
+    <div data-testid="sidebar-editor">
+      <button onClick={onSettingsClick}>Settings</button>
+    </div>
+  ),
+}));
+
+jest.mock('@/components/layout/SidebarBrowser', () => ({
+  SidebarBrowser: () => <div data-testid="sidebar-browser">Sidebar Browser</div>,
+}));
+
 // Mock window.confirm
 global.confirm = jest.fn(() => true);
 
@@ -80,8 +104,8 @@ describe('Sidebar', () => {
     deleteConversation: jest.fn(),
     appMode: 'chat' as const,
     setAppMode: jest.fn(),
-    activeEditorTab: 'files' as const,
-    setActiveEditorTab: jest.fn(),
+    chatViewMode: 'history' as const,
+    setChatViewMode: jest.fn(),
     editorViewMode: 'files' as const,
     setEditorViewMode: jest.fn(),
     browserViewMode: 'chat' as const,
@@ -98,7 +122,7 @@ describe('Sidebar', () => {
     render(<Sidebar />);
 
     expect(screen.getByText('Chat')).toBeInTheDocument();
-    expect(screen.getByTestId('chat-history')).toBeInTheDocument();
+    expect(screen.getByTestId('sidebar-chat')).toBeInTheDocument();
   });
 
   it('should render sidebar in editor mode', () => {
@@ -108,7 +132,7 @@ describe('Sidebar', () => {
     render(<Sidebar />);
 
     expect(screen.getByText('Editor')).toBeInTheDocument();
-    expect(screen.getByTestId('file-explorer')).toBeInTheDocument();
+    expect(screen.getByTestId('sidebar-editor')).toBeInTheDocument();
   });
 
   it('should show mode selector dropdown', async () => {
@@ -154,125 +178,99 @@ describe('Sidebar', () => {
     expect(mockChatStore.setAppMode).toHaveBeenCalledWith('chat');
   });
 
-  it('should show new chat button in chat mode', () => {
+  it('should show chat view mode buttons in chat mode', () => {
     render(<Sidebar />);
 
-    const newChatButton = screen.getByRole('button', { name: /새 대화/i });
-    expect(newChatButton).toBeInTheDocument();
+    expect(screen.getByTitle('대화 기록')).toBeInTheDocument();
+    expect(screen.getByTitle('AI 어시스턴트')).toBeInTheDocument();
+    expect(screen.getByTitle('문서 관리')).toBeInTheDocument();
   });
 
-  it('should not show new chat button in editor mode', () => {
+  it('should not show chat view mode buttons in editor mode', () => {
     const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
     (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
 
     render(<Sidebar />);
 
-    const newChatButton = screen.queryByRole('button', { name: /새 대화/i });
-    expect(newChatButton).not.toBeInTheDocument();
+    expect(screen.queryByTitle('대화 기록')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('AI 어시스턴트')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('문서 관리')).not.toBeInTheDocument();
   });
 
-  it('should create new conversation on new chat button click', async () => {
+  it('should switch chat view mode to history', () => {
     render(<Sidebar />);
 
-    const newChatButton = screen.getByRole('button', { name: /새 대화/i });
-    fireEvent.click(newChatButton);
+    const historyButton = screen.getByTitle('대화 기록');
+    fireEvent.click(historyButton);
 
-    expect(mockChatStore.createConversation).toHaveBeenCalled();
+    expect(mockChatStore.setChatViewMode).toHaveBeenCalledWith('history');
   });
 
-  it('should show delete all button in chat mode', () => {
+  it('should switch chat view mode to chat', () => {
     render(<Sidebar />);
 
-    const deleteAllButton = screen.getByRole('button', { name: /모든 대화 삭제/i });
-    expect(deleteAllButton).toBeInTheDocument();
+    const chatButton = screen.getByTitle('AI 어시스턴트');
+    fireEvent.click(chatButton);
+
+    expect(mockChatStore.setChatViewMode).toHaveBeenCalledWith('chat');
   });
 
-  it('should disable delete all button when no conversations', () => {
-    const emptyMockStore = { ...mockChatStore, conversations: [] };
-    (useChatStore as unknown as jest.Mock).mockReturnValue(emptyMockStore);
-
+  it('should switch chat view mode to documents', () => {
     render(<Sidebar />);
 
-    const deleteAllButton = screen.getByRole('button', { name: /모든 대화 삭제/i });
-    expect(deleteAllButton).toBeDisabled();
+    const documentsButton = screen.getByTitle('문서 관리');
+    fireEvent.click(documentsButton);
+
+    expect(mockChatStore.setChatViewMode).toHaveBeenCalledWith('documents');
   });
 
-  it('should delete all conversations on delete all button click', async () => {
+  it('should highlight active chat view mode', () => {
     render(<Sidebar />);
 
-    const deleteAllButton = screen.getByRole('button', { name: /모든 대화 삭제/i });
-    fireEvent.click(deleteAllButton);
-
-    await waitFor(() => {
-      expect(mockChatStore.deleteConversation).toHaveBeenCalledTimes(2);
-      expect(mockChatStore.createConversation).toHaveBeenCalled();
-    });
+    const historyButton = screen.getByTitle('대화 기록');
+    expect(historyButton).toHaveClass('bg-accent');
   });
 
-  it('should not delete if user cancels confirmation', async () => {
-    (global.confirm as jest.Mock).mockReturnValueOnce(false);
-
-    render(<Sidebar />);
-
-    const deleteAllButton = screen.getByRole('button', { name: /모든 대화 삭제/i });
-    fireEvent.click(deleteAllButton);
-
-    await waitFor(() => {
-      expect(mockChatStore.deleteConversation).not.toHaveBeenCalled();
-    });
-  });
-
-  it('should call onConversationClick when ChatHistory triggers it', () => {
+  it('should call onConversationClick when SidebarChat triggers it', () => {
     const onConversationClick = jest.fn();
     render(<Sidebar onConversationClick={onConversationClick} />);
 
-    const chatHistory = screen.getByTestId('chat-history');
-    fireEvent.click(chatHistory);
+    const conversationButton = screen.getByText('Conversation');
+    fireEvent.click(conversationButton);
 
     expect(onConversationClick).toHaveBeenCalled();
   });
 
-  it('should render ChatHistory only in chat mode', () => {
+  it('should render SidebarChat only in chat mode', () => {
     render(<Sidebar />);
 
-    expect(screen.getByTestId('chat-history')).toBeInTheDocument();
-    expect(screen.queryByTestId('file-explorer')).not.toBeInTheDocument();
+    expect(screen.getByTestId('sidebar-chat')).toBeInTheDocument();
+    expect(screen.queryByTestId('sidebar-editor')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sidebar-browser')).not.toBeInTheDocument();
   });
 
-  it('should render FileExplorer only in editor mode', () => {
+  it('should render SidebarEditor only in editor mode', () => {
     const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
     (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
 
     render(<Sidebar />);
 
-    expect(screen.getByTestId('file-explorer')).toBeInTheDocument();
-    expect(screen.queryByTestId('chat-history')).not.toBeInTheDocument();
-  });
-
-  it('should handle empty conversations for delete all', () => {
-    const emptyMockStore = { ...mockChatStore, conversations: [] };
-    (useChatStore as unknown as jest.Mock).mockReturnValue(emptyMockStore);
-
-    render(<Sidebar />);
-
-    const deleteAllButton = screen.getByRole('button', { name: /모든 대화 삭제/i });
-    fireEvent.click(deleteAllButton);
-
-    // Should not call deleteConversation or createConversation
-    expect(mockChatStore.deleteConversation).not.toHaveBeenCalled();
-    expect(mockChatStore.createConversation).not.toHaveBeenCalled();
+    expect(screen.getByTestId('sidebar-editor')).toBeInTheDocument();
+    expect(screen.queryByTestId('sidebar-chat')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sidebar-browser')).not.toBeInTheDocument();
   });
 
   describe('Browser mode', () => {
-    it('should render sidebar in browser mode', () => {
+    it('should render SidebarBrowser in browser mode', () => {
       const browserMockStore = { ...mockChatStore, appMode: 'browser' as const };
       (useChatStore as unknown as jest.Mock).mockReturnValue(browserMockStore);
 
       render(<Sidebar />);
 
       expect(screen.getByText('Browser')).toBeInTheDocument();
-      expect(screen.getByTestId('simple-chat-area')).toBeInTheDocument();
-      expect(screen.getByTestId('simple-chat-input')).toBeInTheDocument();
+      expect(screen.getByTestId('sidebar-browser')).toBeInTheDocument();
+      expect(screen.queryByTestId('sidebar-chat')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('sidebar-editor')).not.toBeInTheDocument();
     });
 
     it('should switch to browser mode', async () => {
@@ -288,117 +286,83 @@ describe('Sidebar', () => {
 
       expect(mockChatStore.setAppMode).toHaveBeenCalledWith('browser');
     });
-
-    it('should show browser toolbar buttons in browser mode', () => {
-      const browserMockStore = { ...mockChatStore, appMode: 'browser' as const };
-      (useChatStore as unknown as jest.Mock).mockReturnValue(browserMockStore);
-
-      render(<Sidebar />);
-
-      // Browser 모드에는 Footer에 "새 대화" 버튼이 있음 (clearBrowserChat)
-      expect(screen.getByTitle('새 대화')).toBeInTheDocument();
-      expect(screen.getByTitle('페이지 캡처')).toBeInTheDocument();
-      expect(screen.getByTitle('스냅샷 관리')).toBeInTheDocument();
-      expect(screen.getByTitle('북마크')).toBeInTheDocument();
-    });
   });
 
-  describe('Editor tabs', () => {
-    beforeEach(() => {
-      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const, activeEditorTab: 'files' as const };
-      (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
-    });
-
-    it('should show files tab button in editor mode', () => {
-      render(<Sidebar />);
-
-      const filesButton = screen.getByRole('button', { name: /파일 탐색기/i });
-      expect(filesButton).toBeInTheDocument();
-    });
-
-    it('should show search tab button in editor mode', () => {
-      render(<Sidebar />);
-
-      const searchButton = screen.getByRole('button', { name: /전체 검색/i });
-      expect(searchButton).toBeInTheDocument();
-    });
-
-    it('should switch to search tab', () => {
+  describe('Editor view mode', () => {
+    it('should show files and search buttons in editor mode', () => {
       const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
       (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
 
       render(<Sidebar />);
 
-      const searchButton = screen.getByRole('button', { name: /전체 검색/i });
+      expect(screen.getByTitle('파일 탐색기')).toBeInTheDocument();
+      expect(screen.getByTitle('전체 검색')).toBeInTheDocument();
+    });
+
+    it('should switch to search view mode', () => {
+      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
+      (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
+
+      render(<Sidebar />);
+
+      const searchButton = screen.getByTitle('전체 검색');
       fireEvent.click(searchButton);
 
       expect(editorMockStore.setEditorViewMode).toHaveBeenCalledWith('search');
     });
 
-    it('should switch to files tab', () => {
+    it('should switch to files view mode', () => {
       const editorMockStore = { ...mockChatStore, appMode: 'editor' as const, editorViewMode: 'search' as const };
       (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
 
       render(<Sidebar />);
 
-      const filesButton = screen.getByRole('button', { name: /파일 탐색기/i });
+      const filesButton = screen.getByTitle('파일 탐색기');
       fireEvent.click(filesButton);
 
       expect(editorMockStore.setEditorViewMode).toHaveBeenCalledWith('files');
     });
 
-    it('should highlight active tab', () => {
+    it('should highlight active view mode', () => {
       const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
       (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
 
       render(<Sidebar />);
 
-      const filesButton = screen.getByRole('button', { name: /파일 탐색기/i });
+      const filesButton = screen.getByTitle('파일 탐색기');
       expect(filesButton).toHaveClass('bg-accent');
-    });
-
-    it('should show search panel when search tab is active', () => {
-      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const, editorViewMode: 'search' as const };
-      (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
-
-      render(<Sidebar />);
-
-      expect(screen.getByTestId('search-panel')).toBeInTheDocument();
-      expect(screen.queryByTestId('file-explorer')).not.toBeInTheDocument();
     });
   });
 
-  describe('Footer buttons', () => {
-    it('should render theme toggle', () => {
-      render(<Sidebar />);
-
-      expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
-    });
-
-    it('should call onDocumentsClick when documents button clicked', () => {
-      const onDocumentsClick = jest.fn();
-      render(<Sidebar onDocumentsClick={onDocumentsClick} />);
-
-      const documentsButton = screen.getByRole('button', { name: /문서 관리/i });
-      fireEvent.click(documentsButton);
-
-      expect(onDocumentsClick).toHaveBeenCalled();
-    });
-
-    it('should call onGalleryClick when gallery button clicked', () => {
+  describe('Props delegation', () => {
+    it('should pass onGalleryClick to SidebarChat', () => {
       const onGalleryClick = jest.fn();
       render(<Sidebar onGalleryClick={onGalleryClick} />);
 
-      const galleryButton = screen.getByRole('button', { name: /이미지 갤러리/i });
+      const galleryButton = screen.getByText('Gallery');
       fireEvent.click(galleryButton);
 
       expect(onGalleryClick).toHaveBeenCalled();
     });
 
-    it('should open settings dialog when settings button clicked', async () => {
+    it('should open settings dialog when SidebarChat triggers settings', async () => {
       render(<Sidebar />);
 
-      const settingsButton = screen.getByRole('button', { name: /설정/i });
+      const settingsButton = screen.getByText('Settings');
+      fireEvent.click(settingsButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('settings-dialog')).toBeInTheDocument();
+      });
+    });
+
+    it('should open settings dialog when SidebarEditor triggers settings', async () => {
+      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
+      (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
+
+      render(<Sidebar />);
+
+      const settingsButton = screen.getByText('Settings');
       fireEvent.click(settingsButton);
 
       await waitFor(() => {
