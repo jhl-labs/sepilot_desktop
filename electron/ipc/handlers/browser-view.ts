@@ -625,6 +625,10 @@ export function setupBrowserViewHandlers() {
       const thumbnailPath = path.join(snapshotsDir, `${snapshotId}_thumb.png`);
       await fs.writeFile(thumbnailPath, thumbnailBuffer);
 
+      // Save page as MHTML
+      const mhtmlPath = path.join(snapshotsDir, `${snapshotId}.mhtml`);
+      await tab.view.webContents.savePage(mhtmlPath, 'MHTML');
+
       // Get page info
       const url = tab.view.webContents.getURL();
       const title = tab.view.webContents.getTitle() || 'Untitled';
@@ -637,6 +641,7 @@ export function setupBrowserViewHandlers() {
         thumbnail: thumbnailPath,
         createdAt: timestamp,
         screenshotPath,
+        mhtmlPath,
       };
 
       // Load existing snapshots
@@ -682,6 +687,7 @@ export function setupBrowserViewHandlers() {
           ...snapshot,
           thumbnail: `sepilot-file://${snapshot.thumbnail.replace(/\\/g, '/')}`,
           screenshotPath: `sepilot-file://${snapshot.screenshotPath.replace(/\\/g, '/')}`,
+          mhtmlPath: snapshot.mhtmlPath ? `sepilot-file://${snapshot.mhtmlPath.replace(/\\/g, '/')}` : '',
         }));
 
         return {
@@ -727,6 +733,14 @@ export function setupBrowserViewHandlers() {
         await fs.unlink(snapshot.thumbnail);
       } catch (error) {
         logger.warn('Failed to delete thumbnail:', error);
+      }
+
+      if (snapshot.mhtmlPath) {
+        try {
+          await fs.unlink(snapshot.mhtmlPath);
+        } catch (error) {
+          logger.warn('Failed to delete MHTML:', error);
+        }
       }
 
       // Remove from metadata

@@ -452,6 +452,7 @@ interface Snapshot {
   thumbnail: string;
   createdAt: number;
   screenshotPath: string;
+  mhtmlPath: string;
 }
 
 // Bookmark 타입
