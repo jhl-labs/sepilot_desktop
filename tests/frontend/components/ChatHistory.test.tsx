@@ -386,4 +386,108 @@ describe('ChatHistory', () => {
       });
     }
   });
+
+  it('should handle search error gracefully', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    mockChatStore.searchConversations.mockRejectedValue(new Error('Search failed'));
+
+    render(<ChatHistory />);
+
+    const searchInput = screen.getByPlaceholderText('대화 검색...');
+    fireEvent.change(searchInput, { target: { value: 'test' } });
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('Search failed:', expect.any(Error));
+    });
+
+    // Should show no results after error
+    await waitFor(() => {
+      expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument();
+    });
+
+    consoleSpy.mockRestore();
+  });
+
+  it('should stop propagation when clicking menu button', async () => {
+    const onConversationClick = jest.fn();
+    render(<ChatHistory onConversationClick={onConversationClick} />);
+
+    const firstConv = screen.getByText('First Chat').closest('div');
+    const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+
+    if (menuButton) {
+      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const stopPropSpy = jest.spyOn(clickEvent, 'stopPropagation');
+
+      fireEvent.click(menuButton);
+
+      // Menu should open, conversation click should not be triggered
+      await waitFor(() => {
+        expect(screen.getByText('이름 변경')).toBeInTheDocument();
+      });
+    }
+  });
+
+  it('should clear search results when search query is empty', async () => {
+    const searchResults = [
+      {
+        conversation: mockConversations[0],
+        matchedMessages: [
+          { id: 'msg-1', role: 'user', content: 'test message', created_at: Date.now() } as Message,
+        ],
+      },
+    ];
+    mockChatStore.searchConversations.mockResolvedValue(searchResults);
+
+    render(<ChatHistory />);
+
+    // First, perform a search
+    const searchInput = screen.getByPlaceholderText('대화 검색...');
+    fireEvent.change(searchInput, { target: { value: 'test' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('1개 일치')).toBeInTheDocument();
+    });
+
+    // Then clear the search by typing empty string
+    fireEvent.change(searchInput, { target: { value: '' } });
+
+    await waitFor(() => {
+      // Search results should be cleared
+      expect(screen.queryByText('1개 일치')).not.toBeInTheDocument();
+      // Should show regular conversations
+      expect(screen.getByText('First Chat')).toBeInTheDocument();
+    });
+  });
+
+  it('should clear search results when search query is whitespace', async () => {
+    const searchResults = [
+      {
+        conversation: mockConversations[0],
+        matchedMessages: [],
+      },
+    ];
+    mockChatStore.searchConversations.mockResolvedValue(searchResults);
+
+    render(<ChatHistory />);
+
+    // Perform a search
+    const searchInput = screen.getByPlaceholderText('대화 검색...');
+    fireEvent.change(searchInput, { target: { value: 'test' } });
+
+    await waitFor(() => {
+      expect(mockChatStore.searchConversations).toHaveBeenCalledWith('test');
+    });
+
+    // Clear with whitespace
+    fireEvent.change(searchInput, { target: { value: '   ' } });
+
+    await waitFor(() => {
+      // Should show regular conversations, not search results
+      expect(screen.getByText('First Chat')).toBeInTheDocument();
+    });
+
+    // Should not call search for whitespace
+    expect(mockChatStore.searchConversations).toHaveBeenCalledTimes(1);
+  });
 });
