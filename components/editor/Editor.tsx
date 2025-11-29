@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import type monaco from 'monaco-editor';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
 import { X, Save, FileText } from 'lucide-react';
@@ -25,10 +26,12 @@ export function CodeEditor() {
     closeFile,
     updateFileContent,
     markFileDirty,
+    clearInitialPosition,
   } = useChatStore();
 
   const { theme } = useTheme();
   const [isSaving, setIsSaving] = useState(false);
+  const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null);
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath);
 
@@ -86,6 +89,28 @@ export function CodeEditor() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeFile]);
+
+  // Navigate to initialPosition when file is opened
+  useEffect(() => {
+    if (editor && activeFile?.initialPosition && activeFilePath) {
+      const { lineNumber, column } = activeFile.initialPosition;
+
+      // Set cursor position
+      editor.setPosition({
+        lineNumber,
+        column: column || 1,
+      });
+
+      // Reveal line in center of editor
+      editor.revealLineInCenter(lineNumber);
+
+      // Focus editor
+      editor.focus();
+
+      // Clear initialPosition after navigation
+      clearInitialPosition(activeFilePath);
+    }
+  }, [editor, activeFile?.path, activeFile?.initialPosition, activeFilePath, clearInitialPosition]);
 
   if (openFiles.length === 0) {
     return (
@@ -159,6 +184,7 @@ export function CodeEditor() {
             language={activeFile.language || 'plaintext'}
             value={activeFile.content}
             onChange={handleEditorChange}
+            onMount={(editor) => setEditor(editor)}
             theme={theme === 'dark' ? 'vs-dark' : 'light'}
             options={{
               fontSize: 14,

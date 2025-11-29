@@ -95,11 +95,13 @@ export function SearchPanel() {
           filename,
           content: fileResult.data,
           language,
+          initialPosition: {
+            lineNumber: match.line,
+            column: match.column,
+          },
         });
 
-        // TODO: Monaco Editor에서 해당 라인으로 스크롤
-        // Monaco의 revealLineInCenter API를 사용해야 함
-        console.log(`[SearchPanel] Open file at line ${match.line}`);
+        console.log(`[SearchPanel] Opened file at line ${match.line}, column ${match.column}`);
       }
     } catch (error) {
       console.error('[SearchPanel] Error opening file:', error);

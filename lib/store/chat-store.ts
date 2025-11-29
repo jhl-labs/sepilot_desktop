@@ -14,6 +14,10 @@ export interface OpenFile {
   content: string;
   language?: string;
   isDirty: boolean; // Has unsaved changes
+  initialPosition?: {
+    lineNumber: number;
+    column?: number;
+  };
 }
 
 // Web fallback: localStorage 헬퍼 함수들
@@ -128,11 +132,12 @@ interface ChatStore {
   setAppMode: (mode: AppMode) => void;
 
   // Actions - Editor
-  openFile: (file: Omit<OpenFile, 'isDirty'>) => void;
+  openFile: (file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }) => void;
   closeFile: (path: string) => void;
   setActiveFile: (path: string | null) => void;
   updateFileContent: (path: string, content: string) => void;
   markFileDirty: (path: string, isDirty: boolean) => void;
+  clearInitialPosition: (path: string) => void;
   closeAllFiles: () => void;
 
   // Deprecated: kept for backward compatibility
@@ -745,12 +750,20 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   // Editor Actions
-  openFile: (file: Omit<OpenFile, 'isDirty'>) => {
+  openFile: (file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }) => {
     set((state) => {
       // Check if file is already open
-      const existingFile = state.openFiles.find((f) => f.path === file.path);
-      if (existingFile) {
-        // File already open, just set it as active
+      const existingFileIndex = state.openFiles.findIndex((f) => f.path === file.path);
+      if (existingFileIndex !== -1) {
+        // File already open, update initialPosition if provided and set as active
+        if (file.initialPosition) {
+          const updatedFiles = [...state.openFiles];
+          updatedFiles[existingFileIndex] = {
+            ...updatedFiles[existingFileIndex],
+            initialPosition: file.initialPosition,
+          };
+          return { openFiles: updatedFiles, activeFilePath: file.path };
+        }
         return { activeFilePath: file.path };
       }
 
@@ -800,6 +813,16 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set((state) => {
       const updatedFiles = state.openFiles.map((file) =>
         file.path === path ? { ...file, isDirty } : file
+      );
+
+      return { openFiles: updatedFiles };
+    });
+  },
+
+  clearInitialPosition: (path: string) => {
+    set((state) => {
+      const updatedFiles = state.openFiles.map((file) =>
+        file.path === path ? { ...file, initialPosition: undefined } : file
       );
 
       return { openFiles: updatedFiles };
