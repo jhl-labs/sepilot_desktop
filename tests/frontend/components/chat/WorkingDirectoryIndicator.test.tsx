@@ -94,6 +94,19 @@ describe('WorkingDirectoryIndicator', () => {
     expect(screen.getByText('.../home/user')).toBeInTheDocument();
   });
 
+  it('should show full path for 2 or fewer segments', () => {
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      workingDirectory: '/home',
+      setWorkingDirectory: mockSetWorkingDirectory,
+      thinkingMode: 'coding',
+    });
+
+    render(<WorkingDirectoryIndicator />);
+
+    // /home has 2 segments (empty, home), so it shows the full path
+    expect(screen.getByText('/home')).toBeInTheDocument();
+  });
+
   it('should show clear button when directory is set', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       workingDirectory: '/home/user/project',
@@ -237,5 +250,26 @@ describe('WorkingDirectoryIndicator', () => {
 
     // Windows paths are split by \ and displayed as .../user/project
     expect(screen.getByText('.../user/project')).toBeInTheDocument();
+  });
+
+  it('should not select directory in non-Electron environment', async () => {
+    // Disable Electron mode
+    delete (window as any).electronAPI;
+    const { isElectron: originalIsElectron } = require('@/lib/platform');
+    require('@/lib/platform').isElectron = jest.fn(() => false);
+
+    render(<WorkingDirectoryIndicator />);
+
+    const selectButton = screen.getByRole('button', { name: /디렉토리 선택/ });
+    fireEvent.click(selectButton);
+
+    await waitFor(() => {
+      // Should not call selectDirectory or setWorkingDirectory
+      expect(mockSetWorkingDirectory).not.toHaveBeenCalled();
+    });
+
+    // Restore
+    require('@/lib/platform').isElectron = originalIsElectron;
+    (window as any).electronAPI = mockElectronAPI;
   });
 });
