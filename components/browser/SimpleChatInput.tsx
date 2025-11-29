@@ -62,11 +62,11 @@ export function SimpleChatInput() {
       let accumulatedContent = '';
 
       if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.langgraph) {
-        // Electron: Use simple instant mode through IPC
+        // Electron: Use Browser Agent with Browser Control Tools
         const graphConfig = {
-          thinkingMode: 'instant' as const,
+          thinkingMode: 'browser-agent' as const,
           enableRAG: false,
-          enableTools: false,
+          enableTools: true, // Enable Browser Control Tools
           enableImageGeneration: false,
         };
 

@@ -27,6 +27,7 @@ export class GraphFactory {
   private static _treeOfThoughtGraph: any = null;
   private static _deepThinkingGraph: any = null;
   private static _codingAgentGraph: any = null;
+  private static _browserAgentGraph: any = null;
 
   // Lazy getters with dynamic imports
   private static async getChatGraph() {
@@ -85,6 +86,14 @@ export class GraphFactory {
     return this._codingAgentGraph;
   }
 
+  private static async getBrowserAgentGraph() {
+    if (!this._browserAgentGraph) {
+      const { createBrowserAgentGraph } = await import('./graphs/browser-agent');
+      this._browserAgentGraph = createBrowserAgentGraph();
+    }
+    return this._browserAgentGraph;
+  }
+
   /**
    * GraphConfig에 따라 적절한 그래프 선택
    */
@@ -133,6 +142,11 @@ export class GraphFactory {
       case 'coding':
         baseGraph = await this.getCodingAgentGraph();
         baseState = 'coding-agent';
+        break;
+
+      case 'browser-agent':
+        baseGraph = await this.getBrowserAgentGraph();
+        baseState = 'browser-agent';
         break;
 
       default:
@@ -191,6 +205,8 @@ export class GraphFactory {
       case 'coding':
       case 'coding-agent':
         return createInitialCodingAgentState(messages, conversationId);
+      case 'browser-agent':
+        return createInitialAgentState(messages, conversationId);
       default:
         return createInitialChatState(messages, conversationId);
     }
@@ -225,6 +241,12 @@ export class GraphFactory {
     options?: GraphOptions
   ): AsyncGenerator<StreamEvent> {
     const conversationId = options?.conversationId || '';
+
+    // Browser Agent의 경우 BrowserAgentGraph 인스턴스를 직접 사용 (Human-in-the-loop 지원)
+    if (config.thinkingMode === 'browser-agent') {
+      yield* this.streamBrowserAgentGraph(config, messages, options);
+      return;
+    }
 
     // Coding Agent의 경우 CodingAgentGraph 인스턴스를 직접 사용 (Human-in-the-loop 지원)
     if (config.thinkingMode === 'coding') {
@@ -348,6 +370,76 @@ export class GraphFactory {
       yield {
         type: 'error',
         error: error.message || 'Coding agent graph execution failed',
+      };
+    }
+  }
+
+  /**
+   * Browser Agent 그래프 스트리밍 (Human-in-the-loop 지원)
+   * BrowserAgentGraph 클래스의 stream 메서드를 직접 사용
+   */
+  private static async *streamBrowserAgentGraph(
+    config: GraphConfig,
+    messages: Message[],
+    options?: GraphOptions
+  ): AsyncGenerator<StreamEvent> {
+    const conversationId = options?.conversationId || '';
+
+    try {
+      console.log('[GraphFactory] Starting browser agent stream with Human-in-the-loop support');
+
+      const { BrowserAgentGraph } = await import('./graphs/browser-agent');
+      const { createInitialAgentState } = await import('./state');
+
+      const browserAgentGraph = new BrowserAgentGraph();
+      const initialState = createInitialAgentState(messages, conversationId);
+
+      // Use the BrowserAgentGraph's stream method with tool approval callback
+      for await (const event of browserAgentGraph.stream(
+        initialState,
+        options?.maxIterations || 15, // Browser tasks often need more iterations
+        options?.toolApprovalCallback
+      )) {
+        // Handle tool_approval_request and tool_approval_result events
+        if (event.type === 'tool_approval_request') {
+          yield {
+            type: 'tool_approval_request',
+            messageId: event.messageId,
+            toolCalls: event.toolCalls,
+          };
+          continue;
+        }
+
+        if (event.type === 'tool_approval_result') {
+          yield {
+            type: 'tool_approval_result',
+            approved: event.approved,
+          };
+          continue;
+        }
+
+        // Handle regular node events
+        const entries = Object.entries(event);
+        if (entries.length > 0) {
+          const [nodeName, stateUpdate] = entries[0];
+
+          yield {
+            type: 'node',
+            node: nodeName,
+            data: stateUpdate,
+          };
+        }
+      }
+
+      yield {
+        type: 'end',
+      };
+    } catch (error: any) {
+      console.error('[GraphFactory] Browser agent stream error:', error);
+
+      yield {
+        type: 'error',
+        error: error.message || 'Browser agent graph execution failed',
       };
     }
   }

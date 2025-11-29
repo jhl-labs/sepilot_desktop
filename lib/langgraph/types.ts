@@ -1,7 +1,7 @@
 /**
  * Thinking Mode 타입 정의
  */
-export type ThinkingMode = 'instant' | 'sequential' | 'tree-of-thought' | 'deep' | 'coding';
+export type ThinkingMode = 'instant' | 'sequential' | 'tree-of-thought' | 'deep' | 'coding' | 'browser-agent';
 
 /**
  * 기능 토글 옵션
