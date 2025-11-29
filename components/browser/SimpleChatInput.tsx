@@ -12,6 +12,12 @@ export function SimpleChatInput() {
   const [input, setInput] = useState('');
   const [isComposing, setIsComposing] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [agentProgress, setAgentProgress] = useState<{
+    iteration: number;
+    maxIterations: number;
+    status: string;
+    message: string;
+  } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -25,12 +31,24 @@ export function SimpleChatInput() {
     }
   }, [input]);
 
-  const handleStop = () => {
+  const handleStop = async () => {
+    // Stop Browser Agent (if running)
+    if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.langgraph) {
+      try {
+        await window.electronAPI.langgraph.stopBrowserAgent('browser-chat-temp');
+      } catch (error) {
+        console.error('[SimpleChatInput] Failed to stop Browser Agent:', error);
+      }
+    }
+
+    // Abort stream
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+
     setIsStreaming(false);
+    setAgentProgress(null);
   };
 
   const handleSend = async () => {
@@ -93,7 +111,28 @@ export function SimpleChatInput() {
             }
 
             // Cast to any for event property access
-            const evt = event as { type?: string; chunk?: string; data?: { messages?: Array<{ role: string; content?: string }> } };
+            const evt = event as {
+              type?: string;
+              chunk?: string;
+              data?: {
+                messages?: Array<{ role: string; content?: string }>;
+                iteration?: number;
+                maxIterations?: number;
+                status?: string;
+                message?: string;
+              }
+            };
+
+            // Handle progress events
+            if (evt.type === 'progress' && evt.data) {
+              setAgentProgress({
+                iteration: evt.data.iteration || 0,
+                maxIterations: evt.data.maxIterations || 30,
+                status: evt.data.status || 'working',
+                message: evt.data.message || 'AI 작업 중...',
+              });
+              return;
+            }
 
             // Handle real-time streaming chunks from LLM
             if (evt.type === 'streaming' && evt.chunk) {
@@ -184,6 +223,7 @@ export function SimpleChatInput() {
       }
     } finally {
       setIsStreaming(false);
+      setAgentProgress(null);
       abortControllerRef.current = null;
       textareaRef.current?.focus();
     }
@@ -210,6 +250,48 @@ export function SimpleChatInput() {
 
   return (
     <div className="shrink-0 border-t bg-background p-2">
+      {/* Agent Progress Display */}
+      {agentProgress && (
+        <div className="mb-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                <span>
+                  {agentProgress.status === 'thinking' && '🤔 생각 중...'}
+                  {agentProgress.status === 'executing' && '⚙️ 실행 중...'}
+                  {agentProgress.status !== 'thinking' && agentProgress.status !== 'executing' && '🔄 작업 중...'}
+                </span>
+                <span className="text-muted-foreground">
+                  ({agentProgress.iteration}/{agentProgress.maxIterations})
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground truncate">
+                {agentProgress.message}
+              </p>
+            </div>
+            <Button
+              onClick={handleStop}
+              variant="ghost"
+              size="sm"
+              className="h-6 shrink-0 text-xs"
+              title="중단"
+            >
+              중단
+            </Button>
+          </div>
+          {/* Progress bar */}
+          <div className="mt-2 h-1 w-full bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{
+                width: `${(agentProgress.iteration / agentProgress.maxIterations) * 100}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="relative flex items-end gap-2 rounded-lg border border-input bg-background">
         <Textarea
           ref={textareaRef}

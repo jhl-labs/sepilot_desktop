@@ -206,6 +206,8 @@ interface LangGraphAPI {
   respondToolApproval: (conversationId: string, approved: boolean) => Promise<IPCResponse>;
   // Abort streaming
   abort: (conversationId: string) => Promise<IPCResponse>;
+  // Stop Browser Agent
+  stopBrowserAgent: (conversationId: string) => Promise<IPCResponse>;
   removeStreamListener: (event: string, handler: (...args: unknown[]) => void) => void;
   removeAllStreamListeners: () => void;
 }

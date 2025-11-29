@@ -171,6 +171,8 @@ const electronAPI = {
       ipcRenderer.invoke('langgraph-tool-approval-response', conversationId, approved),
     abort: (conversationId: string) =>
       ipcRenderer.invoke('langgraph-abort', conversationId),
+    stopBrowserAgent: (conversationId: string) =>
+      ipcRenderer.invoke('langgraph-stop-browser-agent', conversationId),
     removeStreamListener: (event: string, handler: any) => {
       ipcRenderer.removeListener(event, handler);
     },

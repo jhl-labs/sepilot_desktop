@@ -284,5 +284,28 @@ export function setupLangGraphHandlers() {
     }
   });
 
+  /**
+   * Stop Browser Agent
+   */
+  ipcMain.handle('langgraph-stop-browser-agent', async (_event, conversationId: string) => {
+    try {
+      logger.info(`[LangGraph IPC] Stop Browser Agent requested for conversationId: ${conversationId}`);
+
+      const { GraphFactory } = await import('../../../lib/langgraph');
+      const stopped = GraphFactory.stopBrowserAgent(conversationId);
+
+      if (stopped) {
+        logger.info(`[LangGraph IPC] Browser Agent stopped for conversationId: ${conversationId}`);
+        return { success: true };
+      } else {
+        logger.warn(`[LangGraph IPC] No active Browser Agent found for conversationId: ${conversationId}`);
+        return { success: false, error: 'No active Browser Agent found' };
+      }
+    } catch (error: any) {
+      logger.error(`[LangGraph IPC] Stop Browser Agent error:`, error);
+      return { success: false, error: error.message };
+    }
+  });
+
   logger.info('LangGraph IPC handlers registered');
 }

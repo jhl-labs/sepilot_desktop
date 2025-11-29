@@ -387,6 +387,9 @@ export class GraphFactory {
    * Browser Agent 그래프 스트리밍 (자동 도구 실행)
    * BrowserAgentGraph 클래스의 stream 메서드를 직접 사용
    */
+  // Browser Agent 인스턴스 저장 (중단 기능을 위해)
+  private static activeBrowserAgentGraphs = new Map<string, any>();
+
   private static async *streamBrowserAgentGraph(
     config: GraphConfig,
     messages: Message[],
@@ -403,11 +406,25 @@ export class GraphFactory {
       const browserAgentGraph = new BrowserAgentGraph();
       const initialState = createInitialAgentState(messages, conversationId);
 
+      // Store instance for cancellation
+      if (conversationId) {
+        this.activeBrowserAgentGraphs.set(conversationId, browserAgentGraph);
+      }
+
       // Use the BrowserAgentGraph's stream method (no tool approval needed)
       for await (const event of browserAgentGraph.stream(
         initialState,
-        options?.maxIterations || 15 // Browser tasks often need more iterations
+        options?.maxIterations || 30 // Browser tasks often need more iterations
       )) {
+        // Handle progress events
+        if (event.progress) {
+          yield {
+            type: 'progress',
+            data: event.progress,
+          };
+          continue;
+        }
+
         // Handle regular node events
         const entries = Object.entries(event);
         if (entries.length > 0) {
@@ -419,6 +436,11 @@ export class GraphFactory {
             data: stateUpdate,
           };
         }
+      }
+
+      // Remove from active graphs
+      if (conversationId) {
+        this.activeBrowserAgentGraphs.delete(conversationId);
       }
 
       yield {
@@ -592,5 +614,20 @@ export class GraphFactory {
         error: error.message || 'Editor Agent execution failed',
       };
     }
+  }
+
+  /**
+   * Browser Agent 중단
+   */
+  static stopBrowserAgent(conversationId: string): boolean {
+    const browserAgentGraph = this.activeBrowserAgentGraphs.get(conversationId);
+    if (browserAgentGraph) {
+      console.log('[GraphFactory] Stopping Browser Agent for conversation:', conversationId);
+      browserAgentGraph.stop();
+      this.activeBrowserAgentGraphs.delete(conversationId);
+      return true;
+    }
+    console.warn('[GraphFactory] No active Browser Agent found for conversation:', conversationId);
+    return false;
   }
 }

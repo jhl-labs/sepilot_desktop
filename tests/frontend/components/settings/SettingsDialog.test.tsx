@@ -16,15 +16,59 @@ jest.mock('@/lib/platform', () => ({
 
 // Mock child components
 jest.mock('@/components/settings/LLMSettingsTab', () => ({
-  LLMSettingsTab: () => <div data-testid="llm-settings">LLM Settings</div>,
+  LLMSettingsTab: ({ onSave, config, setConfig, message }: any) => (
+    <div data-testid="llm-settings">
+      <div>LLM Settings</div>
+      <input
+        data-testid="api-key-input"
+        value={config.apiKey}
+        onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+      />
+      <input
+        data-testid="model-input"
+        value={config.model}
+        onChange={(e) => setConfig({ ...config, model: e.target.value })}
+      />
+      <button onClick={onSave} data-testid="llm-save">Save LLM</button>
+      {message && <div data-testid="llm-message">{message.text}</div>}
+    </div>
+  ),
 }));
 
 jest.mock('@/components/settings/NetworkSettingsTab', () => ({
-  NetworkSettingsTab: () => <div data-testid="network-settings">Network Settings</div>,
+  NetworkSettingsTab: ({ onSave, message }: any) => (
+    <div data-testid="network-settings">
+      <div>Network Settings</div>
+      <button onClick={onSave} data-testid="network-save">Save Network</button>
+      {message && <div data-testid="network-message">{message.text}</div>}
+    </div>
+  ),
 }));
 
 jest.mock('@/components/settings/ComfyUISettingsTab', () => ({
-  ComfyUISettingsTab: () => <div data-testid="comfyui-settings">ComfyUI Settings</div>,
+  ComfyUISettingsTab: ({ onSave, comfyConfig, setComfyConfig, message }: any) => (
+    <div data-testid="comfyui-settings">
+      <div>ComfyUI Settings</div>
+      <input
+        data-testid="comfy-enabled"
+        type="checkbox"
+        checked={comfyConfig.enabled}
+        onChange={(e) => setComfyConfig({ ...comfyConfig, enabled: e.target.checked })}
+      />
+      <input
+        data-testid="comfy-url"
+        value={comfyConfig.httpUrl}
+        onChange={(e) => setComfyConfig({ ...comfyConfig, httpUrl: e.target.value })}
+      />
+      <input
+        data-testid="comfy-workflow"
+        value={comfyConfig.workflowId}
+        onChange={(e) => setComfyConfig({ ...comfyConfig, workflowId: e.target.value })}
+      />
+      <button onClick={onSave} data-testid="comfy-save">Save ComfyUI</button>
+      {message && <div data-testid="comfy-message">{message.text}</div>}
+    </div>
+  ),
 }));
 
 jest.mock('@/components/settings/MCPSettingsTab', () => ({
@@ -32,11 +76,36 @@ jest.mock('@/components/settings/MCPSettingsTab', () => ({
 }));
 
 jest.mock('@/components/rag/VectorDBSettings', () => ({
-  VectorDBSettings: () => <div data-testid="vectordb-settings">VectorDB Settings</div>,
+  VectorDBSettings: ({ onSave }: any) => (
+    <div data-testid="vectordb-settings">
+      <div>VectorDB Settings</div>
+      <button
+        onClick={() =>
+          onSave(
+            { type: 'sqlite-vec', path: '/test/db' },
+            { provider: 'openai', model: 'text-embedding-ada-002' }
+          )
+        }
+        data-testid="vectordb-save"
+      >
+        Save VectorDB
+      </button>
+    </div>
+  ),
 }));
 
 jest.mock('@/components/settings/GitHubOAuthSettings', () => ({
-  GitHubOAuthSettings: () => <div data-testid="github-settings">GitHub Settings</div>,
+  GitHubOAuthSettings: ({ onSave }: any) => (
+    <div data-testid="github-settings">
+      <div>GitHub Settings</div>
+      <button
+        onClick={() => onSave({ clientId: 'test-client', clientSecret: 'test-secret' })}
+        data-testid="github-save"
+      >
+        Save GitHub
+      </button>
+    </div>
+  ),
 }));
 
 jest.mock('@/components/settings/BackupRestoreSettings', () => ({
@@ -426,6 +495,527 @@ describe('SettingsDialog', () => {
       });
 
       window.removeEventListener('sepilot:config-updated', eventListener);
+    });
+  });
+
+  describe('LLM 설정 저장', () => {
+    const { initializeLLMClient } = require('@/lib/llm/client');
+    const { configureWebLLMClient } = require('@/lib/llm/web-client');
+
+    beforeEach(() => {
+      (isElectron as jest.Mock).mockReturnValue(false);
+      localStorage.clear();
+      jest.clearAllMocks();
+    });
+
+    it('should show error when API key is empty', async () => {
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      // Clear API key
+      const apiKeyInput = screen.getByTestId('api-key-input');
+      await user.clear(apiKeyInput);
+
+      // Try to save
+      const saveButton = screen.getByTestId('llm-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('API 키를 입력해주세요.')).toBeInTheDocument();
+      });
+    });
+
+    it('should show error when model is empty', async () => {
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      // Set API key but clear model
+      const apiKeyInput = screen.getByTestId('api-key-input');
+      await user.type(apiKeyInput, 'sk-test-key');
+
+      const modelInput = screen.getByTestId('model-input');
+      await user.clear(modelInput);
+
+      const saveButton = screen.getByTestId('llm-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('기본 모델을 선택하거나 입력해주세요.')).toBeInTheDocument();
+      });
+    });
+
+    it('should save LLM config to localStorage in web environment', async () => {
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const apiKeyInput = screen.getByTestId('api-key-input');
+      await user.type(apiKeyInput, 'sk-test-key');
+
+      const modelInput = screen.getByTestId('model-input');
+      await user.type(modelInput, 'gpt-4');
+
+      const saveButton = screen.getByTestId('llm-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(localStorage.setItem).toHaveBeenCalledWith(
+          'sepilot_llm_config',
+          expect.stringContaining('sk-test-key')
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('설정이 저장되었습니다!')).toBeInTheDocument();
+      });
+    });
+
+    it('should initialize web LLM client after saving', async () => {
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const apiKeyInput = screen.getByTestId('api-key-input');
+      await user.type(apiKeyInput, 'sk-test-key');
+
+      const modelInput = screen.getByTestId('model-input');
+      await user.type(modelInput, 'gpt-4');
+
+      const saveButton = screen.getByTestId('llm-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(configureWebLLMClient).toHaveBeenCalled();
+      });
+    });
+
+    it('should save to Electron database when in Electron environment', async () => {
+      (isElectron as jest.Mock).mockReturnValue(true);
+      (window as any).electronAPI = {
+        config: {
+          save: jest.fn().mockResolvedValue({ success: true }),
+        },
+        llm: {
+          init: jest.fn().mockResolvedValue({ success: true }),
+        },
+      };
+
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const apiKeyInput = screen.getByTestId('api-key-input');
+      await user.type(apiKeyInput, 'sk-electron-key');
+
+      const modelInput = screen.getByTestId('model-input');
+      await user.type(modelInput, 'gpt-4-electron');
+
+      const saveButton = screen.getByTestId('llm-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect((window as any).electronAPI.config.save).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect((window as any).electronAPI.llm.init).toHaveBeenCalled();
+      });
+
+      delete (window as any).electronAPI;
+    });
+
+    it('should dispatch config-updated event after saving', async () => {
+      const eventListener = jest.fn();
+      window.addEventListener('sepilot:config-updated', eventListener);
+
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const apiKeyInput = screen.getByTestId('api-key-input');
+      await user.type(apiKeyInput, 'sk-test-key');
+
+      const modelInput = screen.getByTestId('model-input');
+      await user.type(modelInput, 'gpt-4');
+
+      const saveButton = screen.getByTestId('llm-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(eventListener).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'sepilot:config-updated',
+          })
+        );
+      });
+
+      window.removeEventListener('sepilot:config-updated', eventListener);
+    });
+  });
+
+  describe('Network 설정 저장', () => {
+    beforeEach(() => {
+      (isElectron as jest.Mock).mockReturnValue(false);
+      localStorage.clear();
+      jest.clearAllMocks();
+    });
+
+    it('should save network config to localStorage', async () => {
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      // Switch to Network tab
+      const networkTab = screen.getByRole('button', { name: /Network/i });
+      await user.click(networkTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('network-settings')).toBeInTheDocument();
+      });
+
+      const saveButton = screen.getByTestId('network-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(localStorage.setItem).toHaveBeenCalledWith(
+          'sepilot_network_config',
+          expect.any(String)
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('네트워크 설정이 저장되었습니다!')).toBeInTheDocument();
+      });
+    });
+
+    it('should save to Electron database in Electron environment', async () => {
+      (isElectron as jest.Mock).mockReturnValue(true);
+      (window as any).electronAPI = {
+        config: {
+          save: jest.fn().mockResolvedValue({ success: true }),
+        },
+        llm: {
+          init: jest.fn().mockResolvedValue({ success: true }),
+        },
+      };
+
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const networkTab = screen.getByRole('button', { name: /Network/i });
+      await user.click(networkTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('network-settings')).toBeInTheDocument();
+      });
+
+      const saveButton = screen.getByTestId('network-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect((window as any).electronAPI.config.save).toHaveBeenCalled();
+      });
+
+      delete (window as any).electronAPI;
+    });
+  });
+
+  describe('ComfyUI 설정 저장', () => {
+    beforeEach(() => {
+      (isElectron as jest.Mock).mockReturnValue(false);
+      localStorage.clear();
+      jest.clearAllMocks();
+    });
+
+    it('should show error when enabled but URL is empty', async () => {
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const comfyTab = screen.getByRole('button', { name: /ComfyUI/i });
+      await user.click(comfyTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('comfyui-settings')).toBeInTheDocument();
+      });
+
+      // Enable ComfyUI
+      const enabledCheckbox = screen.getByTestId('comfy-enabled');
+      await user.click(enabledCheckbox);
+
+      // Clear URL
+      const urlInput = screen.getByTestId('comfy-url');
+      await user.clear(urlInput);
+
+      const saveButton = screen.getByTestId('comfy-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('ComfyUI HTTP URL을 입력해주세요.')).toBeInTheDocument();
+      });
+    });
+
+    it('should show error when enabled but workflow ID is empty', async () => {
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const comfyTab = screen.getByRole('button', { name: /ComfyUI/i });
+      await user.click(comfyTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('comfyui-settings')).toBeInTheDocument();
+      });
+
+      const enabledCheckbox = screen.getByTestId('comfy-enabled');
+      await user.click(enabledCheckbox);
+
+      const urlInput = screen.getByTestId('comfy-url');
+      await user.type(urlInput, 'http://localhost:8188');
+
+      const workflowInput = screen.getByTestId('comfy-workflow');
+      await user.clear(workflowInput);
+
+      const saveButton = screen.getByTestId('comfy-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('기본 워크플로우 ID를 입력해주세요.')).toBeInTheDocument();
+      });
+    });
+
+    it('should save ComfyUI config successfully', async () => {
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const comfyTab = screen.getByRole('button', { name: /ComfyUI/i });
+      await user.click(comfyTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('comfyui-settings')).toBeInTheDocument();
+      });
+
+      const enabledCheckbox = screen.getByTestId('comfy-enabled');
+      await user.click(enabledCheckbox);
+
+      const urlInput = screen.getByTestId('comfy-url');
+      await user.type(urlInput, 'http://localhost:8188');
+
+      const workflowInput = screen.getByTestId('comfy-workflow');
+      await user.type(workflowInput, 'test-workflow');
+
+      const saveButton = screen.getByTestId('comfy-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(localStorage.setItem).toHaveBeenCalledWith(
+          'sepilot_comfyui_config',
+          expect.any(String)
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('ComfyUI 설정이 저장되었습니다!')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('VectorDB 설정 저장', () => {
+    const { initializeVectorDB } = require('@/lib/vectordb/client');
+    const { initializeEmbedding } = require('@/lib/vectordb/embeddings/client');
+
+    beforeEach(() => {
+      (isElectron as jest.Mock).mockReturnValue(false);
+      localStorage.clear();
+      jest.clearAllMocks();
+    });
+
+    it('should save VectorDB and Embedding config', async () => {
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const vectordbTab = screen.getByRole('button', { name: /VectorDB/i });
+      await user.click(vectordbTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('vectordb-settings')).toBeInTheDocument();
+      });
+
+      const saveButton = screen.getByTestId('vectordb-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(localStorage.setItem).toHaveBeenCalledWith(
+          'sepilot_vectordb_config',
+          expect.any(String)
+        );
+        expect(localStorage.setItem).toHaveBeenCalledWith(
+          'sepilot_embedding_config',
+          expect.any(String)
+        );
+      });
+    });
+
+    it('should initialize VectorDB and Embedding', async () => {
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const vectordbTab = screen.getByRole('button', { name: /VectorDB/i });
+      await user.click(vectordbTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('vectordb-settings')).toBeInTheDocument();
+      });
+
+      const saveButton = screen.getByTestId('vectordb-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(initializeEmbedding).toHaveBeenCalled();
+      });
+    });
+
+    it('should save to Electron database when in Electron environment', async () => {
+      (isElectron as jest.Mock).mockReturnValue(true);
+      (window as any).electronAPI = {
+        config: {
+          save: jest.fn().mockResolvedValue({ success: true }),
+        },
+      };
+
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const vectordbTab = screen.getByRole('button', { name: /VectorDB/i });
+      await user.click(vectordbTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('vectordb-settings')).toBeInTheDocument();
+      });
+
+      const saveButton = screen.getByTestId('vectordb-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect((window as any).electronAPI.config.save).toHaveBeenCalled();
+      });
+
+      delete (window as any).electronAPI;
+    });
+  });
+
+  describe('GitHub 설정 저장', () => {
+    beforeEach(() => {
+      (isElectron as jest.Mock).mockReturnValue(false);
+      localStorage.clear();
+      jest.clearAllMocks();
+    });
+
+    it('should save GitHub OAuth config', async () => {
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const githubTab = screen.getByRole('button', { name: /GitHub/i });
+      await user.click(githubTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('github-settings')).toBeInTheDocument();
+      });
+
+      const saveButton = screen.getByTestId('github-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(localStorage.setItem).toHaveBeenCalledWith(
+          'sepilot_app_config',
+          expect.stringContaining('test-client')
+        );
+      });
+    });
+
+    it('should save to Electron database in Electron environment', async () => {
+      (isElectron as jest.Mock).mockReturnValue(true);
+      (window as any).electronAPI = {
+        config: {
+          save: jest.fn().mockResolvedValue({ success: true }),
+        },
+      };
+
+      const user = userEvent.setup();
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      });
+
+      const githubTab = screen.getByRole('button', { name: /GitHub/i });
+      await user.click(githubTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('github-settings')).toBeInTheDocument();
+      });
+
+      const saveButton = screen.getByTestId('github-save');
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect((window as any).electronAPI.config.save).toHaveBeenCalled();
+      });
+
+      delete (window as any).electronAPI;
     });
   });
 });

@@ -79,7 +79,7 @@ export interface GraphOptions {
  * 스트리밍 이벤트
  */
 export interface StreamEvent {
-  type: 'node' | 'edge' | 'end' | 'error' | 'tool_approval_request' | 'tool_approval_result';
+  type: 'node' | 'edge' | 'end' | 'error' | 'tool_approval_request' | 'tool_approval_result' | 'progress';
   node?: string;
   data?: any;
   error?: string;

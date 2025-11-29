@@ -250,7 +250,13 @@ Remember: This is a REAL browser. Use the tools!`,
  * - browser_scroll: 페이지 스크롤
  */
 export class BrowserAgentGraph {
-  async invoke(initialState: AgentState, maxIterations = 15): Promise<AgentState> {
+  private shouldStop = false;
+
+  public stop() {
+    this.shouldStop = true;
+  }
+
+  async invoke(initialState: AgentState, maxIterations = 30): Promise<AgentState> {
     let state = { ...initialState };
     let iterations = 0;
 
@@ -283,10 +289,11 @@ export class BrowserAgentGraph {
 
   async *stream(
     initialState: AgentState,
-    maxIterations = 15
+    maxIterations = 30
   ): AsyncGenerator<any> {
     let state = { ...initialState };
     let iterations = 0;
+    this.shouldStop = false;
 
     console.log('[BrowserAgent] Starting stream with initial state');
     console.log('[BrowserAgent] Available browser tools: get_page_content, get_interactive_elements, click_element, type_text, scroll');
@@ -294,8 +301,23 @@ export class BrowserAgentGraph {
     let hasError = false;
     let errorMessage = '';
 
-    while (iterations < maxIterations) {
+    // 반복 감지를 위한 도구 호출 히스토리 (최근 5개만 추적)
+    const toolCallHistory: Array<{ name: string; args: string }> = [];
+    const MAX_HISTORY = 5;
+    const LOOP_THRESHOLD = 3; // 같은 호출이 3번 반복되면 루프로 간주
+
+    while (iterations < maxIterations && !this.shouldStop) {
       console.log(`[BrowserAgent] ===== Iteration ${iterations + 1}/${maxIterations} =====`);
+
+      // Emit progress event
+      yield {
+        progress: {
+          iteration: iterations + 1,
+          maxIterations,
+          status: 'thinking',
+          message: 'AI가 다음 작업을 계획하고 있습니다...',
+        },
+      };
 
       // 1. generate with Browser Control Tools
       let generateResult;
@@ -343,9 +365,52 @@ export class BrowserAgentGraph {
         break;
       }
 
+      // Get tool calls for progress message and loop detection
+      const lastMessage = state.messages[state.messages.length - 1];
+      const toolCalls = lastMessage.tool_calls || [];
+
+      // Emit tool execution progress
+      if (toolCalls.length > 0) {
+        const toolNames = toolCalls.map(tc => tc.name).join(', ');
+        yield {
+          progress: {
+            iteration: iterations + 1,
+            maxIterations,
+            status: 'executing',
+            message: `브라우저 도구 실행 중: ${toolNames}`,
+          },
+        };
+      }
+
       // 3. tools 노드 실행 (자동 실행, 승인 불필요)
       console.log('[BrowserAgent] Executing browser tools node');
       const toolsResult = await toolsNode(state);
+
+      // 반복 감지: 도구 호출 히스토리에 추가
+      for (const toolCall of toolCalls) {
+        const callSignature = `${toolCall.name}:${JSON.stringify(toolCall.arguments)}`;
+        toolCallHistory.push({ name: toolCall.name, args: JSON.stringify(toolCall.arguments) });
+
+        // 히스토리 크기 제한
+        if (toolCallHistory.length > MAX_HISTORY) {
+          toolCallHistory.shift();
+        }
+
+        // 반복 감지: 같은 호출이 여러 번 반복되는지 확인
+        const recentCalls = toolCallHistory.slice(-LOOP_THRESHOLD);
+        if (recentCalls.length === LOOP_THRESHOLD) {
+          const allSame = recentCalls.every(
+            (call) => call.name === recentCalls[0].name && call.args === recentCalls[0].args
+          );
+
+          if (allSame) {
+            console.warn('[BrowserAgent] Loop detected: same tool called multiple times with same arguments');
+            hasError = true;
+            errorMessage = `같은 작업(${toolCall.name})이 반복되고 있습니다. 다른 방법을 시도해야 할 것 같습니다.`;
+            break;
+          }
+        }
+      }
 
       // Remove tool_calls from the last message to prevent duplicate execution
       const updatedMessages = [...state.messages];
@@ -374,7 +439,14 @@ export class BrowserAgentGraph {
 
     // Final report message
     const finalReportMessage: Message = (() => {
-      if (hasError) {
+      if (this.shouldStop) {
+        return {
+          id: `msg-${Date.now()}`,
+          role: 'assistant',
+          content: `⏹️ 사용자가 작업을 중단했습니다. (${iterations}회 반복 완료)`,
+          created_at: Date.now(),
+        };
+      } else if (hasError) {
         return {
           id: `msg-${Date.now()}`,
           role: 'assistant',
