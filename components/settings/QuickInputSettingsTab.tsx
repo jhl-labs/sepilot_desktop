@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { QuickInputConfig, QuickQuestion } from '@/types';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Zap } from 'lucide-react';
+import { SettingsSectionHeader } from './SettingsSectionHeader';
 
 interface QuickInputSettingsTabProps {
   config: QuickInputConfig;
@@ -79,10 +80,13 @@ export function QuickInputSettingsTab({
 
   return (
     <div className="space-y-6">
+      <SettingsSectionHeader
+        title="Quick Input 설정"
+        description="Quick Input과 Quick Question 기능의 단축키 및 프롬프트를 설정합니다."
+        icon={Zap}
+      />
+
       <div className="space-y-4">
-        <div className="text-sm text-muted-foreground">
-          Quick Input과 Quick Question 기능의 단축키 및 프롬프트를 설정합니다.
-        </div>
 
         {/* Quick Input Shortcut */}
         <div className="space-y-3 p-4 rounded-lg border">

@@ -24,6 +24,7 @@ import { NetworkSettingsTab } from './NetworkSettingsTab';
 import { ComfyUISettingsTab } from './ComfyUISettingsTab';
 import { MCPSettingsTab } from './MCPSettingsTab';
 import { QuickInputSettingsTab } from './QuickInputSettingsTab';
+import { SettingsSidebar, SettingSection } from './SettingsSidebar';
 import {
   createDefaultLLMConfig,
   createDefaultNetworkConfig,
@@ -44,7 +45,7 @@ const createDefaultQuickInputConfig = (): QuickInputConfig => ({
 });
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'llm' | 'network' | 'vectordb' | 'comfyui' | 'mcp' | 'github' | 'backup' | 'quickinput'>('llm');
+  const [activeTab, setActiveTab] = useState<SettingSection>('llm');
 
   const [config, setConfig] = useState<LLMConfig>(createDefaultLLMConfig());
   const [networkConfig, setNetworkConfig] = useState<NetworkConfig>(createDefaultNetworkConfig());
@@ -537,183 +538,112 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-4xl max-h-[85vh] overflow-y-auto"
+        className="max-w-6xl max-h-[90vh] p-0 gap-0"
         onClose={() => onOpenChange(false)}
       >
-        <DialogHeader>
-          <DialogTitle>설정</DialogTitle>
-          <DialogDescription>
-            LLM, VectorDB, MCP 등의 설정을 구성하세요.
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Tabs */}
-        <div className="flex gap-2 border-b overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('llm')}
-            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'llm'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            LLM
-          </button>
-          <button
-            onClick={() => setActiveTab('network')}
-            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'network'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Network
-          </button>
-          <button
-            onClick={() => setActiveTab('vectordb')}
-            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'vectordb'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            VectorDB
-          </button>
-          <button
-            onClick={() => setActiveTab('comfyui')}
-            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'comfyui'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            ComfyUI
-          </button>
-          <button
-            onClick={() => setActiveTab('mcp')}
-            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'mcp'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            MCP 서버
-          </button>
-          <button
-            onClick={() => setActiveTab('github')}
-            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'github'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            GitHub
-          </button>
-          <button
-            onClick={() => setActiveTab('backup')}
-            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'backup'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            백업/복구
-          </button>
-          <button
-            onClick={() => setActiveTab('quickinput')}
-            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === 'quickinput'
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Quick Input
-          </button>
+        <div className="px-6 pt-6 pb-4 border-b">
+          <DialogHeader>
+            <DialogTitle>설정</DialogTitle>
+            <DialogDescription>
+              LLM, VectorDB, MCP 등의 설정을 구성하세요.
+            </DialogDescription>
+          </DialogHeader>
         </div>
 
-        {/* Tab Content */}
-        {activeTab === 'llm' && (
-          <LLMSettingsTab
-            config={config}
-            setConfig={setConfig}
-            networkConfig={networkConfig}
-            onSave={handleSave}
-            isSaving={isSaving}
-            message={message}
+        <div className="flex h-[calc(90vh-8rem)] overflow-hidden">
+          {/* Sidebar Navigation */}
+          <SettingsSidebar
+            activeSection={activeTab}
+            onSectionChange={setActiveTab}
+            className="flex-shrink-0 overflow-y-auto"
           />
-        )}
 
-        {activeTab === 'network' && (
-          <NetworkSettingsTab
-            networkConfig={networkConfig}
-            setNetworkConfig={setNetworkConfig}
-            onSave={handleNetworkSave}
-            isSaving={isSaving}
-            message={message}
-          />
-        )}
+          {/* Content Area */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {activeTab === 'llm' && (
+              <LLMSettingsTab
+                config={config}
+                setConfig={setConfig}
+                networkConfig={networkConfig}
+                onSave={handleSave}
+                isSaving={isSaving}
+                message={message}
+              />
+            )}
 
-        {activeTab === 'vectordb' && (
-          <VectorDBSettings
-            onSave={handleVectorDBSave}
-            initialVectorDBConfig={vectorDBConfig || undefined}
-            initialEmbeddingConfig={embeddingConfig || undefined}
-          />
-        )}
+            {activeTab === 'network' && (
+              <NetworkSettingsTab
+                networkConfig={networkConfig}
+                setNetworkConfig={setNetworkConfig}
+                onSave={handleNetworkSave}
+                isSaving={isSaving}
+                message={message}
+              />
+            )}
 
-        {activeTab === 'comfyui' && (
-          <ComfyUISettingsTab
-            comfyConfig={comfyConfig}
-            setComfyConfig={setComfyConfig}
-            networkConfig={networkConfig}
-            onSave={handleComfySave}
-            isSaving={isComfySaving}
-            message={comfyMessage}
-            setMessage={setComfyMessage}
-          />
-        )}
+            {activeTab === 'vectordb' && (
+              <VectorDBSettings
+                onSave={handleVectorDBSave}
+                initialVectorDBConfig={vectorDBConfig || undefined}
+                initialEmbeddingConfig={embeddingConfig || undefined}
+              />
+            )}
 
-        {activeTab === 'mcp' && (
-          <MCPSettingsTab />
-        )}
+            {activeTab === 'comfyui' && (
+              <ComfyUISettingsTab
+                comfyConfig={comfyConfig}
+                setComfyConfig={setComfyConfig}
+                networkConfig={networkConfig}
+                onSave={handleComfySave}
+                isSaving={isComfySaving}
+                message={comfyMessage}
+                setMessage={setComfyMessage}
+              />
+            )}
 
-        {activeTab === 'github' && (
-          <GitHubOAuthSettings
-            config={githubConfig}
-            onSave={async (newConfig) => {
-              setGithubConfig(newConfig);
-              let savedConfig: AppConfig | null = null;
-              if (isElectron() && window.electronAPI) {
-                savedConfig = await persistAppConfig({ github: newConfig });
-              }
-              if (!savedConfig) {
-                const currentAppConfig = localStorage.getItem('sepilot_app_config');
-                const appConfig = currentAppConfig ? JSON.parse(currentAppConfig) : {};
-                appConfig.github = newConfig;
-                localStorage.setItem('sepilot_app_config', JSON.stringify(appConfig));
-              }
+            {activeTab === 'mcp' && (
+              <MCPSettingsTab />
+            )}
 
-              // Notify other components about GitHub config update
-              window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
-                detail: { github: newConfig }
-              }));
-            }}
-          />
-        )}
+            {activeTab === 'github' && (
+              <GitHubOAuthSettings
+                config={githubConfig}
+                onSave={async (newConfig) => {
+                  setGithubConfig(newConfig);
+                  let savedConfig: AppConfig | null = null;
+                  if (isElectron() && window.electronAPI) {
+                    savedConfig = await persistAppConfig({ github: newConfig });
+                  }
+                  if (!savedConfig) {
+                    const currentAppConfig = localStorage.getItem('sepilot_app_config');
+                    const appConfig = currentAppConfig ? JSON.parse(currentAppConfig) : {};
+                    appConfig.github = newConfig;
+                    localStorage.setItem('sepilot_app_config', JSON.stringify(appConfig));
+                  }
 
-        {activeTab === 'backup' && (
-          <BackupRestoreSettings />
-        )}
+                  // Notify other components about GitHub config update
+                  window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
+                    detail: { github: newConfig }
+                  }));
+                }}
+              />
+            )}
 
-        {activeTab === 'quickinput' && (
-          <QuickInputSettingsTab
-            config={quickInputConfig}
-            setConfig={setQuickInputConfig}
-            onSave={handleQuickInputSave}
-            isSaving={isSaving}
-            message={message}
-          />
-        )}
+            {activeTab === 'backup' && (
+              <BackupRestoreSettings />
+            )}
+
+            {activeTab === 'quickinput' && (
+              <QuickInputSettingsTab
+                config={quickInputConfig}
+                setConfig={setQuickInputConfig}
+                onSave={handleQuickInputSave}
+                isSaving={isSaving}
+                message={message}
+              />
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

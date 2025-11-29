@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LLMConfig, VisionModelConfig, AutocompleteConfig, NetworkConfig } from '@/types';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Settings } from 'lucide-react';
 import { fetchAvailableModels, createDefaultVisionConfig, createDefaultAutocompleteConfig } from './settingsUtils';
+import { SettingsSectionHeader } from './SettingsSectionHeader';
 
 interface LLMSettingsTabProps {
   config: LLMConfig;
@@ -156,9 +157,16 @@ export function LLMSettingsTab({
     !config.autocomplete?.model || autocompleteModelSelectValue === '__autocomplete_custom__';
 
   return (
-    <div className="space-y-4">
-      {/* Provider */}
-      <div className="space-y-2">
+    <div className="space-y-6">
+      <SettingsSectionHeader
+        title="LLM 설정"
+        description="Language Model 제공자 및 모델을 구성합니다."
+        icon={Settings}
+      />
+
+      <div className="space-y-4">
+        {/* Provider */}
+        <div className="space-y-2">
         <Label htmlFor="provider">Provider</Label>
         <select
           id="provider"
@@ -794,11 +802,12 @@ export function LLMSettingsTab({
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex justify-end gap-2">
-        <Button onClick={onSave} disabled={isSaving}>
-          {isSaving ? '저장 중...' : '저장'}
-        </Button>
+        {/* Actions */}
+        <div className="flex justify-end gap-2">
+          <Button onClick={onSave} disabled={isSaving}>
+            {isSaving ? '저장 중...' : '저장'}
+          </Button>
+        </div>
       </div>
     </div>
   );
