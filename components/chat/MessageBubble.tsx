@@ -1,6 +1,7 @@
 'use client';
 
 import { Message, FileChange } from '@/types';
+import { Persona } from '@/types/persona';
 import { cn } from '@/lib/utils';
 import { User, Bot, Edit2, RefreshCw, Copy, Check, X, FileText, ChevronDown, ChevronUp, ImageIcon } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
@@ -18,6 +19,7 @@ interface MessageBubbleProps {
   onRegenerate?: (messageId: string) => void;
   isLastAssistantMessage?: boolean;
   isStreaming?: boolean;
+  activePersona?: Persona | null;
 }
 
 export function MessageBubble({
@@ -26,6 +28,7 @@ export function MessageBubble({
   onRegenerate,
   isLastAssistantMessage = false,
   isStreaming = false,
+  activePersona = null,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
@@ -176,7 +179,13 @@ export function MessageBubble({
             : 'bg-gradient-to-br from-secondary to-secondary/80 text-secondary-foreground'
         )}
       >
-        {isUser ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
+        {isUser ? (
+          <User className="h-5 w-5" />
+        ) : activePersona?.avatar ? (
+          <span className="text-xl leading-none">{activePersona.avatar}</span>
+        ) : (
+          <Bot className="h-5 w-5" />
+        )}
       </div>
 
       {/* Message Content */}
@@ -186,7 +195,7 @@ export function MessageBubble({
             'text-sm font-semibold',
             isUser ? 'text-blue-700 dark:text-blue-400' : 'text-left'
           )}>
-            {isUser ? 'You' : 'Assistant'}
+            {isUser ? 'You' : (activePersona?.name || 'Assistant')}
           </span>
         </div>
         <div className="prose prose-sm dark:prose-invert max-w-none">

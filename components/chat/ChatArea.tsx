@@ -21,7 +21,10 @@ const FONT_SCALE_OPTIONS = [
 ];
 
 export function ChatArea() {
-  const { messages, activeConversationId, getGraphConfig, updateMessage, deleteMessage, addMessage, startStreaming, stopStreaming, streamingConversations, workingDirectory } = useChatStore();
+  const { messages, activeConversationId, getGraphConfig, updateMessage, deleteMessage, addMessage, startStreaming, stopStreaming, streamingConversations, workingDirectory, personas, activePersonaId } = useChatStore();
+
+  // Get active persona
+  const activePersona = personas.find(p => p.id === activePersonaId);
 
   // Get streaming state for current conversation
   const streamingMessageId = activeConversationId ? streamingConversations.get(activeConversationId) || null : null;
@@ -528,6 +531,7 @@ export function ChatArea() {
                   onRegenerate={handleRegenerate}
                   isLastAssistantMessage={isLastAssistantMessage}
                   isStreaming={isMessageStreaming}
+                  activePersona={activePersona}
                 />
               );
             })}
