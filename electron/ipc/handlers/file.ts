@@ -430,7 +430,12 @@ export function registerFileHandlers() {
           gitignorePatterns = gitignoreContent
             .split('\n')
             .map((line) => line.trim())
-            .filter((line) => line && !line.startsWith('#')); // 빈 줄과 주석 제외
+            .filter((line) => {
+              // 빈 줄, 주석, '!'로 시작하는 라인 제외
+              // '!'로 시작하는 라인은 gitignore에서 "제외하지 않음"을 의미하므로
+              // ripgrep의 --glob 패턴으로는 처리하지 않음
+              return line && !line.startsWith('#') && !line.startsWith('!');
+            });
           console.log(`[File] Loaded ${gitignorePatterns.length} patterns from .gitignore`);
         } catch (error) {
           console.log('[File] No .gitignore file found or failed to read');
@@ -478,11 +483,16 @@ export function registerFileHandlers() {
         console.log('[File] Running command:', command);
         console.log('[File] Using bundled ripgrep at:', rgPath);
 
-        const { stdout } = await execAsync(command, {
+        const { stdout, stderr } = await execAsync(command, {
           maxBuffer: 10 * 1024 * 1024, // 10MB
           encoding: 'utf-8',
           cwd: dirPath, // working directory에서 실행
         });
+
+        console.log('[File] Search stdout length:', stdout.length);
+        if (stderr) {
+          console.log('[File] Search stderr:', stderr);
+        }
 
         // 결과 파싱
         const results: Record<
@@ -490,7 +500,22 @@ export function registerFileHandlers() {
           Array<{ line: number; column: number; text: string }>
         > = {};
 
+        if (!stdout || stdout.trim().length === 0) {
+          console.log('[File] No matches found (empty stdout)');
+          return {
+            success: true,
+            data: {
+              query,
+              totalFiles: 0,
+              totalMatches: 0,
+              results: [],
+            },
+          };
+        }
+
         const lines = stdout.trim().split('\n');
+        console.log('[File] Total output lines:', lines.length);
+
         for (const line of lines) {
           // 형식: 파일명:라인:컬럼:텍스트
           const match = line.match(/^([^:]+):(\d+):(\d+):(.*)$/);
@@ -504,6 +529,8 @@ export function registerFileHandlers() {
               column: parseInt(colNum, 10),
               text: text,
             });
+          } else {
+            console.log('[File] Failed to parse line:', line.substring(0, 100));
           }
         }
 
@@ -514,7 +541,7 @@ export function registerFileHandlers() {
         }));
 
         console.log(
-          `[File] Search complete: ${groupedResults.length} files, ${lines.length} matches`
+          `[File] Search complete: ${groupedResults.length} files, ${Object.values(results).reduce((sum, m) => sum + m.length, 0)} matches`
         );
 
         return {
@@ -522,12 +549,19 @@ export function registerFileHandlers() {
           data: {
             query,
             totalFiles: groupedResults.length,
-            totalMatches: lines.length,
+            totalMatches: Object.values(results).reduce((sum, m) => sum + m.length, 0),
             results: groupedResults,
           },
         };
       } catch (error: any) {
         // ripgrep 실행 에러 처리
+        console.error('[File] Error searching files:', {
+          code: error.code,
+          message: error.message,
+          stderr: error.stderr,
+          stdout: error.stdout,
+        });
+
         if (error.code === 'ENOENT') {
           console.error('[File] Bundled ripgrep not found at:', rgPath);
           return {
@@ -537,6 +571,7 @@ export function registerFileHandlers() {
         }
         if (error.code === 1) {
           // ripgrep exit code 1 = no matches found
+          console.log('[File] No matches found (exit code 1)');
           return {
             success: true,
             data: {
@@ -547,10 +582,10 @@ export function registerFileHandlers() {
             },
           };
         }
-        console.error('[File] Error searching files:', error);
+        console.error('[File] Unexpected error during search');
         return {
           success: false,
-          error: error.message || 'Failed to search files',
+          error: `Search error: ${error.message || 'Unknown error'}\n${error.stderr || ''}`,
         };
       }
     }
