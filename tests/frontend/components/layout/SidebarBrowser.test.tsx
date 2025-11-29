@@ -33,6 +33,10 @@ jest.mock('@/components/browser/BrowserSettings', () => ({
   BrowserSettings: () => <div data-testid="browser-settings">Settings</div>,
 }));
 
+jest.mock('@/components/browser/BrowserAgentLog', () => ({
+  BrowserAgentLog: () => <div data-testid="browser-agent-log">Agent Log</div>,
+}));
+
 describe('SidebarBrowser', () => {
   const mockClearBrowserChat = jest.fn();
   const mockSetBrowserViewMode = jest.fn();
@@ -148,6 +152,42 @@ describe('SidebarBrowser', () => {
       expect(mockSetBrowserViewMode).toHaveBeenCalledWith('snapshots');
     });
 
+    it('should hide BrowserView before switching to snapshots in Electron', async () => {
+      enableElectronMode();
+      (mockElectronAPI.browserView.hideAll as jest.Mock).mockResolvedValue(undefined);
+
+      render(<SidebarBrowser />);
+
+      const snapshotsButton = screen.getByTitle('스냅샷 관리');
+      fireEvent.click(snapshotsButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.browserView.hideAll).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle hideAll error when switching to snapshots', async () => {
+      enableElectronMode();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      (mockElectronAPI.browserView.hideAll as jest.Mock).mockRejectedValue(
+        new Error('Hide failed')
+      );
+
+      render(<SidebarBrowser />);
+
+      const snapshotsButton = screen.getByTitle('스냅샷 관리');
+      fireEvent.click(snapshotsButton);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          '[SidebarBrowser] Failed to hide BrowserView:',
+          expect.any(Error)
+        );
+      });
+
+      consoleSpy.mockRestore();
+    });
+
     it('should switch to bookmarks view when bookmarks button clicked', () => {
       render(<SidebarBrowser />);
 
@@ -157,6 +197,42 @@ describe('SidebarBrowser', () => {
       expect(mockSetBrowserViewMode).toHaveBeenCalledWith('bookmarks');
     });
 
+    it('should hide BrowserView before switching to bookmarks in Electron', async () => {
+      enableElectronMode();
+      (mockElectronAPI.browserView.hideAll as jest.Mock).mockResolvedValue(undefined);
+
+      render(<SidebarBrowser />);
+
+      const bookmarksButton = screen.getByTitle('북마크');
+      fireEvent.click(bookmarksButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.browserView.hideAll).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle hideAll error when switching to bookmarks', async () => {
+      enableElectronMode();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      (mockElectronAPI.browserView.hideAll as jest.Mock).mockRejectedValue(
+        new Error('Hide failed')
+      );
+
+      render(<SidebarBrowser />);
+
+      const bookmarksButton = screen.getByTitle('북마크');
+      fireEvent.click(bookmarksButton);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          '[SidebarBrowser] Failed to hide BrowserView:',
+          expect.any(Error)
+        );
+      });
+
+      consoleSpy.mockRestore();
+    });
+
     it('should switch to settings view when settings button clicked', () => {
       render(<SidebarBrowser />);
 
@@ -164,6 +240,42 @@ describe('SidebarBrowser', () => {
       fireEvent.click(settingsButton);
 
       expect(mockSetBrowserViewMode).toHaveBeenCalledWith('settings');
+    });
+
+    it('should hide BrowserView before switching to settings in Electron', async () => {
+      enableElectronMode();
+      (mockElectronAPI.browserView.hideAll as jest.Mock).mockResolvedValue(undefined);
+
+      render(<SidebarBrowser />);
+
+      const settingsButton = screen.getByTitle('Browser 설정');
+      fireEvent.click(settingsButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.browserView.hideAll).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle hideAll error when switching to settings', async () => {
+      enableElectronMode();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      (mockElectronAPI.browserView.hideAll as jest.Mock).mockRejectedValue(
+        new Error('Hide failed')
+      );
+
+      render(<SidebarBrowser />);
+
+      const settingsButton = screen.getByTitle('Browser 설정');
+      fireEvent.click(settingsButton);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          '[SidebarBrowser] Failed to hide BrowserView:',
+          expect.any(Error)
+        );
+      });
+
+      consoleSpy.mockRestore();
     });
   });
 

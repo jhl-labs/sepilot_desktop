@@ -83,7 +83,7 @@ describe('SidebarEditor', () => {
     it('should render settings button', () => {
       render(<SidebarEditor />);
 
-      expect(screen.getByTitle('Editor 설정')).toBeInTheDocument();
+      expect(screen.getByTitle('설정')).toBeInTheDocument();
     });
   });
 
@@ -175,7 +175,7 @@ describe('SidebarEditor', () => {
     it('should call onSettingsClick when settings button clicked', () => {
       render(<SidebarEditor onSettingsClick={mockOnSettingsClick} />);
 
-      const settingsButton = screen.getByTitle('Editor 설정');
+      const settingsButton = screen.getByTitle('설정');
       fireEvent.click(settingsButton);
 
       expect(mockOnSettingsClick).toHaveBeenCalled();
@@ -184,17 +184,26 @@ describe('SidebarEditor', () => {
     it('should hide BrowserView before opening settings in Electron', async () => {
       enableElectronMode();
 
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
       (mockElectronAPI.browserView.hideAll as jest.Mock).mockResolvedValue(undefined);
 
       render(<SidebarEditor onSettingsClick={mockOnSettingsClick} />);
 
-      const settingsButton = screen.getByTitle('Editor 설정');
+      const settingsButton = screen.getByTitle('설정');
       fireEvent.click(settingsButton);
 
       await waitFor(() => {
         expect(mockElectronAPI.browserView.hideAll).toHaveBeenCalled();
         expect(mockOnSettingsClick).toHaveBeenCalled();
       });
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          '[SidebarEditor] BrowserView hidden before opening Settings'
+        );
+      });
+
+      consoleSpy.mockRestore();
     });
 
     it('should handle BrowserView.hideAll error gracefully', async () => {
@@ -208,7 +217,7 @@ describe('SidebarEditor', () => {
 
       render(<SidebarEditor onSettingsClick={mockOnSettingsClick} />);
 
-      const settingsButton = screen.getByTitle('Editor 설정');
+      const settingsButton = screen.getByTitle('설정');
       fireEvent.click(settingsButton);
 
       await waitFor(() => {
@@ -229,7 +238,7 @@ describe('SidebarEditor', () => {
 
       render(<SidebarEditor onSettingsClick={mockOnSettingsClick} />);
 
-      const settingsButton = screen.getByTitle('Editor 설정');
+      const settingsButton = screen.getByTitle('설정');
       fireEvent.click(settingsButton);
 
       expect(mockElectronAPI.browserView.hideAll).not.toHaveBeenCalled();
@@ -239,7 +248,7 @@ describe('SidebarEditor', () => {
     it('should not crash when onSettingsClick is not provided', () => {
       render(<SidebarEditor />);
 
-      const settingsButton = screen.getByTitle('Editor 설정');
+      const settingsButton = screen.getByTitle('설정');
 
       expect(() => {
         fireEvent.click(settingsButton);
@@ -253,7 +262,7 @@ describe('SidebarEditor', () => {
 
       render(<SidebarEditor onSettingsClick={mockOnSettingsClick} />);
 
-      const settingsButton = screen.getByTitle('Editor 설정');
+      const settingsButton = screen.getByTitle('설정');
       fireEvent.click(settingsButton);
 
       expect(consoleSpy).toHaveBeenCalledWith(
