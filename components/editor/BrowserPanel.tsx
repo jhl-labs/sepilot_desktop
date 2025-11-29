@@ -133,23 +133,22 @@ export function BrowserPanel() {
 
     if (appMode === 'browser') {
       // Browser 모드로 전환 시 BrowserView 표시
-      window.electronAPI.browserView.showActive();
+      window.electronAPI.browserView.showActive().catch((err) => {
+        console.error('[BrowserPanel] Failed to show BrowserView:', err);
+      });
     } else {
       // 다른 모드로 전환 시 BrowserView 숨김
-      window.electronAPI.browserView.hideAll();
+      window.electronAPI.browserView.hideAll().catch((err) => {
+        console.error('[BrowserPanel] Failed to hide BrowserView:', err);
+      });
     }
   }, [appMode]);
 
-  // 초기 탭 생성 및 이벤트 리스너 등록
+  // 이벤트 리스너 등록 (한 번만 실행)
   useEffect(() => {
     if (!isElectron() || !window.electronAPI) {
       return;
     }
-
-    // 첫 탭 생성
-    window.electronAPI.browserView.createTab(currentUrl).then(() => {
-      loadTabs();
-    });
 
     // 이벤트 리스너 등록
     const didNavigateHandler = window.electronAPI.browserView.onDidNavigate((data) => {
@@ -189,12 +188,37 @@ export function BrowserPanel() {
       window.electronAPI.browserView.removeListener('browser-view:loading-state', loadingStateHandler);
       window.electronAPI.browserView.removeListener('browser-view:title-updated', titleUpdatedHandler);
       window.electronAPI.browserView.removeListener('browser-view:tab-created', tabCreatedHandler);
+
+      // BrowserPanel 언마운트 시 BrowserView 숨김
+      if (window.electronAPI) {
+        window.electronAPI.browserView.hideAll();
+      }
     };
   }, []);
+
+  // 초기 탭 생성
+  useEffect(() => {
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    // Browser 모드이고 탭이 없을 때만 탭 생성
+    if (appMode === 'browser' && tabs.length === 0) {
+      // 첫 탭 생성
+      window.electronAPI.browserView.createTab(currentUrl).then(() => {
+        loadTabs();
+      });
+    }
+  }, [appMode, tabs.length, currentUrl]);
 
   // BrowserView bounds 설정 (컨테이너 크기에 맞춤)
   useEffect(() => {
     if (!isElectron() || !window.electronAPI || !containerRef.current) {
+      return;
+    }
+
+    // Browser 모드가 아니면 bounds 설정 안 함
+    if (appMode !== 'browser') {
       return;
     }
 
@@ -228,7 +252,7 @@ export function BrowserPanel() {
       resizeObserver.disconnect();
       window.removeEventListener('resize', updateBounds);
     };
-  }, []);
+  }, [appMode]);
 
   if (!isElectron()) {
     return (
