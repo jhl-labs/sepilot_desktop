@@ -18,6 +18,13 @@ import {
   handleBrowserTypeTextEnhanced,
   handleBrowserSearchElements,
 } from './browser-handlers-enhanced';
+import {
+  captureAnnotatedScreenshot,
+  clickCoordinate,
+  clickMarker,
+  analyzeWithVision,
+  getClickableCoordinate,
+} from './browser-handlers-vision';
 
 const execPromise = promisify(exec);
 
@@ -242,6 +249,17 @@ export async function executeBuiltinTool(
       return await handleBrowserTakeScreenshot(args as { fullPage?: boolean });
     case 'browser_get_selected_text':
       return await handleBrowserGetSelectedText();
+    // Vision tools
+    case 'browser_capture_annotated_screenshot':
+      return await captureAnnotatedScreenshot(args as { maxMarkers?: number; includeOverlay?: boolean } || {});
+    case 'browser_click_coordinate':
+      return await clickCoordinate((args as { x: number; y: number }).x, (args as { x: number; y: number }).y);
+    case 'browser_click_marker':
+      return await clickMarker((args as { marker_label: string }).marker_label);
+    case 'browser_get_clickable_coordinate':
+      return await getClickableCoordinate((args as { element_id: string }).element_id);
+    case 'browser_analyze_with_vision':
+      return await analyzeWithVision((args as { user_query?: string }).user_query);
     default:
       throw new Error(`Unknown builtin tool: ${toolName}`);
   }
@@ -697,6 +715,107 @@ export const browserSearchElementsTool: MCPTool = {
 };
 
 /**
+ * Browser Capture Annotated Screenshot Tool (VISION)
+ */
+export const browserCaptureAnnotatedScreenshotTool: MCPTool = {
+  name: 'browser_capture_annotated_screenshot',
+  description: 'Capture a screenshot with labeled interactive elements (Set-of-Mark style). Returns base64 image with markers (A, B, C...) overlaid on elements.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      max_markers: {
+        type: 'number',
+        description: 'Maximum number of elements to mark (default: 30)',
+      },
+      include_overlay: {
+        type: 'boolean',
+        description: 'Whether to draw visual overlays on screenshot (default: true)',
+      },
+    },
+  },
+};
+
+/**
+ * Browser Click Coordinate Tool (VISION)
+ */
+export const browserClickCoordinateTool: MCPTool = {
+  name: 'browser_click_coordinate',
+  description: 'Click at specific pixel coordinates (x, y) on the page. Useful when DOM-based clicking fails or when using vision-based detection.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      x: {
+        type: 'number',
+        description: 'X coordinate in pixels',
+      },
+      y: {
+        type: 'number',
+        description: 'Y coordinate in pixels',
+      },
+    },
+    required: ['x', 'y'],
+  },
+};
+
+/**
+ * Browser Click Marker Tool (VISION)
+ */
+export const browserClickMarkerTool: MCPTool = {
+  name: 'browser_click_marker',
+  description: 'Click an element by its marker label (A, B, C...) from annotated screenshot. Use after browser_capture_annotated_screenshot.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      marker_label: {
+        type: 'string',
+        description: 'Marker label to click (e.g., "A", "B", "C")',
+      },
+    },
+    required: ['marker_label'],
+  },
+};
+
+/**
+ * Browser Get Clickable Coordinate Tool (VISION)
+ */
+export const browserGetClickableCoordinateTool: MCPTool = {
+  name: 'browser_get_clickable_coordinate',
+  description: 'Get the exact clickable coordinates for an element by its ID. Returns center point and bounding box.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      element_id: {
+        type: 'string',
+        description: 'Element ID (from browser_get_interactive_elements)',
+      },
+    },
+    required: ['element_id'],
+  },
+};
+
+/**
+ * Browser Analyze With Vision Tool (VISION - Future)
+ */
+export const browserAnalyzeWithVisionTool: MCPTool = {
+  name: 'browser_analyze_with_vision',
+  description: 'Analyze the page using LLM vision model with annotated screenshot. Provides AI-powered understanding of page layout and suggested actions.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      user_query: {
+        type: 'string',
+        description: 'Optional: User query to guide vision analysis (e.g., "Find the login button")',
+      },
+    },
+  },
+};
+
+/**
  * Handle browser_get_interactive_elements
  */
 async function handleBrowserGetInteractiveElements(): Promise<string> {
@@ -1051,6 +1170,7 @@ export function getBuiltinTools(): MCPTool[] {
     browserClickElementTool,
     browserTypeTextTool,
     browserScrollTool,
+    browserSearchElementsTool,
     // Browser tab management
     browserCreateTabTool,
     browserSwitchTabTool,
@@ -1059,5 +1179,11 @@ export function getBuiltinTools(): MCPTool[] {
     // Browser advanced
     browserTakeScreenshotTool,
     browserGetSelectedTextTool,
+    // Browser vision (NEW)
+    browserCaptureAnnotatedScreenshotTool,
+    browserClickCoordinateTool,
+    browserClickMarkerTool,
+    browserGetClickableCoordinateTool,
+    browserAnalyzeWithVisionTool,
   ];
 }

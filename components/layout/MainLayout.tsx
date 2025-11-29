@@ -248,9 +248,9 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Load conversations on app start
   useEffect(() => {
+    // Zustand store 함수를 직접 호출 (의존성 없음)
     loadConversations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, []); // Empty deps - only run once on mount
 
   // Listen for config updates from SettingsDialog
   useEffect(() => {
