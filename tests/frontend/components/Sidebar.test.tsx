@@ -44,6 +44,15 @@ jest.mock('@/components/editor/SearchPanel', () => ({
   SearchPanel: () => <div data-testid="search-panel">Search Panel</div>,
 }));
 
+// Mock SimpleChatArea and SimpleChatInput
+jest.mock('@/components/browser/SimpleChatArea', () => ({
+  SimpleChatArea: () => <div data-testid="simple-chat-area">Simple Chat Area</div>,
+}));
+
+jest.mock('@/components/browser/SimpleChatInput', () => ({
+  SimpleChatInput: () => <div data-testid="simple-chat-input">Simple Chat Input</div>,
+}));
+
 // Mock window.confirm
 global.confirm = jest.fn(() => true);
 
@@ -237,5 +246,140 @@ describe('Sidebar', () => {
     // Should not call deleteConversation or createConversation
     expect(mockChatStore.deleteConversation).not.toHaveBeenCalled();
     expect(mockChatStore.createConversation).not.toHaveBeenCalled();
+  });
+
+  describe('Browser mode', () => {
+    it('should render sidebar in browser mode', () => {
+      const browserMockStore = { ...mockChatStore, appMode: 'browser' as const };
+      (useChatStore as unknown as jest.Mock).mockReturnValue(browserMockStore);
+
+      render(<Sidebar />);
+
+      expect(screen.getByText('Browser')).toBeInTheDocument();
+      expect(screen.getByTestId('simple-chat-area')).toBeInTheDocument();
+      expect(screen.getByTestId('simple-chat-input')).toBeInTheDocument();
+    });
+
+    it('should switch to browser mode', async () => {
+      render(<Sidebar />);
+
+      const modeButton = screen.getByText('Chat');
+      fireEvent.click(modeButton);
+
+      await waitFor(() => {
+        const browserOption = screen.getByText('Browser');
+        fireEvent.click(browserOption);
+      });
+
+      expect(mockChatStore.setAppMode).toHaveBeenCalledWith('browser');
+    });
+
+    it('should not show chat action buttons in browser mode', () => {
+      const browserMockStore = { ...mockChatStore, appMode: 'browser' as const };
+      (useChatStore as unknown as jest.Mock).mockReturnValue(browserMockStore);
+
+      render(<Sidebar />);
+
+      expect(screen.queryByRole('button', { name: /새 대화/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /모든 대화 삭제/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Editor tabs', () => {
+    beforeEach(() => {
+      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const, activeEditorTab: 'files' as const };
+      (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
+    });
+
+    it('should show files tab button in editor mode', () => {
+      render(<Sidebar />);
+
+      const filesButton = screen.getByRole('button', { name: /파일 탐색기/i });
+      expect(filesButton).toBeInTheDocument();
+    });
+
+    it('should show search tab button in editor mode', () => {
+      render(<Sidebar />);
+
+      const searchButton = screen.getByRole('button', { name: /전체 검색/i });
+      expect(searchButton).toBeInTheDocument();
+    });
+
+    it('should switch to search tab', () => {
+      render(<Sidebar />);
+
+      const searchButton = screen.getByRole('button', { name: /전체 검색/i });
+      fireEvent.click(searchButton);
+
+      expect(mockChatStore.setActiveEditorTab).toHaveBeenCalledWith('search');
+    });
+
+    it('should switch to files tab', () => {
+      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const, activeEditorTab: 'search' as const };
+      (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
+
+      render(<Sidebar />);
+
+      const filesButton = screen.getByRole('button', { name: /파일 탐색기/i });
+      fireEvent.click(filesButton);
+
+      expect(mockChatStore.setActiveEditorTab).toHaveBeenCalledWith('files');
+    });
+
+    it('should highlight active tab', () => {
+      render(<Sidebar />);
+
+      const filesButton = screen.getByRole('button', { name: /파일 탐색기/i });
+      expect(filesButton).toHaveClass('bg-accent');
+    });
+
+    it('should show search panel when search tab is active', () => {
+      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const, activeEditorTab: 'search' as const };
+      (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
+
+      render(<Sidebar />);
+
+      expect(screen.getByTestId('search-panel')).toBeInTheDocument();
+      expect(screen.queryByTestId('file-explorer')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Footer buttons', () => {
+    it('should render theme toggle', () => {
+      render(<Sidebar />);
+
+      expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
+    });
+
+    it('should call onDocumentsClick when documents button clicked', () => {
+      const onDocumentsClick = jest.fn();
+      render(<Sidebar onDocumentsClick={onDocumentsClick} />);
+
+      const documentsButton = screen.getByRole('button', { name: /문서 관리/i });
+      fireEvent.click(documentsButton);
+
+      expect(onDocumentsClick).toHaveBeenCalled();
+    });
+
+    it('should call onGalleryClick when gallery button clicked', () => {
+      const onGalleryClick = jest.fn();
+      render(<Sidebar onGalleryClick={onGalleryClick} />);
+
+      const galleryButton = screen.getByRole('button', { name: /이미지 갤러리/i });
+      fireEvent.click(galleryButton);
+
+      expect(onGalleryClick).toHaveBeenCalled();
+    });
+
+    it('should open settings dialog when settings button clicked', async () => {
+      render(<Sidebar />);
+
+      const settingsButton = screen.getByRole('button', { name: /설정/i });
+      fireEvent.click(settingsButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('settings-dialog')).toBeInTheDocument();
+      });
+    });
   });
 });
