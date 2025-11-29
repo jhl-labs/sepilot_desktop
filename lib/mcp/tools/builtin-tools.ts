@@ -865,7 +865,7 @@ async function handleBrowserNavigate(args: { url: string }): Promise<string> {
     let validUrl = args.url;
     // Add https:// if no protocol specified
     if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
-      validUrl = 'https://' + validUrl;
+      validUrl = `https://${  validUrl}`;
     }
 
     await browserView.webContents.loadURL(validUrl);

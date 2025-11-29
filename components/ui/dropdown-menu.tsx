@@ -213,7 +213,7 @@ export function DropdownMenuSubTrigger({ children, className }: { children: Reac
 export function DropdownMenuSubContent({ children, className }: { children: React.ReactNode; className?: string }) {
   const { isSubOpen } = React.useContext(DropdownMenuSubContext);
 
-  if (!isSubOpen) return null;
+  if (!isSubOpen) {return null;}
 
   return (
     <div

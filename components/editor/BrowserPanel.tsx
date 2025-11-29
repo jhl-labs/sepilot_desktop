@@ -141,7 +141,7 @@ export function BrowserPanel() {
 
   // 탭 스크롤 핸들러
   const scrollTabs = (direction: 'left' | 'right') => {
-    if (!tabsContainerRef.current) return;
+    if (!tabsContainerRef.current) {return;}
 
     const scrollAmount = 200;
     const newScrollLeft = tabsContainerRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
@@ -154,7 +154,7 @@ export function BrowserPanel() {
 
   // 스크롤 상태 업데이트
   const updateScrollState = () => {
-    if (!tabsContainerRef.current) return;
+    if (!tabsContainerRef.current) {return;}
 
     const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
     setCanScrollLeft(scrollLeft > 0);
@@ -245,7 +245,7 @@ export function BrowserPanel() {
 
   // 탭 변경 시 스크롤 상태 업데이트
   useEffect(() => {
-    if (!tabsContainerRef.current) return;
+    if (!tabsContainerRef.current) {return;}
 
     updateScrollState();
 

@@ -144,7 +144,7 @@ export function CodeEditor() {
 
   // Register inline completion provider for autocomplete
   useEffect(() => {
-    if (!editor) return;
+    if (!editor) {return;}
 
     // Get monaco instance from the editor
     const monacoInstance = (window as any).monaco;
@@ -286,7 +286,7 @@ export function CodeEditor() {
 
   // Register Monaco context menu actions
   useEffect(() => {
-    if (!editor) return;
+    if (!editor) {return;}
 
     // === Writing Tools (Notion style) ===
     const continueAction = editor.addAction({
