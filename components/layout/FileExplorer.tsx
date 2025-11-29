@@ -144,9 +144,9 @@ export function FileExplorer() {
   };
 
   return (
-    <>
+    <div className="flex h-full flex-col">
       {/* Working Directory Selection */}
-      <div className="border-b px-3 py-3">
+      <div className="shrink-0 border-b px-3 py-3">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase">
@@ -282,6 +282,6 @@ export function FileExplorer() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
