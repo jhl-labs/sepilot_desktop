@@ -39,6 +39,11 @@ jest.mock('@/components/layout/FileExplorer', () => ({
   FileExplorer: () => <div data-testid="file-explorer">File Explorer</div>,
 }));
 
+// Mock SearchPanel
+jest.mock('@/components/editor/SearchPanel', () => ({
+  SearchPanel: () => <div data-testid="search-panel">Search Panel</div>,
+}));
+
 // Mock window.confirm
 global.confirm = jest.fn(() => true);
 
@@ -56,6 +61,8 @@ describe('Sidebar', () => {
     deleteConversation: jest.fn(),
     appMode: 'chat' as const,
     setAppMode: jest.fn(),
+    activeEditorTab: 'files' as const,
+    setActiveEditorTab: jest.fn(),
   };
 
   beforeEach(() => {
