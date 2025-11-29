@@ -54,6 +54,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/turndown": "^5.0.6",
+    "@vscode/ripgrep": "^1.17.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "electron-serve": "^3.0.0",

@@ -210,14 +210,6 @@ export function SearchPanel() {
           <div className="m-2 rounded border border-destructive bg-destructive/10 p-3">
             <p className="text-sm font-medium text-destructive">검색 실패</p>
             <p className="mt-1 text-xs text-destructive/80">{error}</p>
-            {error.includes('ripgrep') && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                ripgrep 설치 방법:
-                <br />- Ubuntu/Debian: sudo apt install ripgrep
-                <br />- macOS: brew install ripgrep
-                <br />- Windows: winget install BurntSushi.ripgrep.MSVC
-              </p>
-            )}
           </div>
         )}
 

@@ -6,6 +6,7 @@ import { promisify } from 'util';
 import sharp from 'sharp';
 import TurndownService from 'turndown';
 import mammoth from 'mammoth';
+import { rgPath } from '@vscode/ripgrep';
 
 const execAsync = promisify(exec);
 
@@ -472,8 +473,10 @@ export function registerFileHandlers() {
         // 검색어와 경로 추가
         args.push('--', query, dirPath);
 
-        const command = `rg ${args.join(' ')}`;
+        // 내장된 ripgrep 바이너리 사용
+        const command = `"${rgPath}" ${args.join(' ')}`;
         console.log('[File] Running command:', command);
+        console.log('[File] Using bundled ripgrep at:', rgPath);
 
         const { stdout } = await execAsync(command, {
           maxBuffer: 10 * 1024 * 1024, // 10MB
@@ -524,11 +527,12 @@ export function registerFileHandlers() {
           },
         };
       } catch (error: any) {
-        // ripgrep이 설치되지 않았거나 매치가 없는 경우
+        // ripgrep 실행 에러 처리
         if (error.code === 'ENOENT') {
+          console.error('[File] Bundled ripgrep not found at:', rgPath);
           return {
             success: false,
-            error: 'ripgrep (rg) is not installed. Please install it to use search functionality.',
+            error: 'Internal error: bundled ripgrep not found. Please report this issue.',
           };
         }
         if (error.code === 1) {
