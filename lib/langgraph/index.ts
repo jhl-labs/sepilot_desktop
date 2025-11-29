@@ -28,6 +28,7 @@ export class GraphFactory {
   private static _deepThinkingGraph: any = null;
   private static _codingAgentGraph: any = null;
   private static _browserAgentGraph: any = null;
+  private static _editorAgentGraph: any = null;
 
   // Lazy getters with dynamic imports
   private static async getChatGraph() {
@@ -92,6 +93,14 @@ export class GraphFactory {
       this._browserAgentGraph = createBrowserAgentGraph();
     }
     return this._browserAgentGraph;
+  }
+
+  private static async getEditorAgentGraph() {
+    if (!this._editorAgentGraph) {
+      const { createEditorAgentGraph } = await import('./graphs/editor-agent');
+      this._editorAgentGraph = createEditorAgentGraph();
+    }
+    return this._editorAgentGraph;
   }
 
   /**
@@ -556,6 +565,31 @@ export class GraphFactory {
       yield {
         type: 'error',
         error: error.message || 'Graph execution failed',
+      };
+    }
+  }
+
+  /**
+   * Editor Agent 스트리밍 실행
+   */
+  static async *streamEditorAgent(
+    initialState: any,
+    toolApprovalCallback?: ToolApprovalCallback
+  ): AsyncGenerator<any> {
+    console.log('[GraphFactory] Starting Editor Agent stream');
+
+    try {
+      const graph = await this.getEditorAgentGraph();
+
+      for await (const event of graph.stream(initialState, toolApprovalCallback)) {
+        yield event;
+      }
+    } catch (error: any) {
+      console.error('[GraphFactory] Editor Agent stream error:', error);
+
+      yield {
+        type: 'error',
+        error: error.message || 'Editor Agent execution failed',
       };
     }
   }

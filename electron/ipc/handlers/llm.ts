@@ -470,7 +470,7 @@ Return ONLY the title, without quotes or additional text.`,
   });
 
   /**
-   * 에디터 자동완성 (Autocomplete 모델 사용)
+   * 에디터 자동완성 (Editor Agent 사용)
    */
   ipcMain.handle(
     'llm-editor-autocomplete',
@@ -480,24 +480,26 @@ Return ONLY the title, without quotes or additional text.`,
         code: string;
         cursorPosition: number;
         language?: string;
+        filePath?: string;
       }
     ) => {
       try {
-        logger.info('[Autocomplete] Handler called:', {
+        logger.info('[EditorAgent/Autocomplete] Handler called:', {
           codeLength: context.code.length,
           cursorPosition: context.cursorPosition,
           language: context.language,
+          filePath: context.filePath,
         });
 
         // Get autocomplete config from database
         const configStr = databaseService.getSetting('app_config');
         if (!configStr) {
-          logger.error('[Autocomplete] App config not found in database');
+          logger.error('[EditorAgent/Autocomplete] App config not found in database');
           throw new Error('App config not found');
         }
 
         const config = JSON.parse(configStr) as AppConfig;
-        logger.info('[Autocomplete] Autocomplete config:', {
+        logger.info('[EditorAgent/Autocomplete] Autocomplete config:', {
           enabled: config.llm?.autocomplete?.enabled,
           provider: config.llm?.autocomplete?.provider,
           model: config.llm?.autocomplete?.model,
@@ -505,7 +507,7 @@ Return ONLY the title, without quotes or additional text.`,
         });
 
         if (!config.llm?.autocomplete?.enabled) {
-          logger.warn('[Autocomplete] Autocomplete is not enabled in settings');
+          logger.warn('[EditorAgent/Autocomplete] Autocomplete is not enabled in settings');
           return {
             success: false,
             error: 'Autocomplete is not enabled',
@@ -515,157 +517,88 @@ Return ONLY the title, without quotes or additional text.`,
         const autocompleteConfig = config.llm.autocomplete;
         const baseConfig = config.llm;
 
-        // Create autocomplete provider
+        // Initialize LLM client with autocomplete config
         const providerConfig: LLMConfig = {
           provider: autocompleteConfig.provider || baseConfig.provider,
           baseURL: autocompleteConfig.baseURL || baseConfig.baseURL,
           apiKey: autocompleteConfig.apiKey || baseConfig.apiKey,
           model: autocompleteConfig.model,
           temperature: autocompleteConfig.temperature || 0.2,
-          maxTokens: autocompleteConfig.maxTokens || 500, // Increased from 100 to 500 to allow for input tokens
+          maxTokens: autocompleteConfig.maxTokens || 500,
         };
 
-        logger.info('[Autocomplete] Provider config:', {
+        logger.info('[EditorAgent/Autocomplete] Provider config:', {
           provider: providerConfig.provider,
           model: providerConfig.model,
           temperature: providerConfig.temperature,
           maxTokens: providerConfig.maxTokens,
         });
 
-        // Initialize temporary client for autocomplete
-        const { LLMClient } = await import('../../../lib/llm/client');
-        const autocompleteClient = new LLMClient(providerConfig);
-        const provider = autocompleteClient.getProvider();
+        // Initialize LLM client
+        const { initializeLLMClient } = await import('../../../lib/llm/client');
+        initializeLLMClient(providerConfig);
 
-        // Extract relevant context (not entire file)
-        const lines = context.code.split('\n');
-        const beforeCursor = context.code.substring(0, context.cursorPosition);
-        const afterCursor = context.code.substring(context.cursorPosition);
+        // Use Editor Agent for autocomplete
+        const { GraphFactory } = await import('../../../lib/langgraph');
 
-        // Get line number at cursor
-        const linesBeforeCursor = beforeCursor.split('\n');
-        const currentLineNumber = linesBeforeCursor.length - 1;
-        const currentLine = linesBeforeCursor[currentLineNumber];
-
-        // Extract imports (first 20 lines typically contain imports)
-        const imports = lines.slice(0, Math.min(20, lines.length))
-          .filter(line =>
-            line.trim().startsWith('import ') ||
-            line.trim().startsWith('from ') ||
-            line.trim().startsWith('using ') ||
-            line.trim().startsWith('#include')
-          )
-          .join('\n');
-
-        // Get surrounding context (20 lines before, 5 lines after)
-        const CONTEXT_BEFORE = 20;
-        const CONTEXT_AFTER = 5;
-        const startLine = Math.max(0, currentLineNumber - CONTEXT_BEFORE);
-        const endLine = Math.min(lines.length, currentLineNumber + CONTEXT_AFTER + 1);
-
-        const contextBefore = lines.slice(startLine, currentLineNumber).join('\n');
-        const contextAfter = lines.slice(currentLineNumber + 1, endLine).join('\n');
-
-        // Create clear and direct prompt
-        const systemPrompt = `You are a code/text completion assistant. Complete the text from the cursor position. Return ONLY the completion text without any explanations, markdown, or quotes.`;
-
-        const userPrompt = `Complete the following text from the cursor (█):
-
-${contextBefore ? `Context:\n${contextBefore}\n\n` : ''}Text to complete: ${currentLine}█
-${contextAfter ? `\nNext line: ${contextAfter.split('\n')[0]}` : ''}
-
-Your completion:`;
-
-        const messages: Message[] = [
-          {
-            id: 'system',
-            role: 'system',
-            content: systemPrompt,
-            created_at: Date.now(),
+        // Prepare initial state for Editor Agent
+        const initialState = {
+          messages: [
+            {
+              id: 'system',
+              role: 'system' as const,
+              content: `You are a code/text completion assistant. Complete the text from the cursor position. Return ONLY the completion text without explanations, markdown, or quotes.`,
+              created_at: Date.now(),
+            },
+            {
+              id: 'user',
+              role: 'user' as const,
+              content: `Complete from cursor:\n\nCode:\n${context.code.substring(Math.max(0, context.cursorPosition - 500), context.cursorPosition)}█\n\nYour completion:`,
+              created_at: Date.now(),
+            },
+          ],
+          toolResults: [],
+          editorContext: {
+            filePath: context.filePath,
+            language: context.language,
+            cursorPosition: context.cursorPosition,
+            action: 'autocomplete' as const,
           },
-          {
-            id: 'user',
-            role: 'user',
-            content: userPrompt,
-            created_at: Date.now(),
-          },
-        ];
+        };
 
-        logger.info('[Autocomplete] Prompt created:', {
-          systemPromptLength: systemPrompt.length,
-          userPromptLength: userPrompt.length,
-          currentLine,
-          contextBeforeLines: contextBefore.split('\n').length,
-          contextAfterLines: contextAfter.split('\n').length,
-          importsCount: imports.split('\n').filter(l => l.trim()).length,
-        });
-        logger.info('[Autocomplete] User prompt preview:', userPrompt.substring(0, 500));
-        logger.info('[Autocomplete] Full user prompt:', userPrompt);
-        logger.info('[Autocomplete] Calling LLM API...');
-        const response = await provider.chat(messages);
-        logger.info('[Autocomplete] LLM response received:', {
-          contentLength: response.content?.length || 0,
-          contentPreview: response.content?.substring(0, 100),
-          rawContent: response.content,
-        });
+        logger.info('[EditorAgent/Autocomplete] Calling Editor Agent');
 
-        // Parse and clean the response
-        let completion = response.content.trim();
-        logger.info('[Autocomplete] After trim:', {
-          length: completion.length,
-          preview: completion.substring(0, 100),
-        });
+        let completion = '';
+        for await (const event of GraphFactory.streamEditorAgent(initialState)) {
+          logger.info('[EditorAgent/Autocomplete] Event:', event.type);
 
-        // Remove markdown code blocks
-        const beforeMarkdown = completion;
+          if (event.type === 'message' && event.message) {
+            completion = event.message.content || '';
+            logger.info('[EditorAgent/Autocomplete] Got message:', completion.substring(0, 100));
+          }
+
+          if (event.type === 'error') {
+            throw new Error(event.error);
+          }
+        }
+
+        // Clean completion
+        completion = completion.trim();
         completion = completion.replace(/```[\w]*\n?/g, '').replace(/```$/g, '');
-        logger.info('[Autocomplete] After markdown removal:', {
-          removed: beforeMarkdown !== completion,
-          length: completion.length,
-          preview: completion.substring(0, 100),
-        });
-
-        // Remove leading/trailing quotes if present
-        const beforeQuotes = completion;
         if ((completion.startsWith('"') && completion.endsWith('"')) ||
             (completion.startsWith("'") && completion.endsWith("'"))) {
           completion = completion.slice(1, -1);
         }
-        logger.info('[Autocomplete] After quote removal:', {
-          removed: beforeQuotes !== completion,
-          length: completion.length,
-          preview: completion.substring(0, 100),
-        });
 
-        // If completion starts with the current line, remove it
-        const beforeDuplicate = completion;
-        if (currentLine && completion.startsWith(currentLine.trim())) {
-          completion = completion.substring(currentLine.trim().length).trimStart();
-        }
-        logger.info('[Autocomplete] After duplicate removal:', {
-          removed: beforeDuplicate !== completion,
-          currentLine,
-          length: completion.length,
-          preview: completion.substring(0, 100),
-        });
-
-        // Limit to first 3 lines
-        const beforeLineLimit = completion;
+        // Limit to 3 lines
         const completionLines = completion.split('\n');
         if (completionLines.length > 3) {
           completion = completionLines.slice(0, 3).join('\n');
         }
-        logger.info('[Autocomplete] After line limit:', {
-          limited: beforeLineLimit !== completion,
-          totalLines: completionLines.length,
-          length: completion.length,
-          preview: completion.substring(0, 100),
-        });
 
-        logger.info('[Autocomplete] Final completion:', {
+        logger.info('[EditorAgent/Autocomplete] Final completion:', {
           length: completion.length,
           preview: completion.substring(0, 100),
-          lineCount: completion.split('\n').length,
         });
 
         return {
@@ -689,6 +622,7 @@ Your completion:`;
 
   /**
    * 에디터 액션 (요약, 번역, 완성 등 - 기본 모델 사용)
+   * EditorAgent를 사용하여 처리
    */
   ipcMain.handle(
     'llm-editor-action',
@@ -706,13 +640,16 @@ Your completion:`;
       }
     ) => {
       try {
-        const client = getLLMClient();
+        const config = await loadConfig();
 
+        // Initialize LLM client with main config (not autocomplete)
+        const { initializeLLMClient } = await import('../../../lib/llm/client');
+        initializeLLMClient(config.llm);
+
+        const client = getLLMClient();
         if (!client.isConfigured()) {
           throw new Error('LLM client is not configured');
         }
-
-        const provider = client.getProvider();
 
         // Create prompt based on action
         let systemPrompt = '';
@@ -932,6 +869,14 @@ Rules:
             throw new Error(`Unknown action: ${params.action}`);
         }
 
+        // Determine action type for EditorAgent context
+        const codeActions = ['complete', 'fix', 'improve', 'explain'];
+        const isCodeAction = codeActions.includes(params.action);
+        const actionCategory = isCodeAction ? 'code-action' : 'writing-tool';
+
+        // Use Editor Agent
+        const { GraphFactory } = await import('../../../lib/langgraph');
+
         const messages: Message[] = [
           {
             id: 'system',
@@ -947,10 +892,29 @@ Rules:
           },
         ];
 
-        const response = await provider.chat(messages);
+        const initialState = {
+          messages,
+          toolResults: [],
+          editorContext: {
+            language: params.language,
+            selectedText: params.text,
+            action: actionCategory as 'code-action' | 'writing-tool',
+            actionType: params.action,
+          },
+        };
+
+        let result = '';
+        for await (const event of GraphFactory.streamEditorAgent(initialState)) {
+          if (event.type === 'message' && event.message) {
+            result = event.message.content || '';
+          }
+          if (event.type === 'error') {
+            throw new Error(event.error);
+          }
+        }
 
         // Parse and clean the response
-        let result = response.content.trim();
+        result = result.trim();
 
         // If expecting code only, remove markdown code blocks
         if (returnCodeOnly) {
