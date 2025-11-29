@@ -440,6 +440,32 @@ declare global {
   interface Window {
     electronAPI: ElectronAPI;
   }
+
+  // Webview element type definition for React/JSX
+  namespace JSX {
+    interface IntrinsicElements {
+      webview: React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement> & {
+          src?: string;
+          autosize?: string;
+          nodeintegration?: string;
+          nodeintegrationinsubframes?: string;
+          plugins?: string;
+          preload?: string;
+          httpreferrer?: string;
+          useragent?: string;
+          disablewebsecurity?: string;
+          partition?: string;
+          allowpopups?: string;
+          webpreferences?: string;
+          enableblinkfeatures?: string;
+          disableblinkfeatures?: string;
+          allowfullscreen?: string;
+        },
+        HTMLElement
+      >;
+    }
+  }
 }
 
 // Export 타입들 (다른 파일에서 import 가능하도록)

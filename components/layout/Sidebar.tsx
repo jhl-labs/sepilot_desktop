@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Settings, Trash, FileText, Image, ChevronDown, MessageSquare, Code, Search } from 'lucide-react';
+import { Plus, Settings, Trash, FileText, Image, ChevronDown, MessageSquare, Code, Search, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useState } from 'react';
@@ -9,6 +9,7 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ChatHistory } from './ChatHistory';
 import { FileExplorer } from './FileExplorer';
 import { SearchPanel } from '@/components/editor/SearchPanel';
+import { BrowserPanel } from '@/components/editor/BrowserPanel';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -114,6 +115,15 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
             >
               <Search className="h-5 w-5" />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveEditorTab('browser')}
+              title="브라우저"
+              className={activeEditorTab === 'browser' ? 'bg-accent' : ''}
+            >
+              <Globe className="h-5 w-5" />
+            </Button>
           </div>
         )}
       </div>
@@ -124,8 +134,10 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
       ) : (
         activeEditorTab === 'files' ? (
           <FileExplorer />
-        ) : (
+        ) : activeEditorTab === 'search' ? (
           <SearchPanel />
+        ) : (
+          <BrowserPanel />
         )
       )}
 
