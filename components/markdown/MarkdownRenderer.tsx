@@ -47,22 +47,25 @@ function CustomPreComponent({ children, isStreaming, ...props }: { children: any
   if (children && typeof children === 'object' && 'props' in (children as any)) {
     const { className, children: code } = (children as any).props || {};
 
-    console.log('[MarkdownRenderer] Code block detected:', { className, hasCode: !!code });
-
     // Extract language from className
-    // markdown-to-jsx uses "language-*" format (e.g., "language-javascript" -> "javascript")
+    // className can be: "language-mermaid", "lang-mermaid", or "language-mermaid lang-mermaid"
     let language = '';
     if (className) {
-      if (className.startsWith('language-')) {
-        language = className.replace('language-', '');
-      } else if (className.startsWith('lang-')) {
-        language = className.replace('lang-', '');
+      // Split by space and find the first class that starts with "language-" or "lang-"
+      const classes = className.split(' ');
+      for (const cls of classes) {
+        if (cls.startsWith('language-')) {
+          language = cls.replace('language-', '');
+          break;
+        } else if (cls.startsWith('lang-')) {
+          language = cls.replace('lang-', '');
+          break;
+        }
       }
     }
 
     if (language) {
       const codeText = getTextContent(code);
-      console.log('[MarkdownRenderer] Language detected:', language, 'isStreaming:', isStreaming);
 
       // Handle mermaid diagrams - but not during streaming to avoid parse errors
       if (language === 'mermaid') {
