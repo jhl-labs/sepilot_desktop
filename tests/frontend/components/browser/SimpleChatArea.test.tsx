@@ -25,6 +25,13 @@ jest.mock('@/components/ui/scroll-area', () => ({
   ),
 }));
 
+// Mock MarkdownRenderer
+jest.mock('@/components/markdown/MarkdownRenderer', () => ({
+  MarkdownRenderer: ({ content }: { content: string }) => (
+    <p className="whitespace-pre-wrap break-words">{content}</p>
+  ),
+}));
+
 describe('SimpleChatArea', () => {
   const mockMessages: BrowserChatMessage[] = [
     {
