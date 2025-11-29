@@ -479,6 +479,27 @@ export function registerFileHandlers() {
         args.push('--', query, '.');
 
         console.log('[File] Using bundled ripgrep at:', rgPath);
+
+        // ripgrep 실행 파일 존재 확인
+        try {
+          await fs.access(rgPath);
+          console.log('[File] ripgrep binary exists');
+        } catch (error) {
+          console.error('[File] ripgrep binary NOT found at:', rgPath);
+          // 디렉토리 내용 확인
+          const binDir = path.dirname(rgPath);
+          try {
+            const files = await fs.readdir(binDir);
+            console.log('[File] Files in bin directory:', files);
+          } catch (e) {
+            console.error('[File] Cannot read bin directory:', binDir);
+          }
+          return {
+            success: false,
+            error: `ripgrep binary not found at: ${rgPath}`,
+          };
+        }
+
         console.log('[File] Working directory:', dirPath);
         console.log('[File] Search args:', args);
 

@@ -65,7 +65,7 @@ interface ChatStore {
   // Editor State
   openFiles: OpenFile[];
   activeFilePath: string | null;
-  activeEditorTab: 'files' | 'search'; // Files or Search tab in Editor mode
+  activeEditorTab: 'files' | 'search' | 'browser'; // Files, Search, or Browser tab in Editor mode
 
   // New: Thinking Mode and Feature Toggles
   thinkingMode: ThinkingMode;
@@ -131,7 +131,7 @@ interface ChatStore {
 
   // Actions - App Mode
   setAppMode: (mode: AppMode) => void;
-  setActiveEditorTab: (tab: 'files' | 'search') => void;
+  setActiveEditorTab: (tab: 'files' | 'search' | 'browser') => void;
 
   // Actions - Editor
   openFile: (file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }) => void;
@@ -752,7 +752,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ appMode: mode });
   },
 
-  setActiveEditorTab: (tab: 'files' | 'search') => {
+  setActiveEditorTab: (tab: 'files' | 'search' | 'browser') => {
     set({ activeEditorTab: tab });
   },
 
