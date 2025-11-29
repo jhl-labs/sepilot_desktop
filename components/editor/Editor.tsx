@@ -152,92 +152,92 @@ export function CodeEditor() {
     let debounceTimer: NodeJS.Timeout | null = null;
     const DEBOUNCE_MS = 300;
 
+    // Create the provider object with all required methods
+    const providerObject = {
+      provideInlineCompletions: async (model: any, position: any, context: any, token: any) => {
+        // Return empty if autocomplete is not available
+        if (!window.electronAPI?.llm?.editorAutocomplete) {
+          return { items: [] };
+        }
+
+        // Debounce to avoid too many requests
+        return new Promise((resolve) => {
+          if (debounceTimer) {
+            clearTimeout(debounceTimer);
+          }
+
+          debounceTimer = setTimeout(async () => {
+            try {
+              const code = model.getValue();
+              const offset = model.getOffsetAt(position);
+              const language = model.getLanguageId();
+
+              // Get text before cursor for context
+              const textBeforeCursor = code.substring(0, offset);
+              const lines = textBeforeCursor.split('\n');
+              const currentLine = lines[lines.length - 1];
+
+              // Don't autocomplete if line is empty or just whitespace
+              if (!currentLine.trim()) {
+                resolve({ items: [] });
+                return;
+              }
+
+              console.log('Requesting autocomplete for:', { language, offset, currentLine });
+
+              const result = await window.electronAPI.llm.editorAutocomplete({
+                code,
+                cursorPosition: offset,
+                language,
+              });
+
+              if (result.success && result.data?.completion) {
+                const completion = result.data.completion.trim();
+
+                if (completion) {
+                  console.log('Autocomplete suggestion:', completion);
+
+                  resolve({
+                    items: [
+                      {
+                        insertText: completion,
+                        range: new monacoInstance.Range(
+                          position.lineNumber,
+                          position.column,
+                          position.lineNumber,
+                          position.column
+                        ),
+                        command: undefined,
+                      },
+                    ],
+                  });
+                  return;
+                }
+              }
+            } catch (error) {
+              console.error('Autocomplete error:', error);
+            }
+
+            resolve({ items: [] });
+          }, DEBOUNCE_MS);
+        });
+      },
+      freeInlineCompletions: (completions: any) => {
+        // Clean up resources if needed
+      },
+      handleItemDidShow: (completions: any, item: any) => {
+        // Optional: Called when an item is shown
+      },
+      // Add the missing disposeInlineCompletions method
+      disposeInlineCompletions: (completions: any) => {
+        // Dispose inline completions
+      },
+    };
+
     // Register provider for ALL languages (not just current file's language)
     const provider = monacoInstance.languages.registerInlineCompletionsProvider(
       '*',  // All languages
-      {
-        provideInlineCompletions: async (model: any, position: any, context: any, token: any) => {
-          // Return empty if autocomplete is not available
-          if (!window.electronAPI?.llm?.editorAutocomplete) {
-            return { items: [], dispose: () => {} };
-          }
-
-          // Debounce to avoid too many requests
-          return new Promise((resolve) => {
-            if (debounceTimer) {
-              clearTimeout(debounceTimer);
-            }
-
-            debounceTimer = setTimeout(async () => {
-              try {
-                const code = model.getValue();
-                const offset = model.getOffsetAt(position);
-                const language = model.getLanguageId();
-
-                // Get text before cursor for context
-                const textBeforeCursor = code.substring(0, offset);
-                const lines = textBeforeCursor.split('\n');
-                const currentLine = lines[lines.length - 1];
-
-                // Don't autocomplete if line is empty or just whitespace
-                if (!currentLine.trim()) {
-                  resolve({ items: [], dispose: () => {} });
-                  return;
-                }
-
-                console.log('Requesting autocomplete for:', { language, offset, currentLine });
-
-                const result = await window.electronAPI.llm.editorAutocomplete({
-                  code,
-                  cursorPosition: offset,
-                  language,
-                });
-
-                if (result.success && result.data?.completion) {
-                  const completion = result.data.completion.trim();
-
-                  if (completion) {
-                    console.log('Autocomplete suggestion:', completion);
-
-                    resolve({
-                      items: [
-                        {
-                          insertText: completion,
-                          range: new monacoInstance.Range(
-                            position.lineNumber,
-                            position.column,
-                            position.lineNumber,
-                            position.column
-                          ),
-                          command: undefined,
-                        },
-                      ],
-                      // Add dispose method for proper cleanup
-                      dispose: () => {
-                        // Clean up if needed
-                      },
-                    });
-                    return;
-                  }
-                }
-              } catch (error) {
-                console.error('Autocomplete error:', error);
-              }
-
-              resolve({ items: [], dispose: () => {} });
-            }, DEBOUNCE_MS);
-          });
-        },
-        // Properly implement freeInlineCompletions
-        freeInlineCompletions: (completions: any) => {
-          // Clean up resources if needed
-          // This is called when completions are no longer needed
-        },
-        // Add handleItemDidShow if needed
-        handleItemDidShow: (completions: any, item: any) => {
-          // Optional: Called when an item is shown to the user
-        },
-      }
+      providerObject
     );
 
     console.log('Inline completion provider registered for all languages');
