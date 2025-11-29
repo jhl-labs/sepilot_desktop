@@ -51,7 +51,7 @@ export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: Too
       const loading = new Set<string>();
 
       for (const tool of toolCalls) {
-        if (!isFileEditTool(tool.name)) continue;
+        if (!isFileEditTool(tool.name)) {continue;}
 
         loading.add(tool.id);
 
@@ -59,7 +59,7 @@ export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: Too
           const args = tool.arguments as any;
           const filePath = args.path;
 
-          if (!filePath) continue;
+          if (!filePath) {continue;}
 
           // Read existing file content (may fail if file doesn't exist)
           let oldContent = '';

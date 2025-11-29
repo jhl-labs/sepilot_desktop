@@ -310,8 +310,8 @@ async function finalSynthesisNode(state: DeepThinkingState) {
     id: 'system-final',
     role: 'system',
     content:
-      createBaseSystemMessage() +
-      `\n\n당신은 광범위한 사고 과정을 거쳤습니다.
+      `${createBaseSystemMessage() 
+      }\n\n당신은 광범위한 사고 과정을 거쳤습니다.
 이제 이 모든 심층 사고의 정점을 나타내는 최종적이고 포괄적이며 잘 구조화된 답변을 제공하세요.
 
 명확하고 통찰력 있으며 질문을 철저히 다루는 답변을 작성하세요. 반드시 한국어로 답변하세요.`,

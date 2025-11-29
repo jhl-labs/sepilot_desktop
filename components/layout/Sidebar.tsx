@@ -9,6 +9,8 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ChatHistory } from './ChatHistory';
 import { FileExplorer } from './FileExplorer';
 import { SearchPanel } from '@/components/editor/SearchPanel';
+import { SimpleChatArea } from '@/components/browser/SimpleChatArea';
+import { SimpleChatInput } from '@/components/browser/SimpleChatInput';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +38,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleDeleteAll = async () => {
-    if (conversations.length === 0) return;
+    if (conversations.length === 0) {return;}
 
     if (confirm(`모든 대화(${conversations.length}개)를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`)) {
       for (const conversation of conversations) {
@@ -131,6 +133,11 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
         ) : (
           <SearchPanel />
         )
+      ) : appMode === 'browser' ? (
+        <>
+          <SimpleChatArea />
+          <SimpleChatInput />
+        </>
       ) : null}
 
       {/* Footer */}

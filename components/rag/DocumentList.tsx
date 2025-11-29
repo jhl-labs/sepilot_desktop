@@ -82,8 +82,8 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!onDelete) return;
-    if (!confirm('이 문서를 삭제하시겠습니까?')) return;
+    if (!onDelete) {return;}
+    if (!confirm('이 문서를 삭제하시겠습니까?')) {return;}
 
     try {
       // 원본 문서 ID와 매칭되는 모든 청크 ID 찾기

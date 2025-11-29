@@ -55,7 +55,7 @@ export function ChatArea() {
     setIsDragging(false);
 
     const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return;
+    if (files.length === 0) {return;}
 
     const textContents: string[] = [];
     const imageFiles: { filename: string; mimeType: string; base64: string }[] = [];
@@ -164,7 +164,7 @@ export function ChatArea() {
 
   // Handle message regeneration
   const handleRegenerate = async (messageId: string) => {
-    if (!activeConversationId) return;
+    if (!activeConversationId) {return;}
 
     // Capture conversationId at function start to prevent race conditions
     const conversationId = activeConversationId;
@@ -178,7 +178,7 @@ export function ChatArea() {
     try {
       // 1. Find the assistant message to regenerate
       const messageIndex = messages.findIndex((m) => m.id === messageId);
-      if (messageIndex === -1 || messages[messageIndex].role !== 'assistant') return;
+      if (messageIndex === -1 || messages[messageIndex].role !== 'assistant') {return;}
 
       // 2. Delete the assistant message
       await deleteMessage(messageId);
@@ -232,7 +232,7 @@ export function ChatArea() {
         const eventHandler = window.electronAPI.langgraph.onStreamEvent((event: any) => {
           try {
             // Guard: Check if event exists
-            if (!event) return;
+            if (!event) {return;}
 
             // Filter events by conversationId
             if (event.conversationId && event.conversationId !== conversationId) {
@@ -266,7 +266,7 @@ export function ChatArea() {
                     if (msg.content) {
                       // Truncate long thinking content
                       const thinkingContent = msg.content.length > 300
-                        ? msg.content.substring(0, 300) + '...'
+                        ? `${msg.content.substring(0, 300)  }...`
                         : msg.content;
                       displayContent += `💭 ${thinkingContent}\n\n`;
                     }
@@ -319,7 +319,7 @@ export function ChatArea() {
                       let errorMsg = linesToShow.join('\n');
 
                       if (errorMsg.length > 800) {
-                        errorMsg = errorMsg.substring(0, 800) + '\n... (truncated)';
+                        errorMsg = `${errorMsg.substring(0, 800)  }\n... (truncated)`;
                       }
 
                       const indentedError = errorMsg.split('\n')
@@ -337,7 +337,7 @@ export function ChatArea() {
                           summary = `Modified ${toolArgs.path}`;
                           if (msg.content.includes('lines changed')) {
                             const match = msg.content.match(/(\d+)\s+lines?\s+changed/);
-                            if (match) summary = `${match[1]} lines changed`;
+                            if (match) {summary = `${match[1]} lines changed`;}
                           }
                         } else {
                           summary = msg.content.split('\n')[0].substring(0, 60);
@@ -353,7 +353,7 @@ export function ChatArea() {
                         const lines = msg.content.split('\n').slice(0, 5);
                         let output = lines.join('\n');
                         if (output.length > 200) {
-                          output = output.substring(0, 200) + '...';
+                          output = `${output.substring(0, 200)  }...`;
                         }
                         if (output.trim()) {
                           summary = output;

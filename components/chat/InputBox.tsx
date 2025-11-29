@@ -444,7 +444,7 @@ export function InputBox() {
   // Handle clipboard paste
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData?.items;
-    if (!items) return;
+    if (!items) {return;}
 
     const imageFiles: File[] = [];
 
@@ -459,7 +459,7 @@ export function InputBox() {
       }
     }
 
-    if (imageFiles.length === 0) return;
+    if (imageFiles.length === 0) {return;}
 
     // 이미지가 있으면 텍스트 붙여넣기 방지
     e.preventDefault();
@@ -517,7 +517,7 @@ export function InputBox() {
     setIsDragging(false);
 
     const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return;
+    if (files.length === 0) {return;}
 
     const textContents: string[] = [];
 
@@ -614,7 +614,7 @@ export function InputBox() {
     // Variables for streaming animation
     let accumulatedContent = '';
     let accumulatedMessage: Partial<Message> = {};
-    let pendingUpdate = false;
+    const pendingUpdate = false;
     let rafId: number | null = null;
 
     try {
@@ -880,7 +880,7 @@ export function InputBox() {
                         if (msg.content) {
                           // Truncate long thinking content
                           const thinkingContent = msg.content.length > 300
-                            ? msg.content.substring(0, 300) + '...'
+                            ? `${msg.content.substring(0, 300)  }...`
                             : msg.content;
                           displayContent += `💭 ${thinkingContent}\n\n`;
                         }
@@ -933,7 +933,7 @@ export function InputBox() {
                           let errorMsg = linesToShow.join('\n');
 
                           if (errorMsg.length > 800) {
-                            errorMsg = errorMsg.substring(0, 800) + '\n... (truncated)';
+                            errorMsg = `${errorMsg.substring(0, 800)  }\n... (truncated)`;
                           }
 
                           const indentedError = errorMsg.split('\n')
@@ -951,7 +951,7 @@ export function InputBox() {
                               summary = `Modified ${toolArgs.path}`;
                               if (msg.content.includes('lines changed')) {
                                 const match = msg.content.match(/(\d+)\s+lines?\s+changed/);
-                                if (match) summary = `${match[1]} lines changed`;
+                                if (match) {summary = `${match[1]} lines changed`;}
                               }
                             } else {
                               summary = msg.content.split('\n')[0].substring(0, 60);
@@ -967,7 +967,7 @@ export function InputBox() {
                             const lines = msg.content.split('\n').slice(0, 5);
                             let output = lines.join('\n');
                             if (output.length > 200) {
-                              output = output.substring(0, 200) + '...';
+                              output = `${output.substring(0, 200)  }...`;
                             }
                             if (output.trim()) {
                               summary = output;
@@ -1259,7 +1259,7 @@ export function InputBox() {
 
   // Handle tool approval
   const handleToolApprove = useCallback(async (toolCalls: ToolCall[]) => {
-    if (!pendingToolApproval) return;
+    if (!pendingToolApproval) {return;}
 
     console.log('[InputBox] Approving tools:', toolCalls.map(tc => tc.name));
 
@@ -1279,7 +1279,7 @@ export function InputBox() {
 
   // Handle tool rejection
   const handleToolReject = useCallback(async () => {
-    if (!pendingToolApproval) return;
+    if (!pendingToolApproval) {return;}
 
     console.log('[InputBox] Rejecting tools');
 
@@ -1299,7 +1299,7 @@ export function InputBox() {
 
   // Handle always approve (session-wide)
   const handleToolAlwaysApprove = useCallback(async (toolCalls: ToolCall[]) => {
-    if (!pendingToolApproval) return;
+    if (!pendingToolApproval) {return;}
 
     console.log('[InputBox] Always approving tools for session');
 

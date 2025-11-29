@@ -68,6 +68,17 @@ export interface VisionModelConfig {
   enableStreaming?: boolean; // Default: false for compatibility (LiteLLM + Ollama streaming issues)
 }
 
+export interface AutocompleteConfig {
+  enabled: boolean;
+  provider: 'openai' | 'anthropic' | 'custom';
+  baseURL?: string;
+  apiKey?: string;
+  model: string;
+  maxTokens?: number;
+  temperature?: number;
+  debounceMs?: number; // Debounce time for autocomplete requests (default: 300ms)
+}
+
 export interface NetworkConfig {
   proxy?: {
     enabled: boolean;
@@ -88,6 +99,7 @@ export interface LLMConfig {
   temperature: number;
   maxTokens: number;
   vision?: VisionModelConfig; // Optional vision model configuration
+  autocomplete?: AutocompleteConfig; // Optional autocomplete model configuration
   network?: NetworkConfig; // Network settings (proxy, SSL, headers)
   customHeaders?: Record<string, string>; // Custom HTTP headers for LLM API calls only
 }

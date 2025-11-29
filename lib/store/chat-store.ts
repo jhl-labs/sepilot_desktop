@@ -81,6 +81,9 @@ interface ChatStore {
   // Image Generation Progress (per conversation)
   imageGenerationProgress: Map<string, ImageGenerationProgress>; // conversationId -> progress
 
+  // Browser Mode Chat (simple side chat)
+  browserChatMessages: Message[];
+
   // Deprecated: kept for backward compatibility
   graphType: GraphType;
   isStreaming: boolean;
@@ -129,6 +132,11 @@ interface ChatStore {
   clearImageGenerationProgress: (conversationId: string) => void;
   getImageGenerationProgress: (conversationId: string) => ImageGenerationProgress | undefined;
 
+  // Actions - Browser Chat
+  addBrowserChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => void;
+  updateBrowserChatMessage: (id: string, updates: Partial<Message>) => void;
+  clearBrowserChat: () => void;
+
   // Actions - App Mode
   setAppMode: (mode: AppMode) => void;
   setActiveEditorTab: (tab: 'files' | 'search') => void;
@@ -176,6 +184,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Image Generation Progress
   imageGenerationProgress: new Map<string, ImageGenerationProgress>(),
+
+  // Browser Chat
+  browserChatMessages: [],
 
   // Deprecated
   graphType: 'chat',
@@ -752,8 +763,34 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ appMode: mode });
   },
 
-  setActiveEditorTab: (tab: 'files' | 'search' | 'browser') => {
+  setActiveEditorTab: (tab: 'files' | 'search') => {
     set({ activeEditorTab: tab });
+  },
+
+  // Browser Chat Actions
+  addBrowserChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => {
+    const newMessage: Message = {
+      ...message,
+      id: generateId(),
+      conversation_id: 'browser-chat',
+      created_at: Date.now(),
+    };
+
+    set((state) => ({
+      browserChatMessages: [...state.browserChatMessages, newMessage],
+    }));
+  },
+
+  updateBrowserChatMessage: (id: string, updates: Partial<Message>) => {
+    set((state) => ({
+      browserChatMessages: state.browserChatMessages.map((m) =>
+        m.id === id ? { ...m, ...updates } : m
+      ),
+    }));
+  },
+
+  clearBrowserChat: () => {
+    set({ browserChatMessages: [] });
   },
 
   // Editor Actions

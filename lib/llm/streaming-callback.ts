@@ -132,7 +132,7 @@ export function setStreamingCallback(
  */
 export function getStreamingCallback(conversationId?: string): StreamingCallback | null {
   const id = conversationId || currentConversationId;
-  if (!id) return null;
+  if (!id) {return null;}
   return streamingCallbacks.get(id) || null;
 }
 
@@ -191,7 +191,7 @@ export function emitImageProgress(
   conversationId?: string
 ): boolean {
   const id = conversationId || currentConversationId;
-  if (!id) return false;
+  if (!id) {return false;}
 
   const callback = imageProgressCallbacks.get(id);
   if (callback) {
@@ -219,7 +219,7 @@ export function setAbortSignal(signal: AbortSignal, conversationId?: string): vo
  */
 export function isAborted(conversationId?: string): boolean {
   const id = conversationId || currentConversationId;
-  if (!id) return false;
+  if (!id) {return false;}
   const signal = abortSignals.get(id);
   return signal?.aborted || false;
 }

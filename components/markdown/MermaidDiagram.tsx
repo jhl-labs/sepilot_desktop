@@ -90,7 +90,7 @@ Corrected Mermaid code:`;
 
   // Try to auto-fix on error
   const attemptAutoFix = useCallback(async (brokenChart: string, errorMsg: string) => {
-    if (retryCount >= MAX_RETRY_COUNT || isFixing) return;
+    if (retryCount >= MAX_RETRY_COUNT || isFixing) {return;}
 
     setIsFixing(true);
     try {
@@ -127,7 +127,7 @@ Corrected Mermaid code:`;
     }
 
     const renderDiagram = async () => {
-      if (!containerRef.current) return;
+      if (!containerRef.current) {return;}
 
       const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
 

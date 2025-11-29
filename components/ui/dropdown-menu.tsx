@@ -76,7 +76,7 @@ export function DropdownMenuContent({ align = 'end', side = 'bottom', children, 
 
   // Close when clicking outside
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {return;}
 
     const handleClickOutside = (e: MouseEvent) => {
       if (contentRef.current && !contentRef.current.contains(e.target as Node)) {
@@ -88,7 +88,7 @@ export function DropdownMenuContent({ align = 'end', side = 'bottom', children, 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, setIsOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen) {return null;}
 
   return (
     <div
@@ -111,7 +111,7 @@ export function DropdownMenuItem({ children, onClick, className, disabled }: Dro
   const { setIsOpen } = React.useContext(DropdownMenuContext);
 
   const handleClick = () => {
-    if (disabled) return;
+    if (disabled) {return;}
     onClick?.();
     setIsOpen(false);
   };

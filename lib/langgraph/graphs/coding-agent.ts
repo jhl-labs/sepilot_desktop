@@ -165,7 +165,7 @@ function parsePlanSteps(planText: string): string[] {
  * Extract required files from user prompt
  */
 function extractRequiredFiles(prompt: string): string[] {
-  if (!prompt) return [];
+  if (!prompt) {return [];}
 
   const matches = new Set<string>();
 
@@ -205,7 +205,7 @@ function extractRequiredFiles(prompt: string): string[] {
  * Check if a changed path matches a requirement
  */
 function pathMatchesRequirement(changedPath: string, requirement: string): boolean {
-  if (!changedPath || !requirement) return false;
+  if (!changedPath || !requirement) {return false;}
 
   const changedName = path.basename(changedPath).toLowerCase();
   const reqName = path.basename(requirement).toLowerCase();
@@ -458,9 +458,9 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
   // OpenAI API may reject assistant messages with empty content
   const filteredMessages = messages.filter(m => {
     // Keep tool messages (they can have empty content if they're just function results)
-    if (m.role === 'tool') return true;
+    if (m.role === 'tool') {return true;}
     // Keep messages with tool_calls (even if content is empty)
-    if (m.tool_calls && m.tool_calls.length > 0) return true;
+    if (m.tool_calls && m.tool_calls.length > 0) {return true;}
     // Filter out messages with empty or whitespace-only content
     return m.content && m.content.trim().length > 0;
   });

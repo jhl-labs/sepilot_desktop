@@ -53,7 +53,7 @@ async function analyzeNode(state: ChatState) {
     emitStreamingChunk(chunk, state.conversationId);
   }
 
-  console.log('[Sequential] Analysis complete:', analysis.substring(0, 100) + '...');
+  console.log('[Sequential] Analysis complete:', `${analysis.substring(0, 100)  }...`);
 
   return {
     context: `# Analysis\n\n${analysis}`,
@@ -94,7 +94,7 @@ async function planNode(state: ChatState) {
     emitStreamingChunk(chunk, state.conversationId);
   }
 
-  console.log('[Sequential] Plan complete:', plan.substring(0, 100) + '...');
+  console.log('[Sequential] Plan complete:', `${plan.substring(0, 100)  }...`);
 
   return {
     context: `${state.context}\n\n# Plan\n\n${plan}`,
@@ -135,7 +135,7 @@ async function executeNode(state: ChatState) {
     emitStreamingChunk(chunk, state.conversationId);
   }
 
-  console.log('[Sequential] Execution complete:', execution.substring(0, 100) + '...');
+  console.log('[Sequential] Execution complete:', `${execution.substring(0, 100)  }...`);
 
   return {
     context: `${state.context}\n\n# Execution\n\n${execution}`,
@@ -188,7 +188,7 @@ ${state.context}
     created_at: Date.now(),
   };
 
-  console.log('[Sequential] Final answer generated:', finalAnswer.substring(0, 100) + '...');
+  console.log('[Sequential] Final answer generated:', `${finalAnswer.substring(0, 100)  }...`);
 
   return {
     messages: [assistantMessage],

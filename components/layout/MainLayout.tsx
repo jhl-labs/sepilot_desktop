@@ -92,7 +92,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!isResizing) return;
+      if (!isResizing) {return;}
 
       const delta = e.clientX - startXRef.current;
       const newWidth = Math.min(
@@ -132,7 +132,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Initialize VectorDB and Embedding from config
   const initializeFromConfig = useCallback(async (vectorDBConfig?: any, embeddingConfig?: any) => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
 
     try {
       // VectorDB 초기화
@@ -169,7 +169,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   // Auto-initialize VectorDB and Embedding on app start
   useEffect(() => {
     const autoInitialize = async () => {
-      if (typeof window === 'undefined') return;
+      if (typeof window === 'undefined') {return;}
 
       try {
         let vectorDBConfig = null;

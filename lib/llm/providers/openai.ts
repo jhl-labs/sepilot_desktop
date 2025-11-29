@@ -13,7 +13,7 @@ const log = {
     if (typeof process !== 'undefined' && process.versions?.electron) {
       // Electron Main Process
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+         
         const { logger } = require('../../../electron/services/logger');
         logger.info(...args);
       } catch {
@@ -26,7 +26,7 @@ const log = {
   warn: (...args: any[]) => {
     if (typeof process !== 'undefined' && process.versions?.electron) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+         
         const { logger } = require('../../../electron/services/logger');
         logger.warn?.(...args) || logger.info(...args);
       } catch {
@@ -39,7 +39,7 @@ const log = {
   error: (...args: any[]) => {
     if (typeof process !== 'undefined' && process.versions?.electron) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+         
         const { logger } = require('../../../electron/services/logger');
         logger.error(...args);
       } catch {
@@ -120,8 +120,8 @@ export class OpenAIProvider extends BaseLLMProvider {
           let endIndex = -1;
 
           for (let i = firstBraceIndex; i < responseText.length; i++) {
-            if (responseText[i] === '{') braceCount++;
-            if (responseText[i] === '}') braceCount--;
+            if (responseText[i] === '{') {braceCount++;}
+            if (responseText[i] === '}') {braceCount--;}
             if (braceCount === 0) {
               endIndex = i + 1;
               break;
@@ -332,7 +332,7 @@ export class OpenAIProvider extends BaseLLMProvider {
               if (toolCallsDeltas && Array.isArray(toolCallsDeltas)) {
                 for (const tcDelta of toolCallsDeltas) {
                   const index = tcDelta.index;
-                  if (index === undefined) continue;
+                  if (index === undefined) {continue;}
 
                   // Get or create tool call accumulator for this index
                   let toolCall = toolCallsAccumulator.get(index);

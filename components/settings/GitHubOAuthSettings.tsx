@@ -73,7 +73,7 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
 
   const handlePrivateKeyUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {return;}
 
     try {
       const content = await file.text();
@@ -264,8 +264,8 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
     const currentIndex = steps.indexOf(currentStep);
     const stepIndex = steps.indexOf(step);
 
-    if (stepIndex < currentIndex) return 'completed';
-    if (stepIndex === currentIndex) return 'current';
+    if (stepIndex < currentIndex) {return 'completed';}
+    if (stepIndex === currentIndex) {return 'current';}
     return 'pending';
   };
 

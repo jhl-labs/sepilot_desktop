@@ -177,7 +177,7 @@ export abstract class BaseLLMProvider {
             mimeType: image.mimeType,
             hasDataPrefix: imageUrl.startsWith('data:'),
             length: imageUrl.length,
-            preview: imageUrl.substring(0, 60) + '...'
+            preview: `${imageUrl.substring(0, 60)  }...`
           });
 
           // Skip if no valid image data
@@ -203,7 +203,7 @@ export abstract class BaseLLMProvider {
           content,
         };
 
-        console.log('[LLM] Formatted OpenAI Vision message:', JSON.stringify(formattedMsg).substring(0, 300) + '...');
+        console.log('[LLM] Formatted OpenAI Vision message:', `${JSON.stringify(formattedMsg).substring(0, 300)  }...`);
         return formattedMsg;
       }
 

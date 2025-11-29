@@ -13,7 +13,7 @@ const log = {
   info: (...args: any[]) => {
     if (typeof process !== 'undefined' && process.versions?.electron) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+         
         const { logger } = require('../../electron/services/logger');
         logger.info(...args);
       } catch {

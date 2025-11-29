@@ -106,13 +106,13 @@ export function MessageBubble({
 
       for (const toolCall of message.tool_calls || []) {
         const isFileEditTool = toolCall.name === 'file_edit' || toolCall.name === 'file_write';
-        if (!isFileEditTool) continue;
+        if (!isFileEditTool) {continue;}
 
         try {
           const args = toolCall.arguments as any;
           const filePath = args.path;
 
-          if (!filePath) continue;
+          if (!filePath) {continue;}
 
           // Read existing file content (may fail if file doesn't exist)
           let oldContent = '';

@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LLMConfig, VisionModelConfig, NetworkConfig } from '@/types';
+import { LLMConfig, VisionModelConfig, AutocompleteConfig, NetworkConfig } from '@/types';
 import { RefreshCw } from 'lucide-react';
-import { fetchAvailableModels, createDefaultVisionConfig } from './settingsUtils';
+import { fetchAvailableModels, createDefaultVisionConfig, createDefaultAutocompleteConfig } from './settingsUtils';
 
 interface LLMSettingsTabProps {
   config: LLMConfig;
@@ -27,10 +27,13 @@ export function LLMSettingsTab({
 }: LLMSettingsTabProps) {
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [visionModelOptions, setVisionModelOptions] = useState<string[]>([]);
+  const [autocompleteModelOptions, setAutocompleteModelOptions] = useState<string[]>([]);
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [isVisionModelLoading, setIsVisionModelLoading] = useState(false);
+  const [isAutocompleteModelLoading, setIsAutocompleteModelLoading] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
   const [visionModelFetchError, setVisionModelFetchError] = useState<string | null>(null);
+  const [autocompleteModelFetchError, setAutocompleteModelFetchError] = useState<string | null>(null);
   const [newHeaderKey, setNewHeaderKey] = useState('');
   const [newHeaderValue, setNewHeaderValue] = useState('');
 
@@ -39,6 +42,16 @@ export function LLMSettingsTab({
       ...prev,
       vision: {
         ...(prev.vision ?? createDefaultVisionConfig()),
+        ...partial,
+      },
+    }));
+  };
+
+  const updateAutocompleteConfig = (partial: Partial<AutocompleteConfig>) => {
+    setConfig((prev) => ({
+      ...prev,
+      autocomplete: {
+        ...(prev.autocomplete ?? createDefaultAutocompleteConfig()),
         ...partial,
       },
     }));
@@ -98,6 +111,34 @@ export function LLMSettingsTab({
     }
   };
 
+  const handleRefreshAutocompleteModels = async () => {
+    const autocompleteApiKey = config.autocomplete?.apiKey || config.apiKey;
+
+    if (!autocompleteApiKey.trim()) {
+      setAutocompleteModelFetchError('API 키를 먼저 입력해주세요.');
+      return;
+    }
+
+    setIsAutocompleteModelLoading(true);
+    setAutocompleteModelFetchError(null);
+
+    try {
+      const models = await fetchAvailableModels({
+        provider: config.autocomplete?.provider || config.provider,
+        baseURL: config.autocomplete?.baseURL || config.baseURL,
+        apiKey: autocompleteApiKey,
+        customHeaders: config.customHeaders,
+        networkConfig,
+      });
+      setAutocompleteModelOptions(models);
+    } catch (error: any) {
+      setAutocompleteModelFetchError(error.message || 'Autocomplete 모델 정보를 불러오지 못했습니다.');
+      setAutocompleteModelOptions([]);
+    } finally {
+      setIsAutocompleteModelLoading(false);
+    }
+  };
+
   const baseModelSelectValue =
     modelOptions.includes(config.model) && config.model ? config.model : '__custom__';
   const showCustomModelInput = baseModelSelectValue === '__custom__';
@@ -107,6 +148,12 @@ export function LLMSettingsTab({
       : '__vision_custom__';
   const showCustomVisionModelInput =
     !config.vision?.model || visionModelSelectValue === '__vision_custom__';
+  const autocompleteModelSelectValue =
+    config.autocomplete?.model && autocompleteModelOptions.includes(config.autocomplete.model)
+      ? config.autocomplete.model
+      : '__autocomplete_custom__';
+  const showCustomAutocompleteModelInput =
+    !config.autocomplete?.model || autocompleteModelSelectValue === '__autocomplete_custom__';
 
   return (
     <div className="space-y-4">

@@ -15,25 +15,25 @@ export function BrowserPanel() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleNavigate = () => {
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     window.electronAPI.browserView.loadURL(url);
   };
 
   const handleBack = () => {
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     window.electronAPI.browserView.goBack();
   };
 
   const handleForward = () => {
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     window.electronAPI.browserView.goForward();
   };
 
   const handleReload = () => {
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     window.electronAPI.browserView.reload();
   };
@@ -50,7 +50,7 @@ export function BrowserPanel() {
 
   // BrowserView 생성 및 초기 설정
   useEffect(() => {
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     // BrowserView 생성
     window.electronAPI.browserView.create().then(() => {
@@ -68,8 +68,8 @@ export function BrowserPanel() {
 
     const loadingStateHandler = window.electronAPI.browserView.onLoadingState((data) => {
       setIsLoading(data.isLoading);
-      if (data.canGoBack !== undefined) setCanGoBack(data.canGoBack);
-      if (data.canGoForward !== undefined) setCanGoForward(data.canGoForward);
+      if (data.canGoBack !== undefined) {setCanGoBack(data.canGoBack);}
+      if (data.canGoForward !== undefined) {setCanGoForward(data.canGoForward);}
     });
 
     // Cleanup
@@ -82,10 +82,10 @@ export function BrowserPanel() {
 
   // BrowserView bounds 설정 (컨테이너 크기에 맞춤)
   useEffect(() => {
-    if (!isElectron() || !window.electronAPI || !containerRef.current) return;
+    if (!isElectron() || !window.electronAPI || !containerRef.current) {return;}
 
     const updateBounds = () => {
-      if (!containerRef.current) return;
+      if (!containerRef.current) {return;}
 
       const rect = containerRef.current.getBoundingClientRect();
 
@@ -116,7 +116,7 @@ export function BrowserPanel() {
 
   // 탭 표시/숨김 처리
   useEffect(() => {
-    if (!isElectron() || !window.electronAPI) return;
+    if (!isElectron() || !window.electronAPI) {return;}
 
     // 탭이 활성화될 때 BrowserView 표시
     window.electronAPI.browserView.setVisible(true);

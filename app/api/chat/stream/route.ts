@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       try {
         for await (const event of GraphFactory.streamWithConfig(graphConfig, messages)) {
           // Send each event as a JSON line
-          const data = JSON.stringify(event) + '\n';
+          const data = `${JSON.stringify(event)  }\n`;
           await writer.write(encoder.encode(data));
         }
       } catch (error: any) {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
           type: 'error',
           error: error.message || 'Stream failed',
         };
-        const data = JSON.stringify(errorEvent) + '\n';
+        const data = `${JSON.stringify(errorEvent)  }\n`;
         await writer.write(encoder.encode(data));
       } finally {
         await writer.close();

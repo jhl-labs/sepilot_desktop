@@ -135,7 +135,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
   };
 
   const filteredImages = images.filter((img) => {
-    if (filter === 'all') return true;
+    if (filter === 'all') {return true;}
     return img.type === filter;
   });
 

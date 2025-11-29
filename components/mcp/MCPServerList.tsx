@@ -145,7 +145,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
 
   const handleRemove = async () => {
     const name = deleteDialog.serverName;
-    if (!name) return;
+    if (!name) {return;}
 
     try {
       if (window.electronAPI) {
@@ -163,14 +163,14 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
   };
 
   const getServerIcon = (server: MCPServerConfig) => {
-    if (server.transport === 'sse') return Cloud;
+    if (server.transport === 'sse') {return Cloud;}
 
     const lowerName = server.name.toLowerCase();
-    if (lowerName.includes('filesystem') || lowerName.includes('file')) return FileText;
-    if (lowerName.includes('github')) return Globe;
-    if (lowerName.includes('git')) return Code;
-    if (lowerName.includes('database') || lowerName.includes('db') || lowerName.includes('sqlite')) return Database;
-    if (lowerName.includes('search') || lowerName.includes('brave')) return Search;
+    if (lowerName.includes('filesystem') || lowerName.includes('file')) {return FileText;}
+    if (lowerName.includes('github')) {return Globe;}
+    if (lowerName.includes('git')) {return Code;}
+    if (lowerName.includes('database') || lowerName.includes('db') || lowerName.includes('sqlite')) {return Database;}
+    if (lowerName.includes('search') || lowerName.includes('brave')) {return Search;}
     return Terminal;
   };
 

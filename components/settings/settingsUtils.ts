@@ -1,4 +1,4 @@
-import { LLMConfig, VisionModelConfig, NetworkConfig, ComfyUIConfig } from '@/types';
+import { LLMConfig, VisionModelConfig, AutocompleteConfig, NetworkConfig, ComfyUIConfig } from '@/types';
 
 export const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
@@ -24,6 +24,17 @@ export const createDefaultVisionConfig = (): VisionModelConfig => ({
   enableStreaming: false,
 });
 
+export const createDefaultAutocompleteConfig = (): AutocompleteConfig => ({
+  enabled: false,
+  provider: 'openai',
+  baseURL: DEFAULT_BASE_URL,
+  apiKey: '',
+  model: 'gpt-4o-mini',
+  maxTokens: 100,
+  temperature: 0.3,
+  debounceMs: 300,
+});
+
 export const createDefaultLLMConfig = (): LLMConfig => ({
   provider: 'openai',
   baseURL: DEFAULT_BASE_URL,
@@ -32,6 +43,7 @@ export const createDefaultLLMConfig = (): LLMConfig => ({
   temperature: 0.7,
   maxTokens: 2000,
   vision: createDefaultVisionConfig(),
+  autocomplete: createDefaultAutocompleteConfig(),
   customHeaders: {},
 });
 
@@ -56,6 +68,7 @@ export const mergeLLMConfig = (incoming?: Partial<LLMConfig>): LLMConfig => {
   }
 
   const visionBase = base.vision ?? createDefaultVisionConfig();
+  const autocompleteBase = base.autocomplete ?? createDefaultAutocompleteConfig();
 
   const mergedVision: VisionModelConfig = {
     enabled: incoming.vision?.enabled ?? visionBase.enabled,
@@ -67,10 +80,22 @@ export const mergeLLMConfig = (incoming?: Partial<LLMConfig>): LLMConfig => {
     enableStreaming: incoming.vision?.enableStreaming ?? visionBase.enableStreaming,
   };
 
+  const mergedAutocomplete: AutocompleteConfig = {
+    enabled: incoming.autocomplete?.enabled ?? autocompleteBase.enabled,
+    provider: incoming.autocomplete?.provider ?? autocompleteBase.provider,
+    baseURL: incoming.autocomplete?.baseURL ?? autocompleteBase.baseURL,
+    apiKey: incoming.autocomplete?.apiKey ?? autocompleteBase.apiKey,
+    model: incoming.autocomplete?.model ?? autocompleteBase.model,
+    maxTokens: incoming.autocomplete?.maxTokens ?? autocompleteBase.maxTokens,
+    temperature: incoming.autocomplete?.temperature ?? autocompleteBase.temperature,
+    debounceMs: incoming.autocomplete?.debounceMs ?? autocompleteBase.debounceMs,
+  };
+
   return {
     ...base,
     ...incoming,
     vision: mergedVision,
+    autocomplete: mergedAutocomplete,
     customHeaders: incoming.customHeaders ?? base.customHeaders,
   };
 };
