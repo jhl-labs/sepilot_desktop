@@ -17,7 +17,7 @@ import { isElectron } from '@/lib/platform';
 export function UpdateNotificationDialog() {
   const [open, setOpen] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateCheckResult | null>(null);
-  const [checking, setChecking] = useState(false);
+  const [_checking, setChecking] = useState(false);
 
   useEffect(() => {
     // Only run in Electron environment

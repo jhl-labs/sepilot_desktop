@@ -78,14 +78,20 @@ export function ActivityPanel({ conversationId, className }: ActivityPanelProps)
   };
 
   const formatDuration = (ms?: number) => {
-    if (!ms) return '';
-    if (ms < 1000) return `${ms}ms`;
+    if (!ms) {
+      return '';
+    }
+    if (ms < 1000) {
+      return `${ms}ms`;
+    }
     return `${(ms / 1000).toFixed(2)}s`;
   };
 
   const truncateResult = (result: string, maxLength: number = 100) => {
-    if (result.length <= maxLength) return result;
-    return result.substring(0, maxLength) + '...';
+    if (result.length <= maxLength) {
+      return result;
+    }
+    return `${result.substring(0, maxLength)}...`;
   };
 
   if (loading) {
