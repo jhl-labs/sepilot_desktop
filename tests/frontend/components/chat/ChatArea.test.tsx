@@ -92,6 +92,9 @@ describe('ChatArea', () => {
     stopStreaming: jest.fn(),
     streamingConversations: new Map(),
     workingDirectory: null,
+    personas: [],
+    activePersonaId: null,
+    alwaysApproveToolsForSession: false,
   };
 
   beforeEach(() => {

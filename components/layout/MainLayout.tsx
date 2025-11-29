@@ -21,17 +21,70 @@ const DEFAULT_SIDEBAR_WIDTH = 260;
 
 type ViewMode = 'chat' | 'documents' | 'gallery';
 
+// localStorage keys for sidebar widths
+const SIDEBAR_WIDTH_KEYS = {
+  chat: 'sepilot_sidebar_width_chat',
+  editor: 'sepilot_sidebar_width_editor',
+  browser: 'sepilot_sidebar_width_browser',
+};
+
+// Load sidebar width from localStorage
+function loadSidebarWidth(mode: 'chat' | 'editor' | 'browser'): number {
+  if (typeof window === 'undefined') return DEFAULT_SIDEBAR_WIDTH;
+
+  const key = SIDEBAR_WIDTH_KEYS[mode];
+  const saved = localStorage.getItem(key);
+
+  if (saved) {
+    const width = parseInt(saved, 10);
+    if (!isNaN(width) && width >= MIN_SIDEBAR_WIDTH && width <= MAX_SIDEBAR_WIDTH) {
+      return width;
+    }
+  }
+
+  return DEFAULT_SIDEBAR_WIDTH;
+}
+
+// Save sidebar width to localStorage
+function saveSidebarWidth(mode: 'chat' | 'editor' | 'browser', width: number) {
+  if (typeof window === 'undefined') return;
+
+  const key = SIDEBAR_WIDTH_KEYS[mode];
+  localStorage.setItem(key, width.toString());
+}
+
 export function MainLayout({ children }: MainLayoutProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
   const { createConversation, messages, activeConversationId, streamingConversations, loadConversations, setAppMode, appMode, activeEditorTab, browserViewMode } = useChatStore();
 
+  // Mode-specific sidebar widths
+  const [chatSidebarWidth, setChatSidebarWidth] = useState(() => loadSidebarWidth('chat'));
+  const [editorSidebarWidth, setEditorSidebarWidth] = useState(() => loadSidebarWidth('editor'));
+  const [browserSidebarWidth, setBrowserSidebarWidth] = useState(() => loadSidebarWidth('browser'));
+
+  // Get current sidebar width based on app mode
+  const sidebarWidth = appMode === 'chat' ? chatSidebarWidth : appMode === 'editor' ? editorSidebarWidth : browserSidebarWidth;
+
+  // Set sidebar width based on app mode
+  const setSidebarWidth = (width: number) => {
+    if (appMode === 'chat') {
+      setChatSidebarWidth(width);
+      saveSidebarWidth('chat', width);
+    } else if (appMode === 'editor') {
+      setEditorSidebarWidth(width);
+      saveSidebarWidth('editor', width);
+    } else {
+      setBrowserSidebarWidth(width);
+      saveSidebarWidth('browser', width);
+    }
+  };
+
   // Determine if current conversation is streaming
   const isStreaming = activeConversationId ? streamingConversations.has(activeConversationId) : false;
   const startXRef = useRef(0);
-  const startWidthRef = useRef(DEFAULT_SIDEBAR_WIDTH);
+  const startWidthRef = useRef(sidebarWidth);
 
   // Setup global keyboard shortcuts
   useKeyboardShortcuts([
