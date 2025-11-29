@@ -5,10 +5,11 @@ import dynamic from 'next/dynamic';
 import type monaco from 'monaco-editor';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
-import { X, Save, FileText, Loader2 } from 'lucide-react';
+import { X, Save, FileText, Loader2, Eye, Code } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { isElectron } from '@/lib/platform';
+import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 
 // Load Editor component without SSR
 // For now, we'll allow Monaco to use CDN in development
@@ -33,8 +34,12 @@ export function CodeEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const [previewMode, setPreviewMode] = useState<'editor' | 'preview' | 'split'>('editor');
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath);
+
+  // Markdown 파일인지 확인
+  const isMarkdownFile = activeFile && ['markdown', 'md', 'mdx'].includes(activeFile.language || '');
 
   const handleEditorChange = (value: string | undefined) => {
     if (activeFilePath && value !== undefined) {
@@ -646,6 +651,39 @@ export function CodeEditor() {
             {activeFile.isDirty && (
               <span className="text-xs text-orange-500">Unsaved changes</span>
             )}
+            {/* Markdown Preview Toggle Buttons */}
+            {isMarkdownFile && (
+              <div className="flex items-center gap-1 border-r pr-2 mr-2">
+                <Button
+                  onClick={() => setPreviewMode('editor')}
+                  variant={previewMode === 'editor' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7"
+                  title="Editor Only"
+                >
+                  <Code className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  onClick={() => setPreviewMode('split')}
+                  variant={previewMode === 'split' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7"
+                  title="Split View"
+                >
+                  <Eye className="h-3.5 w-3.5 mr-1" />
+                  <Code className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  onClick={() => setPreviewMode('preview')}
+                  variant={previewMode === 'preview' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7"
+                  title="Preview Only"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
             <Button
               onClick={handleSaveFile}
               variant="ghost"
@@ -660,55 +698,75 @@ export function CodeEditor() {
         </div>
       )}
 
-      {/* Monaco Editor */}
+      {/* Monaco Editor and/or Markdown Preview */}
       {activeFile && (
-        <div className="flex-1 overflow-hidden">
-          <MonacoEditor
-            height="100%"
-            language={activeFile.language || 'plaintext'}
-            value={activeFile.content}
-            onChange={handleEditorChange}
-            onMount={(editor, monaco) => {
-              setEditor(editor);
-              // Store monaco instance globally for InlineCompletionProvider
-              if (!((window as any).monaco)) {
-                (window as any).monaco = monaco;
-                console.log('Monaco instance stored globally');
-              }
-            }}
-            theme={theme === 'dark' ? 'vs-dark' : 'light'}
-            options={{
-              fontSize: 14,
-              minimap: { enabled: true },
-              scrollBeyondLastLine: false,
-              wordWrap: 'on',
-              automaticLayout: true,
-              tabSize: 2,
-              insertSpaces: true,
-              // Enable inline suggestions (like GitHub Copilot)
-              inlineSuggest: {
-                enabled: true,
-                mode: 'prefix',
-              },
-              // Quick suggestions configuration
-              quickSuggestions: {
-                other: true,
-                comments: false,
-                strings: false,
-              },
-              // Suggest configuration
-              suggest: {
-                preview: true,
-                showInlineDetails: true,
-              },
-              // Accept suggestion on commit character
-              acceptSuggestionOnCommitCharacter: true,
-              // Accept suggestion on enter
-              acceptSuggestionOnEnter: 'on',
-              // Show suggestion delay
-              quickSuggestionsDelay: 100,
-            }}
-          />
+        <div className="flex-1 overflow-hidden flex">
+          {/* Monaco Editor */}
+          {(previewMode === 'editor' || previewMode === 'split') && (
+            <div className={cn(
+              "overflow-hidden",
+              previewMode === 'split' ? 'flex-1' : 'w-full'
+            )}>
+              <MonacoEditor
+                height="100%"
+                language={activeFile.language || 'plaintext'}
+                value={activeFile.content}
+                onChange={handleEditorChange}
+                onMount={(editor, monaco) => {
+                  setEditor(editor);
+                  // Store monaco instance globally for InlineCompletionProvider
+                  if (!((window as any).monaco)) {
+                    (window as any).monaco = monaco;
+                    console.log('Monaco instance stored globally');
+                  }
+                }}
+                theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                options={{
+                  fontSize: 14,
+                  minimap: { enabled: previewMode === 'editor' },
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  automaticLayout: true,
+                  tabSize: 2,
+                  insertSpaces: true,
+                  // Enable inline suggestions (like GitHub Copilot)
+                  inlineSuggest: {
+                    enabled: true,
+                    mode: 'prefix',
+                  },
+                  // Quick suggestions configuration
+                  quickSuggestions: {
+                    other: true,
+                    comments: false,
+                    strings: false,
+                  },
+                  // Suggest configuration
+                  suggest: {
+                    preview: true,
+                    showInlineDetails: true,
+                  },
+                  // Accept suggestion on commit character
+                  acceptSuggestionOnCommitCharacter: true,
+                  // Accept suggestion on enter
+                  acceptSuggestionOnEnter: 'on',
+                  // Show suggestion delay
+                  quickSuggestionsDelay: 100,
+                }}
+              />
+            </div>
+          )}
+
+          {/* Markdown Preview */}
+          {isMarkdownFile && (previewMode === 'preview' || previewMode === 'split') && (
+            <div className={cn(
+              "overflow-auto border-l",
+              previewMode === 'split' ? 'flex-1' : 'w-full'
+            )}>
+              <div className="p-6">
+                <MarkdownRenderer content={activeFile.content} />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
