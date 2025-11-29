@@ -18,6 +18,7 @@ import { setupComfyUIHandlers } from './handlers/comfyui';
 import { setupUpdateHandlers } from './handlers/update';
 import { setupQuickInputHandlers } from './handlers/quick-input';
 import { setupBrowserViewHandlers } from './handlers/browser-view';
+import { setupBrowserControlHandlers } from './handlers/browser-control';
 import { logger } from '../services/logger';
 
 /**
@@ -41,6 +42,7 @@ export function setupIpcHandlers() {
   setupUpdateHandlers();
   setupQuickInputHandlers();
   setupBrowserViewHandlers();
+  setupBrowserControlHandlers();
 
   logger.info('IPC handlers setup complete');
 }

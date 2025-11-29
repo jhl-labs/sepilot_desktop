@@ -1,6 +1,7 @@
 import { ipcMain, BrowserWindow, BrowserView } from 'electron';
 import { logger } from '../../services/logger';
 import { randomUUID } from 'crypto';
+import { setActiveBrowserView } from './browser-control';
 
 interface BrowserTab {
   id: string;
@@ -65,6 +66,7 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
 
     mainWindow.addBrowserView(newView);
     activeTabId = newTabId;
+    setActiveBrowserView(newView); // For browser control
 
     // Load popup URL in new tab
     newView.webContents.loadURL(url).catch((error) => {
@@ -184,6 +186,7 @@ export function setupBrowserViewHandlers() {
       if (!activeTabId) {
         activeTabId = tabId;
         mainWindow.addBrowserView(view);
+        setActiveBrowserView(view); // For browser control
       }
 
       // Load URL
@@ -227,6 +230,7 @@ export function setupBrowserViewHandlers() {
       // Add new active view
       mainWindow.addBrowserView(tab.view);
       activeTabId = tabId;
+      setActiveBrowserView(tab.view); // For browser control
 
       logger.info(`Switched to tab: ${tabId}`);
       return {
@@ -269,6 +273,9 @@ export function setupBrowserViewHandlers() {
           const nextTab = remainingTabs[0];
           mainWindow.addBrowserView(nextTab.view);
           activeTabId = nextTab.id;
+          setActiveBrowserView(nextTab.view); // For browser control
+        } else {
+          setActiveBrowserView(null); // No tabs left
         }
       }
 

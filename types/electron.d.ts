@@ -467,6 +467,43 @@ interface BrowserViewAPI {
   removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
 }
 
+// Browser Control (AI Agent가 사용)
+interface InteractiveElement {
+  id: string;
+  tag: string;
+  type: string | null;
+  text: string;
+  placeholder: string | null;
+  value: string | null;
+  href: string | null;
+  role: string | null;
+  ariaLabel: string | null;
+  position: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+interface PageContent {
+  title: string;
+  url: string;
+  text: string;
+  html: string;
+}
+
+interface BrowserControlAPI {
+  getInteractiveElements: () => Promise<IPCResponse<{ elements: InteractiveElement[] }>>;
+  getPageContent: () => Promise<IPCResponse<PageContent>>;
+  captureScreenshot: () => Promise<IPCResponse<{ image: string }>>;
+  clickElement: (elementId: string) => Promise<IPCResponse>;
+  typeText: (elementId: string, text: string) => Promise<IPCResponse>;
+  scroll: (direction: 'up' | 'down', amount?: number) => Promise<IPCResponse>;
+  waitForElement: (selector: string, timeout?: number) => Promise<IPCResponse<{ found: boolean }>>;
+  executeScript: (script: string) => Promise<IPCResponse>;
+}
+
 interface ElectronAPI {
   platform: string;
   chat: ChatAPI;
@@ -486,6 +523,7 @@ interface ElectronAPI {
   update: UpdateAPI;
   quickInput: QuickInputAPI;
   browserView: BrowserViewAPI;
+  browserControl: BrowserControlAPI;
   on: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => void;
 }

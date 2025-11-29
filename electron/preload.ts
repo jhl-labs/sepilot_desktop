@@ -366,6 +366,18 @@ const electronAPI = {
       ipcRenderer.removeListener(event, handler);
     },
   },
+
+  // Browser Control operations (AI Agent 제어)
+  browserControl: {
+    getInteractiveElements: () => ipcRenderer.invoke('browser-control:get-interactive-elements'),
+    getPageContent: () => ipcRenderer.invoke('browser-control:get-page-content'),
+    captureScreenshot: () => ipcRenderer.invoke('browser-control:capture-screenshot'),
+    clickElement: (elementId: string) => ipcRenderer.invoke('browser-control:click-element', elementId),
+    typeText: (elementId: string, text: string) => ipcRenderer.invoke('browser-control:type-text', elementId, text),
+    scroll: (direction: 'up' | 'down', amount?: number) => ipcRenderer.invoke('browser-control:scroll', direction, amount),
+    waitForElement: (selector: string, timeout?: number) => ipcRenderer.invoke('browser-control:wait-for-element', selector, timeout),
+    executeScript: (script: string) => ipcRenderer.invoke('browser-control:execute-script', script),
+  },
 };
 
 // Context Bridge를 통해 안전하게 노출

@@ -155,8 +155,11 @@ export function CodeEditor() {
     // Create the provider object with all required methods
     const providerObject = {
       provideInlineCompletions: async (model: any, position: any, context: any, token: any) => {
+        console.log('[Autocomplete] provideInlineCompletions called');
+
         // Return empty if autocomplete is not available
         if (!window.electronAPI?.llm?.editorAutocomplete) {
+          console.warn('[Autocomplete] electronAPI.llm.editorAutocomplete not available');
           return { items: [] };
         }
 
@@ -177,13 +180,22 @@ export function CodeEditor() {
               const lines = textBeforeCursor.split('\n');
               const currentLine = lines[lines.length - 1];
 
+              console.log('[Autocomplete] Context:', {
+                language,
+                offset,
+                currentLine,
+                lineNumber: position.lineNumber,
+                column: position.column,
+              });
+
               // Don't autocomplete if line is empty or just whitespace
               if (!currentLine.trim()) {
+                console.log('[Autocomplete] Skipping empty line');
                 resolve({ items: [] });
                 return;
               }
 
-              console.log('Requesting autocomplete for:', { language, offset, currentLine });
+              console.log('[Autocomplete] Requesting autocomplete...');
 
               const result = await window.electronAPI.llm.editorAutocomplete({
                 code,

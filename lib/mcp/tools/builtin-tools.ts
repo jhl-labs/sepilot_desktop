@@ -10,6 +10,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { MCPTool } from '../types';
 import { getCurrentWorkingDirectory } from '../../llm/streaming-callback';
+import { getActiveBrowserView } from '../../../electron/ipc/handlers/browser-control';
 
 const execPromise = promisify(exec);
 
@@ -184,7 +185,7 @@ export const grepSearchTool: MCPTool = {
 };
 
 /**
- * Execute built-in file tools
+ * Execute built-in tools
  */
 export async function executeBuiltinTool(
   toolName: string,
@@ -208,6 +209,16 @@ export async function executeBuiltinTool(
         file_type?: string;
         case_sensitive?: boolean;
       });
+    case 'browser_get_interactive_elements':
+      return await handleBrowserGetInteractiveElements();
+    case 'browser_get_page_content':
+      return await handleBrowserGetPageContent();
+    case 'browser_click_element':
+      return await handleBrowserClickElement(args as { element_id: string });
+    case 'browser_type_text':
+      return await handleBrowserTypeText(args as { element_id: string; text: string });
+    case 'browser_scroll':
+      return await handleBrowserScroll(args as { direction: 'up' | 'down'; amount?: number });
     default:
       throw new Error(`Unknown builtin tool: ${toolName}`);
   }
@@ -451,6 +462,282 @@ async function handleGrepSearch(args: {
 }
 
 /**
+ * Browser Get Interactive Elements Tool
+ */
+export const browserGetInteractiveElementsTool: MCPTool = {
+  name: 'browser_get_interactive_elements',
+  description: 'Get all interactive elements (buttons, links, inputs) from the current browser page. Returns element IDs that can be clicked or filled.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+  },
+};
+
+/**
+ * Browser Get Page Content Tool
+ */
+export const browserGetPageContentTool: MCPTool = {
+  name: 'browser_get_page_content',
+  description: 'Get the text content and HTML of the current browser page. Useful for understanding what the page contains.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+  },
+};
+
+/**
+ * Browser Click Element Tool
+ */
+export const browserClickElementTool: MCPTool = {
+  name: 'browser_click_element',
+  description: 'Click an interactive element on the browser page. Use element ID from browser_get_interactive_elements.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      element_id: {
+        type: 'string',
+        description: 'ID of the element to click (from browser_get_interactive_elements)',
+      },
+    },
+    required: ['element_id'],
+  },
+};
+
+/**
+ * Browser Type Text Tool
+ */
+export const browserTypeTextTool: MCPTool = {
+  name: 'browser_type_text',
+  description: 'Type text into an input field on the browser page. Use element ID from browser_get_interactive_elements.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      element_id: {
+        type: 'string',
+        description: 'ID of the input element (from browser_get_interactive_elements)',
+      },
+      text: {
+        type: 'string',
+        description: 'Text to type into the input field',
+      },
+    },
+    required: ['element_id', 'text'],
+  },
+};
+
+/**
+ * Browser Scroll Tool
+ */
+export const browserScrollTool: MCPTool = {
+  name: 'browser_scroll',
+  description: 'Scroll the browser page up or down. Useful for viewing more content.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      direction: {
+        type: 'string',
+        enum: ['up', 'down'],
+        description: 'Direction to scroll',
+      },
+      amount: {
+        type: 'number',
+        description: 'Amount to scroll in pixels (default: 500)',
+      },
+    },
+    required: ['direction'],
+  },
+};
+
+/**
+ * Handle browser_get_interactive_elements
+ */
+async function handleBrowserGetInteractiveElements(): Promise<string> {
+  const browserView = getActiveBrowserView();
+  if (!browserView) {
+    throw new Error('No active browser tab. Please switch to Browser mode first.');
+  }
+
+  try {
+    const elements = await browserView.webContents.executeJavaScript(`
+      (function() {
+        const interactiveSelectors = [
+          'a[href]',
+          'button',
+          'input',
+          'textarea',
+          'select',
+          '[role="button"]',
+          '[role="link"]',
+          '[role="textbox"]',
+          '[onclick]',
+          '[tabindex]'
+        ];
+
+        const elements = [];
+        const selector = interactiveSelectors.join(', ');
+        const nodes = document.querySelectorAll(selector);
+
+        nodes.forEach((node, index) => {
+          const rect = node.getBoundingClientRect();
+          const isVisible = rect.width > 0 && rect.height > 0 &&
+                          window.getComputedStyle(node).visibility !== 'hidden' &&
+                          window.getComputedStyle(node).display !== 'none';
+
+          if (isVisible) {
+            if (!node.hasAttribute('data-ai-id')) {
+              node.setAttribute('data-ai-id', 'ai-element-' + index);
+            }
+
+            elements.push({
+              id: node.getAttribute('data-ai-id'),
+              tag: node.tagName.toLowerCase(),
+              type: node.type || null,
+              text: (node.textContent || '').trim().substring(0, 100),
+              placeholder: node.placeholder || null,
+              value: node.value || null,
+              href: node.href || null,
+              role: node.getAttribute('role') || null,
+              ariaLabel: node.getAttribute('aria-label') || null
+            });
+          }
+        });
+
+        return elements;
+      })();
+    `);
+
+    return JSON.stringify(elements, null, 2);
+  } catch (error: any) {
+    throw new Error(`Failed to get interactive elements: ${error.message}`);
+  }
+}
+
+/**
+ * Handle browser_get_page_content
+ */
+async function handleBrowserGetPageContent(): Promise<string> {
+  const browserView = getActiveBrowserView();
+  if (!browserView) {
+    throw new Error('No active browser tab. Please switch to Browser mode first.');
+  }
+
+  try {
+    const content = await browserView.webContents.executeJavaScript(`
+      (function() {
+        return {
+          title: document.title,
+          url: window.location.href,
+          text: document.body.innerText.substring(0, 10000) // Limit to 10KB
+        };
+      })();
+    `);
+
+    return JSON.stringify(content, null, 2);
+  } catch (error: any) {
+    throw new Error(`Failed to get page content: ${error.message}`);
+  }
+}
+
+/**
+ * Handle browser_click_element
+ */
+async function handleBrowserClickElement(args: { element_id: string }): Promise<string> {
+  const browserView = getActiveBrowserView();
+  if (!browserView) {
+    throw new Error('No active browser tab. Please switch to Browser mode first.');
+  }
+
+  try {
+    const result = await browserView.webContents.executeJavaScript(`
+      (function() {
+        const element = document.querySelector('[data-ai-id="${args.element_id}"]');
+        if (!element) {
+          return { success: false, error: 'Element not found: ${args.element_id}' };
+        }
+
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.click();
+
+        return {
+          success: true,
+          element: {
+            tag: element.tagName,
+            text: element.textContent?.substring(0, 100)
+          }
+        };
+      })();
+    `);
+
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+
+    return `Successfully clicked element: ${args.element_id} (${result.element.tag}: ${result.element.text})`;
+  } catch (error: any) {
+    throw new Error(`Failed to click element: ${error.message}`);
+  }
+}
+
+/**
+ * Handle browser_type_text
+ */
+async function handleBrowserTypeText(args: { element_id: string; text: string }): Promise<string> {
+  const browserView = getActiveBrowserView();
+  if (!browserView) {
+    throw new Error('No active browser tab. Please switch to Browser mode first.');
+  }
+
+  try {
+    await browserView.webContents.executeJavaScript(`
+      (function() {
+        const element = document.querySelector('[data-ai-id="${args.element_id}"]');
+        if (!element) {
+          throw new Error('Element not found: ${args.element_id}');
+        }
+
+        element.focus();
+        element.value = ${JSON.stringify(args.text)};
+
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+      })();
+    `);
+
+    return `Successfully typed "${args.text}" into element: ${args.element_id}`;
+  } catch (error: any) {
+    throw new Error(`Failed to type text: ${error.message}`);
+  }
+}
+
+/**
+ * Handle browser_scroll
+ */
+async function handleBrowserScroll(args: { direction: 'up' | 'down'; amount?: number }): Promise<string> {
+  const browserView = getActiveBrowserView();
+  if (!browserView) {
+    throw new Error('No active browser tab. Please switch to Browser mode first.');
+  }
+
+  try {
+    const scrollAmount = args.amount || 500;
+    const scrollY = args.direction === 'down' ? scrollAmount : -scrollAmount;
+
+    await browserView.webContents.executeJavaScript(`
+      window.scrollBy({ top: ${scrollY}, behavior: 'smooth' });
+    `);
+
+    return `Successfully scrolled ${args.direction} by ${scrollAmount}px`;
+  } catch (error: any) {
+    throw new Error(`Failed to scroll: ${error.message}`);
+  }
+}
+
+/**
  * Get all builtin tools
  */
 export function getBuiltinTools(): MCPTool[] {
@@ -461,5 +748,10 @@ export function getBuiltinTools(): MCPTool[] {
     fileListTool,
     commandExecuteTool,
     grepSearchTool,
+    browserGetInteractiveElementsTool,
+    browserGetPageContentTool,
+    browserClickElementTool,
+    browserTypeTextTool,
+    browserScrollTool,
   ];
 }
