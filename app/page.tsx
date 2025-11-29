@@ -10,9 +10,20 @@ import { EditorWithTerminal } from '@/components/editor/EditorWithTerminal';
 import { BrowserPanel } from '@/components/editor/BrowserPanel';
 import { useChatStore } from '@/lib/store/chat-store';
 import { QuickInputMessageData } from '@/types';
+import { useSessionRestore } from '@/lib/auth/use-session-restore';
 
 export default function Home() {
   const { appMode, createConversation, setActiveConversation, setAppMode, setActiveEditorTab } = useChatStore();
+
+  // 앱 시작 시 세션 자동 복원
+  const { user, isLoading: isRestoringSession } = useSessionRestore();
+
+  // 세션 복원 완료 시 로그 출력
+  useEffect(() => {
+    if (!isRestoringSession && user) {
+      console.warn('[Home] Session restored for user:', user.login);
+    }
+  }, [isRestoringSession, user]);
 
   // Quick Input에서 메시지를 받아 새 대화 생성 및 전송
   useEffect(() => {
