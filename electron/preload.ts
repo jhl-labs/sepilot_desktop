@@ -389,6 +389,34 @@ const electronAPI = {
     waitForElement: (selector: string, timeout?: number) => ipcRenderer.invoke('browser-control:wait-for-element', selector, timeout),
     executeScript: (script: string) => ipcRenderer.invoke('browser-control:execute-script', script),
   },
+
+  // Terminal operations
+  terminal: {
+    // Session management
+    createSession: (cwd?: string, cols?: number, rows?: number) =>
+      ipcRenderer.invoke('terminal:create-session', cwd, cols, rows),
+    write: (sessionId: string, data: string) =>
+      ipcRenderer.invoke('terminal:write', sessionId, data),
+    resize: (sessionId: string, cols: number, rows: number) =>
+      ipcRenderer.invoke('terminal:resize', sessionId, cols, rows),
+    killSession: (sessionId: string) =>
+      ipcRenderer.invoke('terminal:kill-session', sessionId),
+    getSessions: () => ipcRenderer.invoke('terminal:get-sessions'),
+    // Event listeners
+    onData: (callback: (data: { sessionId: string; data: string }) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('terminal:data', handler);
+      return handler;
+    },
+    onExit: (callback: (data: { sessionId: string; exitCode: number; signal?: number }) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('terminal:exit', handler);
+      return handler;
+    },
+    removeListener: (event: string, handler: any) => {
+      ipcRenderer.removeListener(event, handler);
+    },
+  },
 };
 
 // Context Bridge를 통해 안전하게 노출

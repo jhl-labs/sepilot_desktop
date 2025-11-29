@@ -517,6 +517,26 @@ interface BrowserControlAPI {
   executeScript: (script: string) => Promise<IPCResponse>;
 }
 
+// Terminal 관련 타입
+interface TerminalSession {
+  sessionId: string;
+  cwd: string;
+  shell: string;
+}
+
+interface TerminalAPI {
+  // Session management
+  createSession: (cwd?: string, cols?: number, rows?: number) => Promise<IPCResponse<TerminalSession>>;
+  write: (sessionId: string, data: string) => Promise<IPCResponse>;
+  resize: (sessionId: string, cols: number, rows: number) => Promise<IPCResponse>;
+  killSession: (sessionId: string) => Promise<IPCResponse>;
+  getSessions: () => Promise<IPCResponse<TerminalSession[]>>;
+  // Event listeners
+  onData: (callback: (data: { sessionId: string; data: string }) => void) => (...args: unknown[]) => void;
+  onExit: (callback: (data: { sessionId: string; exitCode: number; signal?: number }) => void) => (...args: unknown[]) => void;
+  removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
+}
+
 interface ElectronAPI {
   platform: string;
   chat: ChatAPI;
@@ -537,6 +557,7 @@ interface ElectronAPI {
   quickInput: QuickInputAPI;
   browserView: BrowserViewAPI;
   browserControl: BrowserControlAPI;
+  terminal: TerminalAPI;
   on: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => void;
 }
@@ -588,5 +609,7 @@ export type {
   UpdateAPI,
   UpdateCheckResult,
   ReleaseInfo,
+  TerminalAPI,
+  TerminalSession,
   ElectronAPI,
 };

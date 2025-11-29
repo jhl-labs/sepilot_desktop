@@ -19,6 +19,7 @@ import { setupUpdateHandlers } from './handlers/update';
 import { setupQuickInputHandlers } from './handlers/quick-input';
 import { setupBrowserViewHandlers } from './handlers/browser-view';
 import { setupBrowserControlHandlers } from './handlers/browser-control';
+import { setupTerminalHandlers } from './handlers/terminal';
 import { logger } from '../services/logger';
 
 /**
@@ -43,6 +44,7 @@ export function setupIpcHandlers() {
   setupQuickInputHandlers();
   setupBrowserViewHandlers();
   setupBrowserControlHandlers();
+  setupTerminalHandlers();
 
   logger.info('IPC handlers setup complete');
 }
