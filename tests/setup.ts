@@ -127,6 +127,8 @@ export const mockElectronAPI = {
     addBookmarkFolder: jest.fn(),
     deleteBookmarkFolder: jest.fn(),
     deleteBookmark: jest.fn(),
+    addBookmark: jest.fn(),
+    openBookmark: jest.fn(),
     capturePage: jest.fn(),
     getSnapshots: jest.fn(),
     deleteSnapshot: jest.fn(),
