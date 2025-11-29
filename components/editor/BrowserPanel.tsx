@@ -14,7 +14,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal, Plus, X, ChevronLeft, ChevronRight, MoreVertical, Bookmark, Save, Compass, Eye, MousePointer, Keyboard, ArrowDown, Tabs, Camera, FileText, Search } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal, Plus, X, ChevronLeft, ChevronRight, MoreVertical, Bookmark, Save, Compass, Eye, MousePointer, Keyboard, ArrowDown, Layout, Camera, FileText, Search } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
 import { useChatStore } from '@/lib/store/chat-store';
 
@@ -459,7 +459,7 @@ export function BrowserPanel() {
                   Tab Management (4)
                 </DropdownMenuLabel>
                 <DropdownMenuItem disabled>
-                  <Tabs className="mr-2 h-3 w-3" />
+                  <Layout className="mr-2 h-3 w-3" />
                   <span className="text-xs">browser_list_tabs - 탭 목록</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled>

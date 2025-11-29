@@ -142,3 +142,87 @@ export function DropdownMenuSeparator({ className }: { className?: string }) {
     />
   );
 }
+
+export function DropdownMenuLabel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div
+      className={cn(
+        'px-2 py-1.5 text-sm font-semibold',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+interface DropdownMenuSubProps {
+  children: React.ReactNode;
+}
+
+const DropdownMenuSubContext = React.createContext<{
+  isSubOpen: boolean;
+  setIsSubOpen: (open: boolean) => void;
+}>({
+  isSubOpen: false,
+  setIsSubOpen: () => {},
+});
+
+export function DropdownMenuSub({ children }: DropdownMenuSubProps) {
+  const [isSubOpen, setIsSubOpen] = React.useState(false);
+
+  return (
+    <DropdownMenuSubContext.Provider value={{ isSubOpen, setIsSubOpen }}>
+      <div className="relative">{children}</div>
+    </DropdownMenuSubContext.Provider>
+  );
+}
+
+export function DropdownMenuSubTrigger({ children, className }: { children: React.ReactNode; className?: string }) {
+  const { isSubOpen, setIsSubOpen } = React.useContext(DropdownMenuSubContext);
+
+  return (
+    <div
+      onMouseEnter={() => setIsSubOpen(true)}
+      onMouseLeave={() => setIsSubOpen(false)}
+      className={cn(
+        'relative flex select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors cursor-pointer hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
+        className
+      )}
+    >
+      {children}
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 15 15"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="ml-auto h-4 w-4"
+      >
+        <path
+          d="M6.1584 3.13508C6.35985 2.94621 6.67627 2.95642 6.86514 3.15788L10.6151 7.15788C10.7954 7.3502 10.7954 7.64949 10.6151 7.84182L6.86514 11.8418C6.67627 12.0433 6.35985 12.0535 6.1584 11.8646C5.95694 11.6757 5.94673 11.3593 6.1356 11.1579L9.565 7.49985L6.1356 3.84182C5.94673 3.64036 5.95694 3.32394 6.1584 3.13508Z"
+          fill="currentColor"
+          fillRule="evenodd"
+          clipRule="evenodd"
+        />
+      </svg>
+    </div>
+  );
+}
+
+export function DropdownMenuSubContent({ children, className }: { children: React.ReactNode; className?: string }) {
+  const { isSubOpen } = React.useContext(DropdownMenuSubContext);
+
+  if (!isSubOpen) return null;
+
+  return (
+    <div
+      className={cn(
+        'absolute left-full top-0 ml-1 z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-80',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
