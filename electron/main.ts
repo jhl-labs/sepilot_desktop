@@ -96,8 +96,6 @@ function createQuickInputWindow() {
 
   if (isDev) {
     quickInputWindow.loadURL('http://localhost:3000/quick-input');
-    // 개발 환경에서 개발자 도구 열기 (디버깅용)
-    quickInputWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     quickInputWindow.loadURL('app://./quick-input.html');
   }

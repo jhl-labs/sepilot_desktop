@@ -393,42 +393,27 @@ export function InputBox() {
 
   // Handle Quick Input message (from global shortcut)
   useEffect(() => {
-    console.log('[InputBox] Setting up quick input message listener');
-
     const handleQuickInputMessage = async (e: Event) => {
       const customEvent = e as CustomEvent<{ message: string }>;
       const message = customEvent.detail?.message;
 
-      console.log('[InputBox] Received quick input message event:', message);
-
       if (message && message.trim()) {
         // 입력창에 메시지 설정
-        console.log('[InputBox] Setting input to:', message);
         setInput(message);
 
         // 상태 업데이트 대기 후 send 버튼 클릭
         setTimeout(() => {
-          console.log('[InputBox] Attempting to click send button');
           const sendButton = document.querySelector('[data-send-button]') as HTMLButtonElement;
           if (sendButton && !sendButton.disabled) {
-            console.log('[InputBox] Send button found and enabled, clicking');
             sendButton.click();
-            console.log('[InputBox] Send button clicked successfully');
-          } else if (sendButton) {
-            console.error('[InputBox] Send button found but disabled');
-          } else {
-            console.error('[InputBox] Send button not found');
           }
         }, 200);
-      } else {
-        console.warn('[InputBox] Invalid or empty message:', message);
       }
     };
 
     window.addEventListener('sepilot:quick-input-message', handleQuickInputMessage);
 
     return () => {
-      console.log('[InputBox] Removing quick input message listener');
       window.removeEventListener('sepilot:quick-input-message', handleQuickInputMessage);
     };
   }, []);
