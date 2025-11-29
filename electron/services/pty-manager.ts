@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { randomUUID } from 'crypto';
-import { logger } from '../utils/logger';
+import { logger } from './logger';
 import { BrowserWindow } from 'electron';
 
 export interface PTYSession {

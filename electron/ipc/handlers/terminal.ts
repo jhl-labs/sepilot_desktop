@@ -6,7 +6,7 @@
 
 import { ipcMain, BrowserWindow } from 'electron';
 import { getPTYManager } from '../../services/pty-manager';
-import { logger } from '../../utils/logger';
+import { logger } from '../../services/logger';
 
 let mainWindowRef: BrowserWindow | null = null;
 

@@ -331,6 +331,7 @@ const electronAPI = {
   quickInput: {
     submit: (message: string) => ipcRenderer.invoke('quick-input-submit', message),
     close: () => ipcRenderer.invoke('quick-input-close'),
+    executeQuestion: (prompt: string) => ipcRenderer.invoke('quick-question-execute', prompt),
   },
 
   // BrowserView operations

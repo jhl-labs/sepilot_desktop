@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { AppConfig, ComfyUIConfig, LLMConfig, NetworkConfig } from '@/types';
+import { AppConfig, ComfyUIConfig, LLMConfig, NetworkConfig, QuickInputConfig } from '@/types';
 import { initializeLLMClient } from '@/lib/llm/client';
 import { VectorDBSettings } from '@/components/rag/VectorDBSettings';
 import { VectorDBConfig, EmbeddingConfig } from '@/lib/vectordb/types';
@@ -23,6 +23,7 @@ import { LLMSettingsTab } from './LLMSettingsTab';
 import { NetworkSettingsTab } from './NetworkSettingsTab';
 import { ComfyUISettingsTab } from './ComfyUISettingsTab';
 import { MCPSettingsTab } from './MCPSettingsTab';
+import { QuickInputSettingsTab } from './QuickInputSettingsTab';
 import {
   createDefaultLLMConfig,
   createDefaultNetworkConfig,
@@ -37,12 +38,18 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const createDefaultQuickInputConfig = (): QuickInputConfig => ({
+  quickInputShortcut: 'CommandOrControl+Shift+Space',
+  quickQuestions: [],
+});
+
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'llm' | 'network' | 'vectordb' | 'comfyui' | 'mcp' | 'github' | 'backup'>('llm');
+  const [activeTab, setActiveTab] = useState<'llm' | 'network' | 'vectordb' | 'comfyui' | 'mcp' | 'github' | 'backup' | 'quickinput'>('llm');
 
   const [config, setConfig] = useState<LLMConfig>(createDefaultLLMConfig());
   const [networkConfig, setNetworkConfig] = useState<NetworkConfig>(createDefaultNetworkConfig());
   const [githubConfig, setGithubConfig] = useState<GitHubOAuthConfig | null>(null);
+  const [quickInputConfig, setQuickInputConfig] = useState<QuickInputConfig>(createDefaultQuickInputConfig());
 
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -75,12 +82,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               embedding: result.data.embedding,
               comfyUI: result.data.comfyUI ? mergeComfyConfig(result.data.comfyUI) : undefined,
               github: result.data.github,
+              quickInput: result.data.quickInput ?? createDefaultQuickInputConfig(),
             };
             setAppConfigSnapshot(normalizedConfig);
             setConfig(normalizedConfig.llm);
             setNetworkConfig(normalizedConfig.network ?? createDefaultNetworkConfig());
             setComfyConfig(normalizedConfig.comfyUI ?? createDefaultComfyUIConfig());
             setGithubConfig(normalizedConfig.github ?? null);
+            setQuickInputConfig(normalizedConfig.quickInput ?? createDefaultQuickInputConfig());
 
             // VectorDB 설정 로드 (DB에서)
             if (result.data.vectorDB) {
@@ -129,6 +138,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             setComfyConfig(mergeComfyConfig(JSON.parse(savedComfyConfig)));
           } else {
             setComfyConfig(createDefaultComfyUIConfig());
+          }
+
+          const savedQuickInputConfig = localStorage.getItem('sepilot_quickinput_config');
+          if (savedQuickInputConfig) {
+            setQuickInputConfig(JSON.parse(savedQuickInputConfig));
+          } else {
+            setQuickInputConfig(createDefaultQuickInputConfig());
           }
 
           // VectorDB 설정 로드 및 초기화 (Web 환경에서만, Electron은 위에서 DB에서 로드함)
@@ -191,6 +207,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       mcp: partial.mcp ?? appConfigSnapshot?.mcp ?? [],
       comfyUI: partial.comfyUI ?? appConfigSnapshot?.comfyUI,
       github: partial.github ?? appConfigSnapshot?.github,
+      quickInput: partial.quickInput ?? appConfigSnapshot?.quickInput,
     };
 
     const result = await window.electronAPI.config.save(merged);
@@ -361,6 +378,67 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     }
   };
 
+  const handleQuickInputSave = async () => {
+    setIsSaving(true);
+    setMessage(null);
+
+    try {
+      // Validation
+      if (!quickInputConfig.quickInputShortcut.trim()) {
+        setMessage({ type: 'error', text: 'Quick Input 단축키를 입력해주세요.' });
+        setIsSaving(false);
+        return;
+      }
+
+      // Validate Quick Questions
+      for (const question of quickInputConfig.quickQuestions) {
+        if (!question.name.trim()) {
+          setMessage({ type: 'error', text: 'Quick Question의 이름을 입력해주세요.' });
+          setIsSaving(false);
+          return;
+        }
+        if (!question.shortcut.trim()) {
+          setMessage({ type: 'error', text: 'Quick Question의 단축키를 입력해주세요.' });
+          setIsSaving(false);
+          return;
+        }
+        if (!question.prompt.trim()) {
+          setMessage({ type: 'error', text: 'Quick Question의 프롬프트를 입력해주세요.' });
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      let savedConfig: AppConfig | null = null;
+      if (isElectron() && window.electronAPI) {
+        try {
+          savedConfig = await persistAppConfig({ quickInput: quickInputConfig });
+        } catch (error) {
+          console.error('Error saving QuickInput config to DB:', error);
+        }
+      }
+
+      if (!savedConfig) {
+        localStorage.setItem('sepilot_quickinput_config', JSON.stringify(quickInputConfig));
+      }
+
+      // Notify other components about config update
+      window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
+        detail: { quickInput: quickInputConfig }
+      }));
+
+      setMessage({ type: 'success', text: 'Quick Input 설정이 저장되었습니다!' });
+    } catch (error: any) {
+      console.error('Failed to save QuickInput config:', error);
+      setMessage({
+        type: 'error',
+        text: error.message || 'Quick Input 설정 저장에 실패했습니다.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleVectorDBSave = async (
     vectorDBConfig: VectorDBConfig,
     embeddingConfig: EmbeddingConfig
@@ -517,6 +595,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           >
             백업/복구
           </button>
+          <button
+            onClick={() => setActiveTab('quickinput')}
+            className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
+              activeTab === 'quickinput'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Quick Input
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -591,6 +679,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
         {activeTab === 'backup' && (
           <BackupRestoreSettings />
+        )}
+
+        {activeTab === 'quickinput' && (
+          <QuickInputSettingsTab
+            config={quickInputConfig}
+            setConfig={setQuickInputConfig}
+            onSave={handleQuickInputSave}
+            isSaving={isSaving}
+            message={message}
+          />
         )}
       </DialogContent>
     </Dialog>

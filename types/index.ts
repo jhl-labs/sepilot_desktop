@@ -180,6 +180,19 @@ export interface GitHubOAuthConfig {
   selectedRepo?: string; // Selected repository for sync (owner/repo format)
 }
 
+export interface QuickQuestion {
+  id: string;
+  name: string; // 사용자 친화적인 이름
+  shortcut: string; // 예: "CommandOrControl+Shift+1"
+  prompt: string; // 질문 템플릿, {{clipboard}} 플레이스홀더 사용 가능
+  enabled: boolean;
+}
+
+export interface QuickInputConfig {
+  quickInputShortcut: string; // 기본값: "CommandOrControl+Shift+Space"
+  quickQuestions: QuickQuestion[]; // 최대 5개
+}
+
 export interface AppConfig {
   llm: LLMConfig;
   network?: NetworkConfig;
@@ -188,6 +201,7 @@ export interface AppConfig {
   mcp: MCPServerConfig[];
   comfyUI?: ComfyUIConfig;
   github?: GitHubOAuthConfig;
+  quickInput?: QuickInputConfig;
 }
 
 /**
