@@ -506,7 +506,7 @@ Return ONLY the title, without quotes or additional text.`,
           baseURL: autocompleteConfig.baseURL || baseConfig.baseURL,
           apiKey: autocompleteConfig.apiKey || baseConfig.apiKey,
           model: autocompleteConfig.model,
-          temperature: autocompleteConfig.temperature || 0.3,
+          temperature: autocompleteConfig.temperature || 0.2,
           maxTokens: autocompleteConfig.maxTokens || 100,
         };
 
@@ -515,33 +515,99 @@ Return ONLY the title, without quotes or additional text.`,
         const autocompleteClient = new LLMClient(providerConfig);
         const provider = autocompleteClient.getProvider();
 
-        // Create prompt for autocomplete
+        // Extract relevant context (not entire file)
+        const lines = context.code.split('\n');
+        const beforeCursor = context.code.substring(0, context.cursorPosition);
+        const afterCursor = context.code.substring(context.cursorPosition);
+
+        // Get line number at cursor
+        const linesBeforeCursor = beforeCursor.split('\n');
+        const currentLineNumber = linesBeforeCursor.length - 1;
+        const currentLine = linesBeforeCursor[currentLineNumber];
+
+        // Extract imports (first 20 lines typically contain imports)
+        const imports = lines.slice(0, Math.min(20, lines.length))
+          .filter(line =>
+            line.trim().startsWith('import ') ||
+            line.trim().startsWith('from ') ||
+            line.trim().startsWith('using ') ||
+            line.trim().startsWith('#include')
+          )
+          .join('\n');
+
+        // Get surrounding context (20 lines before, 5 lines after)
+        const CONTEXT_BEFORE = 20;
+        const CONTEXT_AFTER = 5;
+        const startLine = Math.max(0, currentLineNumber - CONTEXT_BEFORE);
+        const endLine = Math.min(lines.length, currentLineNumber + CONTEXT_AFTER + 1);
+
+        const contextBefore = lines.slice(startLine, currentLineNumber).join('\n');
+        const contextAfter = lines.slice(currentLineNumber + 1, endLine).join('\n');
+
+        // Create FIM-style prompt
+        const systemPrompt = `You are an expert code completion AI for ${context.language || 'code'}.
+
+CRITICAL RULES:
+1. Generate ONLY the next few tokens to complete the current line or statement
+2. DO NOT repeat code that already exists
+3. DO NOT include explanations, comments (unless completing a comment), or markdown
+4. Match the existing code style, indentation, and naming conventions
+5. Consider the imports and surrounding context
+6. If the line seems complete, suggest the next logical line
+7. Keep completions short and focused (1-3 lines max)`;
+
+        const userPrompt = `${imports ? `File imports:\n${imports}\n\n` : ''}Context before cursor:
+${contextBefore}
+
+Current line (cursor at end): ${currentLine}█
+
+${contextAfter ? `Context after:\n${contextAfter}\n` : ''}
+Complete from the cursor (█). Return ONLY the completion code, no explanations.`;
+
         const messages: Message[] = [
           {
             id: 'system',
             role: 'system',
-            content: `You are a code completion assistant. Complete the code based on the context.
-Return ONLY the completion text without any explanations or markdown.`,
+            content: systemPrompt,
             created_at: Date.now(),
           },
           {
             id: 'user',
             role: 'user',
-            content: `Complete the following ${context.language || 'code'}:
-
-${context.code.substring(0, context.cursorPosition)}█${context.code.substring(context.cursorPosition)}
-
-Complete from the cursor position (█). Return only the completion text.`,
+            content: userPrompt,
             created_at: Date.now(),
           },
         ];
 
         const response = await provider.chat(messages);
 
+        // Parse and clean the response
+        let completion = response.content.trim();
+
+        // Remove markdown code blocks
+        completion = completion.replace(/```[\w]*\n?/g, '').replace(/```$/g, '');
+
+        // Remove leading/trailing quotes if present
+        if ((completion.startsWith('"') && completion.endsWith('"')) ||
+            (completion.startsWith("'") && completion.endsWith("'"))) {
+          completion = completion.slice(1, -1);
+        }
+
+        // If completion starts with the current line, remove it
+        if (currentLine && completion.startsWith(currentLine.trim())) {
+          completion = completion.substring(currentLine.trim().length).trimStart();
+        }
+
+        // Limit to first 3 lines
+        const completionLines = completion.split('\n');
+        if (completionLines.length > 3) {
+          completion = completionLines.slice(0, 3).join('\n');
+        }
+
         return {
           success: true,
           data: {
-            completion: response.content.trim(),
+            completion: completion,
           },
         };
       } catch (error: any) {
@@ -580,32 +646,86 @@ Complete from the cursor position (█). Return only the completion text.`,
         // Create prompt based on action
         let systemPrompt = '';
         let userPrompt = '';
+        let returnCodeOnly = false;
 
         switch (params.action) {
           case 'summarize':
-            systemPrompt = 'You are a helpful assistant that summarizes text concisely.';
-            userPrompt = `Summarize the following text:\n\n${params.text}`;
+            systemPrompt = `You are a text summarization expert.
+
+Rules:
+- Summarize in 2-4 concise sentences
+- Focus on the main points and key takeaways
+- Use plain text, NO markdown formatting
+- Be clear and direct`;
+
+            userPrompt = `Summarize this text:\n\n${params.text}`;
             break;
+
           case 'translate':
-            systemPrompt = 'You are a professional translator.';
-            userPrompt = `Translate the following text to ${params.targetLanguage || 'English'}:\n\n${params.text}`;
+            systemPrompt = `You are a professional translator.
+
+Rules:
+- Translate accurately while preserving meaning and tone
+- Keep technical terms and code unchanged
+- Maintain formatting (line breaks, indentation)
+- Return ONLY the translated text, no explanations`;
+
+            userPrompt = `Translate to ${params.targetLanguage || 'English'}:\n\n${params.text}`;
             break;
+
           case 'complete':
-            systemPrompt = 'You are a code completion assistant. Complete the code naturally.';
-            userPrompt = `Complete the following ${params.language || 'code'}:\n\n${params.text}`;
+            systemPrompt = `You are an expert ${params.language || 'code'} completion AI.
+
+Rules:
+- Complete the code naturally and logically
+- Match the existing code style and patterns
+- Return ONLY the completed code, NO explanations or markdown
+- Keep it concise and relevant`;
+
+            userPrompt = `Complete this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
+            returnCodeOnly = true;
             break;
+
           case 'explain':
-            systemPrompt = 'You are a helpful assistant that explains code clearly and concisely.';
-            userPrompt = `Explain what the following ${params.language || 'code'} does:\n\n${params.text}`;
+            systemPrompt = `You are a code explanation expert.
+
+Rules:
+- Explain in 3-5 clear, concise sentences
+- Focus on WHAT it does, not line-by-line details
+- Mention key patterns, algorithms, or potential issues
+- Use plain text, NO code blocks or markdown
+- Be technical but understandable`;
+
+            userPrompt = `Explain this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
             break;
+
           case 'fix':
-            systemPrompt = 'You are a helpful assistant that fixes code issues and errors.';
-            userPrompt = `Fix any issues in the following ${params.language || 'code'}:\n\n${params.text}`;
+            systemPrompt = `You are a code debugging expert for ${params.language || 'code'}.
+
+Rules:
+- Fix syntax errors, type errors, logical bugs, and potential issues
+- Return ONLY the corrected code, NO explanations
+- Preserve variable names, structure, and style
+- Add brief inline comments ONLY for significant fixes`;
+
+            userPrompt = `Fix this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
+            returnCodeOnly = true;
             break;
+
           case 'improve':
-            systemPrompt = 'You are a helpful assistant that improves code quality and readability.';
-            userPrompt = `Improve the following ${params.language || 'code'}:\n\n${params.text}`;
+            systemPrompt = `You are a code quality expert for ${params.language || 'code'}.
+
+Rules:
+- Improve readability, performance, and best practices
+- Return ONLY the improved code, NO explanations
+- Preserve functionality and behavior
+- Add brief comments for significant changes
+- Follow modern ${params.language || 'code'} conventions`;
+
+            userPrompt = `Improve this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
+            returnCodeOnly = true;
             break;
+
           default:
             throw new Error(`Unknown action: ${params.action}`);
         }
@@ -627,10 +747,25 @@ Complete from the cursor position (█). Return only the completion text.`,
 
         const response = await provider.chat(messages);
 
+        // Parse and clean the response
+        let result = response.content.trim();
+
+        // If expecting code only, remove markdown code blocks
+        if (returnCodeOnly) {
+          // Remove markdown code blocks
+          result = result.replace(/```[\w]*\n?/g, '').replace(/```$/g, '').trim();
+
+          // Remove leading/trailing quotes if present
+          if ((result.startsWith('"') && result.endsWith('"')) ||
+              (result.startsWith("'") && result.endsWith("'"))) {
+            result = result.slice(1, -1);
+          }
+        }
+
         return {
           success: true,
           data: {
-            result: response.content,
+            result: result,
           },
         };
       } catch (error: any) {
