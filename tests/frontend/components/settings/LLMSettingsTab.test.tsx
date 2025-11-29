@@ -572,6 +572,297 @@ describe('LLMSettingsTab', () => {
       expect(screen.getByPlaceholderText(/비워두면 기본 API 키 사용/i)).toBeInTheDocument();
       expect(screen.getByText(/Vision 모델에 다른 API 키를 사용하려면 입력하세요/i)).toBeInTheDocument();
     });
+
+    it('should fetch vision models when refresh button clicked', async () => {
+      const user = userEvent.setup();
+      const mockModels = ['gpt-4-vision-preview', 'gpt-4-turbo'];
+      (settingsUtils.fetchAvailableModels as jest.Mock).mockResolvedValue(mockModels);
+
+      const configWithVision = {
+        ...defaultConfig,
+        vision: {
+          enabled: true,
+          provider: 'openai',
+          baseURL: 'https://api.openai.com/v1',
+          apiKey: 'sk-vision-key',
+          model: 'gpt-4-vision-preview',
+          maxImageTokens: 4096,
+          enableStreaming: false,
+        },
+      };
+
+      render(
+        <LLMSettingsTab
+          config={configWithVision}
+          setConfig={mockSetConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+        />
+      );
+
+      // Find refresh button for vision models (should be the second refresh button)
+      const refreshButtons = screen.getAllByRole('button', { name: /모델 목록 새로고침/i });
+      expect(refreshButtons.length).toBeGreaterThan(1);
+
+      await user.click(refreshButtons[1]); // Second refresh button is for vision models
+
+      await waitFor(() => {
+        expect(settingsUtils.fetchAvailableModels).toHaveBeenCalledWith({
+          provider: 'openai',
+          baseURL: 'https://api.openai.com/v1',
+          apiKey: 'sk-vision-key',
+          customHeaders: undefined,
+          networkConfig: defaultNetworkConfig,
+        });
+      });
+    });
+
+    it('should show error when vision model fetch fails with no API key', async () => {
+      const user = userEvent.setup();
+
+      const configWithVision = {
+        ...defaultConfig,
+        apiKey: '', // No base API key
+        vision: {
+          enabled: true,
+          provider: 'openai',
+          baseURL: '',
+          apiKey: '', // No vision API key
+          model: '',
+          maxImageTokens: 4096,
+          enableStreaming: false,
+        },
+      };
+
+      render(
+        <LLMSettingsTab
+          config={configWithVision}
+          setConfig={mockSetConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+        />
+      );
+
+      const refreshButtons = screen.getAllByRole('button', { name: /모델 목록 새로고침/i });
+      await user.click(refreshButtons[1]); // Vision refresh button
+
+      await waitFor(() => {
+        expect(screen.getByText(/API 키를 먼저 입력해주세요/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should use base API key when vision API key is not provided', async () => {
+      const user = userEvent.setup();
+      const mockModels = ['gpt-4-vision-preview'];
+      (settingsUtils.fetchAvailableModels as jest.Mock).mockResolvedValue(mockModels);
+
+      const configWithVision = {
+        ...defaultConfig,
+        vision: {
+          enabled: true,
+          provider: 'openai',
+          baseURL: '',
+          apiKey: '', // No vision-specific API key
+          model: '',
+          maxImageTokens: 4096,
+          enableStreaming: false,
+        },
+      };
+
+      render(
+        <LLMSettingsTab
+          config={configWithVision}
+          setConfig={mockSetConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+        />
+      );
+
+      const refreshButtons = screen.getAllByRole('button', { name: /모델 목록 새로고침/i });
+      await user.click(refreshButtons[1]);
+
+      await waitFor(() => {
+        expect(settingsUtils.fetchAvailableModels).toHaveBeenCalledWith(
+          expect.objectContaining({
+            apiKey: 'sk-test-key-123', // Should use base API key
+          })
+        );
+      });
+    });
+  });
+
+  describe('Autocomplete 설정', () => {
+    it('should toggle autocomplete enabled', async () => {
+      const user = userEvent.setup();
+      render(
+        <LLMSettingsTab
+          config={defaultConfig}
+          setConfig={mockSetConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+        />
+      );
+
+      const autocompleteCheckbox = screen.getByRole('checkbox', { name: /자동완성 모델 사용/i });
+      await user.click(autocompleteCheckbox);
+
+      expect(mockSetConfig).toHaveBeenCalledWith(expect.any(Function));
+
+      const updaterFn = mockSetConfig.mock.calls[0][0];
+      const result = updaterFn(defaultConfig);
+      expect(result.autocomplete).toBeDefined();
+      expect(result.autocomplete?.enabled).toBe(true);
+    });
+
+    it('should show autocomplete settings when enabled', () => {
+      const configWithAutocomplete = {
+        ...defaultConfig,
+        autocomplete: {
+          enabled: true,
+          provider: 'openai',
+          baseURL: '',
+          apiKey: '',
+          model: 'gpt-3.5-turbo',
+        },
+      };
+
+      render(
+        <LLMSettingsTab
+          config={configWithAutocomplete}
+          setConfig={mockSetConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+        />
+      );
+
+      // Autocomplete-specific text
+      expect(screen.getByText(/자동완성 모델에 다른 API 키를 사용하려면 입력하세요/i)).toBeInTheDocument();
+    });
+
+    it('should fetch autocomplete models when refresh button clicked', async () => {
+      const user = userEvent.setup();
+      const mockModels = ['gpt-3.5-turbo', 'gpt-4'];
+      (settingsUtils.fetchAvailableModels as jest.Mock).mockResolvedValue(mockModels);
+
+      const configWithAutocomplete = {
+        ...defaultConfig,
+        autocomplete: {
+          enabled: true,
+          provider: 'openai',
+          baseURL: 'https://api.openai.com/v1',
+          apiKey: 'sk-autocomplete-key',
+          model: 'gpt-3.5-turbo',
+        },
+      };
+
+      render(
+        <LLMSettingsTab
+          config={configWithAutocomplete}
+          setConfig={mockSetConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+        />
+      );
+
+      const refreshButtons = screen.getAllByRole('button', { name: /모델 목록 새로고침/i });
+      // Third refresh button is for autocomplete models (base, vision, autocomplete)
+      await user.click(refreshButtons[refreshButtons.length - 1]);
+
+      await waitFor(() => {
+        expect(settingsUtils.fetchAvailableModels).toHaveBeenCalledWith({
+          provider: 'openai',
+          baseURL: 'https://api.openai.com/v1',
+          apiKey: 'sk-autocomplete-key',
+          customHeaders: undefined,
+          networkConfig: defaultNetworkConfig,
+        });
+      });
+    });
+
+    it('should show error when autocomplete model fetch fails with no API key', async () => {
+      const user = userEvent.setup();
+
+      const configWithAutocomplete = {
+        ...defaultConfig,
+        apiKey: '',
+        autocomplete: {
+          enabled: true,
+          provider: 'openai',
+          baseURL: '',
+          apiKey: '',
+          model: '',
+        },
+      };
+
+      render(
+        <LLMSettingsTab
+          config={configWithAutocomplete}
+          setConfig={mockSetConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+        />
+      );
+
+      const refreshButtons = screen.getAllByRole('button', { name: /모델 목록 새로고침/i });
+      await user.click(refreshButtons[refreshButtons.length - 1]);
+
+      await waitFor(() => {
+        expect(screen.getByText(/API 키를 먼저 입력해주세요/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should use base API key when autocomplete API key is not provided', async () => {
+      const user = userEvent.setup();
+      const mockModels = ['gpt-3.5-turbo'];
+      (settingsUtils.fetchAvailableModels as jest.Mock).mockResolvedValue(mockModels);
+
+      const configWithAutocomplete = {
+        ...defaultConfig,
+        autocomplete: {
+          enabled: true,
+          provider: 'openai',
+          baseURL: '',
+          apiKey: '',
+          model: '',
+        },
+      };
+
+      render(
+        <LLMSettingsTab
+          config={configWithAutocomplete}
+          setConfig={mockSetConfig}
+          networkConfig={defaultNetworkConfig}
+          onSave={mockOnSave}
+          isSaving={false}
+          message={null}
+        />
+      );
+
+      const refreshButtons = screen.getAllByRole('button', { name: /모델 목록 새로고침/i });
+      await user.click(refreshButtons[refreshButtons.length - 1]);
+
+      await waitFor(() => {
+        expect(settingsUtils.fetchAvailableModels).toHaveBeenCalledWith(
+          expect.objectContaining({
+            apiKey: 'sk-test-key-123',
+          })
+        );
+      });
+    });
   });
 
   describe('저장 기능', () => {

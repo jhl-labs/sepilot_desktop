@@ -24,6 +24,9 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
       javascript: true,
       images: true,
       partition: 'persist:browser',
+      // Enable more permissive settings for better compatibility
+      experimentalFeatures: true,
+      navigateOnDragDrop: false,
     },
   });
 
@@ -33,8 +36,11 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
   );
 
   // Handle new window/popup requests - open in new tab
-  view.webContents.setWindowOpenHandler(({ url }) => {
-    logger.info('[BrowserView] Window open request (opening in new tab):', url);
+  view.webContents.setWindowOpenHandler(({ url, frameName, features }) => {
+    logger.info('[BrowserView] ===== WINDOW OPEN HANDLER CALLED =====');
+    logger.info('[BrowserView] URL:', url);
+    logger.info('[BrowserView] Frame name:', frameName);
+    logger.info('[BrowserView] Features:', features);
 
     // Create new tab for popup
     const newTabId = randomUUID();
@@ -72,6 +78,11 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
     });
 
     return { action: 'deny' };
+  });
+
+  // Debug: Track navigation attempts
+  view.webContents.on('will-navigate', (event, url) => {
+    logger.info('[BrowserView] will-navigate:', url);
   });
 
   // Handle console messages for debugging
