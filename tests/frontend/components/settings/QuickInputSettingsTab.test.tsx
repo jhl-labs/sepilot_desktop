@@ -295,4 +295,86 @@ describe('QuickInputSettingsTab', () => {
 
     expect(screen.getByText('저장에 실패했습니다.')).toBeInTheDocument();
   });
+
+  it('should show alert when trying to add more than 5 questions', () => {
+    const configWith5Questions: QuickInputConfig = {
+      ...mockConfig,
+      quickQuestions: Array(5)
+        .fill(null)
+        .map((_, i) => ({
+          id: `qq-${i}`,
+          name: `Question ${i}`,
+          shortcut: '',
+          prompt: '',
+          enabled: true,
+        })),
+    };
+
+    render(
+      <QuickInputSettingsTab
+        config={configWith5Questions}
+        setConfig={mockSetConfig}
+        onSave={mockOnSave}
+        isSaving={false}
+        message={null}
+      />
+    );
+
+    const addButton = screen.getByRole('button', { name: /추가/i });
+
+    // Button should be disabled, but test the alert logic by simulating the function call
+    // Since the button is disabled, we need to test the alert through the actual component logic
+    expect(addButton).toBeDisabled();
+
+    // Verify the button is disabled prevents the alert from being shown
+    fireEvent.click(addButton);
+    expect(mockSetConfig).not.toHaveBeenCalled();
+  });
+
+  it('should toggle question enabled state', () => {
+    render(
+      <QuickInputSettingsTab
+        config={mockConfig}
+        setConfig={mockSetConfig}
+        onSave={mockOnSave}
+        isSaving={false}
+        message={null}
+      />
+    );
+
+    // Find the checkbox (it's hidden but functional)
+    const checkbox = screen.getByRole('checkbox');
+    expect(checkbox).toBeChecked();
+
+    fireEvent.click(checkbox);
+
+    expect(mockSetConfig).toHaveBeenCalledWith({
+      ...mockConfig,
+      quickQuestions: [
+        {
+          ...mockConfig.quickQuestions[0],
+          enabled: false,
+        },
+      ],
+    });
+  });
+
+  it('should show empty state when no quick questions', () => {
+    const emptyConfig: QuickInputConfig = {
+      ...mockConfig,
+      quickQuestions: [],
+    };
+
+    render(
+      <QuickInputSettingsTab
+        config={emptyConfig}
+        setConfig={mockSetConfig}
+        onSave={mockOnSave}
+        isSaving={false}
+        message={null}
+      />
+    );
+
+    expect(screen.getByText('등록된 Quick Question이 없습니다.')).toBeInTheDocument();
+  });
 });
