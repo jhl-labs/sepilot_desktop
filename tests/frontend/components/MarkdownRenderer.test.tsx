@@ -10,16 +10,19 @@ import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 // Mock CodeBlock component
 jest.mock('@/components/markdown/CodeBlock', () => ({
   CodeBlock: ({ language, code }: { language: string; code: string }) => (
-    <pre data-testid="code-block" data-language={language}>
-      <code>{code}</code>
-    </pre>
+    <div>
+      <span>{language}</span>
+      <pre data-testid="code-block" data-language={language}>
+        <code>{code}</code>
+      </pre>
+    </div>
   ),
 }));
 
 // Mock MermaidDiagram component
 jest.mock('@/components/markdown/MermaidDiagram', () => ({
   MermaidDiagram: ({ chart }: { chart: string }) => (
-    <div data-testid="mermaid-diagram">{chart}</div>
+    <div className="mermaid-diagram" data-testid="mermaid-diagram">{chart}</div>
   ),
 }));
 
@@ -97,9 +100,8 @@ describe('MarkdownRenderer', () => {
     const codeContent = ['```javascript', 'const x = 10;', '```'].join('\n');
     const { container } = render(<MarkdownRenderer content={codeContent} />);
 
-    // Check that code is rendered with javascript language class
-    const codeElement = container.querySelector('code.lang-javascript, code.language-javascript');
-    expect(codeElement).toBeInTheDocument();
+    // CodeBlock component renders with language label in header
+    expect(screen.getByText('javascript')).toBeInTheDocument();
     expect(screen.getByText('const x = 10;')).toBeInTheDocument();
   });
 
@@ -141,20 +143,20 @@ describe('MarkdownRenderer', () => {
     const mermaidContent = ['```mermaid', 'graph TD', 'A-->B', '```'].join('\n');
     const { container } = render(<MarkdownRenderer content={mermaidContent} />);
 
-    // Check that mermaid code is rendered
-    const codeElement = container.querySelector('code.lang-mermaid, code.language-mermaid');
-    expect(codeElement).toBeInTheDocument();
-    expect(screen.getByText(/graph TD/)).toBeInTheDocument();
+    // When not streaming, mermaid is rendered as MermaidDiagram component
+    // Check for the mermaid-diagram container
+    const mermaidElement = container.querySelector('.mermaid-diagram');
+    expect(mermaidElement).toBeInTheDocument();
   });
 
-  it('should render Plotly charts', () => {
-    const plotlyContent = ['```plotly', '{"data": []}', '```'].join('\n');
+  it('should render Plotly charts (non-streaming)', () => {
+    const plotlyContent = ['```plotly', '{"data": [{"x": [1, 2, 3], "y": [2, 4, 6], "type": "scatter"}]}', '```'].join('\n');
     const { container } = render(<MarkdownRenderer content={plotlyContent} />);
 
-    // Check that plotly code is rendered
-    const codeElement = container.querySelector('code.lang-plotly, code.language-plotly');
-    expect(codeElement).toBeInTheDocument();
-    expect(screen.getByText(/data/)).toBeInTheDocument();
+    // When not streaming, plotly is rendered as PlotlyChart component
+    // PlotlyChart uses dynamic import (ssr: false), so check that PlotlyChart rendered
+    // Instead of checking for Plotly internals, just verify the data is present
+    expect(screen.getByText(/"data"/i)).toBeInTheDocument();
   });
 
   it('should handle mixed content', () => {
@@ -177,9 +179,8 @@ describe('MarkdownRenderer', () => {
     expect(screen.getByText('bold')).toBeInTheDocument();
     expect(screen.getByText('italic')).toBeInTheDocument();
     expect(screen.getByText('List item 1')).toBeInTheDocument();
-    // Check code block is rendered
-    const codeElement = container.querySelector('code.lang-javascript, code.language-javascript');
-    expect(codeElement).toBeInTheDocument();
+    // Check code block is rendered as CodeBlock component
+    expect(screen.getByText('const x = 10;')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Link' })).toBeInTheDocument();
   });
 

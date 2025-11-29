@@ -96,6 +96,9 @@ interface ChatStore {
   editorChatMessages: Message[];
   editorViewMode: 'files' | 'search' | 'chat'; // files, search, or chat view in Editor sidebar
 
+  // Chat Mode View
+  chatViewMode: 'history' | 'documents' | 'chat'; // history, documents, or chat view in Chat sidebar
+
   // Deprecated: kept for backward compatibility
   graphType: GraphType;
   isStreaming: boolean;
@@ -162,6 +165,9 @@ interface ChatStore {
   clearEditorChat: () => void;
   setEditorViewMode: (mode: 'files' | 'search' | 'chat') => void;
 
+  // Actions - Chat Mode View
+  setChatViewMode: (mode: 'history' | 'documents' | 'chat') => void;
+
   // Actions - App Mode
   setAppMode: (mode: AppMode) => void;
   setActiveEditorTab: (tab: 'files' | 'search') => void;
@@ -224,6 +230,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Editor Chat
   editorChatMessages: [],
   editorViewMode: 'files',
+
+  // Chat Mode View
+  chatViewMode: 'history',
 
   // Deprecated
   graphType: 'chat',
@@ -909,6 +918,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setEditorViewMode: (mode: 'files' | 'search' | 'chat') => {
     set({ editorViewMode: mode });
+  },
+
+  // Chat Mode View Actions
+  setChatViewMode: (mode: 'history' | 'documents' | 'chat') => {
+    set({ chatViewMode: mode });
   },
 
   // Editor Actions

@@ -11,7 +11,8 @@ import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 jest.mock('@/components/markdown/CodeBlock', () => ({
   CodeBlock: ({ language, code }: { language: string; code: string }) => (
     <div data-testid="code-block" data-language={language}>
-      {code}
+      <span>{language}</span>
+      <code>{code}</code>
     </div>
   ),
 }));
@@ -105,9 +106,9 @@ describe('MarkdownRenderer', () => {
 
     const { container } = render(<MarkdownRenderer content={content} />);
 
-    const codeBlock = container.querySelector('code.lang-javascript');
-    expect(codeBlock).toBeInTheDocument();
-    expect(codeBlock).toHaveTextContent('const x = 10;');
+    // CodeBlock component renders with language label, not as code.lang-*
+    expect(screen.getByText('javascript')).toBeInTheDocument();
+    expect(screen.getByText('const x = 10;')).toBeInTheDocument();
   });
 
   it('should render mermaid code blocks with language class', () => {
@@ -115,9 +116,8 @@ describe('MarkdownRenderer', () => {
 
     const { container } = render(<MarkdownRenderer content={content} isStreaming={false} />);
 
-    const codeBlock = container.querySelector('code.lang-mermaid');
-    expect(codeBlock).toBeInTheDocument();
-    expect(codeBlock).toHaveTextContent('graph TD;');
+    // When not streaming, mermaid is rendered as MermaidDiagram component
+    expect(screen.getByTestId('mermaid-diagram')).toBeInTheDocument();
   });
 
   it('should render plotly code blocks with language class', () => {
@@ -126,8 +126,8 @@ describe('MarkdownRenderer', () => {
 
     const { container } = render(<MarkdownRenderer content={content} isStreaming={false} />);
 
-    const codeBlock = container.querySelector('code.lang-plotly');
-    expect(codeBlock).toBeInTheDocument();
+    // When not streaming, plotly is rendered as PlotlyChart component
+    expect(screen.getByTestId('plotly-chart')).toBeInTheDocument();
   });
 
   it('should render tables', () => {
@@ -241,9 +241,8 @@ const code = "test";
 
     const { container } = render(<MarkdownRenderer content={content} />);
 
-    const codeBlock = container.querySelector('code.lang-python');
-    expect(codeBlock).toBeInTheDocument();
-    expect(codeBlock).toHaveTextContent('def hello():');
+    expect(screen.getByText('python')).toBeInTheDocument();
+    expect(screen.getByText(/def hello\(\):/)).toBeInTheDocument();
   });
 
   it('should render TypeScript code blocks', () => {
@@ -251,9 +250,8 @@ const code = "test";
 
     const { container } = render(<MarkdownRenderer content={content} />);
 
-    const codeBlock = container.querySelector('code.lang-typescript');
-    expect(codeBlock).toBeInTheDocument();
-    expect(codeBlock).toHaveTextContent('const greeting: string = "Hello";');
+    expect(screen.getByText('typescript')).toBeInTheDocument();
+    expect(screen.getByText('const greeting: string = "Hello";')).toBeInTheDocument();
   });
 
   it('should render all heading levels', () => {
@@ -300,8 +298,8 @@ const code = "test";
 
       const { container } = render(<MarkdownRenderer content={content} isStreaming={true} />);
 
-      const codeBlock = container.querySelector('code.lang-javascript');
-      expect(codeBlock).toBeInTheDocument();
+      expect(screen.getByText('javascript')).toBeInTheDocument();
+      expect(screen.getByText('const x = 10;')).toBeInTheDocument();
     });
 
     it('should render code blocks with isStreaming=false', () => {
@@ -309,8 +307,8 @@ const code = "test";
 
       const { container } = render(<MarkdownRenderer content={content} isStreaming={false} />);
 
-      const codeBlock = container.querySelector('code.lang-javascript');
-      expect(codeBlock).toBeInTheDocument();
+      expect(screen.getByText('javascript')).toBeInTheDocument();
+      expect(screen.getByText('const y = 20;')).toBeInTheDocument();
     });
   });
 
@@ -327,11 +325,9 @@ def hello():
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const jsBlock = container.querySelector('code.lang-javascript');
-      const pyBlock = container.querySelector('code.lang-python');
-
-      expect(jsBlock).toBeInTheDocument();
-      expect(pyBlock).toBeInTheDocument();
+      expect(screen.getByText('javascript')).toBeInTheDocument();
+      expect(screen.getByText('python')).toBeInTheDocument();
+      expect(screen.getByText('const x = 10;')).toBeInTheDocument();
     });
 
     it('should handle code blocks with special characters', () => {
@@ -339,9 +335,8 @@ def hello():
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const codeBlock = container.querySelector('code.lang-bash');
-      expect(codeBlock).toBeInTheDocument();
-      expect(codeBlock).toHaveTextContent('echo "Hello $USER"');
+      expect(screen.getByText('bash')).toBeInTheDocument();
+      expect(screen.getByText('echo "Hello $USER"')).toBeInTheDocument();
     });
 
     it('should handle empty code blocks', () => {
@@ -349,8 +344,7 @@ def hello():
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const codeBlock = container.querySelector('code.lang-javascript');
-      expect(codeBlock).toBeInTheDocument();
+      expect(screen.getByText('javascript')).toBeInTheDocument();
     });
   });
 
@@ -470,9 +464,8 @@ Second paragraph.`;
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const codeBlock = container.querySelector('code.lang-javascript');
-      expect(codeBlock).toBeInTheDocument();
-      expect(codeBlock).toHaveTextContent('12345');
+      expect(screen.getByText('javascript')).toBeInTheDocument();
+      expect(screen.getByText('12345')).toBeInTheDocument();
     });
 
     it('should handle nested code content', () => {
@@ -480,9 +473,8 @@ Second paragraph.`;
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const codeBlock = container.querySelector('code.lang-json');
-      expect(codeBlock).toBeInTheDocument();
-      expect(codeBlock).toHaveTextContent('{"key": "value"');
+      expect(screen.getByText('json')).toBeInTheDocument();
+      expect(screen.getByText(/{"key": "value"/)).toBeInTheDocument();
     });
   });
 
@@ -516,7 +508,7 @@ const x = 10;
       expect(container.querySelector('em')).toHaveTextContent('italic');
       expect(container.querySelector('blockquote')).toBeInTheDocument();
       expect(container.querySelector('ul')).toBeInTheDocument();
-      expect(container.querySelector('code.lang-javascript')).toBeInTheDocument();
+      expect(screen.getByText('javascript')).toBeInTheDocument();
       expect(container.querySelector('a')).toHaveAttribute('href', 'https://example.com');
       expect(container.querySelector('table')).toBeInTheDocument();
       expect(container.querySelector('hr')).toBeInTheDocument();
@@ -537,9 +529,9 @@ z = 30
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      expect(container.querySelector('code.lang-javascript')).toBeInTheDocument();
-      expect(container.querySelector('code.lang-typescript')).toBeInTheDocument();
-      expect(container.querySelector('code.lang-python')).toBeInTheDocument();
+      expect(screen.getByText('javascript')).toBeInTheDocument();
+      expect(screen.getByText('typescript')).toBeInTheDocument();
+      expect(screen.getByText('python')).toBeInTheDocument();
     });
   });
 
@@ -549,9 +541,8 @@ z = 30
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const codeBlock = container.querySelector('code.lang-sql');
-      expect(codeBlock).toBeInTheDocument();
-      expect(codeBlock).toHaveTextContent('SELECT * FROM users;');
+      expect(screen.getByText('sql')).toBeInTheDocument();
+      expect(screen.getByText('SELECT * FROM users;')).toBeInTheDocument();
     });
 
     it('should render CSS code blocks', () => {
@@ -559,8 +550,7 @@ z = 30
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const codeBlock = container.querySelector('code.lang-css');
-      expect(codeBlock).toBeInTheDocument();
+      expect(screen.getByText('css')).toBeInTheDocument();
     });
 
     it('should render HTML code blocks', () => {
@@ -568,8 +558,7 @@ z = 30
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const codeBlock = container.querySelector('code.lang-html');
-      expect(codeBlock).toBeInTheDocument();
+      expect(screen.getByText('html')).toBeInTheDocument();
     });
 
     it('should render Go code blocks', () => {
@@ -577,8 +566,7 @@ z = 30
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const codeBlock = container.querySelector('code.lang-go');
-      expect(codeBlock).toBeInTheDocument();
+      expect(screen.getByText('go')).toBeInTheDocument();
     });
 
     it('should render Rust code blocks', () => {
@@ -586,8 +574,7 @@ z = 30
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const codeBlock = container.querySelector('code.lang-rust');
-      expect(codeBlock).toBeInTheDocument();
+      expect(screen.getByText('rust')).toBeInTheDocument();
     });
 
     it('should render Java code blocks', () => {
@@ -595,8 +582,7 @@ z = 30
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const codeBlock = container.querySelector('code.lang-java');
-      expect(codeBlock).toBeInTheDocument();
+      expect(screen.getByText('java')).toBeInTheDocument();
     });
 
     it('should render C++ code blocks', () => {
@@ -604,8 +590,7 @@ z = 30
 
       const { container } = render(<MarkdownRenderer content={content} />);
 
-      const codeBlock = container.querySelector('code.lang-cpp');
-      expect(codeBlock).toBeInTheDocument();
+      expect(screen.getByText('cpp')).toBeInTheDocument();
     });
   });
 

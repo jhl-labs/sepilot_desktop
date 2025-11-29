@@ -1,68 +1,42 @@
 'use client';
 
-import { FileText, Image, Settings, MessageSquare } from 'lucide-react';
+import { Image, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ChatHistory } from './ChatHistory';
+import { ChatChatArea } from '@/components/chat/ChatChatArea';
+import { DocumentList } from '@/components/rag/DocumentList';
 import { isElectron } from '@/lib/platform';
+import { useChatStore } from '@/lib/store/chat-store';
 
 interface SidebarChatProps {
-  onDocumentsClick?: () => void;
   onGalleryClick?: () => void;
   onConversationClick?: () => void;
   onSettingsClick?: () => void;
-  onEditorChatClick?: () => void;
-  showEditorChat?: boolean;
 }
 
 export function SidebarChat({
-  onDocumentsClick,
   onGalleryClick,
   onConversationClick,
   onSettingsClick,
-  onEditorChatClick,
-  showEditorChat = false
 }: SidebarChatProps) {
+  const { chatViewMode } = useChatStore();
+
   return (
     <div className="flex h-full w-full flex-col">
       {/* Content Area */}
-      <ChatHistory onConversationClick={onConversationClick} />
+      {chatViewMode === 'history' ? (
+        <ChatHistory onConversationClick={onConversationClick} />
+      ) : chatViewMode === 'chat' ? (
+        <ChatChatArea />
+      ) : (
+        <DocumentList />
+      )}
 
       {/* Footer */}
       <div className="border-t p-2">
         <div className="flex gap-1">
           <ThemeToggle />
-          {showEditorChat && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onEditorChatClick}
-              title="Editor Chat (AI 도우미)"
-              className="flex-1"
-            >
-              <MessageSquare className="h-5 w-5" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              console.log('[SidebarChat] Documents button clicked - hiding BrowserView');
-              // Documents 열기 전에 BrowserView 숨김
-              if (isElectron() && window.electronAPI) {
-                window.electronAPI.browserView.hideAll().then(() => {
-                  console.log('[SidebarChat] BrowserView hidden before opening Documents');
-                }).catch((err) => {
-                  console.error('[SidebarChat] Failed to hide BrowserView:', err);
-                });
-              }
-              onDocumentsClick?.();
-            }}
-            title="문서 관리"
-            className="flex-1"
-          >
-            <FileText className="h-5 w-5" />
-          </Button>
           <Button
             variant="ghost"
             size="icon"

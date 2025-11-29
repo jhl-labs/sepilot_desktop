@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, MessageSquare, Code, Globe, Plus, Trash, FileText, Search } from 'lucide-react';
+import { ChevronDown, MessageSquare, Code, Globe, Plus, Trash, FileText, Search, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useState } from 'react';
@@ -30,6 +30,8 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
     deleteConversation,
     editorViewMode,
     setEditorViewMode,
+    chatViewMode,
+    setChatViewMode,
   } = useChatStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -80,20 +82,29 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
             <Button
               variant="ghost"
               size="icon"
-              onClick={createConversation}
-              title="새 대화"
+              onClick={() => setChatViewMode('history')}
+              title="대화 기록"
+              className={chatViewMode === 'history' ? 'bg-accent' : ''}
             >
-              <Plus className="h-5 w-5" />
+              <History className="h-5 w-5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleDeleteAll}
-              title="모든 대화 삭제"
-              disabled={conversations.length === 0}
-              className="text-muted-foreground hover:text-destructive disabled:opacity-30"
+              onClick={() => setChatViewMode('chat')}
+              title="AI 어시스턴트"
+              className={chatViewMode === 'chat' ? 'bg-accent' : ''}
             >
-              <Trash className="h-5 w-5" />
+              <MessageSquare className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setChatViewMode('documents')}
+              title="문서 관리"
+              className={chatViewMode === 'documents' ? 'bg-accent' : ''}
+            >
+              <FileText className="h-5 w-5" />
             </Button>
           </div>
         )}
@@ -124,7 +135,6 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
       {/* Render mode-specific component */}
       {appMode === 'chat' && (
         <SidebarChat
-          onDocumentsClick={onDocumentsClick}
           onGalleryClick={onGalleryClick}
           onConversationClick={onConversationClick}
           onSettingsClick={() => setSettingsOpen(true)}
