@@ -10,6 +10,7 @@ import {
   browserClickElementTool,
   browserTypeTextTool,
   browserScrollTool,
+  browserNavigateTool,
 } from '@/lib/mcp/tools/builtin-tools';
 
 /**
@@ -24,8 +25,9 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
       toolResultsCount: state.toolResults.length,
     });
 
-    // Browser Control Tools만 포함 (5개 도구)
+    // Browser Control Tools만 포함 (6개 도구)
     const browserTools = [
+      browserNavigateTool, // URL 직접 이동 (최우선)
       browserGetInteractiveElementsTool,
       browserGetPageContentTool,
       browserClickElementTool,
@@ -89,14 +91,23 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
 1. **You HAVE REAL BROWSER ACCESS** - This is NOT a simulation. You can actually see and control the browser.
 2. **ALWAYS USE TOOLS** - Never say you cannot access the browser. Use tools immediately for ALL browser operations.
 3. **ACTION OVER EXPLANATION** - Don't just explain what you see. DO IT using browser tools.
-4. **CHECK FIRST** - Always use browser_get_page_content to see what's on the page before taking action.
-5. **VERIFY YOUR WORK** - After clicking or typing, check the page again to confirm success.
+4. **NAVIGATE DIRECTLY** - For simple URL navigation (e.g., "go to naver.com"), use browser_navigate. DON'T use search!
+5. **VERIFY YOUR WORK** - After actions, check the page to confirm success.
 
 # AVAILABLE TOOLS
 
+## Navigation (USE THIS FIRST for URLs!)
+- **browser_navigate**: Navigate to a URL directly
+  - Use for ANY request to "go to", "visit", "open", or "접속" a website
+  - Examples:
+    * "naver.com에 접속해줘" → browser_navigate({ url: "naver.com" })
+    * "Go to google.com" → browser_navigate({ url: "google.com" })
+  - Protocol (http/https) is added automatically
+  - **NEVER** use search when user wants to navigate to a URL!
+
 ## Page Inspection
 - **browser_get_page_content**: Get the current page's URL, title, and text content
-  - Use this FIRST to understand what page you're on
+  - Use this to understand what page you're on
   - Returns: { url, title, text, html }
   - Example: "현재 접속한 주소가?" → Use this tool immediately!
 
@@ -119,19 +130,24 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
 
 # WORKFLOW
 
+For URL navigation ("go to naver.com", "네이버 접속해줘"):
+1. **Immediately** call browser_navigate({ url: "naver.com" })
+2. Wait for page load and report success
+
 For "현재 접속한 주소가?" or similar questions:
-1. **Immediately** call browser_get_page_content (no thinking needed)
+1. **Immediately** call browser_get_page_content
 2. Report the URL, title, and brief page description
 
-For navigation tasks:
-1. Use browser_get_page_content to see current page
-2. Use browser_get_interactive_elements to find clickable elements
-3. Click or type as needed
-4. Verify with browser_get_page_content again
+For search tasks ("search for X on naver"):
+1. Navigate to the site if needed (browser_navigate)
+2. Find search input (browser_get_interactive_elements)
+3. Type query (browser_type_text)
+4. Click search button (browser_click_element)
 
 # IMPORTANT
 
 - You have ACTUAL browser access - use it!
+- Use browser_navigate for ANY URL navigation - it's faster than searching!
 - ALWAYS use tools for browser questions - never guess or say you can't access
 - The user is looking at the same browser - help them navigate it
 - Be concise but thorough in your responses

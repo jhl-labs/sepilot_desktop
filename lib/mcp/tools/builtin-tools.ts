@@ -219,6 +219,8 @@ export async function executeBuiltinTool(
       return await handleBrowserTypeText(args as { element_id: string; text: string });
     case 'browser_scroll':
       return await handleBrowserScroll(args as { direction: 'up' | 'down'; amount?: number });
+    case 'browser_navigate':
+      return await handleBrowserNavigate(args as { url: string });
     default:
       throw new Error(`Unknown builtin tool: ${toolName}`);
   }
@@ -554,6 +556,25 @@ export const browserScrollTool: MCPTool = {
 };
 
 /**
+ * Browser Navigate Tool
+ */
+export const browserNavigateTool: MCPTool = {
+  name: 'browser_navigate',
+  description: 'Navigate to a URL in the browser. Use this to go to websites directly (e.g., "naver.com", "https://google.com"). Do NOT use search for simple navigation.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      url: {
+        type: 'string',
+        description: 'URL to navigate to. Can be with or without protocol (http/https will be added automatically)',
+      },
+    },
+    required: ['url'],
+  },
+};
+
+/**
  * Handle browser_get_interactive_elements
  */
 async function handleBrowserGetInteractiveElements(): Promise<string> {
@@ -738,6 +759,30 @@ async function handleBrowserScroll(args: { direction: 'up' | 'down'; amount?: nu
 }
 
 /**
+ * Handle browser_navigate
+ */
+async function handleBrowserNavigate(args: { url: string }): Promise<string> {
+  const browserView = getActiveBrowserView();
+  if (!browserView) {
+    throw new Error('No active browser tab. Please switch to Browser mode first.');
+  }
+
+  try {
+    let validUrl = args.url;
+    // Add https:// if no protocol specified
+    if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
+      validUrl = 'https://' + validUrl;
+    }
+
+    await browserView.webContents.loadURL(validUrl);
+
+    return `Successfully navigated to: ${validUrl}`;
+  } catch (error: any) {
+    throw new Error(`Failed to navigate: ${error.message}`);
+  }
+}
+
+/**
  * Get all builtin tools
  */
 export function getBuiltinTools(): MCPTool[] {
@@ -753,5 +798,6 @@ export function getBuiltinTools(): MCPTool[] {
     browserClickElementTool,
     browserTypeTextTool,
     browserScrollTool,
+    browserNavigateTool,
   ];
 }

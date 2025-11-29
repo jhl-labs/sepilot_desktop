@@ -482,15 +482,31 @@ export function setupBrowserViewHandlers() {
         return { success: false, error: 'Main window not found' };
       }
 
-      // Remove all BrowserViews from window
+      logger.info('[BrowserView] Hiding all BrowserViews (total:', tabs.size, ')');
+
+      // 1. Move all BrowserViews off-screen first (for extra safety)
       tabs.forEach((tab) => {
-        mainWindow.removeBrowserView(tab.view);
+        try {
+          tab.view.setBounds({ x: -10000, y: -10000, width: 0, height: 0 });
+        } catch (err) {
+          logger.error('[BrowserView] Failed to move view off-screen:', err);
+        }
       });
 
-      logger.info('All BrowserViews hidden');
+      // 2. Remove all BrowserViews from window
+      tabs.forEach((tab) => {
+        try {
+          mainWindow.removeBrowserView(tab.view);
+          logger.info('[BrowserView] Removed BrowserView:', tab.id);
+        } catch (err) {
+          logger.error('[BrowserView] Failed to remove view:', err);
+        }
+      });
+
+      logger.info('[BrowserView] All BrowserViews hidden successfully');
       return { success: true };
     } catch (error) {
-      logger.error('Failed to hide BrowserViews:', error);
+      logger.error('[BrowserView] Failed to hide BrowserViews:', error);
       return { success: false, error: String(error) };
     }
   });
@@ -504,22 +520,26 @@ export function setupBrowserViewHandlers() {
       }
 
       if (!activeTabId) {
+        logger.warn('[BrowserView] No active tab to show');
         return { success: false, error: 'No active tab' };
       }
 
       const tab = tabs.get(activeTabId);
       if (!tab) {
+        logger.error('[BrowserView] Active tab not found:', activeTabId);
         return { success: false, error: 'Active tab not found' };
       }
+
+      logger.info('[BrowserView] Showing active BrowserView:', activeTabId);
 
       // Add active BrowserView back to window
       mainWindow.addBrowserView(tab.view);
       setActiveBrowserView(tab.view);
 
-      logger.info(`Active BrowserView shown: ${activeTabId}`);
+      logger.info('[BrowserView] Active BrowserView shown successfully:', activeTabId);
       return { success: true };
     } catch (error) {
-      logger.error('Failed to show active BrowserView:', error);
+      logger.error('[BrowserView] Failed to show active BrowserView:', error);
       return { success: false, error: String(error) };
     }
   });
