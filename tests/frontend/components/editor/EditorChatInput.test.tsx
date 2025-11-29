@@ -1,12 +1,12 @@
 /**
- * SimpleChatInput 컴포넌트 테스트
+ * EditorChatInput 컴포넌트 테스트
  */
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { SimpleChatInput } from '@/components/browser/SimpleChatInput';
+import { EditorChatInput } from '@/components/editor/EditorChatInput';
 import { useChatStore } from '@/lib/store/chat-store';
 
 // Mock useChatStore
@@ -37,22 +37,24 @@ jest.mock('@/lib/llm/web-client', () => ({
   })),
 }));
 
-describe('SimpleChatInput', () => {
-  const mockAddBrowserChatMessage = jest.fn();
-  const mockUpdateBrowserChatMessage = jest.fn();
+describe('EditorChatInput', () => {
+  const mockAddEditorChatMessage = jest.fn();
+  const mockUpdateEditorChatMessage = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     (useChatStore as unknown as jest.Mock).mockReturnValue({
-      addBrowserChatMessage: mockAddBrowserChatMessage,
-      updateBrowserChatMessage: mockUpdateBrowserChatMessage,
-      browserChatMessages: [],
+      addEditorChatMessage: mockAddEditorChatMessage,
+      updateEditorChatMessage: mockUpdateEditorChatMessage,
+      editorChatMessages: [],
+      workingDirectory: null,
+      openFiles: [],
     });
 
     // Mock getState for streaming updates
     (useChatStore as any).getState = jest.fn(() => ({
-      browserChatMessages: [
+      editorChatMessages: [
         { id: 'msg-1', role: 'user', content: 'Test', created_at: Date.now() },
         { id: 'msg-2', role: 'assistant', content: '', created_at: Date.now() },
       ],
@@ -60,14 +62,14 @@ describe('SimpleChatInput', () => {
   });
 
   it('should render input textarea', () => {
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const textarea = screen.getByRole('textbox');
     expect(textarea).toBeInTheDocument();
   });
 
   it('should render send button', () => {
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const sendButton = screen.getByRole('button', { name: /전송/ });
     expect(sendButton).toBeInTheDocument();
@@ -75,7 +77,7 @@ describe('SimpleChatInput', () => {
 
   it('should update input value on change', async () => {
     const user = userEvent.setup();
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Hello World');
@@ -84,7 +86,7 @@ describe('SimpleChatInput', () => {
   });
 
   it('should disable send button when input is empty', () => {
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const sendButton = screen.getByRole('button', { name: /전송/ });
     expect(sendButton).toBeDisabled();
@@ -92,7 +94,7 @@ describe('SimpleChatInput', () => {
 
   it('should enable send button when input has text', async () => {
     const user = userEvent.setup();
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test message');
@@ -103,14 +105,14 @@ describe('SimpleChatInput', () => {
 
   it('should send message on Enter key', async () => {
     const user = userEvent.setup();
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test message');
     await user.keyboard('{Enter}');
 
     await waitFor(() => {
-      expect(mockAddBrowserChatMessage).toHaveBeenCalledWith({
+      expect(mockAddEditorChatMessage).toHaveBeenCalledWith({
         role: 'user',
         content: 'Test message',
       });
@@ -119,19 +121,19 @@ describe('SimpleChatInput', () => {
 
   it('should not send message on Shift+Enter', async () => {
     const user = userEvent.setup();
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Line 1');
     await user.keyboard('{Shift>}{Enter}{/Shift}');
 
     // Should not send message, just add newline
-    expect(mockAddBrowserChatMessage).not.toHaveBeenCalled();
+    expect(mockAddEditorChatMessage).not.toHaveBeenCalled();
   });
 
   it('should clear input after sending message', async () => {
     const user = userEvent.setup();
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     await user.type(textarea, 'Test message');
@@ -146,7 +148,7 @@ describe('SimpleChatInput', () => {
 
   it('should not send empty message', async () => {
     const user = userEvent.setup();
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, '   '); // Only whitespace
@@ -154,12 +156,12 @@ describe('SimpleChatInput', () => {
     const sendButton = screen.getByRole('button', { name: /전송/ });
     await user.click(sendButton);
 
-    expect(mockAddBrowserChatMessage).not.toHaveBeenCalled();
+    expect(mockAddEditorChatMessage).not.toHaveBeenCalled();
   });
 
   it('should trim message before sending', async () => {
     const user = userEvent.setup();
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, '  Test message  ');
@@ -168,16 +170,15 @@ describe('SimpleChatInput', () => {
     await user.click(sendButton);
 
     await waitFor(() => {
-      expect(mockAddBrowserChatMessage).toHaveBeenCalledWith({
+      expect(mockAddEditorChatMessage).toHaveBeenCalledWith({
         role: 'user',
         content: 'Test message',
       });
     });
   });
 
-
   it('should handle composition events', async () => {
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const textarea = screen.getByRole('textbox');
 
@@ -188,7 +189,7 @@ describe('SimpleChatInput', () => {
     // Press Enter during composition - should not send
     fireEvent.keyDown(textarea, { key: 'Enter' });
 
-    expect(mockAddBrowserChatMessage).not.toHaveBeenCalled();
+    expect(mockAddEditorChatMessage).not.toHaveBeenCalled();
 
     // End composition
     fireEvent.compositionEnd(textarea);
@@ -196,7 +197,7 @@ describe('SimpleChatInput', () => {
 
   it('should create assistant message placeholder when sending', async () => {
     const user = userEvent.setup();
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test');
@@ -205,17 +206,16 @@ describe('SimpleChatInput', () => {
     await user.click(sendButton);
 
     await waitFor(() => {
-      expect(mockAddBrowserChatMessage).toHaveBeenCalledWith({
+      expect(mockAddEditorChatMessage).toHaveBeenCalledWith({
         role: 'assistant',
         content: '',
       });
     });
   });
 
-
   it('should enable textarea after streaming completes', async () => {
     const user = userEvent.setup();
-    render(<SimpleChatInput />);
+    render(<EditorChatInput />);
 
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test');
@@ -245,7 +245,7 @@ describe('SimpleChatInput', () => {
 
     it('should show stop button when streaming', async () => {
       const user = userEvent.setup();
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
@@ -265,7 +265,7 @@ describe('SimpleChatInput', () => {
 
     it('should stop streaming when stop button clicked', async () => {
       const user = userEvent.setup();
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
@@ -292,7 +292,7 @@ describe('SimpleChatInput', () => {
 
     it('should stop streaming on Escape key', async () => {
       const user = userEvent.setup();
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
@@ -322,7 +322,7 @@ describe('SimpleChatInput', () => {
 
     it('should not send message while streaming', async () => {
       const user = userEvent.setup();
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'First message');
@@ -331,7 +331,7 @@ describe('SimpleChatInput', () => {
       await user.click(sendButton);
 
       // Clear mock calls from first send
-      mockAddBrowserChatMessage.mockClear();
+      mockAddEditorChatMessage.mockClear();
 
       // Try to send another message while streaming
       await user.type(textarea, 'Second message');
@@ -347,8 +347,8 @@ describe('SimpleChatInput', () => {
       // Enter should not send while streaming
       fireEvent.keyDown(textarea, { key: 'Enter' });
 
-      // Should not call addBrowserChatMessage
-      expect(mockAddBrowserChatMessage).not.toHaveBeenCalled();
+      // Should not call addEditorChatMessage
+      expect(mockAddEditorChatMessage).not.toHaveBeenCalled();
     });
   });
 
@@ -362,7 +362,7 @@ describe('SimpleChatInput', () => {
       });
 
       const user = userEvent.setup();
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
@@ -372,7 +372,7 @@ describe('SimpleChatInput', () => {
 
       // Should update assistant message with error
       await waitFor(() => {
-        expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith(
+        expect(mockUpdateEditorChatMessage).toHaveBeenCalledWith(
           'msg-2',
           { content: 'Error: Network error' }
         );
@@ -388,7 +388,7 @@ describe('SimpleChatInput', () => {
       });
 
       const user = userEvent.setup();
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
@@ -398,7 +398,7 @@ describe('SimpleChatInput', () => {
 
       // Should update with generic error message
       await waitFor(() => {
-        expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith(
+        expect(mockUpdateEditorChatMessage).toHaveBeenCalledWith(
           'msg-2',
           { content: 'Error: Failed to get response' }
         );
@@ -409,7 +409,7 @@ describe('SimpleChatInput', () => {
   describe('웹 스트리밍', () => {
     it('should update assistant message with streamed content', async () => {
       const user = userEvent.setup();
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
@@ -419,7 +419,7 @@ describe('SimpleChatInput', () => {
 
       // Should update assistant message progressively
       await waitFor(() => {
-        expect(mockUpdateBrowserChatMessage).toHaveBeenCalled();
+        expect(mockUpdateEditorChatMessage).toHaveBeenCalled();
       });
     });
 
@@ -437,7 +437,7 @@ describe('SimpleChatInput', () => {
       });
 
       const user = userEvent.setup();
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
@@ -463,7 +463,7 @@ describe('SimpleChatInput', () => {
   describe('텍스트 영역 자동 리사이즈', () => {
     it('should auto-resize textarea based on content', async () => {
       const user = userEvent.setup();
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
 
@@ -485,7 +485,7 @@ describe('SimpleChatInput', () => {
   describe('초점 관리', () => {
     it('should call focus on textarea after streaming completes', async () => {
       const user = userEvent.setup();
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
       const focusSpy = jest.spyOn(textarea, 'focus');
@@ -517,7 +517,7 @@ describe('SimpleChatInput', () => {
 
   describe('Agent Progress UI', () => {
     it('should not show progress UI initially', () => {
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       expect(screen.queryByText(/생각 중/)).not.toBeInTheDocument();
       expect(screen.queryByText(/실행 중/)).not.toBeInTheDocument();
@@ -525,56 +525,36 @@ describe('SimpleChatInput', () => {
     });
 
     it('should render progress bar container', () => {
-      const { container } = render(<SimpleChatInput />);
+      const { container } = render(<EditorChatInput />);
 
       const inputContainer = container.querySelector('.relative.flex.items-end');
       expect(inputContainer).toBeInTheDocument();
     });
 
     it('should show Send icon when not streaming', () => {
-      const { container } = render(<SimpleChatInput />);
+      const { container } = render(<EditorChatInput />);
 
       // Send icon should be present
       const sendIcon = container.querySelector('svg');
       expect(sendIcon).toBeInTheDocument();
     });
 
-    it('should show Square icon when streaming', async () => {
-      const user = userEvent.setup();
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      // Wait for stop button
-      await waitFor(
-        () => {
-          const stopButton = screen.getByRole('button', { name: /중지/ });
-          expect(stopButton).toBeInTheDocument();
-        },
-        { timeout: 3000 }
-      );
-    });
-
     it('should have placeholder text', () => {
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
       expect(textarea).toBeInTheDocument();
     });
 
     it('should apply correct styling classes', () => {
-      const { container } = render(<SimpleChatInput />);
+      const { container } = render(<EditorChatInput />);
 
       const wrapper = container.querySelector('.shrink-0.border-t.bg-background');
       expect(wrapper).toBeInTheDocument();
     });
 
     it('should render textarea with correct constraints', () => {
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox');
       expect(textarea).toHaveClass('min-h-[40px]');
@@ -585,7 +565,7 @@ describe('SimpleChatInput', () => {
 
   describe('Button States', () => {
     it('should show send button with correct title', () => {
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const sendButton = screen.getByTitle('전송 (Enter)');
       expect(sendButton).toBeInTheDocument();
@@ -593,7 +573,7 @@ describe('SimpleChatInput', () => {
 
     it('should show stop button with correct title when streaming', async () => {
       const user = userEvent.setup();
-      render(<SimpleChatInput />);
+      render(<EditorChatInput />);
 
       const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
@@ -611,7 +591,7 @@ describe('SimpleChatInput', () => {
     });
 
     it('should apply correct button classes', () => {
-      const { container } = render(<SimpleChatInput />);
+      const { container } = render(<EditorChatInput />);
 
       const buttonContainer = container.querySelector('.flex.items-center.pb-1.pr-1');
       expect(buttonContainer).toBeInTheDocument();
@@ -620,14 +600,14 @@ describe('SimpleChatInput', () => {
 
   describe('Container Layout', () => {
     it('should have correct outer container structure', () => {
-      const { container } = render(<SimpleChatInput />);
+      const { container } = render(<EditorChatInput />);
 
       const outerContainer = container.querySelector('.shrink-0.border-t.bg-background.p-2');
       expect(outerContainer).toBeInTheDocument();
     });
 
     it('should have correct inner container structure', () => {
-      const { container } = render(<SimpleChatInput />);
+      const { container } = render(<EditorChatInput />);
 
       const innerContainer = container.querySelector(
         '.relative.flex.items-end.gap-2.rounded-lg.border.border-input.bg-background'
@@ -635,5 +615,4 @@ describe('SimpleChatInput', () => {
       expect(innerContainer).toBeInTheDocument();
     });
   });
-
 });

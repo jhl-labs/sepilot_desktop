@@ -61,7 +61,7 @@ describe('ChatChatArea', () => {
 
     render(<ChatChatArea />);
 
-    expect(screen.getByText('AI 어시스턴트와 대화하세요')).toBeInTheDocument();
+    expect(screen.getByText('• RAG를 활용한 문서 기반 답변')).toBeInTheDocument();
   });
 
   it('should render message icon in empty state', () => {
@@ -188,7 +188,7 @@ describe('ChatChatArea', () => {
       messages: [],
     });
     rerender(<ChatChatArea />);
-    expect(screen.getByText('AI 어시스턴트와 대화하세요')).toBeInTheDocument();
+    expect(screen.getByText('• RAG를 활용한 문서 기반 답변')).toBeInTheDocument();
 
     // Add messages
     (useChatStore as unknown as jest.Mock).mockReturnValue({

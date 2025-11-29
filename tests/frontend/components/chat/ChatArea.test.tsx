@@ -84,6 +84,7 @@ describe('ChatArea', () => {
   const mockChatStore = {
     messages: [],
     activeConversationId: null,
+    conversations: [],
     getGraphConfig: jest.fn(),
     updateMessage: jest.fn(),
     deleteMessage: jest.fn(),
