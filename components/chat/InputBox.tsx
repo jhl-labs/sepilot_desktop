@@ -80,7 +80,13 @@ export function InputBox() {
     clearImageGenerationProgress,
     enableImageGeneration,
     setEnableImageGeneration,
+    personas,
+    activePersonaId,
   } = useChatStore();
+
+  // Get active persona's system prompt
+  const activePersona = personas.find(p => p.id === activePersonaId);
+  const personaSystemPrompt = activePersona?.systemPrompt || null;
 
   // Determine if any conversation is currently streaming
   const isStreaming = activeConversationId ? streamingConversations.has(activeConversationId) : false;
@@ -651,7 +657,18 @@ export function InputBox() {
 
       // Prepare messages for LLM (include history)
       const allMessages = [
-        // Add system message from Quick Question if present
+        // Add persona system prompt (if no Quick Question system message)
+        ...(!systemMessage && personaSystemPrompt
+          ? [
+              {
+                id: 'system-persona',
+                role: 'system' as const,
+                content: personaSystemPrompt,
+                created_at: Date.now(),
+              },
+            ]
+          : []),
+        // Add system message from Quick Question if present (overrides persona)
         ...(systemMessage
           ? [
               {
