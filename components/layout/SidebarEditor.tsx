@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, Terminal } from 'lucide-react';
+import { Settings, Terminal, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
@@ -10,9 +10,10 @@ import { isElectron } from '@/lib/platform';
 
 interface SidebarEditorProps {
   onSettingsClick?: () => void;
+  onEditorChatClick?: () => void;
 }
 
-export function SidebarEditor({ onSettingsClick }: SidebarEditorProps) {
+export function SidebarEditor({ onSettingsClick, onEditorChatClick }: SidebarEditorProps) {
   const {
     activeEditorTab,
     showTerminalPanel,
@@ -33,6 +34,15 @@ export function SidebarEditor({ onSettingsClick }: SidebarEditorProps) {
       <div className="border-t p-2">
         <div className="flex gap-1">
           <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onEditorChatClick}
+            title="Editor Chat (AI 코딩 어시스턴트)"
+            className="flex-1"
+          >
+            <MessageSquare className="h-5 w-5" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -68,7 +78,7 @@ export function SidebarEditor({ onSettingsClick }: SidebarEditorProps) {
               }
               onSettingsClick?.();
             }}
-            title="Editor 설정"
+            title="설정"
             className="flex-1"
           >
             <Settings className="h-5 w-5" />
