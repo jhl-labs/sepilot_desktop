@@ -98,13 +98,22 @@ function getImplicitRole(tag: string, attributes: Record<string, string>): strin
       return 'button';
     case 'a':
       return attributes.href ? 'link' : 'generic';
-    case 'input':
+    case 'input': {
       const type = attributes.type?.toLowerCase() || 'text';
-      if (type === 'button' || type === 'submit' || type === 'reset') return 'button';
-      if (type === 'checkbox') return 'checkbox';
-      if (type === 'radio') return 'radio';
-      if (type === 'search') return 'searchbox';
+      if (type === 'button' || type === 'submit' || type === 'reset') {
+        return 'button';
+      }
+      if (type === 'checkbox') {
+        return 'checkbox';
+      }
+      if (type === 'radio') {
+        return 'radio';
+      }
+      if (type === 'search') {
+        return 'searchbox';
+      }
       return 'textbox';
+    }
     case 'textarea':
       return 'textbox';
     case 'select':
@@ -289,7 +298,7 @@ export function filterRelevantElements(
 ): SemanticElement[] {
   const { maxElements = 50, includeHidden = false, roleFilter } = options;
 
-  let filtered = elements.filter(el => {
+  const filtered = elements.filter(el => {
     // 가시성 필터
     if (!includeHidden && !el.isVisible) {
       return false;

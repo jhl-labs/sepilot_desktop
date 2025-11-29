@@ -11,6 +11,13 @@ import { promisify } from 'util';
 import { MCPTool } from '../types';
 import { getCurrentWorkingDirectory } from '../../llm/streaming-callback';
 import { getActiveBrowserView } from '../../../electron/ipc/handlers/browser-control';
+import {
+  handleBrowserGetInteractiveElementsEnhanced,
+  handleBrowserGetPageContentEnhanced,
+  handleBrowserClickElementEnhanced,
+  handleBrowserTypeTextEnhanced,
+  handleBrowserSearchElements,
+} from './browser-handlers-enhanced';
 
 const execPromise = promisify(exec);
 
@@ -210,13 +217,15 @@ export async function executeBuiltinTool(
         case_sensitive?: boolean;
       });
     case 'browser_get_interactive_elements':
-      return await handleBrowserGetInteractiveElements();
+      return await handleBrowserGetInteractiveElementsEnhanced();
     case 'browser_get_page_content':
-      return await handleBrowserGetPageContent();
+      return await handleBrowserGetPageContentEnhanced();
     case 'browser_click_element':
-      return await handleBrowserClickElement(args as { element_id: string });
+      return await handleBrowserClickElementEnhanced((args as { element_id: string }).element_id);
     case 'browser_type_text':
-      return await handleBrowserTypeText(args as { element_id: string; text: string });
+      return await handleBrowserTypeTextEnhanced((args as { element_id: string; text: string }).element_id, (args as { element_id: string; text: string }).text);
+    case 'browser_search_elements':
+      return await handleBrowserSearchElements((args as { query: string }).query);
     case 'browser_scroll':
       return await handleBrowserScroll(args as { direction: 'up' | 'down'; amount?: number });
     case 'browser_navigate':
@@ -665,6 +674,25 @@ export const browserGetSelectedTextTool: MCPTool = {
   inputSchema: {
     type: 'object',
     properties: {},
+  },
+};
+
+/**
+ * Browser Search Elements Tool (NEW)
+ */
+export const browserSearchElementsTool: MCPTool = {
+  name: 'browser_search_elements',
+  description: 'Search for elements on the page using natural language queries (e.g., "search button", "login input", "submit form"). Returns matching elements with their IDs.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      query: {
+        type: 'string',
+        description: 'Natural language query to search for elements (e.g., "search button", "email input")',
+      },
+    },
+    required: ['query'],
   },
 };
 
