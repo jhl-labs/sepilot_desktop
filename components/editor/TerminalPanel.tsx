@@ -44,31 +44,32 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     tabsRef.current = tabs;
   }, [tabs]);
 
-  // 테마별 설정 (VS Code 터미널 테마 기반)
+  // 테마별 설정 (GitHub Light & VS Code Dark 기반)
   const getTerminalTheme = useCallback(() => {
     if (theme === 'light') {
+      // GitHub Light Theme
       return {
-        background: '#ffffff',
-        foreground: '#1a1a1a', // 훨씬 더 진한 검정색
-        cursor: '#0066cc',
-        cursorAccent: '#ffffff',
-        selectionBackground: '#add6ff80',
-        black: '#000000',
-        red: '#cd3131',
-        green: '#008000', // 더 진한 녹색
-        yellow: '#7a6300', // 더 진한 노란색
-        blue: '#0451a5',
-        magenta: '#bc05bc',
-        cyan: '#0598bc',
-        white: '#3d3d3d', // 더 진한 회색
-        brightBlack: '#666666',
-        brightRed: '#cd3131',
-        brightGreen: '#008000',
-        brightYellow: '#7a6300',
-        brightBlue: '#0451a5',
-        brightMagenta: '#bc05bc',
-        brightCyan: '#0598bc',
-        brightWhite: '#666666', // 더 진한 밝은 회색
+        background: '#F6F8FA',
+        foreground: '#24292f',
+        cursor: '#0969da',
+        cursorAccent: '#F6F8FA',
+        selectionBackground: '#b6d6fb',
+        black: '#24292f',
+        red: '#cf222e',
+        green: '#1a7f37',
+        yellow: '#9a6700',
+        blue: '#0969da',
+        magenta: '#8250df',
+        cyan: '#1b7c83',
+        white: '#6e7781',
+        brightBlack: '#57606a',
+        brightRed: '#a40e26',
+        brightGreen: '#1a7f37',
+        brightYellow: '#633c01',
+        brightBlue: '#218bff',
+        brightMagenta: '#a475f9',
+        brightCyan: '#3192aa',
+        brightWhite: '#8c959f',
       };
     } else {
       return {
