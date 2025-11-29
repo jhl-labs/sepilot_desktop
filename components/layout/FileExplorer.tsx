@@ -14,7 +14,6 @@
 import { useState, useEffect } from 'react';
 import { Folder, FolderPlus, FilePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -144,9 +143,9 @@ export function FileExplorer() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col">
       {/* Working Directory Selection */}
-      <div className="shrink-0 border-b px-3 py-3">
+      <div className="border-b px-3 py-3">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground uppercase">
@@ -197,7 +196,7 @@ export function FileExplorer() {
       </div>
 
       {/* File Tree */}
-      <ScrollArea className="flex-1 px-2 py-2">
+      <div className="px-2 py-2">
         {isLoading ? (
           <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
             로딩 중...
@@ -227,7 +226,7 @@ export function FileExplorer() {
             빈 디렉토리
           </div>
         )}
-      </ScrollArea>
+      </div>
 
       {/* New File Dialog */}
       <Dialog open={showNewFileDialog} onOpenChange={setShowNewFileDialog}>
