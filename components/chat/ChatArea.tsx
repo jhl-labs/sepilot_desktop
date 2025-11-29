@@ -21,10 +21,15 @@ const FONT_SCALE_OPTIONS = [
 ];
 
 export function ChatArea() {
-  const { messages, activeConversationId, getGraphConfig, updateMessage, deleteMessage, addMessage, startStreaming, stopStreaming, streamingConversations, workingDirectory, personas, activePersonaId } = useChatStore();
+  const { messages, activeConversationId, getGraphConfig, updateMessage, deleteMessage, addMessage, startStreaming, stopStreaming, streamingConversations, workingDirectory, personas, activePersonaId, conversations } = useChatStore();
 
-  // Get active persona
-  const activePersona = personas.find(p => p.id === activePersonaId);
+  // Get current conversation's persona (conversation-specific persona takes precedence)
+  const currentConversation = activeConversationId
+    ? conversations.find(c => c.id === activeConversationId)
+    : null;
+  const conversationPersonaId = currentConversation?.personaId;
+  const effectivePersonaId = conversationPersonaId || activePersonaId;
+  const activePersona = personas.find(p => p.id === effectivePersonaId);
 
   // Get streaming state for current conversation
   const streamingMessageId = activeConversationId ? streamingConversations.get(activeConversationId) || null : null;

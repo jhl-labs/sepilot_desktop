@@ -89,8 +89,13 @@ export function InputBox() {
     setActivePersona,
   } = useChatStore();
 
-  // Get active persona's system prompt
-  const activePersona = personas.find(p => p.id === activePersonaId);
+  // Get current conversation's persona (conversation-specific persona takes precedence)
+  const currentConversation = activeConversationId
+    ? conversations.find(c => c.id === activeConversationId)
+    : null;
+  const conversationPersonaId = currentConversation?.personaId;
+  const effectivePersonaId = conversationPersonaId || activePersonaId;
+  const activePersona = personas.find(p => p.id === effectivePersonaId);
   const personaSystemPrompt = activePersona?.systemPrompt || null;
 
   // Detect slash command for persona switching
