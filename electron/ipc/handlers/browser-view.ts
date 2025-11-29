@@ -24,11 +24,16 @@ export function setupBrowserViewHandlers() {
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true,
-          sandbox: true,
+          sandbox: false, // Disable sandbox to allow proper resource loading
           // Allow loading external resources (CSS, JS, images)
           webSecurity: false,
-          // Allow running insecure content only for development
-          allowRunningInsecureContent: false,
+          // Allow running insecure content
+          allowRunningInsecureContent: true,
+          // Enable web APIs
+          javascript: true,
+          images: true,
+          // Session partition for isolation
+          partition: 'persist:browser',
         },
       });
 
@@ -36,6 +41,11 @@ export function setupBrowserViewHandlers() {
       browserView.webContents.setUserAgent(
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       );
+
+      // Handle console messages for debugging
+      browserView.webContents.on('console-message', (_, level, message) => {
+        logger.info(`[BrowserView Console] ${message}`);
+      });
 
       mainWindow.addBrowserView(browserView);
 

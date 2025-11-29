@@ -326,6 +326,7 @@ const electronAPI = {
       ipcRenderer.invoke('browser-view:set-bounds', bounds),
     setVisible: (visible: boolean) => ipcRenderer.invoke('browser-view:set-visible', visible),
     getState: () => ipcRenderer.invoke('browser-view:get-state'),
+    toggleDevTools: () => ipcRenderer.invoke('browser-view:toggle-devtools'),
     onDidNavigate: (callback: (data: { url: string; canGoBack: boolean; canGoForward: boolean }) => void) => {
       const handler = (_: any, data: any) => callback(data);
       ipcRenderer.on('browser-view:did-navigate', handler);

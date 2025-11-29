@@ -430,6 +430,7 @@ interface BrowserViewAPI {
     canGoForward: boolean;
     isLoading: boolean;
   }>>;
+  toggleDevTools: () => Promise<IPCResponse>;
   onDidNavigate: (callback: (data: { url: string; canGoBack: boolean; canGoForward: boolean }) => void) => (...args: unknown[]) => void;
   onLoadingState: (callback: (data: { isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => (...args: unknown[]) => void;
   onTitleUpdated: (callback: (data: { title: string }) => void) => (...args: unknown[]) => void;

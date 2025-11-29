@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, RotateCw, Home, Globe } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
 
 export function BrowserPanel() {
@@ -46,6 +46,12 @@ export function BrowserPanel() {
     if (isElectron() && window.electronAPI) {
       window.electronAPI.browserView.loadURL(homeUrl);
     }
+  };
+
+  const handleToggleDevTools = () => {
+    if (!isElectron() || !window.electronAPI) {return;}
+
+    window.electronAPI.browserView.toggleDevTools();
   };
 
   // BrowserView 생성 및 초기 설정
@@ -190,6 +196,15 @@ export function BrowserPanel() {
             className="flex-1"
           />
         </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleToggleDevTools}
+          title="개발자 도구 (CSS 로딩 문제 디버깅)"
+        >
+          <Terminal className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* BrowserView 컨테이너 */}
