@@ -357,6 +357,11 @@ const electronAPI = {
       ipcRenderer.on('browser-view:title-updated', handler);
       return handler;
     },
+    onTabCreated: (callback: (data: { tabId: string; url: string }) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('browser-view:tab-created', handler);
+      return handler;
+    },
     removeListener: (event: string, handler: any) => {
       ipcRenderer.removeListener(event, handler);
     },

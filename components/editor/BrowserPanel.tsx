@@ -157,11 +157,21 @@ export function BrowserPanel() {
       loadTabs(); // Reload tabs to update titles
     });
 
+    const tabCreatedHandler = window.electronAPI.browserView.onTabCreated((data) => {
+      // Reload tabs when a new tab is created (e.g., from popup)
+      loadTabs();
+      // Switch to the newly created tab
+      if (data.tabId) {
+        switchToTab(data.tabId);
+      }
+    });
+
     // Cleanup
     return () => {
       window.electronAPI.browserView.removeListener('browser-view:did-navigate', didNavigateHandler);
       window.electronAPI.browserView.removeListener('browser-view:loading-state', loadingStateHandler);
       window.electronAPI.browserView.removeListener('browser-view:title-updated', titleUpdatedHandler);
+      window.electronAPI.browserView.removeListener('browser-view:tab-created', tabCreatedHandler);
     };
   }, []);
 

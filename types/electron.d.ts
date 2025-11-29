@@ -463,6 +463,7 @@ interface BrowserViewAPI {
   onDidNavigate: (callback: (data: { tabId: string; url: string; canGoBack: boolean; canGoForward: boolean }) => void) => (...args: unknown[]) => void;
   onLoadingState: (callback: (data: { tabId: string; isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => (...args: unknown[]) => void;
   onTitleUpdated: (callback: (data: { tabId: string; title: string }) => void) => (...args: unknown[]) => void;
+  onTabCreated: (callback: (data: { tabId: string; url: string }) => void) => (...args: unknown[]) => void;
   removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
 }
 

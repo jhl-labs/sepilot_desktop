@@ -32,10 +32,45 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
   );
 
-  // Handle new window/popup requests
+  // Handle new window/popup requests - open in new tab
   view.webContents.setWindowOpenHandler(({ url }) => {
-    logger.info('[BrowserView] Window open request:', url);
-    view.webContents.loadURL(url);
+    logger.info('[BrowserView] Window open request (opening in new tab):', url);
+
+    // Create new tab for popup
+    const newTabId = randomUUID();
+    const newView = createBrowserView(mainWindow, newTabId);
+
+    const newTab: BrowserTab = {
+      id: newTabId,
+      view: newView,
+      url,
+      title: 'Loading...',
+    };
+
+    tabs.set(newTabId, newTab);
+
+    // Switch to new tab
+    if (activeTabId) {
+      const currentTab = tabs.get(activeTabId);
+      if (currentTab) {
+        mainWindow.removeBrowserView(currentTab.view);
+      }
+    }
+
+    mainWindow.addBrowserView(newView);
+    activeTabId = newTabId;
+
+    // Load popup URL in new tab
+    newView.webContents.loadURL(url).catch((error) => {
+      logger.error('[BrowserView] Failed to load popup URL:', error);
+    });
+
+    // Notify renderer about new tab
+    mainWindow.webContents.send('browser-view:tab-created', {
+      tabId: newTabId,
+      url,
+    });
+
     return { action: 'deny' };
   });
 
