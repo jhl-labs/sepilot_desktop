@@ -684,11 +684,12 @@ export function setupBrowserViewHandlers() {
 
         // Convert file paths to sepilot-file:// protocol URLs
         // Windows paths need to be converted: C:\path -> C:/path
+        // Protocol format: sepilot-file:///C:/path or sepilot-file:///home/path
         const snapshotsWithProtocol = snapshots.map((snapshot) => ({
           ...snapshot,
-          thumbnail: `sepilot-file://${snapshot.thumbnail.replace(/\\/g, '/')}`,
-          screenshotPath: `sepilot-file://${snapshot.screenshotPath.replace(/\\/g, '/')}`,
-          mhtmlPath: snapshot.mhtmlPath ? `sepilot-file://${snapshot.mhtmlPath.replace(/\\/g, '/')}` : '',
+          thumbnail: `sepilot-file:///${snapshot.thumbnail.replace(/\\/g, '/')}`,
+          screenshotPath: `sepilot-file:///${snapshot.screenshotPath.replace(/\\/g, '/')}`,
+          mhtmlPath: snapshot.mhtmlPath ? `sepilot-file:///${snapshot.mhtmlPath.replace(/\\/g, '/')}` : '',
         }));
 
         return {
