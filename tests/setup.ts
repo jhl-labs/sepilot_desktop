@@ -113,6 +113,8 @@ export const mockElectronAPI = {
     setBounds: jest.fn(),
     setVisible: jest.fn(),
     destroy: jest.fn(),
+    hideAll: jest.fn(() => Promise.resolve()),
+    showActive: jest.fn(() => Promise.resolve()),
     onDidNavigate: jest.fn(() => jest.fn()),
     onLoadingState: jest.fn(() => jest.fn()),
     removeListener: jest.fn(),

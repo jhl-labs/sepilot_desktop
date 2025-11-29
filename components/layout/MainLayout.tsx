@@ -49,6 +49,15 @@ export function MainLayout({ children }: MainLayoutProps) {
       key: ',',
       meta: true,
       handler: () => {
+        console.log('[MainLayout] Settings shortcut (Cmd+,) pressed - hiding BrowserView');
+        // Settings 열기 전에 BrowserView 숨김
+        if (isElectron() && window.electronAPI) {
+          window.electronAPI.browserView.hideAll().then(() => {
+            console.log('[MainLayout] BrowserView hidden before opening Settings (shortcut)');
+          }).catch((err) => {
+            console.error('[MainLayout] Failed to hide BrowserView:', err);
+          });
+        }
         setSettingsOpen(true);
       },
       description: 'Open settings',

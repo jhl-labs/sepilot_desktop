@@ -11,6 +11,7 @@ import { FileExplorer } from './FileExplorer';
 import { SearchPanel } from '@/components/editor/SearchPanel';
 import { SimpleChatArea } from '@/components/browser/SimpleChatArea';
 import { SimpleChatInput } from '@/components/browser/SimpleChatInput';
+import { isElectron } from '@/lib/platform';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -165,7 +166,18 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setSettingsOpen(true)}
+            onClick={() => {
+              console.log('[Sidebar] Settings button clicked - hiding BrowserView');
+              // Settings 열기 전에 BrowserView 숨김
+              if (isElectron() && window.electronAPI) {
+                window.electronAPI.browserView.hideAll().then(() => {
+                  console.log('[Sidebar] BrowserView hidden before opening Settings');
+                }).catch((err) => {
+                  console.error('[Sidebar] Failed to hide BrowserView:', err);
+                });
+              }
+              setSettingsOpen(true);
+            }}
             title="설정"
             className="flex-1"
           >
