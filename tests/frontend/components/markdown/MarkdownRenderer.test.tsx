@@ -542,4 +542,70 @@ z = 30
       expect(container.querySelector('code.lang-python')).toBeInTheDocument();
     });
   });
+
+  describe('Different code block languages', () => {
+    it('should render SQL code blocks', () => {
+      const content = '```sql\nSELECT * FROM users;\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const codeBlock = container.querySelector('code.lang-sql');
+      expect(codeBlock).toBeInTheDocument();
+      expect(codeBlock).toHaveTextContent('SELECT * FROM users;');
+    });
+
+    it('should render CSS code blocks', () => {
+      const content = '```css\n.class { color: red; }\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const codeBlock = container.querySelector('code.lang-css');
+      expect(codeBlock).toBeInTheDocument();
+    });
+
+    it('should render HTML code blocks', () => {
+      const content = '```html\n<div>Hello</div>\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const codeBlock = container.querySelector('code.lang-html');
+      expect(codeBlock).toBeInTheDocument();
+    });
+
+    it('should render Go code blocks', () => {
+      const content = '```go\nfunc main() {}\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const codeBlock = container.querySelector('code.lang-go');
+      expect(codeBlock).toBeInTheDocument();
+    });
+
+    it('should render Rust code blocks', () => {
+      const content = '```rust\nfn main() {}\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const codeBlock = container.querySelector('code.lang-rust');
+      expect(codeBlock).toBeInTheDocument();
+    });
+
+    it('should render Java code blocks', () => {
+      const content = '```java\npublic class Main {}\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const codeBlock = container.querySelector('code.lang-java');
+      expect(codeBlock).toBeInTheDocument();
+    });
+
+    it('should render C++ code blocks', () => {
+      const content = '```cpp\nint main() { return 0; }\n```';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      const codeBlock = container.querySelector('code.lang-cpp');
+      expect(codeBlock).toBeInTheDocument();
+    });
+  });
 });
