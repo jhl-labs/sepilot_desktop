@@ -175,24 +175,26 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     });
 
     const tabId = `tab-${Date.now()}`;
-    const newTab: TerminalTab = {
-      id: tabId,
-      sessionId: session.sessionId,
-      title: `Terminal ${tabs.length + 1}`,
-      isActive: true,
-      terminal: term,
-      fitAddon,
-    };
 
-    terminalsRef.current.set(tabId, terminalDiv);
-
-    // 기존 탭 비활성화
+    // 기존 탭 비활성화 및 새 탭 추가
     setTabs((prevTabs) => {
+      const newTab: TerminalTab = {
+        id: tabId,
+        sessionId: session.sessionId,
+        title: `Terminal ${prevTabs.length + 1}`,
+        isActive: true,
+        terminal: term,
+        fitAddon,
+      };
+
       prevTabs.forEach((tab) => {
         tab.isActive = false;
         const div = terminalsRef.current.get(tab.id);
         if (div) div.style.display = 'none';
       });
+
+      terminalsRef.current.set(tabId, terminalDiv);
+
       return [...prevTabs, newTab];
     });
 
@@ -202,7 +204,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       fitAddon.fit();
       updateScrollState();
     }, 0);
-  }, [tabs.length, workingDirectory, createSession, write, updateScrollState]);
+  }, [workingDirectory, createSession, write, updateScrollState, getTerminalTheme]);
 
   // 탭 전환
   const handleSwitchTab = useCallback((tabId: string) => {
@@ -267,12 +269,14 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     [tabs, killSession, updateScrollState]
   );
 
-  // 초기 탭 생성
+  // 초기 탭 생성 (한 번만 실행되도록 ref 사용)
+  const initializedRef = useRef(false);
   useEffect(() => {
-    if (tabs.length === 0) {
+    if (!initializedRef.current && tabs.length === 0) {
+      initializedRef.current = true;
       handleNewTab();
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handleNewTab, tabs.length]);
 
   // 리사이즈 처리
   useEffect(() => {
