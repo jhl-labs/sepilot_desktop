@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageSquare } from 'lucide-react';
 import { useChatStore } from '@/lib/store/chat-store';
+import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 
 export function SimpleChatArea() {
   const { browserChatMessages } = useChatStore();
@@ -54,7 +55,11 @@ export function SimpleChatArea() {
                   : 'bg-muted'
               }`}
             >
-              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              {message.role === 'user' ? (
+                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              ) : (
+                <MarkdownRenderer content={message.content} />
+              )}
             </div>
           </div>
         ))}

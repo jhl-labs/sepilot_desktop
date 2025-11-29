@@ -328,6 +328,7 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS. Use the enhanced tools!
 
     for await (const chunk of LLMService.streamChatWithChunks(messages, {
       tools: toolsForLLM,
+      max_tokens: 4096, // Browser Agent에서 더 긴 응답 허용
     })) {
       // Accumulate content and emit to renderer
       if (!chunk.done && chunk.content) {
