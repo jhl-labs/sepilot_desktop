@@ -159,7 +159,7 @@ export function CodeEditor() {
         provideInlineCompletions: async (model: any, position: any, context: any, token: any) => {
           // Return empty if autocomplete is not available
           if (!window.electronAPI?.llm?.editorAutocomplete) {
-            return { items: [] };
+            return { items: [], dispose: () => {} };
           }
 
           // Debounce to avoid too many requests
@@ -181,7 +181,7 @@ export function CodeEditor() {
 
                 // Don't autocomplete if line is empty or just whitespace
                 if (!currentLine.trim()) {
-                  resolve({ items: [] });
+                  resolve({ items: [], dispose: () => {} });
                   return;
                 }
 
@@ -212,6 +212,10 @@ export function CodeEditor() {
                           command: undefined,
                         },
                       ],
+                      // Add dispose method for proper cleanup
+                      dispose: () => {
+                        // Clean up if needed
+                      },
                     });
                     return;
                   }
@@ -220,11 +224,19 @@ export function CodeEditor() {
                 console.error('Autocomplete error:', error);
               }
 
-              resolve({ items: [] });
+              resolve({ items: [], dispose: () => {} });
             }, DEBOUNCE_MS);
           });
         },
-        freeInlineCompletions: () => {},
+        // Properly implement freeInlineCompletions
+        freeInlineCompletions: (completions: any) => {
+          // Clean up resources if needed
+          // This is called when completions are no longer needed
+        },
+        // Add handleItemDidShow if needed
+        handleItemDidShow: (completions: any, item: any) => {
+          // Optional: Called when an item is shown to the user
+        },
       }
     );
 
