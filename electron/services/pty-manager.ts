@@ -117,11 +117,21 @@ export class PTYManager {
 
       // PTY 데이터 이벤트 → Renderer로 전송
       ptyProcess.onData((data) => {
+        logger.info(`[PTYManager] Session ${sessionId} data:`, {
+          length: data.length,
+          preview: data.substring(0, 50),
+          hasWindow: !!this.mainWindow,
+          isDestroyed: this.mainWindow?.isDestroyed(),
+        });
+
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
           this.mainWindow.webContents.send('terminal:data', {
             sessionId,
             data,
           });
+          logger.info(`[PTYManager] Data sent to renderer for session ${sessionId}`);
+        } else {
+          logger.warn(`[PTYManager] Cannot send data - window unavailable`);
         }
       });
 

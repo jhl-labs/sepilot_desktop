@@ -46,18 +46,29 @@ export function useTerminal(options?: UseTerminalOptions): UseTerminalReturn {
 
   // IPC 이벤트 리스너 등록
   useEffect(() => {
+    console.log('[use-terminal] Registering IPC listeners');
+
     const handleData = (data: { sessionId: string; data: string }) => {
+      console.log('[use-terminal] handleData called:', {
+        sessionId: data.sessionId,
+        dataLength: data.data.length,
+        hasCallback: !!onDataRef.current
+      });
       onDataRef.current?.(data);
     };
 
     const handleExit = (data: { sessionId: string; exitCode: number; signal?: number }) => {
+      console.log('[use-terminal] handleExit called:', data);
       onExitRef.current?.(data);
     };
 
     const dataHandler = window.electronAPI.terminal.onData(handleData);
     const exitHandler = window.electronAPI.terminal.onExit(handleExit);
 
+    console.log('[use-terminal] IPC listeners registered:', { dataHandler, exitHandler });
+
     return () => {
+      console.log('[use-terminal] Cleaning up IPC listeners');
       window.electronAPI.terminal.removeListener('terminal:data', dataHandler);
       window.electronAPI.terminal.removeListener('terminal:exit', exitHandler);
     };

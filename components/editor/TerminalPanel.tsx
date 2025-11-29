@@ -95,13 +95,24 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   const { createSession, write, resize, killSession } = useTerminal({
     onData: (data) => {
+      console.log('[TerminalPanel] onData received:', {
+        sessionId: data.sessionId,
+        dataLength: data.data.length,
+        dataPreview: data.data.substring(0, 50),
+        currentTabs: tabsRef.current.map(t => ({ id: t.id, sessionId: t.sessionId }))
+      });
+
       // ref를 사용하여 최신 tabs 상태 참조
       const tab = tabsRef.current.find((t) => t.sessionId === data.sessionId);
       if (tab) {
+        console.log('[TerminalPanel] Writing to terminal:', tab.id);
         tab.terminal.write(data.data);
+      } else {
+        console.warn('[TerminalPanel] Tab not found for session:', data.sessionId);
       }
     },
     onExit: (data) => {
+      console.log('[TerminalPanel] onExit received:', data);
       // ref를 사용하여 최신 tabs 상태 참조
       const tab = tabsRef.current.find((t) => t.sessionId === data.sessionId);
       if (tab) {
