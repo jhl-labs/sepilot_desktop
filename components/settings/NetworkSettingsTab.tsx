@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NetworkConfig } from '@/types';
+import { Network } from 'lucide-react';
+import { SettingsSectionHeader } from './SettingsSectionHeader';
 
 interface NetworkSettingsTabProps {
   networkConfig: NetworkConfig;
@@ -22,12 +24,13 @@ export function NetworkSettingsTab({
 }: NetworkSettingsTabProps) {
   return (
     <div className="space-y-6">
+      <SettingsSectionHeader
+        title="Network 설정"
+        description="프록시 및 SSL 인증서 검증 설정을 관리합니다. 이 설정은 LLM, ComfyUI, VectorDB, MCP 등 모든 외부 연결에 적용됩니다."
+        icon={Network}
+      />
+
       <div className="space-y-4">
-        <div className="text-sm text-muted-foreground">
-          프록시 및 SSL 인증서 검증 설정을 관리합니다.
-          이 설정은 LLM, ComfyUI, VectorDB, MCP 등 모든 외부 연결에 적용됩니다.
-          (커스텀 HTTP 헤더는 LLM 탭에서 관리됩니다)
-        </div>
 
         {/* Proxy Settings */}
         <div className="space-y-3 p-4 rounded-lg border">

@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ComfyUIConfig, NetworkConfig } from '@/types';
+import { Image } from 'lucide-react';
+import { SettingsSectionHeader } from './SettingsSectionHeader';
 
 interface ComfyUISettingsTabProps {
   comfyConfig: ComfyUIConfig;
@@ -83,6 +85,12 @@ export function ComfyUISettingsTab({
 
   return (
     <div className="space-y-6">
+      <SettingsSectionHeader
+        title="ComfyUI 설정"
+        description="이미지 생성을 위한 ComfyUI 워크플로우 연결 및 설정을 관리합니다."
+        icon={Image}
+      />
+
       <div className="rounded-md border bg-muted/40 p-4 space-y-2">
         <div className="flex items-center justify-between gap-4">
           <div>
