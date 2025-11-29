@@ -157,8 +157,8 @@ async function registerShortcuts() {
     unregisterAllShortcuts();
 
     // Load config from database
-    const result = await databaseService.getConfig();
-    const config = result as AppConfig | null;
+    const configStr = databaseService.getSetting('app_config');
+    const config: AppConfig | null = configStr ? JSON.parse(configStr) : null;
     const quickInputConfig = config?.quickInput;
 
     // Register Quick Input shortcut
