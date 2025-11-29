@@ -100,24 +100,15 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   const { createSession, write, resize, killSession } = useTerminal({
     onData: (data) => {
-      console.log('[TerminalPanel] onData received:', {
-        sessionId: data.sessionId,
-        dataLength: data.data.length,
-        dataPreview: data.data.substring(0, 50),
-        currentTabs: tabsRef.current.map(t => ({ id: t.id, sessionId: t.sessionId }))
-      });
-
       // ref를 사용하여 최신 tabs 상태 참조
       const tab = tabsRef.current.find((t) => t.sessionId === data.sessionId);
       if (tab) {
-        console.log('[TerminalPanel] Writing to terminal:', tab.id);
         tab.terminal.write(data.data);
       } else {
         console.warn('[TerminalPanel] Tab not found for session:', data.sessionId);
       }
     },
     onExit: (data) => {
-      console.log('[TerminalPanel] onExit received:', data);
       // ref를 사용하여 최신 tabs 상태 참조
       const tab = tabsRef.current.find((t) => t.sessionId === data.sessionId);
       if (tab) {
@@ -156,8 +147,6 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   const handleNewTab = useCallback(async () => {
     if (!containerRef.current) {return;}
 
-    console.log('[TerminalPanel] handleNewTab called with workingDirectory:', workingDirectory);
-
     // Terminal 인스턴스 생성
     const term = new Terminal({
       cursorBlink: true,
@@ -187,7 +176,6 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     // PTY 세션 생성
     const cols = term.cols;
     const rows = term.rows;
-    console.log('[TerminalPanel] Creating session with cwd:', workingDirectory);
     const session = await createSession(workingDirectory, cols, rows);
 
     if (!session) {
@@ -300,7 +288,6 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   useEffect(() => {
     // 탭이 없고, workingDirectory가 있으면 자동으로 첫 탭 생성
     if (tabs.length === 0 && workingDirectory) {
-      console.log('[TerminalPanel] Creating initial tab with workingDirectory:', workingDirectory);
       handleNewTab();
     }
   }, [tabs.length, workingDirectory, handleNewTab]);

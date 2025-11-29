@@ -4,6 +4,8 @@ import { generateId } from '@/lib/utils';
 import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
 import { isElectron } from '@/lib/platform';
 import type { BrowserAgentLogEntry } from '@/types/browser-agent';
+import type { Persona } from '@/types/persona';
+import { BUILTIN_PERSONAS } from '@/types/persona';
 
 // App mode types
 export type AppMode = 'chat' | 'editor' | 'browser';
@@ -99,6 +101,10 @@ interface ChatStore {
   // Chat Mode View
   chatViewMode: 'history' | 'documents' | 'chat'; // history, documents, or chat view in Chat sidebar
 
+  // Persona (AI Bot Role/System Prompt)
+  personas: Persona[]; // 사용 가능한 페르소나 목록 (기본 + 사용자 생성)
+  activePersonaId: string | null; // 현재 활성화된 페르소나 ID
+
   // Deprecated: kept for backward compatibility
   graphType: GraphType;
   isStreaming: boolean;
@@ -168,6 +174,13 @@ interface ChatStore {
   // Actions - Chat Mode View
   setChatViewMode: (mode: 'history' | 'documents' | 'chat') => void;
 
+  // Actions - Persona
+  loadPersonas: () => Promise<void>;
+  addPersona: (persona: Omit<Persona, 'id' | 'isBuiltin' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updatePersona: (id: string, updates: Partial<Omit<Persona, 'id' | 'isBuiltin' | 'created_at'>>) => Promise<void>;
+  deletePersona: (id: string) => Promise<void>;
+  setActivePersona: (personaId: string | null) => void;
+
   // Actions - App Mode
   setAppMode: (mode: AppMode) => void;
   setActiveEditorTab: (tab: 'files' | 'search') => void;
@@ -233,6 +246,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Chat Mode View
   chatViewMode: 'history',
+
+  // Persona
+  personas: [...BUILTIN_PERSONAS],
+  activePersonaId: 'default',
 
   // Deprecated
   graphType: 'chat',
@@ -1007,5 +1024,141 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   closeAllFiles: () => {
     set({ openFiles: [], activeFilePath: null });
+  },
+
+  // Persona Actions
+  loadPersonas: async () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      if (isElectron() && window.electronAPI) {
+        // TODO: Electron SQLite에서 로드
+        // const result = await window.electronAPI.persona.loadAll();
+        // if (result.success && result.data) {
+        //   set({ personas: [...BUILTIN_PERSONAS, ...result.data] });
+        // }
+      } else {
+        // Web: localStorage에서 로드
+        const savedPersonas = localStorage.getItem('sepilot_personas');
+        if (savedPersonas) {
+          const userPersonas = JSON.parse(savedPersonas);
+          set({ personas: [...BUILTIN_PERSONAS, ...userPersonas] });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load personas:', error);
+    }
+  },
+
+  addPersona: async (persona) => {
+    const newPersona: Persona = {
+      ...persona,
+      id: generateId(),
+      isBuiltin: false,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    };
+
+    try {
+      if (isElectron() && window.electronAPI) {
+        // TODO: Electron SQLite에 저장
+        // await window.electronAPI.persona.save(newPersona);
+      } else {
+        // Web: localStorage에 저장
+        const currentState = get();
+        const userPersonas = currentState.personas.filter(p => !p.isBuiltin);
+        localStorage.setItem('sepilot_personas', JSON.stringify([...userPersonas, newPersona]));
+      }
+
+      set((state) => ({
+        personas: [...state.personas, newPersona],
+      }));
+    } catch (error) {
+      console.error('Failed to add persona:', error);
+      throw error;
+    }
+  },
+
+  updatePersona: async (id, updates) => {
+    const currentState = get();
+    const persona = currentState.personas.find(p => p.id === id);
+
+    if (!persona) {
+      throw new Error('Persona not found');
+    }
+
+    if (persona.isBuiltin) {
+      throw new Error('Cannot modify builtin persona');
+    }
+
+    const updatedPersona: Persona = {
+      ...persona,
+      ...updates,
+      updated_at: Date.now(),
+    };
+
+    try {
+      if (isElectron() && window.electronAPI) {
+        // TODO: Electron SQLite에 업데이트
+        // await window.electronAPI.persona.update(updatedPersona);
+      } else {
+        // Web: localStorage에 업데이트
+        const userPersonas = currentState.personas
+          .filter(p => !p.isBuiltin)
+          .map(p => p.id === id ? updatedPersona : p);
+        localStorage.setItem('sepilot_personas', JSON.stringify(userPersonas));
+      }
+
+      set((state) => ({
+        personas: state.personas.map(p => p.id === id ? updatedPersona : p),
+      }));
+    } catch (error) {
+      console.error('Failed to update persona:', error);
+      throw error;
+    }
+  },
+
+  deletePersona: async (id) => {
+    const currentState = get();
+    const persona = currentState.personas.find(p => p.id === id);
+
+    if (!persona) {
+      throw new Error('Persona not found');
+    }
+
+    if (persona.isBuiltin) {
+      throw new Error('Cannot delete builtin persona');
+    }
+
+    try {
+      if (isElectron() && window.electronAPI) {
+        // TODO: Electron SQLite에서 삭제
+        // await window.electronAPI.persona.delete(id);
+      } else {
+        // Web: localStorage에서 삭제
+        const userPersonas = currentState.personas
+          .filter(p => !p.isBuiltin && p.id !== id);
+        localStorage.setItem('sepilot_personas', JSON.stringify(userPersonas));
+      }
+
+      set((state) => ({
+        personas: state.personas.filter(p => p.id !== id),
+        // 삭제된 페르소나가 활성화되어 있었다면 기본으로 변경
+        activePersonaId: state.activePersonaId === id ? 'default' : state.activePersonaId,
+      }));
+    } catch (error) {
+      console.error('Failed to delete persona:', error);
+      throw error;
+    }
+  },
+
+  setActivePersona: (personaId) => {
+    set({ activePersonaId: personaId });
+    // TODO: localStorage에 저장하여 앱 재시작 시에도 유지
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sepilot_active_persona', personaId || '');
+    }
   },
 }));
