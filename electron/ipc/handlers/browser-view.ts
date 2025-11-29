@@ -786,37 +786,31 @@ export function setupBrowserViewHandlers() {
         return { success: false, error: 'MHTML file not found on disk' };
       }
 
-      // Load the MHTML file in a new tab or current tab
-      if (!activeTabId) {
-        // Create new tab
-        const tabId = randomUUID();
-        const view = createBrowserView(mainWindow, tabId);
+      // Always create a new tab for snapshots
+      const tabId = randomUUID();
+      const view = createBrowserView(mainWindow, tabId);
 
-        const tab: BrowserTab = {
-          id: tabId,
-          view,
-          url: `snapshot://${snapshotId}`,
-          title: `${snapshot.title} - Snapshot`,
-        };
+      const tab: BrowserTab = {
+        id: tabId,
+        view,
+        url: `snapshot://${snapshotId}`,
+        title: `${snapshot.title} - Snapshot`,
+      };
 
-        tabs.set(tabId, tab);
-        activeTabId = tabId;
-        mainWindow.addBrowserView(view);
-        setActiveBrowserView(view);
+      tabs.set(tabId, tab);
+      activeTabId = tabId;
+      mainWindow.addBrowserView(view);
+      setActiveBrowserView(view);
 
-        // Load MHTML file
-        await view.webContents.loadFile(snapshot.mhtmlPath);
-      } else {
-        // Load in active tab
-        const tab = tabs.get(activeTabId);
-        if (tab) {
-          tab.url = `snapshot://${snapshotId}`;
-          tab.title = `${snapshot.title} - Snapshot`;
+      // Load MHTML file
+      await view.webContents.loadFile(snapshot.mhtmlPath);
 
-          // Load MHTML file
-          await tab.view.webContents.loadFile(snapshot.mhtmlPath);
-        }
-      }
+      // Notify renderer to update tabs
+      mainWindow.webContents.send('browser-view:tab-created', {
+        id: tabId,
+        url: tab.url,
+        title: tab.title,
+      });
 
       logger.info(`Snapshot opened: ${snapshotId} (MHTML: ${snapshot.mhtmlPath})`);
       return { success: true };
