@@ -59,10 +59,17 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
   const { createConversation, messages, activeConversationId, streamingConversations, loadConversations, setAppMode, appMode, activeEditorTab, browserViewMode } = useChatStore();
 
-  // Mode-specific sidebar widths
-  const [chatSidebarWidth, setChatSidebarWidth] = useState(() => loadSidebarWidth('chat'));
-  const [editorSidebarWidth, setEditorSidebarWidth] = useState(() => loadSidebarWidth('editor'));
-  const [browserSidebarWidth, setBrowserSidebarWidth] = useState(() => loadSidebarWidth('browser'));
+  // Mode-specific sidebar widths - always start with default to avoid hydration mismatch
+  const [chatSidebarWidth, setChatSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const [editorSidebarWidth, setEditorSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const [browserSidebarWidth, setBrowserSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+
+  // Load saved widths on client side only
+  useEffect(() => {
+    setChatSidebarWidth(loadSidebarWidth('chat'));
+    setEditorSidebarWidth(loadSidebarWidth('editor'));
+    setBrowserSidebarWidth(loadSidebarWidth('browser'));
+  }, []);
 
   // Get current sidebar width based on app mode
   const sidebarWidth = appMode === 'chat' ? chatSidebarWidth : appMode === 'editor' ? editorSidebarWidth : browserSidebarWidth;
