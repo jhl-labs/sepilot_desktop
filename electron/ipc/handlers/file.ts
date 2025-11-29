@@ -430,6 +430,90 @@ export function registerFileHandlers() {
     }
   });
 
+  // 파일 생성 (Editor용)
+  ipcMain.handle('fs:create-file', async (_event, filePath: string, content: string = '') => {
+    try {
+      // 부모 디렉토리 확인
+      const dirPath = path.dirname(filePath);
+      await fs.mkdir(dirPath, { recursive: true });
+
+      // 파일 생성
+      await fs.writeFile(filePath, content, 'utf-8');
+      console.log('[File] File created successfully:', filePath);
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error creating file:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to create file',
+      };
+    }
+  });
+
+  // 폴더 생성 (Editor용)
+  ipcMain.handle('fs:create-directory', async (_event, dirPath: string) => {
+    try {
+      await fs.mkdir(dirPath, { recursive: true });
+      console.log('[File] Directory created successfully:', dirPath);
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error creating directory:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to create directory',
+      };
+    }
+  });
+
+  // 파일/폴더 삭제 (Editor용)
+  ipcMain.handle('fs:delete', async (_event, targetPath: string) => {
+    try {
+      const stats = await fs.stat(targetPath);
+
+      if (stats.isDirectory()) {
+        await fs.rm(targetPath, { recursive: true, force: true });
+        console.log('[File] Directory deleted successfully:', targetPath);
+      } else {
+        await fs.unlink(targetPath);
+        console.log('[File] File deleted successfully:', targetPath);
+      }
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error deleting:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to delete',
+      };
+    }
+  });
+
+  // 파일/폴더 이름 변경 (Editor용)
+  ipcMain.handle('fs:rename', async (_event, oldPath: string, newPath: string) => {
+    try {
+      await fs.rename(oldPath, newPath);
+      console.log('[File] Renamed successfully:', oldPath, '->', newPath);
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error renaming:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to rename',
+      };
+    }
+  });
+
   // 파일 전체 검색 (ripgrep 사용)
   ipcMain.handle(
     'fs:search-files',

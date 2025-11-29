@@ -318,6 +318,10 @@ interface FileSystemAPI {
   readDirectory: (dirPath: string) => Promise<IPCResponse<FileNode[]>>;
   readFile: (filePath: string) => Promise<IPCResponse<string>>;
   writeFile: (filePath: string, content: string) => Promise<IPCResponse>;
+  createFile: (filePath: string, content?: string) => Promise<IPCResponse>;
+  createDirectory: (dirPath: string) => Promise<IPCResponse>;
+  delete: (targetPath: string) => Promise<IPCResponse>;
+  rename: (oldPath: string, newPath: string) => Promise<IPCResponse>;
   searchFiles: (
     query: string,
     dirPath: string,

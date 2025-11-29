@@ -224,6 +224,12 @@ const electronAPI = {
     readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
     writeFile: (filePath: string, content: string) =>
       ipcRenderer.invoke('fs:write-file', filePath, content),
+    createFile: (filePath: string, content?: string) =>
+      ipcRenderer.invoke('fs:create-file', filePath, content),
+    createDirectory: (dirPath: string) => ipcRenderer.invoke('fs:create-directory', dirPath),
+    delete: (targetPath: string) => ipcRenderer.invoke('fs:delete', targetPath),
+    rename: (oldPath: string, newPath: string) =>
+      ipcRenderer.invoke('fs:rename', oldPath, newPath),
     searchFiles: (query: string, dirPath: string, options?: any) =>
       ipcRenderer.invoke('fs:search-files', query, dirPath, options),
   },
