@@ -608,4 +608,41 @@ z = 30
       expect(codeBlock).toBeInTheDocument();
     });
   });
+
+  describe('getTextContent Helper', () => {
+    it('should extract text from number children', () => {
+      const content = 'Number: `123`';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      expect(container.textContent).toContain('123');
+    });
+
+    it('should extract text from array children', () => {
+      const content = '- Item 1\n- Item 2\n- Item 3';
+
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByText('Item 1')).toBeInTheDocument();
+      expect(screen.getByText('Item 2')).toBeInTheDocument();
+      expect(screen.getByText('Item 3')).toBeInTheDocument();
+    });
+
+    it('should extract text from nested object children', () => {
+      const content = '**Bold text** and *italic text*';
+
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByText(/Bold text/)).toBeInTheDocument();
+      expect(screen.getByText(/italic text/)).toBeInTheDocument();
+    });
+
+    it('should handle empty or null children gracefully', () => {
+      const content = '';
+
+      const { container } = render(<MarkdownRenderer content={content} />);
+
+      expect(container).toBeInTheDocument();
+    });
+  });
 });
