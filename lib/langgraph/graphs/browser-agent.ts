@@ -11,6 +11,12 @@ import {
   browserTypeTextTool,
   browserScrollTool,
   browserNavigateTool,
+  browserCreateTabTool,
+  browserSwitchTabTool,
+  browserCloseTabTool,
+  browserListTabsTool,
+  browserTakeScreenshotTool,
+  browserGetSelectedTextTool,
 } from '@/lib/mcp/tools/builtin-tools';
 
 /**
@@ -25,14 +31,24 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
       toolResultsCount: state.toolResults.length,
     });
 
-    // Browser Control Tools만 포함 (6개 도구)
+    // Browser Control Tools (12개 도구)
     const browserTools = [
+      // Navigation
       browserNavigateTool, // URL 직접 이동 (최우선)
-      browserGetInteractiveElementsTool,
+      // Page inspection
       browserGetPageContentTool,
+      browserGetInteractiveElementsTool,
+      browserGetSelectedTextTool,
+      browserTakeScreenshotTool,
+      // Page interaction
       browserClickElementTool,
       browserTypeTextTool,
       browserScrollTool,
+      // Tab management
+      browserListTabsTool,
+      browserCreateTabTool,
+      browserSwitchTabTool,
+      browserCloseTabTool,
     ];
 
     console.log(`[BrowserAgent.Generate] Available Browser Control tools: ${browserTools.length}`);
@@ -115,6 +131,15 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
   - Returns buttons, links, inputs, textareas with IDs
   - Use this to find what you can click or type into
 
+- **browser_get_selected_text**: Get text that user has selected/highlighted
+  - Returns the selected text if any
+  - Useful for reading specific parts user wants to focus on
+
+- **browser_take_screenshot**: Capture screenshot and get text preview
+  - Takes a screenshot of current page
+  - Returns visible text preview
+  - Useful for understanding what user sees
+
 ## Page Interaction
 - **browser_click_element**: Click an element by its ID
   - Get element IDs from browser_get_interactive_elements
@@ -127,6 +152,23 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
 - **browser_scroll**: Scroll the page up or down
   - Directions: "up" or "down"
   - Example: browser_scroll({ direction: "down", amount: 500 })
+
+## Tab Management
+- **browser_list_tabs**: List all open tabs with IDs, titles, and URLs
+  - Shows which tab is currently active
+  - Use this to see all available tabs
+
+- **browser_create_tab**: Open a new browser tab
+  - Optional URL parameter (defaults to Google)
+  - Example: browser_create_tab({ url: "github.com" })
+
+- **browser_switch_tab**: Switch to a different tab by ID
+  - Get tab IDs from browser_list_tabs
+  - Example: browser_switch_tab({ tabId: "tab-123" })
+
+- **browser_close_tab**: Close a specific tab by ID
+  - Cannot close the last remaining tab
+  - Example: browser_close_tab({ tabId: "tab-123" })
 
 # WORKFLOW
 

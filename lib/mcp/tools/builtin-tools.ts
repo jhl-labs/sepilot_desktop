@@ -221,6 +221,18 @@ export async function executeBuiltinTool(
       return await handleBrowserScroll(args as { direction: 'up' | 'down'; amount?: number });
     case 'browser_navigate':
       return await handleBrowserNavigate(args as { url: string });
+    case 'browser_create_tab':
+      return await handleBrowserCreateTab(args as { url?: string });
+    case 'browser_switch_tab':
+      return await handleBrowserSwitchTab(args as { tabId: string });
+    case 'browser_close_tab':
+      return await handleBrowserCloseTab(args as { tabId: string });
+    case 'browser_list_tabs':
+      return await handleBrowserListTabs();
+    case 'browser_take_screenshot':
+      return await handleBrowserTakeScreenshot(args as { fullPage?: boolean });
+    case 'browser_get_selected_text':
+      return await handleBrowserGetSelectedText();
     default:
       throw new Error(`Unknown builtin tool: ${toolName}`);
   }
@@ -574,6 +586,88 @@ export const browserNavigateTool: MCPTool = {
   },
 };
 
+export const browserCreateTabTool: MCPTool = {
+  name: 'browser_create_tab',
+  description: 'Create a new browser tab. Opens a new tab with the specified URL or Google homepage.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      url: {
+        type: 'string',
+        description: 'Optional URL to open in the new tab. Defaults to Google homepage.',
+      },
+    },
+  },
+};
+
+export const browserSwitchTabTool: MCPTool = {
+  name: 'browser_switch_tab',
+  description: 'Switch to a specific browser tab by its ID. Use browser_list_tabs to see all available tabs and their IDs.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      tabId: {
+        type: 'string',
+        description: 'The ID of the tab to switch to',
+      },
+    },
+    required: ['tabId'],
+  },
+};
+
+export const browserCloseTabTool: MCPTool = {
+  name: 'browser_close_tab',
+  description: 'Close a specific browser tab by its ID. Cannot close the last remaining tab.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      tabId: {
+        type: 'string',
+        description: 'The ID of the tab to close',
+      },
+    },
+    required: ['tabId'],
+  },
+};
+
+export const browserListTabsTool: MCPTool = {
+  name: 'browser_list_tabs',
+  description: 'List all open browser tabs with their IDs, titles, and URLs. Shows which tab is currently active.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+  },
+};
+
+export const browserTakeScreenshotTool: MCPTool = {
+  name: 'browser_take_screenshot',
+  description: 'Capture a screenshot of the current browser page and get a text preview. Useful for understanding what the user sees.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      fullPage: {
+        type: 'boolean',
+        description: 'Whether to capture the full page or just the visible area. Defaults to visible area.',
+      },
+    },
+  },
+};
+
+export const browserGetSelectedTextTool: MCPTool = {
+  name: 'browser_get_selected_text',
+  description: 'Get the text that is currently selected/highlighted in the browser. Returns empty if nothing is selected.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+  },
+};
+
 /**
  * Handle browser_get_interactive_elements
  */
@@ -783,21 +877,159 @@ async function handleBrowserNavigate(args: { url: string }): Promise<string> {
 }
 
 /**
+ * Handle browser_create_tab
+ */
+async function handleBrowserCreateTab(args: { url?: string }): Promise<string> {
+  try {
+    const { browserCreateTab } = await import('../../../electron/ipc/handlers/browser-view');
+    const url = args.url || 'https://www.google.com';
+    const result = await browserCreateTab(url);
+
+    if (result.success && result.data) {
+      return `Successfully created new tab (ID: ${result.data.tabId}) with URL: ${url}`;
+    } else {
+      throw new Error(result.error || 'Failed to create tab');
+    }
+  } catch (error: any) {
+    throw new Error(`Failed to create tab: ${error.message}`);
+  }
+}
+
+/**
+ * Handle browser_switch_tab
+ */
+async function handleBrowserSwitchTab(args: { tabId: string }): Promise<string> {
+  try {
+    const { browserSwitchTab } = await import('../../../electron/ipc/handlers/browser-view');
+    const result = await browserSwitchTab(args.tabId);
+
+    if (result.success && result.data) {
+      return `Successfully switched to tab (ID: ${args.tabId}). Current URL: ${result.data.url}`;
+    } else {
+      throw new Error(result.error || 'Failed to switch tab');
+    }
+  } catch (error: any) {
+    throw new Error(`Failed to switch tab: ${error.message}`);
+  }
+}
+
+/**
+ * Handle browser_close_tab
+ */
+async function handleBrowserCloseTab(args: { tabId: string }): Promise<string> {
+  try {
+    const { browserCloseTab } = await import('../../../electron/ipc/handlers/browser-view');
+    const result = await browserCloseTab(args.tabId);
+
+    if (result.success) {
+      return `Successfully closed tab (ID: ${args.tabId})`;
+    } else {
+      throw new Error(result.error || 'Failed to close tab');
+    }
+  } catch (error: any) {
+    throw new Error(`Failed to close tab: ${error.message}`);
+  }
+}
+
+/**
+ * Handle browser_list_tabs
+ */
+async function handleBrowserListTabs(): Promise<string> {
+  try {
+    const { browserGetTabs } = await import('../../../electron/ipc/handlers/browser-view');
+    const result = browserGetTabs();
+
+    if (result.success && result.data) {
+      const { tabs, activeTabId } = result.data;
+      const tabList = tabs.map(tab =>
+        `${tab.isActive ? '✓' : ' '} [${tab.id}] ${tab.title || 'Untitled'} - ${tab.url}`
+      ).join('\n');
+
+      return `Total tabs: ${tabs.length}\nActive tab: ${activeTabId}\n\n${tabList}`;
+    } else {
+      throw new Error(result.error || 'Failed to get tabs');
+    }
+  } catch (error: any) {
+    throw new Error(`Failed to list tabs: ${error.message}`);
+  }
+}
+
+/**
+ * Handle browser_take_screenshot
+ */
+async function handleBrowserTakeScreenshot(args: { fullPage?: boolean }): Promise<string> {
+  const browserView = getActiveBrowserView();
+  if (!browserView) {
+    throw new Error('No active browser tab. Please switch to Browser mode first.');
+  }
+
+  try {
+    // Take screenshot
+    const image = await browserView.webContents.capturePage();
+    const base64 = image.toDataURL();
+
+    // Get page text for summary
+    const textResult = await browserView.webContents.executeJavaScript(`
+      document.body.innerText.substring(0, 2000);
+    `);
+
+    return `Screenshot captured successfully!\n\nVisible text preview:\n${textResult}\n\nScreenshot: ${base64.substring(0, 100)}... (base64 data)`;
+  } catch (error: any) {
+    throw new Error(`Failed to take screenshot: ${error.message}`);
+  }
+}
+
+/**
+ * Handle browser_get_selected_text
+ */
+async function handleBrowserGetSelectedText(): Promise<string> {
+  const browserView = getActiveBrowserView();
+  if (!browserView) {
+    throw new Error('No active browser tab. Please switch to Browser mode first.');
+  }
+
+  try {
+    const selectedText = await browserView.webContents.executeJavaScript(`
+      window.getSelection().toString();
+    `);
+
+    if (!selectedText || selectedText.trim() === '') {
+      return 'No text is currently selected in the browser.';
+    }
+
+    return `Selected text (${selectedText.length} characters):\n\n${selectedText}`;
+  } catch (error: any) {
+    throw new Error(`Failed to get selected text: ${error.message}`);
+  }
+}
+
+/**
  * Get all builtin tools
  */
 export function getBuiltinTools(): MCPTool[] {
   return [
+    // File operations
     fileReadTool,
     fileWriteTool,
     fileEditTool,
     fileListTool,
+    // Command execution
     commandExecuteTool,
     grepSearchTool,
-    browserGetInteractiveElementsTool,
+    // Browser control
+    browserNavigateTool,
     browserGetPageContentTool,
+    browserGetInteractiveElementsTool,
     browserClickElementTool,
     browserTypeTextTool,
     browserScrollTool,
-    browserNavigateTool,
+    // Browser tab management
+    browserCreateTabTool,
+    browserSwitchTabTool,
+    browserCloseTabTool,
+    browserListTabsTool,
+    // Browser advanced
+    browserTakeScreenshotTool,
+    browserGetSelectedTextTool,
   ];
 }

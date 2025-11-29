@@ -556,3 +556,152 @@ export function cleanupBrowserView() {
   activeTabId = null;
   mainWindowRef = null;
 }
+
+/**
+ * Export functions for direct access from built-in tools
+ */
+export async function browserCreateTab(url?: string) {
+  if (!mainWindowRef) {
+    return { success: false, error: 'No active window' };
+  }
+
+  try {
+    const tabId = randomUUID();
+    const defaultUrl = url || 'https://www.google.com';
+
+    const view = createBrowserView(mainWindowRef, tabId);
+
+    const tab: BrowserTab = {
+      id: tabId,
+      view,
+      url: defaultUrl,
+      title: 'New Tab',
+    };
+
+    tabs.set(tabId, tab);
+
+    // If this is the first tab, make it active
+    if (!activeTabId) {
+      activeTabId = tabId;
+      mainWindowRef.addBrowserView(view);
+      setActiveBrowserView(view); // For browser control
+    }
+
+    // Load URL
+    await view.webContents.loadURL(defaultUrl);
+
+    logger.info(`Tab created via built-in tool: ${tabId}`);
+    return {
+      success: true,
+      data: {
+        tabId,
+        url: defaultUrl,
+      },
+    };
+  } catch (error) {
+    logger.error('Failed to create tab:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+export async function browserSwitchTab(tabId: string) {
+  if (!mainWindowRef) {
+    return { success: false, error: 'No active window' };
+  }
+
+  try {
+    const tab = tabs.get(tabId);
+    if (!tab) {
+      return { success: false, error: 'Tab not found' };
+    }
+
+    // Hide current tab
+    if (activeTabId) {
+      const currentTab = tabs.get(activeTabId);
+      if (currentTab) {
+        mainWindowRef.removeBrowserView(currentTab.view);
+      }
+    }
+
+    // Show new tab
+    mainWindowRef.addBrowserView(tab.view);
+    setActiveBrowserView(tab.view); // For browser control
+    activeTabId = tabId;
+
+    logger.info(`Switched to tab via built-in tool: ${tabId}`);
+    return {
+      success: true,
+      data: {
+        tabId,
+        url: tab.url,
+        canGoBack: tab.view.webContents.canGoBack(),
+        canGoForward: tab.view.webContents.canGoForward(),
+      },
+    };
+  } catch (error) {
+    logger.error('Failed to switch tab:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+export async function browserCloseTab(tabId: string) {
+  if (!mainWindowRef) {
+    return { success: false, error: 'No active window' };
+  }
+
+  try {
+    const tab = tabs.get(tabId);
+    if (!tab) {
+      return { success: false, error: 'Tab not found' };
+    }
+
+    // Don't close if it's the only tab
+    if (tabs.size === 1) {
+      return { success: false, error: 'Cannot close the last tab' };
+    }
+
+    // If closing active tab, switch to another tab
+    if (activeTabId === tabId) {
+      const otherTabId = Array.from(tabs.keys()).find((id) => id !== tabId);
+      if (otherTabId) {
+        await browserSwitchTab(otherTabId);
+      }
+    }
+
+    // Remove and destroy
+    mainWindowRef.removeBrowserView(tab.view);
+    // Destroy webContents (cast to any as destroy is not in types)
+    if (tab.view.webContents && !tab.view.webContents.isDestroyed()) {
+      (tab.view.webContents as any).destroy();
+    }
+    tabs.delete(tabId);
+
+    logger.info(`Tab closed via built-in tool: ${tabId}`);
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to close tab:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+export function browserGetTabs() {
+  try {
+    const tabsArray = Array.from(tabs.entries()).map(([id, tab]) => ({
+      id,
+      url: tab.url,
+      title: tab.title,
+      isActive: id === activeTabId,
+    }));
+
+    return {
+      success: true,
+      data: {
+        tabs: tabsArray,
+        activeTabId,
+      },
+    };
+  } catch (error) {
+    logger.error('Failed to get tabs:', error);
+    return { success: false, error: String(error) };
+  }
+}
