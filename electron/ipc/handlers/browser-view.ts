@@ -1026,30 +1026,30 @@ export function setupBrowserViewHandlers() {
         return { success: false, error: 'Bookmark not found' };
       }
 
-      // Load the URL in active tab or create new tab
-      if (!activeTabId) {
-        const tabId = randomUUID();
-        const view = createBrowserView(mainWindow, tabId);
+      // Always create a new tab for bookmarks
+      const tabId = randomUUID();
+      const view = createBrowserView(mainWindow, tabId);
 
-        const tab: BrowserTab = {
-          id: tabId,
-          view,
-          url: bookmark.url,
-          title: bookmark.title,
-        };
+      const tab: BrowserTab = {
+        id: tabId,
+        view,
+        url: bookmark.url,
+        title: bookmark.title,
+      };
 
-        tabs.set(tabId, tab);
-        activeTabId = tabId;
-        mainWindow.addBrowserView(view);
-        setActiveBrowserView(view);
+      tabs.set(tabId, tab);
+      activeTabId = tabId;
+      mainWindow.addBrowserView(view);
+      setActiveBrowserView(view);
 
-        await view.webContents.loadURL(bookmark.url);
-      } else {
-        const tab = tabs.get(activeTabId);
-        if (tab) {
-          await tab.view.webContents.loadURL(bookmark.url);
-        }
-      }
+      await view.webContents.loadURL(bookmark.url);
+
+      // Notify renderer to update tabs
+      mainWindow.webContents.send('browser-view:tab-created', {
+        id: tabId,
+        url: tab.url,
+        title: tab.title,
+      });
 
       logger.info(`Bookmark opened: ${bookmarkId}`);
       return { success: true };
