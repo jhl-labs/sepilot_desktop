@@ -91,7 +91,7 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh]">
+      <DialogContent className="max-w-3xl max-h-[80vh]" onClose={() => onOpenChange(false)}>
         <DialogHeader>
           <DialogTitle>
             <div className="flex items-center gap-2">
