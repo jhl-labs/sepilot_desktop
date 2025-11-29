@@ -196,24 +196,20 @@ async function registerShortcuts() {
           mainWindow.focus();
           logger.info('[Shortcuts] Main window shown and focused');
 
-          // Read clipboard and include in message
+          // Read clipboard and send as separate system/user messages
           const { clipboard } = require('electron');
           const clipboardContent = clipboard.readText();
           logger.info(`[Shortcuts] Clipboard content length: ${clipboardContent.length}`);
 
-          let finalMessage: string;
-          if (question.prompt.includes('{{clipboard}}')) {
-            // Replace {{clipboard}} placeholder
-            finalMessage = question.prompt.replace(/\{\{clipboard\}\}/g, clipboardContent);
-          } else {
-            // Append clipboard content if no placeholder
-            finalMessage = clipboardContent.trim()
-              ? `${question.prompt}\n\n\`\`\`\n${clipboardContent}\n\`\`\``
-              : question.prompt;
-          }
+          // Send prompt as system message, clipboard as user message
+          const messageData = {
+            systemMessage: question.prompt,
+            userMessage: clipboardContent.trim() || '(클립보드가 비어있습니다)',
+          };
 
-          logger.info(`[Shortcuts] Sending message to main window: ${finalMessage.substring(0, 100)}...`);
-          mainWindow.webContents.send('create-new-chat-with-message', finalMessage);
+          logger.info(`[Shortcuts] Sending message with system prompt: ${question.prompt.substring(0, 50)}...`);
+          logger.info(`[Shortcuts] User message (clipboard): ${messageData.userMessage.substring(0, 50)}...`);
+          mainWindow.webContents.send('create-new-chat-with-message', messageData);
           logger.info('[Shortcuts] Message sent successfully');
         } else {
           logger.error('[Shortcuts] Failed to create/access main window');
@@ -398,7 +394,7 @@ app.whenReady().then(async () => {
     );
   }
 
-  // Setup IPC handlers
+  // Setup IPC handlers (terminal handlers will be set up after window creation)
   setupIpcHandlers();
 
   // Initialize builtin tools (file_read, file_write, file_edit, file_list)
@@ -414,6 +410,13 @@ app.whenReady().then(async () => {
 
   // Create window
   createWindow();
+
+  // Setup terminal handlers with mainWindow after window is created
+  if (mainWindow) {
+    const { setupTerminalHandlers } = require('./ipc/handlers/terminal');
+    setupTerminalHandlers(mainWindow);
+    logger.info('Terminal handlers registered with mainWindow');
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

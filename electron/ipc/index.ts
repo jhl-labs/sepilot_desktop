@@ -3,6 +3,7 @@
  * Electron IPC 핸들러 등록
  */
 
+import { BrowserWindow } from 'electron';
 import { setupChatHandlers } from './handlers/chat';
 import { setupActivityHandlers } from './handlers/activity';
 import { setupConfigHandlers } from './handlers/config';
@@ -25,7 +26,7 @@ import { logger } from '../services/logger';
 /**
  * Register all IPC handlers
  */
-export function setupIpcHandlers() {
+export function setupIpcHandlers(mainWindow?: BrowserWindow) {
   logger.info('Setting up IPC handlers');
 
   setupChatHandlers();
@@ -44,7 +45,7 @@ export function setupIpcHandlers() {
   setupQuickInputHandlers();
   setupBrowserViewHandlers();
   setupBrowserControlHandlers();
-  setupTerminalHandlers();
+  setupTerminalHandlers(mainWindow);
 
   logger.info('IPC handlers setup complete');
 }
