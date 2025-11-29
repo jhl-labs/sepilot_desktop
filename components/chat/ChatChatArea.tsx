@@ -21,7 +21,6 @@ export function ChatChatArea() {
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground px-4">
         <MessageSquare className="mb-4 h-12 w-12 opacity-10" />
         <div className="text-xs font-medium text-center space-y-2">
-          <p className="text-sm mb-3">AI 어시스턴트와 대화하세요</p>
           <p>• RAG를 활용한 문서 기반 답변</p>
           <p>• MCP Tool calling 지원</p>
           <p>• 이미지 생성 및 해석</p>
