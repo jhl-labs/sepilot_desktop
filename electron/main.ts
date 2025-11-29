@@ -396,6 +396,10 @@ function createTray() {
   });
 }
 
+// Configure DNS settings before app is ready
+// Disable built-in DNS client to use system DNS resolver
+app.commandLine.appendSwitch('disable-features', 'AsyncDns');
+
 app.whenReady().then(async () => {
   logger.info('App is ready');
 
