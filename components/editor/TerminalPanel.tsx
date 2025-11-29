@@ -155,6 +155,8 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   const handleNewTab = useCallback(async () => {
     if (!containerRef.current) return;
 
+    console.log('[TerminalPanel] handleNewTab called with workingDirectory:', workingDirectory);
+
     // Terminal 인스턴스 생성
     const term = new Terminal({
       cursorBlink: true,
@@ -184,6 +186,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     // PTY 세션 생성
     const cols = term.cols;
     const rows = term.rows;
+    console.log('[TerminalPanel] Creating session with cwd:', workingDirectory);
     const session = await createSession(workingDirectory, cols, rows);
 
     if (!session) {
@@ -292,14 +295,14 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     [tabs, killSession, updateScrollState]
   );
 
-  // 초기 탭 생성 (한 번만 실행되도록 ref 사용)
-  const initializedRef = useRef(false);
+  // 초기 탭 생성 - 탭이 없을 때 자동으로 하나 생성
   useEffect(() => {
-    if (!initializedRef.current && tabs.length === 0) {
-      initializedRef.current = true;
+    // 탭이 없고, workingDirectory가 있으면 자동으로 첫 탭 생성
+    if (tabs.length === 0 && workingDirectory) {
+      console.log('[TerminalPanel] Creating initial tab with workingDirectory:', workingDirectory);
       handleNewTab();
     }
-  }, [handleNewTab, tabs.length]);
+  }, [tabs.length, workingDirectory, handleNewTab]);
 
   // 리사이즈 처리
   useEffect(() => {
