@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal, Plus, X } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
+import { useChatStore } from '@/lib/store/chat-store';
 
 interface Tab {
   id: string;
@@ -14,6 +15,7 @@ interface Tab {
 }
 
 export function BrowserPanel() {
+  const { appMode, activeEditorTab } = useChatStore();
   const [url, setUrl] = useState('https://www.google.com');
   const [currentUrl, setCurrentUrl] = useState(url);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -194,6 +196,15 @@ export function BrowserPanel() {
       return;
     }
 
+    // Browser 모드가 아닐 때는 bounds 설정하지 않음
+    const isBrowserVisible =
+      appMode === 'browser' ||
+      (appMode === 'editor' && activeEditorTab === 'browser');
+
+    if (!isBrowserVisible) {
+      return;
+    }
+
     const updateBounds = () => {
       if (!containerRef.current) {
         return;
@@ -203,6 +214,7 @@ export function BrowserPanel() {
 
       // BrowserView의 위치를 컨테이너에 맞춤
       // Note: BrowserView 좌표는 윈도우 기준이므로 rect의 x, y를 사용
+      console.log('[BrowserPanel] Setting bounds:', { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
       window.electronAPI.browserView.setBounds({
         x: Math.round(rect.x),
         y: Math.round(rect.y),
@@ -211,8 +223,10 @@ export function BrowserPanel() {
       });
     };
 
-    // 초기 bounds 설정
-    updateBounds();
+    // 약간의 지연 후 bounds 설정 (DOM이 완전히 렌더링될 시간 확보)
+    const timer = setTimeout(() => {
+      updateBounds();
+    }, 100);
 
     // 윈도우 리사이즈 시 bounds 업데이트
     const resizeObserver = new ResizeObserver(updateBounds);
@@ -221,10 +235,11 @@ export function BrowserPanel() {
     window.addEventListener('resize', updateBounds);
 
     return () => {
+      clearTimeout(timer);
       resizeObserver.disconnect();
       window.removeEventListener('resize', updateBounds);
     };
-  }, []); // BrowserPanel이 렌더링되면 bounds 설정
+  }, [appMode, activeEditorTab]); // appMode나 activeEditorTab이 변경될 때마다 bounds 재설정
 
   if (!isElectron()) {
     return (
