@@ -1,7 +1,7 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import sharp from 'sharp';
 import TurndownService from 'turndown';
@@ -476,26 +476,52 @@ export function registerFileHandlers() {
         args.push('--glob', '!.git/**');
 
         // 검색어 추가
-        args.push('--', query);
+        args.push('--', query, '.');
 
-        // 내장된 ripgrep 바이너리 사용
-        // 현재 디렉토리(.)에서 검색하도록 변경 (cwd 설정으로 인해)
-        const command = `"${rgPath}" ${args.join(' ')} .`;
-        console.log('[File] Running command:', command);
         console.log('[File] Using bundled ripgrep at:', rgPath);
         console.log('[File] Working directory:', dirPath);
+        console.log('[File] Search args:', args);
 
-        const { stdout, stderr } = await execAsync(command, {
-          maxBuffer: 10 * 1024 * 1024, // 10MB
-          encoding: 'utf-8',
-          cwd: dirPath, // working directory에서 실행
-          windowsHide: true,
+        // spawn을 사용하여 직접 실행 (shell 파싱 문제 회피)
+        const stdout = await new Promise<string>((resolve, reject) => {
+          const child = spawn(rgPath, args, {
+            cwd: dirPath,
+            windowsHide: true,
+          });
+
+          let output = '';
+          let errorOutput = '';
+
+          child.stdout.on('data', (data) => {
+            output += data.toString();
+          });
+
+          child.stderr.on('data', (data) => {
+            errorOutput += data.toString();
+          });
+
+          child.on('close', (code) => {
+            if (code === 0) {
+              // 성공
+              resolve(output);
+            } else if (code === 1) {
+              // 매칭 없음
+              console.log('[File] No matches found (exit code 1)');
+              resolve('');
+            } else {
+              // 에러
+              console.error('[File] ripgrep error:', { code, stderr: errorOutput });
+              reject(new Error(`ripgrep failed with code ${code}: ${errorOutput}`));
+            }
+          });
+
+          child.on('error', (error) => {
+            console.error('[File] Failed to spawn ripgrep:', error);
+            reject(error);
+          });
         });
 
         console.log('[File] Search stdout length:', stdout.length);
-        if (stderr) {
-          console.log('[File] Search stderr:', stderr);
-        }
 
         // 결과 파싱
         const results: Record<
@@ -558,12 +584,7 @@ export function registerFileHandlers() {
         };
       } catch (error: any) {
         // ripgrep 실행 에러 처리
-        console.error('[File] Error searching files:', {
-          code: error.code,
-          message: error.message,
-          stderr: error.stderr,
-          stdout: error.stdout,
-        });
+        console.error('[File] Error searching files:', error);
 
         if (error.code === 'ENOENT') {
           console.error('[File] Bundled ripgrep not found at:', rgPath);
@@ -572,23 +593,11 @@ export function registerFileHandlers() {
             error: 'Internal error: bundled ripgrep not found. Please report this issue.',
           };
         }
-        if (error.code === 1) {
-          // ripgrep exit code 1 = no matches found
-          console.log('[File] No matches found (exit code 1)');
-          return {
-            success: true,
-            data: {
-              query,
-              totalFiles: 0,
-              totalMatches: 0,
-              results: [],
-            },
-          };
-        }
+
         console.error('[File] Unexpected error during search');
         return {
           success: false,
-          error: `Search error: ${error.message || 'Unknown error'}\n${error.stderr || ''}`,
+          error: `Search error: ${error.message || 'Unknown error'}`,
         };
       }
     }
