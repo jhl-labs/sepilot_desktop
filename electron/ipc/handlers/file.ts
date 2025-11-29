@@ -6,9 +6,35 @@ import { promisify } from 'util';
 import sharp from 'sharp';
 import TurndownService from 'turndown';
 import mammoth from 'mammoth';
-import { rgPath } from '@vscode/ripgrep';
 
 const execAsync = promisify(exec);
+
+/**
+ * Get ripgrep binary path
+ * @vscode/ripgrep 패키지는 플랫폼별로 다른 바이너리를 제공
+ */
+function getRipgrepPath(): string {
+  try {
+    // @vscode/ripgrep 패키지 경로
+    const ripgrepModule = require.resolve('@vscode/ripgrep');
+    const ripgrepDir = path.dirname(ripgrepModule);
+
+    // 플랫폼별 바이너리 경로
+    let binaryName = 'rg';
+    if (process.platform === 'win32') {
+      binaryName = 'rg.exe';
+    }
+
+    // bin 디렉토리 찾기
+    const binPath = path.join(ripgrepDir, 'bin', binaryName);
+
+    console.log('[File] Resolved ripgrep path:', binPath);
+    return binPath;
+  } catch (error) {
+    console.error('[File] Failed to resolve ripgrep path:', error);
+    throw new Error('Failed to locate ripgrep binary');
+  }
+}
 
 /**
  * File IPC Handlers
@@ -478,7 +504,18 @@ export function registerFileHandlers() {
         // 검색어 추가
         args.push('--', query, '.');
 
-        console.log('[File] Using bundled ripgrep at:', rgPath);
+        // ripgrep 경로 가져오기
+        let rgPath: string;
+        try {
+          rgPath = getRipgrepPath();
+          console.log('[File] Using bundled ripgrep at:', rgPath);
+        } catch (error: any) {
+          console.error('[File] Failed to get ripgrep path:', error);
+          return {
+            success: false,
+            error: `Failed to locate ripgrep: ${error.message}`,
+          };
+        }
 
         // ripgrep 실행 파일 존재 확인
         try {
@@ -608,7 +645,7 @@ export function registerFileHandlers() {
         console.error('[File] Error searching files:', error);
 
         if (error.code === 'ENOENT') {
-          console.error('[File] Bundled ripgrep not found at:', rgPath);
+          console.error('[File] Bundled ripgrep not found');
           return {
             success: false,
             error: 'Internal error: bundled ripgrep not found. Please report this issue.',
