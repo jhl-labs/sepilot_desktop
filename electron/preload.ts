@@ -209,7 +209,10 @@ const electronAPI = {
   fs: {
     readDirectory: (dirPath: string) => ipcRenderer.invoke('fs:read-directory', dirPath),
     readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
-    writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:write-file', filePath, content),
+    writeFile: (filePath: string, content: string) =>
+      ipcRenderer.invoke('fs:write-file', filePath, content),
+    searchFiles: (query: string, dirPath: string, options?: any) =>
+      ipcRenderer.invoke('fs:search-files', query, dirPath, options),
   },
 
   // GitHub operations

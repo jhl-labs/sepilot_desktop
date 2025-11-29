@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Settings, Trash, FileText, Image, ChevronDown, MessageSquare, Code } from 'lucide-react';
+import { Plus, Settings, Trash, FileText, Image, ChevronDown, MessageSquare, Code, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useState } from 'react';
@@ -8,6 +8,7 @@ import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ChatHistory } from './ChatHistory';
 import { FileExplorer } from './FileExplorer';
+import { SearchPanel } from '@/components/editor/SearchPanel';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +32,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
   } = useChatStore();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeEditorTab, setActiveEditorTab] = useState<'files' | 'search'>('files');
 
   const handleDeleteAll = async () => {
     if (conversations.length === 0) return;
@@ -69,8 +71,8 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Action Buttons (Chat mode only) */}
-        {appMode === 'chat' && (
+        {/* Action Buttons (Chat mode) / Tab Buttons (Editor mode) */}
+        {appMode === 'chat' ? (
           <div className="flex gap-1">
             <Button
               variant="ghost"
@@ -91,14 +93,39 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
               <Trash className="h-5 w-5" />
             </Button>
           </div>
+        ) : (
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveEditorTab('files')}
+              title="파일 탐색기"
+              className={activeEditorTab === 'files' ? 'bg-accent' : ''}
+            >
+              <FileText className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveEditorTab('search')}
+              title="전체 검색"
+              className={activeEditorTab === 'search' ? 'bg-accent' : ''}
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          </div>
         )}
       </div>
 
-      {/* Content Area - Conditionally render based on mode */}
+      {/* Content Area - Conditionally render based on mode and tab */}
       {appMode === 'chat' ? (
         <ChatHistory onConversationClick={onConversationClick} />
       ) : (
-        <FileExplorer />
+        activeEditorTab === 'files' ? (
+          <FileExplorer />
+        ) : (
+          <SearchPanel />
+        )
       )}
 
       {/* Footer */}

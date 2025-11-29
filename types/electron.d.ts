@@ -271,10 +271,41 @@ interface FileAPI {
 }
 
 // File System API (Editor용)
+interface SearchMatch {
+  line: number;
+  column: number;
+  text: string;
+}
+
+interface SearchResult {
+  file: string;
+  matches: SearchMatch[];
+}
+
+interface SearchOptions {
+  caseSensitive?: boolean;
+  wholeWord?: boolean;
+  useRegex?: boolean;
+  includePattern?: string;
+  excludePattern?: string;
+}
+
+interface SearchResponse {
+  query: string;
+  totalFiles: number;
+  totalMatches: number;
+  results: SearchResult[];
+}
+
 interface FileSystemAPI {
   readDirectory: (dirPath: string) => Promise<IPCResponse<FileNode[]>>;
   readFile: (filePath: string) => Promise<IPCResponse<string>>;
   writeFile: (filePath: string, content: string) => Promise<IPCResponse>;
+  searchFiles: (
+    query: string,
+    dirPath: string,
+    options?: SearchOptions
+  ) => Promise<IPCResponse<SearchResponse>>;
 }
 
 interface GitHubAPI {

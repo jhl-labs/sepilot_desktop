@@ -1,9 +1,13 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import sharp from 'sharp';
 import TurndownService from 'turndown';
 import mammoth from 'mammoth';
+
+const execAsync = promisify(exec);
 
 /**
  * File IPC Handlers
@@ -398,6 +402,140 @@ export function registerFileHandlers() {
       };
     }
   });
+
+  // 파일 전체 검색 (ripgrep 사용)
+  ipcMain.handle(
+    'fs:search-files',
+    async (
+      _event,
+      query: string,
+      dirPath: string,
+      options?: {
+        caseSensitive?: boolean;
+        wholeWord?: boolean;
+        useRegex?: boolean;
+        includePattern?: string;
+        excludePattern?: string;
+      }
+    ) => {
+      try {
+        console.log('[File] Searching files:', { query, dirPath, options });
+
+        // ripgrep 명령 구성
+        const args: string[] = [
+          '--line-number', // 라인 번호 표시
+          '--column', // 컬럼 번호 표시
+          '--no-heading', // 파일명을 각 줄에 표시
+          '--with-filename', // 파일명 포함
+          '--color=never', // 컬러 출력 비활성화
+        ];
+
+        // 옵션 적용
+        if (!options?.caseSensitive) {
+          args.push('--ignore-case');
+        }
+        if (options?.wholeWord) {
+          args.push('--word-regexp');
+        }
+        if (!options?.useRegex) {
+          args.push('--fixed-strings'); // 정규식이 아닌 일반 문자열 검색
+        }
+        if (options?.includePattern) {
+          args.push('--glob', options.includePattern);
+        }
+        if (options?.excludePattern) {
+          args.push('--glob', `!${options.excludePattern}`);
+        }
+
+        // 기본 제외 패턴
+        args.push('--glob', '!node_modules/**');
+        args.push('--glob', '!.git/**');
+        args.push('--glob', '!dist/**');
+        args.push('--glob', '!build/**');
+        args.push('--glob', '!.next/**');
+        args.push('--glob', '!out/**');
+
+        // 검색어와 경로 추가
+        args.push('--', query, dirPath);
+
+        const command = `rg ${args.join(' ')}`;
+        console.log('[File] Running command:', command);
+
+        const { stdout } = await execAsync(command, {
+          maxBuffer: 10 * 1024 * 1024, // 10MB
+          encoding: 'utf-8',
+        });
+
+        // 결과 파싱
+        const results: Record<
+          string,
+          Array<{ line: number; column: number; text: string }>
+        > = {};
+
+        const lines = stdout.trim().split('\n');
+        for (const line of lines) {
+          // 형식: 파일명:라인:컬럼:텍스트
+          const match = line.match(/^([^:]+):(\d+):(\d+):(.*)$/);
+          if (match) {
+            const [, filePath, lineNum, colNum, text] = match;
+            if (!results[filePath]) {
+              results[filePath] = [];
+            }
+            results[filePath].push({
+              line: parseInt(lineNum, 10),
+              column: parseInt(colNum, 10),
+              text: text,
+            });
+          }
+        }
+
+        // 파일별로 그룹화된 결과로 변환
+        const groupedResults = Object.entries(results).map(([file, matches]) => ({
+          file,
+          matches,
+        }));
+
+        console.log(
+          `[File] Search complete: ${groupedResults.length} files, ${lines.length} matches`
+        );
+
+        return {
+          success: true,
+          data: {
+            query,
+            totalFiles: groupedResults.length,
+            totalMatches: lines.length,
+            results: groupedResults,
+          },
+        };
+      } catch (error: any) {
+        // ripgrep이 설치되지 않았거나 매치가 없는 경우
+        if (error.code === 'ENOENT') {
+          return {
+            success: false,
+            error: 'ripgrep (rg) is not installed. Please install it to use search functionality.',
+          };
+        }
+        if (error.code === 1) {
+          // ripgrep exit code 1 = no matches found
+          return {
+            success: true,
+            data: {
+              query,
+              totalFiles: 0,
+              totalMatches: 0,
+              results: [],
+            },
+          };
+        }
+        console.error('[File] Error searching files:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to search files',
+        };
+      }
+    }
+  );
 
   console.log('[File] IPC handlers registered');
 }
