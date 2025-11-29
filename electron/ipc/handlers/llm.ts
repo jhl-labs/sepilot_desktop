@@ -483,14 +483,29 @@ Return ONLY the title, without quotes or additional text.`,
       }
     ) => {
       try {
+        logger.info('[Autocomplete] Handler called:', {
+          codeLength: context.code.length,
+          cursorPosition: context.cursorPosition,
+          language: context.language,
+        });
+
         // Get autocomplete config from database
         const configStr = databaseService.getSetting('app_config');
         if (!configStr) {
+          logger.error('[Autocomplete] App config not found in database');
           throw new Error('App config not found');
         }
 
         const config = JSON.parse(configStr) as AppConfig;
+        logger.info('[Autocomplete] Autocomplete config:', {
+          enabled: config.llm?.autocomplete?.enabled,
+          provider: config.llm?.autocomplete?.provider,
+          model: config.llm?.autocomplete?.model,
+          hasApiKey: !!config.llm?.autocomplete?.apiKey,
+        });
+
         if (!config.llm?.autocomplete?.enabled) {
+          logger.warn('[Autocomplete] Autocomplete is not enabled in settings');
           return {
             success: false,
             error: 'Autocomplete is not enabled',
@@ -579,7 +594,12 @@ Complete from the cursor (█). Return ONLY the completion code, no explanations
           },
         ];
 
+        logger.info('[Autocomplete] Calling LLM API...');
         const response = await provider.chat(messages);
+        logger.info('[Autocomplete] LLM response received:', {
+          contentLength: response.content?.length || 0,
+          contentPreview: response.content?.substring(0, 100),
+        });
 
         // Parse and clean the response
         let completion = response.content.trim();
@@ -604,6 +624,12 @@ Complete from the cursor (█). Return ONLY the completion code, no explanations
           completion = completionLines.slice(0, 3).join('\n');
         }
 
+        logger.info('[Autocomplete] Final completion:', {
+          length: completion.length,
+          preview: completion.substring(0, 100),
+          lineCount: completion.split('\n').length,
+        });
+
         return {
           success: true,
           data: {
@@ -611,7 +637,10 @@ Complete from the cursor (█). Return ONLY the completion code, no explanations
           },
         };
       } catch (error: any) {
-        logger.error('[LLM IPC] Autocomplete error:', error);
+        logger.error('[Autocomplete] Error occurred:', {
+          message: error.message,
+          stack: error.stack,
+        });
         return {
           success: false,
           error: error.message || 'Failed to generate autocomplete',

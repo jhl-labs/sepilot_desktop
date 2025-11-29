@@ -207,11 +207,19 @@ export function CodeEditor() {
                 language,
               });
 
+              console.log('[Autocomplete] Response received:', result);
+
               if (result.success && result.data?.completion) {
                 const completion = result.data.completion.trim();
 
+                console.log('[Autocomplete] Completion text:', {
+                  original: result.data.completion,
+                  trimmed: completion,
+                  length: completion.length,
+                });
+
                 if (completion) {
-                  console.log('Autocomplete suggestion:', completion);
+                  console.log('[Autocomplete] Showing suggestion:', completion);
 
                   resolve({
                     items: [
@@ -228,10 +236,19 @@ export function CodeEditor() {
                     ],
                   });
                   return;
+                } else {
+                  console.log('[Autocomplete] Completion is empty after trim');
                 }
+              } else {
+                console.log('[Autocomplete] Failed:', {
+                  success: result.success,
+                  hasData: !!result.data,
+                  hasCompletion: !!result.data?.completion,
+                  error: result.error,
+                });
               }
             } catch (error) {
-              console.error('Autocomplete error:', error);
+              console.error('[Autocomplete] Exception caught:', error);
             }
 
             resolve({ items: [] });
