@@ -541,19 +541,40 @@ Return ONLY the title, without quotes or additional text.`,
         // Use Editor Agent for autocomplete
         const { GraphFactory } = await import('../../../lib/langgraph');
 
+        // Extract context for autocomplete
+        const textBeforeCursor = context.code.substring(0, context.cursorPosition);
+        const textAfterCursor = context.code.substring(context.cursorPosition);
+
+        // Get current line being typed
+        const lines = textBeforeCursor.split('\n');
+        const currentLine = lines[lines.length - 1];
+
+        // Get a few lines before for context (max 3 lines)
+        const contextLinesBefore = lines.slice(-4, -1).join('\n');
+
+        // Get a few lines after for context (max 2 lines)
+        const linesAfter = textAfterCursor.split('\n').slice(0, 2).join('\n');
+
         // Prepare initial state for Editor Agent
         const initialState = {
           messages: [
             {
               id: 'system',
               role: 'system' as const,
-              content: `You are a code/text completion assistant. Complete the text from the cursor position. Return ONLY the completion text without explanations, markdown, or quotes.`,
+              content: `You are an autocomplete assistant. Your task is to continue writing from the cursor position (marked with █).
+
+CRITICAL RULES:
+- DO NOT repeat any text that comes before █
+- Write ONLY what comes AFTER █
+- Return raw text without quotes, markdown, or explanations
+- Keep completion concise (1-3 lines max)
+- Match the writing style and context`,
               created_at: Date.now(),
             },
             {
               id: 'user',
               role: 'user' as const,
-              content: `Complete from cursor:\n\nCode:\n${context.code.substring(Math.max(0, context.cursorPosition - 500), context.cursorPosition)}█\n\nYour completion:`,
+              content: `${contextLinesBefore ? `Context:\n${contextLinesBefore}\n\n` : ''}Current line: ${currentLine}█${linesAfter ? `\n\nNext lines:\n${linesAfter}` : ''}\n\nComplete from █:`,
               created_at: Date.now(),
             },
           ],
@@ -584,11 +605,27 @@ Return ONLY the title, without quotes or additional text.`,
 
         // Clean completion
         completion = completion.trim();
+
+        // Remove markdown code blocks
         completion = completion.replace(/```[\w]*\n?/g, '').replace(/```$/g, '');
+
+        // Remove quotes
         if ((completion.startsWith('"') && completion.endsWith('"')) ||
             (completion.startsWith("'") && completion.endsWith("'"))) {
           completion = completion.slice(1, -1);
         }
+
+        // Remove any text that repeats the current line
+        // If completion starts with the current line text, remove it
+        if (currentLine && completion.startsWith(currentLine)) {
+          completion = completion.substring(currentLine.length);
+        }
+
+        // Remove leading █ if present
+        completion = completion.replace(/^█+/, '');
+
+        // Trim again after cleanup
+        completion = completion.trim();
 
         // Limit to 3 lines
         const completionLines = completion.split('\n');
