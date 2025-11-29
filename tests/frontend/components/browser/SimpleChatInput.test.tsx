@@ -19,15 +19,21 @@ jest.mock('@/lib/platform', () => ({
   isElectron: jest.fn(() => false),
 }));
 
-// Mock WebLLMClient
+// Mock WebLLMClient with delay
+const createSlowStreamMock = () => async function* () {
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  yield { content: 'Hello', done: false };
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  yield { content: ' ', done: false };
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  yield { content: 'World', done: false };
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  yield { done: true };
+};
+
 jest.mock('@/lib/llm/web-client', () => ({
   getWebLLMClient: jest.fn(() => ({
-    stream: jest.fn(async function* () {
-      yield { content: 'Hello', done: false };
-      yield { content: ' ', done: false };
-      yield { content: 'World', done: false };
-      yield { done: true };
-    }),
+    stream: createSlowStreamMock(),
   })),
 }));
 
@@ -225,6 +231,287 @@ describe('SimpleChatInput', () => {
     // Textarea should be enabled again
     await waitFor(() => {
       expect(textarea).not.toBeDisabled();
+    });
+  });
+
+  describe('스트리밍 중지 기능', () => {
+    beforeEach(() => {
+      // Use slower mock for stop tests
+      const mockWebLLMClient = require('@/lib/llm/web-client');
+      mockWebLLMClient.getWebLLMClient.mockReturnValue({
+        stream: createSlowStreamMock(),
+      });
+    });
+
+    it('should show stop button when streaming', async () => {
+      const user = userEvent.setup();
+      render(<SimpleChatInput />);
+
+      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      // Stop button should appear during streaming
+      await waitFor(
+        () => {
+          const stopButton = screen.getByRole('button', { name: /중지/ });
+          expect(stopButton).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('should stop streaming when stop button clicked', async () => {
+      const user = userEvent.setup();
+      render(<SimpleChatInput />);
+
+      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      // Wait for stop button
+      const stopButton = await screen.findByRole(
+        'button',
+        { name: /중지/ },
+        { timeout: 3000 }
+      );
+      await user.click(stopButton);
+
+      // Should show send button again
+      await waitFor(
+        () => {
+          expect(screen.getByRole('button', { name: /전송/ })).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('should stop streaming on Escape key', async () => {
+      const user = userEvent.setup();
+      render(<SimpleChatInput />);
+
+      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      // Wait for streaming to start
+      await waitFor(
+        () => {
+          expect(screen.getByRole('button', { name: /중지/ })).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      // Press Escape key
+      fireEvent.keyDown(window, { key: 'Escape' });
+
+      // Should show send button again
+      await waitFor(
+        () => {
+          expect(screen.getByRole('button', { name: /전송/ })).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+    });
+
+    it('should not send message while streaming', async () => {
+      const user = userEvent.setup();
+      render(<SimpleChatInput />);
+
+      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      await user.type(textarea, 'First message');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      // Clear mock calls from first send
+      mockAddBrowserChatMessage.mockClear();
+
+      // Try to send another message while streaming
+      await user.type(textarea, 'Second message');
+
+      // Stop button should be shown
+      const stopButton = await screen.findByRole(
+        'button',
+        { name: /중지/ },
+        { timeout: 3000 }
+      );
+      expect(stopButton).toBeInTheDocument();
+
+      // Enter should not send while streaming
+      fireEvent.keyDown(textarea, { key: 'Enter' });
+
+      // Should not call addBrowserChatMessage
+      expect(mockAddBrowserChatMessage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('에러 처리', () => {
+    it('should handle stream error', async () => {
+      const mockWebLLMClient = require('@/lib/llm/web-client');
+      mockWebLLMClient.getWebLLMClient.mockReturnValue({
+        stream: jest.fn(async function* () {
+          throw new Error('Network error');
+        }),
+      });
+
+      const user = userEvent.setup();
+      render(<SimpleChatInput />);
+
+      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      // Should update assistant message with error
+      await waitFor(() => {
+        expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith(
+          'msg-2',
+          { content: 'Error: Network error' }
+        );
+      });
+    });
+
+    it('should handle unknown error type', async () => {
+      const mockWebLLMClient = require('@/lib/llm/web-client');
+      mockWebLLMClient.getWebLLMClient.mockReturnValue({
+        stream: jest.fn(async function* () {
+          throw 'Unknown error';
+        }),
+      });
+
+      const user = userEvent.setup();
+      render(<SimpleChatInput />);
+
+      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      // Should update with generic error message
+      await waitFor(() => {
+        expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith(
+          'msg-2',
+          { content: 'Error: Failed to get response' }
+        );
+      });
+    });
+  });
+
+  describe('웹 스트리밍', () => {
+    it('should update assistant message with streamed content', async () => {
+      const user = userEvent.setup();
+      render(<SimpleChatInput />);
+
+      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      // Should update assistant message progressively
+      await waitFor(() => {
+        expect(mockUpdateBrowserChatMessage).toHaveBeenCalled();
+      });
+    });
+
+    it('should respect abort signal during streaming', async () => {
+      // Create a longer streaming mock that can be aborted
+      const mockWebLLMClient = require('@/lib/llm/web-client');
+      mockWebLLMClient.getWebLLMClient.mockReturnValue({
+        stream: jest.fn(async function* () {
+          for (let i = 0; i < 100; i++) {
+            yield { content: `chunk ${i}`, done: false };
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          }
+          yield { done: true };
+        }),
+      });
+
+      const user = userEvent.setup();
+      render(<SimpleChatInput />);
+
+      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      // Wait a bit then stop
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /중지/ })).toBeInTheDocument();
+      });
+
+      const stopButton = screen.getByRole('button', { name: /중지/ });
+      await user.click(stopButton);
+
+      // Should stop streaming
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /전송/ })).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('텍스트 영역 자동 리사이즈', () => {
+    it('should auto-resize textarea based on content', async () => {
+      const user = userEvent.setup();
+      render(<SimpleChatInput />);
+
+      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...') as HTMLTextAreaElement;
+
+      // Mock scrollHeight
+      Object.defineProperty(textarea, 'scrollHeight', {
+        value: 100,
+        writable: true,
+      });
+
+      await user.type(textarea, 'Line 1\nLine 2\nLine 3');
+
+      // Should adjust height
+      await waitFor(() => {
+        expect(textarea.style.height).toBe('100px');
+      });
+    });
+  });
+
+  describe('초점 관리', () => {
+    it('should call focus on textarea after streaming completes', async () => {
+      const user = userEvent.setup();
+      render(<SimpleChatInput />);
+
+      const textarea = screen.getByPlaceholderText('메시지를 입력하세요...') as HTMLTextAreaElement;
+      const focusSpy = jest.spyOn(textarea, 'focus');
+
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      // Wait for streaming to complete
+      await waitFor(
+        () => {
+          expect(screen.getByRole('button', { name: /전송/ })).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
+
+      // Textarea focus should have been called
+      await waitFor(
+        () => {
+          expect(focusSpy).toHaveBeenCalled();
+        },
+        { timeout: 1000 }
+      );
+
+      focusSpy.mockRestore();
     });
   });
 
