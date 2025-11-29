@@ -607,6 +607,14 @@ describe('SettingsDialog', () => {
       (isElectron as jest.Mock).mockReturnValue(true);
       (window as any).electronAPI = {
         config: {
+          load: jest.fn().mockResolvedValue({
+            success: true,
+            data: {
+              llm: { provider: 'openai', apiKey: '', model: '', temperature: 0.7, maxTokens: 2000, baseURL: '' },
+              network: { useProxy: false, sslVerification: true },
+              mcp: [],
+            },
+          }),
           save: jest.fn().mockResolvedValue({ success: true }),
         },
         llm: {
@@ -715,6 +723,14 @@ describe('SettingsDialog', () => {
       (isElectron as jest.Mock).mockReturnValue(true);
       (window as any).electronAPI = {
         config: {
+          load: jest.fn().mockResolvedValue({
+            success: true,
+            data: {
+              llm: { provider: 'openai', apiKey: '', model: '', temperature: 0.7, maxTokens: 2000, baseURL: '' },
+              network: { useProxy: false, sslVerification: true },
+              mcp: [],
+            },
+          }),
           save: jest.fn().mockResolvedValue({ success: true }),
         },
         llm: {
@@ -924,6 +940,14 @@ describe('SettingsDialog', () => {
       (isElectron as jest.Mock).mockReturnValue(true);
       (window as any).electronAPI = {
         config: {
+          load: jest.fn().mockResolvedValue({
+            success: true,
+            data: {
+              llm: { provider: 'openai', apiKey: '', model: '', temperature: 0.7, maxTokens: 2000, baseURL: '' },
+              network: { useProxy: false, sslVerification: true },
+              mcp: [],
+            },
+          }),
           save: jest.fn().mockResolvedValue({ success: true }),
         },
       };
@@ -990,6 +1014,14 @@ describe('SettingsDialog', () => {
       (isElectron as jest.Mock).mockReturnValue(true);
       (window as any).electronAPI = {
         config: {
+          load: jest.fn().mockResolvedValue({
+            success: true,
+            data: {
+              llm: { provider: 'openai', apiKey: '', model: '', temperature: 0.7, maxTokens: 2000, baseURL: '' },
+              network: { useProxy: false, sslVerification: true },
+              mcp: [],
+            },
+          }),
           save: jest.fn().mockResolvedValue({ success: true }),
         },
       };
