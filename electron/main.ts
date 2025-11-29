@@ -207,15 +207,16 @@ app.whenReady().then(async () => {
   // Set Content Security Policy
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const cspValue = isDev
-      ? // Development: Allow unsafe-eval for webpack HMR and external API connections
+      ? // Development: Allow unsafe-eval for webpack HMR, Monaco CDN, and external API connections
         [
           "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* ws://localhost:* wss://localhost:* data: blob:",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*",
-          "style-src 'self' 'unsafe-inline' http://localhost:*",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* https://cdn.jsdelivr.net",
+          "style-src 'self' 'unsafe-inline' http://localhost:* https://cdn.jsdelivr.net",
           "img-src 'self' data: blob: http://localhost:*",
-          "font-src 'self' data:",
+          "font-src 'self' data: https://cdn.jsdelivr.net",
           "connect-src 'self' http: https: ws: wss: data: blob:",
           "frame-src 'none'",
+          "worker-src 'self' blob: https://cdn.jsdelivr.net",
         ].join('; ')
       : // Production: Relaxed CSP for external API calls (CORS handled via IPC proxy)
         [
