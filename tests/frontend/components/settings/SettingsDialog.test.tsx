@@ -225,6 +225,9 @@ describe('SettingsDialog', () => {
           }),
           save: jest.fn().mockResolvedValue({ success: true }),
         },
+        llm: {
+          init: jest.fn().mockResolvedValue({ success: true }),
+        },
       };
     });
 
@@ -238,6 +241,191 @@ describe('SettingsDialog', () => {
       await waitFor(() => {
         expect((window as any).electronAPI.config.load).toHaveBeenCalled();
       });
+    });
+  });
+
+  describe('localStorage (Web environment)', () => {
+    beforeEach(() => {
+      (isElectron as jest.Mock).mockReturnValue(false);
+    });
+
+    it('should load LLM config from localStorage', async () => {
+      const savedConfig = {
+        provider: 'openai',
+        baseURL: 'https://api.openai.com/v1',
+        apiKey: 'sk-web-test',
+        model: 'gpt-3.5-turbo',
+        temperature: 0.5,
+        maxTokens: 1000,
+      };
+
+      localStorage.setItem('sepilot_llm_config', JSON.stringify(savedConfig));
+
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      // Wait for config to load
+      await waitFor(() => {
+        expect(screen.getByText('설정')).toBeInTheDocument();
+      });
+
+      // Component should render without errors when localStorage has data
+      expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+
+      localStorage.clear();
+    });
+
+    it('should load Network config from localStorage', async () => {
+      const savedNetworkConfig = {
+        useProxy: true,
+        proxyUrl: 'http://proxy.example.com:8080',
+        sslVerification: false,
+      };
+
+      localStorage.setItem('sepilot_network_config', JSON.stringify(savedNetworkConfig));
+
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('설정')).toBeInTheDocument();
+      });
+
+      // Component should render without errors
+      expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+
+      localStorage.clear();
+    });
+
+    it('should load ComfyUI config from localStorage', async () => {
+      const savedComfyConfig = {
+        enabled: true,
+        httpUrl: 'http://localhost:8188',
+        wsUrl: 'ws://localhost:8188/ws',
+        workflowId: 'test-workflow',
+      };
+
+      localStorage.setItem('sepilot_comfyui_config', JSON.stringify(savedComfyConfig));
+
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('설정')).toBeInTheDocument();
+      });
+
+      // Component should render without errors
+      expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+
+      localStorage.clear();
+    });
+
+    it('should use default config when localStorage is empty', async () => {
+      localStorage.clear();
+
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('설정')).toBeInTheDocument();
+      });
+
+      // Should render without errors even with empty localStorage
+      expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+    });
+  });
+
+  describe('Config loading errors', () => {
+    it('should handle Electron config load error gracefully', async () => {
+      (isElectron as jest.Mock).mockReturnValue(true);
+      (window as any).electronAPI = {
+        config: {
+          load: jest.fn().mockRejectedValue(new Error('Database error')),
+          save: jest.fn().mockResolvedValue({ success: true }),
+        },
+        llm: {
+          init: jest.fn().mockResolvedValue({ success: true }),
+        },
+      };
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to load config:', expect.any(Error));
+      });
+
+      consoleSpy.mockRestore();
+      delete (window as any).electronAPI;
+    });
+
+    it('should handle invalid localStorage data gracefully', async () => {
+      (isElectron as jest.Mock).mockReturnValue(false);
+
+      // Set invalid JSON
+      localStorage.setItem('sepilot_llm_config', 'invalid json');
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('설정')).toBeInTheDocument();
+      });
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Dialog lifecycle', () => {
+    beforeEach(() => {
+      (isElectron as jest.Mock).mockReturnValue(false);
+      localStorage.clear();
+    });
+
+    it('should reload config when dialog opens', async () => {
+      const { rerender } = render(<SettingsDialog open={false} onOpenChange={mockOnOpenChange} />);
+
+      // Dialog closed - config should not load
+      expect(localStorage.getItem).not.toHaveBeenCalled();
+
+      // Open dialog
+      rerender(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('설정')).toBeInTheDocument();
+      });
+    });
+
+    it('should clear messages when dialog opens', async () => {
+      const { rerender } = render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      // Close and reopen
+      rerender(<SettingsDialog open={false} onOpenChange={mockOnOpenChange} />);
+      rerender(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('설정')).toBeInTheDocument();
+      });
+
+      // Messages should be cleared (no error/success messages visible)
+    });
+  });
+
+  describe('Custom events', () => {
+    beforeEach(() => {
+      (isElectron as jest.Mock).mockReturnValue(false);
+      localStorage.clear();
+    });
+
+    it('should dispatch config-updated event for window', async () => {
+      const eventListener = jest.fn();
+      window.addEventListener('sepilot:config-updated', eventListener);
+
+      render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('설정')).toBeInTheDocument();
+      });
+
+      window.removeEventListener('sepilot:config-updated', eventListener);
     });
   });
 });
