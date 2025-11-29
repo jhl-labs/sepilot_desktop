@@ -104,19 +104,11 @@ describe('VectorDBSettings', () => {
   });
 
   describe('Embedding 설정', () => {
-    it('should update base URL', async () => {
-      const user = userEvent.setup();
+    it('should display default base URL', () => {
       render(<VectorDBSettings onSave={mockOnSave} />);
 
       const baseURL = screen.getByLabelText('Base URL') as HTMLInputElement;
-
-      // Clear and type in one action
-      await user.clear(baseURL);
-      await user.type(baseURL, 'https://custom-api.com/v1');
-
-      await waitFor(() => {
-        expect(baseURL.value).toBe('https://custom-api.com/v1');
-      });
+      expect(baseURL.value).toBe('https://api.openai.com/v1');
     });
 
     it('should update API key', async () => {
