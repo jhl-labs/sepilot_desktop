@@ -122,7 +122,10 @@ export function QuickInputSettingsTab({
 
           <p className="text-xs text-muted-foreground">
             클립보드 내용을 기반으로 즉시 질문하고 답변을 받는 기능입니다.
-            프롬프트에 {'{'}{'{'} clipboard {'}'}{'}'}를 사용하여 클립보드 내용을 참조할 수 있습니다.
+            <br />
+            • 클립보드 내용은 <strong>항상 자동으로 포함</strong>됩니다.
+            <br />
+            • 프롬프트에 {'{'}{'{'} clipboard {'}'}{'}'}를 사용하면 원하는 위치에 삽입할 수 있습니다.
           </p>
 
           {config.quickQuestions.length === 0 ? (
@@ -208,9 +211,14 @@ export function QuickInputSettingsTab({
                       onChange={(e) =>
                         handleUpdateQuestion(question.id, { prompt: e.target.value })
                       }
-                      placeholder="클립보드 내용: {{ clipboard }}"
+                      placeholder="예: 이 코드를 설명해줘 (클립보드 내용이 자동으로 추가됨)"
                       className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      클립보드 내용이 프롬프트 뒤에 코드 블록으로 자동 추가됩니다.
+                      <br />
+                      특정 위치에 삽입하려면: "이걸 번역해줘: {'{{'}clipboard{'}}'}"
+                    </p>
                   </div>
                 </div>
               ))}

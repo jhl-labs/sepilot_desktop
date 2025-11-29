@@ -192,11 +192,22 @@ async function registerShortcuts() {
           mainWin.show();
           mainWin.focus();
 
-          // Read clipboard and replace {{clipboard}} in prompt
+          // Read clipboard and include in message
           const { clipboard } = require('electron');
           const clipboardContent = clipboard.readText();
-          const finalMessage = question.prompt.replace(/\{\{clipboard\}\}/g, clipboardContent);
 
+          let finalMessage: string;
+          if (question.prompt.includes('{{clipboard}}')) {
+            // Replace {{clipboard}} placeholder
+            finalMessage = question.prompt.replace(/\{\{clipboard\}\}/g, clipboardContent);
+          } else {
+            // Append clipboard content if no placeholder
+            finalMessage = clipboardContent.trim()
+              ? `${question.prompt}\n\n\`\`\`\n${clipboardContent}\n\`\`\``
+              : question.prompt;
+          }
+
+          logger.info(`[Shortcuts] Final message: ${finalMessage.substring(0, 100)}...`);
           mainWin.webContents.send('create-new-chat-with-message', finalMessage);
         }
       });

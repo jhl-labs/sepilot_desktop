@@ -66,8 +66,17 @@ export function setupQuickInputHandlers() {
       const clipboardContent = clipboard.readText();
       logger.info('[QuickQuestion Handler] Clipboard content:', clipboardContent.substring(0, 100));
 
-      // 프롬프트에서 {{clipboard}} 치환
-      const finalMessage = prompt.replace(/\{\{clipboard\}\}/g, clipboardContent);
+      // 클립보드 내용을 메시지에 포함
+      let finalMessage: string;
+      if (prompt.includes('{{clipboard}}')) {
+        // {{clipboard}} 플레이스홀더 치환
+        finalMessage = prompt.replace(/\{\{clipboard\}\}/g, clipboardContent);
+      } else {
+        // 플레이스홀더가 없으면 클립보드 내용을 뒤에 추가
+        finalMessage = clipboardContent.trim()
+          ? `${prompt}\n\n\`\`\`\n${clipboardContent}\n\`\`\``
+          : prompt;
+      }
       logger.info('[QuickQuestion Handler] Final message:', finalMessage.substring(0, 100));
 
       // 메인 창 찾기
