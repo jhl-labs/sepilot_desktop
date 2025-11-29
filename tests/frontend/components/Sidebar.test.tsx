@@ -72,6 +72,9 @@ describe('Sidebar', () => {
     setAppMode: jest.fn(),
     activeEditorTab: 'files' as const,
     setActiveEditorTab: jest.fn(),
+    browserViewMode: 'chat' as const,
+    setBrowserViewMode: jest.fn(),
+    browserChatMessages: [],
   };
 
   beforeEach(() => {
