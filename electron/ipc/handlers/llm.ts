@@ -594,6 +594,15 @@ Complete from the cursor (█). Return ONLY the completion code, no explanations
           },
         ];
 
+        logger.info('[Autocomplete] Prompt created:', {
+          systemPromptLength: systemPrompt.length,
+          userPromptLength: userPrompt.length,
+          currentLine,
+          contextBeforeLines: contextBefore.split('\n').length,
+          contextAfterLines: contextAfter.split('\n').length,
+          importsCount: imports.split('\n').filter(l => l.trim()).length,
+        });
+        logger.info('[Autocomplete] User prompt preview:', userPrompt.substring(0, 500));
         logger.info('[Autocomplete] Calling LLM API...');
         const response = await provider.chat(messages);
         logger.info('[Autocomplete] LLM response received:', {

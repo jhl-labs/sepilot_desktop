@@ -150,6 +150,16 @@ export class OpenAIProvider extends BaseLLMProvider {
 
       const message = data.choices[0].message;
 
+      // Debug logging for autocomplete
+      log.info('[OpenAI] Response data:', {
+        model: data.model,
+        choicesCount: data.choices?.length,
+        messageContent: message.content,
+        contentLength: message.content?.length || 0,
+        hasToolCalls: !!message.tool_calls,
+        finishReason: data.choices[0].finish_reason,
+      });
+
       return {
         content: message.content || '',
         model: data.model,
