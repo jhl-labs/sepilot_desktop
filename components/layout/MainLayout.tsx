@@ -249,7 +249,8 @@ export function MainLayout({ children }: MainLayoutProps) {
   // Load conversations on app start
   useEffect(() => {
     loadConversations();
-  }, [loadConversations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
 
   // Listen for config updates from SettingsDialog
   useEffect(() => {

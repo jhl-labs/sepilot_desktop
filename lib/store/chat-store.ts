@@ -270,19 +270,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   deleteConversation: async (id: string) => {
+    const state = get();
+    const wasActive = state.activeConversationId === id;
+
     // Immediately update UI state to prevent input blocking
     // This prevents the textarea from being disabled during async DB operation
-    set((state) => {
-      const filtered = state.conversations.filter((c) => c.id !== id);
-      const newActiveId =
-        state.activeConversationId === id ? filtered[0]?.id || null : state.activeConversationId;
+    set((currentState) => {
+      const filtered = currentState.conversations.filter((c) => c.id !== id);
+      const newActiveId = wasActive ? filtered[0]?.id || null : currentState.activeConversationId;
 
       // Remove from streaming conversations if it was streaming
-      const newStreamingConversations = new Map(state.streamingConversations);
+      const newStreamingConversations = new Map(currentState.streamingConversations);
       newStreamingConversations.delete(id);
 
       // Remove from messages cache
-      const newCache = new Map(state.messagesCache);
+      const newCache = new Map(currentState.messagesCache);
       newCache.delete(id);
 
       // Check if the new active conversation is streaming
@@ -292,10 +294,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           ? newStreamingConversations.get(newActiveId) || null
           : null;
 
+      // Get messages for the new active conversation from cache
+      const newMessages = newActiveId ? newCache.get(newActiveId) || [] : [];
+
       return {
         conversations: filtered,
         activeConversationId: newActiveId,
-        messages: newActiveId === id ? [] : state.messages,
+        messages: newMessages,
         messagesCache: newCache,
         streamingConversations: newStreamingConversations,
         // Update streaming state based on the NEW active conversation's streaming status
@@ -303,6 +308,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         streamingMessageId: newActiveStreamingMessageId,
       };
     });
+
+    // If we switched to a different conversation, load its messages
+    if (wasActive) {
+      const newState = get();
+      if (newState.activeConversationId) {
+        // Load messages for the new active conversation (non-blocking)
+        get().setActiveConversation(newState.activeConversationId);
+      }
+    }
 
     // Delete from database (async, in background)
     let deleted = false;
@@ -321,8 +335,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     // If DB delete failed or web mode, delete from localStorage
     if (!deleted) {
-      const state = get();
-      const filtered = state.conversations;
+      const currentState = get();
+      const filtered = currentState.conversations;
       saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, filtered);
       // 메시지도 삭제
       const allMessages = loadFromLocalStorage<Record<string, Message[]>>(
