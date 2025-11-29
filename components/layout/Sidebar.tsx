@@ -9,7 +9,6 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ChatHistory } from './ChatHistory';
 import { FileExplorer } from './FileExplorer';
 import { SearchPanel } from '@/components/editor/SearchPanel';
-import { BrowserPanel } from '@/components/editor/BrowserPanel';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +47,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
     }
   };
 
-  const modeLabel = appMode === 'chat' ? 'Chat' : 'Editor';
+  const modeLabel = appMode === 'chat' ? 'Chat' : appMode === 'editor' ? 'Editor' : 'Browser';
 
   return (
     <div className="flex h-full w-full flex-col border-r bg-background">
@@ -69,6 +68,10 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
             <DropdownMenuItem onClick={() => setAppMode('editor')}>
               <Code className="mr-2 h-4 w-4" />
               Editor
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAppMode('browser')}>
+              <Globe className="mr-2 h-4 w-4" />
+              Browser
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -95,7 +98,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
               <Trash className="h-5 w-5" />
             </Button>
           </div>
-        ) : (
+        ) : appMode === 'editor' ? (
           <div className="flex gap-1">
             <Button
               variant="ghost"
@@ -115,31 +118,20 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
             >
               <Search className="h-5 w-5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setActiveEditorTab('browser')}
-              title="브라우저"
-              className={activeEditorTab === 'browser' ? 'bg-accent' : ''}
-            >
-              <Globe className="h-5 w-5" />
-            </Button>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Content Area - Conditionally render based on mode and tab */}
       {appMode === 'chat' ? (
         <ChatHistory onConversationClick={onConversationClick} />
-      ) : (
+      ) : appMode === 'editor' ? (
         activeEditorTab === 'files' ? (
           <FileExplorer />
-        ) : activeEditorTab === 'search' ? (
-          <SearchPanel />
         ) : (
-          <BrowserPanel />
+          <SearchPanel />
         )
-      )}
+      ) : null}
 
       {/* Footer */}
       <div className="border-t p-2">

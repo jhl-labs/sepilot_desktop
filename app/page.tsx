@@ -7,6 +7,7 @@ import { InputBox } from '@/components/chat/InputBox';
 import { WorkingDirectoryIndicator } from '@/components/chat/WorkingDirectoryIndicator';
 import { UpdateNotificationDialog } from '@/components/UpdateNotificationDialog';
 import { CodeEditor } from '@/components/editor/Editor';
+import { BrowserPanel } from '@/components/editor/BrowserPanel';
 import { useChatStore } from '@/lib/store/chat-store';
 
 export default function Home() {
@@ -76,8 +77,10 @@ export default function Home() {
             <WorkingDirectoryIndicator />
             <InputBox />
           </>
-        ) : (
+        ) : appMode === 'editor' ? (
           <CodeEditor />
+        ) : (
+          <BrowserPanel />
         )}
       </div>
       <UpdateNotificationDialog />

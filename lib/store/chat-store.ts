@@ -5,7 +5,7 @@ import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
 import { isElectron } from '@/lib/platform';
 
 // App mode types
-export type AppMode = 'chat' | 'editor';
+export type AppMode = 'chat' | 'editor' | 'browser';
 
 // Open file tab interface
 export interface OpenFile {
@@ -65,7 +65,7 @@ interface ChatStore {
   // Editor State
   openFiles: OpenFile[];
   activeFilePath: string | null;
-  activeEditorTab: 'files' | 'search' | 'browser'; // Files, Search, or Browser tab in Editor mode
+  activeEditorTab: 'files' | 'search'; // Files or Search tab in Editor mode
 
   // New: Thinking Mode and Feature Toggles
   thinkingMode: ThinkingMode;
@@ -131,7 +131,7 @@ interface ChatStore {
 
   // Actions - App Mode
   setAppMode: (mode: AppMode) => void;
-  setActiveEditorTab: (tab: 'files' | 'search' | 'browser') => void;
+  setActiveEditorTab: (tab: 'files' | 'search') => void;
 
   // Actions - Editor
   openFile: (file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }) => void;
