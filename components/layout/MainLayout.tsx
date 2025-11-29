@@ -26,7 +26,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
-  const { createConversation, messages, activeConversationId, streamingConversations, loadConversations } = useChatStore();
+  const { createConversation, messages, activeConversationId, streamingConversations, loadConversations, setAppMode } = useChatStore();
 
   // Determine if current conversation is streaming
   const isStreaming = activeConversationId ? streamingConversations.has(activeConversationId) : false;
@@ -268,7 +268,10 @@ export function MainLayout({ children }: MainLayoutProps) {
         <Sidebar
           onDocumentsClick={() => setViewMode('documents')}
           onGalleryClick={() => setViewMode('gallery')}
-          onConversationClick={() => setViewMode('chat')}
+          onConversationClick={() => {
+            setViewMode('chat');
+            setAppMode('chat');
+          }}
         />
 
         {/* Resize Handle */}

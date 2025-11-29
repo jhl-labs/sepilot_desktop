@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal, Plus, X } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
+import { useChatStore } from '@/lib/store/chat-store';
 
 interface Tab {
   id: string;
@@ -14,6 +15,7 @@ interface Tab {
 }
 
 export function BrowserPanel() {
+  const { appMode } = useChatStore();
   const [url, setUrl] = useState('https://www.google.com');
   const [currentUrl, setCurrentUrl] = useState(url);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -122,6 +124,21 @@ export function BrowserPanel() {
       setActiveTabId(result.data.activeTabId);
     }
   };
+
+  // appMode 변경 시 BrowserView 숨김/표시 처리
+  useEffect(() => {
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    if (appMode === 'browser') {
+      // Browser 모드로 전환 시 BrowserView 표시
+      window.electronAPI.browserView.showActive();
+    } else {
+      // 다른 모드로 전환 시 BrowserView 숨김
+      window.electronAPI.browserView.hideAll();
+    }
+  }, [appMode]);
 
   // 초기 탭 생성 및 이벤트 리스너 등록
   useEffect(() => {

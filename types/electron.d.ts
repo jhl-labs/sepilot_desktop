@@ -153,7 +153,7 @@ interface LLMAPI {
 
 // LangGraph 관련 타입
 interface GraphConfig {
-  thinkingMode: 'instant' | 'sequential' | 'tree-of-thought' | 'deep' | 'coding';
+  thinkingMode: 'instant' | 'sequential' | 'tree-of-thought' | 'deep' | 'coding' | 'browser-agent';
   enableRAG: boolean;
   enableTools: boolean;
 }
@@ -463,6 +463,9 @@ interface BrowserViewAPI {
     isLoading: boolean;
   }>>;
   toggleDevTools: () => Promise<IPCResponse>;
+  // Show/Hide
+  hideAll: () => Promise<IPCResponse>;
+  showActive: () => Promise<IPCResponse>;
   // Event listeners
   onDidNavigate: (callback: (data: { tabId: string; url: string; canGoBack: boolean; canGoForward: boolean }) => void) => (...args: unknown[]) => void;
   onLoadingState: (callback: (data: { tabId: string; isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => (...args: unknown[]) => void;

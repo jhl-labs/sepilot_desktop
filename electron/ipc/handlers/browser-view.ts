@@ -473,6 +473,56 @@ export function setupBrowserViewHandlers() {
       return { success: false, error: String(error) };
     }
   });
+
+  // Hide all BrowserViews (when switching away from Browser mode)
+  ipcMain.handle('browser-view:hide-all', async (event) => {
+    try {
+      const mainWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!mainWindow) {
+        return { success: false, error: 'Main window not found' };
+      }
+
+      // Remove all BrowserViews from window
+      tabs.forEach((tab) => {
+        mainWindow.removeBrowserView(tab.view);
+      });
+
+      logger.info('All BrowserViews hidden');
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to hide BrowserViews:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Show active BrowserView (when switching back to Browser mode)
+  ipcMain.handle('browser-view:show-active', async (event) => {
+    try {
+      const mainWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!mainWindow) {
+        return { success: false, error: 'Main window not found' };
+      }
+
+      if (!activeTabId) {
+        return { success: false, error: 'No active tab' };
+      }
+
+      const tab = tabs.get(activeTabId);
+      if (!tab) {
+        return { success: false, error: 'Active tab not found' };
+      }
+
+      // Add active BrowserView back to window
+      mainWindow.addBrowserView(tab.view);
+      setActiveBrowserView(tab.view);
+
+      logger.info(`Active BrowserView shown: ${activeTabId}`);
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to show active BrowserView:', error);
+      return { success: false, error: String(error) };
+    }
+  });
 }
 
 // Clean up on app quit
