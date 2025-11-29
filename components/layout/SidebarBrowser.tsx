@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Settings, Camera, Album, Bookmark } from 'lucide-react';
+import { Plus, Settings, Camera, Album, Bookmark, ScrollText, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { SimpleChatArea } from '@/components/browser/SimpleChatArea';
@@ -9,6 +9,8 @@ import { SnapshotsList } from '@/components/browser/SnapshotsList';
 import { BookmarksList } from '@/components/browser/BookmarksList';
 import { BrowserSettings } from '@/components/browser/BrowserSettings';
 import { BrowserAgentLog } from '@/components/browser/BrowserAgentLog';
+import { BrowserAgentLogsView } from '@/components/browser/BrowserAgentLogsView';
+import { BrowserToolsList } from '@/components/browser/BrowserToolsList';
 import { isElectron } from '@/lib/platform';
 
 export function SidebarBrowser() {
@@ -20,6 +22,48 @@ export function SidebarBrowser() {
 
   return (
     <div className="flex h-full w-full flex-col">
+      {/* Header - chat 모드에서만 표시 */}
+      {browserViewMode === 'chat' && (
+        <div className="border-b p-2 bg-muted/20">
+          <div className="flex gap-1 justify-end">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                console.warn('[SidebarBrowser] Tools button clicked - hiding BrowserView');
+                if (isElectron() && window.electronAPI) {
+                  window.electronAPI.browserView.hideAll().catch((err) => {
+                    console.error('[SidebarBrowser] Failed to hide BrowserView:', err);
+                  });
+                }
+                setBrowserViewMode('tools');
+              }}
+              title="사용 가능한 도구 보기"
+              className="h-8 w-8"
+            >
+              <Wrench className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                console.warn('[SidebarBrowser] Logs button clicked - hiding BrowserView');
+                if (isElectron() && window.electronAPI) {
+                  window.electronAPI.browserView.hideAll().catch((err) => {
+                    console.error('[SidebarBrowser] Failed to hide BrowserView:', err);
+                  });
+                }
+                setBrowserViewMode('logs');
+              }}
+              title="Agent 실행 로그 보기"
+              className="h-8 w-8"
+            >
+              <ScrollText className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Content Area */}
       {browserViewMode === 'chat' ? (
         <>
@@ -32,13 +76,18 @@ export function SidebarBrowser() {
         <BookmarksList />
       ) : browserViewMode === 'settings' ? (
         <BrowserSettings />
+      ) : browserViewMode === 'logs' ? (
+        <BrowserAgentLogsView />
+      ) : browserViewMode === 'tools' ? (
+        <BrowserToolsList />
       ) : null}
 
       {/* Agent Log Panel (chat 모드에서만 표시) */}
       {browserViewMode === 'chat' && <BrowserAgentLog />}
 
-      {/* Footer */}
-      <div className="border-t p-2">
+      {/* Footer (logs, tools 모드에서는 숨김) */}
+      {browserViewMode !== 'logs' && browserViewMode !== 'tools' && (
+        <div className="border-t p-2">
         <div className="flex gap-1">
           <Button
             variant="ghost"
@@ -146,6 +195,7 @@ export function SidebarBrowser() {
           </Button>
         </div>
       </div>
+      )}
     </div>
   );
 }
