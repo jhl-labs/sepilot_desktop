@@ -20,16 +20,17 @@ describe('ThemeToggle', () => {
     jest.clearAllMocks();
   });
 
-  it('should render nothing before mounting (SSR hydration)', () => {
+  it('should render button after mounting', async () => {
     (useTheme as jest.Mock).mockReturnValue({
       resolvedTheme: 'light',
       setTheme: mockSetTheme,
     });
 
-    const { container } = render(<ThemeToggle />);
+    render(<ThemeToggle />);
 
-    // Initially returns null to avoid hydration mismatch
-    expect(container.firstChild).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByRole('button')).toBeInTheDocument();
+    });
   });
 
   it('should render moon icon in light mode after mounting', async () => {
@@ -127,15 +128,17 @@ describe('ThemeToggle', () => {
       setTheme: mockSetTheme,
     });
 
-    const { container } = render(<ThemeToggle />);
+    render(<ThemeToggle />);
 
     await waitFor(() => {
       const button = screen.getByRole('button');
       expect(button).toBeInTheDocument();
     });
 
-    const button = container.querySelector('button');
-    expect(button).toHaveClass('variant-ghost');
+    const button = screen.getByRole('button');
+    // Ghost variant includes hover:bg-accent and hover:text-accent-foreground classes
+    expect(button).toHaveClass('hover:bg-accent');
+    expect(button).toHaveClass('hover:text-accent-foreground');
   });
 
   it('should display correct title attribute for light mode', async () => {

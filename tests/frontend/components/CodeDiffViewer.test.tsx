@@ -32,8 +32,9 @@ describe('CodeDiffViewer', () => {
       <CodeDiffViewer filePath="src/test.ts" oldContent={oldContent} newContent={newContent} />
     );
 
-    // Should show modified or added lines
-    expect(screen.getByText(/[~+]\d+/)).toBeInTheDocument();
+    // Should show modified and added lines
+    const stats = screen.getAllByText(/[~+]\d+/);
+    expect(stats.length).toBeGreaterThan(0);
   });
 
   it('should display modified lines', () => {

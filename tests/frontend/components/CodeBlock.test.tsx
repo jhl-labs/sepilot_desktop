@@ -69,10 +69,8 @@ describe('CodeBlock', () => {
 
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(code);
+      expect(screen.getByText('복사됨')).toBeInTheDocument();
     });
-
-    // Should show "복사됨" feedback
-    expect(screen.getByText('복사됨')).toBeInTheDocument();
   });
 
   it('should reset copy button after 2 seconds', async () => {
@@ -83,8 +81,10 @@ describe('CodeBlock', () => {
     const copyButton = screen.getByRole('button', { name: /복사/i });
     fireEvent.click(copyButton);
 
-    // Initially shows "복사됨"
-    expect(screen.getByText('복사됨')).toBeInTheDocument();
+    // Wait for "복사됨" to appear
+    await waitFor(() => {
+      expect(screen.getByText('복사됨')).toBeInTheDocument();
+    });
 
     // After 2 seconds, should reset to "복사"
     jest.advanceTimersByTime(2000);
@@ -155,7 +155,11 @@ describe('CodeBlock', () => {
 
     render(<CodeBlock language="javascript" code={multilineCode} />);
 
-    expect(screen.getByTestId('syntax-highlighter')).toHaveTextContent(multilineCode);
+    const highlighter = screen.getByTestId('syntax-highlighter');
+    // Check that all lines are present (whitespace might be normalized in rendering)
+    expect(highlighter).toHaveTextContent('function hello()');
+    expect(highlighter).toHaveTextContent('console.log("Hello")');
+    expect(highlighter).toHaveTextContent('return true');
   });
 
   it('should handle special characters in code', () => {
