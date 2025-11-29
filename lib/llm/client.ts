@@ -59,3 +59,26 @@ export function initializeLLMClient(config: LLMConfig): void {
   const client = getLLMClient();
   client.setConfig(config);
 }
+
+/**
+ * Create a standalone LLM provider instance (for autocomplete, editor actions, etc.)
+ */
+export function createProvider(config: LLMConfig): BaseLLMProvider {
+  switch (config.provider) {
+    case 'openai':
+    case 'anthropic':
+    case 'custom':
+      return new OpenAIProvider(
+        config.baseURL,
+        config.apiKey,
+        config.model,
+        {
+          temperature: config.temperature,
+          maxTokens: config.maxTokens,
+        },
+        config
+      );
+    default:
+      throw new Error(`Unsupported provider: ${config.provider}`);
+  }
+}
