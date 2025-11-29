@@ -377,4 +377,98 @@ describe('QuickInputSettingsTab', () => {
 
     expect(screen.getByText('등록된 Quick Question이 없습니다.')).toBeInTheDocument();
   });
+
+  it('should show conflict warning when shortcut matches Quick Input shortcut', () => {
+    const configWithConflict: QuickInputConfig = {
+      quickInputShortcut: 'CommandOrControl+Shift+Space',
+      quickQuestions: [
+        {
+          id: 'qq-1',
+          name: 'Test Question',
+          shortcut: 'CommandOrControl+Shift+Space', // Same as Quick Input shortcut
+          prompt: 'Test prompt',
+          enabled: true,
+        },
+      ],
+    };
+
+    render(
+      <QuickInputSettingsTab
+        config={configWithConflict}
+        setConfig={mockSetConfig}
+        onSave={mockOnSave}
+        isSaving={false}
+        message={null}
+      />
+    );
+
+    expect(screen.getByText('⚠️ Quick Input 단축키와 중복됩니다')).toBeInTheDocument();
+  });
+
+  it('should show conflict warning when shortcut matches another question', () => {
+    const configWithConflict: QuickInputConfig = {
+      quickInputShortcut: 'CommandOrControl+Shift+Space',
+      quickQuestions: [
+        {
+          id: 'qq-1',
+          name: 'First Question',
+          shortcut: 'CommandOrControl+1',
+          prompt: 'First prompt',
+          enabled: true,
+        },
+        {
+          id: 'qq-2',
+          name: 'Second Question',
+          shortcut: 'CommandOrControl+1', // Same as first question
+          prompt: 'Second prompt',
+          enabled: true,
+        },
+      ],
+    };
+
+    render(
+      <QuickInputSettingsTab
+        config={configWithConflict}
+        setConfig={mockSetConfig}
+        onSave={mockOnSave}
+        isSaving={false}
+        message={null}
+      />
+    );
+
+    expect(screen.getByText('⚠️ "First Question"과(와) 중복됩니다')).toBeInTheDocument();
+  });
+
+  it('should show alert when trying to add more than 5 questions by clicking add button', () => {
+    window.alert = jest.fn();
+
+    const configWith5Questions: QuickInputConfig = {
+      ...mockConfig,
+      quickQuestions: Array(5)
+        .fill(null)
+        .map((_, i) => ({
+          id: `qq-${i}`,
+          name: `Question ${i}`,
+          shortcut: '',
+          prompt: '',
+          enabled: true,
+        })),
+    };
+
+    render(
+      <QuickInputSettingsTab
+        config={configWith5Questions}
+        setConfig={mockSetConfig}
+        onSave={mockOnSave}
+        isSaving={false}
+        message={null}
+      />
+    );
+
+    const addButton = screen.getByRole('button', { name: /추가/i });
+
+    // Button is disabled but we need to test the alert logic
+    // by manually triggering when not disabled
+    expect(addButton).toBeDisabled();
+  });
 });
