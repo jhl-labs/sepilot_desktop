@@ -84,6 +84,15 @@ export function SidebarBrowser() {
             variant="ghost"
             size="icon"
             onClick={() => {
+              console.log('[SidebarBrowser] Snapshots button clicked - hiding BrowserView');
+              // 스냅샷 보기 전에 BrowserView 숨김
+              if (isElectron() && window.electronAPI) {
+                window.electronAPI.browserView.hideAll().then(() => {
+                  console.log('[SidebarBrowser] BrowserView hidden before showing Snapshots');
+                }).catch((err) => {
+                  console.error('[SidebarBrowser] Failed to hide BrowserView:', err);
+                });
+              }
               setBrowserViewMode('snapshots');
             }}
             title="스냅샷 관리"
@@ -95,6 +104,15 @@ export function SidebarBrowser() {
             variant="ghost"
             size="icon"
             onClick={() => {
+              console.log('[SidebarBrowser] Bookmarks button clicked - hiding BrowserView');
+              // 북마크 보기 전에 BrowserView 숨김
+              if (isElectron() && window.electronAPI) {
+                window.electronAPI.browserView.hideAll().then(() => {
+                  console.log('[SidebarBrowser] BrowserView hidden before showing Bookmarks');
+                }).catch((err) => {
+                  console.error('[SidebarBrowser] Failed to hide BrowserView:', err);
+                });
+              }
               setBrowserViewMode('bookmarks');
             }}
             title="북마크"
@@ -106,6 +124,15 @@ export function SidebarBrowser() {
             variant="ghost"
             size="icon"
             onClick={() => {
+              console.log('[SidebarBrowser] Settings button clicked - hiding BrowserView');
+              // Settings 열기 전에 BrowserView 숨김
+              if (isElectron() && window.electronAPI) {
+                window.electronAPI.browserView.hideAll().then(() => {
+                  console.log('[SidebarBrowser] BrowserView hidden before opening Settings');
+                }).catch((err) => {
+                  console.error('[SidebarBrowser] Failed to hide BrowserView:', err);
+                });
+              }
               setBrowserViewMode('settings');
             }}
             title="Browser 설정"
