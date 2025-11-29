@@ -270,34 +270,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   deleteConversation: async (id: string) => {
-    // Delete from database
-    let deleted = false;
-    if (isElectron() && window.electronAPI) {
-      try {
-        const result = await window.electronAPI.chat.deleteConversation(id);
-        if (result.success) {
-          deleted = true;
-        } else {
-          console.error('Failed to delete conversation from DB:', result.error);
-        }
-      } catch (error) {
-        console.error('Error deleting conversation from DB:', error);
-      }
-    }
-
+    // Immediately update UI state to prevent input blocking
+    // This prevents the textarea from being disabled during async DB operation
     set((state) => {
       const filtered = state.conversations.filter((c) => c.id !== id);
-      // Web or Electron DB delete failed: localStorage에서 삭제
-      if (!deleted) {
-        saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, filtered);
-        // 메시지도 삭제
-        const allMessages = loadFromLocalStorage<Record<string, Message[]>>(
-          STORAGE_KEYS.MESSAGES,
-          {}
-        );
-        delete allMessages[id];
-        saveToLocalStorage(STORAGE_KEYS.MESSAGES, allMessages);
-      }
       const newActiveId =
         state.activeConversationId === id ? filtered[0]?.id || null : state.activeConversationId;
 
@@ -327,6 +303,35 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         streamingMessageId: newActiveStreamingMessageId,
       };
     });
+
+    // Delete from database (async, in background)
+    let deleted = false;
+    if (isElectron() && window.electronAPI) {
+      try {
+        const result = await window.electronAPI.chat.deleteConversation(id);
+        if (result.success) {
+          deleted = true;
+        } else {
+          console.error('Failed to delete conversation from DB:', result.error);
+        }
+      } catch (error) {
+        console.error('Error deleting conversation from DB:', error);
+      }
+    }
+
+    // If DB delete failed or web mode, delete from localStorage
+    if (!deleted) {
+      const state = get();
+      const filtered = state.conversations;
+      saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, filtered);
+      // 메시지도 삭제
+      const allMessages = loadFromLocalStorage<Record<string, Message[]>>(
+        STORAGE_KEYS.MESSAGES,
+        {}
+      );
+      delete allMessages[id];
+      saveToLocalStorage(STORAGE_KEYS.MESSAGES, allMessages);
+    }
   },
 
   setActiveConversation: async (id: string) => {
