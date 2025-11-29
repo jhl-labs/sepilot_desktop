@@ -11,9 +11,9 @@ import { FileExplorer } from './FileExplorer';
 import { SearchPanel } from '@/components/editor/SearchPanel';
 import { SimpleChatArea } from '@/components/browser/SimpleChatArea';
 import { SimpleChatInput } from '@/components/browser/SimpleChatInput';
-import { SnapshotsDialog } from '@/components/browser/SnapshotsDialog';
-import { BookmarksDialog } from '@/components/browser/BookmarksDialog';
-import { BrowserSettingDialog } from '@/components/browser/BrowserSettingDialog';
+import { SnapshotsList } from '@/components/browser/SnapshotsList';
+import { BookmarksList } from '@/components/browser/BookmarksList';
+import { BrowserSettings } from '@/components/browser/BrowserSettings';
 import { isElectron } from '@/lib/platform';
 import {
   DropdownMenu,
@@ -40,12 +40,11 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
     clearBrowserChat,
     showTerminalPanel,
     setShowTerminalPanel,
+    browserViewMode,
+    setBrowserViewMode,
   } = useChatStore();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [snapshotsOpen, setSnapshotsOpen] = useState(false);
-  const [bookmarksOpen, setBookmarksOpen] = useState(false);
-  const [browserSettingsOpen, setBrowserSettingsOpen] = useState(false);
 
   const handleDeleteAll = async () => {
     if (conversations.length === 0) {return;}
@@ -144,10 +143,18 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
           <SearchPanel />
         )
       ) : appMode === 'browser' ? (
-        <>
-          <SimpleChatArea />
-          <SimpleChatInput />
-        </>
+        browserViewMode === 'chat' ? (
+          <>
+            <SimpleChatArea />
+            <SimpleChatInput />
+          </>
+        ) : browserViewMode === 'snapshots' ? (
+          <SnapshotsList />
+        ) : browserViewMode === 'bookmarks' ? (
+          <BookmarksList />
+        ) : browserViewMode === 'settings' ? (
+          <BrowserSettings />
+        ) : null
       ) : null}
 
       {/* Footer */}
@@ -161,6 +168,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
               onClick={() => {
                 if (confirm('현재 대화 내역을 모두 삭제하시겠습니까?')) {
                   clearBrowserChat();
+                  setBrowserViewMode('chat');
                 }
               }}
               title="새 대화"
@@ -202,7 +210,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
               variant="ghost"
               size="icon"
               onClick={() => {
-                setSnapshotsOpen(true);
+                setBrowserViewMode('snapshots');
               }}
               title="스냅샷 관리"
               className="flex-1"
@@ -213,7 +221,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
               variant="ghost"
               size="icon"
               onClick={() => {
-                setBookmarksOpen(true);
+                setBrowserViewMode('bookmarks');
               }}
               title="북마크"
               className="flex-1"
@@ -224,7 +232,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
               variant="ghost"
               size="icon"
               onClick={() => {
-                setBrowserSettingsOpen(true);
+                setBrowserViewMode('settings');
               }}
               title="Browser 설정"
               className="flex-1"
@@ -316,11 +324,6 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
 
       {/* Settings Dialog */}
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-
-      {/* Browser 모드 전용 다이얼로그 */}
-      <SnapshotsDialog open={snapshotsOpen} onOpenChange={setSnapshotsOpen} />
-      <BookmarksDialog open={bookmarksOpen} onOpenChange={setBookmarksOpen} />
-      <BrowserSettingDialog open={browserSettingsOpen} onOpenChange={setBrowserSettingsOpen} />
     </div>
   );
 }

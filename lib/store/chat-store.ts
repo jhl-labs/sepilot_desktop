@@ -84,6 +84,7 @@ interface ChatStore {
 
   // Browser Mode Chat (simple side chat)
   browserChatMessages: Message[];
+  browserViewMode: 'chat' | 'snapshots' | 'bookmarks' | 'settings';
 
   // Deprecated: kept for backward compatibility
   graphType: GraphType;
@@ -137,6 +138,7 @@ interface ChatStore {
   addBrowserChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => void;
   updateBrowserChatMessage: (id: string, updates: Partial<Message>) => void;
   clearBrowserChat: () => void;
+  setBrowserViewMode: (mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings') => void;
 
   // Actions - App Mode
   setAppMode: (mode: AppMode) => void;
@@ -190,6 +192,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Browser Chat
   browserChatMessages: [],
+  browserViewMode: 'chat',
 
   // Deprecated
   graphType: 'chat',
@@ -798,6 +801,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   clearBrowserChat: () => {
     set({ browserChatMessages: [] });
+  },
+
+  setBrowserViewMode: (mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings') => {
+    set({ browserViewMode: mode });
   },
 
   // Editor Actions
