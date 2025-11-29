@@ -18,6 +18,13 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import type { Conversation, Message } from '@/types';
 import { MoreHorizontal } from 'lucide-react';
 
@@ -42,6 +49,8 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{conversation: Conversation; matchedMessages: Message[]}>>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
 
   // Focus input when editing starts
@@ -76,8 +85,17 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     }
   };
 
-  const handleSetPersona = async (conversationId: string, personaId: string | null) => {
-    await updateConversationPersona(conversationId, personaId);
+  const handleOpenPersonaDialog = (conversationId: string) => {
+    setSelectedConversationId(conversationId);
+    setPersonaDialogOpen(true);
+  };
+
+  const handleSetPersona = async (personaId: string | null) => {
+    if (selectedConversationId) {
+      await updateConversationPersona(selectedConversationId, personaId);
+      setPersonaDialogOpen(false);
+      setSelectedConversationId(null);
+    }
   };
 
   const handleSearch = async (query: string) => {
@@ -110,6 +128,10 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     handleClearSearch();
     onConversationClick?.();
   };
+
+  const selectedConversation = selectedConversationId
+    ? conversations.find((c) => c.id === selectedConversationId)
+    : null;
 
   return (
     <>
@@ -270,41 +292,12 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                           <Pencil className="mr-2 h-4 w-4" />
                           이름 변경
                         </DropdownMenuItem>
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <User className="mr-2 h-4 w-4" />
-                            Persona 지정
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            <DropdownMenuItem
-                              onClick={() => handleSetPersona(conversation.id, null)}
-                            >
-                              {!conversation.personaId && (
-                                <Check className="mr-2 h-4 w-4" />
-                              )}
-                              {conversation.personaId && (
-                                <span className="mr-2 h-4 w-4 inline-block" />
-                              )}
-                              없음
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {personas.map((persona) => (
-                              <DropdownMenuItem
-                                key={persona.id}
-                                onClick={() => handleSetPersona(conversation.id, persona.id)}
-                              >
-                                {conversation.personaId === persona.id && (
-                                  <Check className="mr-2 h-4 w-4" />
-                                )}
-                                {conversation.personaId !== persona.id && (
-                                  <span className="mr-2 h-4 w-4 inline-block" />
-                                )}
-                                <span className="mr-2">{persona.avatar || '🤖'}</span>
-                                {persona.name}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
+                        <DropdownMenuItem
+                          onClick={() => handleOpenPersonaDialog(conversation.id)}
+                        >
+                          <User className="mr-2 h-4 w-4" />
+                          Persona
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDelete(conversation.id)}
                           className="text-destructive focus:text-destructive"
@@ -321,6 +314,70 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
           </div>
         )}
       </ScrollArea>
+
+      {/* Persona Selection Dialog */}
+      <Dialog open={personaDialogOpen} onOpenChange={setPersonaDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Persona 선택</DialogTitle>
+            <DialogDescription>
+              이 대화에 적용할 페르소나를 선택하세요
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4">
+            {/* None option */}
+            <button
+              onClick={() => handleSetPersona(null)}
+              className={cn(
+                'w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors hover:bg-accent',
+                !selectedConversation?.personaId && 'bg-accent border-primary'
+              )}
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                <X className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1 text-left">
+                <div className="font-medium">없음</div>
+                <div className="text-xs text-muted-foreground">
+                  페르소나를 사용하지 않습니다
+                </div>
+              </div>
+              {!selectedConversation?.personaId && (
+                <Check className="h-5 w-5 text-primary" />
+              )}
+            </button>
+
+            {/* Persona options */}
+            {personas.map((persona) => (
+              <button
+                key={persona.id}
+                onClick={() => handleSetPersona(persona.id)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors hover:bg-accent',
+                  selectedConversation?.personaId === persona.id &&
+                    'bg-accent border-primary'
+                )}
+              >
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-lg"
+                  style={{ backgroundColor: `${persona.color}20` }}
+                >
+                  {persona.avatar}
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="font-medium">{persona.name}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-1">
+                    {persona.description}
+                  </div>
+                </div>
+                {selectedConversation?.personaId === persona.id && (
+                  <Check className="h-5 w-5 text-primary" />
+                )}
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
