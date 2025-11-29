@@ -522,8 +522,15 @@ Return ONLY the title, without quotes or additional text.`,
           apiKey: autocompleteConfig.apiKey || baseConfig.apiKey,
           model: autocompleteConfig.model,
           temperature: autocompleteConfig.temperature || 0.2,
-          maxTokens: autocompleteConfig.maxTokens || 100,
+          maxTokens: autocompleteConfig.maxTokens || 500, // Increased from 100 to 500 to allow for input tokens
         };
+
+        logger.info('[Autocomplete] Provider config:', {
+          provider: providerConfig.provider,
+          model: providerConfig.model,
+          temperature: providerConfig.temperature,
+          maxTokens: providerConfig.maxTokens,
+        });
 
         // Initialize temporary client for autocomplete
         const { LLMClient } = await import('../../../lib/llm/client');
@@ -559,25 +566,14 @@ Return ONLY the title, without quotes or additional text.`,
         const contextBefore = lines.slice(startLine, currentLineNumber).join('\n');
         const contextAfter = lines.slice(currentLineNumber + 1, endLine).join('\n');
 
-        // Create FIM-style prompt
-        const systemPrompt = `You are an expert code completion AI for ${context.language || 'code'}.
+        // Create concise prompt to reduce token usage
+        const systemPrompt = `Code completion AI. Complete from cursor. Return ONLY completion text, no explanations or markdown.`;
 
-CRITICAL RULES:
-1. Generate ONLY the next few tokens to complete the current line or statement
-2. DO NOT repeat code that already exists
-3. DO NOT include explanations, comments (unless completing a comment), or markdown
-4. Match the existing code style, indentation, and naming conventions
-5. Consider the imports and surrounding context
-6. If the line seems complete, suggest the next logical line
-7. Keep completions short and focused (1-3 lines max)`;
+        const userPrompt = `${contextBefore ? `Before:\n${contextBefore}\n` : ''}
+Current: ${currentLine}█
+${contextAfter ? `After:\n${contextAfter}` : ''}
 
-        const userPrompt = `${imports ? `File imports:\n${imports}\n\n` : ''}Context before cursor:
-${contextBefore}
-
-Current line (cursor at end): ${currentLine}█
-
-${contextAfter ? `Context after:\n${contextAfter}\n` : ''}
-Complete from the cursor (█). Return ONLY the completion code, no explanations.`;
+Complete from █:`;
 
         const messages: Message[] = [
           {

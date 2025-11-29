@@ -30,8 +30,8 @@ export const createDefaultAutocompleteConfig = (): AutocompleteConfig => ({
   baseURL: DEFAULT_BASE_URL,
   apiKey: '',
   model: 'gpt-4o-mini',
-  maxTokens: 100,
-  temperature: 0.3,
+  maxTokens: 500, // Increased to allow for prompt tokens + completion tokens
+  temperature: 0.2, // Lower for more consistent completions
   debounceMs: 300,
 });
 
