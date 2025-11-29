@@ -34,9 +34,15 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   const tabListRef = useRef<HTMLDivElement>(null);
   const terminalsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const [tabs, setTabs] = useState<TerminalTab[]>([]);
+  const tabsRef = useRef<TerminalTab[]>([]); // tabs의 최신 상태를 추적하기 위한 ref
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const { theme } = useTheme();
+
+  // tabs 상태가 변경될 때마다 ref 업데이트
+  useEffect(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
 
   // 테마별 설정
   const getTerminalTheme = useCallback(() => {
@@ -89,13 +95,15 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   const { createSession, write, resize, killSession } = useTerminal({
     onData: (data) => {
-      const tab = tabs.find((t) => t.sessionId === data.sessionId);
+      // ref를 사용하여 최신 tabs 상태 참조
+      const tab = tabsRef.current.find((t) => t.sessionId === data.sessionId);
       if (tab) {
         tab.terminal.write(data.data);
       }
     },
     onExit: (data) => {
-      const tab = tabs.find((t) => t.sessionId === data.sessionId);
+      // ref를 사용하여 최신 tabs 상태 참조
+      const tab = tabsRef.current.find((t) => t.sessionId === data.sessionId);
       if (tab) {
         tab.terminal.writeln('');
         tab.terminal.writeln(`\x1b[31mProcess exited with code ${data.exitCode}\x1b[0m`);
