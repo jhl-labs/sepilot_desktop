@@ -605,17 +605,20 @@ export function InputBox() {
 
     const userMessage = input.trim();
     const messagImages = selectedImages.length > 0 ? [...selectedImages] : undefined;
+    const systemMessage = quickSystemMessage; // Capture current system message
     setInput('');
     setSelectedImages([]);
+    setQuickSystemMessage(null); // Clear immediately after capturing
 
     // Execute streaming in background (don't await - allows user to switch conversations)
-    executeStreamingInBackground(targetConversationId, userMessage, messagImages);
+    executeStreamingInBackground(targetConversationId, userMessage, messagImages, systemMessage);
   };
 
   const executeStreamingInBackground = async (
     conversationId: string,
     userMessage: string,
-    messagImages?: ImageAttachment[]
+    messagImages?: ImageAttachment[],
+    systemMessage?: string | null
   ) => {
     // Variables for streaming animation
     let accumulatedContent = '';
@@ -637,12 +640,12 @@ export function InputBox() {
       // Prepare messages for LLM (include history)
       const allMessages = [
         // Add system message from Quick Question if present
-        ...(quickSystemMessage
+        ...(systemMessage
           ? [
               {
                 id: 'system-quick',
                 role: 'system' as const,
-                content: quickSystemMessage,
+                content: systemMessage,
                 created_at: Date.now(),
               },
             ]
@@ -656,6 +659,13 @@ export function InputBox() {
           images: messagImages, // 이미지 포함!
         },
       ];
+
+      // Debug: Log messages being sent to LLM
+      if (systemMessage) {
+        console.log('[Quick Question] System message:', systemMessage);
+        console.log('[Quick Question] Total messages:', allMessages.length);
+        console.log('[Quick Question] First message role:', allMessages[0]?.role);
+      }
 
       // Create empty assistant message for streaming (specify conversation ID)
       const assistantMessage = await addMessage(
