@@ -13,6 +13,20 @@ const nextConfig = {
   },
 
   webpack: (config, { isServer, webpack }) => {
+    // Bundle analysis (only for client-side)
+    if (!isServer && process.env.ANALYZE === 'true') {
+      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+      config.plugins.push(
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'json',
+          generateStatsFile: true,
+          statsFilename: '../analyze/__bundle_analysis.json',
+          reportFilename: '../analyze/bundle-report.html',
+          openAnalyzer: false,
+        })
+      );
+    }
+
     if (!isServer) {
       // Use 'web' target instead of 'electron-renderer'
       config.target = 'web';

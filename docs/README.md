@@ -1,5 +1,9 @@
 # SEPilot Desktop - GitHub Pages
 
+[![codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graph/badge.svg?token=RTDC27F34B)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
+
+![Codecov Tree Graph](https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/tree.svg?token=RTDC27F34B)
+
 이 폴더는 SEPilot Desktop의 GitHub Pages 소개 페이지를 포함합니다.
 
 ## 📁 폴더 구조

@@ -88,6 +88,12 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v5
         with:
@@ -159,3 +165,37 @@ jobs:
             .next
             dist
           retention-days: 7
+
+  bundle-analysis:
+    name: Bundle Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Next.js with bundle analysis
+        run: pnpm run build
+        env:
+          ANALYZE: true
+
+      - name: Upload bundle stats to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: .next/analyze/__bundle_analysis.json
+          flags: bundle-analysis
+          fail_ci_if_error: false
