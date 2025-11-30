@@ -6,6 +6,8 @@ import { isElectron } from '@/lib/platform';
 import type { BrowserAgentLogEntry, BrowserAgentLLMConfig, BrowserChatFontConfig } from '@/types/browser-agent';
 import type { Persona } from '@/types/persona';
 import { BUILTIN_PERSONAS } from '@/types/persona';
+import type { EditorAppearanceConfig, EditorLLMPromptsConfig } from '@/types/editor-settings';
+import { DEFAULT_EDITOR_APPEARANCE, DEFAULT_EDITOR_LLM_PROMPTS } from '@/types/editor-settings';
 
 // App mode types
 export type AppMode = 'chat' | 'editor' | 'browser';
@@ -129,7 +131,6 @@ interface ChatStore {
   // Browser Agent Logs (실행 과정 가시성)
   browserAgentLogs: BrowserAgentLogEntry[];
   browserAgentIsRunning: boolean;
-  showBrowserAgentLogs: boolean; // 로그 패널 표시 여부
 
   // Browser Agent LLM 설정
   browserAgentLLMConfig: BrowserAgentLLMConfig;
@@ -139,7 +140,11 @@ interface ChatStore {
 
   // Editor Mode Chat (simple side chat for AI coding assistant)
   editorChatMessages: Message[];
-  editorViewMode: 'files' | 'search' | 'chat'; // files, search, or chat view in Editor sidebar
+  editorViewMode: 'files' | 'search' | 'chat' | 'settings'; // files, search, chat, or settings view in Editor sidebar
+
+  // Editor Settings
+  editorAppearanceConfig: EditorAppearanceConfig;
+  editorLLMPromptsConfig: EditorLLMPromptsConfig;
 
   // Chat Mode View
   chatViewMode: 'history' | 'documents' | 'chat'; // history, documents, or chat view in Chat sidebar
@@ -207,7 +212,6 @@ interface ChatStore {
   addBrowserAgentLog: (log: Omit<BrowserAgentLogEntry, 'id' | 'timestamp'>) => void;
   clearBrowserAgentLogs: () => void;
   setBrowserAgentIsRunning: (isRunning: boolean) => void;
-  setShowBrowserAgentLogs: (show: boolean) => void;
 
   // Actions - Browser Agent LLM Config
   setBrowserAgentLLMConfig: (config: Partial<BrowserAgentLLMConfig>) => void;
@@ -221,7 +225,13 @@ interface ChatStore {
   addEditorChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => void;
   updateEditorChatMessage: (id: string, updates: Partial<Message>) => void;
   clearEditorChat: () => void;
-  setEditorViewMode: (mode: 'files' | 'search' | 'chat') => void;
+  setEditorViewMode: (mode: 'files' | 'search' | 'chat' | 'settings') => void;
+
+  // Actions - Editor Settings
+  setEditorAppearanceConfig: (config: Partial<EditorAppearanceConfig>) => void;
+  resetEditorAppearanceConfig: () => void;
+  setEditorLLMPromptsConfig: (config: Partial<EditorLLMPromptsConfig>) => void;
+  resetEditorLLMPromptsConfig: () => void;
 
   // Actions - Chat Mode View
   setChatViewMode: (mode: 'history' | 'documents' | 'chat') => void;
@@ -293,7 +303,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Browser Agent Logs
   browserAgentLogs: [],
   browserAgentIsRunning: false,
-  showBrowserAgentLogs: false,
 
   // Browser Agent LLM Config (localStorage에서 로드 또는 기본값)
   browserAgentLLMConfig: (() => {
@@ -348,6 +357,36 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Editor Chat
   editorChatMessages: [],
   editorViewMode: 'files',
+
+  // Editor Appearance Config
+  editorAppearanceConfig: (() => {
+    if (typeof window === 'undefined') {return DEFAULT_EDITOR_APPEARANCE;}
+    try {
+      const saved = localStorage.getItem('sepilot_editor_appearance_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...DEFAULT_EDITOR_APPEARANCE, ...parsed };
+      }
+    } catch (error) {
+      console.error('Failed to load Editor Appearance config from localStorage:', error);
+    }
+    return DEFAULT_EDITOR_APPEARANCE;
+  })(),
+
+  // Editor LLM Prompts Config
+  editorLLMPromptsConfig: (() => {
+    if (typeof window === 'undefined') {return DEFAULT_EDITOR_LLM_PROMPTS;}
+    try {
+      const saved = localStorage.getItem('sepilot_editor_llm_prompts_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...DEFAULT_EDITOR_LLM_PROMPTS, ...parsed };
+      }
+    } catch (error) {
+      console.error('Failed to load Editor LLM Prompts config from localStorage:', error);
+    }
+    return DEFAULT_EDITOR_LLM_PROMPTS;
+  })(),
 
   // Chat Mode View
   chatViewMode: 'history',
@@ -1027,10 +1066,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ browserAgentIsRunning: isRunning });
   },
 
-  setShowBrowserAgentLogs: (show: boolean) => {
-    set({ showBrowserAgentLogs: show });
-  },
-
   // Browser Agent LLM Config Actions
   setBrowserAgentLLMConfig: (config: Partial<BrowserAgentLLMConfig>) => {
     set((state) => {
@@ -1107,8 +1142,43 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ editorChatMessages: [] });
   },
 
-  setEditorViewMode: (mode: 'files' | 'search' | 'chat') => {
+  setEditorViewMode: (mode: 'files' | 'search' | 'chat' | 'settings') => {
     set({ editorViewMode: mode });
+  },
+
+  // Editor Settings
+  setEditorAppearanceConfig: (config: Partial<EditorAppearanceConfig>) => {
+    set((state) => {
+      const newConfig = { ...state.editorAppearanceConfig, ...config };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sepilot_editor_appearance_config', JSON.stringify(newConfig));
+      }
+      return { editorAppearanceConfig: newConfig };
+    });
+  },
+
+  resetEditorAppearanceConfig: () => {
+    set({ editorAppearanceConfig: DEFAULT_EDITOR_APPEARANCE });
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sepilot_editor_appearance_config');
+    }
+  },
+
+  setEditorLLMPromptsConfig: (config: Partial<EditorLLMPromptsConfig>) => {
+    set((state) => {
+      const newConfig = { ...state.editorLLMPromptsConfig, ...config };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sepilot_editor_llm_prompts_config', JSON.stringify(newConfig));
+      }
+      return { editorLLMPromptsConfig: newConfig };
+    });
+  },
+
+  resetEditorLLMPromptsConfig: () => {
+    set({ editorLLMPromptsConfig: DEFAULT_EDITOR_LLM_PROMPTS });
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sepilot_editor_llm_prompts_config');
+    }
   },
 
   // Chat Mode View Actions

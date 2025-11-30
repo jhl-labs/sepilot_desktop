@@ -138,9 +138,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
             onDocumentsClick={onDocumentsClick}
           />
         )}
-        {appMode === 'editor' && (
-          <SidebarEditor onSettingsClick={() => setSettingsOpen(true)} />
-        )}
+        {appMode === 'editor' && <SidebarEditor />}
         {appMode === 'browser' && <SidebarBrowser />}
       </div>
 

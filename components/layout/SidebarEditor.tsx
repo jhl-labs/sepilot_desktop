@@ -8,13 +8,9 @@ import { FileExplorer } from './FileExplorer';
 import { SearchPanel } from '@/components/editor/SearchPanel';
 import { EditorChatArea } from '@/components/editor/EditorChatArea';
 import { EditorChatInput } from '@/components/editor/EditorChatInput';
-import { isElectron } from '@/lib/platform';
+import { EditorSettings } from '@/components/editor/EditorSettings';
 
-interface SidebarEditorProps {
-  onSettingsClick?: () => void;
-}
-
-export function SidebarEditor({ onSettingsClick }: SidebarEditorProps) {
+export function SidebarEditor() {
   const {
     editorViewMode,
     setEditorViewMode,
@@ -32,6 +28,8 @@ export function SidebarEditor({ onSettingsClick }: SidebarEditorProps) {
           <FileExplorer />
         ) : editorViewMode === 'search' ? (
           <SearchPanel />
+        ) : editorViewMode === 'settings' ? (
+          <EditorSettings />
         ) : (
           <div className="flex h-full flex-col overflow-y-auto">
             <EditorChatArea />
@@ -49,7 +47,7 @@ export function SidebarEditor({ onSettingsClick }: SidebarEditorProps) {
             size="icon"
             onClick={() => {
               if (editorViewMode === 'chat') {
-                if (confirm('현재 대화 내역을 모두 삭제하시겠습니까?')) {
+                if (window.confirm('현재 대화 내역을 모두 삭제하시겠습니까?')) {
                   clearEditorChat();
                   setEditorViewMode('chat');
                 }
@@ -89,18 +87,7 @@ export function SidebarEditor({ onSettingsClick }: SidebarEditorProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => {
-              console.log('[SidebarEditor] Settings button clicked - hiding BrowserView');
-              // Settings 열기 전에 BrowserView 숨김
-              if (isElectron() && window.electronAPI) {
-                window.electronAPI.browserView.hideAll().then(() => {
-                  console.log('[SidebarEditor] BrowserView hidden before opening Settings');
-                }).catch((err) => {
-                  console.error('[SidebarEditor] Failed to hide BrowserView:', err);
-                });
-              }
-              onSettingsClick?.();
-            }}
+            onClick={() => setEditorViewMode('settings')}
             title="설정"
             className="flex-1"
           >
