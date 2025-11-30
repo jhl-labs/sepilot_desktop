@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Folder, FolderPlus, FilePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,10 @@ export function FileExplorer() {
   const [newItemName, setNewItemName] = useState('');
   const { readDirectory, readFile, createFile, createDirectory } = useFileSystem();
 
+  // Refs for dialog inputs
+  const newFileInputRef = useRef<HTMLInputElement>(null);
+  const newFolderInputRef = useRef<HTMLInputElement>(null);
+
   // Restore saved working directory on mount
   useEffect(() => {
     loadWorkingDirectory();
@@ -53,6 +57,30 @@ export function FileExplorer() {
 
     loadFileTree(workingDirectory);
   }, [workingDirectory]);
+
+  // Focus input when new file dialog opens
+  useEffect(() => {
+    if (showNewFileDialog) {
+      // Use setTimeout to wait for Dialog animation to complete
+      const timer = setTimeout(() => {
+        newFileInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [showNewFileDialog]);
+
+  // Focus input when new folder dialog opens
+  useEffect(() => {
+    if (showNewFolderDialog) {
+      // Use setTimeout to wait for Dialog animation to complete
+      const timer = setTimeout(() => {
+        newFolderInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [showNewFolderDialog]);
 
   const loadFileTree = async (dirPath: string) => {
     console.log(`[FileExplorer] Loading file tree: ${dirPath}`);
@@ -238,13 +266,13 @@ export function FileExplorer() {
             </DialogDescription>
           </DialogHeader>
           <Input
+            ref={newFileInputRef}
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {handleCreateFile();}
             }}
             placeholder="예: example.txt"
-            autoFocus
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewFileDialog(false)}>
@@ -265,13 +293,13 @@ export function FileExplorer() {
             </DialogDescription>
           </DialogHeader>
           <Input
+            ref={newFolderInputRef}
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {handleCreateFolder();}
             }}
             placeholder="예: my-folder"
-            autoFocus
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewFolderDialog(false)}>
