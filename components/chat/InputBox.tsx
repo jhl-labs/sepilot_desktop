@@ -736,6 +736,12 @@ export function InputBox() {
           // 이벤트에 포함된 conversationId로 필터링하여 다른 대화의 이벤트 무시
           cleanupEventHandler = window.electronAPI.langgraph.onStreamEvent((event) => {
             try {
+              // Guard: Check if event exists
+              if (!event) {
+                console.error('[InputBox] Received null/undefined event');
+                return;
+              }
+
               // Filter events by conversationId - ignore events from other conversations
               if (event.conversationId && event.conversationId !== conversationId) {
                 return;
