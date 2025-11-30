@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ChatHistory } from './ChatHistory';
 import { ChatChatArea } from '@/components/chat/ChatChatArea';
-import { DocumentList } from '@/components/rag/DocumentList';
 import { PersonaDialog } from '@/components/persona/PersonaDialog';
 import { isElectron } from '@/lib/platform';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -15,14 +14,16 @@ interface SidebarChatProps {
   onGalleryClick?: () => void;
   onConversationClick?: () => void;
   onSettingsClick?: () => void;
+  onDocumentsClick?: () => void;
 }
 
 export function SidebarChat({
   onGalleryClick,
   onConversationClick,
   onSettingsClick,
+  onDocumentsClick,
 }: SidebarChatProps) {
-  const { chatViewMode, setChatViewMode } = useChatStore();
+  const { chatViewMode } = useChatStore();
   const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
 
   return (
@@ -31,10 +32,8 @@ export function SidebarChat({
       <div className="flex-1 overflow-y-auto">
         {chatViewMode === 'history' ? (
           <ChatHistory onConversationClick={onConversationClick} />
-        ) : chatViewMode === 'chat' ? (
-          <ChatChatArea />
         ) : (
-          <DocumentList />
+          <ChatChatArea />
         )}
       </div>
 
@@ -56,11 +55,9 @@ export function SidebarChat({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => {
-              setChatViewMode(chatViewMode === 'documents' ? 'history' : 'documents');
-            }}
+            onClick={onDocumentsClick}
             title="문서 관리"
-            className={`flex-1 ${chatViewMode === 'documents' ? 'bg-accent' : ''}`}
+            className="flex-1"
           >
             <FileText className="h-5 w-5" />
           </Button>

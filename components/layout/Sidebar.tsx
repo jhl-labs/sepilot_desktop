@@ -131,6 +131,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
             onGalleryClick={onGalleryClick}
             onConversationClick={onConversationClick}
             onSettingsClick={() => setSettingsOpen(true)}
+            onDocumentsClick={onDocumentsClick}
           />
         )}
         {appMode === 'editor' && (
