@@ -75,12 +75,12 @@ export function BrowserSettings() {
       topP,
       maxIterations,
     });
-    alert('Browser Agent LLM 설정이 저장되었습니다.');
+    window.alert('Browser Agent LLM 설정이 저장되었습니다.');
   };
 
   // LLM 설정 초기화
   const handleResetLLMConfig = () => {
-    if (confirm('Browser Agent LLM 설정을 기본값으로 초기화하시겠습니까?')) {
+    if (window.confirm('Browser Agent LLM 설정을 기본값으로 초기화하시겠습니까?')) {
       resetBrowserAgentLLMConfig();
       const defaultConfig = {
         maxTokens: 4096,
@@ -92,7 +92,7 @@ export function BrowserSettings() {
       setTemperature(defaultConfig.temperature);
       setTopP(defaultConfig.topP);
       setMaxIterations(defaultConfig.maxIterations);
-      alert('Browser Agent LLM 설정이 초기화되었습니다.');
+      window.alert('Browser Agent LLM 설정이 초기화되었습니다.');
     }
   };
 

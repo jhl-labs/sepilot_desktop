@@ -341,7 +341,6 @@ export function ChatArea() {
                       if (toolName === 'file_write' || toolName === 'file_edit') {
                         // Show file modification summary
                         if (toolArgs?.path) {
-                          const lines = msg.content.split('\n').length;
                           summary = `Modified ${toolArgs.path}`;
                           if (msg.content.includes('lines changed')) {
                             const match = msg.content.match(/(\d+)\s+lines?\s+changed/);
@@ -351,15 +350,15 @@ export function ChatArea() {
                           summary = msg.content.split('\n')[0].substring(0, 60);
                         }
                       } else if (toolName === 'file_read') {
-                        const lines = msg.content.split('\n').length;
-                        summary = `Read ${lines} lines`;
+                        const lineCount = msg.content.split('\n').length;
+                        summary = `Read ${lineCount} lines`;
                       } else if (toolName === 'file_list') {
                         const files = msg.content.split('\n').filter((l: string) => l.trim()).length;
                         summary = `Found ${files} items`;
                       } else if (toolName === 'command_execute') {
                         // Show stdout (first few lines)
-                        const lines = msg.content.split('\n').slice(0, 5);
-                        let output = lines.join('\n');
+                        const contentLines = msg.content.split('\n').slice(0, 5);
+                        let output = contentLines.join('\n');
                         if (output.length > 200) {
                           output = `${output.substring(0, 200)  }...`;
                         }

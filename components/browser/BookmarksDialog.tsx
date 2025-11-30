@@ -75,16 +75,16 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
         setIsAddingFolder(false);
       } else {
         console.error('[BookmarksDialog] Failed to add folder:', result.error);
-        alert(`폴더 추가 실패: ${result.error}`);
+        window.alert(`폴더 추가 실패: ${result.error}`);
       }
     } catch (error) {
       console.error('[BookmarksDialog] Error adding folder:', error);
-      alert('폴더 추가 중 오류가 발생했습니다.');
+      window.alert('폴더 추가 중 오류가 발생했습니다.');
     }
   };
 
   const handleDeleteFolder = async (id: string) => {
-    if (!confirm('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?')) {return;}
+    if (!window.confirm('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?')) {return;}
     if (!isElectron() || !window.electronAPI) {return;}
 
     try {
@@ -97,16 +97,16 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
         }
       } else {
         console.error('[BookmarksDialog] Failed to delete folder:', result.error);
-        alert(`폴더 삭제 실패: ${result.error}`);
+        window.alert(`폴더 삭제 실패: ${result.error}`);
       }
     } catch (error) {
       console.error('[BookmarksDialog] Error deleting folder:', error);
-      alert('폴더 삭제 중 오류가 발생했습니다.');
+      window.alert('폴더 삭제 중 오류가 발생했습니다.');
     }
   };
 
   const handleDeleteBookmark = async (id: string) => {
-    if (!confirm('이 북마크를 삭제하시겠습니까?')) {return;}
+    if (!window.confirm('이 북마크를 삭제하시겠습니까?')) {return;}
     if (!isElectron() || !window.electronAPI) {return;}
 
     try {
@@ -115,11 +115,11 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
         setBookmarks((prev) => prev.filter((b) => b.id !== id));
       } else {
         console.error('[BookmarksDialog] Failed to delete bookmark:', result.error);
-        alert(`북마크 삭제 실패: ${result.error}`);
+        window.alert(`북마크 삭제 실패: ${result.error}`);
       }
     } catch (error) {
       console.error('[BookmarksDialog] Error deleting bookmark:', error);
-      alert('북마크 삭제 중 오류가 발생했습니다.');
+      window.alert('북마크 삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -133,11 +133,11 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
         onOpenChange(false);
       } else {
         console.error('[BookmarksDialog] Failed to open bookmark:', result.error);
-        alert(`북마크 열기 실패: ${result.error}`);
+        window.alert(`북마크 열기 실패: ${result.error}`);
       }
     } catch (error) {
       console.error('[BookmarksDialog] Error opening bookmark:', error);
-      alert('북마크 열기 중 오류가 발생했습니다.');
+      window.alert('북마크 열기 중 오류가 발생했습니다.');
     }
   };
 
@@ -152,14 +152,14 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
       if (result.success && result.data) {
         const newBookmark = result.data;
         setBookmarks((prev) => [...prev, newBookmark]);
-        alert('현재 페이지가 북마크에 추가되었습니다.');
+        window.alert('현재 페이지가 북마크에 추가되었습니다.');
       } else {
         console.error('[BookmarksDialog] Failed to add bookmark:', result.error);
-        alert(`북마크 추가 실패: ${result.error}`);
+        window.alert(`북마크 추가 실패: ${result.error}`);
       }
     } catch (error) {
       console.error('[BookmarksDialog] Error adding bookmark:', error);
-      alert('북마크 추가 중 오류가 발생했습니다.');
+      window.alert('북마크 추가 중 오류가 발생했습니다.');
     }
   };
 

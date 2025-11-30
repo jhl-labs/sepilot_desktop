@@ -98,16 +98,16 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
       fontFamily,
       fontSize,
     });
-    alert('폰트 설정이 저장되었습니다.');
+    window.alert('폰트 설정이 저장되었습니다.');
   };
 
   // 폰트 설정 초기화
   const handleResetFontConfig = () => {
-    if (confirm('폰트 설정을 기본값으로 초기화하시겠습니까?')) {
+    if (window.confirm('폰트 설정을 기본값으로 초기화하시겠습니까?')) {
       resetBrowserChatFontConfig();
       setFontFamily('system-ui, -apple-system, sans-serif');
       setFontSize(14);
-      alert('폰트 설정이 초기화되었습니다.');
+      window.alert('폰트 설정이 초기화되었습니다.');
     }
   };
 

@@ -48,7 +48,7 @@ export function SnapshotsDialog({ open, onOpenChange }: SnapshotsDialogProps) {
   }, [open]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('이 스냅샷을 삭제하시겠습니까?')) {return;}
+    if (!window.confirm('이 스냅샷을 삭제하시겠습니까?')) {return;}
 
     if (!isElectron() || !window.electronAPI) {return;}
 
@@ -59,11 +59,11 @@ export function SnapshotsDialog({ open, onOpenChange }: SnapshotsDialogProps) {
         setSnapshots((prev) => prev.filter((s) => s.id !== id));
       } else {
         console.error('[SnapshotsDialog] Failed to delete snapshot:', result.error);
-        alert(`스냅샷 삭제 실패: ${result.error}`);
+        window.alert(`스냅샷 삭제 실패: ${result.error}`);
       }
     } catch (error) {
       console.error('[SnapshotsDialog] Error deleting snapshot:', error);
-      alert('스냅샷 삭제 중 오류가 발생했습니다.');
+      window.alert('스냅샷 삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -77,11 +77,11 @@ export function SnapshotsDialog({ open, onOpenChange }: SnapshotsDialogProps) {
         onOpenChange(false);
       } else {
         console.error('[SnapshotsDialog] Failed to open snapshot:', result.error);
-        alert(`스냅샷 열기 실패: ${result.error}`);
+        window.alert(`스냅샷 열기 실패: ${result.error}`);
       }
     } catch (error) {
       console.error('[SnapshotsDialog] Error opening snapshot:', error);
-      alert('스냅샷 열기 중 오류가 발생했습니다.');
+      window.alert('스냅샷 열기 중 오류가 발생했습니다.');
     }
   };
 
