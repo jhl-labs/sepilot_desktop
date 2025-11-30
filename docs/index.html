@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="SEPilot Desktop - 오픈소스 LLM 데스크톱 애플리케이션. LangGraph, RAG, MCP 지원.">
-    <meta name="keywords" content="LLM, Desktop App, Electron, Next.js, LangGraph, RAG, MCP, AI Assistant, Open Source">
+    <meta name="description" content="SEPilot Desktop - 오픈소스 LLM 데스크톱 애플리케이션. Chat, Editor, Browser 3가지 모드, LangGraph, RAG, MCP 지원.">
+    <meta name="keywords" content="LLM, Desktop App, Electron, Next.js, LangGraph, RAG, MCP, AI Assistant, Open Source, Monaco Editor, Browser Automation">
     <meta name="author" content="SEPilot Team">
 
     <!-- Open Graph -->
     <meta property="og:title" content="SEPilot Desktop - Open Source LLM Desktop Application">
-    <meta property="og:description" content="오픈소스 LLM 데스크톱 애플리케이션. LangGraph, RAG, MCP 지원.">
+    <meta property="og:description" content="Chat, Editor, Browser 3가지 모드를 지원하는 오픈소스 LLM 데스크톱 애플리케이션. LangGraph, RAG, MCP 지원.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://jhl-labs.github.io/sepilot_desktop">
 
@@ -84,6 +84,7 @@
 
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="#features" class="text-gray-600 hover:text-gray-900 transition">주요 기능</a>
+                    <a href="#modes" class="text-gray-600 hover:text-gray-900 transition">애플리케이션 모드</a>
                     <a href="#tech-stack" class="text-gray-600 hover:text-gray-900 transition">기술 스택</a>
                     <a href="#get-started" class="text-gray-600 hover:text-gray-900 transition">시작하기</a>
                     <a href="#download" class="text-gray-600 hover:text-gray-900 transition">다운로드</a>
@@ -103,7 +104,7 @@
         <div class="max-w-7xl mx-auto">
             <div class="text-center">
                 <div class="inline-flex items-center px-4 py-2 bg-blue-50 rounded-full mb-6">
-                    <span class="text-blue-600 text-sm font-medium">🚀 v0.5.0 출시 - LangGraph 워크플로우, RAG, MCP 지원</span>
+                    <span class="text-blue-600 text-sm font-medium">🚀 v0.6.0 출시 - Persona 시스템, Editor 모드, Browser 자동화, Quick Question</span>
                 </div>
 
                 <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
@@ -112,8 +113,8 @@
                 </h1>
 
                 <p class="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto">
-                    LangGraph 워크플로우, RAG, MCP 도구 통합을 지원하는<br/>
-                    강력하고 유연한 LLM 데스크톱 애플리케이션
+                    Chat, Editor, Browser 3가지 모드를 지원하는 강력하고 유연한 LLM 데스크톱 애플리케이션<br/>
+                    LangGraph 워크플로우, RAG, MCP 도구 통합, Monaco Editor, 브라우저 자동화
                 </p>
 
                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-16">
@@ -138,8 +139,8 @@
                             <svg class="w-24 h-24 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                             </svg>
-                            <p class="text-gray-500 text-lg">여기에 데모 영상 또는 스크린샷을 추가하세요</p>
-                            <p class="text-gray-400 text-sm mt-2">assets/images/ 또는 assets/videos/ 폴더에 파일을 추가하고<br/>이 섹션을 업데이트하세요</p>
+                            <p class="text-gray-500 text-lg font-semibold mb-2">SEPilot Desktop 데모 영상</p>
+                            <p class="text-gray-400 text-sm">📁 assets/videos/demo-main.mp4</p>
                         </div>
                     </div>
                 </div>
@@ -147,8 +148,85 @@
         </div>
     </section>
 
+    <!-- Application Modes Section -->
+    <section id="modes" class="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">3가지 애플리케이션 모드</h2>
+                <p class="text-xl text-gray-600">용도에 맞는 최적의 작업 환경</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Chat Mode -->
+                <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 border border-gray-200">
+                    <div class="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mb-6">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">Chat 모드</h3>
+                    <p class="text-gray-600 mb-6">AI와 대화하고 질문하세요</p>
+                    <ul class="space-y-2 text-sm text-gray-700">
+                        <li>• LangGraph 워크플로우 (4가지 그래프)</li>
+                        <li>• RAG 문서 검색</li>
+                        <li>• MCP 도구 통합</li>
+                        <li>• 이미지 생성 및 해석 (ComfyUI, Vision)</li>
+                        <li>• Persona 시스템 (AI 역할 정의)</li>
+                        <li>• Quick Question (빠른 질문)</li>
+                    </ul>
+                    <div class="mt-6 aspect-video bg-white rounded-lg flex items-center justify-center border border-gray-200">
+                        <p class="text-gray-400 text-xs">📁 chat-mode-demo.mp4</p>
+                    </div>
+                </div>
+
+                <!-- Editor Mode -->
+                <div class="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 border border-gray-200">
+                    <div class="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center mb-6">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">Editor 모드</h3>
+                    <p class="text-gray-600 mb-6">코드를 작성하고 편집하세요</p>
+                    <ul class="space-y-2 text-sm text-gray-700">
+                        <li>• Monaco Editor (VS Code 엔진)</li>
+                        <li>• 파일 탐색기 (Working Directory)</li>
+                        <li>• 다중 파일 탭 관리</li>
+                        <li>• 구문 강조 및 자동 완성</li>
+                        <li>• Terminal 통합 (개발 예정)</li>
+                        <li>• Git 통합 (개발 예정)</li>
+                    </ul>
+                    <div class="mt-6 aspect-video bg-white rounded-lg flex items-center justify-center border border-gray-200">
+                        <p class="text-gray-400 text-xs">📁 editor-mode-demo.mp4</p>
+                    </div>
+                </div>
+
+                <!-- Browser Mode -->
+                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border border-gray-200">
+                    <div class="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center mb-6">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">Browser 모드</h3>
+                    <p class="text-gray-600 mb-6">AI와 함께 웹을 탐색하세요</p>
+                    <ul class="space-y-2 text-sm text-gray-700">
+                        <li>• Chromium 기반 브라우저 (BrowserView)</li>
+                        <li>• 18개 자동화 도구 (Navigate, Click, Fill 등)</li>
+                        <li>• AI Agent와 협업 (웹 탐색, 데이터 추출)</li>
+                        <li>• 스크린샷 캡처 및 HTML 추출</li>
+                        <li>• 북마크 관리</li>
+                    </ul>
+                    <div class="mt-6 aspect-video bg-white rounded-lg flex items-center justify-center border border-gray-200">
+                        <p class="text-gray-400 text-xs">📁 browser-mode-demo.mp4</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Features Section -->
-    <section id="features" class="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="features" class="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
         <div class="max-w-7xl mx-auto">
             <div class="text-center mb-16">
                 <h2 class="text-4xl md:text-5xl font-bold mb-4">주요 기능</h2>
@@ -194,29 +272,69 @@
                             <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
-                            <p class="text-gray-500">LangGraph 워크플로우<br/>GIF/영상 추가</p>
+                            <p class="text-gray-500 text-sm">📁 assets/videos/langgraph-workflow.gif</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Feature 2: RAG -->
+                <!-- Feature 2: Persona System -->
                 <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div class="order-2 md:order-1 bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
+                    <div class="order-2 md:order-1 bg-gradient-to-br from-pink-50 to-purple-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
                         <div class="text-center">
                             <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                             </svg>
-                            <p class="text-gray-500">RAG 문서 검색<br/>GIF/영상 추가</p>
+                            <p class="text-gray-500 text-sm">📁 assets/videos/persona-system.gif</p>
                         </div>
                     </div>
                     <div class="order-1 md:order-2">
+                        <div class="inline-flex items-center px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-sm font-medium mb-4">
+                            🎭 NEW in v0.6.0
+                        </div>
+                        <h3 class="text-3xl font-bold mb-4">AI Persona 시스템</h3>
+                        <p class="text-lg text-gray-600 mb-6">
+                            AI의 역할과 행동 방식을 정의하는 Persona 기능.<br/>
+                            대화별로 다른 페르소나 지정 가능.
+                        </p>
+                        <ul class="space-y-3">
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">기본 페르소나: 일반 어시스턴트, 번역가, 영어 선생님, 시니어 개발자</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">사용자 정의 페르소나 추가/수정/삭제</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">슬래시 커맨드 자동완성 (/persona)</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">SQLite 기반 영구 저장</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Feature 3: RAG -->
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div>
                         <div class="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium mb-4">
                             📚 문서 검색
                         </div>
                         <h3 class="text-3xl font-bold mb-4">RAG (검색 증강 생성)</h3>
                         <p class="text-lg text-gray-600 mb-6">
                             강력한 문서 검색과 임베딩 기반 RAG 시스템.<br/>
-                            텍스트, URL, 파일(PDF, DOCX) 업로드 지원 및 LLM 기반 문서 정제 기능.
+                            텍스트, URL, 파일(PDF, DOCX, TXT, MD) 업로드 지원 및 LLM 기반 문서 정제 기능.
                         </p>
                         <ul class="space-y-3">
                             <li class="flex items-start">
@@ -239,12 +357,62 @@
                             </li>
                         </ul>
                     </div>
+                    <div class="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
+                        <div class="text-center">
+                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <p class="text-gray-500 text-sm">📁 assets/videos/rag-demo.gif</p>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Feature 3: MCP -->
+                <!-- Feature 4: Browser Automation -->
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div class="order-2 md:order-1 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
+                        <div class="text-center">
+                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            <p class="text-gray-500 text-sm">📁 assets/videos/browser-automation.gif</p>
+                        </div>
+                    </div>
+                    <div class="order-1 md:order-2">
+                        <div class="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium mb-4">
+                            🌐 NEW in v0.6.0
+                        </div>
+                        <h3 class="text-3xl font-bold mb-4">브라우저 자동화 (18개 도구)</h3>
+                        <p class="text-lg text-gray-600 mb-6">
+                            Electron BrowserView 기반 Chromium 브라우저 통합.<br/>
+                            AI Agent와 협업하여 웹 탐색 및 데이터 추출.
+                        </p>
+                        <ul class="space-y-3">
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">페이지 조작: Navigate, Click, Fill, Submit, Scroll</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">데이터 추출: Extract Text/Links/Images/Table, Get HTML</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">스크린샷 캡처, 북마크 관리</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Feature 5: MCP -->
                 <div class="grid md:grid-cols-2 gap-12 items-center">
                     <div>
-                        <div class="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium mb-4">
+                        <div class="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium mb-4">
                             🛠️ 도구 통합
                         </div>
                         <h3 class="text-3xl font-bold mb-4">MCP 프로토콜</h3>
@@ -273,103 +441,13 @@
                             </li>
                         </ul>
                     </div>
-                    <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
+                    <div class="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
                         <div class="text-center">
                             <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                             </svg>
-                            <p class="text-gray-500">MCP 도구 실행<br/>GIF/영상 추가</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Feature 4: GitHub Sync -->
-                <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div class="order-2 md:order-1 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
-                        <div class="text-center">
-                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
-                            </svg>
-                            <p class="text-gray-500">GitHub 설정 동기화<br/>GIF/영상 추가</p>
-                        </div>
-                    </div>
-                    <div class="order-1 md:order-2">
-                        <div class="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium mb-4">
-                            🔐 설정 동기화
-                        </div>
-                        <h3 class="text-3xl font-bold mb-4">GitHub OAuth 동기화</h3>
-                        <p class="text-lg text-gray-600 mb-6">
-                            AES-256-GCM 암호화를 통한 안전한 설정 동기화.<br/>
-                            여러 디바이스에서 동일한 환경을 유지하세요.
-                        </p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                                <span class="text-gray-700">GitHub OAuth 인증으로 안전한 접근</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                                <span class="text-gray-700">마스터 패스워드 기반 AES-256-GCM 암호화</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                                <span class="text-gray-700">LLM 설정, MCP 서버, RAG 문서 동기화</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Feature 5: Advanced Chat -->
-                <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div>
-                        <div class="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium mb-4">
-                            💬 채팅 기능
-                        </div>
-                        <h3 class="text-3xl font-bold mb-4">고급 채팅 기능</h3>
-                        <p class="text-lg text-gray-600 mb-6">
-                            강력하고 직관적인 채팅 인터페이스.<br/>
-                            메시지 편집, 재생성, 코드 복사 등 다양한 기능 제공.
-                        </p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                                <span class="text-gray-700">자동 대화 제목 생성</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                                <span class="text-gray-700">메시지 편집 및 재생성</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                                <span class="text-gray-700">Markdown, Mermaid 다이어그램, 코드 하이라이팅</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                                <span class="text-gray-700">글꼴 크기 조절 (50%~200%)</span>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
-                        <div class="text-center">
-                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                            </svg>
-                            <p class="text-gray-500">채팅 인터페이스<br/>GIF/영상 추가</p>
+                            <p class="text-gray-500 text-sm">📁 assets/videos/mcp-tools.gif</p>
                         </div>
                     </div>
                 </div>
@@ -381,7 +459,7 @@
                             <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                             </svg>
-                            <p class="text-gray-500">이미지 생성 및 해석<br/>GIF/영상 추가</p>
+                            <p class="text-gray-500 text-sm">📁 assets/videos/image-generation.gif</p>
                         </div>
                     </div>
                     <div class="order-1 md:order-2">
@@ -420,7 +498,7 @@
     </section>
 
     <!-- Tech Stack Section -->
-    <section id="tech-stack" class="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+    <section id="tech-stack" class="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div class="max-w-7xl mx-auto">
             <div class="text-center mb-16">
                 <h2 class="text-4xl md:text-5xl font-bold mb-4">기술 스택</h2>
@@ -429,7 +507,7 @@
 
             <div class="grid md:grid-cols-3 gap-8">
                 <!-- Frontend -->
-                <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <div class="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-200">
                     <h3 class="text-2xl font-bold mb-6 text-gray-900">프론트엔드</h3>
                     <ul class="space-y-4">
                         <li class="flex items-center">
@@ -437,8 +515,8 @@
                                 <span class="text-white font-bold text-sm">▲</span>
                             </div>
                             <div>
-                                <div class="font-semibold">Next.js 14</div>
-                                <div class="text-sm text-gray-500">App Router, React 18</div>
+                                <div class="font-semibold">Next.js 16</div>
+                                <div class="text-sm text-gray-500">App Router, React 19</div>
                             </div>
                         </li>
                         <li class="flex items-center">
@@ -446,7 +524,7 @@
                                 <span class="text-white font-bold text-sm">TS</span>
                             </div>
                             <div>
-                                <div class="font-semibold">TypeScript 5.4</div>
+                                <div class="font-semibold">TypeScript 5.7</div>
                                 <div class="text-sm text-gray-500">Strict mode</div>
                             </div>
                         </li>
@@ -468,11 +546,20 @@
                                 <div class="text-sm text-gray-500">상태 관리</div>
                             </div>
                         </li>
+                        <li class="flex items-center">
+                            <div class="w-10 h-10 bg-blue-700 rounded-lg flex items-center justify-center mr-3">
+                                <span class="text-white font-bold text-sm">M</span>
+                            </div>
+                            <div>
+                                <div class="font-semibold">Monaco Editor</div>
+                                <div class="text-sm text-gray-500">VS Code 엔진</div>
+                            </div>
+                        </li>
                     </ul>
                 </div>
 
                 <!-- Desktop -->
-                <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <div class="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-200">
                     <h3 class="text-2xl font-bold mb-6 text-gray-900">데스크톱</h3>
                     <ul class="space-y-4">
                         <li class="flex items-center">
@@ -489,7 +576,7 @@
                                 <span class="text-white font-bold text-sm">N</span>
                             </div>
                             <div>
-                                <div class="font-semibold">Node.js 18+</div>
+                                <div class="font-semibold">Node.js 20+</div>
                                 <div class="text-sm text-gray-500">백엔드 런타임</div>
                             </div>
                         </li>
@@ -500,6 +587,15 @@
                             <div>
                                 <div class="font-semibold">better-sqlite3</div>
                                 <div class="text-sm text-gray-500">로컬 스토리지</div>
+                            </div>
+                        </li>
+                        <li class="flex items-center">
+                            <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center mr-3">
+                                <span class="text-white font-bold text-sm">VDB</span>
+                            </div>
+                            <div>
+                                <div class="font-semibold">SQLite-vec</div>
+                                <div class="text-sm text-gray-500">벡터 검색</div>
                             </div>
                         </li>
                         <li class="flex items-center">
@@ -515,7 +611,7 @@
                 </div>
 
                 <!-- LLM & AI -->
-                <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <div class="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-200">
                     <h3 class="text-2xl font-bold mb-6 text-gray-900">LLM & AI</h3>
                     <ul class="space-y-4">
                         <li class="flex items-center">
@@ -532,17 +628,17 @@
                                 <span class="text-white font-bold text-sm">AI</span>
                             </div>
                             <div>
-                                <div class="font-semibold">OpenAI API</div>
-                                <div class="text-sm text-gray-500">GPT-4, Embeddings</div>
+                                <div class="font-semibold">Multiple LLMs</div>
+                                <div class="text-sm text-gray-500">OpenAI, Anthropic, Google, Groq</div>
                             </div>
                         </li>
                         <li class="flex items-center">
                             <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">VDB</span>
+                                <span class="text-white font-bold text-sm">LC</span>
                             </div>
                             <div>
-                                <div class="font-semibold">SQLite-vec</div>
-                                <div class="text-sm text-gray-500">벡터 DB</div>
+                                <div class="font-semibold">LangChain</div>
+                                <div class="text-sm text-gray-500">RAG, Embeddings</div>
                             </div>
                         </li>
                         <li class="flex items-center">
@@ -554,6 +650,15 @@
                                 <div class="text-sm text-gray-500">도구 통합</div>
                             </div>
                         </li>
+                        <li class="flex items-center">
+                            <div class="w-10 h-10 bg-pink-500 rounded-lg flex items-center justify-center mr-3">
+                                <span class="text-white font-bold text-sm">CI</span>
+                            </div>
+                            <div>
+                                <div class="font-semibold">ComfyUI</div>
+                                <div class="text-sm text-gray-500">이미지 생성</div>
+                            </div>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -561,7 +666,7 @@
     </section>
 
     <!-- Get Started Section -->
-    <section id="get-started" class="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="get-started" class="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
         <div class="max-w-4xl mx-auto">
             <div class="text-center mb-16">
                 <h2 class="text-4xl md:text-5xl font-bold mb-4">빠른 시작</h2>
@@ -577,11 +682,11 @@
                     <div class="flex-1">
                         <h3 class="text-2xl font-bold mb-2">다운로드 및 설치</h3>
                         <p class="text-gray-600 mb-4">플랫폼에 맞는 설치 파일을 다운로드하고 설치하세요.</p>
-                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div class="bg-white rounded-lg p-4 border border-gray-200">
                             <code class="text-sm text-gray-800">
-                                <span class="text-gray-500"># Windows: </span>SEPilot-Setup-0.5.0.exe<br/>
-                                <span class="text-gray-500"># macOS: </span>SEPilot-0.5.0.dmg<br/>
-                                <span class="text-gray-500"># Linux: </span>SEPilot-0.5.0.AppImage
+                                <span class="text-gray-500"># Windows: </span>SEPilot-Setup-0.6.0.exe<br/>
+                                <span class="text-gray-500"># macOS: </span>SEPilot-0.6.0.dmg<br/>
+                                <span class="text-gray-500"># Linux: </span>SEPilot-0.6.0.AppImage
                             </code>
                         </div>
                     </div>
@@ -600,13 +705,19 @@
                                 <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                 </svg>
-                                OpenAI (gpt-4, gpt-4-turbo, gpt-3.5-turbo)
+                                OpenAI (gpt-4o, gpt-4-turbo, gpt-3.5-turbo)
                             </li>
                             <li class="flex items-start">
                                 <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                 </svg>
                                 Anthropic (claude-3-5-sonnet, claude-3-opus)
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                                Google (gemini-pro, gemini-1.5-pro)
                             </li>
                             <li class="flex items-start">
                                 <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -624,24 +735,32 @@
                         3
                     </div>
                     <div class="flex-1">
-                        <h3 class="text-2xl font-bold mb-2">그래프 타입 선택</h3>
-                        <p class="text-gray-600 mb-4">사용 목적에 맞는 워크플로우를 선택하세요.</p>
+                        <h3 class="text-2xl font-bold mb-2">모드 및 그래프 타입 선택</h3>
+                        <p class="text-gray-600 mb-4">사용 목적에 맞는 모드와 워크플로우를 선택하세요.</p>
                         <div class="grid sm:grid-cols-2 gap-4">
                             <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                                <div class="font-semibold text-blue-900 mb-1">Basic Chat</div>
+                                <div class="font-semibold text-blue-900 mb-1">Chat: Basic Chat</div>
                                 <div class="text-sm text-blue-700">일반 대화</div>
                             </div>
                             <div class="bg-green-50 rounded-lg p-4 border border-green-200">
-                                <div class="font-semibold text-green-900 mb-1">RAG Chat</div>
+                                <div class="font-semibold text-green-900 mb-1">Chat: RAG Chat</div>
                                 <div class="text-sm text-green-700">문서 기반 질의응답</div>
                             </div>
                             <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                                <div class="font-semibold text-purple-900 mb-1">Agent</div>
+                                <div class="font-semibold text-purple-900 mb-1">Chat: Agent</div>
                                 <div class="text-sm text-purple-700">MCP 도구 활용</div>
                             </div>
                             <div class="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                                <div class="font-semibold text-orange-900 mb-1">Coding Agent</div>
+                                <div class="font-semibold text-orange-900 mb-1">Chat: Coding Agent</div>
                                 <div class="text-sm text-orange-700">복잡한 코딩 작업</div>
+                            </div>
+                            <div class="bg-teal-50 rounded-lg p-4 border border-teal-200">
+                                <div class="font-semibold text-teal-900 mb-1">Editor 모드</div>
+                                <div class="text-sm text-teal-700">코드 편집 및 파일 관리</div>
+                            </div>
+                            <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                                <div class="font-semibold text-indigo-900 mb-1">Browser 모드</div>
+                                <div class="text-sm text-indigo-700">웹 탐색 및 자동화</div>
                             </div>
                         </div>
                     </div>
@@ -726,7 +845,7 @@
                     <div>
                         <div class="font-semibold text-gray-900 mb-2">최소 사양</div>
                         <ul class="space-y-1 text-gray-600 text-sm">
-                            <li>• Node.js 18.0.0 이상</li>
+                            <li>• Node.js 20.9.0 이상</li>
                             <li>• 4GB RAM</li>
                             <li>• 500MB 디스크 공간</li>
                         </ul>
@@ -734,7 +853,7 @@
                     <div>
                         <div class="font-semibold text-gray-900 mb-2">권장 사양</div>
                         <ul class="space-y-1 text-gray-600 text-sm">
-                            <li>• Node.js 20.0.0 이상</li>
+                            <li>• Node.js 22.0.0 이상</li>
                             <li>• 8GB RAM</li>
                             <li>• 1GB 디스크 공간</li>
                         </ul>
@@ -757,8 +876,8 @@
                         <span class="text-xl font-bold text-white">SEPilot Desktop</span>
                     </div>
                     <p class="text-gray-400 mb-4">
-                        LangGraph, RAG, MCP를 지원하는 오픈소스 LLM 데스크톱 애플리케이션.<br/>
-                        강력하고 유연한 AI 워크플로우를 경험하세요.
+                        Chat, Editor, Browser 3가지 모드를 지원하는 오픈소스 LLM 데스크톱 애플리케이션.<br/>
+                        LangGraph, RAG, MCP를 통한 강력하고 유연한 AI 워크플로우를 경험하세요.
                     </p>
                     <div class="flex space-x-4">
                         <a href="https://github.com/jhl-labs/sepilot_desktop" target="_blank" class="text-gray-400 hover:text-white transition">
@@ -776,6 +895,7 @@
                         <li><a href="https://github.com/jhl-labs/sepilot_desktop" target="_blank" class="text-gray-400 hover:text-white transition">GitHub</a></li>
                         <li><a href="https://github.com/jhl-labs/sepilot_desktop/issues" target="_blank" class="text-gray-400 hover:text-white transition">Issues</a></li>
                         <li><a href="https://github.com/jhl-labs/sepilot_desktop/releases" target="_blank" class="text-gray-400 hover:text-white transition">Releases</a></li>
+                        <li><a href="https://github.com/jhl-labs/sepilot_desktop/blob/main/FEATURES.md" target="_blank" class="text-gray-400 hover:text-white transition">Features</a></li>
                     </ul>
                 </div>
 
