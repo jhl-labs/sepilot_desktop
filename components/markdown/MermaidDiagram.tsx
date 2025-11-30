@@ -21,7 +21,6 @@ export function MermaidDiagram({ chart, onChartFixed }: MermaidDiagramProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string>('');
-  const [errorDetails, setErrorDetails] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -33,7 +32,6 @@ export function MermaidDiagram({ chart, onChartFixed }: MermaidDiagramProps) {
     setCurrentChart(chart);
     setRetryCount(0);
     setError('');
-    setErrorDetails('');
   }, [chart]);
 
   // Auto-fix mermaid syntax using LLM
@@ -135,12 +133,10 @@ Corrected Mermaid code:`;
         const { svg: renderedSvg } = await mermaid.render(id, currentChart);
         setSvg(renderedSvg);
         setError('');
-        setErrorDetails('');
       } catch (err: any) {
         console.error('Mermaid rendering error:', err);
         const errorMsg = err.message || 'Failed to render diagram';
         setError(errorMsg);
-        setErrorDetails(err.toString());
 
         // Clean up error SVG elements created by mermaid
         // Mermaid creates error SVG with the same ID when rendering fails

@@ -65,16 +65,18 @@ export const DropdownMenuTrigger = React.forwardRef<
     setIsOpen(!isOpen);
   };
 
-  // Merge refs
+  // Merge refs using a ref callback
   const mergedRef = React.useCallback(
-    (node: HTMLDivElement) => {
-      if (triggerRef) {
-        (triggerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    (node: HTMLDivElement | null) => {
+      // Update context ref
+      if (triggerRef && 'current' in triggerRef) {
+        triggerRef.current = node;
       }
+      // Update forwarded ref
       if (typeof ref === 'function') {
         ref(node);
-      } else if (ref) {
-        (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      } else if (ref && 'current' in ref) {
+        ref.current = node;
       }
     },
     [ref, triggerRef]

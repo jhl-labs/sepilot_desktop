@@ -5,7 +5,6 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, X, ChevronRight, ChevronDown, FileText } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { isElectron } from '@/lib/platform';
 
 interface SearchMatch {

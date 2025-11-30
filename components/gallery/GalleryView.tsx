@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Download, Trash2, ZoomIn, Image as ImageIcon, Sparkles, Clipboard } from 'lucide-react';
+import { X, Download, Image as ImageIcon, Sparkles, Clipboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { isElectron } from '@/lib/platform';
-import type { ImageAttachment, Message } from '@/types';
+import type { Message } from '@/types';
 
 interface GalleryImage {
   id: string;

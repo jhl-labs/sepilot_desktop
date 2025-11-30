@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CheckCircle, AlertCircle, Github, Upload, TestTube2, ChevronRight } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, Github, TestTube2, ChevronRight } from 'lucide-react';
 import { GitHubOAuthConfig } from '@/types';
 import { GitHubRepository } from '@/lib/auth/types';
 

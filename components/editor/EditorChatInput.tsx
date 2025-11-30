@@ -26,7 +26,6 @@ export function EditorChatInput() {
     updateEditorChatMessage,
     editorChatMessages,
     workingDirectory,
-    openFiles
   } = useChatStore();
 
   // Auto-resize textarea

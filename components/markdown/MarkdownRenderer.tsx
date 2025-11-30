@@ -108,8 +108,6 @@ export function MarkdownRenderer({
   content,
   className,
   isStreaming = false,
-  referencedDocuments = [],
-  onSourceClick
 }: MarkdownRendererProps) {
   // Create a wrapped component that includes isStreaming
   const CustomPre = (props: any) => <CustomPreComponent {...props} isStreaming={isStreaming} />;

@@ -275,7 +275,7 @@ export function EditorSettings() {
                 )}
                 <div className="flex-1">
                   <div>function hello() {'{'}</div>
-                  <div>  console.log('Hello, World!');</div>
+                  <div>  console.log(&apos;Hello, World!&apos;);</div>
                   <div>{'}'}</div>
                 </div>
               </div>

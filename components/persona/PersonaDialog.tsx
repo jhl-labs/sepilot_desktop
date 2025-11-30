@@ -55,7 +55,7 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
 
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.systemPrompt.trim()) {
-      alert('이름과 시스템 프롬프트는 필수입니다.');
+      window.alert('이름과 시스템 프롬프트는 필수입니다.');
       return;
     }
 
@@ -69,16 +69,16 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
       setEditingId(null);
       setFormData({ name: '', description: '', systemPrompt: '', avatar: '🤖' });
     } catch (error: any) {
-      alert(error.message || '저장 실패');
+      window.alert(error.message || '저장 실패');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('정말로 이 페르소나를 삭제하시겠습니까?')) {
+    if (window.confirm('정말로 이 페르소나를 삭제하시겠습니까?')) {
       try {
         await deletePersona(id);
       } catch (error: any) {
-        alert(error.message || '삭제 실패');
+        window.alert(error.message || '삭제 실패');
       }
     }
   };

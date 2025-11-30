@@ -77,7 +77,6 @@ export function InputBox() {
     pendingToolApproval,
     setPendingToolApproval,
     clearPendingToolApproval,
-    alwaysApproveToolsForSession,
     setAlwaysApproveToolsForSession,
     imageGenerationProgress,
     setImageGenerationProgress,
@@ -990,7 +989,6 @@ export function InputBox() {
                           if (toolName === 'file_write' || toolName === 'file_edit') {
                             // Show file modification summary
                             if (toolArgs?.path) {
-                              const lines = msg.content.split('\n').length;
                               summary = `Modified ${toolArgs.path}`;
                               if (msg.content.includes('lines changed')) {
                                 const match = msg.content.match(/(\d+)\s+lines?\s+changed/);
@@ -1389,7 +1387,7 @@ export function InputBox() {
   }, [pendingToolApproval, clearPendingToolApproval]);
 
   // Handle always approve (session-wide)
-  const handleToolAlwaysApprove = useCallback(async (toolCalls: ToolCall[]) => {
+  const handleToolAlwaysApprove = useCallback(async (_toolCalls: ToolCall[]) => {
     if (!pendingToolApproval) {return;}
 
     console.log('[InputBox] Always approving tools for session');

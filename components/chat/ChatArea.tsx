@@ -104,7 +104,7 @@ export function ChatArea() {
 
     // Show error notification for failed files
     if (failedFiles.length > 0) {
-      alert(`다음 파일을 읽을 수 없습니다:\n${failedFiles.join('\n')}`);
+      window.alert(`다음 파일을 읽을 수 없습니다:\n${failedFiles.join('\n')}`);
     }
 
     // Dispatch custom event to InputBox

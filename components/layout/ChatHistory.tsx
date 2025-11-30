@@ -12,10 +12,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
@@ -80,7 +76,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('이 대화를 삭제하시겠습니까?')) {
+    if (window.confirm('이 대화를 삭제하시겠습니까?')) {
       await deleteConversation(id);
     }
   };

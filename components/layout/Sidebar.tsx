@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, MessageSquare, Code, Globe, Plus, Trash, FileText, Search, History } from 'lucide-react';
+import { ChevronDown, MessageSquare, Code, Globe, Plus, Trash, FileText, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useState } from 'react';
@@ -30,7 +30,6 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
     deleteConversation,
     editorViewMode,
     setEditorViewMode,
-    chatViewMode,
     setChatViewMode,
   } = useChatStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -40,7 +39,7 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
   const handleDeleteAll = async () => {
     if (conversations.length === 0) {return;}
 
-    if (confirm(`모든 대화(${conversations.length}개)를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`)) {
+    if (window.confirm(`모든 대화(${conversations.length}개)를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`)) {
       // 먼저 새 대화를 생성하여 activeConversationId가 null이 되는 것을 방지
       const newConversationId = await createConversation();
 

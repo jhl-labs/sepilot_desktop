@@ -3,7 +3,7 @@
 import { Message, FileChange } from '@/types';
 import { Persona } from '@/types/persona';
 import { cn } from '@/lib/utils';
-import { User, Bot, Edit2, RefreshCw, Copy, Check, X, FileText, ChevronDown, ChevronUp, ImageIcon } from 'lucide-react';
+import { User, Bot, Edit2, RefreshCw, Copy, Check, X, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,6 @@ export function MessageBubble({
   const [copied, setCopied] = useState(false);
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   const [detectedFileChanges, setDetectedFileChanges] = useState<FileChange[]>([]);
-  const [loadingFiles, setLoadingFiles] = useState(false);
 
   const { addMessage, imageGenerationProgress } = useChatStore();
 
@@ -104,7 +103,6 @@ export function MessageBubble({
     }
 
     const detectFileChanges = async () => {
-      setLoadingFiles(true);
       const fileChanges: FileChange[] = [];
 
       for (const toolCall of message.tool_calls || []) {
@@ -154,7 +152,6 @@ export function MessageBubble({
       }
 
       setDetectedFileChanges(fileChanges);
-      setLoadingFiles(false);
     };
 
     detectFileChanges();
@@ -233,7 +230,7 @@ export function MessageBubble({
               {/* Display attached/generated images */}
               {message.images && message.images.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-2">
-                  {message.images.map((image, index) => (
+                  {message.images.map((image) => (
                     <div key={image.id} className="group relative">
                       <img
                         src={image.base64}
@@ -328,7 +325,7 @@ export function MessageBubble({
               참조 문서 ({message.referenced_documents.length}개)
             </div>
             <div className="space-y-1.5">
-              {message.referenced_documents.map((doc, index) => {
+              {message.referenced_documents.map((doc) => {
                 const isExpanded = expandedDocs.has(doc.id);
                 const preview = doc.content.slice(0, 100);
                 return (

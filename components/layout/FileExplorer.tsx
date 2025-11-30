@@ -147,7 +147,7 @@ export function FileExplorer() {
       setNewItemName('');
       loadFileTree(workingDirectory);
     } else {
-      alert(`파일 생성 실패`);
+      window.alert(`파일 생성 실패`);
     }
   };
 
@@ -166,7 +166,7 @@ export function FileExplorer() {
       setNewItemName('');
       loadFileTree(workingDirectory);
     } else {
-      alert(`폴더 생성 실패`);
+      window.alert(`폴더 생성 실패`);
     }
   };
 

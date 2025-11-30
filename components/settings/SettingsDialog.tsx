@@ -521,7 +521,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   ) => {
     try {
       // Network Config를 EmbeddingConfig에 포함 (customHeaders 제외 - LLM 전용)
-      const { customHeaders, ...networkConfigWithoutCustomHeaders } = networkConfig;
+      const { customHeaders: _customHeaders, ...networkConfigWithoutCustomHeaders } = networkConfig;
       const embeddingConfigWithNetwork = {
         ...embeddingConfig,
         networkConfig: networkConfigWithoutCustomHeaders,
@@ -530,10 +530,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       console.log('[SettingsDialog] Saving embedding config with model:', embeddingConfig.model, 'networkConfig:', !!networkConfig);
 
       // Save to database or localStorage (LLM 설정과 동일한 방식)
-      let savedConfig: AppConfig | null = null;
       if (isElectron() && window.electronAPI) {
         try {
-          savedConfig = await persistAppConfig({
+          await persistAppConfig({
             vectorDB: vectorDBConfig,
             embedding: embeddingConfigWithNetwork,
           });

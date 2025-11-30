@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,7 +43,7 @@ export function QuickInputSettingsTab({
 
   const handleAddQuestion = () => {
     if (config.quickQuestions.length >= 5) {
-      alert('최대 5개의 Quick Question만 등록할 수 있습니다.');
+      window.alert('최대 5개의 Quick Question만 등록할 수 있습니다.');
       return;
     }
 
@@ -132,7 +131,7 @@ export function QuickInputSettingsTab({
             • <strong>클립보드 내용</strong>: 사용자 메시지로 전송되어 처리할 대상이 됩니다.
             <br />
             <br />
-            예: 프롬프트 "한국어를 영어로, 영어는 한국어로" → 클립보드의 텍스트를 번역합니다.
+            예: 프롬프트 &quot;한국어를 영어로, 영어는 한국어로&quot; → 클립보드의 텍스트를 번역합니다.
           </p>
 
           {config.quickQuestions.length === 0 ? (

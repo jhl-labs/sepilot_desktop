@@ -46,21 +46,21 @@ export function FileTreeItem({
   isActive,
   onFileClick,
   onRefresh,
-  parentPath,
 }: FileTreeItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(node.name);
+  const [children, setChildren] = useState(node.children);
   const { deleteItem, renameItem, readDirectory, isAvailable } = useFileSystem();
 
   const handleClick = async () => {
     if (node.isDirectory) {
       // Lazy load children if not loaded yet
-      if (!node.children && isAvailable) {
+      if (!children && isAvailable) {
         console.log(`[FileTreeItem] Lazy loading directory: ${node.path}`);
-        const children = await readDirectory(node.path);
-        if (children) {
-          node.children = children;
+        const loadedChildren = await readDirectory(node.path);
+        if (loadedChildren) {
+          setChildren(loadedChildren);
           setIsExpanded(true);
         }
       } else {
@@ -74,7 +74,7 @@ export function FileTreeItem({
 
   const handleDelete = async () => {
     const itemType = node.isDirectory ? '폴더와 내용' : '파일';
-    const confirmed = confirm(`"${node.name}" ${itemType}을(를) 삭제하시겠습니까?`);
+    const confirmed = window.confirm(`"${node.name}" ${itemType}을(를) 삭제하시겠습니까?`);
     if (!confirmed) {
       console.log('[FileTreeItem] Delete cancelled by user');
       return;
@@ -85,7 +85,7 @@ export function FileTreeItem({
     if (success) {
       onRefresh();
     } else {
-      alert(`삭제 실패`);
+      window.alert(`삭제 실패`);
     }
   };
 
@@ -108,7 +108,7 @@ export function FileTreeItem({
       setIsRenaming(false);
       onRefresh();
     } else {
-      alert(`이름 변경 실패`);
+      window.alert(`이름 변경 실패`);
       setNewName(node.name);
     }
   };
@@ -180,9 +180,9 @@ export function FileTreeItem({
         </ContextMenuContent>
       </ContextMenu>
 
-      {node.isDirectory && isExpanded && node.children && (
+      {node.isDirectory && isExpanded && children && (
         <div>
-          {node.children.map((child) => (
+          {children.map((child) => (
             <FileTreeItem
               key={child.path}
               node={child}

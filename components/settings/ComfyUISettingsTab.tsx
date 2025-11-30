@@ -42,7 +42,7 @@ export function ComfyUISettingsTab({
       // Electron 환경: IPC를 통해 Main Process에서 호출 (CORS 없음, Network Config 사용)
       if (typeof window !== 'undefined' && window.electronAPI?.comfyui) {
         // customHeaders는 LLM 전용이므로 ComfyUI에는 전달하지 않음
-        const { customHeaders, ...networkConfigWithoutCustomHeaders } = networkConfig;
+        const { customHeaders: _customHeaders, ...networkConfigWithoutCustomHeaders } = networkConfig;
         const result = await window.electronAPI.comfyui.testConnection(
           comfyConfig.httpUrl,
           comfyConfig.apiKey,

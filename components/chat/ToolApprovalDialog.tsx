@@ -33,12 +33,6 @@ export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: Too
   const [fileContents, setFileContents] = useState<Map<string, FileToolContent>>(new Map());
   const [loadingFiles, setLoadingFiles] = useState<Set<string>>(new Set());
 
-  if (!pendingToolApproval) {
-    return null;
-  }
-
-  const { toolCalls } = pendingToolApproval;
-
   // Helper: Check if tool is a file editing tool
   const isFileEditTool = (toolName: string): boolean => {
     return toolName === 'file_edit' || toolName === 'file_write';
@@ -46,6 +40,9 @@ export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: Too
 
   // Helper: Load file content for diff display
   useEffect(() => {
+    if (!pendingToolApproval) {return;}
+
+    const toolCalls = pendingToolApproval.toolCalls;
     const loadFileContents = async () => {
       const newContents = new Map<string, FileToolContent>();
       const loading = new Set<string>();
@@ -99,7 +96,13 @@ export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: Too
     };
 
     loadFileContents();
-  }, [toolCalls]);
+  }, [pendingToolApproval]);
+
+  if (!pendingToolApproval) {
+    return null;
+  }
+
+  const { toolCalls } = pendingToolApproval;
 
   const toggleToolExpand = (toolId: string) => {
     setExpandedTools((prev) => {

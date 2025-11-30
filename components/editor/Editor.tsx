@@ -82,7 +82,7 @@ export function CodeEditor() {
   ) => {
     if (!window.electronAPI?.llm) {
       console.error('LLM API is not available. Please check your settings.');
-      alert('LLM API is not available. Please check your settings.');
+      window.alert('LLM API is not available. Please check your settings.');
       return;
     }
 
@@ -112,11 +112,11 @@ export function CodeEditor() {
         }
       } else {
         console.error('Editor action failed:', result.error);
-        alert(`Failed: ${result.error || 'Unknown error'}`);
+        window.alert(`Failed: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Editor action error:', error);
-      alert(`Error: ${error instanceof Error ? error.message : 'An unexpected error occurred'}`);
+      window.alert(`Error: ${error instanceof Error ? error.message : 'An unexpected error occurred'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -127,7 +127,7 @@ export function CodeEditor() {
 
     const fileToClose = openFiles.find((f) => f.path === path);
     if (fileToClose?.isDirty) {
-      if (confirm('파일에 저장되지 않은 변경사항이 있습니다. 닫으시겠습니까?')) {
+      if (window.confirm('파일에 저장되지 않은 변경사항이 있습니다. 닫으시겠습니까?')) {
         closeFile(path);
       }
     } else {
@@ -166,7 +166,7 @@ export function CodeEditor() {
 
     // Create the provider object with all required methods
     const providerObject = {
-      provideInlineCompletions: async (model: any, position: any, context: any, token: any) => {
+      provideInlineCompletions: async (model: any, position: any, _context: any, _token: any) => {
         console.log('[Autocomplete] provideInlineCompletions called');
 
         // Return empty if autocomplete is not available
@@ -266,14 +266,14 @@ export function CodeEditor() {
           }, DEBOUNCE_MS);
         });
       },
-      freeInlineCompletions: (completions: any) => {
+      freeInlineCompletions: (_completions: any) => {
         // Clean up resources if needed
       },
-      handleItemDidShow: (completions: any, item: any) => {
+      handleItemDidShow: (_completions: any, _item: any) => {
         // Optional: Called when an item is shown
       },
       // Add the missing disposeInlineCompletions method
-      disposeInlineCompletions: (completions: any) => {
+      disposeInlineCompletions: (_completions: any) => {
         // Dispose inline completions
       },
     };

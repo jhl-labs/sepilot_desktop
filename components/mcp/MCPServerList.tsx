@@ -107,7 +107,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
     }
   };
 
-  const handleToggle = async (name: string, currentEnabled: boolean) => {
+  const handleToggle = async (name: string) => {
     setTogglingServer(name);
     try {
       if (window.electronAPI) {
@@ -377,7 +377,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                         ) : (
                           <Switch
                             checked={isEnabled}
-                            onCheckedChange={() => handleToggle(server.name, isEnabled)}
+                            onCheckedChange={() => handleToggle(server.name)}
                             className="data-[state=checked]:bg-green-500"
                           />
                         )}
