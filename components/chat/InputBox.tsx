@@ -732,9 +732,9 @@ export function InputBox() {
           // 이벤트에 포함된 conversationId로 필터링하여 다른 대화의 이벤트 무시
           cleanupEventHandler = window.electronAPI.langgraph.onStreamEvent((event) => {
             try {
-              // Guard: Check if event exists
+              // Guard: Check if event exists (stream may send null on completion)
               if (!event) {
-                console.error('[InputBox] Received null/undefined event');
+                // Silently ignore null events - this is expected at stream end
                 return;
               }
 
@@ -1154,7 +1154,13 @@ export function InputBox() {
                 return;
               }
 
-              const errorMsg = data?.error || 'Failed to get response from LLM';
+              // Guard: Ignore empty error events (may occur after normal stream completion)
+              if (!data || !data.error) {
+                console.warn('[InputBox] Received empty error event, ignoring');
+                return;
+              }
+
+              const errorMsg = data.error;
               console.error('[InputBox] Stream error:', errorMsg);
               setError(errorMsg);
 
