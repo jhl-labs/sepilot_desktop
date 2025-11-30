@@ -2,20 +2,20 @@
 
 import { useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Brain, Wrench, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 
 export function SimpleChatArea() {
-  const { browserChatMessages, browserChatFontConfig } = useChatStore();
+  const { browserChatMessages, browserChatFontConfig, browserAgentLogs, browserAgentIsRunning } = useChatStore();
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages or logs arrive
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [browserChatMessages]);
+  }, [browserChatMessages, browserAgentLogs]);
 
   if (browserChatMessages.length === 0) {
     return (
@@ -67,6 +67,38 @@ export function SimpleChatArea() {
             </div>
           </div>
         ))}
+
+        {/* Agent 실행 로그 표시 */}
+        {browserAgentLogs.length > 0 && (
+          <div className="flex justify-start">
+            <div className="max-w-[85%] rounded-lg px-3 py-2 bg-muted/50 border border-muted-foreground/20">
+              <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-muted-foreground">
+                <Brain className="h-3 w-3" />
+                <span>Agent 실행 과정</span>
+                {browserAgentIsRunning && (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                )}
+              </div>
+              <div className="space-y-1.5 text-xs">
+                {browserAgentLogs.slice(-5).map((log) => (
+                  <div key={log.id} className="flex items-start gap-2">
+                    {log.phase === 'thinking' && <Brain className="h-3 w-3 mt-0.5 text-blue-500 shrink-0" />}
+                    {log.phase === 'tool_call' && <Wrench className="h-3 w-3 mt-0.5 text-purple-500 shrink-0" />}
+                    {log.phase === 'tool_result' && <CheckCircle2 className="h-3 w-3 mt-0.5 text-green-500 shrink-0" />}
+                    {log.phase === 'error' && <XCircle className="h-3 w-3 mt-0.5 text-red-500 shrink-0" />}
+                    {log.phase === 'completion' && <CheckCircle2 className="h-3 w-3 mt-0.5 text-green-500 shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-foreground/80">{log.message}</span>
+                      {log.details?.toolName && (
+                        <span className="ml-1 text-muted-foreground">({log.details.toolName})</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ScrollArea>
   );
