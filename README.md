@@ -1,10 +1,19 @@
 # SEPilot Desktop
 
-> A professional LLM desktop application built with Next.js and Electron
->
-> Claude Desktop과 같은 수준의 LLM 데스크톱 애플리케이션
+<div align="center">
+
+**A professional LLM desktop application built with Next.js and Electron**
+
+*Claude Desktop과 같은 수준의 LLM 데스크톱 애플리케이션*
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-31.0-47848F)](https://www.electronjs.org/)
+[![License](https://img.shields.io/badge/license-Custom-green)](./LICENSE)
 
 [English](#english) | [한국어](#korean)
+
+</div>
 
 ---
 
@@ -12,14 +21,9 @@
 
 ## English
 
-<div align="center">
+### 📖 Overview
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
-[![Electron](https://img.shields.io/badge/Electron-31.0-47848F)](https://www.electronjs.org/)
-[![License](https://img.shields.io/badge/license-Custom-green)](./LICENSE)
-
-</div>
+SEPilot Desktop is a professional LLM desktop application that provides Claude Desktop-level functionality with enhanced features. Built on Next.js and Electron, it offers a seamless experience for interacting with multiple LLM providers through various workflow patterns including RAG and autonomous agents.
 
 ### ✨ Features
 
@@ -162,6 +166,38 @@ Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTIN
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+### 📸 Screenshots
+
+*(Add screenshots here to showcase your application)*
+
+### 🗺️ Roadmap
+
+- [ ] Plugin system for custom extensions
+- [ ] Multi-language UI support
+- [ ] Enhanced voice input/output
+- [ ] Collaborative chat sessions
+- [ ] Mobile companion app
+
+### ❓ FAQ
+
+<details>
+<summary>Which LLM providers are supported?</summary>
+
+OpenAI, Anthropic, and any custom LLM server that supports OpenAI Compatible API.
+</details>
+
+<details>
+<summary>Can it run locally?</summary>
+
+Yes, SEPilot Desktop is a fully local desktop application. All data is stored on your computer.
+</details>
+
+<details>
+<summary>How do I use the RAG feature?</summary>
+
+Configure VectorDB in settings, upload documents in the Documents tab, and select RAG as your chat type.
+</details>
+
 ### 📄 License
 
 This project is licensed under a custom license. See the [LICENSE](LICENSE) file for details.
@@ -172,11 +208,20 @@ This project is licensed under a custom license. See the [LICENSE](LICENSE) file
 - UI components from [shadcn/ui](https://ui.shadcn.com/)
 - Icons from [Lucide](https://lucide.dev/)
 
+### 📞 Contact & Support
+
+- **Issues**: [GitHub Issues](https://github.com/yourusername/sepilot_desktop/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/sepilot_desktop/discussions)
+
 ---
 
 <a name="korean"></a>
 
 ## 한국어
+
+### 📖 개요
+
+SEPilot Desktop은 Claude Desktop 수준의 기능을 제공하는 전문 LLM 데스크톱 애플리케이션입니다. Next.js와 Electron으로 구축되었으며, RAG 및 자율 에이전트를 포함한 다양한 워크플로우 패턴을 통해 여러 LLM 제공자와의 원활한 상호작용을 제공합니다.
 
 ### ✨ 주요 기능
 
@@ -319,6 +364,38 @@ npm run build:linux    # Linux (AppImage, deb)
 4. 브랜치에 푸시 (`git push origin feature/AmazingFeature`)
 5. Pull Request 생성
 
+### 📸 스크린샷
+
+*(애플리케이션을 소개하는 스크린샷을 추가하세요)*
+
+### 🗺️ 로드맵
+
+- [ ] 커스텀 확장을 위한 플러그인 시스템
+- [ ] 다국어 UI 지원
+- [ ] 향상된 음성 입력/출력
+- [ ] 협업 채팅 세션
+- [ ] 모바일 컴패니언 앱
+
+### ❓ FAQ
+
+<details>
+<summary>어떤 LLM 제공자를 지원하나요?</summary>
+
+OpenAI, Anthropic, 그리고 OpenAI Compatible API를 지원하는 모든 커스텀 LLM 서버를 사용할 수 있습니다.
+</details>
+
+<details>
+<summary>로컬에서 실행 가능한가요?</summary>
+
+네, SEPilot Desktop은 완전히 로컬에서 실행되는 데스크톱 애플리케이션입니다. 모든 데이터는 사용자의 컴퓨터에 저장됩니다.
+</details>
+
+<details>
+<summary>RAG 기능은 어떻게 사용하나요?</summary>
+
+설정에서 VectorDB를 구성하고, Documents 탭에서 문서를 업로드한 후, 채팅 타입을 RAG로 선택하면 됩니다.
+</details>
+
 ### 📄 라이선스
 
 이 프로젝트는 커스텀 라이선스로 제공됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
@@ -328,3 +405,10 @@ npm run build:linux    # Linux (AppImage, deb)
 - [Claude Code](https://claude.com/claude-code)로 제작되었습니다
 - UI 컴포넌트는 [shadcn/ui](https://ui.shadcn.com/)를 사용했습니다
 - 아이콘은 [Lucide](https://lucide.dev/)를 사용했습니다
+
+---
+
+### 📞 Contact & Support
+
+- **Issues**: [GitHub Issues](https://github.com/yourusername/sepilot_desktop/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/sepilot_desktop/discussions)
