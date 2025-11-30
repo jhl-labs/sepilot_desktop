@@ -759,10 +759,10 @@ describe('MessageBubble', () => {
         ],
       };
 
-      // Mock file.read to throw an error during the edit content processing
-      (mockElectronAPI.file.read as jest.Mock).mockImplementation(() => {
-        throw new Error('Permission denied');
-      });
+      // Mock file.read to reject with error (caught by inner try-catch)
+      (mockElectronAPI.file.read as jest.Mock).mockRejectedValue(
+        new Error('Permission denied')
+      );
 
       render(<MessageBubble message={messageWithToolCalls} />);
 
@@ -770,6 +770,45 @@ describe('MessageBubble', () => {
       await waitFor(() => {
         expect(screen.getByTestId('markdown-renderer')).toBeInTheDocument();
       });
+    });
+
+    it('should handle unexpected errors during file processing', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      const messageWithToolCalls: Message = {
+        ...assistantMessage,
+        tool_calls: [
+          {
+            id: 'tool-1',
+            name: 'file_edit',
+            arguments: {
+              path: '/test/file.ts',
+              old_str: 'old',
+              new_str: 'new',
+            },
+          },
+        ],
+      };
+
+      // Mock file.read to return null, which will cause replace() to throw
+      (mockElectronAPI.file.read as jest.Mock).mockResolvedValue(null as any);
+
+      render(<MessageBubble message={messageWithToolCalls} />);
+
+      // Component should not crash even when processing fails
+      await waitFor(() => {
+        expect(screen.getByTestId('markdown-renderer')).toBeInTheDocument();
+      });
+
+      // Verify that error was logged (outer catch block)
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Failed to load file content for tool'),
+          expect.any(Error)
+        );
+      });
+
+      consoleErrorSpy.mockRestore();
     });
 
     it('should determine changeType as created when oldContent is empty', async () => {
