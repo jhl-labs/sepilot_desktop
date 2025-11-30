@@ -87,7 +87,7 @@ export function ConnectionManager({
   };
 
   const handleSaveEdit = () => {
-    if (!editingId) return;
+    if (!editingId) {return;}
 
     const { name, provider, baseURL, apiKey } = formData;
     if (!name?.trim() || !baseURL?.trim() || !apiKey?.trim()) {

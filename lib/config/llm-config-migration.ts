@@ -36,7 +36,7 @@ export function migrateLLMConfig(oldConfig: LLMConfig): LLMConfigV2 {
     maxTokens: oldConfig.maxTokens,
   });
 
-  let activeBaseModelId: string | undefined = baseModelId;
+  const activeBaseModelId: string | undefined = baseModelId;
   let activeVisionModelId: string | undefined;
   let activeAutocompleteModelId: string | undefined;
 

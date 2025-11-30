@@ -617,7 +617,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 setConfig={(update) => {
                   if (typeof update === 'function') {
                     setConfigV2((prev) => {
-                      if (!prev) return prev;
+                      if (!prev) {return prev;}
                       const newV2 = update(prev);
                       // Also update V1 config for compatibility
                       try {

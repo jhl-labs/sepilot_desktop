@@ -30,7 +30,7 @@ const SIDEBAR_WIDTH_KEYS = {
 
 // Load sidebar width from localStorage
 function loadSidebarWidth(mode: 'chat' | 'editor' | 'browser'): number {
-  if (typeof window === 'undefined') return DEFAULT_SIDEBAR_WIDTH;
+  if (typeof window === 'undefined') {return DEFAULT_SIDEBAR_WIDTH;}
 
   const key = SIDEBAR_WIDTH_KEYS[mode];
   const saved = localStorage.getItem(key);
@@ -47,7 +47,7 @@ function loadSidebarWidth(mode: 'chat' | 'editor' | 'browser'): number {
 
 // Save sidebar width to localStorage
 function saveSidebarWidth(mode: 'chat' | 'editor' | 'browser', width: number) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {return;}
 
   const key = SIDEBAR_WIDTH_KEYS[mode];
   localStorage.setItem(key, width.toString());

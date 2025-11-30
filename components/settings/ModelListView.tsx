@@ -148,7 +148,7 @@ export function ModelListView({
   const handleToggleTag = (modelId: string, tag: ModelRoleTag) => {
     onModelsChange(
       models.map((m) => {
-        if (m.id !== modelId) return m;
+        if (m.id !== modelId) {return m;}
 
         const tags = m.tags.includes(tag)
           ? m.tags.filter((t) => t !== tag)
