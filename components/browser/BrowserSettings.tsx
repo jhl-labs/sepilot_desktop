@@ -50,7 +50,9 @@ export function BrowserSettings() {
   const [maxIterations, setMaxIterations] = useState(browserAgentLLMConfig?.maxIterations ?? 10);
 
   // 폰트 설정 로컬 상태
-  const [fontFamily, setFontFamily] = useState(browserChatFontConfig?.fontFamily ?? 'system-ui, -apple-system, sans-serif');
+  const [fontFamily, setFontFamily] = useState(
+    browserChatFontConfig?.fontFamily ?? 'system-ui, -apple-system, sans-serif'
+  );
   const [fontSize, setFontSize] = useState(browserChatFontConfig?.fontSize ?? 14);
 
   // 폰트 설정 저장
