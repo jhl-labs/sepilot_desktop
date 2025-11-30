@@ -273,45 +273,25 @@ export function SimpleChatInput() {
 
   return (
     <div className="shrink-0 border-t bg-background p-2">
-      {/* Agent Progress Display */}
+      {/* Simplified Agent Status - 상세 로그는 SimpleChatArea에 표시 */}
       {agentProgress && (
-        <div className="mb-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 text-xs font-medium text-primary">
-                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                <span>
-                  {agentProgress.status === 'thinking' && '🤔 생각 중...'}
-                  {agentProgress.status === 'executing' && '⚙️ 실행 중...'}
-                  {agentProgress.status !== 'thinking' && agentProgress.status !== 'executing' && '🔄 작업 중...'}
-                </span>
-                <span className="text-muted-foreground">
-                  ({agentProgress.iteration}/{agentProgress.maxIterations})
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground truncate">
-                {agentProgress.message}
-              </p>
-            </div>
-            <Button
-              onClick={handleStop}
-              variant="ghost"
-              size="sm"
-              className="h-6 shrink-0 text-xs"
-              title="중단"
-            >
-              중단
-            </Button>
+        <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5">
+          <div className="flex items-center gap-2 text-xs font-medium text-primary">
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <span>Agent 실행 중...</span>
+            <span className="text-muted-foreground">
+              ({agentProgress.iteration}/{agentProgress.maxIterations})
+            </span>
           </div>
-          {/* Progress bar */}
-          <div className="mt-2 h-1 w-full bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary transition-all duration-300"
-              style={{
-                width: `${(agentProgress.iteration / agentProgress.maxIterations) * 100}%`,
-              }}
-            />
-          </div>
+          <Button
+            onClick={handleStop}
+            variant="ghost"
+            size="sm"
+            className="h-6 shrink-0 text-xs"
+            title="중단 (Esc)"
+          >
+            중단
+          </Button>
         </div>
       )}
 
