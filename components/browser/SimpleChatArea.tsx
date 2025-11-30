@@ -7,7 +7,7 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 
 export function SimpleChatArea() {
-  const { browserChatMessages } = useChatStore();
+  const { browserChatMessages, browserChatFontConfig } = useChatStore();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -49,11 +49,15 @@ export function SimpleChatArea() {
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+              className={`max-w-[85%] rounded-lg px-3 py-2 ${
                 message.role === 'user'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted'
               }`}
+              style={{
+                fontFamily: browserChatFontConfig.fontFamily,
+                fontSize: `${browserChatFontConfig.fontSize}px`,
+              }}
             >
               {message.role === 'user' ? (
                 <p className="whitespace-pre-wrap break-words">{message.content}</p>

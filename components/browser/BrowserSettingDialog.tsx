@@ -168,11 +168,85 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
               </p>
             </div>
 
-            {/* 향후 추가될 설정들을 위한 공간 */}
-            <div className="border-t pt-4">
-              <p className="text-sm text-muted-foreground">
-                추가 설정이 향후 지원될 예정입니다.
-              </p>
+            {/* Browser Chat 폰트 설정 */}
+            <div className="border-t pt-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="font-semibold">Browser Chat 폰트 설정</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetFontConfig}
+                  className="h-8 gap-1"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  초기화
+                </Button>
+              </div>
+
+              {/* Font Family */}
+              <div className="space-y-2">
+                <Label className="text-sm">폰트</Label>
+                <Select
+                  value={fontFamily}
+                  onValueChange={setFontFamily}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="폰트를 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AVAILABLE_FONTS.map((font) => (
+                      <SelectItem key={font.value} value={font.value}>
+                        <span style={{ fontFamily: font.value }}>{font.label}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  채팅 메시지에 사용할 폰트를 선택하세요.
+                </p>
+              </div>
+
+              {/* Font Size */}
+              <div className="space-y-2">
+                <Label className="text-sm">폰트 크기 (px)</Label>
+                <Input
+                  type="number"
+                  value={fontSize}
+                  onChange={(e) => setFontSize(parseInt(e.target.value, 10))}
+                  min={10}
+                  max={24}
+                  step={1}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  채팅 메시지의 폰트 크기 (10-24px, 기본값: 14px)
+                </p>
+              </div>
+
+              {/* 미리보기 */}
+              <div className="space-y-2">
+                <Label className="text-sm">미리보기</Label>
+                <div
+                  className="rounded-md border bg-muted p-3"
+                  style={{
+                    fontFamily,
+                    fontSize: `${fontSize}px`,
+                  }}
+                >
+                  <p>사용자: 안녕하세요!</p>
+                  <p className="mt-2">AI: 안녕하세요! 무엇을 도와드릴까요?</p>
+                  <p className="mt-2">English: Hello, how can I help you?</p>
+                  <p className="mt-2">日本語: こんにちは、お手伝いできますか？</p>
+                </div>
+              </div>
+
+              {/* 저장 버튼 */}
+              <Button
+                onClick={handleSaveFontConfig}
+                className="w-full"
+              >
+                폰트 설정 저장
+              </Button>
             </div>
           </div>
         )}
