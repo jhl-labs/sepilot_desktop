@@ -24,12 +24,14 @@ docs/
 index.html이 FEATURES.md를 기반으로 대폭 업데이트되었습니다:
 
 ### 새로운 섹션
+
 - **3가지 애플리케이션 모드** (#modes): Chat, Editor, Browser 모드 상세 설명
 - **Persona 시스템** 기능 추가
 - **브라우저 자동화** (18개 도구) 기능 추가
 - **Monaco Editor** 기술 스택 추가
 
 ### 업데이트된 내용
+
 - 버전: v0.5.0 → v0.6.0
 - Next.js 14 → 16, React 18 → 19
 - TypeScript 5.4 → 5.7
@@ -43,16 +45,19 @@ index.html이 FEATURES.md를 기반으로 대폭 업데이트되었습니다:
 현재 다음 위치에 플레이스홀더가 설정되어 있습니다:
 
 #### 1. 메인 데모 영상
+
 - **위치**: Hero Section
 - **파일**: `assets/videos/demo-main.mp4`
 - **설명**: SEPilot Desktop 전체 기능 소개
 
 #### 2. 애플리케이션 모드 (3개)
+
 - **Chat 모드**: `assets/videos/chat-mode-demo.mp4`
 - **Editor 모드**: `assets/videos/editor-mode-demo.mp4`
 - **Browser 모드**: `assets/videos/browser-mode-demo.mp4`
 
 #### 3. 주요 기능 (6개)
+
 - **LangGraph 워크플로우**: `assets/videos/langgraph-workflow.gif`
 - **Persona 시스템**: `assets/videos/persona-system.gif`
 - **RAG 검색**: `assets/videos/rag-demo.gif`
@@ -66,6 +71,7 @@ index.html이 FEATURES.md를 기반으로 대폭 업데이트되었습니다:
 2. `index.html`에서 해당 이미지를 참조
 
 예시:
+
 ```html
 <img src="assets/images/screenshot-chat.png" alt="Chat Interface" class="rounded-lg shadow-lg" />
 ```
@@ -73,11 +79,13 @@ index.html이 FEATURES.md를 기반으로 대폭 업데이트되었습니다:
 ### 영상/GIF 추가 방법
 
 #### GIF 파일 (권장)
+
 ```html
 <img src="assets/videos/demo-langgraph.gif" alt="LangGraph Demo" class="w-full rounded-2xl" />
 ```
 
 #### MP4 파일
+
 ```html
 <video autoplay loop muted playsinline class="w-full h-full object-cover">
   <source src="assets/videos/demo-main.mp4" type="video/mp4" />
@@ -87,8 +95,11 @@ index.html이 FEATURES.md를 기반으로 대폭 업데이트되었습니다:
 ### 플레이스홀더 교체 예시
 
 **현재 (플레이스홀더):**
+
 ```html
-<div class="aspect-video bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+<div
+  class="aspect-video bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center"
+>
   <div class="text-center">
     <p class="text-gray-500 text-sm">📁 assets/videos/langgraph-workflow.gif</p>
   </div>
@@ -96,6 +107,7 @@ index.html이 FEATURES.md를 기반으로 대폭 업데이트되었습니다:
 ```
 
 **교체 후:**
+
 ```html
 <div class="aspect-video">
   <img
@@ -169,11 +181,13 @@ GitHub Actions를 통해 자동으로 배포됩니다:
 3. GitHub Actions가 자동으로 GitHub Pages에 배포
 
 배포된 페이지는 다음 주소에서 확인 가능:
+
 - **Production**: https://jhl-labs.github.io/sepilot_desktop
 
 ## 💡 영상/이미지 최적화 가이드
 
 ### GIF 최적화
+
 - **크기**: 최대 1920x1080
 - **프레임레이트**: 15-24 FPS
 - **파일 크기**: 5MB 이하 권장
@@ -183,6 +197,7 @@ GitHub Actions를 통해 자동으로 배포됩니다:
   - FFmpeg 명령어: `ffmpeg -i input.mp4 -vf "fps=15,scale=1280:-1:flags=lanczos" -c:v gif output.gif`
 
 ### 영상 최적화 (MP4)
+
 - **형식**: MP4 (H.264)
 - **해상도**: 1920x1080 또는 1280x720
 - **파일 크기**: 10MB 이하 권장
@@ -191,6 +206,7 @@ GitHub Actions를 통해 자동으로 배포됩니다:
   - FFmpeg 명령어: `ffmpeg -i input.mp4 -vcodec h264 -acodec aac -crf 23 -preset slow output.mp4`
 
 ### 스크린샷 최적화
+
 - **형식**:
   - PNG (투명 배경 필요 시, 텍스트 중심)
   - JPG (일반 스크린샷, 더 작은 파일 크기)
@@ -207,16 +223,19 @@ GitHub Actions를 통해 자동으로 배포됩니다:
 ### 화면 녹화 도구 권장
 
 #### macOS
+
 - **QuickTime Player** (내장) - 간단한 화면 녹화
 - **ScreenFlow** - 전문가급 편집 기능
 - **Kap** (무료) - GIF 직접 생성
 
 #### Windows
+
 - **OBS Studio** (무료) - 오픈소스, 강력한 기능
 - **ShareX** (무료) - 스크린샷 + 화면 녹화
 - **ScreenToGif** (무료) - GIF 전문
 
 #### Linux
+
 - **SimpleScreenRecorder** - 간단하고 가벼움
 - **OBS Studio** - 크로스 플랫폼
 - **Peek** - GIF 녹화 전문
@@ -274,7 +293,7 @@ tailwind.config = {
     extend: {
       colors: {
         primary: {
-          50: '#f0f9ff',   // 변경 가능
+          50: '#f0f9ff', // 변경 가능
           // ... 다른 색상 코드
         },
       },

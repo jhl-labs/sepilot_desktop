@@ -89,15 +89,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: {
-      path: [
-        'node_modules',
-        'dist',
-        'out',
-        '.next',
-        'coverage',
-        'test-results',
-        '\\.d\\.ts$',
-      ],
+      path: ['node_modules', 'dist', 'out', '.next', 'coverage', 'test-results', '\\.d\\.ts$'],
     },
     exclude: {
       path: [
@@ -114,12 +106,7 @@ module.exports = {
         '\\.spec\\.(ts|tsx|js|jsx)$',
       ],
     },
-    includeOnly: [
-      '^app/',
-      '^components/',
-      '^lib/',
-      '^electron/',
-    ],
+    includeOnly: ['^app/', '^components/', '^lib/', '^electron/'],
     tsPreCompilationDeps: true,
     tsConfig: {
       fileName: 'tsconfig.json',
