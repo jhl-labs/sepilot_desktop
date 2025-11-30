@@ -418,4 +418,94 @@ describe('BrowserAgentLogsView', () => {
       expect(scrollContainer).toBeInTheDocument();
     });
   });
+
+  describe('Default Cases', () => {
+    it('should handle unknown log level with default styles', () => {
+      const unknownLevelLog: BrowserAgentLogEntry = {
+        id: 'unknown-1',
+        timestamp: Date.now(),
+        level: 'unknown' as any, // Unknown level
+        phase: 'thinking',
+        message: 'Unknown level log',
+      };
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        browserAgentLogs: [unknownLevelLog],
+        browserAgentIsRunning: false,
+        clearBrowserAgentLogs: mockClearBrowserAgentLogs,
+        setBrowserViewMode: mockSetBrowserViewMode,
+      });
+
+      const { container } = render(<BrowserAgentLogsView />);
+
+      const logEntry = container.querySelector('.border-l-gray-500');
+      expect(logEntry).toBeInTheDocument();
+    });
+
+    it('should handle unknown phase with default label', () => {
+      const unknownPhaseLog: BrowserAgentLogEntry = {
+        id: 'unknown-2',
+        timestamp: Date.now(),
+        level: 'info',
+        phase: 'unknown' as any, // Unknown phase
+        message: 'Unknown phase log',
+      };
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        browserAgentLogs: [unknownPhaseLog],
+        browserAgentIsRunning: false,
+        clearBrowserAgentLogs: mockClearBrowserAgentLogs,
+        setBrowserViewMode: mockSetBrowserViewMode,
+      });
+
+      render(<BrowserAgentLogsView />);
+
+      expect(screen.getByText('📝 로그')).toBeInTheDocument();
+    });
+
+    it('should handle default icon for unknown level', () => {
+      const defaultIconLog: BrowserAgentLogEntry = {
+        id: 'default-icon-1',
+        timestamp: Date.now(),
+        level: 'unknown' as any,
+        phase: 'thinking',
+        message: 'Default icon test',
+      };
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        browserAgentLogs: [defaultIconLog],
+        browserAgentIsRunning: false,
+        clearBrowserAgentLogs: mockClearBrowserAgentLogs,
+        setBrowserViewMode: mockSetBrowserViewMode,
+      });
+
+      const { container } = render(<BrowserAgentLogsView />);
+
+      // Default icon is AlertCircle - check for SVG element
+      const svgIcons = container.querySelectorAll('svg');
+      expect(svgIcons.length).toBeGreaterThan(0);
+    });
+
+    it('should handle warning level with yellow border', () => {
+      const warningLog: BrowserAgentLogEntry = {
+        id: 'warning-1',
+        timestamp: Date.now(),
+        level: 'warning',
+        phase: 'thinking',
+        message: 'Warning message',
+      };
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        browserAgentLogs: [warningLog],
+        browserAgentIsRunning: false,
+        clearBrowserAgentLogs: mockClearBrowserAgentLogs,
+        setBrowserViewMode: mockSetBrowserViewMode,
+      });
+
+      const { container } = render(<BrowserAgentLogsView />);
+
+      const logEntry = container.querySelector('.border-l-yellow-500');
+      expect(logEntry).toBeInTheDocument();
+    });
+  });
 });
