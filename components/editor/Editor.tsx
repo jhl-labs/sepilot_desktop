@@ -7,7 +7,6 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
 import { X, Save, FileText, Loader2, Eye, Code } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTheme } from 'next-themes';
 import { isElectron } from '@/lib/platform';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 
@@ -28,9 +27,9 @@ export function CodeEditor() {
     updateFileContent,
     markFileDirty,
     clearInitialPosition,
+    editorAppearanceConfig,
   } = useChatStore();
 
-  const { theme } = useTheme();
   const [isSaving, setIsSaving] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -602,6 +601,22 @@ export function CodeEditor() {
     }
   }, [editor, activeFile?.path, activeFile?.initialPosition, activeFilePath, clearInitialPosition]);
 
+  // Update editor options when appearance config changes
+  useEffect(() => {
+    if (!editor) {return;}
+
+    editor.updateOptions({
+      fontSize: editorAppearanceConfig.fontSize,
+      fontFamily: editorAppearanceConfig.fontFamily,
+      minimap: {
+        enabled: previewMode === 'split' ? false : editorAppearanceConfig.minimap
+      },
+      wordWrap: editorAppearanceConfig.wordWrap,
+      tabSize: editorAppearanceConfig.tabSize,
+      lineNumbers: editorAppearanceConfig.lineNumbers,
+    });
+  }, [editor, editorAppearanceConfig, previewMode]);
+
   if (openFiles.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
@@ -727,15 +742,19 @@ export function CodeEditor() {
                     console.log('Monaco instance stored globally');
                   }
                 }}
-                theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                theme={editorAppearanceConfig.theme}
                 options={{
-                  fontSize: 14,
-                  minimap: { enabled: previewMode === 'editor' },
+                  fontSize: editorAppearanceConfig.fontSize,
+                  fontFamily: editorAppearanceConfig.fontFamily,
+                  minimap: {
+                    enabled: previewMode === 'split' ? false : editorAppearanceConfig.minimap
+                  },
                   scrollBeyondLastLine: false,
-                  wordWrap: 'on',
+                  wordWrap: editorAppearanceConfig.wordWrap,
                   automaticLayout: true,
-                  tabSize: 2,
+                  tabSize: editorAppearanceConfig.tabSize,
                   insertSpaces: true,
+                  lineNumbers: editorAppearanceConfig.lineNumbers,
                   // Enable inline suggestions (like GitHub Copilot)
                   inlineSuggest: {
                     enabled: true,

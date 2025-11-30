@@ -7,7 +7,7 @@ import { InputBox } from '@/components/chat/InputBox';
 import { WorkingDirectoryIndicator } from '@/components/chat/WorkingDirectoryIndicator';
 import { UpdateNotificationDialog } from '@/components/UpdateNotificationDialog';
 import { EditorWithTerminal } from '@/components/editor/EditorWithTerminal';
-import { BrowserPanel } from '@/components/editor/BrowserPanel';
+import { BrowserPanel } from '@/components/browser/BrowserPanel';
 import { useChatStore } from '@/lib/store/chat-store';
 import { QuickInputMessageData } from '@/types';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
