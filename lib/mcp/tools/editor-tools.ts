@@ -144,7 +144,7 @@ export async function searchSimilarCode(params: {
   try {
     // This would use ripgrep in production
     // For now, return placeholder
-    console.log('[searchSimilarCode] Searching for:', pattern, 'in', language || 'all', 'files');
+    console.log('[searchSimilarCode] Searching for:', pattern, 'in', language || 'all', 'files', 'workingDirectory:', workingDirectory, 'maxResults:', maxResults);
 
     // Placeholder implementation
     return [

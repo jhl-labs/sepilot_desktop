@@ -407,9 +407,9 @@ export class EditorAgentGraph {
   /**
    * Tool: Get file context
    */
-  private async getFileContext(args: any, state: EditorAgentState): Promise<string> {
+  private async getFileContext(args: any, _state: EditorAgentState): Promise<string> {
     const { includeImports = true, includeTypes = true, linesBefore = 10, linesAfter = 5 } = args;
-    const context = state.editorContext;
+    const context = _state.editorContext;
 
     if (!context) {
       return 'No editor context available';
@@ -431,7 +431,7 @@ This would include:
   /**
    * Tool: Search similar code
    */
-  private async searchSimilarCode(args: any, state: EditorAgentState): Promise<string> {
+  private async searchSimilarCode(args: any, _state: EditorAgentState): Promise<string> {
     const { pattern, language } = args;
 
     // Placeholder - would use ripgrep or similar
@@ -444,7 +444,7 @@ This would use ripgrep to find similar patterns across the project.`;
   /**
    * Tool: Get documentation
    */
-  private async getDocumentation(args: any, state: EditorAgentState): Promise<string> {
+  private async getDocumentation(args: any, _state: EditorAgentState): Promise<string> {
     const { query } = args;
 
     // Placeholder - would fetch from online docs or local cache

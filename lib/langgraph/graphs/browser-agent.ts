@@ -784,7 +784,6 @@ export class BrowserAgentGraph {
 
       // 반복 감지: 도구 호출 히스토리에 추가
       for (const toolCall of toolCalls) {
-        const callSignature = `${toolCall.name}:${JSON.stringify(toolCall.arguments)}`;
         toolCallHistory.push({ name: toolCall.name, args: JSON.stringify(toolCall.arguments) });
 
         // 히스토리 크기 제한

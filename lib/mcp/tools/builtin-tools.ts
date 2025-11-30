@@ -818,7 +818,7 @@ export const browserAnalyzeWithVisionTool: MCPTool = {
 /**
  * Handle browser_get_interactive_elements
  */
-async function handleBrowserGetInteractiveElements(): Promise<string> {
+async function _handleBrowserGetInteractiveElements(): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
     throw new Error('No active browser tab. Please switch to Browser mode first.');
@@ -882,7 +882,7 @@ async function handleBrowserGetInteractiveElements(): Promise<string> {
 /**
  * Handle browser_get_page_content
  */
-async function handleBrowserGetPageContent(): Promise<string> {
+async function _handleBrowserGetPageContent(): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
     throw new Error('No active browser tab. Please switch to Browser mode first.');
@@ -908,7 +908,8 @@ async function handleBrowserGetPageContent(): Promise<string> {
 /**
  * Handle browser_click_element
  */
-async function handleBrowserClickElement(args: { element_id: string }): Promise<string> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function _handleBrowserClickElement(args: { element_id: string }): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
     throw new Error('No active browser tab. Please switch to Browser mode first.');
@@ -948,7 +949,8 @@ async function handleBrowserClickElement(args: { element_id: string }): Promise<
 /**
  * Handle browser_type_text
  */
-async function handleBrowserTypeText(args: { element_id: string; text: string }): Promise<string> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function _handleBrowserTypeText(args: { element_id: string; text: string }): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
     throw new Error('No active browser tab. Please switch to Browser mode first.');
@@ -1104,7 +1106,7 @@ async function handleBrowserListTabs(): Promise<string> {
 /**
  * Handle browser_take_screenshot
  */
-async function handleBrowserTakeScreenshot(args: { fullPage?: boolean }): Promise<string> {
+async function handleBrowserTakeScreenshot(_args: { fullPage?: boolean }): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
     throw new Error('No active browser tab. Please switch to Browser mode first.');

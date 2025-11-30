@@ -614,7 +614,7 @@ export class AdvancedEditorAgentGraph {
   }
 
   // Tool implementations
-  private async readFile(args: { filePath: string }, state: EditorAgentState): Promise<string> {
+  private async readFile(args: { filePath: string }, _state: EditorAgentState): Promise<string> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       const result = await window.electronAPI.fs.readFile(args.filePath);
       if (result.success && result.data) {
@@ -625,7 +625,7 @@ export class AdvancedEditorAgentGraph {
     throw new Error('File operations not available in browser mode');
   }
 
-  private async listFiles(args: { dirPath: string; recursive?: boolean }, state: EditorAgentState): Promise<string> {
+  private async listFiles(args: { dirPath: string; recursive?: boolean }, _state: EditorAgentState): Promise<string> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       const result = await window.electronAPI.fs.readDirectory(args.dirPath);
       if (result.success && result.data) {
@@ -639,9 +639,9 @@ export class AdvancedEditorAgentGraph {
     throw new Error('File operations not available in browser mode');
   }
 
-  private async searchFiles(args: { pattern: string; path?: string; caseInsensitive?: boolean; fileType?: string }, state: EditorAgentState): Promise<string> {
+  private async searchFiles(args: { pattern: string; path?: string; caseInsensitive?: boolean; fileType?: string }, _state: EditorAgentState): Promise<string> {
     // Use ripgrep via existing grep_search
-    const workingDir = args.path || state.editorContext?.workingDirectory || process.cwd();
+    const workingDir = args.path || _state.editorContext?.workingDirectory || process.cwd();
 
     if (typeof window !== 'undefined' && window.electronAPI) {
       // This would need a new IPC handler for ripgrep search
@@ -650,7 +650,7 @@ export class AdvancedEditorAgentGraph {
     throw new Error('Search not available in browser mode');
   }
 
-  private async writeFile(args: { filePath: string; content: string }, state: EditorAgentState): Promise<string> {
+  private async writeFile(args: { filePath: string; content: string }, _state: EditorAgentState): Promise<string> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       const result = await window.electronAPI.fs.writeFile(args.filePath, args.content);
       if (result.success) {
@@ -661,7 +661,7 @@ export class AdvancedEditorAgentGraph {
     throw new Error('File operations not available in browser mode');
   }
 
-  private async editFile(args: { filePath: string; edits: Array<{ oldText: string; newText: string }> }, state: EditorAgentState): Promise<string> {
+  private async editFile(args: { filePath: string; edits: Array<{ oldText: string; newText: string }> }, _state: EditorAgentState): Promise<string> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       // Read file first
       const readResult = await window.electronAPI.fs.readFile(args.filePath);
@@ -700,17 +700,17 @@ export class AdvancedEditorAgentGraph {
     throw new Error('File operations not available in browser mode');
   }
 
-  private async executeCommand(args: { command: string; cwd?: string }, state: EditorAgentState): Promise<string> {
+  private async executeCommand(args: { command: string; cwd?: string }, _state: EditorAgentState): Promise<string> {
     // This would execute via terminal IPC
     return `Executed: ${args.command}\n(Terminal integration pending)`;
   }
 
-  private async getTerminalOutput(args: { lines?: number }, state: EditorAgentState): Promise<string> {
+  private async getTerminalOutput(args: { lines?: number }, _state: EditorAgentState): Promise<string> {
     // This would read from terminal buffer
     return `Last ${args.lines || 50} lines of terminal output\n(Terminal integration pending)`;
   }
 
-  private async getGitStatus(args: any, state: EditorAgentState): Promise<string> {
+  private async getGitStatus(_args: any, _state: EditorAgentState): Promise<string> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       // Would execute git status via command
       return `Git status:\n(Git integration pending)`;
@@ -718,7 +718,7 @@ export class AdvancedEditorAgentGraph {
     throw new Error('Git operations not available in browser mode');
   }
 
-  private async gitDiff(args: { filePath?: string; staged?: boolean }, state: EditorAgentState): Promise<string> {
+  private async gitDiff(args: { filePath?: string; staged?: boolean }, _state: EditorAgentState): Promise<string> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       // Would execute git diff via command
       return `Git diff${args.filePath ? ` for ${args.filePath}` : ''}\n(Git integration pending)`;

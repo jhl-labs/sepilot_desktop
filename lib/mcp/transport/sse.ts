@@ -91,7 +91,7 @@ export class SSEMCPClient extends MCPClient {
     }
 
     // 모든 대기 중인 요청 취소
-    for (const [id, pending] of this.pendingRequests.entries()) {
+    for (const [_id, pending] of this.pendingRequests.entries()) {
       clearTimeout(pending.timeout);
       pending.reject(new Error('Connection closed'));
     }
@@ -210,6 +210,9 @@ export class SSEMCPClient extends MCPClient {
       if (data.id !== undefined) {
         this.handleMessage(JSON.stringify(data));
       }
+    } else {
+      // Unused response check to avoid no-unused-expressions
+      void response;
     }
   }
 

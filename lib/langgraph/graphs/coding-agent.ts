@@ -1,5 +1,6 @@
 import { StateGraph, END } from '@langchain/langgraph';
 import { CodingAgentStateAnnotation, CodingAgentState } from '../state';
+import { shouldUseTool } from '../nodes/tools';
 import { LLMService } from '@/lib/llm/service';
 import { Message, Activity } from '@/types';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
@@ -149,7 +150,7 @@ function parsePlanSteps(planText: string): string[] {
   for (const line of lines) {
     const trimmed = line.trim();
     // Match lines starting with number followed by . or ) or :
-    if (/^\d+[\.\)\:]/.test(trimmed)) {
+    if (/^\d+[.):]/.test(trimmed)) {
       steps.push(trimmed);
     }
   }
@@ -166,7 +167,7 @@ function extractRequiredFiles(prompt: string): string[] {
   const matches = new Set<string>();
 
   // Pattern 1: Files with path separators
-  const pathPattern = /[@`"']?([A-Za-z0-9_-]+\/[A-Za-z0-9_\/.-]+\.(?:py|md|txt|json|yaml|yml|ini|cfg|sh|js|ts|tsx|jsx|java|go|rs|c|cpp|h|hpp))[@`"']?/gi;
+  const pathPattern = /[@`"']?([A-Za-z0-9_-]+\/[A-Za-z0-9_/.-]+\.(?:py|md|txt|json|yaml|yml|ini|cfg|sh|js|ts|tsx|jsx|java|go|rs|c|cpp|h|hpp))[@`"']?/gi;
   const pathMatches = prompt.match(pathPattern);
   if (pathMatches) {
     for (const match of pathMatches) {
@@ -178,7 +179,7 @@ function extractRequiredFiles(prompt: string): string[] {
   }
 
   // Pattern 2: Files in quotes or backticks
-  const quotedPattern = /[`"']([A-Za-z0-9_\/.-]+\.(?:py|md|txt|json|yaml|yml|ini|cfg|sh|js|ts|tsx|jsx|java|go|rs|c|cpp|h|hpp))[`"']/gi;
+  const quotedPattern = /[`"']([A-Za-z0-9_/.-]+\.(?:py|md|txt|json|yaml|yml|ini|cfg|sh|js|ts|tsx|jsx|java|go|rs|c|cpp|h|hpp))[`"']/gi;
   const quotedMatches = prompt.match(quotedPattern);
   if (quotedMatches) {
     for (const match of quotedMatches) {

@@ -28,6 +28,7 @@ const log = {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { logger } = require('../../../electron/services/logger');
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         logger.warn?.(...args) || logger.info(...args);
       } catch {
         console.warn(...args);
