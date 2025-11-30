@@ -178,18 +178,7 @@ export function SidebarBrowser() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => {
-              console.log('[SidebarBrowser] Settings button clicked - hiding BrowserView');
-              // Settings 열기 전에 BrowserView 숨김
-              if (isElectron() && window.electronAPI) {
-                window.electronAPI.browserView.hideAll().then(() => {
-                  console.log('[SidebarBrowser] BrowserView hidden before opening Settings');
-                }).catch((err) => {
-                  console.error('[SidebarBrowser] Failed to hide BrowserView:', err);
-                });
-              }
-              setBrowserViewMode('settings');
-            }}
+            onClick={() => setBrowserViewMode('settings')}
             title="Browser 설정"
             className="flex-1"
           >
