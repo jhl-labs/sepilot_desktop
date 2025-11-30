@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { AppConfig, ComfyUIConfig, LLMConfig, NetworkConfig, QuickInputConfig } from '@/types';
+import { AppConfig, ComfyUIConfig, LLMConfig, LLMConfigV2, NetworkConfig, QuickInputConfig } from '@/types';
 import { initializeLLMClient } from '@/lib/llm/client';
 import { VectorDBSettings } from '@/components/rag/VectorDBSettings';
 import { VectorDBConfig, EmbeddingConfig } from '@/lib/vectordb/types';
@@ -19,7 +19,7 @@ import { configureWebLLMClient } from '@/lib/llm/web-client';
 import { GitHubOAuthSettings } from '@/components/settings/GitHubOAuthSettings';
 import { GitHubOAuthConfig } from '@/types';
 import { BackupRestoreSettings } from '@/components/settings/BackupRestoreSettings';
-import { LLMSettingsTab } from './LLMSettingsTab';
+import { LLMSettingsTabV2 } from './LLMSettingsTabV2';
 import { NetworkSettingsTab } from './NetworkSettingsTab';
 import { ComfyUISettingsTab } from './ComfyUISettingsTab';
 import { MCPSettingsTab } from './MCPSettingsTab';
@@ -33,6 +33,7 @@ import {
   mergeNetworkConfig,
   mergeComfyConfig,
 } from './settingsUtils';
+import { migrateLLMConfig, convertV2ToV1, isLLMConfigV2 } from '@/lib/config/llm-config-migration';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -48,6 +49,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<SettingSection>('llm');
 
   const [config, setConfig] = useState<LLMConfig>(createDefaultLLMConfig());
+  const [configV2, setConfigV2] = useState<LLMConfigV2 | null>(null); // New V2 config
   const [networkConfig, setNetworkConfig] = useState<NetworkConfig>(createDefaultNetworkConfig());
   const [githubConfig, setGithubConfig] = useState<GitHubOAuthConfig | null>(null);
   const [quickInputConfig, setQuickInputConfig] = useState<QuickInputConfig>(createDefaultQuickInputConfig());
@@ -75,8 +77,22 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           // Electron: SQLite에서 로드
           const result = await window.electronAPI.config.load();
           if (result.success && result.data) {
+            // Check if LLM config is V2
+            let llmConfig: LLMConfig;
+            let llmConfigV2: LLMConfigV2 | null = null;
+
+            if (isLLMConfigV2(result.data.llm)) {
+              // V2 config detected
+              llmConfigV2 = result.data.llm as LLMConfigV2;
+              llmConfig = convertV2ToV1(llmConfigV2);
+            } else {
+              // V1 config, migrate to V2
+              llmConfig = mergeLLMConfig(result.data.llm);
+              llmConfigV2 = migrateLLMConfig(llmConfig);
+            }
+
             const normalizedConfig: AppConfig = {
-              llm: mergeLLMConfig(result.data.llm),
+              llm: llmConfig,
               network: mergeNetworkConfig(result.data.network),
               mcp: result.data.mcp ?? [],
               vectorDB: result.data.vectorDB,
@@ -86,7 +102,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               quickInput: result.data.quickInput ?? createDefaultQuickInputConfig(),
             };
             setAppConfigSnapshot(normalizedConfig);
-            setConfig(normalizedConfig.llm);
+            setConfig(llmConfig);
+            setConfigV2(llmConfigV2);
             setNetworkConfig(normalizedConfig.network ?? createDefaultNetworkConfig());
             setComfyConfig(normalizedConfig.comfyUI ?? createDefaultComfyUIConfig());
             setGithubConfig(normalizedConfig.github ?? null);
@@ -226,19 +243,33 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setMessage(null);
 
     try {
-      // Validate API key
-      if (!config.apiKey.trim()) {
-        setMessage({ type: 'error', text: 'API 키를 입력해주세요.' });
+      // Validate V2 config
+      if (!configV2) {
+        setMessage({ type: 'error', text: '설정이 초기화되지 않았습니다.' });
         setIsSaving(false);
         return;
       }
-      if (!config.model.trim()) {
-        setMessage({ type: 'error', text: '기본 모델을 선택하거나 입력해주세요.' });
+
+      // Validate connections
+      if (configV2.connections.length === 0) {
+        setMessage({ type: 'error', text: '최소 하나의 Connection을 추가해주세요.' });
         setIsSaving(false);
         return;
       }
-      if (config.vision?.enabled && !config.vision.model.trim()) {
-        setMessage({ type: 'error', text: 'Vision 모델 ID를 입력해주세요.' });
+
+      // Validate active base model
+      if (!configV2.activeBaseModelId) {
+        setMessage({ type: 'error', text: '기본 대화용 모델을 선택해주세요.' });
+        setIsSaving(false);
+        return;
+      }
+
+      // Convert V2 to V1 for backward compatibility
+      let v1Config: LLMConfig;
+      try {
+        v1Config = convertV2ToV1(configV2);
+      } catch (error: any) {
+        setMessage({ type: 'error', text: error.message || '설정 변환에 실패했습니다.' });
         setIsSaving(false);
         return;
       }
@@ -247,7 +278,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       let savedConfig: AppConfig | null = null;
       if (isElectron() && window.electronAPI) {
         try {
-          savedConfig = await persistAppConfig({ llm: config, network: networkConfig });
+          // Save V1 config for backward compatibility
+          savedConfig = await persistAppConfig({ llm: v1Config, network: networkConfig });
           if (savedConfig) {
             // Initialize Main Process LLM client
             await window.electronAPI.llm.init(savedConfig);
@@ -260,16 +292,20 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       // Fallback to localStorage if not saved
       if (!savedConfig) {
         // Web or Electron DB save failed: localStorage에 저장
-        localStorage.setItem('sepilot_llm_config', JSON.stringify(config));
+        localStorage.setItem('sepilot_llm_config', JSON.stringify(v1Config));
+        localStorage.setItem('sepilot_llm_config_v2', JSON.stringify(configV2)); // Also save V2
         localStorage.setItem('sepilot_network_config', JSON.stringify(networkConfig));
+      } else {
+        // Also save V2 to localStorage for UI
+        localStorage.setItem('sepilot_llm_config_v2', JSON.stringify(configV2));
       }
 
       // Initialize Renderer Process LLM client (for both Electron and Web)
       try {
         if (isElectron() && typeof initializeLLMClient !== 'undefined') {
-          initializeLLMClient(config);
+          initializeLLMClient(v1Config);
         } else {
-          configureWebLLMClient(config);
+          configureWebLLMClient(v1Config);
         }
       } catch (error) {
         console.error('Failed to initialize LLM client:', error);
@@ -277,7 +313,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
       // Notify other components about config update
       window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
-        detail: { llm: config, network: networkConfig }
+        detail: { llm: v1Config, network: networkConfig }
       }));
 
       setMessage({ type: 'success', text: '설정이 저장되었습니다!' });
@@ -560,10 +596,31 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto p-6">
-            {activeTab === 'llm' && (
-              <LLMSettingsTab
-                config={config}
-                setConfig={setConfig}
+            {activeTab === 'llm' && configV2 && (
+              <LLMSettingsTabV2
+                config={configV2}
+                setConfig={(update) => {
+                  if (typeof update === 'function') {
+                    setConfigV2((prev) => {
+                      if (!prev) return prev;
+                      const newV2 = update(prev);
+                      // Also update V1 config for compatibility
+                      try {
+                        setConfig(convertV2ToV1(newV2));
+                      } catch (err) {
+                        console.error('Failed to convert V2 to V1:', err);
+                      }
+                      return newV2;
+                    });
+                  } else {
+                    setConfigV2(update);
+                    try {
+                      setConfig(convertV2ToV1(update));
+                    } catch (err) {
+                      console.error('Failed to convert V2 to V1:', err);
+                    }
+                  }
+                }}
                 networkConfig={networkConfig}
                 onSave={handleSave}
                 isSaving={isSaving}

@@ -80,6 +80,67 @@ export interface AutocompleteConfig {
   debounceMs?: number; // Debounce time for autocomplete requests (default: 300ms)
 }
 
+/**
+ * LLM Connection: LLM 서비스에 대한 연결 정보
+ * - 여러 Connection을 등록하고 각 Connection에서 모델 목록을 가져옴
+ */
+export interface LLMConnection {
+  id: string; // 고유 식별자
+  name: string; // 사용자 정의 이름 (예: "My OpenAI", "Local Ollama")
+  provider: 'openai' | 'anthropic' | 'custom';
+  baseURL: string;
+  apiKey: string;
+  customHeaders?: Record<string, string>; // Connection 레벨 커스텀 헤더
+  enabled: boolean; // 활성화 여부
+}
+
+/**
+ * Model Role Tag: 모델의 역할을 나타내는 태그
+ */
+export type ModelRoleTag = 'base' | 'vision' | 'autocomplete';
+
+/**
+ * Model Configuration: 개별 모델의 세부 설정
+ * - Connection에서 가져온 모델에 대한 세부 설정
+ */
+export interface ModelConfig {
+  id: string; // 고유 식별자
+  connectionId: string; // 소속 Connection ID
+  modelId: string; // 모델 ID (예: "gpt-4o", "claude-3-5-sonnet")
+  displayName?: string; // 사용자 정의 표시 이름 (선택사항)
+  tags: ModelRoleTag[]; // 역할 태그 (base, vision, autocomplete)
+
+  // 모델별 세부 설정
+  temperature?: number; // 기본값: Connection의 기본 temperature
+  maxTokens?: number; // 기본값: Connection의 기본 maxTokens
+  customHeaders?: Record<string, string>; // 모델별 커스텀 헤더 (Connection 헤더에 병합됨)
+
+  // Vision 전용 설정
+  maxImageTokens?: number; // Vision 모델 전용
+  enableStreaming?: boolean; // Vision 모델 전용
+
+  // Autocomplete 전용 설정
+  debounceMs?: number; // Autocomplete 전용
+}
+
+/**
+ * New LLM Config: Connection 기반 LLM 설정
+ */
+export interface LLMConfigV2 {
+  version: 2; // 설정 버전 (마이그레이션 용도)
+  connections: LLMConnection[]; // 등록된 Connection 목록
+  models: ModelConfig[]; // 모델 설정 목록
+
+  // 기본 설정값
+  defaultTemperature: number;
+  defaultMaxTokens: number;
+
+  // 활성 모델 선택
+  activeBaseModelId?: string; // 기본 대화용 모델
+  activeVisionModelId?: string; // Vision 모델
+  activeAutocompleteModelId?: string; // Autocomplete 모델
+}
+
 export interface NetworkConfig {
   proxy?: {
     enabled: boolean;
