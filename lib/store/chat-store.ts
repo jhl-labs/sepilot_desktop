@@ -3,7 +3,7 @@ import { Conversation, Message, PendingToolApproval, ImageGenerationProgress } f
 import { generateId } from '@/lib/utils';
 import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
 import { isElectron } from '@/lib/platform';
-import type { BrowserAgentLogEntry } from '@/types/browser-agent';
+import type { BrowserAgentLogEntry, BrowserAgentLLMConfig } from '@/types/browser-agent';
 import type { Persona } from '@/types/persona';
 import { BUILTIN_PERSONAS } from '@/types/persona';
 
@@ -131,6 +131,9 @@ interface ChatStore {
   browserAgentIsRunning: boolean;
   showBrowserAgentLogs: boolean; // 로그 패널 표시 여부
 
+  // Browser Agent LLM 설정
+  browserAgentLLMConfig: BrowserAgentLLMConfig;
+
   // Editor Mode Chat (simple side chat for AI coding assistant)
   editorChatMessages: Message[];
   editorViewMode: 'files' | 'search' | 'chat'; // files, search, or chat view in Editor sidebar
@@ -202,6 +205,10 @@ interface ChatStore {
   clearBrowserAgentLogs: () => void;
   setBrowserAgentIsRunning: (isRunning: boolean) => void;
   setShowBrowserAgentLogs: (show: boolean) => void;
+
+  // Actions - Browser Agent LLM Config
+  setBrowserAgentLLMConfig: (config: Partial<BrowserAgentLLMConfig>) => void;
+  resetBrowserAgentLLMConfig: () => void;
 
   // Actions - Editor Chat
   addEditorChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => void;
@@ -280,6 +287,32 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   browserAgentLogs: [],
   browserAgentIsRunning: false,
   showBrowserAgentLogs: false,
+
+  // Browser Agent LLM Config (localStorage에서 로드 또는 기본값)
+  browserAgentLLMConfig: (() => {
+    const defaultConfig: BrowserAgentLLMConfig = {
+      maxTokens: 4096,
+      temperature: 0.7,
+      topP: 1.0,
+      maxIterations: 20,
+    };
+
+    if (typeof window === 'undefined') {
+      return defaultConfig;
+    }
+
+    try {
+      const saved = localStorage.getItem('sepilot_browser_agent_llm_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...defaultConfig, ...parsed };
+      }
+    } catch (error) {
+      console.error('Failed to load Browser Agent LLM config from localStorage:', error);
+    }
+
+    return defaultConfig;
+  })(),
 
   // Editor Chat
   editorChatMessages: [],
@@ -965,6 +998,32 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setShowBrowserAgentLogs: (show: boolean) => {
     set({ showBrowserAgentLogs: show });
+  },
+
+  // Browser Agent LLM Config Actions
+  setBrowserAgentLLMConfig: (config: Partial<BrowserAgentLLMConfig>) => {
+    set((state) => {
+      const newConfig = { ...state.browserAgentLLMConfig, ...config };
+      // localStorage에 저장
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sepilot_browser_agent_llm_config', JSON.stringify(newConfig));
+      }
+      return { browserAgentLLMConfig: newConfig };
+    });
+  },
+
+  resetBrowserAgentLLMConfig: () => {
+    const defaultConfig: BrowserAgentLLMConfig = {
+      maxTokens: 4096,
+      temperature: 0.7,
+      topP: 1.0,
+      maxIterations: 20,
+    };
+    // localStorage에서 제거
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sepilot_browser_agent_llm_config');
+    }
+    set({ browserAgentLLMConfig: defaultConfig });
   },
 
   // Editor Chat Actions

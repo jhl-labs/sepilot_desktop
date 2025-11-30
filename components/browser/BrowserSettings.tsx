@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { FolderOpen, ChevronLeft } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { FolderOpen, ChevronLeft, RotateCcw } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
 import { useChatStore } from '@/lib/store/chat-store';
 
@@ -11,7 +12,18 @@ export function BrowserSettings() {
   const [snapshotsPath, setSnapshotsPath] = useState<string>('');
   const [bookmarksPath, setBookmarksPath] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const { setBrowserViewMode } = useChatStore();
+  const {
+    setBrowserViewMode,
+    browserAgentLLMConfig,
+    setBrowserAgentLLMConfig,
+    resetBrowserAgentLLMConfig
+  } = useChatStore();
+
+  // LLM 설정 로컬 상태
+  const [maxTokens, setMaxTokens] = useState(browserAgentLLMConfig.maxTokens);
+  const [temperature, setTemperature] = useState(browserAgentLLMConfig.temperature);
+  const [topP, setTopP] = useState(browserAgentLLMConfig.topP);
+  const [maxIterations, setMaxIterations] = useState(browserAgentLLMConfig.maxIterations);
 
   // Load paths on mount
   useEffect(() => {
@@ -52,6 +64,35 @@ export function BrowserSettings() {
       await window.electronAPI.shell.openExternal(`file://${bookmarksPath}`);
     } catch (error) {
       console.error('[BrowserSettings] Error opening bookmarks folder:', error);
+    }
+  };
+
+  // LLM 설정 저장
+  const handleSaveLLMConfig = () => {
+    setBrowserAgentLLMConfig({
+      maxTokens,
+      temperature,
+      topP,
+      maxIterations,
+    });
+    alert('Browser Agent LLM 설정이 저장되었습니다.');
+  };
+
+  // LLM 설정 초기화
+  const handleResetLLMConfig = () => {
+    if (confirm('Browser Agent LLM 설정을 기본값으로 초기화하시겠습니까?')) {
+      resetBrowserAgentLLMConfig();
+      const defaultConfig = {
+        maxTokens: 4096,
+        temperature: 0.7,
+        topP: 1.0,
+        maxIterations: 20,
+      };
+      setMaxTokens(defaultConfig.maxTokens);
+      setTemperature(defaultConfig.temperature);
+      setTopP(defaultConfig.topP);
+      setMaxIterations(defaultConfig.maxIterations);
+      alert('Browser Agent LLM 설정이 초기화되었습니다.');
     }
   };
 
@@ -124,11 +165,96 @@ export function BrowserSettings() {
               </p>
             </div>
 
-            {/* 향후 추가될 설정들을 위한 공간 */}
-            <div className="border-t pt-4">
-              <p className="text-xs text-muted-foreground">
-                추가 설정이 향후 지원될 예정입니다.
-              </p>
+            {/* Browser Agent LLM 설정 */}
+            <div className="border-t pt-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Browser Agent LLM 설정</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetLLMConfig}
+                  className="h-7 text-xs gap-1"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  초기화
+                </Button>
+              </div>
+
+              {/* Max Tokens */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Max Tokens</Label>
+                <Input
+                  type="number"
+                  value={maxTokens}
+                  onChange={(e) => setMaxTokens(parseInt(e.target.value, 10))}
+                  min={256}
+                  max={16384}
+                  step={256}
+                  className="h-8 text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  응답 최대 길이 (256-16384, 기본값: 4096)
+                </p>
+              </div>
+
+              {/* Temperature */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Temperature</Label>
+                <Input
+                  type="number"
+                  value={temperature}
+                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  className="h-8 text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  창의성 조절 (0-2, 기본값: 0.7, 낮을수록 일관적)
+                </p>
+              </div>
+
+              {/* Top P */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Top P</Label>
+                <Input
+                  type="number"
+                  value={topP}
+                  onChange={(e) => setTopP(parseFloat(e.target.value))}
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  className="h-8 text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  응답 다양성 (0-1, 기본값: 1.0)
+                </p>
+              </div>
+
+              {/* Max Iterations */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Max Iterations</Label>
+                <Input
+                  type="number"
+                  value={maxIterations}
+                  onChange={(e) => setMaxIterations(parseInt(e.target.value, 10))}
+                  min={1}
+                  max={50}
+                  step={1}
+                  className="h-8 text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  최대 반복 횟수 (1-50, 기본값: 20)
+                </p>
+              </div>
+
+              {/* 저장 버튼 */}
+              <Button
+                onClick={handleSaveLLMConfig}
+                className="w-full h-8 text-xs"
+              >
+                설정 저장
+              </Button>
             </div>
           </div>
         )}

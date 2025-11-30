@@ -324,11 +324,17 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS. Use the enhanced tools!
     let accumulatedContent = '';
     let finalToolCalls: any[] | undefined = undefined;
 
+    // Browser Agent LLM 설정 가져오기
+    const { browserAgentLLMConfig } = useChatStore.getState();
+
     console.log('[BrowserAgent.Generate] Starting streaming with browser tools...');
+    console.log('[BrowserAgent.Generate] LLM Config:', browserAgentLLMConfig);
 
     for await (const chunk of LLMService.streamChatWithChunks(messages, {
       tools: toolsForLLM,
-      max_tokens: 4096, // Browser Agent에서 더 긴 응답 허용
+      max_tokens: browserAgentLLMConfig.maxTokens,
+      temperature: browserAgentLLMConfig.temperature,
+      top_p: browserAgentLLMConfig.topP,
     })) {
       // Accumulate content and emit to renderer
       if (!chunk.done && chunk.content) {
@@ -414,11 +420,15 @@ export class BrowserAgentGraph {
     this.shouldStop = true;
   }
 
-  async invoke(initialState: AgentState, maxIterations = 30): Promise<AgentState> {
+  async invoke(initialState: AgentState, maxIterations?: number): Promise<AgentState> {
     let state = { ...initialState };
     let iterations = 0;
 
-    while (iterations < maxIterations) {
+    // Browser Agent LLM 설정 가져오기
+    const { browserAgentLLMConfig } = useChatStore.getState();
+    const actualMaxIterations = maxIterations ?? browserAgentLLMConfig.maxIterations;
+
+    while (iterations < actualMaxIterations) {
       // 1. generate 노드 실행 (Browser Tools 포함)
       const generateResult = await generateWithBrowserToolsNode(state);
       state = {
@@ -447,17 +457,21 @@ export class BrowserAgentGraph {
 
   async *stream(
     initialState: AgentState,
-    maxIterations = 30
+    maxIterations?: number
   ): AsyncGenerator<any> {
     let state = { ...initialState };
     let iterations = 0;
     this.shouldStop = false;
 
+    // Browser Agent LLM 설정 가져오기
+    const { browserAgentLLMConfig, addBrowserAgentLog, setBrowserAgentIsRunning, clearBrowserAgentLogs } = useChatStore.getState();
+    const actualMaxIterations = maxIterations ?? browserAgentLLMConfig.maxIterations;
+
     console.log('[BrowserAgent] Starting stream with initial state');
     console.log('[BrowserAgent] Available browser tools: get_page_content, get_interactive_elements, click_element, type_text, scroll');
+    console.log('[BrowserAgent] Max iterations:', actualMaxIterations);
 
     // Agent 로그 시작
-    const { addBrowserAgentLog, setBrowserAgentIsRunning, clearBrowserAgentLogs } = useChatStore.getState();
     clearBrowserAgentLogs();
     setBrowserAgentIsRunning(true);
 
@@ -466,7 +480,7 @@ export class BrowserAgentGraph {
       phase: 'thinking',
       message: 'Browser Agent 시작',
       details: {
-        maxIterations,
+        maxIterations: actualMaxIterations,
       },
     });
 
@@ -478,17 +492,17 @@ export class BrowserAgentGraph {
     const MAX_HISTORY = 5;
     const LOOP_THRESHOLD = 3; // 같은 호출이 3번 반복되면 루프로 간주
 
-    while (iterations < maxIterations && !this.shouldStop) {
-      console.log(`[BrowserAgent] ===== Iteration ${iterations + 1}/${maxIterations} =====`);
+    while (iterations < actualMaxIterations && !this.shouldStop) {
+      console.log(`[BrowserAgent] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`);
 
       // 로그: 반복 시작
       addBrowserAgentLog({
         level: 'info',
         phase: 'thinking',
-        message: `반복 ${iterations + 1}/${maxIterations} 시작`,
+        message: `반복 ${iterations + 1}/${actualMaxIterations} 시작`,
         details: {
           iteration: iterations + 1,
-          maxIterations,
+          maxIterations: actualMaxIterations,
         },
       });
 
@@ -496,7 +510,7 @@ export class BrowserAgentGraph {
       yield {
         progress: {
           iteration: iterations + 1,
-          maxIterations,
+          maxIterations: actualMaxIterations,
           status: 'thinking',
           message: 'AI가 다음 작업을 계획하고 있습니다...',
         },
@@ -741,7 +755,7 @@ export class BrowserAgentGraph {
           content: `❌ 브라우저 작업 중 오류가 발생했습니다: ${errorMessage}`,
           created_at: Date.now(),
         };
-      } else if (iterations >= maxIterations) {
+      } else if (iterations >= actualMaxIterations) {
         addBrowserAgentLog({
           level: 'warning',
           phase: 'completion',

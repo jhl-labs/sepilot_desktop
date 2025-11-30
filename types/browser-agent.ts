@@ -4,6 +4,16 @@
 
 export type BrowserAgentLogLevel = 'info' | 'success' | 'warning' | 'error' | 'thinking';
 
+/**
+ * Browser Agent LLM 설정
+ */
+export interface BrowserAgentLLMConfig {
+  maxTokens: number;
+  temperature: number;
+  topP: number;
+  maxIterations: number;
+}
+
 export interface BrowserAgentLogEntry {
   id: string;
   timestamp: number;
