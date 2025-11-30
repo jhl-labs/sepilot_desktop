@@ -13,6 +13,20 @@ import * as chatStoreModule from '@/lib/store/chat-store';
 jest.mock('@/lib/store/chat-store', () => ({
   useChatStore: jest.fn(() => ({
     setBrowserViewMode: jest.fn(),
+    browserAgentLLMConfig: {
+      maxTokens: 4000,
+      temperature: 0.7,
+      topP: 1.0,
+      maxIterations: 10,
+    },
+    setBrowserAgentLLMConfig: jest.fn(),
+    resetBrowserAgentLLMConfig: jest.fn(),
+    browserChatFontConfig: {
+      fontFamily: 'monospace',
+      fontSize: 14,
+    },
+    setBrowserChatFontConfig: jest.fn(),
+    resetBrowserChatFontConfig: jest.fn(),
   })),
 }));
 
@@ -22,9 +36,29 @@ describe('BrowserSettings', () => {
     bookmarksPath: '/home/user/bookmarks',
   };
 
+  const defaultMockStore = {
+    setBrowserViewMode: jest.fn(),
+    browserAgentLLMConfig: {
+      maxTokens: 4000,
+      temperature: 0.7,
+      topP: 1.0,
+      maxIterations: 10,
+    },
+    setBrowserAgentLLMConfig: jest.fn(),
+    resetBrowserAgentLLMConfig: jest.fn(),
+    browserChatFontConfig: {
+      fontFamily: 'monospace',
+      fontSize: 14,
+    },
+    setBrowserChatFontConfig: jest.fn(),
+    resetBrowserChatFontConfig: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     enableElectronMode();
+    // Reset to default mock
+    (chatStoreModule.useChatStore as jest.Mock).mockReturnValue(defaultMockStore);
   });
 
   it('should show loading state', () => {
@@ -92,6 +126,7 @@ describe('BrowserSettings', () => {
   it('should call setBrowserViewMode when back button is clicked', async () => {
     const mockSetBrowserViewMode = jest.fn();
     (chatStoreModule.useChatStore as jest.Mock).mockReturnValue({
+      ...defaultMockStore,
       setBrowserViewMode: mockSetBrowserViewMode,
     });
 
@@ -224,7 +259,8 @@ describe('BrowserSettings', () => {
     });
   });
 
-  it('should show future settings message', async () => {
+  it.skip('should show future settings message', async () => {
+    // Note: This message was removed from the component
     (mockElectronAPI.browserView.getBrowserSettings as jest.Mock).mockResolvedValue({
       success: true,
       data: mockSettings,
