@@ -58,9 +58,15 @@ describe('SimpleChatArea', () => {
     jest.clearAllMocks();
   });
 
+  const mockFontConfig = {
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    fontSize: 14,
+  };
+
   it('should render empty state when no messages', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [],
+      browserChatFontConfig: mockFontConfig,
     });
 
     render(<SimpleChatArea />);
@@ -71,6 +77,7 @@ describe('SimpleChatArea', () => {
   it('should render message icon in empty state', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [],
+      browserChatFontConfig: mockFontConfig,
     });
 
     const { container } = render(<SimpleChatArea />);
@@ -83,6 +90,7 @@ describe('SimpleChatArea', () => {
   it('should render messages when available', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: mockMessages,
+      browserChatFontConfig: mockFontConfig,
     });
 
     render(<SimpleChatArea />);
@@ -95,6 +103,7 @@ describe('SimpleChatArea', () => {
   it('should apply user message styling', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [mockMessages[0]], // User message
+      browserChatFontConfig: mockFontConfig,
     });
 
     render(<SimpleChatArea />);
@@ -107,6 +116,7 @@ describe('SimpleChatArea', () => {
   it('should apply assistant message styling', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [mockMessages[1]], // Assistant message
+      browserChatFontConfig: mockFontConfig,
     });
 
     render(<SimpleChatArea />);
@@ -118,6 +128,7 @@ describe('SimpleChatArea', () => {
   it('should align user messages to the right', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [mockMessages[0]], // User message
+      browserChatFontConfig: mockFontConfig,
     });
 
     render(<SimpleChatArea />);
@@ -129,6 +140,7 @@ describe('SimpleChatArea', () => {
   it('should align assistant messages to the left', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [mockMessages[1]], // Assistant message
+      browserChatFontConfig: mockFontConfig,
     });
 
     render(<SimpleChatArea />);
@@ -140,6 +152,7 @@ describe('SimpleChatArea', () => {
   it('should render multiple messages in order', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: mockMessages,
+      browserChatFontConfig: mockFontConfig,
     });
 
     const { container } = render(<SimpleChatArea />);
@@ -161,6 +174,7 @@ describe('SimpleChatArea', () => {
 
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [longMessage],
+      browserChatFontConfig: mockFontConfig,
     });
 
     render(<SimpleChatArea />);
@@ -176,6 +190,7 @@ describe('SimpleChatArea', () => {
     // Initially no messages
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [],
+      browserChatFontConfig: mockFontConfig,
     });
     rerender(<SimpleChatArea />);
     expect(screen.getByText('사용 가능한 Browser Agent 도구')).toBeInTheDocument();
@@ -183,6 +198,7 @@ describe('SimpleChatArea', () => {
     // Add messages
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: mockMessages,
+      browserChatFontConfig: mockFontConfig,
     });
     rerender(<SimpleChatArea />);
     expect(screen.getByText('Hello, how are you?')).toBeInTheDocument();
@@ -198,6 +214,7 @@ describe('SimpleChatArea', () => {
 
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [emptyMessage],
+      browserChatFontConfig: mockFontConfig,
     });
 
     const { container } = render(<SimpleChatArea />);
@@ -217,6 +234,7 @@ describe('SimpleChatArea', () => {
 
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [specialMessage],
+      browserChatFontConfig: mockFontConfig,
     });
 
     render(<SimpleChatArea />);
@@ -227,6 +245,7 @@ describe('SimpleChatArea', () => {
   it('should use message id as key', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: mockMessages,
+      browserChatFontConfig: mockFontConfig,
     });
 
     const { container } = render(<SimpleChatArea />);
