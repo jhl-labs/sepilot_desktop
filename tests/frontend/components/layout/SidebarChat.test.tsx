@@ -265,5 +265,16 @@ describe('SidebarChat', () => {
 
       consoleSpy.mockRestore();
     });
+
+    it('should open persona dialog when persona button is clicked', async () => {
+      render(<SidebarChat onSettingsClick={mockOnSettingsClick} />);
+
+      const personaButton = screen.getByTitle('AI 페르소나 관리');
+      fireEvent.click(personaButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Persona Dialog')).toBeInTheDocument();
+      });
+    });
   });
 });
