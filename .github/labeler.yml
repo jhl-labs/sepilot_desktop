@@ -1,79 +1,97 @@
-# Auto-labeling configuration for PRs
+# Auto-labeling configuration for PRs (v6 format)
 
 # Documentation
 documentation:
-  - '**/*.md'
-  - 'docs/**/*'
+  - changed-files:
+    - any-glob-to-any-file: ['**/*.md', 'docs/**/*']
 
 # UI/Frontend
 ui:
-  - 'components/**/*'
-  - 'app/**/*'
-  - '**/*.tsx'
-  - 'public/**/*'
+  - changed-files:
+    - any-glob-to-any-file: ['components/**/*', 'app/**/*', '**/*.tsx', 'public/**/*']
 
 # Backend/Electron
 electron:
-  - 'electron/**/*'
-  - 'electron-builder.json'
+  - changed-files:
+    - any-glob-to-any-file: ['electron/**/*', 'electron-builder.json']
 
 # LangGraph
 langgraph:
-  - 'lib/langgraph/**/*'
+  - changed-files:
+    - any-glob-to-any-file: ['lib/langgraph/**/*']
 
 # RAG System
 rag:
-  - 'lib/documents/**/*'
-  - 'electron/services/vectordb.ts'
-  - 'electron/ipc/handlers/vectordb.ts'
-  - 'electron/ipc/handlers/embeddings.ts'
-  - 'components/rag/**/*'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'lib/documents/**/*'
+      - 'electron/services/vectordb.ts'
+      - 'electron/ipc/handlers/vectordb.ts'
+      - 'electron/ipc/handlers/embeddings.ts'
+      - 'components/rag/**/*'
 
 # MCP Integration
 mcp:
-  - 'lib/mcp/**/*'
-  - 'electron/ipc/handlers/mcp.ts'
-  - 'components/mcp/**/*'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'lib/mcp/**/*'
+      - 'electron/ipc/handlers/mcp.ts'
+      - 'components/mcp/**/*'
 
 # LLM
 llm:
-  - 'lib/llm/**/*'
-  - 'electron/ipc/handlers/llm.ts'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'lib/llm/**/*'
+      - 'electron/ipc/handlers/llm.ts'
 
 # Configuration
 config:
-  - '**/*.json'
-  - '**/*.yml'
-  - '**/*.yaml'
-  - '.env*'
-  - 'lib/config/**/*'
-  - 'electron/ipc/handlers/config.ts'
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.json'
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '.env*'
+      - 'lib/config/**/*'
+      - 'electron/ipc/handlers/config.ts'
 
 # Dependencies
 dependencies:
-  - 'package.json'
-  - 'pnpm-lock.yaml'
-  - 'package-lock.json'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'package-lock.json'
 
 # Testing
 testing:
-  - '**/*.test.ts'
-  - '**/*.test.tsx'
-  - '**/*.spec.ts'
-  - '**/*.spec.tsx'
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.test.ts'
+      - '**/*.test.tsx'
+      - '**/*.spec.ts'
+      - '**/*.spec.tsx'
 
 # CI/CD
 ci-cd:
-  - '.github/**/*'
+  - changed-files:
+    - any-glob-to-any-file: ['.github/**/*']
 
 # Security
 security:
-  - 'SECURITY.md'
-  - 'lib/config/encryption.ts'
-  - 'electron/services/token-manager.ts'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'SECURITY.md'
+      - '.github/SECURITY*.md'
+      - 'lib/config/encryption.ts'
+      - 'electron/services/token-manager.ts'
+      - '.github/workflows/security*.yml'
 
 # GitHub Integration
 github:
-  - 'electron/ipc/handlers/github.ts'
-  - 'lib/auth/github-oauth.ts'
-  - 'components/settings/GitHubOAuthSettings.tsx'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'electron/ipc/handlers/github.ts'
+      - 'lib/auth/github-oauth.ts'
+      - 'components/settings/GitHubOAuthSettings.tsx'

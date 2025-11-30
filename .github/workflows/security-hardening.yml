@@ -237,8 +237,7 @@ jobs:
           path: sbom.json
           retention-days: 90
 
-      - name: Upload SBOM to GitHub Dependency Graph
-        uses: advanced-security/sbom-dependency-submission-action@v0.0.1
-        if: github.event_name == 'push'
-        with:
-          sbom-file-path: sbom.json
+      - name: Upload SBOM to dependency submission
+        uses: actions/dependency-review-action@v4
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
