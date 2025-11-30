@@ -543,5 +543,87 @@ describe('VectorDBSettings', () => {
       expect(options[0]).toBe('custom-embedding-model');
     });
 
+    it('should add custom model to available models when not in list', async () => {
+      const customConfig: EmbeddingConfig = {
+        provider: 'openai',
+        model: 'brand-new-model-2025',
+        dimension: 2048,
+      };
+
+      render(<VectorDBSettings onSave={mockOnSave} initialEmbeddingConfig={customConfig} />);
+
+      await waitFor(() => {
+        const modelSelect = screen.getByLabelText('Model') as HTMLSelectElement;
+        expect(modelSelect.value).toBe('brand-new-model-2025');
+        const options = Array.from(modelSelect.options).map(opt => opt.value);
+        expect(options).toContain('brand-new-model-2025');
+      });
+    });
+
+    it('should change vectorDB type via select', async () => {
+      const user = userEvent.setup();
+
+      render(<VectorDBSettings onSave={mockOnSave} />);
+
+      const vectorDBTypeSelect = screen.getByLabelText('Vector DB Type') as HTMLSelectElement;
+      expect(vectorDBTypeSelect.value).toBe('sqlite-vec');
+
+      await user.selectOptions(vectorDBTypeSelect, 'sqlite-vec');
+      expect(vectorDBTypeSelect.value).toBe('sqlite-vec');
+    });
+
+    it('should change embedding provider via select', async () => {
+      const user = userEvent.setup();
+
+      render(<VectorDBSettings onSave={mockOnSave} />);
+
+      const providerSelect = screen.getByLabelText('Provider') as HTMLSelectElement;
+      expect(providerSelect.value).toBe('openai');
+
+      await user.selectOptions(providerSelect, 'openai');
+      expect(providerSelect.value).toBe('openai');
+    });
+
+    it('should set dimension for ada model from initial config', async () => {
+      const adaConfig: EmbeddingConfig = {
+        provider: 'openai',
+        model: 'text-embedding-ada-002',
+        dimension: 1536,
+      };
+
+      render(<VectorDBSettings onSave={mockOnSave} initialEmbeddingConfig={adaConfig} />);
+
+      await waitFor(() => {
+        const modelSelect = screen.getByLabelText('Model') as HTMLSelectElement;
+        expect(modelSelect.value).toBe('text-embedding-ada-002');
+      });
+
+      const dimensionInput = screen.getByLabelText('Dimension') as HTMLInputElement;
+      expect(dimensionInput.value).toBe('1536');
+    });
+
+    it('should handle small model dimension in else if branch', async () => {
+      const user = userEvent.setup();
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [{ id: 'text-embedding-3-small' }] }),
+      });
+
+      render(<VectorDBSettings onSave={mockOnSave} />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Model')).toBeInTheDocument();
+      });
+
+      const modelSelect = screen.getByLabelText('Model') as HTMLSelectElement;
+      await user.selectOptions(modelSelect, 'text-embedding-3-small');
+
+      const dimensionInput = screen.getByLabelText('Dimension') as HTMLInputElement;
+      await waitFor(() => {
+        expect(dimensionInput.value).toBe('1536');
+      });
+    });
+
   });
 });
