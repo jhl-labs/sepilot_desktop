@@ -295,4 +295,80 @@ describe('ActivityPanel', () => {
       expect(screen.getByText(/실행 시각:/)).toBeInTheDocument();
     });
   });
+
+  it('should format duration correctly for milliseconds', async () => {
+    (mockElectronAPI.activity.loadActivities as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [{
+        ...mockActivities[0],
+        duration_ms: 500,
+      }],
+    });
+
+    render(<ActivityPanel conversationId="conv-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('500ms')).toBeInTheDocument();
+    });
+  });
+
+  it('should handle missing duration', async () => {
+    (mockElectronAPI.activity.loadActivities as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [{
+        ...mockActivities[0],
+        duration_ms: undefined,
+      }],
+    });
+
+    render(<ActivityPanel conversationId="conv-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('파일 읽기')).toBeInTheDocument();
+    });
+
+    // Duration should not be displayed when undefined
+    expect(screen.queryByText(/150ms|2\.50s/)).not.toBeInTheDocument();
+  });
+
+  it('should handle zero duration', async () => {
+    (mockElectronAPI.activity.loadActivities as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [{
+        ...mockActivities[0],
+        duration_ms: 0,
+      }],
+    });
+
+    render(<ActivityPanel conversationId="conv-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('파일 읽기')).toBeInTheDocument();
+    });
+
+    // Duration should not be displayed when 0
+    expect(screen.queryByText(/^\d+ms$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^\d+\.\d+s$/)).not.toBeInTheDocument();
+  });
+
+  it('should truncate long tool args value', async () => {
+    const longValue = 'a'.repeat(100);
+    (mockElectronAPI.activity.loadActivities as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [{
+        ...mockActivities[0],
+        tool_args: { longPath: longValue },
+      }],
+    });
+
+    render(<ActivityPanel conversationId="conv-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('파일 읽기')).toBeInTheDocument();
+    });
+
+    // Truncated value should be visible in the preview
+    const truncated = `${'a'.repeat(50)}...`;
+    expect(screen.getByText(truncated)).toBeInTheDocument();
+  });
 });

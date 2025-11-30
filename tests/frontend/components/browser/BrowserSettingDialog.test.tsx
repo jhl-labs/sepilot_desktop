@@ -243,4 +243,38 @@ describe('BrowserSettingDialog', () => {
       expect(screen.getByText('추가 설정이 향후 지원될 예정입니다.')).toBeInTheDocument();
     });
   });
+
+  it('should handle error when opening bookmarks folder', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    (mockElectronAPI.browserView.getBrowserSettings as jest.Mock).mockResolvedValue({
+      success: true,
+      data: {
+        snapshotsPath: '/path/to/snapshots',
+        bookmarksPath: '/path/to/bookmarks',
+      },
+    });
+
+    (mockElectronAPI.shell.openExternal as jest.Mock).mockRejectedValue(
+      new Error('Failed to open folder')
+    );
+
+    render(<BrowserSettingDialog open={true} onOpenChange={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('/path/to/bookmarks')).toBeInTheDocument();
+    });
+
+    const openButtons = screen.getAllByTitle('폴더 열기');
+    fireEvent.click(openButtons[1]); // bookmarks folder button
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[BrowserSettingDialog] Error opening bookmarks folder:',
+        expect.any(Error)
+      );
+    });
+
+    consoleSpy.mockRestore();
+  });
 });

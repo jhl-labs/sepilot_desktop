@@ -203,4 +203,33 @@ describe('ImageGenerationProgressBar', () => {
 
     expect(screen.getByText('단계: 5 / 5')).toBeInTheDocument();
   });
+
+  it('should handle unknown status with default icon', () => {
+    const progress = {
+      status: 'unknown-status' as any,
+      progress: 50,
+      message: '알 수 없는 상태',
+    };
+
+    const { container } = render(<ImageGenerationProgressBar progress={progress} />);
+
+    // Should render without errors and use default ImageIcon
+    expect(screen.getByText('알 수 없는 상태')).toBeInTheDocument();
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('should handle unknown status with default progress bar color', () => {
+    const progress = {
+      status: 'invalid-status' as any,
+      progress: 75,
+      message: '잘못된 상태',
+    };
+
+    const { container } = render(<ImageGenerationProgressBar progress={progress} />);
+
+    // Should render progress bar with default color
+    expect(screen.getByText('75%')).toBeInTheDocument();
+    const progressBar = container.querySelector('[style*="width"]');
+    expect(progressBar).toHaveStyle({ width: '75%' });
+  });
 });

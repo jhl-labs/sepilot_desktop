@@ -375,4 +375,79 @@ describe('SnapshotsDialog', () => {
       consoleSpy.mockRestore();
     });
   });
+
+  describe('Non-Electron Environment', () => {
+    it('should not delete snapshot when not in Electron', async () => {
+      const mockSnapshot: Snapshot = {
+        id: 'test-1',
+        url: 'https://example.com',
+        title: 'Example',
+        timestamp: Date.now(),
+        thumbnailPath: '/path/to/thumbnail.png',
+        imagePath: '/path/to/image.png',
+      };
+
+      (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [mockSnapshot],
+      });
+
+      render(<SnapshotsDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Example')).toBeInTheDocument();
+      });
+
+      // Save original count
+      const originalCallCount = (mockElectronAPI.browserView.deleteSnapshot as jest.Mock).mock.calls.length;
+
+      // Disable Electron mode
+      (window as any).electronAPI = undefined;
+
+      const deleteButtons = screen.getAllByRole('button');
+      const deleteButton = deleteButtons.find(btn => btn.getAttribute('title') === '삭제');
+      if (deleteButton) {
+        fireEvent.click(deleteButton);
+      }
+
+      // Should not have made additional calls
+      expect((mockElectronAPI.browserView.deleteSnapshot as jest.Mock).mock.calls.length).toBe(originalCallCount);
+    });
+
+    it('should not open snapshot when not in Electron', async () => {
+      const mockSnapshot: Snapshot = {
+        id: 'test-1',
+        url: 'https://example.com',
+        title: 'Example',
+        timestamp: Date.now(),
+        thumbnailPath: '/path/to/thumbnail.png',
+        imagePath: '/path/to/image.png',
+      };
+
+      (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [mockSnapshot],
+      });
+
+      render(<SnapshotsDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Example')).toBeInTheDocument();
+      });
+
+      // Save original count
+      const originalCallCount = (mockElectronAPI.browserView.openSnapshot as jest.Mock).mock.calls.length;
+
+      // Disable Electron mode
+      (window as any).electronAPI = undefined;
+
+      const snapshot = screen.getByText('Example').closest('div[class*="cursor-pointer"]');
+      if (snapshot) {
+        fireEvent.click(snapshot);
+      }
+
+      // Should not have made additional calls
+      expect((mockElectronAPI.browserView.openSnapshot as jest.Mock).mock.calls.length).toBe(originalCallCount);
+    });
+  });
 });

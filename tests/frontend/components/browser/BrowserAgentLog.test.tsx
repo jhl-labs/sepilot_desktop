@@ -536,4 +536,76 @@ describe('BrowserAgentLog', () => {
       expect(screen.getByText('Third log')).toBeInTheDocument();
     });
   });
+
+  describe('Default Cases Coverage', () => {
+    it('should handle unknown phase with default icon and label', () => {
+      const mockLog = {
+        id: '14',
+        timestamp: Date.now(),
+        phase: 'unknown_phase' as any,
+        level: 'info',
+        message: 'Unknown phase message',
+      };
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        browserAgentLogs: [mockLog],
+        browserAgentIsRunning: false,
+        showBrowserAgentLogs: true,
+        setShowBrowserAgentLogs: mockSetShowBrowserAgentLogs,
+        clearBrowserAgentLogs: mockClearBrowserAgentLogs,
+      });
+
+      render(<BrowserAgentLog />);
+
+      expect(screen.getByText('📝 로그')).toBeInTheDocument();
+      expect(screen.getByText('Unknown phase message')).toBeInTheDocument();
+    });
+
+    it('should handle unknown level with default color', () => {
+      const mockLog = {
+        id: '15',
+        timestamp: Date.now(),
+        phase: 'thinking',
+        level: 'unknown_level' as any,
+        message: 'Unknown level message',
+      };
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        browserAgentLogs: [mockLog],
+        browserAgentIsRunning: false,
+        showBrowserAgentLogs: true,
+        setShowBrowserAgentLogs: mockSetShowBrowserAgentLogs,
+        clearBrowserAgentLogs: mockClearBrowserAgentLogs,
+      });
+
+      const { container } = render(<BrowserAgentLog />);
+
+      const logEntry = container.querySelector('.border-l-gray-500');
+      expect(logEntry).toBeInTheDocument();
+    });
+
+    it('should handle unknown phase icon with default AlertCircle', () => {
+      const mockLog = {
+        id: '16',
+        timestamp: Date.now(),
+        phase: 'invalid_phase' as any,
+        level: 'info',
+        message: 'Invalid phase',
+      };
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        browserAgentLogs: [mockLog],
+        browserAgentIsRunning: false,
+        showBrowserAgentLogs: true,
+        setShowBrowserAgentLogs: mockSetShowBrowserAgentLogs,
+        clearBrowserAgentLogs: mockClearBrowserAgentLogs,
+      });
+
+      const { container } = render(<BrowserAgentLog />);
+
+      // Default icon should be rendered (AlertCircle with gray color)
+      const iconContainer = container.querySelector('.text-gray-600');
+      expect(iconContainer).toBeInTheDocument();
+    });
+  });
 });
