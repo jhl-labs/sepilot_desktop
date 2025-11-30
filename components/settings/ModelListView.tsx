@@ -52,6 +52,7 @@ export function ModelListView({
     setLoadError(null);
 
     const allModels: AvailableModel[] = [];
+    const errors: Array<{ connection: string; error: string }> = [];
 
     for (const connection of connections) {
       if (!connection.enabled) {
@@ -77,13 +78,22 @@ export function ModelListView({
         });
       } catch (error: any) {
         console.error(`Failed to fetch models from ${connection.name}:`, error);
+        errors.push({
+          connection: connection.name,
+          error: error.message || '알 수 없는 오류',
+        });
       }
     }
 
     setAvailableModels(allModels);
     setIsLoadingModels(false);
 
-    if (allModels.length === 0) {
+    if (errors.length > 0) {
+      const errorMsg = errors
+        .map((e) => `- ${e.connection}: ${e.error}`)
+        .join('\n');
+      setLoadError(`일부 Connection에서 모델을 가져오지 못했습니다:\n${errorMsg}`);
+    } else if (allModels.length === 0) {
       setLoadError('활성화된 Connection에서 모델을 가져오지 못했습니다.');
     }
   };

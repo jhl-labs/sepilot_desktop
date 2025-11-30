@@ -269,7 +269,22 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       try {
         v1Config = convertV2ToV1(configV2);
       } catch (error: any) {
-        setMessage({ type: 'error', text: error.message || '설정 변환에 실패했습니다.' });
+        console.error('[SettingsDialog] V2 to V1 conversion failed:', error);
+
+        let userMessage = '설정 변환에 실패했습니다.';
+
+        // Provide specific error messages
+        if (error.message?.includes('No active base model')) {
+          userMessage =
+            '기본 대화용 모델이 선택되지 않았습니다. Models 탭에서 base 태그가 있는 모델을 선택하고 "기본 모델로 사용" 버튼을 클릭해주세요.';
+        } else if (error.message?.includes('connection')) {
+          userMessage =
+            '모델이 참조하는 Connection이 존재하지 않습니다. Connections 탭을 확인해주세요.';
+        } else {
+          userMessage = `설정 변환 오류: ${error.message}`;
+        }
+
+        setMessage({ type: 'error', text: userMessage });
         setIsSaving(false);
         return;
       }
