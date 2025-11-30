@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import { DocumentSource, FetchedDocument } from './types';
 
 /**
@@ -203,7 +204,7 @@ export async function fetchDocument(source: DocumentSource): Promise<FetchedDocu
       }
       return [await fetchHttpDocument(source.url)];
 
-    case 'github':
+    case 'github': {
       if (!source.repoUrl || !source.path) {
         throw new Error('Repository URL and path are required for GitHub documents');
       }
@@ -230,6 +231,7 @@ export async function fetchDocument(source: DocumentSource): Promise<FetchedDocu
           source.branch || 'main'
         );
       }
+    }
 
     case 'manual':
       throw new Error('Manual documents should be handled separately');

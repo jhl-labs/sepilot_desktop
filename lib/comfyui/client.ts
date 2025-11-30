@@ -284,11 +284,10 @@ export class ComfyUIClient {
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(`${this.config.wsUrl}?clientId=${this.clientId}`);
-      let timeout: NodeJS.Timeout;
       let currentStep = 0;
       const totalSteps = this.config.steps || 4;
 
-      timeout = setTimeout(() => {
+      const timeout = setTimeout(() => {
         ws.close();
         reject(new Error('Image generation timeout (60s)'));
       }, 60000);
@@ -354,7 +353,7 @@ export class ComfyUIClient {
         }
       };
 
-      ws.onerror = (error) => {
+      ws.onerror = (_error) => {
         clearTimeout(timeout);
         onProgress?.({
           status: 'error',
@@ -432,7 +431,7 @@ export class ComfyUIClient {
     try {
       const response = await fetch(`${this.config.httpUrl}/system_stats`);
       return response.ok;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
