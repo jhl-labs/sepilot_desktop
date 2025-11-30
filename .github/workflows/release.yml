@@ -110,12 +110,73 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R artifacts
 
+      - name: Generate checksums
+        run: |
+          cd artifacts/windows-build
+          sha256sum *.exe > SHA256SUMS.txt
+          sha256sum *.yml >> SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Import GPG key
+        if: secrets.GPG_PRIVATE_KEY != ''
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          gpg --list-keys
+
+      - name: Sign release files with GPG
+        if: secrets.GPG_PRIVATE_KEY != ''
+        run: |
+          cd artifacts/windows-build
+          # Sign all .exe and .yml files
+          for file in *.exe *.yml SHA256SUMS.txt; do
+            if [ -f "$file" ]; then
+              gpg --batch --yes --detach-sign --armor "$file"
+              echo "Signed: $file"
+            fi
+          done
+          ls -la
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/windows-build/*
+          files: |
+            artifacts/windows-build/*.exe
+            artifacts/windows-build/*.exe.blockmap
+            artifacts/windows-build/*.yml
+            artifacts/windows-build/*.asc
+            artifacts/windows-build/SHA256SUMS.txt
           draft: false
           prerelease: false
           generate_release_notes: true
+          body: |
+            ## 🎉 새 버전이 출시되었습니다!
+
+            ### 📥 설치 방법
+
+            **Windows 사용자:**
+            1. `SEPilot-Setup-*.exe` 파일 다운로드
+            2. 실행 시 Windows SmartScreen 경고가 표시될 수 있습니다
+            3. "추가 정보" → "실행" 클릭하여 설치 진행
+
+            ### 🔒 보안 검증
+
+            **SHA256 체크섬 확인:**
+            ```bash
+            sha256sum -c SHA256SUMS.txt
+            ```
+
+            **GPG 서명 검증 (선택사항):**
+            ```bash
+            # GPG 공개키 가져오기
+            gpg --keyserver keys.openpgp.org --recv-keys YOUR_KEY_ID
+
+            # 서명 검증
+            gpg --verify SEPilot-Setup-*.exe.asc SEPilot-Setup-*.exe
+            ```
+
+            ### ⚙️ 자동 업데이트
+            앱 내에서 자동 업데이트가 지원됩니다.
+
+            ---
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
