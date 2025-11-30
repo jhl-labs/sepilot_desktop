@@ -399,16 +399,37 @@ export function registerFileHandlers() {
   // 파일 읽기 (Editor용)
   ipcMain.handle('fs:read-file', async (_event, filePath: string) => {
     try {
+      console.log('[File] Reading file:', filePath);
+
+      // 파일 존재 여부 확인
+      try {
+        await fs.access(filePath);
+      } catch (accessError: any) {
+        console.error('[File] File does not exist or is not accessible:', filePath);
+        return {
+          success: false,
+          error: `File not found or not accessible: ${filePath}`,
+          code: accessError.code || 'ENOENT',
+        };
+      }
+
       const content = await fs.readFile(filePath, 'utf-8');
+      console.log('[File] File read successfully:', filePath, `(${content.length} bytes)`);
       return {
         success: true,
         data: content,
       };
     } catch (error: any) {
-      console.error('[File] Error reading file:', error);
+      console.error('[File] Error reading file:', {
+        path: filePath,
+        error: error.message,
+        code: error.code,
+        stack: error.stack,
+      });
       return {
         success: false,
         error: error.message || 'Failed to read file',
+        code: error.code || 'UNKNOWN',
       };
     }
   });

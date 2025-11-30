@@ -143,7 +143,10 @@ export function useFileSystem(): UseFileSystemReturn {
         console.log(`[FileSystem] File read successfully: ${filePath} (${result.data.length} bytes)`);
         return result.data;
       } else {
-        throw new Error(result.error || 'Failed to read file');
+        // 에러 객체를 제대로 생성 (code 포함)
+        const error: any = new Error(result.error || 'Failed to read file');
+        error.code = (result as any).code || 'UNKNOWN';
+        throw error;
       }
     } catch (error: any) {
       handleError('readFile', error);
