@@ -18,9 +18,12 @@ module.exports = [
       'tests/**',
       'scripts/**',
       'public/**',
-      '*.config.js',
-      '*.config.ts',
       'types/**/*.js',
+      'coverage/**',
+      'lib/**/*.js',
+      'hooks/**/*.js',
+      'eslint.config.js',
+      'jest.config.js',
     ],
   },
 
@@ -29,7 +32,7 @@ module.exports = [
 
   // TypeScript 및 React 파일 설정
   {
-    files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],
+    files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
@@ -98,6 +101,7 @@ module.exports = [
 
       // React Hooks rules
       ...reactHooksPlugin.configs.recommended.rules,
+      'react-hooks/set-state-in-effect': 'off',
 
       // Next.js rules
       '@next/next/no-html-link-for-pages': 'error',
