@@ -304,6 +304,25 @@ importers:
         specifier: ^9.0.3
         version: 9.0.3
 
+  node_modules/@vscode/ripgrep:
+    dependencies:
+      '@vscode/ripgrep':
+        specifier: 1.17.0
+        version: 1.17.0
+      https-proxy-agent:
+        specifier: ^7.0.2
+        version: 7.0.6
+      proxy-from-env:
+        specifier: ^1.1.0
+        version: 1.1.0
+      yauzl:
+        specifier: ^2.9.2
+        version: 2.10.0
+    devDependencies:
+      '@types/node':
+        specifier: ^20.8.4
+        version: 20.19.25
+
 packages:
 
   7zip-bin@5.2.0:
@@ -2171,6 +2190,9 @@ packages:
 
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
+
+  '@types/node@20.19.25':
+    resolution: {integrity: sha512-ZsJzA5thDQMSQO788d7IocwwQbI8B5OPzmqNvpf3NY/+MHDAS759Wo0gd2WQeXYt5AAAQjzcrTVC6SKCuYgoCQ==}
 
   '@types/node@22.19.1':
     resolution: {integrity: sha512-LCCV0HdSZZZb34qifBsyWlUmok6W7ouER+oQIGBScS8EsZsQbrtFTUrDX4hOl+CS6p7cnNC4td+qrSVGSCTUfQ==}
@@ -9178,6 +9200,10 @@ snapshots:
       '@types/pbf': 3.0.5
 
   '@types/ms@2.1.0': {}
+
+  '@types/node@20.19.25':
+    dependencies:
+      undici-types: 6.21.0
 
   '@types/node@22.19.1':
     dependencies:

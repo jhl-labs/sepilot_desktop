@@ -16,8 +16,10 @@ const execAsync = promisify(exec);
 function getRipgrepPath(): string {
   try {
     // @vscode/ripgrep 패키지 경로
+    // require.resolve('@vscode/ripgrep')는 /path/to/node_modules/@vscode/ripgrep/lib/index.js를 반환
     const ripgrepModule = require.resolve('@vscode/ripgrep');
-    const ripgrepDir = path.dirname(ripgrepModule);
+    // lib/index.js -> lib -> @vscode/ripgrep (패키지 루트)
+    const ripgrepDir = path.dirname(path.dirname(ripgrepModule));
 
     // 플랫폼별 바이너리 경로
     let binaryName = 'rg';
