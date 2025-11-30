@@ -192,18 +192,21 @@ export function CodeEditor() {
               const textBeforeCursor = code.substring(0, offset);
               const lines = textBeforeCursor.split('\n');
               const currentLine = lines[lines.length - 1];
+              const previousLine = lines.length > 1 ? lines[lines.length - 2] : '';
 
               console.log('[Autocomplete] Context:', {
                 language,
                 offset,
                 currentLine,
+                previousLine,
                 lineNumber: position.lineNumber,
                 column: position.column,
               });
 
-              // Don't autocomplete if line is empty or just whitespace
-              if (!currentLine.trim()) {
-                console.log('[Autocomplete] Skipping empty line');
+              // Don't autocomplete only if there are 2+ consecutive empty lines
+              // (current line is empty AND previous line is also empty)
+              if (!currentLine.trim() && !previousLine.trim()) {
+                console.log('[Autocomplete] Skipping - 2+ consecutive empty lines');
                 resolve({ items: [] });
                 return;
               }
