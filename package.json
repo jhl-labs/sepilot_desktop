@@ -89,7 +89,7 @@
     "turndown": "^7.2.2",
     "ws": "^8.18.3",
     "zod": "^4.1.13",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
