@@ -97,8 +97,11 @@ export function FileTreeItem({
       return;
     }
 
-    const newPath = path.join(parentPath, newName);
+    // 현재 파일/폴더의 부모 디렉토리 경로를 추출
+    const currentDir = path.dirname(node.path);
+    const newPath = path.join(currentDir, newName);
     console.log(`[FileTreeItem] Renaming: ${node.path} -> ${newPath}`);
+    console.log(`[FileTreeItem] Current dir: ${currentDir}, New name: ${newName}`);
     const success = await renameItem(node.path, newPath);
 
     if (success) {
