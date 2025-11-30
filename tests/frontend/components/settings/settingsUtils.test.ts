@@ -350,4 +350,269 @@ describe('settingsUtils', () => {
       expect(extractModelIds(payload)).toEqual([]);
     });
   });
+
+  describe('fetchAvailableModels', () => {
+    const { fetchAvailableModels } = require('@/components/settings/settingsUtils');
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      global.fetch = jest.fn();
+      (window as any).electronAPI = undefined;
+    });
+
+    afterEach(() => {
+      delete (global as any).fetch;
+      delete (window as any).electronAPI;
+    });
+
+    it('should return empty array when apiKey is empty', async () => {
+      const result = await fetchAvailableModels({
+        provider: 'openai',
+        baseURL: 'https://api.openai.com/v1',
+        apiKey: '',
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when apiKey is only whitespace', async () => {
+      const result = await fetchAvailableModels({
+        provider: 'openai',
+        baseURL: 'https://api.openai.com/v1',
+        apiKey: '   ',
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('should use electronAPI when available', async () => {
+      const mockElectronAPI = {
+        llm: {
+          fetchModels: jest.fn().mockResolvedValue({
+            success: true,
+            data: ['model-1', 'model-2'],
+          }),
+        },
+      };
+
+      (window as any).electronAPI = mockElectronAPI;
+
+      const result = await fetchAvailableModels({
+        provider: 'openai',
+        baseURL: 'https://api.openai.com/v1',
+        apiKey: 'test-key',
+      });
+
+      expect(result).toEqual(['model-1', 'model-2']);
+      expect(mockElectronAPI.llm.fetchModels).toHaveBeenCalledWith({
+        provider: 'openai',
+        baseURL: 'https://api.openai.com/v1',
+        apiKey: 'test-key',
+        customHeaders: undefined,
+        networkConfig: undefined,
+      });
+    });
+
+    it('should throw error when electronAPI returns error', async () => {
+      const mockElectronAPI = {
+        llm: {
+          fetchModels: jest.fn().mockResolvedValue({
+            success: false,
+            error: 'API Error',
+          }),
+        },
+      };
+
+      (window as any).electronAPI = mockElectronAPI;
+
+      await expect(
+        fetchAvailableModels({
+          provider: 'openai',
+          baseURL: 'https://api.openai.com/v1',
+          apiKey: 'test-key',
+        })
+      ).rejects.toThrow('API Error');
+    });
+
+    it('should throw error when electronAPI returns no data', async () => {
+      const mockElectronAPI = {
+        llm: {
+          fetchModels: jest.fn().mockResolvedValue({
+            success: true,
+            data: null,
+          }),
+        },
+      };
+
+      (window as any).electronAPI = mockElectronAPI;
+
+      await expect(
+        fetchAvailableModels({
+          provider: 'openai',
+          baseURL: 'https://api.openai.com/v1',
+          apiKey: 'test-key',
+        })
+      ).rejects.toThrow('모델 목록을 불러오지 못했습니다.');
+    });
+
+    it('should use fetch in browser mode for OpenAI', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: [
+            { id: 'gpt-4' },
+            { id: 'gpt-3.5-turbo' },
+          ],
+        }),
+        text: jest.fn(),
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = await fetchAvailableModels({
+        provider: 'openai',
+        baseURL: 'https://api.openai.com/v1',
+        apiKey: 'test-key',
+      });
+
+      expect(result).toEqual(['gpt-3.5-turbo', 'gpt-4']);
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.openai.com/v1/models',
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-key',
+          },
+        }
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[Settings] Running in browser mode - CORS may occur, Network Config not applied'
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should use fetch in browser mode for Anthropic', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: [
+            { id: 'claude-3-opus' },
+            { id: 'claude-3-sonnet' },
+          ],
+        }),
+        text: jest.fn(),
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = await fetchAvailableModels({
+        provider: 'anthropic',
+        baseURL: 'https://api.anthropic.com/v1',
+        apiKey: 'test-key',
+      });
+
+      expect(result).toEqual(['claude-3-opus', 'claude-3-sonnet']);
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.anthropic.com/v1/models',
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': 'test-key',
+            'anthropic-version': '2023-06-01',
+          },
+        }
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should include custom headers in browser mode', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          data: [{ id: 'model-1' }],
+        }),
+        text: jest.fn(),
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      await fetchAvailableModels({
+        provider: 'openai',
+        baseURL: 'https://api.openai.com/v1',
+        apiKey: 'test-key',
+        customHeaders: {
+          'X-Custom': 'value',
+          'X-Another': 'header',
+        },
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.openai.com/v1/models',
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-key',
+            'X-Custom': 'value',
+            'X-Another': 'header',
+          },
+        }
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should throw error when fetch fails', async () => {
+      const mockResponse = {
+        ok: false,
+        status: 401,
+        text: jest.fn().mockResolvedValue('Unauthorized'),
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      await expect(
+        fetchAvailableModels({
+          provider: 'openai',
+          baseURL: 'https://api.openai.com/v1',
+          apiKey: 'invalid-key',
+        })
+      ).rejects.toThrow('모델 목록을 불러오지 못했습니다. (401 Unauthorized)');
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should normalize baseURL before fetching', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({ data: [{ id: 'model-1' }] }),
+        text: jest.fn(),
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      await fetchAvailableModels({
+        provider: 'openai',
+        baseURL: 'https://api.openai.com/v1/', // Trailing slash
+        apiKey: 'test-key',
+      });
+
+      // Should remove trailing slash
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.openai.com/v1/models',
+        expect.anything()
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+  });
 });
