@@ -21,12 +21,7 @@ describe('SettingsSectionHeader', () => {
   });
 
   it('should render description when provided', () => {
-    render(
-      <SettingsSectionHeader
-        title="Test Title"
-        description="This is a test description"
-      />
-    );
+    render(<SettingsSectionHeader title="Test Title" description="This is a test description" />);
 
     expect(screen.getByText('This is a test description')).toBeInTheDocument();
   });
@@ -39,12 +34,7 @@ describe('SettingsSectionHeader', () => {
   });
 
   it('should render icon when provided', () => {
-    render(
-      <SettingsSectionHeader
-        title="Test Title"
-        icon={MockIcon}
-      />
-    );
+    render(<SettingsSectionHeader title="Test Title" icon={MockIcon} />);
 
     expect(screen.getByTestId('mock-icon')).toBeInTheDocument();
   });
@@ -56,12 +46,7 @@ describe('SettingsSectionHeader', () => {
   });
 
   it('should apply correct icon className when icon is provided', () => {
-    render(
-      <SettingsSectionHeader
-        title="Test Title"
-        icon={MockIcon}
-      />
-    );
+    render(<SettingsSectionHeader title="Test Title" icon={MockIcon} />);
 
     const icon = screen.getByTestId('mock-icon');
     expect(icon).toHaveClass('w-6', 'h-6', 'text-primary');
@@ -96,12 +81,7 @@ describe('SettingsSectionHeader', () => {
   });
 
   it('should have correct description styling', () => {
-    render(
-      <SettingsSectionHeader
-        title="Test Title"
-        description="Test Description"
-      />
-    );
+    render(<SettingsSectionHeader title="Test Title" description="Test Description" />);
 
     const description = screen.getByText('Test Description');
     expect(description).toHaveClass('text-sm', 'text-muted-foreground', 'mt-1');
@@ -123,12 +103,7 @@ describe('SettingsSectionHeader', () => {
 
   it('should render with very long description', () => {
     const longDescription = 'B'.repeat(200);
-    render(
-      <SettingsSectionHeader
-        title="Test Title"
-        description={longDescription}
-      />
-    );
+    render(<SettingsSectionHeader title="Test Title" description={longDescription} />);
 
     expect(screen.getByText(longDescription)).toBeInTheDocument();
   });
@@ -142,12 +117,7 @@ describe('SettingsSectionHeader', () => {
 
   it('should render with special characters in description', () => {
     const specialDescription = 'Description with <>&"\'';
-    render(
-      <SettingsSectionHeader
-        title="Test Title"
-        description={specialDescription}
-      />
-    );
+    render(<SettingsSectionHeader title="Test Title" description={specialDescription} />);
 
     expect(screen.getByText(specialDescription)).toBeInTheDocument();
   });

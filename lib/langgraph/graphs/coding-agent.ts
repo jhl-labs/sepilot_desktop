@@ -162,12 +162,15 @@ function parsePlanSteps(planText: string): string[] {
  * Extract required files from user prompt
  */
 function extractRequiredFiles(prompt: string): string[] {
-  if (!prompt) {return [];}
+  if (!prompt) {
+    return [];
+  }
 
   const matches = new Set<string>();
 
   // Pattern 1: Files with path separators
-  const pathPattern = /[@`"']?([A-Za-z0-9_-]+\/[A-Za-z0-9_/.-]+\.(?:py|md|txt|json|yaml|yml|ini|cfg|sh|js|ts|tsx|jsx|java|go|rs|c|cpp|h|hpp))[@`"']?/gi;
+  const pathPattern =
+    /[@`"']?([A-Za-z0-9_-]+\/[A-Za-z0-9_/.-]+\.(?:py|md|txt|json|yaml|yml|ini|cfg|sh|js|ts|tsx|jsx|java|go|rs|c|cpp|h|hpp))[@`"']?/gi;
   const pathMatches = prompt.match(pathPattern);
   if (pathMatches) {
     for (const match of pathMatches) {
@@ -179,7 +182,8 @@ function extractRequiredFiles(prompt: string): string[] {
   }
 
   // Pattern 2: Files in quotes or backticks
-  const quotedPattern = /[`"']([A-Za-z0-9_/.-]+\.(?:py|md|txt|json|yaml|yml|ini|cfg|sh|js|ts|tsx|jsx|java|go|rs|c|cpp|h|hpp))[`"']/gi;
+  const quotedPattern =
+    /[`"']([A-Za-z0-9_/.-]+\.(?:py|md|txt|json|yaml|yml|ini|cfg|sh|js|ts|tsx|jsx|java|go|rs|c|cpp|h|hpp))[`"']/gi;
   const quotedMatches = prompt.match(quotedPattern);
   if (quotedMatches) {
     for (const match of quotedMatches) {
@@ -191,7 +195,10 @@ function extractRequiredFiles(prompt: string): string[] {
   }
 
   // Pattern 3: Special files
-  if (prompt.includes('README') && !Array.from(matches).some(m => m.toLowerCase().includes('readme'))) {
+  if (
+    prompt.includes('README') &&
+    !Array.from(matches).some((m) => m.toLowerCase().includes('readme'))
+  ) {
     matches.add('README.md');
   }
 
@@ -202,15 +209,15 @@ function extractRequiredFiles(prompt: string): string[] {
  * Check if a changed path matches a requirement
  */
 function pathMatchesRequirement(changedPath: string, requirement: string): boolean {
-  if (!changedPath || !requirement) {return false;}
+  if (!changedPath || !requirement) {
+    return false;
+  }
 
   const changedName = path.basename(changedPath).toLowerCase();
   const reqName = path.basename(requirement).toLowerCase();
 
   return (
-    changedPath.endsWith(requirement) ||
-    changedName === reqName ||
-    changedName.includes(reqName)
+    changedPath.endsWith(requirement) || changedName === reqName || changedName.includes(reqName)
   );
 }
 
@@ -234,10 +241,9 @@ async function triageNode(state: CodingAgentState): Promise<Partial<CodingAgentS
   }
 
   // Simple heuristic: if prompt is short and looks like a question, respond directly
-  const isSimpleQuestion = (
+  const isSimpleQuestion =
     userPrompt.length < 200 &&
-    (userPrompt.includes('?') || userPrompt.includes('what') || userPrompt.includes('how'))
-  );
+    (userPrompt.includes('?') || userPrompt.includes('what') || userPrompt.includes('how'));
 
   const decision = isSimpleQuestion ? 'direct_response' : 'graph';
   const reason = isSimpleQuestion ? 'Simple question detected' : 'Complex task requiring tools';
@@ -264,12 +270,11 @@ async function directResponseNode(state: CodingAgentState): Promise<Partial<Codi
   const systemMessage: Message = {
     id: 'system-direct',
     role: 'system',
-    content: (
+    content:
       '💬 You are a DIRECT RESPONSE SPECIALIST.\n\n' +
       'Provide immediate answers without using tools.\n' +
       'Answer questions using your knowledge base.\n' +
-      'Keep responses concise and relevant.'
-    ),
+      'Keep responses concise and relevant.',
     created_at: Date.now(),
   };
 
@@ -339,8 +344,8 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
   const planningSystemMessage: Message = {
     id: 'system-plan',
     role: 'system',
-    content: (
-      'You are SE Pilot, analyzing the user\'s request to create an execution plan.\n\n' +
+    content:
+      "You are SE Pilot, analyzing the user's request to create an execution plan.\n\n" +
       'CRITICAL: Determine the task type first:\n\n' +
       'READ-ONLY tasks (정보 요청):\n' +
       '- Keywords: 요약, 설명, 분석, 리뷰, 검토, 확인, 보기\n' +
@@ -348,27 +353,28 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
       'MODIFICATION tasks (작업 요청):\n' +
       '- Keywords: 생성, 만들기, 작성, 수정, 편집, 변경, 실행\n' +
       '- Action: Plan to EXECUTE changes using tools\n\n' +
-      'Create a focused execution plan (3-7 steps).'
-    ),
+      'Create a focused execution plan (3-7 steps).',
     created_at: Date.now(),
   };
 
   const planningPromptMessage: Message = {
     id: 'planning-prompt',
     role: 'user',
-    content: (
+    content:
       `User request:\n${userPrompt}\n\n` +
       'Create an actionable execution plan:\n\n' +
       '1. First line: [READ-ONLY] or [MODIFICATION]\n' +
-      '2. List 3-7 specific steps'
-    ),
+      '2. List 3-7 specific steps',
     created_at: Date.now(),
   };
 
   let planContent = '';
 
   try {
-    for await (const chunk of LLMService.streamChat([planningSystemMessage, planningPromptMessage])) {
+    for await (const chunk of LLMService.streamChat([
+      planningSystemMessage,
+      planningPromptMessage,
+    ])) {
       planContent += chunk;
       // Send planning output to renderer
       emitStreamingChunk(chunk, state.conversationId);
@@ -446,18 +452,22 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
   // Debug: Log message count and sizes
   console.log('[CodingAgent.Agent] Message summary:', {
     totalMessages: messages.length,
-    roles: messages.map(m => m.role),
-    contentLengths: messages.map(m => m.content?.length || 0),
-    hasToolCalls: messages.map(m => !!m.tool_calls),
+    roles: messages.map((m) => m.role),
+    contentLengths: messages.map((m) => m.content?.length || 0),
+    hasToolCalls: messages.map((m) => !!m.tool_calls),
   });
 
   // Filter out messages with empty content (except tool messages which can have empty content)
   // OpenAI API may reject assistant messages with empty content
-  const filteredMessages = messages.filter(m => {
+  const filteredMessages = messages.filter((m) => {
     // Keep tool messages (they can have empty content if they're just function results)
-    if (m.role === 'tool') {return true;}
+    if (m.role === 'tool') {
+      return true;
+    }
     // Keep messages with tool_calls (even if content is empty)
-    if (m.tool_calls && m.tool_calls.length > 0) {return true;}
+    if (m.tool_calls && m.tool_calls.length > 0) {
+      return true;
+    }
     // Filter out messages with empty or whitespace-only content
     return m.content && m.content.trim().length > 0;
   });
@@ -471,9 +481,10 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
   // Limit context length to prevent 500 errors from server
   // Keep only the most recent messages to avoid context overflow
   const MAX_CONTEXT_MESSAGES = 20;
-  const limitedMessages = filteredMessages.length > MAX_CONTEXT_MESSAGES
-    ? filteredMessages.slice(-MAX_CONTEXT_MESSAGES)
-    : filteredMessages;
+  const limitedMessages =
+    filteredMessages.length > MAX_CONTEXT_MESSAGES
+      ? filteredMessages.slice(-MAX_CONTEXT_MESSAGES)
+      : filteredMessages;
 
   if (filteredMessages.length > MAX_CONTEXT_MESSAGES) {
     console.log('[CodingAgent.Agent] Context limited:', {
@@ -485,7 +496,7 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
 
   // Get Built-in tools and convert to OpenAI format
   const builtinTools = getBuiltinTools();
-  const toolsForLLM = builtinTools.map(tool => ({
+  const toolsForLLM = builtinTools.map((tool) => ({
     type: 'function' as const,
     function: {
       name: tool.name,
@@ -498,7 +509,10 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
   }));
 
   console.log(`[CodingAgent.Agent] Available Built-in tools: ${builtinTools.length}`);
-  console.log('[CodingAgent.Agent] Tool details:', builtinTools.map(t => t.name));
+  console.log(
+    '[CodingAgent.Agent] Tool details:',
+    builtinTools.map((t) => t.name)
+  );
 
   // Add system prompts
   const codingSystemMsg: Message = {
@@ -641,7 +655,10 @@ ITERATION BUDGET:
       }
     }
 
-    console.log('[CodingAgent.Agent] Streaming complete. Content length:', accumulatedContent.length);
+    console.log(
+      '[CodingAgent.Agent] Streaming complete. Content length:',
+      accumulatedContent.length
+    );
 
     // Parse tool calls
     const toolCalls = finalToolCalls?.map((tc: any, index: number) => {
@@ -735,9 +752,12 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 
   // Get Built-in tools
   const builtinTools = getBuiltinTools();
-  const builtinToolNames = new Set(builtinTools.map(t => t.name));
+  const builtinToolNames = new Set(builtinTools.map((t) => t.name));
 
-  console.log('[CodingAgent.Tools] Tool calls:', lastMessage.tool_calls.map(c => c.name));
+  console.log(
+    '[CodingAgent.Tools] Tool calls:',
+    lastMessage.tool_calls.map((c) => c.name)
+  );
   console.log('[CodingAgent.Tools] Built-in tools available:', Array.from(builtinToolNames));
 
   // Execute tools
@@ -760,7 +780,11 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
           const duration = Date.now() - startTime;
 
           // Save activity to database (non-blocking)
-          if (state.conversationId && typeof window !== 'undefined' && window.electronAPI?.activity) {
+          if (
+            state.conversationId &&
+            typeof window !== 'undefined' &&
+            window.electronAPI?.activity
+          ) {
             const activity: Activity = {
               id: uuidv4(),
               conversation_id: state.conversationId,
@@ -791,7 +815,11 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
           const duration = Date.now() - startTime;
 
           // Save error activity
-          if (state.conversationId && typeof window !== 'undefined' && window.electronAPI?.activity) {
+          if (
+            state.conversationId &&
+            typeof window !== 'undefined' &&
+            window.electronAPI?.activity
+          ) {
             const activity: Activity = {
               id: uuidv4(),
               conversation_id: state.conversationId,
@@ -932,7 +960,7 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
 
   if (requiredFiles.length > 0 && modifiedFiles.length > 0) {
     const missingFiles = requiredFiles.filter(
-      req => !modifiedFiles.some(mod => pathMatchesRequirement(mod, req))
+      (req) => !modifiedFiles.some((mod) => pathMatchesRequirement(mod, req))
     );
 
     if (missingFiles.length > 0 && (state.iterationCount || 0) < 3) {
@@ -955,7 +983,9 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
 
   // Advance plan step if we have a plan
   if (planSteps.length > 0 && currentStep < planSteps.length - 1) {
-    console.log(`[Verification] Advancing to next plan step (${currentStep + 1}/${planSteps.length})`);
+    console.log(
+      `[Verification] Advancing to next plan step (${currentStep + 1}/${planSteps.length})`
+    );
     return {
       currentPlanStep: currentStep + 1,
       verificationNotes: ['✅ Step completed, moving to next'],
@@ -977,7 +1007,7 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
 async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
   console.log('[Reporter] Checking if final report is needed');
 
-  const hasToolError = state.toolResults?.some(r => r.error);
+  const hasToolError = state.toolResults?.some((r) => r.error);
   const hasAgentError = state.agentError && state.agentError.length > 0;
   const maxIterations = state.maxIterations || 10;
   const iterationCount = state.iterationCount || 0;
@@ -1073,55 +1103,35 @@ export function createCodingAgentGraph() {
   workflow.setEntryPoint('triage');
 
   // Add edges
-  workflow.addConditionalEdges(
-    'triage',
-    triageNextStep,
-    {
-      direct: 'direct_response',
-      graph: 'planner',
-    }
-  );
+  workflow.addConditionalEdges('triage', triageNextStep, {
+    direct: 'direct_response',
+    graph: 'planner',
+  });
 
   workflow.addEdge('direct_response', END);
   workflow.addEdge('planner', 'iteration_guard');
 
-  workflow.addConditionalEdges(
-    'iteration_guard',
-    guardDecision,
-    {
-      continue: 'agent',
-      stop: 'reporter',
-    }
-  );
+  workflow.addConditionalEdges('iteration_guard', guardDecision, {
+    continue: 'agent',
+    stop: 'reporter',
+  });
 
-  workflow.addConditionalEdges(
-    'agent',
-    shouldUseTool,
-    {
-      tools: 'approval',
-      end: 'verifier',
-    }
-  );
+  workflow.addConditionalEdges('agent', shouldUseTool, {
+    tools: 'approval',
+    end: 'verifier',
+  });
 
-  workflow.addConditionalEdges(
-    'approval',
-    approvalNextStep,
-    {
-      run_tools: 'tools',
-      retry: 'iteration_guard',
-    }
-  );
+  workflow.addConditionalEdges('approval', approvalNextStep, {
+    run_tools: 'tools',
+    retry: 'iteration_guard',
+  });
 
   workflow.addEdge('tools', 'verifier');
 
-  workflow.addConditionalEdges(
-    'verifier',
-    verificationNextStep,
-    {
-      continue: 'iteration_guard',
-      report: 'reporter',
-    }
-  );
+  workflow.addConditionalEdges('verifier', verificationNextStep, {
+    continue: 'iteration_guard',
+    report: 'reporter',
+  });
 
   workflow.addEdge('reporter', END);
 
@@ -1151,7 +1161,6 @@ export class CodingAgentGraph {
 
       // Main ReAct loop (simplified - no triage, no planner)
       while (iterations < maxIterations) {
-
         // Agent (LLM with tools)
         yield { type: 'node', node: 'agent', data: { status: 'starting' } };
         const agentResult = await agentNode(state);
@@ -1179,7 +1188,11 @@ export class CodingAgentGraph {
         }
 
         // Tool approval (human-in-the-loop)
-        if (this.toolApprovalCallback && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+        if (
+          this.toolApprovalCallback &&
+          lastMessage.tool_calls &&
+          lastMessage.tool_calls.length > 0
+        ) {
           console.log('[CodingAgentGraph] Requesting tool approval');
 
           // Yield tool approval request
@@ -1228,7 +1241,7 @@ export class CodingAgentGraph {
         const toolsResult = await enhancedToolsNode(state);
 
         // Check for errors
-        if (toolsResult.toolResults?.some(r => r.error)) {
+        if (toolsResult.toolResults?.some((r) => r.error)) {
           hasError = true;
         }
 
@@ -1262,7 +1275,6 @@ export class CodingAgentGraph {
         };
       }
       yield { type: 'node', node: 'reporter', data: { ...reportResult, messages: state.messages } };
-
     } catch (error: any) {
       console.error('[CodingAgentGraph] Stream error:', error);
       yield { type: 'error', error: error.message || 'Graph execution failed' };

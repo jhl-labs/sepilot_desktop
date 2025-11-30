@@ -29,9 +29,8 @@ async function generateImageInMainProcess(
 
   try {
     // Build workflow
-    const seedValue = config.seed && config.seed >= 0
-      ? config.seed
-      : Math.floor(Math.random() * 4294967295);
+    const seedValue =
+      config.seed && config.seed >= 0 ? config.seed : Math.floor(Math.random() * 4294967295);
 
     const workflow = {
       '60': {
@@ -70,7 +69,11 @@ async function generateImageInMainProcess(
         _meta: { title: 'CLIP Text Encode (Positive Prompt)' },
       },
       '75:38': {
-        inputs: { clip_name: 'qwen_2.5_vl_7b_fp8_scaled.safetensors', type: 'qwen_image', device: 'default' },
+        inputs: {
+          clip_name: 'qwen_2.5_vl_7b_fp8_scaled.safetensors',
+          type: 'qwen_image',
+          device: 'default',
+        },
         class_type: 'CLIPLoader',
         _meta: { title: 'CLIP 로드' },
       },
@@ -96,7 +99,11 @@ async function generateImageInMainProcess(
         _meta: { title: 'KSampler' },
       },
       '75:73': {
-        inputs: { lora_name: 'Qwen-Image-Lightning-4steps-V1.0.safetensors', strength_model: 1, model: ['75:37', 0] },
+        inputs: {
+          lora_name: 'Qwen-Image-Lightning-4steps-V1.0.safetensors',
+          strength_model: 1,
+          model: ['75:37', 0],
+        },
         class_type: 'LoraLoaderModelOnly',
         _meta: { title: 'LoRA 로드 (모델 전용)' },
       },
@@ -115,7 +122,10 @@ async function generateImageInMainProcess(
     }
 
     // Queue prompt
-    emitImageProgress({ status: 'executing', message: '🎨 이미지 생성 요청을 전송 중...', progress: 10 }, conversationId);
+    emitImageProgress(
+      { status: 'executing', message: '🎨 이미지 생성 요청을 전송 중...', progress: 10 },
+      conversationId
+    );
 
     const queueResponse = await fetch(`${normalizedUrl}/prompt`, {
       method: 'POST',
@@ -131,7 +141,10 @@ async function generateImageInMainProcess(
     const queueResult = await queueResponse.json();
     const promptId = queueResult.prompt_id;
 
-    emitImageProgress({ status: 'executing', message: '🖼️ 이미지를 생성하고 있습니다...', progress: 20 }, conversationId);
+    emitImageProgress(
+      { status: 'executing', message: '🖼️ 이미지를 생성하고 있습니다...', progress: 20 },
+      conversationId
+    );
 
     // Wait for completion via WebSocket
     const imageData = await waitForCompletionInMainProcess(
@@ -144,12 +157,18 @@ async function generateImageInMainProcess(
       conversationId
     );
 
-    emitImageProgress({ status: 'completed', message: '✅ 이미지 생성 완료!', progress: 100 }, conversationId);
+    emitImageProgress(
+      { status: 'completed', message: '✅ 이미지 생성 완료!', progress: 100 },
+      conversationId
+    );
 
     return { success: true, imageBase64: imageData };
   } catch (error: any) {
     console.error('[Tools] ComfyUI generation error:', error);
-    emitImageProgress({ status: 'error', message: `❌ 이미지 생성 실패: ${error.message}`, progress: 0 }, conversationId);
+    emitImageProgress(
+      { status: 'error', message: `❌ 이미지 생성 실패: ${error.message}`, progress: 0 },
+      conversationId
+    );
     return { success: false, error: error.message };
   }
 }
@@ -181,18 +200,24 @@ function waitForCompletionInMainProcess(
           const currentStep = message.data.value || 0;
           const maxSteps = message.data.max || totalSteps;
           const progress = 20 + Math.floor((currentStep / maxSteps) * 70);
-          emitImageProgress({
-            status: 'executing',
-            message: `🎨 이미지 생성 중... (${currentStep}/${maxSteps} 단계)`,
-            progress,
-            currentStep,
-            totalSteps: maxSteps,
-          }, conversationId);
+          emitImageProgress(
+            {
+              status: 'executing',
+              message: `🎨 이미지 생성 중... (${currentStep}/${maxSteps} 단계)`,
+              progress,
+              currentStep,
+              totalSteps: maxSteps,
+            },
+            conversationId
+          );
         }
 
         if (message.type === 'executed' && message.data.prompt_id === promptId) {
           clearTimeout(timeout);
-          emitImageProgress({ status: 'executing', message: '📥 생성된 이미지를 다운로드하는 중...', progress: 90 }, conversationId);
+          emitImageProgress(
+            { status: 'executing', message: '📥 생성된 이미지를 다운로드하는 중...', progress: 90 },
+            conversationId
+          );
 
           try {
             const images = message.data.output?.images || [];
@@ -254,7 +279,10 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
       return {};
     }
 
-    console.log('[Tools] Executing tools:', lastMessage.tool_calls.map(c => c.name));
+    console.log(
+      '[Tools] Executing tools:',
+      lastMessage.tool_calls.map((c) => c.name)
+    );
 
     // 각 도구 호출 실행
     const results: ToolResult[] = await Promise.all(
@@ -287,13 +315,21 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
             };
 
             // Emit initial progress (conversationId로 격리)
-            emitImageProgress({
-              status: 'queued',
-              message: '🎨 이미지 생성을 시작합니다...',
-              progress: 0,
-            }, state.conversationId);
+            emitImageProgress(
+              {
+                status: 'queued',
+                message: '🎨 이미지 생성을 시작합니다...',
+                progress: 0,
+              },
+              state.conversationId
+            );
 
-            const imageResult = await generateImageInMainProcess(comfyConfig, networkConfig, args, state.conversationId);
+            const imageResult = await generateImageInMainProcess(
+              comfyConfig,
+              networkConfig,
+              args,
+              state.conversationId
+            );
 
             if (imageResult.success && imageResult.imageBase64) {
               return {
@@ -333,7 +369,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
           // Main Process에서 직접 MCP 도구 실행
           // Note: toolsNode는 Electron Main Process에서 실행되므로 직접 메서드 사용
           const allTools = MCPServerManager.getAllToolsInMainProcess();
-          const tool = allTools.find(t => t.name === call.name);
+          const tool = allTools.find((t) => t.name === call.name);
 
           if (!tool) {
             console.warn(`[Tools] Tool not found in MCP servers: ${call.name}`);
@@ -381,7 +417,10 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
             resultText = String(mcpResult);
           }
 
-          console.log(`[Tools] Extracted result text (${resultText.length} chars):`, resultText.substring(0, 200));
+          console.log(
+            `[Tools] Extracted result text (${resultText.length} chars):`,
+            resultText.substring(0, 200)
+          );
 
           return {
             toolCallId: call.id,

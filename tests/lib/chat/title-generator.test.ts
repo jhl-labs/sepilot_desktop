@@ -63,9 +63,7 @@ describe('title-generator', () => {
         data: { title: 'Clean Title' },
       });
 
-      const messages: Pick<Message, 'role' | 'content'>[] = [
-        { role: 'user', content: 'Test' },
-      ];
+      const messages: Pick<Message, 'role' | 'content'>[] = [{ role: 'user', content: 'Test' }];
 
       const title = await generateConversationTitle(messages);
 
@@ -141,9 +139,7 @@ describe('title-generator', () => {
   describe('fallback title generation', () => {
     beforeEach(() => {
       enableElectronMode();
-      (mockElectronAPI.llm.generateTitle as jest.Mock).mockRejectedValue(
-        new Error('IPC Error')
-      );
+      (mockElectronAPI.llm.generateTitle as jest.Mock).mockRejectedValue(new Error('IPC Error'));
     });
 
     it('should use first user message content', async () => {
@@ -158,7 +154,8 @@ describe('title-generator', () => {
     });
 
     it('should truncate long messages with ellipsis', async () => {
-      const longMessage = 'This is a very long message that should be truncated because it exceeds the maximum length for a conversation title';
+      const longMessage =
+        'This is a very long message that should be truncated because it exceeds the maximum length for a conversation title';
       const messages: Pick<Message, 'role' | 'content'>[] = [
         { role: 'user', content: longMessage },
       ];

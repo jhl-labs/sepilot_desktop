@@ -32,7 +32,7 @@ async function fetchLatestRelease(): Promise<ReleaseInfo | null> {
       method: 'GET',
       headers: {
         'User-Agent': 'SEPilot-Desktop',
-        'Accept': 'application/vnd.github.v3+json',
+        Accept: 'application/vnd.github.v3+json',
       },
     };
 
@@ -62,8 +62,8 @@ async function fetchLatestRelease(): Promise<ReleaseInfo | null> {
           // Find Windows installer asset
           let downloadUrl: string | undefined;
           if (release.assets && Array.isArray(release.assets)) {
-            const windowsAsset = release.assets.find((asset: any) =>
-              asset.name.endsWith('.exe') && asset.name.includes('Setup')
+            const windowsAsset = release.assets.find(
+              (asset: any) => asset.name.endsWith('.exe') && asset.name.includes('Setup')
             );
             downloadUrl = windowsAsset?.browser_download_url;
           }

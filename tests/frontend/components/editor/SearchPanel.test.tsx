@@ -138,7 +138,9 @@ describe('SearchPanel', () => {
 
       // 검색 버튼은 빈 검색어일 때 disabled 상태여야 함
       const buttons = screen.getAllByRole('button');
-      const searchButton = buttons.find((btn) => btn.querySelector('svg') && btn.hasAttribute('disabled'));
+      const searchButton = buttons.find(
+        (btn) => btn.querySelector('svg') && btn.hasAttribute('disabled')
+      );
 
       expect(searchButton).toBeDefined();
       expect(mockElectronAPI.fs.searchFiles).not.toHaveBeenCalled();
@@ -334,7 +336,9 @@ describe('SearchPanel', () => {
 
       // "Aa" 레이블의 체크박스 찾기
       const aaLabel = screen.getByText('Aa');
-      const caseSensitiveCheckbox = aaLabel.closest('label')?.querySelector('input[type="checkbox"]');
+      const caseSensitiveCheckbox = aaLabel
+        .closest('label')
+        ?.querySelector('input[type="checkbox"]');
 
       if (caseSensitiveCheckbox) {
         await user.click(caseSensitiveCheckbox);
@@ -609,9 +613,7 @@ describe('SearchPanel', () => {
         },
       });
 
-      (mockElectronAPI.fs.readFile as jest.Mock).mockRejectedValue(
-        new Error('File read error')
-      );
+      (mockElectronAPI.fs.readFile as jest.Mock).mockRejectedValue(new Error('File read error'));
 
       render(<SearchPanel />);
 

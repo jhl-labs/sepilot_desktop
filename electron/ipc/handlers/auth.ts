@@ -24,67 +24,61 @@ export function setupAuthHandlers() {
   /**
    * OAuth 코드를 토큰으로 교환
    */
-  ipcMain.handle(
-    'auth-exchange-code',
-    async (_event, code: string, codeVerifier: string) => {
-      try {
-        const clientId = process.env.GITHUB_CLIENT_ID;
-        if (!clientId) {
-          throw new Error('GITHUB_CLIENT_ID is not configured.');
-        }
-
-        const response = await fetch(
-          'https://github.com/login/oauth/access_token',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-            },
-            body: JSON.stringify({
-              client_id: clientId,
-              code,
-              code_verifier: codeVerifier,
-              redirect_uri: process.env.GITHUB_REDIRECT_URI,
-            }),
-          },
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            `Failed to exchange code: ${errorData.error_description || response.statusText}`,
-          );
-        }
-
-        const data = await response.json();
-
-        if (data.error) {
-          throw new Error(data.error_description || 'Unknown error during token exchange');
-        }
-        
-        // 토큰 저장
-        await tokenManager.storeToken('github_token', data.access_token);
-
-        return {
-          success: true,
-          data: {
-            access_token: data.access_token,
-            refresh_token: data.refresh_token,
-            expires_in: data.expires_in,
-            scope: data.scope,
-            token_type: data.token_type,
-          },
-        };
-      } catch (error: any) {
-        console.error('Failed to exchange code:', error);
-        return {
-          success: false,
-          error: error.message || 'Failed to exchange code for token',
-        };
+  ipcMain.handle('auth-exchange-code', async (_event, code: string, codeVerifier: string) => {
+    try {
+      const clientId = process.env.GITHUB_CLIENT_ID;
+      if (!clientId) {
+        throw new Error('GITHUB_CLIENT_ID is not configured.');
       }
-    },
-  );
+
+      const response = await fetch('https://github.com/login/oauth/access_token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+          code,
+          code_verifier: codeVerifier,
+          redirect_uri: process.env.GITHUB_REDIRECT_URI,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          `Failed to exchange code: ${errorData.error_description || response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error_description || 'Unknown error during token exchange');
+      }
+
+      // 토큰 저장
+      await tokenManager.storeToken('github_token', data.access_token);
+
+      return {
+        success: true,
+        data: {
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_in: data.expires_in,
+          scope: data.scope,
+          token_type: data.token_type,
+        },
+      };
+    } catch (error: any) {
+      console.error('Failed to exchange code:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to exchange code for token',
+      };
+    }
+  });
 
   /**
    * 사용자 정보 가져오기
@@ -157,21 +151,18 @@ export function setupAuthHandlers() {
   /**
    * Config 동기화 (GitHub에서 가져오기)
    */
-  ipcMain.handle(
-    'auth-sync-from-github',
-    async (_event, token: string, masterPassword: string) => {
-      try {
-        const { ConfigSync } = await import('../../../lib/config/sync');
-        const configSync = new ConfigSync();
-        await configSync.initialize(token);
-        const config = await configSync.syncFromGitHub(masterPassword);
-        return { success: true, data: config };
-      } catch (error: any) {
-        console.error('Failed to sync from GitHub:', error);
-        return { success: false, error: error.message };
-      }
-    },
-  );
+  ipcMain.handle('auth-sync-from-github', async (_event, token: string, masterPassword: string) => {
+    try {
+      const { ConfigSync } = await import('../../../lib/config/sync');
+      const configSync = new ConfigSync();
+      await configSync.initialize(token);
+      const config = await configSync.syncFromGitHub(masterPassword);
+      return { success: true, data: config };
+    } catch (error: any) {
+      console.error('Failed to sync from GitHub:', error);
+      return { success: false, error: error.message };
+    }
+  });
 
   /**
    * Config 동기화 (GitHub에 저장)
@@ -189,6 +180,6 @@ export function setupAuthHandlers() {
         console.error('Failed to sync to GitHub:', error);
         return { success: false, error: error.message };
       }
-    },
+    }
   );
 }

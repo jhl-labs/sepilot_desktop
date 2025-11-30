@@ -73,9 +73,10 @@ export async function* generateNode(state: ChatState): AsyncGenerator<Partial<Ch
 export async function* generateWithContextNode(state: RAGState): AsyncGenerator<Partial<RAGState>> {
   try {
     // 검색된 문서를 컨텍스트로 추가
-    const context = state.documents.length > 0
-      ? state.documents.map((doc, i) => `[문서 ${i + 1}]\n${doc.content}`).join('\n\n')
-      : '';
+    const context =
+      state.documents.length > 0
+        ? state.documents.map((doc, i) => `[문서 ${i + 1}]\n${doc.content}`).join('\n\n')
+        : '';
 
     const messages = context
       ? [
@@ -156,15 +157,18 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
     console.log(`[Agent] Available MCP tools: ${availableTools.length}`);
 
     if (availableTools.length > 0) {
-      console.log('[Agent] Tool details:', availableTools.map(t => ({
-        name: t.name,
-        description: t.description,
-        server: t.serverName,
-      })));
+      console.log(
+        '[Agent] Tool details:',
+        availableTools.map((t) => ({
+          name: t.name,
+          description: t.description,
+          server: t.serverName,
+        }))
+      );
     }
 
     // MCP 도구를 OpenAI compatible tools 형식으로 변환
-    const toolsForLLM = availableTools.map(tool => ({
+    const toolsForLLM = availableTools.map((tool) => ({
       type: 'function' as const,
       function: {
         name: tool.name,
@@ -185,17 +189,20 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
         type: 'function' as const,
         function: {
           name: 'generate_image',
-          description: 'Generate a high-quality image using AI image generation (ComfyUI/Stable Diffusion). ALWAYS use this tool when the user asks to: create/generate/make/draw/paint an image, picture, or artwork. This generates actual photorealistic or artistic images, NOT text-based representations like SVG or ASCII art. Use detailed English prompts for best results.',
+          description:
+            'Generate a high-quality image using AI image generation (ComfyUI/Stable Diffusion). ALWAYS use this tool when the user asks to: create/generate/make/draw/paint an image, picture, or artwork. This generates actual photorealistic or artistic images, NOT text-based representations like SVG or ASCII art. Use detailed English prompts for best results.',
           parameters: {
             type: 'object',
             properties: {
               prompt: {
                 type: 'string',
-                description: 'Detailed English description of the image to generate. Be very specific about: subject, style, colors, lighting, composition, mood. Example: "a blue cat with green eyes, sitting on a red cushion, photorealistic, studio lighting, 4k, detailed fur texture"',
+                description:
+                  'Detailed English description of the image to generate. Be very specific about: subject, style, colors, lighting, composition, mood. Example: "a blue cat with green eyes, sitting on a red cushion, photorealistic, studio lighting, 4k, detailed fur texture"',
               },
               negativePrompt: {
                 type: 'string',
-                description: 'Things to avoid in the generated image (e.g., "blurry, low quality, distorted, ugly")',
+                description:
+                  'Things to avoid in the generated image (e.g., "blurry, low quality, distorted, ugly")',
               },
               width: {
                 type: 'number',
@@ -229,9 +236,8 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
         // 이미지 생성 도구인 경우: base64 제거하고 요약만 전달
         if (result.toolName === 'generate_image') {
           try {
-            const resultData = typeof result.result === 'string'
-              ? JSON.parse(result.result)
-              : result.result;
+            const resultData =
+              typeof result.result === 'string' ? JSON.parse(result.result) : result.result;
 
             if (resultData.success) {
               // LLM에게는 이미지가 성공적으로 생성되었다는 정보만 전달
@@ -248,7 +254,8 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
           }
         } else {
           // 다른 도구들은 기존 방식대로
-          content = typeof result.result === 'string' ? result.result : JSON.stringify(result.result);
+          content =
+            typeof result.result === 'string' ? result.result : JSON.stringify(result.result);
         }
       } else {
         content = 'No result';
@@ -275,7 +282,8 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
     const convertedToolMessages: Message[] = toolMessages.map((toolMsg: any) => ({
       id: `tool-${toolMsg.tool_call_id}`,
       role: 'tool' as const,
-      content: typeof toolMsg.content === 'string' ? toolMsg.content : JSON.stringify(toolMsg.content),
+      content:
+        typeof toolMsg.content === 'string' ? toolMsg.content : JSON.stringify(toolMsg.content),
       created_at: Date.now(),
       tool_call_id: toolMsg.tool_call_id, // OpenAI API 호환성을 위해 추가
       name: toolMsg.name, // OpenAI API 호환성을 위해 추가
@@ -283,12 +291,15 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
 
     const messages = [...state.messages, ...convertedToolMessages];
 
-    console.log('[Agent] Messages to LLM:', messages.map(m => ({
-      role: m.role,
-      hasContent: !!m.content,
-      contentPreview: m.content?.substring(0, 50),
-      tool_call_id: (m as any).tool_call_id,
-    })));
+    console.log(
+      '[Agent] Messages to LLM:',
+      messages.map((m) => ({
+        role: m.role,
+        hasContent: !!m.content,
+        contentPreview: m.content?.substring(0, 50),
+        tool_call_id: (m as any).tool_call_id,
+      }))
+    );
 
     // LLM 호출 (스트리밍, tools 포함)
     let accumulatedContent = '';

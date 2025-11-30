@@ -689,10 +689,7 @@ export function registerFileHandlers() {
         console.log('[File] Search stdout length:', stdout.length);
 
         // 결과 파싱
-        const results: Record<
-          string,
-          Array<{ line: number; column: number; text: string }>
-        > = {};
+        const results: Record<string, Array<{ line: number; column: number; text: string }>> = {};
 
         if (!stdout || stdout.trim().length === 0) {
           console.log('[File] No matches found (empty stdout)');

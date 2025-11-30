@@ -74,7 +74,9 @@ export class AdvancedEditorAgentGraph {
     let errorMessage = '';
 
     while (iterations < this.maxIterations) {
-      console.log(`[AdvancedEditorAgent] ===== Iteration ${iterations + 1}/${this.maxIterations} =====`);
+      console.log(
+        `[AdvancedEditorAgent] ===== Iteration ${iterations + 1}/${this.maxIterations} =====`
+      );
 
       // 1. Generate response with tools
       let generateResult;
@@ -124,7 +126,7 @@ export class AdvancedEditorAgentGraph {
         ];
 
         const toolsNeedingApproval = lastMessage.tool_calls.filter(
-          tc => !readOnlyTools.includes(tc.name)
+          (tc) => !readOnlyTools.includes(tc.name)
         );
 
         if (toolsNeedingApproval.length > 0) {
@@ -281,7 +283,7 @@ export class AdvancedEditorAgentGraph {
     parts.push('- Always read files before modifying them');
     parts.push('- Use edit_file for small changes, write_file for complete rewrites');
     parts.push('- Test changes with terminal commands when appropriate');
-    parts.push('- Explain what you\'re doing before making changes');
+    parts.push("- Explain what you're doing before making changes");
     parts.push('- Be careful with file operations - they require user approval');
 
     return parts.join('\n');
@@ -306,12 +308,13 @@ export class AdvancedEditorAgentGraph {
       tools: tools.length > 0 ? tools : undefined,
     });
 
-    const toolCalls = response.toolCalls?.map(tc => ({
+    const toolCalls = response.toolCalls?.map((tc) => ({
       id: tc.id,
       name: tc.function.name,
-      arguments: typeof tc.function.arguments === 'string'
-        ? JSON.parse(tc.function.arguments)
-        : tc.function.arguments,
+      arguments:
+        typeof tc.function.arguments === 'string'
+          ? JSON.parse(tc.function.arguments)
+          : tc.function.arguments,
     }));
 
     const newMessage: Message = {
@@ -368,7 +371,11 @@ export class AdvancedEditorAgentGraph {
   private shouldUseTool(state: EditorAgentState): 'tools' | 'end' {
     const lastMessage = state.messages[state.messages.length - 1];
 
-    if (lastMessage?.role === 'assistant' && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+    if (
+      lastMessage?.role === 'assistant' &&
+      lastMessage.tool_calls &&
+      lastMessage.tool_calls.length > 0
+    ) {
       return 'tools';
     }
 
@@ -385,7 +392,8 @@ export class AdvancedEditorAgentGraph {
         type: 'function',
         function: {
           name: 'read_file',
-          description: 'Read the complete contents of a file. Use this to understand existing code before making changes.',
+          description:
+            'Read the complete contents of a file. Use this to understand existing code before making changes.',
           parameters: {
             type: 'object',
             properties: {
@@ -423,7 +431,8 @@ export class AdvancedEditorAgentGraph {
         type: 'function',
         function: {
           name: 'search_files',
-          description: 'Search for text pattern in files using ripgrep. Great for finding usage examples or definitions.',
+          description:
+            'Search for text pattern in files using ripgrep. Great for finding usage examples or definitions.',
           parameters: {
             type: 'object',
             properties: {
@@ -453,7 +462,8 @@ export class AdvancedEditorAgentGraph {
         type: 'function',
         function: {
           name: 'write_file',
-          description: 'Create a new file or completely replace existing file contents. Use for new files or complete rewrites.',
+          description:
+            'Create a new file or completely replace existing file contents. Use for new files or complete rewrites.',
           parameters: {
             type: 'object',
             properties: {
@@ -474,7 +484,8 @@ export class AdvancedEditorAgentGraph {
         type: 'function',
         function: {
           name: 'edit_file',
-          description: 'Apply precise edits to a file using search and replace. Better than write_file for small changes. Can make multiple edits in one call.',
+          description:
+            'Apply precise edits to a file using search and replace. Better than write_file for small changes. Can make multiple edits in one call.',
           parameters: {
             type: 'object',
             properties: {
@@ -510,7 +521,8 @@ export class AdvancedEditorAgentGraph {
         type: 'function',
         function: {
           name: 'execute_command',
-          description: 'Execute a shell command in the terminal. Great for running tests, builds, git commands, etc.',
+          description:
+            'Execute a shell command in the terminal. Great for running tests, builds, git commands, etc.',
           parameters: {
             type: 'object',
             properties: {
@@ -625,12 +637,15 @@ export class AdvancedEditorAgentGraph {
     throw new Error('File operations not available in browser mode');
   }
 
-  private async listFiles(args: { dirPath: string; recursive?: boolean }, _state: EditorAgentState): Promise<string> {
+  private async listFiles(
+    args: { dirPath: string; recursive?: boolean },
+    _state: EditorAgentState
+  ): Promise<string> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       const result = await window.electronAPI.fs.readDirectory(args.dirPath);
       if (result.success && result.data) {
-        const items = result.data.map((item: any) =>
-          `${item.isDirectory ? '[DIR]' : '[FILE]'} ${item.name}`
+        const items = result.data.map(
+          (item: any) => `${item.isDirectory ? '[DIR]' : '[FILE]'} ${item.name}`
         );
         return items.join('\n');
       }
@@ -639,7 +654,10 @@ export class AdvancedEditorAgentGraph {
     throw new Error('File operations not available in browser mode');
   }
 
-  private async searchFiles(args: { pattern: string; path?: string; caseInsensitive?: boolean; fileType?: string }, _state: EditorAgentState): Promise<string> {
+  private async searchFiles(
+    args: { pattern: string; path?: string; caseInsensitive?: boolean; fileType?: string },
+    _state: EditorAgentState
+  ): Promise<string> {
     // Use ripgrep via existing grep_search
     const workingDir = args.path || _state.editorContext?.workingDirectory || process.cwd();
 
@@ -650,7 +668,10 @@ export class AdvancedEditorAgentGraph {
     throw new Error('Search not available in browser mode');
   }
 
-  private async writeFile(args: { filePath: string; content: string }, _state: EditorAgentState): Promise<string> {
+  private async writeFile(
+    args: { filePath: string; content: string },
+    _state: EditorAgentState
+  ): Promise<string> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       const result = await window.electronAPI.fs.writeFile(args.filePath, args.content);
       if (result.success) {
@@ -661,7 +682,10 @@ export class AdvancedEditorAgentGraph {
     throw new Error('File operations not available in browser mode');
   }
 
-  private async editFile(args: { filePath: string; edits: Array<{ oldText: string; newText: string }> }, _state: EditorAgentState): Promise<string> {
+  private async editFile(
+    args: { filePath: string; edits: Array<{ oldText: string; newText: string }> },
+    _state: EditorAgentState
+  ): Promise<string> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       // Read file first
       const readResult = await window.electronAPI.fs.readFile(args.filePath);
@@ -679,7 +703,9 @@ export class AdvancedEditorAgentGraph {
           continue;
         }
 
-        const occurrences = (content.match(new RegExp(edit.oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+        const occurrences = (
+          content.match(new RegExp(edit.oldText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []
+        ).length;
         if (occurrences > 1) {
           results.push(`⚠️  Warning: Found ${occurrences} occurrences of text. Replacing all.`);
         }
@@ -700,12 +726,18 @@ export class AdvancedEditorAgentGraph {
     throw new Error('File operations not available in browser mode');
   }
 
-  private async executeCommand(args: { command: string; cwd?: string }, _state: EditorAgentState): Promise<string> {
+  private async executeCommand(
+    args: { command: string; cwd?: string },
+    _state: EditorAgentState
+  ): Promise<string> {
     // This would execute via terminal IPC
     return `Executed: ${args.command}\n(Terminal integration pending)`;
   }
 
-  private async getTerminalOutput(args: { lines?: number }, _state: EditorAgentState): Promise<string> {
+  private async getTerminalOutput(
+    args: { lines?: number },
+    _state: EditorAgentState
+  ): Promise<string> {
     // This would read from terminal buffer
     return `Last ${args.lines || 50} lines of terminal output\n(Terminal integration pending)`;
   }
@@ -718,7 +750,10 @@ export class AdvancedEditorAgentGraph {
     throw new Error('Git operations not available in browser mode');
   }
 
-  private async gitDiff(args: { filePath?: string; staged?: boolean }, _state: EditorAgentState): Promise<string> {
+  private async gitDiff(
+    args: { filePath?: string; staged?: boolean },
+    _state: EditorAgentState
+  ): Promise<string> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       // Would execute git diff via command
       return `Git diff${args.filePath ? ` for ${args.filePath}` : ''}\n(Git integration pending)`;

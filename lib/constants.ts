@@ -240,14 +240,7 @@ export const FILE_TYPES = {
 // ========================================
 
 export const DEFAULT_MODELS = {
-  OPENAI: [
-    'gpt-4o',
-    'gpt-4o-mini',
-    'gpt-4-turbo',
-    'gpt-4',
-    'gpt-3.5-turbo',
-    'gpt-3.5-turbo-16k',
-  ],
+  OPENAI: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k'],
   ANTHROPIC: [
     'claude-3-5-sonnet-20241022',
     'claude-3-5-haiku-20241022',

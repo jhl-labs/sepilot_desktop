@@ -34,7 +34,13 @@ jest.mock('@/components/rag/DocumentList', () => ({
 }));
 
 jest.mock('@/components/persona/PersonaDialog', () => ({
-  PersonaDialog: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+  PersonaDialog: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) => (
     <div data-testid="persona-dialog" data-open={open} onClick={() => onOpenChange(false)}>
       Persona Dialog
     </div>

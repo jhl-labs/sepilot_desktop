@@ -120,7 +120,9 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 탭 스크롤 상태 업데이트
   const updateScrollState = useCallback(() => {
-    if (!tabListRef.current) {return;}
+    if (!tabListRef.current) {
+      return;
+    }
 
     const { scrollLeft, scrollWidth, clientWidth } = tabListRef.current;
     setCanScrollLeft(scrollLeft > 0);
@@ -129,7 +131,9 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 탭 스크롤
   const scrollTabs = useCallback((direction: 'left' | 'right') => {
-    if (!tabListRef.current) {return;}
+    if (!tabListRef.current) {
+      return;
+    }
 
     const scrollAmount = 200;
     const newScrollLeft =
@@ -145,7 +149,9 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 새 탭 생성
   const handleNewTab = useCallback(async () => {
-    if (!containerRef.current) {return;}
+    if (!containerRef.current) {
+      return;
+    }
 
     // Terminal 인스턴스 생성
     const term = new Terminal({
@@ -205,7 +211,9 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       prevTabs.forEach((tab) => {
         tab.isActive = false;
         const div = terminalsRef.current.get(tab.id);
-        if (div) {div.style.display = 'none';}
+        if (div) {
+          div.style.display = 'none';
+        }
       });
 
       terminalsRef.current.set(tabId, terminalDiv);
@@ -249,7 +257,9 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       event.stopPropagation();
 
       const tab = tabs.find((t) => t.id === tabId);
-      if (!tab) {return;}
+      if (!tab) {
+        return;
+      }
 
       // PTY 세션 종료
       await killSession(tab.sessionId);
@@ -323,7 +333,9 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 탭 리스트 스크롤 감지
   useEffect(() => {
-    if (!tabListRef.current) {return;}
+    if (!tabListRef.current) {
+      return;
+    }
 
     const handleScroll = () => updateScrollState();
     tabListRef.current.addEventListener('scroll', handleScroll);
@@ -342,7 +354,10 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   }, [theme, tabs, getTerminalTheme]);
 
   return (
-    <div className="flex h-full flex-col" style={{ backgroundColor: getTerminalTheme().background }}>
+    <div
+      className="flex h-full flex-col"
+      style={{ backgroundColor: getTerminalTheme().background }}
+    >
       {/* 탭 바 */}
       <div className="flex items-center border-b border-border bg-background/50">
         {/* 좌측 스크롤 버튼 */}
@@ -358,10 +373,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
         )}
 
         {/* 탭 목록 */}
-        <div
-          ref={tabListRef}
-          className="scrollbar-hide flex flex-1 items-center overflow-x-auto"
-        >
+        <div ref={tabListRef} className="scrollbar-hide flex flex-1 items-center overflow-x-auto">
           {tabs.map((tab) => (
             <div
               key={tab.id}
@@ -408,11 +420,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       </div>
 
       {/* 터미널 컨테이너 */}
-      <div
-        ref={containerRef}
-        className="flex-1"
-        style={{ overflow: 'hidden' }}
-      />
+      <div ref={containerRef} className="flex-1" style={{ overflow: 'hidden' }} />
     </div>
   );
 }

@@ -25,7 +25,15 @@ import { generateConversationTitle, shouldGenerateTitle } from '@/lib/chat/title
 import { isElectron } from '@/lib/platform';
 import { getWebLLMClient, configureWebLLMClient } from '@/lib/llm/web-client';
 import { isTextFile } from '@/lib/utils';
-import { ImageAttachment, Message, ToolCall, ComfyUIConfig, NetworkConfig, LLMConfig, QuickInputMessageData } from '@/types';
+import {
+  ImageAttachment,
+  Message,
+  ToolCall,
+  ComfyUIConfig,
+  NetworkConfig,
+  LLMConfig,
+  QuickInputMessageData,
+} from '@/types';
 import { ToolApprovalDialog } from './ToolApprovalDialog';
 import { ImageGenerationProgressBar } from './ImageGenerationProgressBar';
 import { LLMStatusBar, type ToolInfo } from './LLMStatusBar';
@@ -90,24 +98,27 @@ export function InputBox() {
 
   // Get current conversation's persona (conversation-specific persona takes precedence)
   const currentConversation = activeConversationId
-    ? conversations.find(c => c.id === activeConversationId)
+    ? conversations.find((c) => c.id === activeConversationId)
     : null;
   const conversationPersonaId = currentConversation?.personaId;
   const effectivePersonaId = conversationPersonaId || activePersonaId;
-  const activePersona = personas.find(p => p.id === effectivePersonaId);
+  const activePersona = personas.find((p) => p.id === effectivePersonaId);
   const personaSystemPrompt = activePersona?.systemPrompt || null;
 
   // Detect slash command for persona switching
   const personaCommand = input.match(/^\/persona\s+(.*)$/);
   const filteredPersonas = personaCommand
-    ? personas.filter(p =>
-        p.name.toLowerCase().includes(personaCommand[1].toLowerCase()) ||
-        p.description.toLowerCase().includes(personaCommand[1].toLowerCase())
+    ? personas.filter(
+        (p) =>
+          p.name.toLowerCase().includes(personaCommand[1].toLowerCase()) ||
+          p.description.toLowerCase().includes(personaCommand[1].toLowerCase())
       )
     : [];
 
   // Determine if any conversation is currently streaming
-  const isStreaming = activeConversationId ? streamingConversations.has(activeConversationId) : false;
+  const isStreaming = activeConversationId
+    ? streamingConversations.has(activeConversationId)
+    : false;
 
   // Get image generation progress for current conversation
   const currentImageGenProgress = activeConversationId
@@ -133,7 +144,9 @@ export function InputBox() {
         configureWebLLMClient(updatedConfig);
       }
       // Dispatch event to notify other components
-      window.dispatchEvent(new CustomEvent('sepilot:config-updated', { detail: { llm: updatedConfig } }));
+      window.dispatchEvent(
+        new CustomEvent('sepilot:config-updated', { detail: { llm: updatedConfig } })
+      );
     } catch (error) {
       console.error('Failed to save LLM config:', error);
     }
@@ -159,13 +172,14 @@ export function InputBox() {
       try {
         // Get all tools from ToolRegistry
         const allToolsResult = await window.electronAPI.mcp.getAllTools();
-        const allTools: ToolInfo[] = allToolsResult.success && allToolsResult.data
-          ? allToolsResult.data.map((tool: any) => ({
-              name: tool.name,
-              description: tool.description,
-              serverName: tool.serverName,
-            }))
-          : [];
+        const allTools: ToolInfo[] =
+          allToolsResult.success && allToolsResult.data
+            ? allToolsResult.data.map((tool: any) => ({
+                name: tool.name,
+                description: tool.description,
+                serverName: tool.serverName,
+              }))
+            : [];
 
         // Chat-specific tool names (Coding Agent only)
         const chatToolNames = new Set([
@@ -199,7 +213,12 @@ export function InputBox() {
 
   // Listen for file drop events from ChatArea
   useEffect(() => {
-    const handleFileDrop = (e: CustomEvent<{ textContents: string[]; imageFiles: { filename: string; mimeType: string; base64: string }[] }>) => {
+    const handleFileDrop = (
+      e: CustomEvent<{
+        textContents: string[];
+        imageFiles: { filename: string; mimeType: string; base64: string }[];
+      }>
+    ) => {
       const { textContents, imageFiles } = e.detail;
 
       if (textContents.length > 0) {
@@ -460,7 +479,9 @@ export function InputBox() {
   // Handle clipboard paste
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData?.items;
-    if (!items) {return;}
+    if (!items) {
+      return;
+    }
 
     const imageFiles: File[] = [];
 
@@ -475,7 +496,9 @@ export function InputBox() {
       }
     }
 
-    if (imageFiles.length === 0) {return;}
+    if (imageFiles.length === 0) {
+      return;
+    }
 
     // 이미지가 있으면 텍스트 붙여넣기 방지
     e.preventDefault();
@@ -533,7 +556,9 @@ export function InputBox() {
     setIsDragging(false);
 
     const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) {return;}
+    if (files.length === 0) {
+      return;
+    }
 
     const textContents: string[] = [];
 
@@ -771,13 +796,17 @@ export function InputBox() {
                 // Update UI with progress status
                 if (progress.status === 'executing' || progress.status === 'queued') {
                   // Append progress message to existing content
-                  scheduleUpdate({ content: `${accumulatedMessage.content || ''}\n\n${progress.message}` });
+                  scheduleUpdate({
+                    content: `${accumulatedMessage.content || ''}\n\n${progress.message}`,
+                  });
                 } else if (progress.status === 'completed') {
                   clearImageGenerationProgress(conversationId);
                 } else if (progress.status === 'error') {
                   clearImageGenerationProgress(conversationId);
                   // Append error message to existing content
-                  scheduleUpdate({ content: `${accumulatedMessage.content || ''}\n\n❌ 이미지 생성 오류: ${progress.message}` });
+                  scheduleUpdate({
+                    content: `${accumulatedMessage.content || ''}\n\n❌ 이미지 생성 오류: ${progress.message}`,
+                  });
                 }
                 return;
               }
@@ -818,7 +847,9 @@ export function InputBox() {
                   timestamp: Date.now(),
                 });
                 // Append approval waiting message to existing content
-                scheduleUpdate({ content: `${accumulatedMessage.content || ''}\n\n🔔 도구 실행 승인을 기다리는 중...` });
+                scheduleUpdate({
+                  content: `${accumulatedMessage.content || ''}\n\n🔔 도구 실행 승인을 기다리는 중...`,
+                });
                 return;
               }
 
@@ -834,296 +865,313 @@ export function InputBox() {
 
               // Show graph node execution status for Agent mode (when tools are enabled)
               if (enableTools && event.type === 'node') {
-                  let nodeStatusMessage = '';
+                let nodeStatusMessage = '';
 
-                  // Generate node: Show AI thinking
-                  if (event.node === 'generate') {
-                    nodeStatusMessage = '🤖 AI가 응답을 생성하고 있습니다...';
+                // Generate node: Show AI thinking
+                if (event.node === 'generate') {
+                  nodeStatusMessage = '🤖 AI가 응답을 생성하고 있습니다...';
 
-                    // If there are tool calls, show them
-                    if (event.data?.messages?.[0]?.tool_calls) {
-                      const toolNames = event.data.messages[0].tool_calls
-                        .map((tc: any) => tc.name)
-                        .join(', ');
-                      nodeStatusMessage = `🤖 AI가 도구 사용을 계획하고 있습니다: ${toolNames}`;
-                    }
-                  }
-
-                  // Tools node: Show tool execution
-                  else if (event.node === 'tools') {
-                    const toolResults = event.data?.toolResults || [];
-                    if (toolResults.length > 0) {
-                      const toolNames = toolResults.map((tr: any) => tr.toolName).join(', ');
-                      const hasError = toolResults.some((tr: any) => tr.error);
-                      const hasImageGen = toolNames.includes('generate_image');
-
-                      if (hasImageGen) {
-                        // 이미지 생성 완료 또는 오류
-                        clearImageGenerationProgress(conversationId);
-                      }
-
-                      if (hasError) {
-                        nodeStatusMessage = `⚠️ 도구 실행 중 일부 오류 발생: ${toolNames}`;
-                      } else {
-                        nodeStatusMessage = `✅ 도구 실행 완료: ${toolNames}`;
-                      }
-                    } else {
-                      // 도구 실행 시작 - 메시지에서 이미지 생성 여부 확인
-                      const recentMessages = event.data?.messages || [];
-                      const hasImageGenCall = recentMessages.some((msg: any) =>
-                        msg.tool_calls?.some((tc: any) => tc.name === 'generate_image')
-                      );
-
-                      if (hasImageGenCall) {
-                        nodeStatusMessage = '🎨 이미지를 생성하고 있습니다...';
-                        setImageGenerationProgress({
-                          conversationId,
-                          messageId: assistantMessageId,
-                          status: 'queued',
-                          message: '🎨 이미지 생성 요청을 준비하는 중...',
-                          progress: 0,
-                        });
-                      } else {
-                        nodeStatusMessage = '🔧 도구를 실행하고 있습니다...';
-                      }
-                    }
-                  }
-
-                  // Reporter node: Final summary
-                  else if (event.node === 'reporter') {
-                    nodeStatusMessage = '📊 최종 결과를 정리하고 있습니다...';
-                  }
-
-                  if (nodeStatusMessage) {
-                    console.log(`[InputBox] Node execution: ${event.node} - ${nodeStatusMessage}`);
-                    // Append to existing content instead of replacing it
-                    scheduleUpdate({ content: `${accumulatedMessage.content || ''}\n\n${nodeStatusMessage}` });
+                  // If there are tool calls, show them
+                  if (event.data?.messages?.[0]?.tool_calls) {
+                    const toolNames = event.data.messages[0].tool_calls
+                      .map((tc: any) => tc.name)
+                      .join(', ');
+                    nodeStatusMessage = `🤖 AI가 도구 사용을 계획하고 있습니다: ${toolNames}`;
                   }
                 }
 
-                // 각 노드의 실행 결과에서 메시지 업데이트
-                // Coding Agent의 모든 과정을 Claude Code 스타일로 표시
-                if (event.type === 'node' && event.data?.messages) {
-                  const allMessages = event.data.messages;
-                  if (allMessages && allMessages.length > 0) {
-                    // Convert all messages to a single display content (Claude Code style)
-                    let displayContent = '';
+                // Tools node: Show tool execution
+                else if (event.node === 'tools') {
+                  const toolResults = event.data?.toolResults || [];
+                  if (toolResults.length > 0) {
+                    const toolNames = toolResults.map((tr: any) => tr.toolName).join(', ');
+                    const hasError = toolResults.some((tr: any) => tr.error);
+                    const hasImageGen = toolNames.includes('generate_image');
 
-                    for (let i = 0; i < allMessages.length; i++) {
-                      const msg = allMessages[i];
+                    if (hasImageGen) {
+                      // 이미지 생성 완료 또는 오류
+                      clearImageGenerationProgress(conversationId);
+                    }
 
-                      // Skip user messages (already displayed separately)
-                      if (msg.role === 'user') {
-                        continue;
-                      }
+                    if (hasError) {
+                      nodeStatusMessage = `⚠️ 도구 실행 중 일부 오류 발생: ${toolNames}`;
+                    } else {
+                      nodeStatusMessage = `✅ 도구 실행 완료: ${toolNames}`;
+                    }
+                  } else {
+                    // 도구 실행 시작 - 메시지에서 이미지 생성 여부 확인
+                    const recentMessages = event.data?.messages || [];
+                    const hasImageGenCall = recentMessages.some((msg: any) =>
+                      msg.tool_calls?.some((tc: any) => tc.name === 'generate_image')
+                    );
 
-                      // Assistant message with tool calls - Only show thinking, not tool names
-                      if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
-                        if (msg.content) {
-                          // Truncate long thinking content
-                          const thinkingContent = msg.content.length > 300
-                            ? `${msg.content.substring(0, 300)  }...`
+                    if (hasImageGenCall) {
+                      nodeStatusMessage = '🎨 이미지를 생성하고 있습니다...';
+                      setImageGenerationProgress({
+                        conversationId,
+                        messageId: assistantMessageId,
+                        status: 'queued',
+                        message: '🎨 이미지 생성 요청을 준비하는 중...',
+                        progress: 0,
+                      });
+                    } else {
+                      nodeStatusMessage = '🔧 도구를 실행하고 있습니다...';
+                    }
+                  }
+                }
+
+                // Reporter node: Final summary
+                else if (event.node === 'reporter') {
+                  nodeStatusMessage = '📊 최종 결과를 정리하고 있습니다...';
+                }
+
+                if (nodeStatusMessage) {
+                  console.log(`[InputBox] Node execution: ${event.node} - ${nodeStatusMessage}`);
+                  // Append to existing content instead of replacing it
+                  scheduleUpdate({
+                    content: `${accumulatedMessage.content || ''}\n\n${nodeStatusMessage}`,
+                  });
+                }
+              }
+
+              // 각 노드의 실행 결과에서 메시지 업데이트
+              // Coding Agent의 모든 과정을 Claude Code 스타일로 표시
+              if (event.type === 'node' && event.data?.messages) {
+                const allMessages = event.data.messages;
+                if (allMessages && allMessages.length > 0) {
+                  // Convert all messages to a single display content (Claude Code style)
+                  let displayContent = '';
+
+                  for (let i = 0; i < allMessages.length; i++) {
+                    const msg = allMessages[i];
+
+                    // Skip user messages (already displayed separately)
+                    if (msg.role === 'user') {
+                      continue;
+                    }
+
+                    // Assistant message with tool calls - Only show thinking, not tool names
+                    if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+                      if (msg.content) {
+                        // Truncate long thinking content
+                        const thinkingContent =
+                          msg.content.length > 300
+                            ? `${msg.content.substring(0, 300)}...`
                             : msg.content;
-                          displayContent += `💭 ${thinkingContent}\n\n`;
-                        }
-                        // Don't show tool calls here - they'll be shown with results
-                        continue;
+                        displayContent += `💭 ${thinkingContent}\n\n`;
                       }
+                      // Don't show tool calls here - they'll be shown with results
+                      continue;
+                    }
 
-                      // Tool result messages - Show tool call + result together
-                      if (msg.role === 'tool' && msg.tool_call_id) {
-                        const toolName = msg.name || 'tool';
+                    // Tool result messages - Show tool call + result together
+                    if (msg.role === 'tool' && msg.tool_call_id) {
+                      const toolName = msg.name || 'tool';
 
-                        // Find the corresponding tool call to get arguments
-                        let toolArgs: any = null;
-                        for (let j = i - 1; j >= 0; j--) {
-                          const prevMsg = allMessages[j];
-                          if (prevMsg.role === 'assistant' && prevMsg.tool_calls) {
-                            const toolCall = prevMsg.tool_calls.find((tc: any) => tc.id === msg.tool_call_id);
-                            if (toolCall) {
-                              toolArgs = toolCall.arguments;
-                              break;
-                            }
+                      // Find the corresponding tool call to get arguments
+                      let toolArgs: any = null;
+                      for (let j = i - 1; j >= 0; j--) {
+                        const prevMsg = allMessages[j];
+                        if (prevMsg.role === 'assistant' && prevMsg.tool_calls) {
+                          const toolCall = prevMsg.tool_calls.find(
+                            (tc: any) => tc.id === msg.tool_call_id
+                          );
+                          if (toolCall) {
+                            toolArgs = toolCall.arguments;
+                            break;
                           }
                         }
+                      }
 
-                        // Check if there's an error in the content
-                        const hasError = msg.content && (
-                          msg.content.toLowerCase().includes('error:') ||
+                      // Check if there's an error in the content
+                      const hasError =
+                        msg.content &&
+                        (msg.content.toLowerCase().includes('error:') ||
                           msg.content.toLowerCase().includes('failed to') ||
                           msg.content.toLowerCase().includes('enoent') ||
-                          msg.content.toLowerCase().includes('eacces')
-                        );
+                          msg.content.toLowerCase().includes('eacces'));
 
-                        // Start with tool name and args
-                        displayContent += `🔧 ${toolName}`;
-                        if (toolArgs) {
-                          if (toolArgs.command) {
-                            displayContent += ` \`${toolArgs.command}\``;
-                          } else if (toolArgs.path) {
-                            displayContent += ` \`${toolArgs.path}\``;
-                          } else if (toolArgs.pattern) {
-                            displayContent += ` \`${toolArgs.pattern}\``;
-                          }
+                      // Start with tool name and args
+                      displayContent += `🔧 ${toolName}`;
+                      if (toolArgs) {
+                        if (toolArgs.command) {
+                          displayContent += ` \`${toolArgs.command}\``;
+                        } else if (toolArgs.path) {
+                          displayContent += ` \`${toolArgs.path}\``;
+                        } else if (toolArgs.pattern) {
+                          displayContent += ` \`${toolArgs.pattern}\``;
                         }
-                        displayContent += '\n';
+                      }
+                      displayContent += '\n';
 
-                        if (hasError) {
-                          // Show error details
-                          const errorLines = msg.content.split('\n');
-                          const linesToShow = errorLines.slice(0, 10);
-                          let errorMsg = linesToShow.join('\n');
+                      if (hasError) {
+                        // Show error details
+                        const errorLines = msg.content.split('\n');
+                        const linesToShow = errorLines.slice(0, 10);
+                        let errorMsg = linesToShow.join('\n');
 
-                          if (errorMsg.length > 800) {
-                            errorMsg = `${errorMsg.substring(0, 800)  }\n... (truncated)`;
-                          }
+                        if (errorMsg.length > 800) {
+                          errorMsg = `${errorMsg.substring(0, 800)}\n... (truncated)`;
+                        }
 
-                          const indentedError = errorMsg.split('\n')
-                            .map((line: string) => `   ❌ ${line}`)
-                            .join('\n');
-                          displayContent += `${indentedError}\n\n`;
-                        } else {
-                          // Show success with summary
-                          let summary = '';
+                        const indentedError = errorMsg
+                          .split('\n')
+                          .map((line: string) => `   ❌ ${line}`)
+                          .join('\n');
+                        displayContent += `${indentedError}\n\n`;
+                      } else {
+                        // Show success with summary
+                        let summary = '';
 
-                          if (toolName === 'file_write' || toolName === 'file_edit') {
-                            // Show file modification summary
-                            if (toolArgs?.path) {
-                              summary = `Modified ${toolArgs.path}`;
-                              if (msg.content.includes('lines changed')) {
-                                const match = msg.content.match(/(\d+)\s+lines?\s+changed/);
-                                if (match) {summary = `${match[1]} lines changed`;}
+                        if (toolName === 'file_write' || toolName === 'file_edit') {
+                          // Show file modification summary
+                          if (toolArgs?.path) {
+                            summary = `Modified ${toolArgs.path}`;
+                            if (msg.content.includes('lines changed')) {
+                              const match = msg.content.match(/(\d+)\s+lines?\s+changed/);
+                              if (match) {
+                                summary = `${match[1]} lines changed`;
                               }
-                            } else {
-                              summary = msg.content.split('\n')[0].substring(0, 60);
                             }
-                          } else if (toolName === 'file_read') {
-                            const lines = msg.content.split('\n').length;
-                            summary = `Read ${lines} lines`;
-                          } else if (toolName === 'file_list') {
-                            const files = msg.content.split('\n').filter((l: string) => l.trim()).length;
-                            summary = `Found ${files} items`;
-                          } else if (toolName === 'command_execute') {
-                            // Show stdout (first few lines)
-                            const lines = msg.content.split('\n').slice(0, 5);
-                            let output = lines.join('\n');
-                            if (output.length > 200) {
-                              output = `${output.substring(0, 200)  }...`;
-                            }
-                            if (output.trim()) {
-                              summary = output;
-                            } else {
-                              summary = 'Success (no output)';
-                            }
-                          } else if (toolName === 'grep_search') {
-                            const matches = msg.content.split('\n').filter((l: string) => l.trim()).length;
-                            summary = `Found ${matches} matches`;
                           } else {
-                            // Generic summary - first line
                             summary = msg.content.split('\n')[0].substring(0, 60);
                           }
-
-                          displayContent += `   ✅ ${summary}\n\n`;
-                        }
-                        continue;
-                      }
-
-                      // Final assistant message (no tool calls)
-                      if (msg.role === 'assistant' && (!msg.tool_calls || msg.tool_calls.length === 0)) {
-                        if (msg.content) {
-                          displayContent += `${msg.content}\n\n`;
-                        }
-                      }
-                    }
-
-                    // Update with formatted content
-                    scheduleUpdate({
-                      content: displayContent.trim(),
-                      referenced_documents: allMessages[allMessages.length - 1]?.referenced_documents
-                    });
-                  }
-                }
-
-                // Extract generated images from tool results
-                if (event.type === 'node' && event.node === 'tools' && event.data?.toolResults) {
-                  const toolResults = event.data.toolResults;
-                  const generatedImages: ImageAttachment[] = [];
-
-                  console.log('[InputBox] Processing tool results:', toolResults);
-
-                  // Show tool completion status
-                  const toolNames = toolResults.map((tr: any) => tr.toolName).join(', ');
-                  const hasImageGeneration = toolResults.some(
-                    (tr: any) => tr.toolName === 'generate_image'
-                  );
-
-                  // 이미지 생성 진행 상황 초기화
-                  if (hasImageGeneration) {
-                    clearImageGenerationProgress(conversationId);
-                  }
-
-                  const statusMessage = `✅ 도구 실행 완료: ${toolNames}\n\n답변을 생성하고 있습니다...`;
-                  // Append to existing content instead of replacing it
-                  scheduleUpdate({ content: `${accumulatedMessage.content || ''}\n\n${statusMessage}` });
-
-                  for (const toolResult of toolResults) {
-                    if (toolResult.toolName === 'generate_image' && toolResult.result) {
-                      try {
-                        let resultData;
-
-                        // Safe JSON parsing with better error handling
-                        if (typeof toolResult.result === 'string') {
-                          try {
-                            // Try to parse as JSON
-                            resultData = JSON.parse(toolResult.result);
-                          } catch (parseError) {
-                            // If parsing fails, log and skip
-                            console.error('[InputBox] JSON parse error for tool result:', parseError);
-                            console.error(
-                              '[InputBox] Raw result:',
-                              toolResult.result.substring(0, 200)
-                            );
-                            continue;
+                        } else if (toolName === 'file_read') {
+                          const lines = msg.content.split('\n').length;
+                          summary = `Read ${lines} lines`;
+                        } else if (toolName === 'file_list') {
+                          const files = msg.content
+                            .split('\n')
+                            .filter((l: string) => l.trim()).length;
+                          summary = `Found ${files} items`;
+                        } else if (toolName === 'command_execute') {
+                          // Show stdout (first few lines)
+                          const lines = msg.content.split('\n').slice(0, 5);
+                          let output = lines.join('\n');
+                          if (output.length > 200) {
+                            output = `${output.substring(0, 200)}...`;
                           }
+                          if (output.trim()) {
+                            summary = output;
+                          } else {
+                            summary = 'Success (no output)';
+                          }
+                        } else if (toolName === 'grep_search') {
+                          const matches = msg.content
+                            .split('\n')
+                            .filter((l: string) => l.trim()).length;
+                          summary = `Found ${matches} matches`;
                         } else {
-                          // Already an object
-                          resultData = toolResult.result;
+                          // Generic summary - first line
+                          summary = msg.content.split('\n')[0].substring(0, 60);
                         }
 
-                        console.log('[InputBox] Parsed image generation result:', resultData);
+                        displayContent += `   ✅ ${summary}\n\n`;
+                      }
+                      continue;
+                    }
 
-                        if (resultData.success && resultData.imageBase64) {
-                          generatedImages.push({
-                            id: `generated-${Date.now()}-${Math.random()}`,
-                            path: '',
-                            filename: `Generated: ${resultData.prompt?.substring(0, 30) || 'image'}...`,
-                            mimeType: 'image/png',
-                            base64: resultData.imageBase64,
-                          });
-                          console.log('[InputBox] Added generated image to message');
-                        }
-                      } catch (error) {
-                        console.error('[InputBox] Failed to process image generation result:', error);
+                    // Final assistant message (no tool calls)
+                    if (
+                      msg.role === 'assistant' &&
+                      (!msg.tool_calls || msg.tool_calls.length === 0)
+                    ) {
+                      if (msg.content) {
+                        displayContent += `${msg.content}\n\n`;
                       }
                     }
                   }
 
-                  if (generatedImages.length > 0) {
-                    scheduleUpdate({ images: generatedImages });
-                    // 이미지 생성 완료 후 토글 자동 비활성화
-                    setEnableImageGeneration(false);
-                    console.log('[InputBox] Image generation completed, disabling toggle');
+                  // Update with formatted content
+                  scheduleUpdate({
+                    content: displayContent.trim(),
+                    referenced_documents: allMessages[allMessages.length - 1]?.referenced_documents,
+                  });
+                }
+              }
+
+              // Extract generated images from tool results
+              if (event.type === 'node' && event.node === 'tools' && event.data?.toolResults) {
+                const toolResults = event.data.toolResults;
+                const generatedImages: ImageAttachment[] = [];
+
+                console.log('[InputBox] Processing tool results:', toolResults);
+
+                // Show tool completion status
+                const toolNames = toolResults.map((tr: any) => tr.toolName).join(', ');
+                const hasImageGeneration = toolResults.some(
+                  (tr: any) => tr.toolName === 'generate_image'
+                );
+
+                // 이미지 생성 진행 상황 초기화
+                if (hasImageGeneration) {
+                  clearImageGenerationProgress(conversationId);
+                }
+
+                const statusMessage = `✅ 도구 실행 완료: ${toolNames}\n\n답변을 생성하고 있습니다...`;
+                // Append to existing content instead of replacing it
+                scheduleUpdate({
+                  content: `${accumulatedMessage.content || ''}\n\n${statusMessage}`,
+                });
+
+                for (const toolResult of toolResults) {
+                  if (toolResult.toolName === 'generate_image' && toolResult.result) {
+                    try {
+                      let resultData;
+
+                      // Safe JSON parsing with better error handling
+                      if (typeof toolResult.result === 'string') {
+                        try {
+                          // Try to parse as JSON
+                          resultData = JSON.parse(toolResult.result);
+                        } catch (parseError) {
+                          // If parsing fails, log and skip
+                          console.error('[InputBox] JSON parse error for tool result:', parseError);
+                          console.error(
+                            '[InputBox] Raw result:',
+                            toolResult.result.substring(0, 200)
+                          );
+                          continue;
+                        }
+                      } else {
+                        // Already an object
+                        resultData = toolResult.result;
+                      }
+
+                      console.log('[InputBox] Parsed image generation result:', resultData);
+
+                      if (resultData.success && resultData.imageBase64) {
+                        generatedImages.push({
+                          id: `generated-${Date.now()}-${Math.random()}`,
+                          path: '',
+                          filename: `Generated: ${resultData.prompt?.substring(0, 30) || 'image'}...`,
+                          mimeType: 'image/png',
+                          base64: resultData.imageBase64,
+                        });
+                        console.log('[InputBox] Added generated image to message');
+                      }
+                    } catch (error) {
+                      console.error('[InputBox] Failed to process image generation result:', error);
+                    }
                   }
                 }
 
-                // 에러 처리
-                if (event.type === 'error') {
-                  throw new Error(event.error || 'Graph execution failed');
+                if (generatedImages.length > 0) {
+                  scheduleUpdate({ images: generatedImages });
+                  // 이미지 생성 완료 후 토글 자동 비활성화
+                  setEnableImageGeneration(false);
+                  console.log('[InputBox] Image generation completed, disabling toggle');
                 }
-              } catch (parseError) {
-                console.error('[InputBox] Failed to parse stream event:', parseError);
               }
-            });
+
+              // 에러 처리
+              if (event.type === 'error') {
+                throw new Error(event.error || 'Graph execution failed');
+              }
+            } catch (parseError) {
+              console.error('[InputBox] Failed to parse stream event:', parseError);
+            }
+          });
 
           cleanupDoneHandler = window.electronAPI.langgraph.onStreamDone(
             (data?: { conversationId?: string }) => {
@@ -1309,16 +1357,12 @@ export function InputBox() {
     if (showPersonaAutocomplete && filteredPersonas.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setPersonaAutocompleteIndex((prev) =>
-          prev < filteredPersonas.length - 1 ? prev + 1 : 0
-        );
+        setPersonaAutocompleteIndex((prev) => (prev < filteredPersonas.length - 1 ? prev + 1 : 0));
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setPersonaAutocompleteIndex((prev) =>
-          prev > 0 ? prev - 1 : filteredPersonas.length - 1
-        );
+        setPersonaAutocompleteIndex((prev) => (prev > 0 ? prev - 1 : filteredPersonas.length - 1));
         return;
       }
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -1347,28 +1391,38 @@ export function InputBox() {
   };
 
   // Handle tool approval
-  const handleToolApprove = useCallback(async (toolCalls: ToolCall[]) => {
-    if (!pendingToolApproval) {return;}
-
-    console.log('[InputBox] Approving tools:', toolCalls.map(tc => tc.name));
-
-    try {
-      if (isElectron() && window.electronAPI?.langgraph) {
-        await window.electronAPI.langgraph.respondToolApproval(
-          pendingToolApproval.conversationId,
-          true
-        );
+  const handleToolApprove = useCallback(
+    async (toolCalls: ToolCall[]) => {
+      if (!pendingToolApproval) {
+        return;
       }
-    } catch (error) {
-      console.error('[InputBox] Failed to respond to tool approval:', error);
-    }
 
-    clearPendingToolApproval();
-  }, [pendingToolApproval, clearPendingToolApproval]);
+      console.log(
+        '[InputBox] Approving tools:',
+        toolCalls.map((tc) => tc.name)
+      );
+
+      try {
+        if (isElectron() && window.electronAPI?.langgraph) {
+          await window.electronAPI.langgraph.respondToolApproval(
+            pendingToolApproval.conversationId,
+            true
+          );
+        }
+      } catch (error) {
+        console.error('[InputBox] Failed to respond to tool approval:', error);
+      }
+
+      clearPendingToolApproval();
+    },
+    [pendingToolApproval, clearPendingToolApproval]
+  );
 
   // Handle tool rejection
   const handleToolReject = useCallback(async () => {
-    if (!pendingToolApproval) {return;}
+    if (!pendingToolApproval) {
+      return;
+    }
 
     console.log('[InputBox] Rejecting tools');
 
@@ -1387,28 +1441,33 @@ export function InputBox() {
   }, [pendingToolApproval, clearPendingToolApproval]);
 
   // Handle always approve (session-wide)
-  const handleToolAlwaysApprove = useCallback(async (_toolCalls: ToolCall[]) => {
-    if (!pendingToolApproval) {return;}
-
-    console.log('[InputBox] Always approving tools for session');
-
-    // Set session-wide auto-approval
-    setAlwaysApproveToolsForSession(true);
-
-    // Approve current tools
-    try {
-      if (isElectron() && window.electronAPI?.langgraph) {
-        await window.electronAPI.langgraph.respondToolApproval(
-          pendingToolApproval.conversationId,
-          true
-        );
+  const handleToolAlwaysApprove = useCallback(
+    async (_toolCalls: ToolCall[]) => {
+      if (!pendingToolApproval) {
+        return;
       }
-    } catch (error) {
-      console.error('[InputBox] Failed to respond to tool approval:', error);
-    }
 
-    clearPendingToolApproval();
-  }, [pendingToolApproval, clearPendingToolApproval, setAlwaysApproveToolsForSession]);
+      console.log('[InputBox] Always approving tools for session');
+
+      // Set session-wide auto-approval
+      setAlwaysApproveToolsForSession(true);
+
+      // Approve current tools
+      try {
+        if (isElectron() && window.electronAPI?.langgraph) {
+          await window.electronAPI.langgraph.respondToolApproval(
+            pendingToolApproval.conversationId,
+            true
+          );
+        }
+      } catch (error) {
+        console.error('[InputBox] Failed to respond to tool approval:', error);
+      }
+
+      clearPendingToolApproval();
+    },
+    [pendingToolApproval, clearPendingToolApproval, setAlwaysApproveToolsForSession]
+  );
 
   return (
     <>
@@ -1441,368 +1500,369 @@ export function InputBox() {
             </div>
           )}
 
-        {error && (
-          <div className="mb-3 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive border border-destructive/20">
-            {error}
-          </div>
-        )}
-        {/* Selected Images Preview */}
-        {selectedImages.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
-            {mounted ? (
-              <TooltipProvider>
-                {selectedImages.map((image, index) => (
-                  <Tooltip key={image.id}>
-                    <TooltipTrigger asChild>
-                      <div className="relative inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm group hover:bg-accent/80 transition-colors">
-                        <ImagePlus className="h-3.5 w-3.5" />
-                        <span className="font-medium">이미지 #{index + 1}</span>
-                        <button
-                          onClick={() => handleRemoveImage(image.id)}
-                          className="ml-1 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
-                          disabled={isStreaming}
-                          title="이미지 제거"
-                          aria-label="이미지 제거"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="p-0 border-0 shadow-lg">
-                      <div className="max-w-xs">
-                        <img
-                          src={image.base64}
-                          alt={image.filename}
-                          className="rounded-md max-h-48 w-auto"
-                        />
-                        <div className="p-2 text-xs text-muted-foreground bg-background/95 backdrop-blur">
-                          {image.filename}
-                        </div>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </TooltipProvider>
-            ) : (
-              // Fallback for SSR - no tooltip
-              selectedImages.map((image, index) => (
-                <div
-                  key={image.id}
-                  className="relative inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm group hover:bg-accent/80 transition-colors"
-                >
-                  <ImagePlus className="h-3.5 w-3.5" />
-                  <span className="font-medium">이미지 #{index + 1}</span>
-                  <button
-                    onClick={() => handleRemoveImage(image.id)}
-                    className="ml-1 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
-                    disabled={isStreaming}
-                    title="이미지 제거"
-                    aria-label="이미지 제거"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-        <div className="relative flex items-end gap-2 rounded-2xl border border-input bg-background shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 transition-all">
-          {/* Persona Autocomplete Dropdown */}
-          {showPersonaAutocomplete && filteredPersonas.length > 0 && (
-            <div
-              ref={autocompleteRef}
-              className="absolute bottom-full left-0 right-0 mb-2 max-h-[300px] overflow-y-auto rounded-lg border border-input bg-popover shadow-lg z-50"
-            >
-              <div className="p-2 space-y-1">
-                {filteredPersonas.map((persona, index) => (
-                  <button
-                    key={persona.id}
-                    onClick={() => {
-                      setActivePersona(persona.id);
-                      setInput('');
-                      setShowPersonaAutocomplete(false);
-                    }}
-                    className={`w-full flex items-center gap-3 p-3 rounded-md text-left transition-colors ${
-                      index === personaAutocompleteIndex
-                        ? 'bg-accent'
-                        : 'hover:bg-accent/50'
-                    }`}
-                  >
-                    <span className="text-2xl flex-shrink-0">{persona.avatar || '🤖'}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{persona.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {persona.description}
-                      </div>
-                    </div>
-                    {activePersonaId === persona.id && (
-                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                    )}
-                  </button>
-                ))}
-              </div>
+          {error && (
+            <div className="mb-3 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive border border-destructive/20">
+              {error}
             </div>
           )}
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            onCompositionStart={() => setIsComposing(true)}
-            onCompositionEnd={() => setIsComposing(false)}
-            placeholder={
-              selectedImages.length > 0
-                ? '이미지에 대한 질문을 입력하세요...'
-                : '메시지를 입력하세요...'
-            }
-            className="flex-1 min-h-[52px] max-h-[200px] resize-none border-0 bg-transparent px-4 py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
-            disabled={isStreaming}
-            rows={1}
-            aria-label="메시지 입력"
-            aria-disabled={isStreaming}
-          />
-          <div className="flex items-center gap-1 pb-2 pr-2">
-            {/* Thinking Mode Selector */}
-            {mounted && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 rounded-xl shrink-0"
-                    title={
-                      enableImageGeneration
-                        ? '이미지 생성 모드에서는 Instant 모드만 사용 가능합니다'
-                        : `사고 모드: ${
-                            thinkingMode === 'instant'
-                              ? 'Instant'
-                              : thinkingMode === 'sequential'
-                                ? 'Sequential'
-                                : thinkingMode === 'tree-of-thought'
-                                  ? 'Tree of Thought'
-                                  : thinkingMode === 'deep'
-                                    ? 'Deep Thinking'
-                                    : 'Coding (beta)'
-                          }`
-                    }
-                    disabled={isStreaming || enableImageGeneration}
+          {/* Selected Images Preview */}
+          {selectedImages.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {mounted ? (
+                <TooltipProvider>
+                  {selectedImages.map((image, index) => (
+                    <Tooltip key={image.id}>
+                      <TooltipTrigger asChild>
+                        <div className="relative inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm group hover:bg-accent/80 transition-colors">
+                          <ImagePlus className="h-3.5 w-3.5" />
+                          <span className="font-medium">이미지 #{index + 1}</span>
+                          <button
+                            onClick={() => handleRemoveImage(image.id)}
+                            className="ml-1 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
+                            disabled={isStreaming}
+                            title="이미지 제거"
+                            aria-label="이미지 제거"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="p-0 border-0 shadow-lg">
+                        <div className="max-w-xs">
+                          <img
+                            src={image.base64}
+                            alt={image.filename}
+                            className="rounded-md max-h-48 w-auto"
+                          />
+                          <div className="p-2 text-xs text-muted-foreground bg-background/95 backdrop-blur">
+                            {image.filename}
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
+              ) : (
+                // Fallback for SSR - no tooltip
+                selectedImages.map((image, index) => (
+                  <div
+                    key={image.id}
+                    className="relative inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm group hover:bg-accent/80 transition-colors"
                   >
-                    {thinkingMode === 'instant' && <Zap className="h-4 w-4" />}
-                    {thinkingMode === 'sequential' && <Brain className="h-4 w-4" />}
-                    {thinkingMode === 'tree-of-thought' && <Network className="h-4 w-4" />}
-                    {thinkingMode === 'deep' && <Sparkles className="h-4 w-4" />}
-                    {thinkingMode === 'coding' && <Code className="h-4 w-4" />}
-                    <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" side="top" className="w-56">
-                  <DropdownMenuItem
-                    onClick={() => setThinkingMode('instant')}
-                    className={thinkingMode === 'instant' ? 'bg-accent' : ''}
-                  >
-                    <Zap className="mr-2 h-4 w-4 text-yellow-500" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">Instant</span>
-                      <span className="text-xs text-muted-foreground">즉시 응답 - 빠른 대화</span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setThinkingMode('sequential')}
-                    className={thinkingMode === 'sequential' ? 'bg-accent' : ''}
-                  >
-                    <Brain className="mr-2 h-4 w-4 text-blue-500" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">Sequential Thinking</span>
-                      <span className="text-xs text-muted-foreground">
-                        순차적 사고 - 단계별 추론
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setThinkingMode('tree-of-thought')}
-                    className={thinkingMode === 'tree-of-thought' ? 'bg-accent' : ''}
-                  >
-                    <Network className="mr-2 h-4 w-4 text-purple-500" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">Tree of Thought</span>
-                      <span className="text-xs text-muted-foreground">다중 경로 탐색</span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setThinkingMode('deep')}
-                    className={thinkingMode === 'deep' ? 'bg-accent' : ''}
-                  >
-                    <Sparkles className="mr-2 h-4 w-4 text-pink-500" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">Deep Thinking</span>
-                      <span className="text-xs text-muted-foreground">
-                        깊은 사고 - 최고 품질 (느림)
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setThinkingMode('coding');
-                      // Coding 모드는 자동으로 Tools를 활성화
+                    <ImagePlus className="h-3.5 w-3.5" />
+                    <span className="font-medium">이미지 #{index + 1}</span>
+                    <button
+                      onClick={() => handleRemoveImage(image.id)}
+                      className="ml-1 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
+                      disabled={isStreaming}
+                      title="이미지 제거"
+                      aria-label="이미지 제거"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+          <div className="relative flex items-end gap-2 rounded-2xl border border-input bg-background shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 transition-all">
+            {/* Persona Autocomplete Dropdown */}
+            {showPersonaAutocomplete && filteredPersonas.length > 0 && (
+              <div
+                ref={autocompleteRef}
+                className="absolute bottom-full left-0 right-0 mb-2 max-h-[300px] overflow-y-auto rounded-lg border border-input bg-popover shadow-lg z-50"
+              >
+                <div className="p-2 space-y-1">
+                  {filteredPersonas.map((persona, index) => (
+                    <button
+                      key={persona.id}
+                      onClick={() => {
+                        setActivePersona(persona.id);
+                        setInput('');
+                        setShowPersonaAutocomplete(false);
+                      }}
+                      className={`w-full flex items-center gap-3 p-3 rounded-md text-left transition-colors ${
+                        index === personaAutocompleteIndex ? 'bg-accent' : 'hover:bg-accent/50'
+                      }`}
+                    >
+                      <span className="text-2xl flex-shrink-0">{persona.avatar || '🤖'}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{persona.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {persona.description}
+                        </div>
+                      </div>
+                      {activePersonaId === persona.id && (
+                        <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <Textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={() => setIsComposing(false)}
+              placeholder={
+                selectedImages.length > 0
+                  ? '이미지에 대한 질문을 입력하세요...'
+                  : '메시지를 입력하세요...'
+              }
+              className="flex-1 min-h-[52px] max-h-[200px] resize-none border-0 bg-transparent px-4 py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
+              disabled={isStreaming}
+              rows={1}
+              aria-label="메시지 입력"
+              aria-disabled={isStreaming}
+            />
+            <div className="flex items-center gap-1 pb-2 pr-2">
+              {/* Thinking Mode Selector */}
+              {mounted && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-xl shrink-0"
+                      title={
+                        enableImageGeneration
+                          ? '이미지 생성 모드에서는 Instant 모드만 사용 가능합니다'
+                          : `사고 모드: ${
+                              thinkingMode === 'instant'
+                                ? 'Instant'
+                                : thinkingMode === 'sequential'
+                                  ? 'Sequential'
+                                  : thinkingMode === 'tree-of-thought'
+                                    ? 'Tree of Thought'
+                                    : thinkingMode === 'deep'
+                                      ? 'Deep Thinking'
+                                      : 'Coding (beta)'
+                            }`
+                      }
+                      disabled={isStreaming || enableImageGeneration}
+                    >
+                      {thinkingMode === 'instant' && <Zap className="h-4 w-4" />}
+                      {thinkingMode === 'sequential' && <Brain className="h-4 w-4" />}
+                      {thinkingMode === 'tree-of-thought' && <Network className="h-4 w-4" />}
+                      {thinkingMode === 'deep' && <Sparkles className="h-4 w-4" />}
+                      {thinkingMode === 'coding' && <Code className="h-4 w-4" />}
+                      <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" side="top" className="w-56">
+                    <DropdownMenuItem
+                      onClick={() => setThinkingMode('instant')}
+                      className={thinkingMode === 'instant' ? 'bg-accent' : ''}
+                    >
+                      <Zap className="mr-2 h-4 w-4 text-yellow-500" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Instant</span>
+                        <span className="text-xs text-muted-foreground">즉시 응답 - 빠른 대화</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setThinkingMode('sequential')}
+                      className={thinkingMode === 'sequential' ? 'bg-accent' : ''}
+                    >
+                      <Brain className="mr-2 h-4 w-4 text-blue-500" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Sequential Thinking</span>
+                        <span className="text-xs text-muted-foreground">
+                          순차적 사고 - 단계별 추론
+                        </span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setThinkingMode('tree-of-thought')}
+                      className={thinkingMode === 'tree-of-thought' ? 'bg-accent' : ''}
+                    >
+                      <Network className="mr-2 h-4 w-4 text-purple-500" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Tree of Thought</span>
+                        <span className="text-xs text-muted-foreground">다중 경로 탐색</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setThinkingMode('deep')}
+                      className={thinkingMode === 'deep' ? 'bg-accent' : ''}
+                    >
+                      <Sparkles className="mr-2 h-4 w-4 text-pink-500" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Deep Thinking</span>
+                        <span className="text-xs text-muted-foreground">
+                          깊은 사고 - 최고 품질 (느림)
+                        </span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setThinkingMode('coding');
+                        // Coding 모드는 자동으로 Tools를 활성화
+                        setEnableTools(true);
+                      }}
+                      className={thinkingMode === 'coding' ? 'bg-accent' : ''}
+                    >
+                      <Code className="mr-2 h-4 w-4 text-green-500" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Coding (beta)</span>
+                        <span className="text-xs text-muted-foreground">
+                          복잡한 코딩 작업 - ReAct Agent
+                        </span>
+                      </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              {/* RAG Toggle */}
+              {mounted && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={() => setEnableRAG(!enableRAG)}
+                        variant="ghost"
+                        size="icon"
+                        className={`h-9 w-9 rounded-xl shrink-0 transition-colors ${
+                          enableRAG ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20' : ''
+                        }`}
+                        title={enableRAG ? 'RAG 비활성화' : 'RAG 활성화'}
+                        aria-label={enableRAG ? 'RAG 비활성화' : 'RAG 활성화'}
+                        disabled={isStreaming}
+                      >
+                        <Database className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p className="font-medium">RAG 검색</p>
+                      <p className="text-xs text-muted-foreground">
+                        문서 데이터베이스에서 관련 정보를 검색합니다
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {/* Tools Toggle */}
+              {mounted && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={() => setEnableTools(!enableTools)}
+                        variant="ghost"
+                        size="icon"
+                        className={`h-9 w-9 rounded-xl shrink-0 transition-colors ${
+                          enableTools
+                            ? 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20'
+                            : ''
+                        }`}
+                        title={enableTools ? 'Tools 비활성화' : 'Tools 활성화'}
+                        aria-label={enableTools ? 'Tools 비활성화' : 'Tools 활성화'}
+                        disabled={isStreaming}
+                      >
+                        <Wrench className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p className="font-medium">MCP Tools</p>
+                      <p className="text-xs text-muted-foreground">
+                        AI가 외부 도구를 사용할 수 있습니다
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {/* Image Upload Button */}
+              {mounted && isElectron() && (
+                <Button
+                  onClick={handleImageSelect}
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-xl shrink-0"
+                  title="이미지 추가"
+                  aria-label="이미지 파일 선택"
+                  disabled={isStreaming}
+                >
+                  <ImagePlus className="h-4 w-4" />
+                </Button>
+              )}
+              {/* Image Generation Toggle - Only show if ComfyUI is available */}
+              {mounted && isElectron() && comfyUIAvailable && (
+                <Button
+                  onClick={() => {
+                    const newValue = !enableImageGeneration;
+                    setEnableImageGeneration(newValue);
+                    // 이미지 생성 활성화 시 자동으로 Tools도 활성화 (Agent 그래프 사용)
+                    if (newValue && !enableTools) {
                       setEnableTools(true);
-                    }}
-                    className={thinkingMode === 'coding' ? 'bg-accent' : ''}
-                  >
-                    <Code className="mr-2 h-4 w-4 text-green-500" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">Coding (beta)</span>
-                      <span className="text-xs text-muted-foreground">
-                        복잡한 코딩 작업 - ReAct Agent
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {/* RAG Toggle */}
-            {mounted && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => setEnableRAG(!enableRAG)}
-                      variant="ghost"
-                      size="icon"
-                      className={`h-9 w-9 rounded-xl shrink-0 transition-colors ${
-                        enableRAG ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20' : ''
-                      }`}
-                      title={enableRAG ? 'RAG 비활성화' : 'RAG 활성화'}
-                      aria-label={enableRAG ? 'RAG 비활성화' : 'RAG 활성화'}
-                      disabled={isStreaming}
-                    >
-                      <Database className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p className="font-medium">RAG 검색</p>
-                    <p className="text-xs text-muted-foreground">
-                      문서 데이터베이스에서 관련 정보를 검색합니다
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-
-            {/* Tools Toggle */}
-            {mounted && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => setEnableTools(!enableTools)}
-                      variant="ghost"
-                      size="icon"
-                      className={`h-9 w-9 rounded-xl shrink-0 transition-colors ${
-                        enableTools ? 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20' : ''
-                      }`}
-                      title={enableTools ? 'Tools 비활성화' : 'Tools 활성화'}
-                      aria-label={enableTools ? 'Tools 비활성화' : 'Tools 활성화'}
-                      disabled={isStreaming}
-                    >
-                      <Wrench className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p className="font-medium">MCP Tools</p>
-                    <p className="text-xs text-muted-foreground">
-                      AI가 외부 도구를 사용할 수 있습니다
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-
-            {/* Image Upload Button */}
-            {mounted && isElectron() && (
-              <Button
-                onClick={handleImageSelect}
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-xl shrink-0"
-                title="이미지 추가"
-                aria-label="이미지 파일 선택"
-                disabled={isStreaming}
-              >
-                <ImagePlus className="h-4 w-4" />
-              </Button>
-            )}
-            {/* Image Generation Toggle - Only show if ComfyUI is available */}
-            {mounted && isElectron() && comfyUIAvailable && (
-              <Button
-                onClick={() => {
-                  const newValue = !enableImageGeneration;
-                  setEnableImageGeneration(newValue);
-                  // 이미지 생성 활성화 시 자동으로 Tools도 활성화 (Agent 그래프 사용)
-                  if (newValue && !enableTools) {
-                    setEnableTools(true);
+                    }
+                  }}
+                  variant="ghost"
+                  size="icon"
+                  className={`h-9 w-9 rounded-xl shrink-0 transition-colors ${
+                    enableImageGeneration ? 'bg-primary/10 text-primary hover:bg-primary/20' : ''
+                  }`}
+                  title={
+                    enableImageGeneration
+                      ? '이미지 생성 비활성화'
+                      : '이미지 생성 활성화 (Tools 자동 활성화)'
                   }
-                }}
-                variant="ghost"
-                size="icon"
-                className={`h-9 w-9 rounded-xl shrink-0 transition-colors ${
-                  enableImageGeneration ? 'bg-primary/10 text-primary hover:bg-primary/20' : ''
-                }`}
-                title={enableImageGeneration ? '이미지 생성 비활성화' : '이미지 생성 활성화 (Tools 자동 활성화)'}
-                aria-label={enableImageGeneration ? '이미지 생성 비활성화' : '이미지 생성 활성화'}
-                aria-pressed={enableImageGeneration}
-                disabled={isStreaming}
-              >
-                <Sparkles className="h-4 w-4" />
-              </Button>
-            )}
+                  aria-label={enableImageGeneration ? '이미지 생성 비활성화' : '이미지 생성 활성화'}
+                  aria-pressed={enableImageGeneration}
+                  disabled={isStreaming}
+                >
+                  <Sparkles className="h-4 w-4" />
+                </Button>
+              )}
 
-            {/* Send/Stop Button */}
-            {isStreaming ? (
-              <Button
-                onClick={handleStop}
-                variant="destructive"
-                size="icon"
-                className="h-9 w-9 rounded-xl shrink-0"
-                title="중지 (Esc)"
-                aria-label="스트리밍 중지"
-              >
-                <Square className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSend}
-                disabled={!input.trim() && selectedImages.length === 0}
-                size="icon"
-                className="h-9 w-9 rounded-xl shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-50"
-                title="전송 (Enter)"
-                aria-label="메시지 전송"
-                data-send-button
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            )}
+              {/* Send/Stop Button */}
+              {isStreaming ? (
+                <Button
+                  onClick={handleStop}
+                  variant="destructive"
+                  size="icon"
+                  className="h-9 w-9 rounded-xl shrink-0"
+                  title="중지 (Esc)"
+                  aria-label="스트리밍 중지"
+                >
+                  <Square className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSend}
+                  disabled={!input.trim() && selectedImages.length === 0}
+                  size="icon"
+                  className="h-9 w-9 rounded-xl shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-50"
+                  title="전송 (Enter)"
+                  aria-label="메시지 전송"
+                  data-send-button
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-        {/* Image Generation Progress */}
-        {currentImageGenProgress && currentImageGenProgress.status !== 'completed' && (
-          <ImageGenerationProgressBar
-            progress={currentImageGenProgress}
-            className="mt-3"
+          {/* Image Generation Progress */}
+          {currentImageGenProgress && currentImageGenProgress.status !== 'completed' && (
+            <ImageGenerationProgressBar progress={currentImageGenProgress} className="mt-3" />
+          )}
+          <LLMStatusBar
+            isStreaming={isStreaming}
+            llmConfig={llmConfig}
+            messages={messages}
+            input={input}
+            mounted={mounted}
+            tools={tools}
+            onCompact={handleCompact}
+            onConfigUpdate={handleConfigUpdate}
           />
-        )}
-        <LLMStatusBar
-          isStreaming={isStreaming}
-          llmConfig={llmConfig}
-          messages={messages}
-          input={input}
-          mounted={mounted}
-          tools={tools}
-          onCompact={handleCompact}
-          onConfigUpdate={handleConfigUpdate}
-        />
-      </div>
+        </div>
       </div>
     </>
   );

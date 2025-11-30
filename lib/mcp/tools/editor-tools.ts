@@ -144,7 +144,17 @@ export async function searchSimilarCode(params: {
   try {
     // This would use ripgrep in production
     // For now, return placeholder
-    console.log('[searchSimilarCode] Searching for:', pattern, 'in', language || 'all', 'files', 'workingDirectory:', workingDirectory, 'maxResults:', maxResults);
+    console.log(
+      '[searchSimilarCode] Searching for:',
+      pattern,
+      'in',
+      language || 'all',
+      'files',
+      'workingDirectory:',
+      workingDirectory,
+      'maxResults:',
+      maxResults
+    );
 
     // Placeholder implementation
     return [
@@ -170,7 +180,14 @@ export async function getDocumentation(params: {
   const { query, language, source = 'devdocs' } = params;
 
   try {
-    console.log('[getDocumentation] Searching docs for:', query, 'language:', language, 'source:', source);
+    console.log(
+      '[getDocumentation] Searching docs for:',
+      query,
+      'language:',
+      language,
+      'source:',
+      source
+    );
 
     // Placeholder - would fetch from actual sources
     return {
@@ -262,7 +279,8 @@ export async function getTypeInfo(params: {
 export const EDITOR_TOOLS = {
   get_file_context: {
     name: 'get_file_context',
-    description: 'Get context about the current file including imports, types, and surrounding code',
+    description:
+      'Get context about the current file including imports, types, and surrounding code',
     inputSchema: {
       type: 'object' as const,
       properties: {

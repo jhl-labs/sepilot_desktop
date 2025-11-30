@@ -72,19 +72,9 @@ export function BrowserToolsList() {
               name="get_interactive_elements"
               description="클릭/입력 가능한 요소 찾기 (버튼, 링크, 입력창 등)"
             />
-            <ToolItem
-              name="search_elements"
-              description="자연어로 요소 검색"
-              badge="NEW"
-            />
-            <ToolItem
-              name="get_selected_text"
-              description="사용자가 선택/드래그한 텍스트 읽기"
-            />
-            <ToolItem
-              name="take_screenshot"
-              description="화면 캡처 + 텍스트 미리보기"
-            />
+            <ToolItem name="search_elements" description="자연어로 요소 검색" badge="NEW" />
+            <ToolItem name="get_selected_text" description="사용자가 선택/드래그한 텍스트 읽기" />
+            <ToolItem name="take_screenshot" description="화면 캡처 + 텍스트 미리보기" />
           </CardContent>
         </Card>
 
@@ -98,18 +88,9 @@ export function BrowserToolsList() {
             <CardDescription className="text-xs">페이지 조작</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <ToolItem
-              name="click_element"
-              description="특정 요소 클릭 (가시성/상태 검증)"
-            />
-            <ToolItem
-              name="type_text"
-              description="입력창에 텍스트 입력 (이벤트 트리거링)"
-            />
-            <ToolItem
-              name="scroll"
-              description="페이지 스크롤 (위/아래)"
-            />
+            <ToolItem name="click_element" description="특정 요소 클릭 (가시성/상태 검증)" />
+            <ToolItem name="type_text" description="입력창에 텍스트 입력 (이벤트 트리거링)" />
+            <ToolItem name="scroll" description="페이지 스크롤 (위/아래)" />
           </CardContent>
         </Card>
 
@@ -123,22 +104,10 @@ export function BrowserToolsList() {
             <CardDescription className="text-xs">탭 관리</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <ToolItem
-              name="list_tabs"
-              description="열린 탭 목록 조회 (ID, 제목, URL)"
-            />
-            <ToolItem
-              name="create_tab"
-              description="새 탭 열기"
-            />
-            <ToolItem
-              name="switch_tab"
-              description="특정 탭으로 전환"
-            />
-            <ToolItem
-              name="close_tab"
-              description="탭 닫기 (마지막 탭 제외)"
-            />
+            <ToolItem name="list_tabs" description="열린 탭 목록 조회 (ID, 제목, URL)" />
+            <ToolItem name="create_tab" description="새 탭 열기" />
+            <ToolItem name="switch_tab" description="특정 탭으로 전환" />
+            <ToolItem name="close_tab" description="탭 닫기 (마지막 탭 제외)" />
           </CardContent>
         </Card>
 
@@ -157,16 +126,8 @@ export function BrowserToolsList() {
               description="Set-of-Mark 스크린샷 캡처"
               badge="NEW"
             />
-            <ToolItem
-              name="click_coordinate"
-              description="좌표로 클릭"
-              badge="NEW"
-            />
-            <ToolItem
-              name="click_marker"
-              description="마커로 클릭"
-              badge="NEW"
-            />
+            <ToolItem name="click_coordinate" description="좌표로 클릭" badge="NEW" />
+            <ToolItem name="click_marker" description="마커로 클릭" badge="NEW" />
             <ToolItem
               name="get_clickable_coordinate"
               description="클릭 가능한 좌표 추출"

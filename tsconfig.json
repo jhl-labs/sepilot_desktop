@@ -1,10 +1,6 @@
 {
   "compilerOptions": {
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -22,9 +18,7 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     },
     "target": "ES2020",
     "forceConsistentCasingInFileNames": true,
@@ -47,11 +41,5 @@
     "out/types/**/*.ts",
     "out/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "electron",
-    "dist",
-    "out",
-    ".next"
-  ]
+  "exclude": ["node_modules", "electron", "dist", "out", ".next"]
 }

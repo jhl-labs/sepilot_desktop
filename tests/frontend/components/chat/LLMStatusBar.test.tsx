@@ -39,13 +39,7 @@ describe('LLMStatusBar', () => {
 
     it('설정이 없을 때 안내 메시지를 표시해야 함', () => {
       render(
-        <LLMStatusBar
-          isStreaming={false}
-          llmConfig={null}
-          messages={[]}
-          input=""
-          mounted={true}
-        />
+        <LLMStatusBar isStreaming={false} llmConfig={null} messages={[]} input="" mounted={true} />
       );
 
       expect(screen.getByText('모델 설정 필요')).toBeInTheDocument();

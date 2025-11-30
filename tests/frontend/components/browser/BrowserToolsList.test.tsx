@@ -62,7 +62,9 @@ describe('BrowserToolsList', () => {
     it('should display total tools count', () => {
       render(<BrowserToolsList />);
 
-      expect(screen.getByText('Browser Agent가 사용할 수 있는 총 18개의 도구입니다.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Browser Agent가 사용할 수 있는 총 18개의 도구입니다.')
+      ).toBeInTheDocument();
     });
   });
 
@@ -181,7 +183,9 @@ describe('BrowserToolsList', () => {
     it('should render info message', () => {
       render(<BrowserToolsList />);
 
-      expect(screen.getByText('이 도구들은 Browser Agent가 자동으로 선택하여 사용합니다.')).toBeInTheDocument();
+      expect(
+        screen.getByText('이 도구들은 Browser Agent가 자동으로 선택하여 사용합니다.')
+      ).toBeInTheDocument();
       expect(screen.getByText('사용자는 자연어로 명령만 입력하면 됩니다.')).toBeInTheDocument();
     });
   });
@@ -266,7 +270,7 @@ describe('BrowserToolsList', () => {
       const { container } = render(<BrowserToolsList />);
 
       const newBadges = screen.getAllByText('NEW');
-      newBadges.forEach(badge => {
+      newBadges.forEach((badge) => {
         expect(badge).toHaveClass('h-4', 'text-[10px]', 'px-1');
       });
     });

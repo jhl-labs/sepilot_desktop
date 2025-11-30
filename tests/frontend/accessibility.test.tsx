@@ -1,6 +1,6 @@
 /**
  * 접근성(A11y) 테스트 케이스
- * 
+ *
  * 키보드 네비게이션, ARIA 속성, 스크린 리더 지원 등을 테스트합니다.
  */
 
@@ -29,7 +29,7 @@ describe('접근성 테스트', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     enableElectronMode();
-    
+
     (useChatStore as jest.Mock).mockReturnValue({
       conversations: [],
       activeConversationId: null,
@@ -155,7 +155,7 @@ describe('접근성 테스트', () => {
 
       const dialog = screen.getByRole('dialog');
       const firstButton = screen.getByRole('button', { name: /첫 번째 버튼/i });
-      
+
       expect(dialog).toHaveAttribute('aria-modal', 'true');
       // 포커스는 실제로는 useEffect나 다른 로직에서 처리되지만,
       // 최소한 dialog가 존재하고 modal 속성이 있는지 확인
@@ -186,12 +186,7 @@ describe('접근성 테스트', () => {
     it('에러 메시지가 aria-describedby로 연결되어야 함', () => {
       render(
         <div>
-          <input
-            id="email-input"
-            type="email"
-            aria-describedby="email-error"
-            aria-invalid="true"
-          />
+          <input id="email-input" type="email" aria-describedby="email-error" aria-invalid="true" />
           <span id="email-error" role="alert">
             올바른 이메일 형식이 아닙니다
           </span>
@@ -237,4 +232,3 @@ describe('접근성 테스트', () => {
     });
   });
 });
-

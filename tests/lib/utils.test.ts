@@ -43,7 +43,7 @@ describe('utils', () => {
       jest.useRealTimers();
     });
 
-    it('should format today\'s date as time', () => {
+    it("should format today's date as time", () => {
       const now = new Date('2024-01-15T14:30:00');
       jest.setSystemTime(now);
 

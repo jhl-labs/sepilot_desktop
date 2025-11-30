@@ -28,9 +28,7 @@ describe('use-keyboard-shortcuts', () => {
 
     it('should register keydown event listener', () => {
       const handler = jest.fn();
-      const shortcuts: KeyboardShortcut[] = [
-        { key: 'n', meta: true, handler },
-      ];
+      const shortcuts: KeyboardShortcut[] = [{ key: 'n', meta: true, handler }];
 
       renderHook(() => useKeyboardShortcuts(shortcuts));
 
@@ -39,9 +37,7 @@ describe('use-keyboard-shortcuts', () => {
 
     it('should remove event listener on unmount', () => {
       const handler = jest.fn();
-      const shortcuts: KeyboardShortcut[] = [
-        { key: 'n', meta: true, handler },
-      ];
+      const shortcuts: KeyboardShortcut[] = [{ key: 'n', meta: true, handler }];
 
       const { unmount } = renderHook(() => useKeyboardShortcuts(shortcuts));
       unmount();
@@ -51,9 +47,7 @@ describe('use-keyboard-shortcuts', () => {
 
     it('should not register listener when disabled', () => {
       const handler = jest.fn();
-      const shortcuts: KeyboardShortcut[] = [
-        { key: 'n', meta: true, handler },
-      ];
+      const shortcuts: KeyboardShortcut[] = [{ key: 'n', meta: true, handler }];
 
       renderHook(() => useKeyboardShortcuts(shortcuts, false));
 
@@ -62,9 +56,7 @@ describe('use-keyboard-shortcuts', () => {
 
     it('should call handler when shortcut matches', () => {
       const handler = jest.fn();
-      const shortcuts: KeyboardShortcut[] = [
-        { key: 'n', ctrl: true, handler },
-      ];
+      const shortcuts: KeyboardShortcut[] = [{ key: 'n', ctrl: true, handler }];
 
       renderHook(() => useKeyboardShortcuts(shortcuts));
 
@@ -84,9 +76,7 @@ describe('use-keyboard-shortcuts', () => {
 
     it('should not call handler when modifier keys do not match', () => {
       const handler = jest.fn();
-      const shortcuts: KeyboardShortcut[] = [
-        { key: 'n', ctrl: true, handler },
-      ];
+      const shortcuts: KeyboardShortcut[] = [{ key: 'n', ctrl: true, handler }];
 
       renderHook(() => useKeyboardShortcuts(shortcuts));
 
@@ -138,9 +128,7 @@ describe('use-keyboard-shortcuts', () => {
 
     it('should handle shift modifier', () => {
       const handler = jest.fn();
-      const shortcuts: KeyboardShortcut[] = [
-        { key: 'c', ctrl: true, shift: true, handler },
-      ];
+      const shortcuts: KeyboardShortcut[] = [{ key: 'c', ctrl: true, shift: true, handler }];
 
       renderHook(() => useKeyboardShortcuts(shortcuts));
 
@@ -159,9 +147,7 @@ describe('use-keyboard-shortcuts', () => {
 
     it('should handle alt modifier', () => {
       const handler = jest.fn();
-      const shortcuts: KeyboardShortcut[] = [
-        { key: 'p', alt: true, handler },
-      ];
+      const shortcuts: KeyboardShortcut[] = [{ key: 'p', alt: true, handler }];
 
       renderHook(() => useKeyboardShortcuts(shortcuts));
 
@@ -179,9 +165,7 @@ describe('use-keyboard-shortcuts', () => {
 
     it('should handle meta (Cmd) modifier', () => {
       const handler = jest.fn();
-      const shortcuts: KeyboardShortcut[] = [
-        { key: 'k', meta: true, handler },
-      ];
+      const shortcuts: KeyboardShortcut[] = [{ key: 'k', meta: true, handler }];
 
       renderHook(() => useKeyboardShortcuts(shortcuts));
 
@@ -199,9 +183,7 @@ describe('use-keyboard-shortcuts', () => {
 
     it('should match by key code', () => {
       const handler = jest.fn();
-      const shortcuts: KeyboardShortcut[] = [
-        { key: 'KeyN', ctrl: true, handler },
-      ];
+      const shortcuts: KeyboardShortcut[] = [{ key: 'KeyN', ctrl: true, handler }];
 
       renderHook(() => useKeyboardShortcuts(shortcuts));
 

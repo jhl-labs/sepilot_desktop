@@ -265,10 +265,7 @@ describe('settingsUtils', () => {
   describe('extractModelIds', () => {
     it('should extract from payload.data array with id', () => {
       const payload = {
-        data: [
-          { id: 'model-1' },
-          { id: 'model-2' },
-        ],
+        data: [{ id: 'model-1' }, { id: 'model-2' }],
       };
 
       expect(extractModelIds(payload)).toEqual(['model-1', 'model-2']);
@@ -276,10 +273,7 @@ describe('settingsUtils', () => {
 
     it('should extract from payload.data array with name', () => {
       const payload = {
-        data: [
-          { name: 'model-1' },
-          { name: 'model-2' },
-        ],
+        data: [{ name: 'model-1' }, { name: 'model-2' }],
       };
 
       expect(extractModelIds(payload)).toEqual(['model-1', 'model-2']);
@@ -287,10 +281,7 @@ describe('settingsUtils', () => {
 
     it('should extract from payload.data array with slug', () => {
       const payload = {
-        data: [
-          { slug: 'model-1' },
-          { slug: 'model-2' },
-        ],
+        data: [{ slug: 'model-1' }, { slug: 'model-2' }],
       };
 
       expect(extractModelIds(payload)).toEqual(['model-1', 'model-2']);
@@ -298,20 +289,14 @@ describe('settingsUtils', () => {
 
     it('should extract from payload.models array', () => {
       const payload = {
-        models: [
-          { id: 'model-1' },
-          { id: 'model-2' },
-        ],
+        models: [{ id: 'model-1' }, { id: 'model-2' }],
       };
 
       expect(extractModelIds(payload)).toEqual(['model-1', 'model-2']);
     });
 
     it('should extract from array payload', () => {
-      const payload = [
-        { id: 'model-1' },
-        { id: 'model-2' },
-      ];
+      const payload = [{ id: 'model-1' }, { id: 'model-2' }];
 
       expect(extractModelIds(payload)).toEqual(['model-1', 'model-2']);
     });
@@ -326,11 +311,7 @@ describe('settingsUtils', () => {
 
     it('should filter out null/undefined entries', () => {
       const payload = {
-        data: [
-          { id: 'model-1' },
-          {},
-          { id: 'model-2' },
-        ],
+        data: [{ id: 'model-1' }, {}, { id: 'model-2' }],
       };
 
       expect(extractModelIds(payload)).toEqual(['model-1', 'model-2']);
@@ -459,10 +440,7 @@ describe('settingsUtils', () => {
       const mockResponse = {
         ok: true,
         json: jest.fn().mockResolvedValue({
-          data: [
-            { id: 'gpt-4' },
-            { id: 'gpt-3.5-turbo' },
-          ],
+          data: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }],
         }),
         text: jest.fn(),
       };
@@ -477,16 +455,13 @@ describe('settingsUtils', () => {
       });
 
       expect(result).toEqual(['gpt-3.5-turbo', 'gpt-4']);
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.openai.com/v1/models',
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer test-key',
-          },
-        }
-      );
+      expect(global.fetch).toHaveBeenCalledWith('https://api.openai.com/v1/models', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-key',
+        },
+      });
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         '[Settings] Running in browser mode - CORS may occur, Network Config not applied'
       );
@@ -498,10 +473,7 @@ describe('settingsUtils', () => {
       const mockResponse = {
         ok: true,
         json: jest.fn().mockResolvedValue({
-          data: [
-            { id: 'claude-3-opus' },
-            { id: 'claude-3-sonnet' },
-          ],
+          data: [{ id: 'claude-3-opus' }, { id: 'claude-3-sonnet' }],
         }),
         text: jest.fn(),
       };
@@ -516,17 +488,14 @@ describe('settingsUtils', () => {
       });
 
       expect(result).toEqual(['claude-3-opus', 'claude-3-sonnet']);
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.anthropic.com/v1/models',
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': 'test-key',
-            'anthropic-version': '2023-06-01',
-          },
-        }
-      );
+      expect(global.fetch).toHaveBeenCalledWith('https://api.anthropic.com/v1/models', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'test-key',
+          'anthropic-version': '2023-06-01',
+        },
+      });
 
       consoleWarnSpy.mockRestore();
     });
@@ -553,18 +522,15 @@ describe('settingsUtils', () => {
         },
       });
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.openai.com/v1/models',
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer test-key',
-            'X-Custom': 'value',
-            'X-Another': 'header',
-          },
-        }
-      );
+      expect(global.fetch).toHaveBeenCalledWith('https://api.openai.com/v1/models', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-key',
+          'X-Custom': 'value',
+          'X-Another': 'header',
+        },
+      });
 
       consoleWarnSpy.mockRestore();
     });

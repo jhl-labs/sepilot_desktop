@@ -76,8 +76,8 @@ export function SidebarEditor() {
               !workingDirectory
                 ? 'Working Directory를 먼저 설정해주세요'
                 : showTerminalPanel
-                ? '터미널 숨기기'
-                : '터미널 열기'
+                  ? '터미널 숨기기'
+                  : '터미널 열기'
             }
             disabled={!workingDirectory}
             className={`flex-1 ${showTerminalPanel ? 'bg-accent' : ''}`}

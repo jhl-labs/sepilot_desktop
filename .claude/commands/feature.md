@@ -1,6 +1,6 @@
 ---
 description: Design and implement a new feature
-argument-hint: "[feature-name] [description]"
+argument-hint: '[feature-name] [description]'
 ---
 
 # New Feature Development

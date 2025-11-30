@@ -12,25 +12,13 @@ describe('CodeDiffViewer', () => {
   const newContent = 'line 1\nmodified line 2\nline 3\nadded line 4';
 
   it('should render file path', () => {
-    render(
-      <CodeDiffViewer
-        filePath="test.ts"
-        oldContent={oldContent}
-        newContent={newContent}
-      />
-    );
+    render(<CodeDiffViewer filePath="test.ts" oldContent={oldContent} newContent={newContent} />);
 
     expect(screen.getByText('test.ts')).toBeInTheDocument();
   });
 
   it('should show diff stats', () => {
-    render(
-      <CodeDiffViewer
-        filePath="test.ts"
-        oldContent={oldContent}
-        newContent={newContent}
-      />
-    );
+    render(<CodeDiffViewer filePath="test.ts" oldContent={oldContent} newContent={newContent} />);
 
     // +1 added line, ~1 modified line
     expect(screen.getByText('+1')).toBeInTheDocument();
@@ -38,13 +26,7 @@ describe('CodeDiffViewer', () => {
   });
 
   it('should be expanded by default', () => {
-    render(
-      <CodeDiffViewer
-        filePath="test.ts"
-        oldContent={oldContent}
-        newContent={newContent}
-      />
-    );
+    render(<CodeDiffViewer filePath="test.ts" oldContent={oldContent} newContent={newContent} />);
 
     expect(screen.getByText('line 1')).toBeInTheDocument();
     expect(screen.getByText('modified line 2')).toBeInTheDocument();
@@ -53,13 +35,7 @@ describe('CodeDiffViewer', () => {
   });
 
   it('should collapse when header is clicked', () => {
-    render(
-      <CodeDiffViewer
-        filePath="test.ts"
-        oldContent={oldContent}
-        newContent={newContent}
-      />
-    );
+    render(<CodeDiffViewer filePath="test.ts" oldContent={oldContent} newContent={newContent} />);
 
     const header = screen.getByText('test.ts').closest('button');
     expect(header).toBeInTheDocument();
@@ -72,13 +48,7 @@ describe('CodeDiffViewer', () => {
   });
 
   it('should expand when header is clicked again', () => {
-    render(
-      <CodeDiffViewer
-        filePath="test.ts"
-        oldContent={oldContent}
-        newContent={newContent}
-      />
-    );
+    render(<CodeDiffViewer filePath="test.ts" oldContent={oldContent} newContent={newContent} />);
 
     const header = screen.getByText('test.ts').closest('button');
 
@@ -95,13 +65,7 @@ describe('CodeDiffViewer', () => {
     const oldText = 'line 1';
     const newText = 'line 1\nline 2\nline 3';
 
-    render(
-      <CodeDiffViewer
-        filePath="test.ts"
-        oldContent={oldText}
-        newContent={newText}
-      />
-    );
+    render(<CodeDiffViewer filePath="test.ts" oldContent={oldText} newContent={newText} />);
 
     expect(screen.getByText('+2')).toBeInTheDocument();
   });
@@ -110,13 +74,7 @@ describe('CodeDiffViewer', () => {
     const oldText = 'line 1\nline 2\nline 3';
     const newText = 'line 1';
 
-    render(
-      <CodeDiffViewer
-        filePath="test.ts"
-        oldContent={oldText}
-        newContent={newText}
-      />
-    );
+    render(<CodeDiffViewer filePath="test.ts" oldContent={oldText} newContent={newText} />);
 
     expect(screen.getByText('-2')).toBeInTheDocument();
   });
@@ -124,13 +82,7 @@ describe('CodeDiffViewer', () => {
   it('should handle empty old content', () => {
     const newText = 'new line 1\nnew line 2';
 
-    render(
-      <CodeDiffViewer
-        filePath="test.ts"
-        oldContent=""
-        newContent={newText}
-      />
-    );
+    render(<CodeDiffViewer filePath="test.ts" oldContent="" newContent={newText} />);
 
     // Empty string becomes [""] when split, so 1 line will be modified and 1 added
     expect(screen.getByText('new line 1')).toBeInTheDocument();
@@ -140,13 +92,7 @@ describe('CodeDiffViewer', () => {
   it('should show unchanged lines without stats', () => {
     const sameContent = 'line 1\nline 2';
 
-    render(
-      <CodeDiffViewer
-        filePath="test.ts"
-        oldContent={sameContent}
-        newContent={sameContent}
-      />
-    );
+    render(<CodeDiffViewer filePath="test.ts" oldContent={sameContent} newContent={sameContent} />);
 
     // No stats should be shown
     expect(screen.queryByText(/\+/)).not.toBeInTheDocument();
@@ -221,13 +167,7 @@ describe('CodeDiffViewer', () => {
   });
 
   it('should not show action buttons when neither onAccept nor onReject is provided', () => {
-    render(
-      <CodeDiffViewer
-        filePath="test.ts"
-        oldContent={oldContent}
-        newContent={newContent}
-      />
-    );
+    render(<CodeDiffViewer filePath="test.ts" oldContent={oldContent} newContent={newContent} />);
 
     expect(screen.queryByRole('button', { name: /accept/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /reject/i })).not.toBeInTheDocument();
@@ -269,13 +209,7 @@ describe('CodeDiffViewer', () => {
     const old = 'line 1\nline 2\nline 3\nline 4';
     const newer = 'modified 1\nmodified 2\nmodified 3\nmodified 4';
 
-    render(
-      <CodeDiffViewer
-        filePath="test.ts"
-        oldContent={old}
-        newContent={newer}
-      />
-    );
+    render(<CodeDiffViewer filePath="test.ts" oldContent={old} newContent={newer} />);
 
     expect(screen.getByText('~4')).toBeInTheDocument();
   });

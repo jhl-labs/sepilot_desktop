@@ -1,5 +1,14 @@
 // Electron API 타입 정의
-import type { Conversation, Message, Activity, AppConfig, MCPServerConfig, NetworkConfig, ImageAttachment, ComfyUIConfig } from './index';
+import type {
+  Conversation,
+  Message,
+  Activity,
+  AppConfig,
+  MCPServerConfig,
+  NetworkConfig,
+  ImageAttachment,
+  ComfyUIConfig,
+} from './index';
 import type { Persona } from './persona';
 
 // IPC 응답 타입
@@ -65,7 +74,11 @@ interface MCPAPI {
   removeServer: (name: string) => Promise<IPCResponse>;
   listServers: () => Promise<IPCResponse<MCPServerConfig[]>>;
   getAllTools: () => Promise<IPCResponse<MCPTool[]>>;
-  callTool: (serverName: string, toolName: string, args: Record<string, unknown>) => Promise<IPCResponse<unknown>>;
+  callTool: (
+    serverName: string,
+    toolName: string,
+    args: Record<string, unknown>
+  ) => Promise<IPCResponse<unknown>>;
   toggleServer: (name: string) => Promise<IPCResponse>;
   getServerStatus: (name: string) => Promise<IPCResponse<MCPServerStatus>>;
 }
@@ -88,7 +101,10 @@ interface OAuthLoginInfo {
 interface AuthAPI {
   initiateLogin: () => Promise<OAuthLoginInfo>;
   githubLogin: (authUrl: string) => Promise<IPCResponse>;
-  exchangeCode: (code: string, codeVerifier: string) => Promise<IPCResponse<{ access_token: string; token_type: string; scope: string }>>;
+  exchangeCode: (
+    code: string,
+    codeVerifier: string
+  ) => Promise<IPCResponse<{ access_token: string; token_type: string; scope: string }>>;
   saveToken: (token: string) => Promise<IPCResponse>;
   getUserInfo: (token: string) => Promise<IPCResponse<GitHubUser>>;
   getToken: () => Promise<IPCResponse<string | null>>;
@@ -136,7 +152,9 @@ interface LLMAPI {
   init: (config: AppConfig) => Promise<IPCResponse>;
   validate: () => Promise<IPCResponse>;
   fetchModels: (config: LLMFetchModelsConfig) => Promise<IPCResponse<string[]>>;
-  generateTitle: (messages: Array<Pick<Message, 'role' | 'content'>>) => Promise<IPCResponse<{ title: string }>>;
+  generateTitle: (
+    messages: Array<Pick<Message, 'role' | 'content'>>
+  ) => Promise<IPCResponse<{ title: string }>>;
   onStreamChunk: (callback: (chunk: string) => void) => (...args: unknown[]) => void;
   onStreamDone: (callback: () => void) => (...args: unknown[]) => void;
   onStreamError: (callback: (error: string) => void) => (...args: unknown[]) => void;
@@ -149,10 +167,22 @@ interface LLMAPI {
   }) => Promise<IPCResponse<{ completion: string }>>;
   editorAction: (params: {
     action:
-      | 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve'
-      | 'continue' | 'make-shorter' | 'make-longer' | 'simplify' | 'fix-grammar'
-      | 'change-tone-professional' | 'change-tone-casual' | 'change-tone-friendly'
-      | 'find-action-items' | 'create-outline';
+      | 'summarize'
+      | 'translate'
+      | 'complete'
+      | 'explain'
+      | 'fix'
+      | 'improve'
+      | 'continue'
+      | 'make-shorter'
+      | 'make-longer'
+      | 'simplify'
+      | 'fix-grammar'
+      | 'change-tone-professional'
+      | 'change-tone-casual'
+      | 'change-tone-friendly'
+      | 'find-action-items'
+      | 'create-outline';
     text: string;
     language?: string;
     targetLanguage?: string;
@@ -161,7 +191,14 @@ interface LLMAPI {
 
 // LangGraph 관련 타입
 interface GraphConfig {
-  thinkingMode: 'instant' | 'sequential' | 'tree-of-thought' | 'deep' | 'coding' | 'browser-agent' | 'editor-agent';
+  thinkingMode:
+    | 'instant'
+    | 'sequential'
+    | 'tree-of-thought'
+    | 'deep'
+    | 'coding'
+    | 'browser-agent'
+    | 'editor-agent';
   enableRAG: boolean;
   enableTools: boolean;
 }
@@ -252,10 +289,16 @@ interface LangGraphAPI {
     workingDirectory?: string
   ) => Promise<IPCResponse<{ conversationId?: string }>>;
   onStreamEvent: (callback: (event: LangGraphStreamEvent) => void) => (...args: unknown[]) => void;
-  onStreamDone: (callback: (data?: LangGraphStreamDoneData) => void) => (...args: unknown[]) => void;
-  onStreamError: (callback: (data: LangGraphStreamErrorData) => void) => (...args: unknown[]) => void;
+  onStreamDone: (
+    callback: (data?: LangGraphStreamDoneData) => void
+  ) => (...args: unknown[]) => void;
+  onStreamError: (
+    callback: (data: LangGraphStreamErrorData) => void
+  ) => (...args: unknown[]) => void;
   // Tool Approval (Human-in-the-loop)
-  onToolApprovalRequest: (callback: (data: LangGraphToolApprovalRequest) => void) => (...args: unknown[]) => void;
+  onToolApprovalRequest: (
+    callback: (data: LangGraphToolApprovalRequest) => void
+  ) => (...args: unknown[]) => void;
   respondToolApproval: (conversationId: string, approved: boolean) => Promise<IPCResponse>;
   // Abort streaming
   abort: (conversationId: string) => Promise<IPCResponse>;
@@ -527,13 +570,15 @@ interface BookmarkFolder {
 interface BrowserViewAPI {
   // Tab management
   createTab: (url?: string) => Promise<IPCResponse<{ tabId: string; url: string }>>;
-  switchTab: (tabId: string) => Promise<IPCResponse<{
-    tabId: string;
-    url: string;
-    title: string;
-    canGoBack: boolean;
-    canGoForward: boolean;
-  }>>;
+  switchTab: (tabId: string) => Promise<
+    IPCResponse<{
+      tabId: string;
+      url: string;
+      title: string;
+      canGoBack: boolean;
+      canGoForward: boolean;
+    }>
+  >;
   closeTab: (tabId: string) => Promise<IPCResponse<{ activeTabId: string | null }>>;
   getTabs: () => Promise<IPCResponse<{ tabs: BrowserTab[]; activeTabId: string | null }>>;
   // Navigation (operates on active tab)
@@ -541,15 +586,22 @@ interface BrowserViewAPI {
   goBack: () => Promise<IPCResponse>;
   goForward: () => Promise<IPCResponse>;
   reload: () => Promise<IPCResponse>;
-  setBounds: (bounds: { x: number; y: number; width: number; height: number }) => Promise<IPCResponse>;
-  getState: () => Promise<IPCResponse<{
-    tabId: string;
-    url: string;
-    title: string;
-    canGoBack: boolean;
-    canGoForward: boolean;
-    isLoading: boolean;
-  }>>;
+  setBounds: (bounds: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => Promise<IPCResponse>;
+  getState: () => Promise<
+    IPCResponse<{
+      tabId: string;
+      url: string;
+      title: string;
+      canGoBack: boolean;
+      canGoForward: boolean;
+      isLoading: boolean;
+    }>
+  >;
   toggleDevTools: () => Promise<IPCResponse>;
   // Show/Hide
   hideAll: () => Promise<IPCResponse>;
@@ -560,7 +612,11 @@ interface BrowserViewAPI {
   deleteSnapshot: (snapshotId: string) => Promise<IPCResponse>;
   openSnapshot: (snapshotId: string) => Promise<IPCResponse>;
   // Bookmark operations
-  addBookmark: (options?: { url?: string; title?: string; folderId?: string }) => Promise<IPCResponse<Bookmark>>;
+  addBookmark: (options?: {
+    url?: string;
+    title?: string;
+    folderId?: string;
+  }) => Promise<IPCResponse<Bookmark>>;
   getBookmarks: () => Promise<IPCResponse<Bookmark[]>>;
   deleteBookmark: (bookmarkId: string) => Promise<IPCResponse>;
   openBookmark: (bookmarkId: string) => Promise<IPCResponse>;
@@ -570,10 +626,28 @@ interface BrowserViewAPI {
   // Browser settings
   getBrowserSettings: () => Promise<IPCResponse<{ snapshotsPath: string; bookmarksPath: string }>>;
   // Event listeners
-  onDidNavigate: (callback: (data: { tabId: string; url: string; canGoBack: boolean; canGoForward: boolean }) => void) => (...args: unknown[]) => void;
-  onLoadingState: (callback: (data: { tabId: string; isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => (...args: unknown[]) => void;
-  onTitleUpdated: (callback: (data: { tabId: string; title: string }) => void) => (...args: unknown[]) => void;
-  onTabCreated: (callback: (data: { tabId: string; url: string }) => void) => (...args: unknown[]) => void;
+  onDidNavigate: (
+    callback: (data: {
+      tabId: string;
+      url: string;
+      canGoBack: boolean;
+      canGoForward: boolean;
+    }) => void
+  ) => (...args: unknown[]) => void;
+  onLoadingState: (
+    callback: (data: {
+      tabId: string;
+      isLoading: boolean;
+      canGoBack?: boolean;
+      canGoForward?: boolean;
+    }) => void
+  ) => (...args: unknown[]) => void;
+  onTitleUpdated: (
+    callback: (data: { tabId: string; title: string }) => void
+  ) => (...args: unknown[]) => void;
+  onTabCreated: (
+    callback: (data: { tabId: string; url: string }) => void
+  ) => (...args: unknown[]) => void;
   removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
 }
 
@@ -623,14 +697,22 @@ interface TerminalSession {
 
 interface TerminalAPI {
   // Session management
-  createSession: (cwd?: string, cols?: number, rows?: number) => Promise<IPCResponse<TerminalSession>>;
+  createSession: (
+    cwd?: string,
+    cols?: number,
+    rows?: number
+  ) => Promise<IPCResponse<TerminalSession>>;
   write: (sessionId: string, data: string) => Promise<IPCResponse>;
   resize: (sessionId: string, cols: number, rows: number) => Promise<IPCResponse>;
   killSession: (sessionId: string) => Promise<IPCResponse>;
   getSessions: () => Promise<IPCResponse<TerminalSession[]>>;
   // Event listeners
-  onData: (callback: (data: { sessionId: string; data: string }) => void) => (...args: unknown[]) => void;
-  onExit: (callback: (data: { sessionId: string; exitCode: number; signal?: number }) => void) => (...args: unknown[]) => void;
+  onData: (
+    callback: (data: { sessionId: string; data: string }) => void
+  ) => (...args: unknown[]) => void;
+  onExit: (
+    callback: (data: { sessionId: string; exitCode: number; signal?: number }) => void
+  ) => (...args: unknown[]) => void;
   removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
 }
 

@@ -25,10 +25,7 @@ export function initializeBuiltinTools(): void {
 /**
  * 도구 실행
  */
-export async function executeTool(
-  toolName: string,
-  args: any
-): Promise<ToolCallResult> {
+export async function executeTool(toolName: string, args: any): Promise<ToolCallResult> {
   // 도구 찾기
   const tool = ToolRegistry.getTool(toolName);
 

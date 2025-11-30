@@ -59,46 +59,28 @@ describe('ToolApprovalDialog', () => {
     });
 
     const { container } = render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
+      <ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />
     );
 
     expect(container.firstChild).toBeNull();
   });
 
   it('should render dialog with tool count', () => {
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     expect(screen.getByText('도구 실행 승인 필요')).toBeInTheDocument();
     expect(screen.getByText(/AI가 2개의 도구를 실행하려고 합니다/)).toBeInTheDocument();
   });
 
   it('should display all tool names', () => {
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     expect(screen.getByText('bash')).toBeInTheDocument();
     expect(screen.getByText('file_edit')).toBeInTheDocument();
   });
 
   it('should expand tool when clicked', () => {
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     const bashTool = screen.getByText('bash');
     fireEvent.click(bashTool);
@@ -109,12 +91,7 @@ describe('ToolApprovalDialog', () => {
   });
 
   it('should collapse tool when clicked again', () => {
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     const bashTool = screen.getByText('bash');
 
@@ -128,12 +105,7 @@ describe('ToolApprovalDialog', () => {
   });
 
   it('should call onReject when reject button clicked', () => {
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     const rejectButton = screen.getByText('아니오');
     fireEvent.click(rejectButton);
@@ -142,12 +114,7 @@ describe('ToolApprovalDialog', () => {
   });
 
   it('should call onApprove with toolCalls when approve button clicked', () => {
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     const approveButton = screen.getByText('예');
     fireEvent.click(approveButton);
@@ -168,12 +135,7 @@ describe('ToolApprovalDialog', () => {
   });
 
   it('should not show always approve button when onAlwaysApprove is not provided', () => {
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     expect(screen.queryByText('항상 예 (이번 세션)')).not.toBeInTheDocument();
   });
@@ -194,12 +156,7 @@ describe('ToolApprovalDialog', () => {
   });
 
   it('should load file content for file_edit tool', async () => {
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     await waitFor(() => {
       expect(mockElectronAPI.file.read).toHaveBeenCalledWith('/test/file.txt');
@@ -209,9 +166,7 @@ describe('ToolApprovalDialog', () => {
   it('should handle file read error gracefully (file does not exist)', async () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-    (mockElectronAPI.file.read as jest.Mock).mockRejectedValue(
-      new Error('File not found')
-    );
+    (mockElectronAPI.file.read as jest.Mock).mockRejectedValue(new Error('File not found'));
 
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       pendingToolApproval: {
@@ -230,12 +185,7 @@ describe('ToolApprovalDialog', () => {
       },
     });
 
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     // Should not crash and should complete loading
     await waitFor(() => {
@@ -248,12 +198,7 @@ describe('ToolApprovalDialog', () => {
   it('should show diff viewer for file_edit tool', async () => {
     (mockElectronAPI.file.read as jest.Mock).mockResolvedValue('old text in file');
 
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     await waitFor(() => {
       expect(mockElectronAPI.file.read).toHaveBeenCalled();
@@ -286,16 +231,9 @@ describe('ToolApprovalDialog', () => {
       },
     });
 
-    (mockElectronAPI.file.read as jest.Mock).mockRejectedValue(
-      new Error('File not found')
-    );
+    (mockElectronAPI.file.read as jest.Mock).mockRejectedValue(new Error('File not found'));
 
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     await waitFor(() => {
       expect(mockElectronAPI.file.read).toHaveBeenCalled();
@@ -330,12 +268,7 @@ describe('ToolApprovalDialog', () => {
       },
     });
 
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     const bashTool = screen.getByText('bash');
     fireEvent.click(bashTool);
@@ -362,12 +295,7 @@ describe('ToolApprovalDialog', () => {
       },
     });
 
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     const testTool = screen.getByText('test');
     fireEvent.click(testTool);
@@ -377,12 +305,7 @@ describe('ToolApprovalDialog', () => {
   });
 
   it('should expand multiple tools independently', () => {
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     const bashTool = screen.getByText('bash');
     const fileEditTool = screen.getByText('file_edit');
@@ -414,12 +337,7 @@ describe('ToolApprovalDialog', () => {
       },
     });
 
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     await waitFor(() => {
       // Should not call file.read without path
@@ -450,12 +368,7 @@ describe('ToolApprovalDialog', () => {
       },
     });
 
-    render(
-      <ToolApprovalDialog
-        onApprove={mockOnApprove}
-        onReject={mockOnReject}
-      />
-    );
+    render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
     await waitFor(() => {
       expect(mockElectronAPI.file.read).toHaveBeenCalled();

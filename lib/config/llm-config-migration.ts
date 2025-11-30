@@ -158,8 +158,12 @@ export function convertV2ToV1(configV2: LLMConfigV2): LLMConfig {
       config.vision = {
         enabled: true,
         provider: visionConnection.provider,
-        baseURL: visionConnection.baseURL !== baseConnection.baseURL ? visionConnection.baseURL : undefined,
-        apiKey: visionConnection.apiKey !== baseConnection.apiKey ? visionConnection.apiKey : undefined,
+        baseURL:
+          visionConnection.baseURL !== baseConnection.baseURL
+            ? visionConnection.baseURL
+            : undefined,
+        apiKey:
+          visionConnection.apiKey !== baseConnection.apiKey ? visionConnection.apiKey : undefined,
         model: visionModel.modelId,
         maxImageTokens: visionModel.maxImageTokens,
         enableStreaming: visionModel.enableStreaming,
@@ -169,15 +173,25 @@ export function convertV2ToV1(configV2: LLMConfigV2): LLMConfig {
 
   // Add Autocomplete config if active autocomplete model exists
   if (configV2.activeAutocompleteModelId) {
-    const autocompleteModel = configV2.models.find((m) => m.id === configV2.activeAutocompleteModelId);
-    const autocompleteConnection = configV2.connections.find((c) => c.id === autocompleteModel?.connectionId);
+    const autocompleteModel = configV2.models.find(
+      (m) => m.id === configV2.activeAutocompleteModelId
+    );
+    const autocompleteConnection = configV2.connections.find(
+      (c) => c.id === autocompleteModel?.connectionId
+    );
 
     if (autocompleteModel && autocompleteConnection) {
       config.autocomplete = {
         enabled: true,
         provider: autocompleteConnection.provider,
-        baseURL: autocompleteConnection.baseURL !== baseConnection.baseURL ? autocompleteConnection.baseURL : undefined,
-        apiKey: autocompleteConnection.apiKey !== baseConnection.apiKey ? autocompleteConnection.apiKey : undefined,
+        baseURL:
+          autocompleteConnection.baseURL !== baseConnection.baseURL
+            ? autocompleteConnection.baseURL
+            : undefined,
+        apiKey:
+          autocompleteConnection.apiKey !== baseConnection.apiKey
+            ? autocompleteConnection.apiKey
+            : undefined,
         model: autocompleteModel.modelId,
         temperature: autocompleteModel.temperature,
         maxTokens: autocompleteModel.maxTokens,

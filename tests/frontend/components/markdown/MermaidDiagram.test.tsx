@@ -194,10 +194,7 @@ describe('MermaidDiagram', () => {
     const { rerender } = render(<MermaidDiagram chart={validChart} />);
 
     await waitFor(() => {
-      expect(mockRender).toHaveBeenCalledWith(
-        expect.any(String),
-        validChart
-      );
+      expect(mockRender).toHaveBeenCalledWith(expect.any(String), validChart);
     });
 
     const newChart = 'graph LR\n  X --> Y';
@@ -206,10 +203,7 @@ describe('MermaidDiagram', () => {
     rerender(<MermaidDiagram chart={newChart} />);
 
     await waitFor(() => {
-      expect(mockRender).toHaveBeenCalledWith(
-        expect.any(String),
-        newChart
-      );
+      expect(mockRender).toHaveBeenCalledWith(expect.any(String), newChart);
     });
   });
 
@@ -235,10 +229,7 @@ describe('MermaidDiagram', () => {
     render(<MermaidDiagram chart={sequenceDiagram} />);
 
     await waitFor(() => {
-      expect(mockRender).toHaveBeenCalledWith(
-        expect.any(String),
-        sequenceDiagram
-      );
+      expect(mockRender).toHaveBeenCalledWith(expect.any(String), sequenceDiagram);
     });
   });
 
@@ -251,10 +242,7 @@ describe('MermaidDiagram', () => {
     render(<MermaidDiagram chart={flowchart} />);
 
     await waitFor(() => {
-      expect(mockRender).toHaveBeenCalledWith(
-        expect.any(String),
-        flowchart
-      );
+      expect(mockRender).toHaveBeenCalledWith(expect.any(String), flowchart);
     });
   });
 
@@ -354,9 +342,7 @@ describe('MermaidDiagram', () => {
     const { rerender } = render(<MermaidDiagram chart={validChart} />);
 
     await waitFor(() => {
-      expect(mockInitialize).toHaveBeenCalledWith(
-        expect.objectContaining({ theme: 'default' })
-      );
+      expect(mockInitialize).toHaveBeenCalledWith(expect.objectContaining({ theme: 'default' }));
     });
 
     mockInitialize.mockClear();
@@ -365,9 +351,7 @@ describe('MermaidDiagram', () => {
     rerender(<MermaidDiagram chart={validChart} />);
 
     await waitFor(() => {
-      expect(mockInitialize).toHaveBeenCalledWith(
-        expect.objectContaining({ theme: 'dark' })
-      );
+      expect(mockInitialize).toHaveBeenCalledWith(expect.objectContaining({ theme: 'dark' }));
     });
   });
 
@@ -377,9 +361,7 @@ describe('MermaidDiagram', () => {
     render(<MermaidDiagram chart={validChart} />);
 
     await waitFor(() => {
-      expect(mockInitialize).toHaveBeenCalledWith(
-        expect.objectContaining({ theme: 'default' })
-      );
+      expect(mockInitialize).toHaveBeenCalledWith(expect.objectContaining({ theme: 'default' }));
     });
   });
 
@@ -628,9 +610,12 @@ describe('MermaidDiagram', () => {
 
       render(<MermaidDiagram chart={badChart} />);
 
-      await waitFor(() => {
-        expect(chatMock).toHaveBeenCalledTimes(1);
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(chatMock).toHaveBeenCalledTimes(1);
+        },
+        { timeout: 2000 }
+      );
 
       delete (window as any).electronAPI;
       (require('@/lib/platform').isElectron as jest.Mock).mockReturnValue(false);

@@ -149,7 +149,9 @@ describe('ConfigSync', () => {
     });
 
     it('should decrypt and return config', async () => {
-      const encryptedContent = Buffer.from(`encrypted:${JSON.stringify(testConfig)}`).toString('base64');
+      const encryptedContent = Buffer.from(`encrypted:${JSON.stringify(testConfig)}`).toString(
+        'base64'
+      );
 
       (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },

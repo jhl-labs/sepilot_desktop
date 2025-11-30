@@ -34,23 +34,26 @@ export function useConfirmDialog(): UseConfirmDialogReturn {
     setDialogState((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
-  const confirm = useCallback((title: string, description: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      setDialogState({
-        isOpen: true,
-        title,
-        description,
-        onConfirm: () => {
-          closeDialog();
-          resolve(true);
-        },
-        onCancel: () => {
-          closeDialog();
-          resolve(false);
-        },
+  const confirm = useCallback(
+    (title: string, description: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        setDialogState({
+          isOpen: true,
+          title,
+          description,
+          onConfirm: () => {
+            closeDialog();
+            resolve(true);
+          },
+          onCancel: () => {
+            closeDialog();
+            resolve(false);
+          },
+        });
       });
-    });
-  }, [closeDialog]);
+    },
+    [closeDialog]
+  );
 
   return {
     dialogState,

@@ -2,12 +2,7 @@
  * platform 유틸리티 테스트
  */
 
-import {
-  isElectron,
-  isWeb,
-  getElectronAPI,
-  getEnvironment,
-} from '@/lib/platform';
+import { isElectron, isWeb, getElectronAPI, getEnvironment } from '@/lib/platform';
 
 describe('platform utilities', () => {
   const originalWindow = global.window;

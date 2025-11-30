@@ -89,6 +89,7 @@ export function MyComponent({
 ## Available shadcn/ui Components
 
 ### Buttons
+
 ```typescript
 import { Button } from '@/components/ui/button';
 
@@ -101,6 +102,7 @@ import { Button } from '@/components/ui/button';
 ```
 
 ### Dialogs
+
 ```typescript
 import {
   Dialog,
@@ -128,6 +130,7 @@ import {
 ```
 
 ### Alert Dialogs
+
 ```typescript
 import {
   AlertDialog,
@@ -157,6 +160,7 @@ import {
 ```
 
 ### Forms with Select
+
 ```typescript
 import {
   Select,
@@ -178,6 +182,7 @@ import {
 ```
 
 ### Tabs
+
 ```typescript
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -196,6 +201,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 ```
 
 ### Switch
+
 ```typescript
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -207,6 +213,7 @@ import { Label } from '@/components/ui/label';
 ```
 
 ### Badges
+
 ```typescript
 import { Badge } from '@/components/ui/badge';
 
@@ -257,12 +264,14 @@ import { cn } from '@/lib/utils';
 ## State Management
 
 ### useState for Local State
+
 ```typescript
 const [isOpen, setIsOpen] = useState(false);
 const [data, setData] = useState<MyType | null>(null);
 ```
 
 ### useEffect for Side Effects
+
 ```typescript
 useEffect(() => {
   // Fetch data or setup listeners
@@ -276,6 +285,7 @@ useEffect(() => {
 ```
 
 ### Custom Hooks
+
 ```typescript
 function useConversation(id: string) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -297,6 +307,7 @@ function useConversation(id: string) {
 ## IPC Integration
 
 ### Invoking Backend
+
 ```typescript
 const handleSubmit = async (): Promise<void> => {
   try {
@@ -311,10 +322,11 @@ const handleSubmit = async (): Promise<void> => {
 ```
 
 ### Listening to Events
+
 ```typescript
 useEffect(() => {
   const handleUpdate = (data: UpdateData): void => {
-    setStreamData(prev => [...prev, data]);
+    setStreamData((prev) => [...prev, data]);
   };
 
   window.electron.on('stream:data', handleUpdate);
@@ -328,6 +340,7 @@ useEffect(() => {
 ## Accessibility
 
 Always include:
+
 - ARIA labels for interactive elements
 - Keyboard navigation support
 - Focus management
@@ -397,6 +410,7 @@ export class ErrorBoundary extends Component<Props, State> {
 ## Real-World Example
 
 See `components/UpdateNotificationDialog.tsx` for a complete example integrating:
+
 - shadcn/ui components (AlertDialog, Button)
 - IPC communication
 - TypeScript types

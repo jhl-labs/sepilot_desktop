@@ -8,11 +8,12 @@ import { Check, Copy } from 'lucide-react';
 // Dynamically import Plotly to avoid SSR issues
 // Using factory pattern to bind plotly.js-dist-min
 const Plot = dynamic(
-  () => import('react-plotly.js/factory').then((mod) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const Plotly = require('plotly.js-dist-min');
-    return mod.default(Plotly);
-  }),
+  () =>
+    import('react-plotly.js/factory').then((mod) => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const Plotly = require('plotly.js-dist-min');
+      return mod.default(Plotly);
+    }),
   { ssr: false }
 );
 
@@ -74,9 +75,13 @@ export function PlotlyChart({ data }: PlotlyChartProps) {
         </div>
         <div className="p-4 space-y-2">
           <p className="text-sm text-destructive font-medium">파싱 오류:</p>
-          <pre className="text-xs text-destructive/80 whitespace-pre-wrap bg-destructive/5 p-2 rounded">{error}</pre>
+          <pre className="text-xs text-destructive/80 whitespace-pre-wrap bg-destructive/5 p-2 rounded">
+            {error}
+          </pre>
           <p className="text-sm text-muted-foreground font-medium mt-4">원본 코드:</p>
-          <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted p-2 rounded font-mono">{data}</pre>
+          <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted p-2 rounded font-mono">
+            {data}
+          </pre>
         </div>
       </div>
     );
@@ -90,15 +95,8 @@ export function PlotlyChart({ data }: PlotlyChartProps) {
     <div className="group relative my-4 overflow-hidden rounded-lg border bg-muted">
       {/* Header */}
       <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
-        <span className="text-xs font-medium text-muted-foreground">
-          Plotly Chart
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCopy}
-          className="h-7 gap-1 px-2"
-        >
+        <span className="text-xs font-medium text-muted-foreground">Plotly Chart</span>
+        <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 gap-1 px-2">
           {copied ? (
             <>
               <Check className="h-3 w-3" />

@@ -142,11 +142,7 @@ describe('DOMAnalyzer', () => {
     });
 
     it('should use placeholder for inputs', () => {
-      const result = DOMAnalyzer.getAccessibleLabel(
-        'input',
-        { placeholder: 'Enter text' },
-        ''
-      );
+      const result = DOMAnalyzer.getAccessibleLabel('input', { placeholder: 'Enter text' }, '');
       expect(result).toBe('Enter text');
     });
 
@@ -249,11 +245,12 @@ describe('DOMAnalyzer', () => {
     });
 
     it('should limit sibling texts to 3', () => {
-      const result = DOMAnalyzer.buildContext(
-        {},
-        '',
-        ['Sibling 1', 'Sibling 2', 'Sibling 3', 'Sibling 4']
-      );
+      const result = DOMAnalyzer.buildContext({}, '', [
+        'Sibling 1',
+        'Sibling 2',
+        'Sibling 3',
+        'Sibling 4',
+      ]);
       expect(result).not.toContain('Sibling 4');
     });
 

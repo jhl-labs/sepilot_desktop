@@ -38,12 +38,22 @@ export function EditorSettings() {
   const [lineNumbers, setLineNumbers] = useState(editorAppearanceConfig.lineNumbers);
 
   // LLM 프롬프트 로컬 상태
-  const [autoCompletePrompt, setAutoCompletePrompt] = useState(editorLLMPromptsConfig.autoCompletePrompt);
-  const [explainCodePrompt, setExplainCodePrompt] = useState(editorLLMPromptsConfig.explainCodePrompt);
-  const [refactorCodePrompt, setRefactorCodePrompt] = useState(editorLLMPromptsConfig.refactorCodePrompt);
+  const [autoCompletePrompt, setAutoCompletePrompt] = useState(
+    editorLLMPromptsConfig.autoCompletePrompt
+  );
+  const [explainCodePrompt, setExplainCodePrompt] = useState(
+    editorLLMPromptsConfig.explainCodePrompt
+  );
+  const [refactorCodePrompt, setRefactorCodePrompt] = useState(
+    editorLLMPromptsConfig.refactorCodePrompt
+  );
   const [fixBugPrompt, setFixBugPrompt] = useState(editorLLMPromptsConfig.fixBugPrompt);
-  const [addCommentsPrompt, setAddCommentsPrompt] = useState(editorLLMPromptsConfig.addCommentsPrompt);
-  const [generateTestPrompt, setGenerateTestPrompt] = useState(editorLLMPromptsConfig.generateTestPrompt);
+  const [addCommentsPrompt, setAddCommentsPrompt] = useState(
+    editorLLMPromptsConfig.addCommentsPrompt
+  );
+  const [generateTestPrompt, setGenerateTestPrompt] = useState(
+    editorLLMPromptsConfig.generateTestPrompt
+  );
 
   // 외형 설정 저장
   const handleSaveAppearance = () => {
@@ -172,15 +182,16 @@ export function EditorSettings() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              에디터에 사용할 폰트를 선택하세요.
-            </p>
+            <p className="text-xs text-muted-foreground">에디터에 사용할 폰트를 선택하세요.</p>
           </div>
 
           {/* 테마 */}
           <div className="space-y-1.5">
             <Label className="text-xs">테마</Label>
-            <Select value={theme} onValueChange={(value: 'vs-dark' | 'vs-light') => setTheme(value)}>
+            <Select
+              value={theme}
+              onValueChange={(value: 'vs-dark' | 'vs-light') => setTheme(value)}
+            >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
@@ -189,15 +200,16 @@ export function EditorSettings() {
                 <SelectItem value="vs-light">Light</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              에디터 색상 테마 (기본값: Dark)
-            </p>
+            <p className="text-xs text-muted-foreground">에디터 색상 테마 (기본값: Dark)</p>
           </div>
 
           {/* 탭 크기 */}
           <div className="space-y-1.5">
             <Label className="text-xs">탭 크기</Label>
-            <Select value={String(tabSize)} onValueChange={(value) => setTabSize(parseInt(value, 10))}>
+            <Select
+              value={String(tabSize)}
+              onValueChange={(value) => setTabSize(parseInt(value, 10))}
+            >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
@@ -207,9 +219,7 @@ export function EditorSettings() {
                 <SelectItem value="8">8 spaces</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              들여쓰기 크기 (기본값: 2)
-            </p>
+            <p className="text-xs text-muted-foreground">들여쓰기 크기 (기본값: 2)</p>
           </div>
 
           {/* Word Wrap */}
@@ -221,23 +231,16 @@ export function EditorSettings() {
                 onCheckedChange={(checked) => setWordWrap(checked ? 'on' : 'off')}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              긴 줄을 자동으로 줄바꿈 (기본값: Off)
-            </p>
+            <p className="text-xs text-muted-foreground">긴 줄을 자동으로 줄바꿈 (기본값: Off)</p>
           </div>
 
           {/* Minimap */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label className="text-xs">미니맵 표시</Label>
-              <Switch
-                checked={minimap}
-                onCheckedChange={setMinimap}
-              />
+              <Switch checked={minimap} onCheckedChange={setMinimap} />
             </div>
-            <p className="text-xs text-muted-foreground">
-              우측 미니맵 표시 여부 (기본값: On)
-            </p>
+            <p className="text-xs text-muted-foreground">우측 미니맵 표시 여부 (기본값: On)</p>
           </div>
 
           {/* Line Numbers */}
@@ -249,9 +252,7 @@ export function EditorSettings() {
                 onCheckedChange={(checked) => setLineNumbers(checked ? 'on' : 'off')}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              좌측 줄 번호 표시 여부 (기본값: On)
-            </p>
+            <p className="text-xs text-muted-foreground">좌측 줄 번호 표시 여부 (기본값: On)</p>
           </div>
 
           {/* 미리보기 */}
@@ -275,21 +276,16 @@ export function EditorSettings() {
                 )}
                 <div className="flex-1">
                   <div>function hello() {'{'}</div>
-                  <div>  console.log(&apos;Hello, World!&apos;);</div>
+                  <div> console.log(&apos;Hello, World!&apos;);</div>
                   <div>{'}'}</div>
                 </div>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              현재 설정이 적용된 코드 미리보기
-            </p>
+            <p className="text-xs text-muted-foreground">현재 설정이 적용된 코드 미리보기</p>
           </div>
 
           {/* 저장 버튼 */}
-          <Button
-            onClick={handleSaveAppearance}
-            className="w-full h-8 text-xs"
-          >
+          <Button onClick={handleSaveAppearance} className="w-full h-8 text-xs">
             외형 설정 저장
           </Button>
         </div>
@@ -380,10 +376,7 @@ export function EditorSettings() {
           </div>
 
           {/* 저장 버튼 */}
-          <Button
-            onClick={handleSavePrompts}
-            className="w-full h-8 text-xs"
-          >
+          <Button onClick={handleSavePrompts} className="w-full h-8 text-xs">
             LLM 프롬프트 저장
           </Button>
         </div>

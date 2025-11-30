@@ -159,7 +159,8 @@ describe('SimpleChatArea', () => {
 
     render(<SimpleChatArea />);
 
-    const messageContainer = screen.getByText('I am doing well, thank you!').parentElement?.parentElement;
+    const messageContainer = screen.getByText('I am doing well, thank you!').parentElement
+      ?.parentElement;
     expect(messageContainer).toHaveClass('justify-start');
   });
 
@@ -184,7 +185,8 @@ describe('SimpleChatArea', () => {
     const longMessage: BrowserChatMessage = {
       id: 'msg-long',
       role: 'user',
-      content: 'This is a very long message that should wrap properly.\nIt also has multiple lines.',
+      content:
+        'This is a very long message that should wrap properly.\nIt also has multiple lines.',
       created_at: Date.now(),
     };
 
@@ -265,7 +267,9 @@ describe('SimpleChatArea', () => {
 
     render(<SimpleChatArea />);
 
-    expect(screen.getByText(/<script>alert\("XSS"\)<\/script> & special chars: © ® ™/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/<script>alert\("XSS"\)<\/script> & special chars: © ® ™/)
+    ).toBeInTheDocument();
   });
 
   it('should use message id as key', () => {
@@ -304,12 +308,15 @@ describe('SimpleChatArea', () => {
 
     // Add new message
     (useChatStore as unknown as jest.Mock).mockReturnValue({
-      browserChatMessages: [...mockMessages, {
-        id: 'msg-4',
-        role: 'assistant',
-        content: 'New message',
-        created_at: Date.now(),
-      }],
+      browserChatMessages: [
+        ...mockMessages,
+        {
+          id: 'msg-4',
+          role: 'assistant',
+          content: 'New message',
+          created_at: Date.now(),
+        },
+      ],
       browserChatFontConfig: mockFontConfig,
       browserAgentLogs: [],
       browserAgentIsRunning: false,
@@ -414,10 +421,30 @@ describe('SimpleChatArea', () => {
 
   it('should render different icons for different log phases', () => {
     const mockLogs = [
-      { id: 'log-1', phase: 'thinking' as const, message: 'Thinking', timestamp: Date.now() - 4000 },
-      { id: 'log-2', phase: 'tool_call' as const, message: 'Tool call', timestamp: Date.now() - 3000 },
-      { id: 'log-3', phase: 'tool_result' as const, message: 'Tool result', timestamp: Date.now() - 2000 },
-      { id: 'log-4', phase: 'error' as const, message: 'Error occurred', timestamp: Date.now() - 1000 },
+      {
+        id: 'log-1',
+        phase: 'thinking' as const,
+        message: 'Thinking',
+        timestamp: Date.now() - 4000,
+      },
+      {
+        id: 'log-2',
+        phase: 'tool_call' as const,
+        message: 'Tool call',
+        timestamp: Date.now() - 3000,
+      },
+      {
+        id: 'log-3',
+        phase: 'tool_result' as const,
+        message: 'Tool result',
+        timestamp: Date.now() - 2000,
+      },
+      {
+        id: 'log-4',
+        phase: 'error' as const,
+        message: 'Error occurred',
+        timestamp: Date.now() - 1000,
+      },
       { id: 'log-5', phase: 'completion' as const, message: 'Completed', timestamp: Date.now() },
     ];
 

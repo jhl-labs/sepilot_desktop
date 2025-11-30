@@ -31,10 +31,5 @@
     "../lib/comfyui/**/*.ts",
     "../lib/platform.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "**/*.spec.ts",
-    "../components/**/*",
-    "../app/**/*"
-  ]
+  "exclude": ["node_modules", "**/*.spec.ts", "../components/**/*", "../app/**/*"]
 }

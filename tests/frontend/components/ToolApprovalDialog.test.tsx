@@ -47,9 +47,7 @@ describe('ToolApprovalDialog', () => {
       pendingToolApproval: null,
     });
 
-    const { container } = render(
-      <ToolApprovalDialog onApprove={jest.fn()} onReject={jest.fn()} />
-    );
+    const { container } = render(<ToolApprovalDialog onApprove={jest.fn()} onReject={jest.fn()} />);
 
     expect(container.firstChild).toBeNull();
   });
@@ -206,9 +204,7 @@ describe('ToolApprovalDialog', () => {
       },
     });
 
-    const { container } = render(
-      <ToolApprovalDialog onApprove={jest.fn()} onReject={jest.fn()} />
-    );
+    const { container } = render(<ToolApprovalDialog onApprove={jest.fn()} onReject={jest.fn()} />);
 
     // Warning icon should be present
     expect(container.querySelector('svg')).toBeInTheDocument();

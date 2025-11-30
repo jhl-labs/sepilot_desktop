@@ -24,9 +24,7 @@ jest.mock('@/components/markdown/MermaidDiagram', () => ({
 }));
 
 jest.mock('@/components/markdown/PlotlyChart', () => ({
-  PlotlyChart: ({ data }: { data: string }) => (
-    <div data-testid="plotly-chart">{data}</div>
-  ),
+  PlotlyChart: ({ data }: { data: string }) => <div data-testid="plotly-chart">{data}</div>,
 }));
 
 describe('MarkdownRenderer', () => {
@@ -284,8 +282,12 @@ const code = "test";
     it('should accept isStreaming prop', () => {
       const content = 'Test content';
 
-      const { container: container1 } = render(<MarkdownRenderer content={content} isStreaming={true} />);
-      const { container: container2 } = render(<MarkdownRenderer content={content} isStreaming={false} />);
+      const { container: container1 } = render(
+        <MarkdownRenderer content={content} isStreaming={true} />
+      );
+      const { container: container2 } = render(
+        <MarkdownRenderer content={content} isStreaming={false} />
+      );
 
       // Both should render the content
       expect(container1.textContent).toContain('Test content');
@@ -409,7 +411,15 @@ def hello():
 
       const th = container.querySelector('th');
       expect(th).toBeInTheDocument();
-      expect(th).toHaveClass('border', 'border-border', 'bg-muted', 'px-4', 'py-2', 'text-left', 'font-semibold');
+      expect(th).toHaveClass(
+        'border',
+        'border-border',
+        'bg-muted',
+        'px-4',
+        'py-2',
+        'text-left',
+        'font-semibold'
+      );
     });
 
     it('should apply correct styles to table cells', () => {
@@ -431,7 +441,14 @@ def hello():
 
       const blockquote = container.querySelector('blockquote');
       expect(blockquote).toBeInTheDocument();
-      expect(blockquote).toHaveClass('border-l-4', 'border-primary/30', 'pl-4', 'italic', 'text-muted-foreground', 'my-4');
+      expect(blockquote).toHaveClass(
+        'border-l-4',
+        'border-primary/30',
+        'pl-4',
+        'italic',
+        'text-muted-foreground',
+        'my-4'
+      );
     });
 
     it('should apply correct styles to paragraphs', () => {
@@ -720,7 +737,8 @@ z = 30
 
     it('should extract text from complex nested markdown in code', () => {
       // Test the full path: object → props → children → recursive call
-      const content = '```json\n{\n  "key": "value",\n  "nested": {\n    "deep": "data"\n  }\n}\n```';
+      const content =
+        '```json\n{\n  "key": "value",\n  "nested": {\n    "deep": "data"\n  }\n}\n```';
 
       render(<MarkdownRenderer content={content} />);
 
@@ -746,12 +764,12 @@ z = 30
             y: [10, 15, 13, 17],
             type: 'scatter',
             mode: 'lines+markers',
-            name: 'Sales'
-          }
+            name: 'Sales',
+          },
         ],
         layout: {
-          title: 'Sales Data'
-        }
+          title: 'Sales Data',
+        },
       });
 
       const content = '```plotly\n' + plotlyData + '\n```';
@@ -763,7 +781,8 @@ z = 30
 
     it('should handle code with mixed array and string children', () => {
       // Comprehensive test for getTextContent with various types
-      const content = '```javascript\nconst arr = [1, 2, 3];\nconst sum = arr.reduce((a, b) => a + b, 0);\nconsole.log(sum);\n```';
+      const content =
+        '```javascript\nconst arr = [1, 2, 3];\nconst sum = arr.reduce((a, b) => a + b, 0);\nconsole.log(sum);\n```';
 
       render(<MarkdownRenderer content={content} />);
 

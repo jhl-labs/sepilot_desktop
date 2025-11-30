@@ -74,9 +74,7 @@ describe('Dialog Components', () => {
     });
 
     it('should apply custom className', () => {
-      const { container } = render(
-        <DialogContent className="custom-class">Content</DialogContent>
-      );
+      const { container } = render(<DialogContent className="custom-class">Content</DialogContent>);
 
       const content = container.firstChild as HTMLElement;
       expect(content).toHaveClass('custom-class');
@@ -92,11 +90,7 @@ describe('Dialog Components', () => {
     });
 
     it('should show close button when onClose is provided', () => {
-      render(
-        <DialogContent onClose={() => {}}>
-          Content
-        </DialogContent>
-      );
+      render(<DialogContent onClose={() => {}}>Content</DialogContent>);
 
       const closeButton = screen.getByRole('button', { name: /close/i });
       expect(closeButton).toBeInTheDocument();
@@ -111,11 +105,7 @@ describe('Dialog Components', () => {
 
     it('should call onClose when close button is clicked', () => {
       const handleClose = jest.fn();
-      render(
-        <DialogContent onClose={handleClose}>
-          Content
-        </DialogContent>
-      );
+      render(<DialogContent onClose={handleClose}>Content</DialogContent>);
 
       const closeButton = screen.getByRole('button', { name: /close/i });
       fireEvent.click(closeButton);
@@ -181,9 +171,7 @@ describe('Dialog Components', () => {
     });
 
     it('should apply custom className', () => {
-      const { container } = render(
-        <DialogFooter className="custom-footer">Footer</DialogFooter>
-      );
+      const { container } = render(<DialogFooter className="custom-footer">Footer</DialogFooter>);
 
       const footer = container.firstChild as HTMLElement;
       expect(footer).toHaveClass('custom-footer');

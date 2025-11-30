@@ -3,7 +3,11 @@ import { Conversation, Message, PendingToolApproval, ImageGenerationProgress } f
 import { generateId } from '@/lib/utils';
 import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
 import { isElectron } from '@/lib/platform';
-import type { BrowserAgentLogEntry, BrowserAgentLLMConfig, BrowserChatFontConfig } from '@/types/browser-agent';
+import type {
+  BrowserAgentLogEntry,
+  BrowserAgentLLMConfig,
+  BrowserChatFontConfig,
+} from '@/types/browser-agent';
 import type { Persona } from '@/types/persona';
 import { BUILTIN_PERSONAS } from '@/types/persona';
 import type { EditorAppearanceConfig, EditorLLMPromptsConfig } from '@/types/editor-settings';
@@ -198,7 +202,10 @@ interface ChatStore {
 
   // Actions - Image Generation Progress
   setImageGenerationProgress: (progress: ImageGenerationProgress) => void;
-  updateImageGenerationProgress: (conversationId: string, updates: Partial<ImageGenerationProgress>) => void;
+  updateImageGenerationProgress: (
+    conversationId: string,
+    updates: Partial<ImageGenerationProgress>
+  ) => void;
   clearImageGenerationProgress: (conversationId: string) => void;
   getImageGenerationProgress: (conversationId: string) => ImageGenerationProgress | undefined;
 
@@ -241,8 +248,13 @@ interface ChatStore {
 
   // Actions - Persona
   loadPersonas: () => Promise<void>;
-  addPersona: (persona: Omit<Persona, 'id' | 'isBuiltin' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updatePersona: (id: string, updates: Partial<Omit<Persona, 'id' | 'isBuiltin' | 'created_at'>>) => Promise<void>;
+  addPersona: (
+    persona: Omit<Persona, 'id' | 'isBuiltin' | 'created_at' | 'updated_at'>
+  ) => Promise<void>;
+  updatePersona: (
+    id: string,
+    updates: Partial<Omit<Persona, 'id' | 'isBuiltin' | 'created_at'>>
+  ) => Promise<void>;
   deletePersona: (id: string) => Promise<void>;
   setActivePersona: (personaId: string | null) => void;
 
@@ -252,7 +264,9 @@ interface ChatStore {
   setShowTerminalPanel: (show: boolean) => void;
 
   // Actions - Editor
-  openFile: (file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }) => void;
+  openFile: (
+    file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }
+  ) => void;
   closeFile: (path: string) => void;
   setActiveFile: (path: string | null) => void;
   updateFileContent: (path: string, content: string) => void;
@@ -360,7 +374,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Editor Appearance Config
   editorAppearanceConfig: (() => {
-    if (typeof window === 'undefined') {return DEFAULT_EDITOR_APPEARANCE;}
+    if (typeof window === 'undefined') {
+      return DEFAULT_EDITOR_APPEARANCE;
+    }
     try {
       const saved = localStorage.getItem('sepilot_editor_appearance_config');
       if (saved) {
@@ -375,7 +391,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Editor LLM Prompts Config
   editorLLMPromptsConfig: (() => {
-    if (typeof window === 'undefined') {return DEFAULT_EDITOR_LLM_PROMPTS;}
+    if (typeof window === 'undefined') {
+      return DEFAULT_EDITOR_LLM_PROMPTS;
+    }
     try {
       const saved = localStorage.getItem('sepilot_editor_llm_prompts_config');
       if (saved) {
@@ -769,7 +787,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       return {
         // Only update UI if this is the active conversation
         messages:
-          state.activeConversationId === activeId ? [...state.messages, newMessage] : state.messages,
+          state.activeConversationId === activeId
+            ? [...state.messages, newMessage]
+            : state.messages,
         messagesCache: newCache,
       };
     });
@@ -856,7 +876,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const newCache = new Map(state.messagesCache);
       if (activeId) {
         const cachedMessages = newCache.get(activeId) || [];
-        newCache.set(activeId, cachedMessages.filter((m) => m.id !== id));
+        newCache.set(
+          activeId,
+          cachedMessages.filter((m) => m.id !== id)
+        );
       }
 
       return {
@@ -980,7 +1003,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     });
   },
 
-  updateImageGenerationProgress: (conversationId: string, updates: Partial<ImageGenerationProgress>) => {
+  updateImageGenerationProgress: (
+    conversationId: string,
+    updates: Partial<ImageGenerationProgress>
+  ) => {
     set((state) => {
       const newMap = new Map(state.imageGenerationProgress);
       const existing = newMap.get(conversationId);
@@ -1195,7 +1221,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   // Editor Actions
-  openFile: (file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }) => {
+  openFile: (
+    file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }
+  ) => {
     set((state) => {
       // Check if file is already open
       const existingFileIndex = state.openFiles.findIndex((f) => f.path === file.path);
@@ -1229,9 +1257,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set((state) => {
       const filtered = state.openFiles.filter((f) => f.path !== path);
       const newActiveFilePath =
-        state.activeFilePath === path
-          ? filtered[0]?.path || null
-          : state.activeFilePath;
+        state.activeFilePath === path ? filtered[0]?.path || null : state.activeFilePath;
 
       return {
         openFiles: filtered,
@@ -1318,7 +1344,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       } else {
         // Web: localStorage에 저장
         const currentState = get();
-        const userPersonas = currentState.personas.filter(p => !p.isBuiltin);
+        const userPersonas = currentState.personas.filter((p) => !p.isBuiltin);
         localStorage.setItem('sepilot_personas', JSON.stringify([...userPersonas, newPersona]));
       }
 
@@ -1333,7 +1359,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   updatePersona: async (id, updates) => {
     const currentState = get();
-    const persona = currentState.personas.find(p => p.id === id);
+    const persona = currentState.personas.find((p) => p.id === id);
 
     if (!persona) {
       throw new Error('Persona not found');
@@ -1356,13 +1382,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       } else {
         // Web: localStorage에 업데이트
         const userPersonas = currentState.personas
-          .filter(p => !p.isBuiltin)
-          .map(p => p.id === id ? updatedPersona : p);
+          .filter((p) => !p.isBuiltin)
+          .map((p) => (p.id === id ? updatedPersona : p));
         localStorage.setItem('sepilot_personas', JSON.stringify(userPersonas));
       }
 
       set((state) => ({
-        personas: state.personas.map(p => p.id === id ? updatedPersona : p),
+        personas: state.personas.map((p) => (p.id === id ? updatedPersona : p)),
       }));
     } catch (error) {
       console.error('Failed to update persona:', error);
@@ -1372,7 +1398,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   deletePersona: async (id) => {
     const currentState = get();
-    const persona = currentState.personas.find(p => p.id === id);
+    const persona = currentState.personas.find((p) => p.id === id);
 
     if (!persona) {
       throw new Error('Persona not found');
@@ -1388,13 +1414,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         await window.electronAPI.persona.delete(id);
       } else {
         // Web: localStorage에서 삭제
-        const userPersonas = currentState.personas
-          .filter(p => !p.isBuiltin && p.id !== id);
+        const userPersonas = currentState.personas.filter((p) => !p.isBuiltin && p.id !== id);
         localStorage.setItem('sepilot_personas', JSON.stringify(userPersonas));
       }
 
       set((state) => ({
-        personas: state.personas.filter(p => p.id !== id),
+        personas: state.personas.filter((p) => p.id !== id),
         // 삭제된 페르소나가 활성화되어 있었다면 기본으로 변경
         activePersonaId: state.activePersonaId === id ? 'default' : state.activePersonaId,
       }));

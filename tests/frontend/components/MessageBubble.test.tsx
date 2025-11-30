@@ -16,7 +16,9 @@ jest.mock('@/lib/store/chat-store', () => ({
 
 // Mock MarkdownRenderer
 jest.mock('@/components/markdown/MarkdownRenderer', () => ({
-  MarkdownRenderer: ({ content }: { content: string }) => <div data-testid="markdown">{content}</div>,
+  MarkdownRenderer: ({ content }: { content: string }) => (
+    <div data-testid="markdown">{content}</div>
+  ),
 }));
 
 // Mock CodeDiffViewer
@@ -92,7 +94,9 @@ describe('MessageBubble', () => {
   it('should show copy button on hover for assistant messages', () => {
     render(<MessageBubble message={assistantMessage} />);
 
-    const messageElement = screen.getByText('I am doing well, thank you!').closest('div')!.parentElement!;
+    const messageElement = screen
+      .getByText('I am doing well, thank you!')
+      .closest('div')!.parentElement!;
     fireEvent.mouseEnter(messageElement);
 
     // Copy button should be visible
@@ -103,7 +107,9 @@ describe('MessageBubble', () => {
   it('should copy message content to clipboard', async () => {
     render(<MessageBubble message={assistantMessage} />);
 
-    const messageElement = screen.getByText('I am doing well, thank you!').closest('div')!.parentElement!;
+    const messageElement = screen
+      .getByText('I am doing well, thank you!')
+      .closest('div')!.parentElement!;
     fireEvent.mouseEnter(messageElement);
 
     const copyButton = screen.getByRole('button', { name: /복사/ });
@@ -195,7 +201,9 @@ describe('MessageBubble', () => {
       />
     );
 
-    const messageElement = screen.getByText('I am doing well, thank you!').closest('div')!.parentElement!;
+    const messageElement = screen
+      .getByText('I am doing well, thank you!')
+      .closest('div')!.parentElement!;
     fireEvent.mouseEnter(messageElement);
 
     const regenerateButton = screen.getByRole('button', { name: /재생성/ });
@@ -212,7 +220,9 @@ describe('MessageBubble', () => {
       />
     );
 
-    const messageElement = screen.getByText('I am doing well, thank you!').closest('div')!.parentElement!;
+    const messageElement = screen
+      .getByText('I am doing well, thank you!')
+      .closest('div')!.parentElement!;
     fireEvent.mouseEnter(messageElement);
 
     const regenerateButton = screen.getByRole('button', { name: /재생성/ });
@@ -236,7 +246,7 @@ describe('MessageBubble', () => {
           path: '/test/test.png',
           filename: 'test.png',
           mimeType: 'image/png',
-          base64: 'data:image/png;base64,abc'
+          base64: 'data:image/png;base64,abc',
         },
       ],
     };
@@ -308,7 +318,9 @@ describe('MessageBubble', () => {
     render(<MessageBubble message={assistantMessage} isStreaming={true} />);
 
     // Should not show action buttons while streaming
-    const messageElement = screen.getByText('I am doing well, thank you!').closest('div')!.parentElement!;
+    const messageElement = screen
+      .getByText('I am doing well, thank you!')
+      .closest('div')!.parentElement!;
     fireEvent.mouseEnter(messageElement);
 
     expect(screen.queryByRole('button', { name: /regenerate/i })).not.toBeInTheDocument();
@@ -342,7 +354,8 @@ describe('MessageBubble', () => {
           {
             id: 'doc-1',
             title: 'Test Document',
-            content: 'This is a very long test document content that should be truncated in preview mode',
+            content:
+              'This is a very long test document content that should be truncated in preview mode',
             source: 'test.md',
             similarity: 0.95,
           },
@@ -481,14 +494,14 @@ describe('MessageBubble', () => {
             path: '/test/test1.png',
             filename: 'test1.png',
             mimeType: 'image/png',
-            base64: 'data:image/png;base64,abc'
+            base64: 'data:image/png;base64,abc',
           },
           {
             id: 'img-2',
             path: '/test/test2.jpg',
             filename: 'test2.jpg',
             mimeType: 'image/jpeg',
-            base64: 'data:image/jpeg;base64,def'
+            base64: 'data:image/jpeg;base64,def',
           },
         ],
       };
@@ -510,7 +523,7 @@ describe('MessageBubble', () => {
             path: '/test/test.png',
             filename: 'test.png',
             mimeType: 'image/png',
-            base64: 'data:image/png;base64,abc'
+            base64: 'data:image/png;base64,abc',
           },
         ],
       };
@@ -582,7 +595,9 @@ describe('MessageBubble', () => {
         />
       );
 
-      const messageElement = screen.getByText('I am doing well, thank you!').closest('div')!.parentElement!;
+      const messageElement = screen
+        .getByText('I am doing well, thank you!')
+        .closest('div')!.parentElement!;
       fireEvent.mouseEnter(messageElement);
 
       expect(screen.queryByRole('button', { name: /재생성/ })).not.toBeInTheDocument();

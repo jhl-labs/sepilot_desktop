@@ -222,39 +222,44 @@ export function setupBrowserControlHandlers() {
   /**
    * 스크롤
    */
-  ipcMain.handle('browser-control:scroll', async (event, direction: 'up' | 'down', amount?: number) => {
-    try {
-      if (!activeBrowserView) {
-        return { success: false, error: 'No active browser view' };
-      }
+  ipcMain.handle(
+    'browser-control:scroll',
+    async (event, direction: 'up' | 'down', amount?: number) => {
+      try {
+        if (!activeBrowserView) {
+          return { success: false, error: 'No active browser view' };
+        }
 
-      const scrollAmount = amount || 500;
-      const scrollY = direction === 'down' ? scrollAmount : -scrollAmount;
+        const scrollAmount = amount || 500;
+        const scrollY = direction === 'down' ? scrollAmount : -scrollAmount;
 
-      await activeBrowserView.webContents.executeJavaScript(`
+        await activeBrowserView.webContents.executeJavaScript(`
         window.scrollBy({ top: ${scrollY}, behavior: 'smooth' });
       `);
 
-      logger.info(`[Browser Control] Scrolled ${direction} by ${scrollAmount}px`);
-      return { success: true };
-    } catch (error) {
-      logger.error('[Browser Control] Failed to scroll:', error);
-      return { success: false, error: String(error) };
+        logger.info(`[Browser Control] Scrolled ${direction} by ${scrollAmount}px`);
+        return { success: true };
+      } catch (error) {
+        logger.error('[Browser Control] Failed to scroll:', error);
+        return { success: false, error: String(error) };
+      }
     }
-  });
+  );
 
   /**
    * 요소 대기 (특정 selector가 나타날 때까지)
    */
-  ipcMain.handle('browser-control:wait-for-element', async (event, selector: string, timeout?: number) => {
-    try {
-      if (!activeBrowserView) {
-        return { success: false, error: 'No active browser view' };
-      }
+  ipcMain.handle(
+    'browser-control:wait-for-element',
+    async (event, selector: string, timeout?: number) => {
+      try {
+        if (!activeBrowserView) {
+          return { success: false, error: 'No active browser view' };
+        }
 
-      const waitTimeout = timeout || 5000;
+        const waitTimeout = timeout || 5000;
 
-      const result = await activeBrowserView.webContents.executeJavaScript(`
+        const result = await activeBrowserView.webContents.executeJavaScript(`
         (function() {
           return new Promise((resolve) => {
             const startTime = Date.now();
@@ -273,12 +278,13 @@ export function setupBrowserControlHandlers() {
         })();
       `);
 
-      return result;
-    } catch (error) {
-      logger.error('[Browser Control] Failed to wait for element:', error);
-      return { success: false, error: String(error) };
+        return result;
+      } catch (error) {
+        logger.error('[Browser Control] Failed to wait for element:', error);
+        return { success: false, error: String(error) };
+      }
     }
-  });
+  );
 
   /**
    * JavaScript 실행

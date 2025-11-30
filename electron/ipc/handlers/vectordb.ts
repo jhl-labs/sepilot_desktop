@@ -5,16 +5,19 @@ import { VectorDocument, SearchResult } from '../../../lib/vectordb/types';
 
 export function setupVectorDBHandlers() {
   // Initialize VectorDB
-  ipcMain.handle('vectordb-initialize', async (_, config: { indexName: string; dimension: number }) => {
-    try {
-      logger.debug('Initializing VectorDB', config);
-      await vectorDBService.initialize(config);
-      return { success: true };
-    } catch (error) {
-      logger.error('Failed to initialize VectorDB', error);
-      return { success: false, error: (error as Error).message };
+  ipcMain.handle(
+    'vectordb-initialize',
+    async (_, config: { indexName: string; dimension: number }) => {
+      try {
+        logger.debug('Initializing VectorDB', config);
+        await vectorDBService.initialize(config);
+        return { success: true };
+      } catch (error) {
+        logger.error('Failed to initialize VectorDB', error);
+        return { success: false, error: (error as Error).message };
+      }
     }
-  });
+  );
 
   // Create index
   ipcMain.handle('vectordb-create-index', async (_, name: string, dimension: number) => {
@@ -114,44 +117,47 @@ export function setupVectorDBHandlers() {
   });
 
   // Index documents (with embedding and chunking)
-  ipcMain.handle('vectordb-index-documents', async (
-    _,
-    documents: Array<{ id: string; content: string; metadata: Record<string, any> }>,
-    options: { chunkSize: number; chunkOverlap: number; batchSize: number }
-  ) => {
-    try {
-      logger.debug('Indexing documents', { count: documents.length, options });
+  ipcMain.handle(
+    'vectordb-index-documents',
+    async (
+      _,
+      documents: Array<{ id: string; content: string; metadata: Record<string, any> }>,
+      options: { chunkSize: number; chunkOverlap: number; batchSize: number }
+    ) => {
+      try {
+        logger.debug('Indexing documents', { count: documents.length, options });
 
-      // Embedding config를 DB에서 로드하여 초기화
-      const { databaseService } = await import('../../services/database');
-      const { initializeEmbedding } = await import('../../../lib/vectordb/embeddings/client');
+        // Embedding config를 DB에서 로드하여 초기화
+        const { databaseService } = await import('../../services/database');
+        const { initializeEmbedding } = await import('../../../lib/vectordb/embeddings/client');
 
-      const configStr = databaseService.getSetting('app_config');
-      if (!configStr) {
-        throw new Error('App config not found. Please configure Embedding in Settings.');
+        const configStr = databaseService.getSetting('app_config');
+        if (!configStr) {
+          throw new Error('App config not found. Please configure Embedding in Settings.');
+        }
+
+        const appConfig = JSON.parse(configStr);
+        if (!appConfig.embedding) {
+          throw new Error('Embedding config not found. Please configure Embedding in Settings.');
+        }
+
+        logger.debug('Initializing embedding with config:', {
+          provider: appConfig.embedding.provider,
+          model: appConfig.embedding.model,
+        });
+
+        // Embedding 초기화
+        initializeEmbedding(appConfig.embedding);
+
+        await vectorDBService.indexDocuments(documents, options);
+        logger.debug('Documents indexed successfully');
+        return { success: true };
+      } catch (error) {
+        logger.error('Failed to index documents', error);
+        return { success: false, error: (error as Error).message };
       }
-
-      const appConfig = JSON.parse(configStr);
-      if (!appConfig.embedding) {
-        throw new Error('Embedding config not found. Please configure Embedding in Settings.');
-      }
-
-      logger.debug('Initializing embedding with config:', {
-        provider: appConfig.embedding.provider,
-        model: appConfig.embedding.model,
-      });
-
-      // Embedding 초기화
-      initializeEmbedding(appConfig.embedding);
-
-      await vectorDBService.indexDocuments(documents, options);
-      logger.debug('Documents indexed successfully');
-      return { success: true };
-    } catch (error) {
-      logger.error('Failed to index documents', error);
-      return { success: false, error: (error as Error).message };
     }
-  });
+  );
 
   logger.info('VectorDB IPC handlers registered');
 }

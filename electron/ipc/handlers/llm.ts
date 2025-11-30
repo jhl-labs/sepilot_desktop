@@ -111,7 +111,10 @@ export function setupLLMHandlers() {
         const visionProvider = getVisionProviderFromDB();
         if (visionProvider) {
           const streamingEnabled = (visionProvider as any).streamingEnabled ?? false;
-          logger.info('[LLM IPC] Using vision model for image analysis, streaming:', streamingEnabled);
+          logger.info(
+            '[LLM IPC] Using vision model for image analysis, streaming:',
+            streamingEnabled
+          );
 
           // 비전 모델이 스트리밍 비활성화된 경우 non-streaming으로 처리
           if (!streamingEnabled) {
@@ -127,7 +130,9 @@ export function setupLLMHandlers() {
 
           provider = visionProvider;
         } else {
-          logger.warn('[LLM IPC] Images present but vision model not configured, using regular model');
+          logger.warn(
+            '[LLM IPC] Images present but vision model not configured, using regular model'
+          );
         }
       }
 
@@ -203,7 +208,9 @@ export function setupLLMHandlers() {
           logger.info('[LLM IPC] Using vision model for chat with images');
           provider = visionProvider;
         } else {
-          logger.warn('[LLM IPC] Images present but vision model not configured, using regular model');
+          logger.warn(
+            '[LLM IPC] Images present but vision model not configured, using regular model'
+          );
         }
       }
 
@@ -332,8 +339,8 @@ export function setupLLMHandlers() {
         const normalizedBaseURL = baseURL?.trim()
           ? baseURL.trim().replace(/\/+$/, '')
           : provider === 'anthropic'
-          ? 'https://api.anthropic.com/v1'
-          : 'https://api.openai.com/v1';
+            ? 'https://api.anthropic.com/v1'
+            : 'https://api.openai.com/v1';
 
         const endpoint = `${normalizedBaseURL}/models`;
 
@@ -610,8 +617,10 @@ CRITICAL RULES:
         completion = completion.replace(/```[\w]*\n?/g, '').replace(/```$/g, '');
 
         // Remove quotes
-        if ((completion.startsWith('"') && completion.endsWith('"')) ||
-            (completion.startsWith("'") && completion.endsWith("'"))) {
+        if (
+          (completion.startsWith('"') && completion.endsWith('"')) ||
+          (completion.startsWith("'") && completion.endsWith("'"))
+        ) {
           completion = completion.slice(1, -1);
         }
 
@@ -667,10 +676,22 @@ CRITICAL RULES:
       _event,
       params: {
         action:
-          | 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve'
-          | 'continue' | 'make-shorter' | 'make-longer' | 'simplify' | 'fix-grammar'
-          | 'change-tone-professional' | 'change-tone-casual' | 'change-tone-friendly'
-          | 'find-action-items' | 'create-outline';
+          | 'summarize'
+          | 'translate'
+          | 'complete'
+          | 'explain'
+          | 'fix'
+          | 'improve'
+          | 'continue'
+          | 'make-shorter'
+          | 'make-longer'
+          | 'simplify'
+          | 'fix-grammar'
+          | 'change-tone-professional'
+          | 'change-tone-casual'
+          | 'change-tone-friendly'
+          | 'find-action-items'
+          | 'create-outline';
         text: string;
         language?: string;
         targetLanguage?: string; // for translate
@@ -963,11 +984,16 @@ Rules:
         // If expecting code only, remove markdown code blocks
         if (returnCodeOnly) {
           // Remove markdown code blocks
-          result = result.replace(/```[\w]*\n?/g, '').replace(/```$/g, '').trim();
+          result = result
+            .replace(/```[\w]*\n?/g, '')
+            .replace(/```$/g, '')
+            .trim();
 
           // Remove leading/trailing quotes if present
-          if ((result.startsWith('"') && result.endsWith('"')) ||
-              (result.startsWith("'") && result.endsWith("'"))) {
+          if (
+            (result.startsWith('"') && result.endsWith('"')) ||
+            (result.startsWith("'") && result.endsWith("'"))
+          ) {
             result = result.slice(1, -1);
           }
         }

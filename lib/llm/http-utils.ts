@@ -8,10 +8,7 @@ import { LLMConfig } from '@/types';
 /**
  * LLM 설정에서 fetch 옵션 생성
  */
-export function createFetchOptions(
-  config: LLMConfig,
-  baseOptions: RequestInit = {}
-): RequestInit {
+export function createFetchOptions(config: LLMConfig, baseOptions: RequestInit = {}): RequestInit {
   const options: RequestInit = { ...baseOptions };
 
   // Headers 설정
@@ -66,10 +63,14 @@ export async function fetchWithConfig(
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
-        throw new Error(`Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`);
+        throw new Error(
+          `Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`
+        );
       }
       // Provide more helpful error message
-      throw new Error(`Failed to fetch from ${url}: ${error.message || error}. Check your network connection and server status.`);
+      throw new Error(
+        `Failed to fetch from ${url}: ${error.message || error}. Check your network connection and server status.`
+      );
     }
   }
 
@@ -128,10 +129,14 @@ export async function fetchWithConfig(
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
-        throw new Error(`Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`);
+        throw new Error(
+          `Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`
+        );
       }
       // Provide more helpful error message
-      throw new Error(`Failed to fetch from ${url}: ${error.message || error}. Check your network connection and server status.`);
+      throw new Error(
+        `Failed to fetch from ${url}: ${error.message || error}. Check your network connection and server status.`
+      );
     }
   } catch (error) {
     console.error('Error creating fetch with config:', error);
@@ -150,10 +155,14 @@ export async function fetchWithConfig(
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
       if (fetchError.name === 'AbortError') {
-        throw new Error(`Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`);
+        throw new Error(
+          `Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`
+        );
       }
       // Provide more helpful error message
-      throw new Error(`Failed to fetch from ${url}: ${fetchError.message || fetchError}. Check your network connection and server status.`);
+      throw new Error(
+        `Failed to fetch from ${url}: ${fetchError.message || fetchError}. Check your network connection and server status.`
+      );
     }
   }
 }
@@ -161,10 +170,7 @@ export async function fetchWithConfig(
 /**
  * 설정에서 Authorization 헤더 생성
  */
-export function createAuthHeader(
-  provider: string,
-  apiKey: string
-): Record<string, string> {
+export function createAuthHeader(provider: string, apiKey: string): Record<string, string> {
   if (provider === 'anthropic') {
     return {
       'x-api-key': apiKey,

@@ -13,16 +13,13 @@ const electronAPI = {
 
   // Chat operations
   chat: {
-    saveConversation: (conversation: any) =>
-      ipcRenderer.invoke('save-conversation', conversation),
+    saveConversation: (conversation: any) => ipcRenderer.invoke('save-conversation', conversation),
     loadConversations: () => ipcRenderer.invoke('load-conversations'),
-    deleteConversation: (id: string) =>
-      ipcRenderer.invoke('delete-conversation', id),
+    deleteConversation: (id: string) => ipcRenderer.invoke('delete-conversation', id),
     updateConversationTitle: (id: string, title: string) =>
       ipcRenderer.invoke('update-conversation-title', id, title),
     saveMessage: (message: any) => ipcRenderer.invoke('save-message', message),
-    loadMessages: (conversationId: string) =>
-      ipcRenderer.invoke('load-messages', conversationId),
+    loadMessages: (conversationId: string) => ipcRenderer.invoke('load-messages', conversationId),
     deleteMessage: (id: string) => ipcRenderer.invoke('delete-message', id),
   },
 
@@ -48,8 +45,7 @@ const electronAPI = {
   config: {
     load: () => ipcRenderer.invoke('load-config'),
     save: (config: any) => ipcRenderer.invoke('save-config', config),
-    updateSetting: (key: string, value: any) =>
-      ipcRenderer.invoke('update-setting', key, value),
+    updateSetting: (key: string, value: any) => ipcRenderer.invoke('update-setting', key, value),
     getSetting: (key: string) => ipcRenderer.invoke('get-setting', key),
   },
 
@@ -92,7 +88,7 @@ const electronAPI = {
     },
     removeOAuthCallbackListener: (handler: (event: any, url: string) => void) => {
       ipcRenderer.removeListener('oauth-callback', handler);
-    }
+    },
   },
 
   // LLM operations (CORS 문제 해결)
@@ -132,11 +128,8 @@ const electronAPI = {
       ipcRenderer.removeAllListeners('llm-stream-done');
       ipcRenderer.removeAllListeners('llm-stream-error');
     },
-    editorAutocomplete: (context: {
-      code: string;
-      cursorPosition: number;
-      language?: string;
-    }) => ipcRenderer.invoke('llm-editor-autocomplete', context),
+    editorAutocomplete: (context: { code: string; cursorPosition: number; language?: string }) =>
+      ipcRenderer.invoke('llm-editor-autocomplete', context),
     editorAction: (params: {
       action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve';
       text: string;
@@ -148,8 +141,23 @@ const electronAPI = {
   // LangGraph operations (CORS 문제 해결)
   // conversationId를 통해 각 대화별로 스트리밍을 격리
   langgraph: {
-    stream: (graphConfig: any, messages: any[], conversationId?: string, comfyUIConfig?: any, networkConfig?: any, workingDirectory?: string) =>
-      ipcRenderer.invoke('langgraph-stream', graphConfig, messages, conversationId, comfyUIConfig, networkConfig, workingDirectory),
+    stream: (
+      graphConfig: any,
+      messages: any[],
+      conversationId?: string,
+      comfyUIConfig?: any,
+      networkConfig?: any,
+      workingDirectory?: string
+    ) =>
+      ipcRenderer.invoke(
+        'langgraph-stream',
+        graphConfig,
+        messages,
+        conversationId,
+        comfyUIConfig,
+        networkConfig,
+        workingDirectory
+      ),
     onStreamEvent: (callback: (event: any) => void) => {
       const handler = (_: any, event: any) => callback(event);
       ipcRenderer.on('langgraph-stream-event', handler);
@@ -166,19 +174,20 @@ const electronAPI = {
       return handler;
     },
     // Tool Approval (Human-in-the-loop)
-    onToolApprovalRequest: (callback: (data: {
-      conversationId: string;
-      messageId: string;
-      toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
-    }) => void) => {
+    onToolApprovalRequest: (
+      callback: (data: {
+        conversationId: string;
+        messageId: string;
+        toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+      }) => void
+    ) => {
       const handler = (_: any, data: any) => callback(data);
       ipcRenderer.on('langgraph-tool-approval-request', handler);
       return handler;
     },
     respondToolApproval: (conversationId: string, approved: boolean) =>
       ipcRenderer.invoke('langgraph-tool-approval-response', conversationId, approved),
-    abort: (conversationId: string) =>
-      ipcRenderer.invoke('langgraph-abort', conversationId),
+    abort: (conversationId: string) => ipcRenderer.invoke('langgraph-abort', conversationId),
     stopBrowserAgent: (conversationId: string) =>
       ipcRenderer.invoke('langgraph-stop-browser-agent', conversationId),
     removeStreamListener: (event: string, handler: any) => {
@@ -198,22 +207,18 @@ const electronAPI = {
       ipcRenderer.invoke('vectordb-initialize', config),
     createIndex: (name: string, dimension: number) =>
       ipcRenderer.invoke('vectordb-create-index', name, dimension),
-    deleteIndex: (name: string) =>
-      ipcRenderer.invoke('vectordb-delete-index', name),
-    indexExists: (name: string) =>
-      ipcRenderer.invoke('vectordb-index-exists', name),
-    insert: (documents: any[]) =>
-      ipcRenderer.invoke('vectordb-insert', documents),
+    deleteIndex: (name: string) => ipcRenderer.invoke('vectordb-delete-index', name),
+    indexExists: (name: string) => ipcRenderer.invoke('vectordb-index-exists', name),
+    insert: (documents: any[]) => ipcRenderer.invoke('vectordb-insert', documents),
     search: (queryEmbedding: number[], k: number) =>
       ipcRenderer.invoke('vectordb-search', queryEmbedding, k),
-    delete: (ids: string[]) =>
-      ipcRenderer.invoke('vectordb-delete', ids),
-    count: () =>
-      ipcRenderer.invoke('vectordb-count'),
-    getAll: () =>
-      ipcRenderer.invoke('vectordb-get-all'),
-    indexDocuments: (documents: Array<{ id: string; content: string; metadata: Record<string, any> }>, options: { chunkSize: number; chunkOverlap: number; batchSize: number }) =>
-      ipcRenderer.invoke('vectordb-index-documents', documents, options),
+    delete: (ids: string[]) => ipcRenderer.invoke('vectordb-delete', ids),
+    count: () => ipcRenderer.invoke('vectordb-count'),
+    getAll: () => ipcRenderer.invoke('vectordb-get-all'),
+    indexDocuments: (
+      documents: Array<{ id: string; content: string; metadata: Record<string, any> }>,
+      options: { chunkSize: number; chunkOverlap: number; batchSize: number }
+    ) => ipcRenderer.invoke('vectordb-index-documents', documents, options),
   },
 
   // File operations
@@ -236,24 +241,49 @@ const electronAPI = {
       ipcRenderer.invoke('fs:create-file', filePath, content),
     createDirectory: (dirPath: string) => ipcRenderer.invoke('fs:create-directory', dirPath),
     delete: (targetPath: string) => ipcRenderer.invoke('fs:delete', targetPath),
-    rename: (oldPath: string, newPath: string) =>
-      ipcRenderer.invoke('fs:rename', oldPath, newPath),
+    rename: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:rename', oldPath, newPath),
     searchFiles: (query: string, dirPath: string, options?: any) =>
       ipcRenderer.invoke('fs:search-files', query, dirPath, options),
   },
 
   // GitHub operations
   github: {
-    setPrivateKey: (privateKey: string) =>
-      ipcRenderer.invoke('github-set-private-key', privateKey),
-    hasPrivateKey: () =>
-      ipcRenderer.invoke('github-has-private-key'),
+    setPrivateKey: (privateKey: string) => ipcRenderer.invoke('github-set-private-key', privateKey),
+    hasPrivateKey: () => ipcRenderer.invoke('github-has-private-key'),
     getRepositories: (baseUrl: string, appId: string, installationId: string, networkConfig: any) =>
       ipcRenderer.invoke('github-get-repositories', baseUrl, appId, installationId, networkConfig),
-    syncFromGitHub: (baseUrl: string, installationId: string, repo: string, masterPassword: string, networkConfig: any) =>
-      ipcRenderer.invoke('github-sync-from-github', baseUrl, installationId, repo, masterPassword, networkConfig),
-    syncToGitHub: (baseUrl: string, installationId: string, repo: string, config: any, masterPassword: string, networkConfig: any) =>
-      ipcRenderer.invoke('github-sync-to-github', baseUrl, installationId, repo, config, masterPassword, networkConfig),
+    syncFromGitHub: (
+      baseUrl: string,
+      installationId: string,
+      repo: string,
+      masterPassword: string,
+      networkConfig: any
+    ) =>
+      ipcRenderer.invoke(
+        'github-sync-from-github',
+        baseUrl,
+        installationId,
+        repo,
+        masterPassword,
+        networkConfig
+      ),
+    syncToGitHub: (
+      baseUrl: string,
+      installationId: string,
+      repo: string,
+      config: any,
+      masterPassword: string,
+      networkConfig: any
+    ) =>
+      ipcRenderer.invoke(
+        'github-sync-to-github',
+        baseUrl,
+        installationId,
+        repo,
+        config,
+        masterPassword,
+        networkConfig
+      ),
   },
 
   // Shell operations
@@ -263,24 +293,26 @@ const electronAPI = {
 
   // Embeddings operations (CORS 문제 해결)
   embeddings: {
-    generate: (text: string, config: {
-      apiKey: string;
-      model: string;
-      baseURL: string;
-      networkConfig?: any;
-    }) => ipcRenderer.invoke('embeddings-generate', text, config),
-    generateBatch: (texts: string[], config: {
-      apiKey: string;
-      model: string;
-      baseURL: string;
-      networkConfig?: any;
-    }) => ipcRenderer.invoke('embeddings-generate-batch', texts, config),
-    validate: (config: {
-      apiKey: string;
-      model: string;
-      baseURL: string;
-      networkConfig?: any;
-    }) => ipcRenderer.invoke('embeddings-validate', config),
+    generate: (
+      text: string,
+      config: {
+        apiKey: string;
+        model: string;
+        baseURL: string;
+        networkConfig?: any;
+      }
+    ) => ipcRenderer.invoke('embeddings-generate', text, config),
+    generateBatch: (
+      texts: string[],
+      config: {
+        apiKey: string;
+        model: string;
+        baseURL: string;
+        networkConfig?: any;
+      }
+    ) => ipcRenderer.invoke('embeddings-generate-batch', texts, config),
+    validate: (config: { apiKey: string; model: string; baseURL: string; networkConfig?: any }) =>
+      ipcRenderer.invoke('embeddings-validate', config),
   },
 
   // ComfyUI operations (CORS 문제 해결)
@@ -293,7 +325,15 @@ const electronAPI = {
       clientId: string,
       apiKey: string | undefined,
       networkConfig: any
-    ) => ipcRenderer.invoke('comfyui-queue-prompt', httpUrl, workflow, clientId, apiKey, networkConfig),
+    ) =>
+      ipcRenderer.invoke(
+        'comfyui-queue-prompt',
+        httpUrl,
+        workflow,
+        clientId,
+        apiKey,
+        networkConfig
+      ),
     fetchImage: (
       httpUrl: string,
       filename: string,
@@ -301,7 +341,16 @@ const electronAPI = {
       type: string,
       apiKey: string | undefined,
       networkConfig: any
-    ) => ipcRenderer.invoke('comfyui-fetch-image', httpUrl, filename, subfolder, type, apiKey, networkConfig),
+    ) =>
+      ipcRenderer.invoke(
+        'comfyui-fetch-image',
+        httpUrl,
+        filename,
+        subfolder,
+        type,
+        apiKey,
+        networkConfig
+      ),
   },
 
   // Update operations
@@ -312,11 +361,7 @@ const electronAPI = {
 
   // 이벤트 리스너
   on: (channel: string, callback: (...args: unknown[]) => void) => {
-    const validChannels = [
-      'update-available',
-      'download-progress',
-      'create-new-chat-with-message',
-    ];
+    const validChannels = ['update-available', 'download-progress', 'create-new-chat-with-message'];
 
     if (validChannels.includes(channel)) {
       // wrapper 함수 없이 직접 등록 (removeListener와 호환)
@@ -365,26 +410,46 @@ const electronAPI = {
     // Snapshot operations
     capturePage: () => ipcRenderer.invoke('browser-view:capture-page'),
     getSnapshots: () => ipcRenderer.invoke('browser-view:get-snapshots'),
-    deleteSnapshot: (snapshotId: string) => ipcRenderer.invoke('browser-view:delete-snapshot', snapshotId),
-    openSnapshot: (snapshotId: string) => ipcRenderer.invoke('browser-view:open-snapshot', snapshotId),
+    deleteSnapshot: (snapshotId: string) =>
+      ipcRenderer.invoke('browser-view:delete-snapshot', snapshotId),
+    openSnapshot: (snapshotId: string) =>
+      ipcRenderer.invoke('browser-view:open-snapshot', snapshotId),
     // Bookmark operations
     addBookmark: (options?: { url?: string; title?: string; folderId?: string }) =>
       ipcRenderer.invoke('browser-view:add-bookmark', options),
     getBookmarks: () => ipcRenderer.invoke('browser-view:get-bookmarks'),
-    deleteBookmark: (bookmarkId: string) => ipcRenderer.invoke('browser-view:delete-bookmark', bookmarkId),
-    openBookmark: (bookmarkId: string) => ipcRenderer.invoke('browser-view:open-bookmark', bookmarkId),
-    addBookmarkFolder: (name: string) => ipcRenderer.invoke('browser-view:add-bookmark-folder', name),
+    deleteBookmark: (bookmarkId: string) =>
+      ipcRenderer.invoke('browser-view:delete-bookmark', bookmarkId),
+    openBookmark: (bookmarkId: string) =>
+      ipcRenderer.invoke('browser-view:open-bookmark', bookmarkId),
+    addBookmarkFolder: (name: string) =>
+      ipcRenderer.invoke('browser-view:add-bookmark-folder', name),
     getBookmarkFolders: () => ipcRenderer.invoke('browser-view:get-bookmark-folders'),
-    deleteBookmarkFolder: (folderId: string) => ipcRenderer.invoke('browser-view:delete-bookmark-folder', folderId),
+    deleteBookmarkFolder: (folderId: string) =>
+      ipcRenderer.invoke('browser-view:delete-bookmark-folder', folderId),
     // Browser settings
     getBrowserSettings: () => ipcRenderer.invoke('browser-view:get-browser-settings'),
     // Event listeners
-    onDidNavigate: (callback: (data: { tabId: string; url: string; canGoBack: boolean; canGoForward: boolean }) => void) => {
+    onDidNavigate: (
+      callback: (data: {
+        tabId: string;
+        url: string;
+        canGoBack: boolean;
+        canGoForward: boolean;
+      }) => void
+    ) => {
       const handler = (_: any, data: any) => callback(data);
       ipcRenderer.on('browser-view:did-navigate', handler);
       return handler;
     },
-    onLoadingState: (callback: (data: { tabId: string; isLoading: boolean; canGoBack?: boolean; canGoForward?: boolean }) => void) => {
+    onLoadingState: (
+      callback: (data: {
+        tabId: string;
+        isLoading: boolean;
+        canGoBack?: boolean;
+        canGoForward?: boolean;
+      }) => void
+    ) => {
       const handler = (_: any, data: any) => callback(data);
       ipcRenderer.on('browser-view:loading-state', handler);
       return handler;
@@ -409,10 +474,14 @@ const electronAPI = {
     getInteractiveElements: () => ipcRenderer.invoke('browser-control:get-interactive-elements'),
     getPageContent: () => ipcRenderer.invoke('browser-control:get-page-content'),
     captureScreenshot: () => ipcRenderer.invoke('browser-control:capture-screenshot'),
-    clickElement: (elementId: string) => ipcRenderer.invoke('browser-control:click-element', elementId),
-    typeText: (elementId: string, text: string) => ipcRenderer.invoke('browser-control:type-text', elementId, text),
-    scroll: (direction: 'up' | 'down', amount?: number) => ipcRenderer.invoke('browser-control:scroll', direction, amount),
-    waitForElement: (selector: string, timeout?: number) => ipcRenderer.invoke('browser-control:wait-for-element', selector, timeout),
+    clickElement: (elementId: string) =>
+      ipcRenderer.invoke('browser-control:click-element', elementId),
+    typeText: (elementId: string, text: string) =>
+      ipcRenderer.invoke('browser-control:type-text', elementId, text),
+    scroll: (direction: 'up' | 'down', amount?: number) =>
+      ipcRenderer.invoke('browser-control:scroll', direction, amount),
+    waitForElement: (selector: string, timeout?: number) =>
+      ipcRenderer.invoke('browser-control:wait-for-element', selector, timeout),
     executeScript: (script: string) => ipcRenderer.invoke('browser-control:execute-script', script),
   },
 
@@ -425,8 +494,7 @@ const electronAPI = {
       ipcRenderer.invoke('terminal:write', sessionId, data),
     resize: (sessionId: string, cols: number, rows: number) =>
       ipcRenderer.invoke('terminal:resize', sessionId, cols, rows),
-    killSession: (sessionId: string) =>
-      ipcRenderer.invoke('terminal:kill-session', sessionId),
+    killSession: (sessionId: string) => ipcRenderer.invoke('terminal:kill-session', sessionId),
     getSessions: () => ipcRenderer.invoke('terminal:get-sessions'),
     // Event listeners
     onData: (callback: (data: { sessionId: string; data: string }) => void) => {
@@ -434,7 +502,9 @@ const electronAPI = {
       ipcRenderer.on('terminal:data', handler);
       return handler;
     },
-    onExit: (callback: (data: { sessionId: string; exitCode: number; signal?: number }) => void) => {
+    onExit: (
+      callback: (data: { sessionId: string; exitCode: number; signal?: number }) => void
+    ) => {
       const handler = (_: any, data: any) => callback(data);
       ipcRenderer.on('terminal:exit', handler);
       return handler;

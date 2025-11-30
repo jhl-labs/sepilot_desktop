@@ -20,16 +20,17 @@ jest.mock('@/lib/platform', () => ({
 }));
 
 // Mock WebLLMClient with delay
-const createSlowStreamMock = () => async function* () {
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  yield { content: 'Hello', done: false };
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  yield { content: ' ', done: false };
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  yield { content: 'World', done: false };
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  yield { done: true };
-};
+const createSlowStreamMock = () =>
+  async function* () {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    yield { content: 'Hello', done: false };
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    yield { content: ' ', done: false };
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    yield { content: 'World', done: false };
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    yield { done: true };
+  };
 
 jest.mock('@/lib/llm/web-client', () => ({
   getWebLLMClient: jest.fn(() => ({
@@ -274,11 +275,7 @@ describe('EditorChatInput', () => {
       await user.click(sendButton);
 
       // Wait for stop button
-      const stopButton = await screen.findByRole(
-        'button',
-        { name: /중지/ },
-        { timeout: 3000 }
-      );
+      const stopButton = await screen.findByRole('button', { name: /중지/ }, { timeout: 3000 });
       await user.click(stopButton);
 
       // Should show send button again
@@ -337,11 +334,7 @@ describe('EditorChatInput', () => {
       await user.type(textarea, 'Second message');
 
       // Stop button should be shown
-      const stopButton = await screen.findByRole(
-        'button',
-        { name: /중지/ },
-        { timeout: 3000 }
-      );
+      const stopButton = await screen.findByRole('button', { name: /중지/ }, { timeout: 3000 });
       expect(stopButton).toBeInTheDocument();
 
       // Enter should not send while streaming
@@ -372,10 +365,9 @@ describe('EditorChatInput', () => {
 
       // Should update assistant message with error
       await waitFor(() => {
-        expect(mockUpdateEditorChatMessage).toHaveBeenCalledWith(
-          'msg-2',
-          { content: 'Error: Network error' }
-        );
+        expect(mockUpdateEditorChatMessage).toHaveBeenCalledWith('msg-2', {
+          content: 'Error: Network error',
+        });
       });
     });
 
@@ -398,10 +390,9 @@ describe('EditorChatInput', () => {
 
       // Should update with generic error message
       await waitFor(() => {
-        expect(mockUpdateEditorChatMessage).toHaveBeenCalledWith(
-          'msg-2',
-          { content: 'Error: Failed to get response' }
-        );
+        expect(mockUpdateEditorChatMessage).toHaveBeenCalledWith('msg-2', {
+          content: 'Error: Failed to get response',
+        });
       });
     });
   });
@@ -836,11 +827,7 @@ describe('EditorChatInput', () => {
       await user.click(sendButton);
 
       // Wait for stop button to appear
-      const stopButton = await screen.findByRole(
-        'button',
-        { name: /중지/ },
-        { timeout: 3000 }
-      );
+      const stopButton = await screen.findByRole('button', { name: /중지/ }, { timeout: 3000 });
       await user.click(stopButton);
 
       await waitFor(() => {
@@ -865,11 +852,7 @@ describe('EditorChatInput', () => {
       const sendButton = screen.getByRole('button', { name: /전송/ });
       await user.click(sendButton);
 
-      const stopButton = await screen.findByRole(
-        'button',
-        { name: /중지/ },
-        { timeout: 3000 }
-      );
+      const stopButton = await screen.findByRole('button', { name: /중지/ }, { timeout: 3000 });
       await user.click(stopButton);
 
       await waitFor(() => {
@@ -985,11 +968,7 @@ describe('EditorChatInput', () => {
       await user.click(sendButton);
 
       // Wait for stop button
-      const stopButton = await screen.findByRole(
-        'button',
-        { name: /중지/ },
-        { timeout: 3000 }
-      );
+      const stopButton = await screen.findByRole('button', { name: /중지/ }, { timeout: 3000 });
       await user.click(stopButton);
 
       // Clear previous calls

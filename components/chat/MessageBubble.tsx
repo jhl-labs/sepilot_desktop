@@ -3,7 +3,18 @@
 import { Message, FileChange } from '@/types';
 import { Persona } from '@/types/persona';
 import { cn } from '@/lib/utils';
-import { User, Bot, Edit2, RefreshCw, Copy, Check, X, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  User,
+  Bot,
+  Edit2,
+  RefreshCw,
+  Copy,
+  Check,
+  X,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -107,13 +118,17 @@ export function MessageBubble({
 
       for (const toolCall of message.tool_calls || []) {
         const isFileEditTool = toolCall.name === 'file_edit' || toolCall.name === 'file_write';
-        if (!isFileEditTool) {continue;}
+        if (!isFileEditTool) {
+          continue;
+        }
 
         try {
           const args = toolCall.arguments as any;
           const filePath = args.path;
 
-          if (!filePath) {continue;}
+          if (!filePath) {
+            continue;
+          }
 
           // Read existing file content (may fail if file doesn't exist)
           let oldContent = '';
@@ -188,11 +203,13 @@ export function MessageBubble({
       {/* Message Content */}
       <div className="flex flex-col gap-2 flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className={cn(
-            'text-sm font-semibold',
-            isUser ? 'text-blue-700 dark:text-blue-400' : 'text-left'
-          )}>
-            {isUser ? 'You' : (activePersona?.name || 'Assistant')}
+          <span
+            className={cn(
+              'text-sm font-semibold',
+              isUser ? 'text-blue-700 dark:text-blue-400' : 'text-left'
+            )}
+          >
+            {isUser ? 'You' : activePersona?.name || 'Assistant'}
           </span>
         </div>
         <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -215,11 +232,7 @@ export function MessageBubble({
                   <X className="h-3 w-3 mr-1" />
                   취소
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={handleEditSave}
-                  aria-label="편집 저장"
-                >
+                <Button size="sm" onClick={handleEditSave} aria-label="편집 저장">
                   <Check className="h-3 w-3 mr-1" />
                   저장
                 </Button>
@@ -251,10 +264,7 @@ export function MessageBubble({
 
               {/* Image Generation Progress */}
               {messageImageGenProgress && (
-                <ImageGenerationProgressBar
-                  progress={messageImageGenProgress}
-                  className="mb-3"
-                />
+                <ImageGenerationProgressBar progress={messageImageGenProgress} className="mb-3" />
               )}
 
               {isAssistant ? (
@@ -296,94 +306,98 @@ export function MessageBubble({
               </div>
             )}
             {/* Fallback: show message.fileChanges if provided and no auto-detected changes */}
-            {message.fileChanges && message.fileChanges.length > 0 && detectedFileChanges.length === 0 && (
-              <div className="mt-3 space-y-2">
-                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-2">
-                  <FileText className="h-3 w-3" />
-                  파일 변경 ({message.fileChanges.length}개)
+            {message.fileChanges &&
+              message.fileChanges.length > 0 &&
+              detectedFileChanges.length === 0 && (
+                <div className="mt-3 space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-2">
+                    <FileText className="h-3 w-3" />
+                    파일 변경 ({message.fileChanges.length}개)
+                  </div>
+                  <div className="space-y-2">
+                    {message.fileChanges.map((fileChange, index) => (
+                      <CodeDiffViewer
+                        key={`${fileChange.filePath}-${index}`}
+                        filePath={fileChange.filePath}
+                        oldContent={fileChange.oldContent || ''}
+                        newContent={fileChange.newContent || ''}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  {message.fileChanges.map((fileChange, index) => (
-                    <CodeDiffViewer
-                      key={`${fileChange.filePath}-${index}`}
-                      filePath={fileChange.filePath}
-                      oldContent={fileChange.oldContent || ''}
-                      newContent={fileChange.newContent || ''}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
           </>
         )}
 
         {/* Referenced Documents */}
-        {isAssistant && message.referenced_documents && message.referenced_documents.length > 0 && !isEditing && (
-          <div className="mt-3 space-y-2">
-            <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-              <FileText className="h-3 w-3" />
-              참조 문서 ({message.referenced_documents.length}개)
-            </div>
-            <div className="space-y-1.5">
-              {message.referenced_documents.map((doc) => {
-                const isExpanded = expandedDocs.has(doc.id);
-                const preview = doc.content.slice(0, 100);
-                return (
-                  <div
-                    key={doc.id}
-                    className="text-xs bg-muted/30 rounded-lg p-2.5 border border-border/50 hover:border-primary/30 transition-colors cursor-pointer"
-                    onClick={() => handleViewDocument(doc.id, doc.title, doc.content)}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-primary hover:underline mb-0.5">
-                          【출처: {doc.source} - {doc.title}】
+        {isAssistant &&
+          message.referenced_documents &&
+          message.referenced_documents.length > 0 &&
+          !isEditing && (
+            <div className="mt-3 space-y-2">
+              <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <FileText className="h-3 w-3" />
+                참조 문서 ({message.referenced_documents.length}개)
+              </div>
+              <div className="space-y-1.5">
+                {message.referenced_documents.map((doc) => {
+                  const isExpanded = expandedDocs.has(doc.id);
+                  const preview = doc.content.slice(0, 100);
+                  return (
+                    <div
+                      key={doc.id}
+                      className="text-xs bg-muted/30 rounded-lg p-2.5 border border-border/50 hover:border-primary/30 transition-colors cursor-pointer"
+                      onClick={() => handleViewDocument(doc.id, doc.title, doc.content)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-primary hover:underline mb-0.5">
+                            【출처: {doc.source} - {doc.title}】
+                          </div>
+                          {isExpanded && (
+                            <div className="mt-2 pt-2 border-t border-border/30 text-[11px] leading-relaxed whitespace-pre-wrap">
+                              {doc.content}
+                            </div>
+                          )}
+                          {!isExpanded && (
+                            <div className="text-[11px] text-muted-foreground line-clamp-2">
+                              {preview}...
+                            </div>
+                          )}
                         </div>
-                        {isExpanded && (
-                          <div className="mt-2 pt-2 border-t border-border/30 text-[11px] leading-relaxed whitespace-pre-wrap">
-                            {doc.content}
-                          </div>
-                        )}
-                        {!isExpanded && (
-                          <div className="text-[11px] text-muted-foreground line-clamp-2">
-                            {preview}...
-                          </div>
-                        )}
+                      </div>
+                      <div className="flex gap-1 mt-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleDocumentExpand(doc.id);
+                          }}
+                          className="h-6 px-2 text-[10px] hover:bg-muted"
+                        >
+                          {isExpanded ? (
+                            <>
+                              <ChevronUp className="h-3 w-3 mr-1" />
+                              접기
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="h-3 w-3 mr-1" />
+                              펼치기
+                            </>
+                          )}
+                        </Button>
+                        <div className="text-[10px] text-muted-foreground flex items-center px-2">
+                          클릭하여 대화창에 표시
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-1 mt-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleDocumentExpand(doc.id);
-                        }}
-                        className="h-6 px-2 text-[10px] hover:bg-muted"
-                      >
-                        {isExpanded ? (
-                          <>
-                            <ChevronUp className="h-3 w-3 mr-1" />
-                            접기
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="h-3 w-3 mr-1" />
-                            펼치기
-                          </>
-                        )}
-                      </Button>
-                      <div className="text-[10px] text-muted-foreground flex items-center px-2">
-                        클릭하여 대화창에 표시
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
-
+          )}
       </div>
 
       {/* Action Buttons - Float on top right */}
@@ -402,7 +416,11 @@ export function MessageBubble({
             title={copied ? '복사됨' : '복사'}
             aria-label={copied ? '메시지 복사됨' : '메시지 복사'}
           >
-            {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-green-500" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
           </Button>
 
           {/* 편집 버튼 - 사용자 메시지에 표시 */}

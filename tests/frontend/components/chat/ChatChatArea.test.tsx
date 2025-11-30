@@ -142,7 +142,8 @@ describe('ChatChatArea', () => {
 
     render(<ChatChatArea />);
 
-    const messageContainer = screen.getByText('I am doing well, thank you!').parentElement?.parentElement;
+    const messageContainer = screen.getByText('I am doing well, thank you!').parentElement
+      ?.parentElement;
     expect(messageContainer).toHaveClass('justify-start');
   });
 
@@ -165,7 +166,8 @@ describe('ChatChatArea', () => {
       id: 'msg-long',
       conversation_id: 'conv-1',
       role: 'user',
-      content: 'This is a very long message that should wrap properly.\nIt also has multiple lines.',
+      content:
+        'This is a very long message that should wrap properly.\nIt also has multiple lines.',
       created_at: Date.now(),
     };
 
@@ -211,7 +213,7 @@ describe('ChatChatArea', () => {
       messages: [emptyMessage],
     });
 
-    const { container} = render(<ChatChatArea />);
+    const { container } = render(<ChatChatArea />);
 
     const messages = container.querySelectorAll('.whitespace-pre-wrap');
     expect(messages).toHaveLength(1);
@@ -233,7 +235,9 @@ describe('ChatChatArea', () => {
 
     render(<ChatChatArea />);
 
-    expect(screen.getByText(/<script>alert\("XSS"\)<\/script> & special chars: © ® ™/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/<script>alert\("XSS"\)<\/script> & special chars: © ® ™/)
+    ).toBeInTheDocument();
   });
 
   it('should use message id as key', () => {

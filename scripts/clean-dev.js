@@ -43,7 +43,7 @@ if (killProcesses) {
         const lines = output.trim().split('\n');
         const pids = new Set();
 
-        lines.forEach(line => {
+        lines.forEach((line) => {
           const match = line.match(/LISTENING\s+(\d+)/);
           if (match) {
             pids.add(match[1]);
@@ -53,12 +53,12 @@ if (killProcesses) {
         if (pids.size > 0) {
           console.log(`Found ${pids.size} process(es) using port 3000`);
 
-          pids.forEach(pid => {
+          pids.forEach((pid) => {
             // 프로세스 정보 조회
             try {
               const processInfo = execSync(`tasklist /FI "PID eq ${pid}" /FO CSV /NH`, {
                 encoding: 'utf8',
-                stdio: ['pipe', 'pipe', 'pipe']
+                stdio: ['pipe', 'pipe', 'pipe'],
               }).trim();
 
               if (processInfo) {
@@ -82,7 +82,7 @@ if (killProcesses) {
               try {
                 execSync(cmd, {
                   encoding: 'utf8',
-                  stdio: ['pipe', 'pipe', 'pipe']
+                  stdio: ['pipe', 'pipe', 'pipe'],
                 });
                 console.log(`  ✅ Killed process ${pid}`);
                 killed = true;
@@ -96,7 +96,7 @@ if (killProcesses) {
                 // 마지막 시도: 에러 메시지 확인
                 execSync(`taskkill /F /PID ${pid}`, {
                   encoding: 'utf8',
-                  stdio: ['pipe', 'pipe', 'pipe']
+                  stdio: ['pipe', 'pipe', 'pipe'],
                 });
               } catch (e) {
                 const errorMsg = e.message || '';
@@ -104,7 +104,10 @@ if (killProcesses) {
                 if (errorMsg.includes('Access is denied') || errorMsg.includes('액세스가 거부')) {
                   console.error(`  ❌ Failed to kill process ${pid}: Access denied`);
                   console.error(`     💡 Try running this command as Administrator`);
-                } else if (errorMsg.includes('not found') || errorMsg.includes('찾을 수 없습니다')) {
+                } else if (
+                  errorMsg.includes('not found') ||
+                  errorMsg.includes('찾을 수 없습니다')
+                ) {
                   console.log(`  ℹ️  Process ${pid} already terminated`);
                 } else {
                   console.error(`  ⚠️  Failed to kill process ${pid}`);

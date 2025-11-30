@@ -27,7 +27,8 @@ export async function retrieveNode(state: RAGState): Promise<Partial<RAGState>> 
         // Dynamic import to avoid bundling in renderer process
         const { vectorDBService } = await import('../../../electron/services/vectordb');
         const { databaseService } = await import('../../../electron/services/database');
-        const { initializeEmbedding, getEmbeddingProvider } = await import('@/lib/vectordb/embeddings/client');
+        const { initializeEmbedding, getEmbeddingProvider } =
+          await import('@/lib/vectordb/embeddings/client');
 
         console.log('[RetrieveNode] Using vectorDBService in Main Process');
 
@@ -98,7 +99,8 @@ function getDummyDocuments(query: string): Document[] {
     },
     {
       id: 'doc-2',
-      content: 'SEPilot Desktop은 LangGraph 기반 워크플로우와 벡터 검색을 지원하는 LLM 애플리케이션입니다.',
+      content:
+        'SEPilot Desktop은 LangGraph 기반 워크플로우와 벡터 검색을 지원하는 LLM 애플리케이션입니다.',
       metadata: { source: 'sepilot-docs', page: 1 },
       score: 0.85,
     },

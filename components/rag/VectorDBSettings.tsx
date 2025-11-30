@@ -15,7 +15,7 @@ interface VectorDBSettingsProps {
 export function VectorDBSettings({
   onSave,
   initialVectorDBConfig,
-  initialEmbeddingConfig
+  initialEmbeddingConfig,
 }: VectorDBSettingsProps) {
   const [vectorDBConfig, setVectorDBConfig] = useState<VectorDBConfig>(
     initialVectorDBConfig || {
@@ -48,7 +48,10 @@ export function VectorDBSettings({
     }
     if (initialEmbeddingConfig) {
       setEmbeddingConfig(initialEmbeddingConfig);
-      console.log('[VectorDBSettings] Set embedding config with model:', initialEmbeddingConfig.model);
+      console.log(
+        '[VectorDBSettings] Set embedding config with model:',
+        initialEmbeddingConfig.model
+      );
     }
   }, [initialVectorDBConfig, initialEmbeddingConfig]);
 
@@ -105,14 +108,22 @@ export function VectorDBSettings({
 
       // 임베딩 모델 키워드 목록
       const embeddingKeywords = [
-        'embedding', 'embed', 'bge', 'nomic', 'e5', 'gte',
-        'sentence', 'instructor', 'minilm', 'mpnet'
+        'embedding',
+        'embed',
+        'bge',
+        'nomic',
+        'e5',
+        'gte',
+        'sentence',
+        'instructor',
+        'minilm',
+        'mpnet',
       ];
 
       // 임베딩 모델 필터 함수
       const isEmbeddingModel = (modelName: string): boolean => {
         const lowerName = modelName.toLowerCase();
-        return embeddingKeywords.some(keyword => lowerName.includes(keyword));
+        return embeddingKeywords.some((keyword) => lowerName.includes(keyword));
       };
 
       // OpenAI API 형식: { data: [{ id: "model-name", ... }] }
@@ -120,25 +131,34 @@ export function VectorDBSettings({
       if (data.data && Array.isArray(data.data)) {
         const allModels = data.data.map((model: any) => model.id || model.name);
         // 임베딩 모델 필터링
-        const embeddingModels = allModels.filter((id: string) =>
-          typeof id === 'string' && isEmbeddingModel(id)
+        const embeddingModels = allModels.filter(
+          (id: string) => typeof id === 'string' && isEmbeddingModel(id)
         );
         // 임베딩 모델이 없으면 모든 모델 표시
-        models = embeddingModels.length > 0 ? embeddingModels : allModels.filter((id: string) => typeof id === 'string');
+        models =
+          embeddingModels.length > 0
+            ? embeddingModels
+            : allModels.filter((id: string) => typeof id === 'string');
       } else if (data.models && Array.isArray(data.models)) {
         // Ollama API 형식: { models: [{ name: "model-name", ... }] }
         const allModels = data.models.map((model: any) => model.name || model.id);
-        const embeddingModels = allModels.filter((id: string) =>
-          typeof id === 'string' && isEmbeddingModel(id)
+        const embeddingModels = allModels.filter(
+          (id: string) => typeof id === 'string' && isEmbeddingModel(id)
         );
-        models = embeddingModels.length > 0 ? embeddingModels : allModels.filter((id: string) => typeof id === 'string');
+        models =
+          embeddingModels.length > 0
+            ? embeddingModels
+            : allModels.filter((id: string) => typeof id === 'string');
       } else if (Array.isArray(data)) {
         // 다른 형식의 응답 처리
         const allModels = data.map((model: any) => model.id || model.name || model);
-        const embeddingModels = allModels.filter((id: string) =>
-          typeof id === 'string' && isEmbeddingModel(id)
+        const embeddingModels = allModels.filter(
+          (id: string) => typeof id === 'string' && isEmbeddingModel(id)
         );
-        models = embeddingModels.length > 0 ? embeddingModels : allModels.filter((id: string) => typeof id === 'string');
+        models =
+          embeddingModels.length > 0
+            ? embeddingModels
+            : allModels.filter((id: string) => typeof id === 'string');
       }
 
       if (models.length === 0) {
@@ -151,7 +171,9 @@ export function VectorDBSettings({
         // 현재 선택된 모델이 새 목록에 없으면 첫 번째 모델로 변경
         if (!models.includes(embeddingConfig.model || '')) {
           const firstModel = models[0];
-          console.log(`[VectorDBSettings] Current model "${embeddingConfig.model}" not in new list, selecting first: "${firstModel}"`);
+          console.log(
+            `[VectorDBSettings] Current model "${embeddingConfig.model}" not in new list, selecting first: "${firstModel}"`
+          );
 
           // 첫 번째 모델의 dimension 추정
           let dimension = 1536;
@@ -189,7 +211,10 @@ export function VectorDBSettings({
 
     try {
       // API 키 검증
-      if (embeddingConfig.provider === 'openai' && (!embeddingConfig.apiKey || !embeddingConfig.apiKey.trim())) {
+      if (
+        embeddingConfig.provider === 'openai' &&
+        (!embeddingConfig.apiKey || !embeddingConfig.apiKey.trim())
+      ) {
         setMessage({ type: 'error', text: 'OpenAI API 키를 입력해주세요.' });
         setIsSaving(false);
         return;
@@ -238,7 +263,8 @@ export function VectorDBSettings({
               </option>
             </select>
             <p className="text-xs text-muted-foreground mt-1">
-              ℹ️ SQLite-vec는 Node.js 환경(Electron)에서만 동작합니다. 웹 브라우저에서는 설정만 저장됩니다.
+              ℹ️ SQLite-vec는 Node.js 환경(Electron)에서만 동작합니다. 웹 브라우저에서는 설정만
+              저장됩니다.
             </p>
           </div>
 
@@ -248,9 +274,7 @@ export function VectorDBSettings({
             <Input
               id="index-name"
               value={vectorDBConfig.indexName}
-              onChange={(e) =>
-                setVectorDBConfig({ ...vectorDBConfig, indexName: e.target.value })
-              }
+              onChange={(e) => setVectorDBConfig({ ...vectorDBConfig, indexName: e.target.value })}
               placeholder="documents"
             />
           </div>
@@ -304,12 +328,33 @@ export function VectorDBSettings({
                   >
                     {isLoadingModels ? (
                       <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                     ) : (
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
                       </svg>
                     )}
                   </Button>
@@ -317,9 +362,7 @@ export function VectorDBSettings({
                 <p className="text-xs text-muted-foreground">
                   OpenAI Compatible API 엔드포인트 URL
                 </p>
-                {modelError && (
-                  <p className="text-xs text-destructive">{modelError}</p>
-                )}
+                {modelError && <p className="text-xs text-destructive">{modelError}</p>}
               </div>
 
               <div className="space-y-2">
@@ -348,7 +391,10 @@ export function VectorDBSettings({
                       dimension = 3072;
                     } else if (selectedModel.includes('ada')) {
                       dimension = 1536;
-                    } else if (selectedModel.includes('3-small') || selectedModel.includes('small')) {
+                    } else if (
+                      selectedModel.includes('3-small') ||
+                      selectedModel.includes('small')
+                    ) {
                       dimension = 1536;
                     }
 

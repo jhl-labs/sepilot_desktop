@@ -150,10 +150,12 @@ describe('ConfigManager', () => {
 
       const result = await ConfigManager.loadLLMConfig();
 
-      expect(result).toEqual(expect.objectContaining({
-        provider: 'openai',
-        model: 'gpt-4',
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          provider: 'openai',
+          model: 'gpt-4',
+        })
+      );
     });
 
     it('should merge with defaults', async () => {

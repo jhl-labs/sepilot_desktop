@@ -1,7 +1,14 @@
 /**
  * Thinking Mode 타입 정의
  */
-export type ThinkingMode = 'instant' | 'sequential' | 'tree-of-thought' | 'deep' | 'coding' | 'browser-agent' | 'editor-agent';
+export type ThinkingMode =
+  | 'instant'
+  | 'sequential'
+  | 'tree-of-thought'
+  | 'deep'
+  | 'coding'
+  | 'browser-agent'
+  | 'editor-agent';
 
 /**
  * 기능 토글 옵션
@@ -79,7 +86,14 @@ export interface GraphOptions {
  * 스트리밍 이벤트
  */
 export interface StreamEvent {
-  type: 'node' | 'edge' | 'end' | 'error' | 'tool_approval_request' | 'tool_approval_result' | 'progress';
+  type:
+    | 'node'
+    | 'edge'
+    | 'end'
+    | 'error'
+    | 'tool_approval_request'
+    | 'tool_approval_result'
+    | 'progress';
   node?: string;
   data?: any;
   error?: string;

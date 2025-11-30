@@ -40,11 +40,8 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
   const [bookmarksPath, setBookmarksPath] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const {
-    browserChatFontConfig,
-    setBrowserChatFontConfig,
-    resetBrowserChatFontConfig,
-  } = useChatStore();
+  const { browserChatFontConfig, setBrowserChatFontConfig, resetBrowserChatFontConfig } =
+    useChatStore();
 
   // 폰트 설정 로컬 상태
   const [fontFamily, setFontFamily] = useState(browserChatFontConfig.fontFamily);
@@ -52,7 +49,9 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
 
   // Load paths when dialog opens
   useEffect(() => {
-    if (!open || !isElectron() || !window.electronAPI) {return;}
+    if (!open || !isElectron() || !window.electronAPI) {
+      return;
+    }
 
     const loadPaths = async () => {
       setIsLoading(true);
@@ -73,7 +72,9 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
   }, [open]);
 
   const handleOpenSnapshotsFolder = async () => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       await window.electronAPI.shell.openExternal(`file://${snapshotsPath}`);
@@ -83,7 +84,9 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
   };
 
   const handleOpenBookmarksFolder = async () => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       await window.electronAPI.shell.openExternal(`file://${bookmarksPath}`);
@@ -163,9 +166,7 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
                   <FolderOpen className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                북마크 데이터가 저장되는 위치입니다.
-              </p>
+              <p className="text-xs text-muted-foreground">북마크 데이터가 저장되는 위치입니다.</p>
             </div>
 
             {/* Browser Chat 폰트 설정 */}
@@ -186,10 +187,7 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
               {/* Font Family */}
               <div className="space-y-2">
                 <Label className="text-sm">폰트</Label>
-                <Select
-                  value={fontFamily}
-                  onValueChange={setFontFamily}
-                >
+                <Select value={fontFamily} onValueChange={setFontFamily}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="폰트를 선택하세요" />
                   </SelectTrigger>
@@ -241,10 +239,7 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
               </div>
 
               {/* 저장 버튼 */}
-              <Button
-                onClick={handleSaveFontConfig}
-                className="w-full"
-              >
+              <Button onClick={handleSaveFontConfig} className="w-full">
                 폰트 설정 저장
               </Button>
             </div>

@@ -276,9 +276,7 @@ describe('ChatStore', () => {
     it('should update message content', () => {
       useChatStore.setState({
         activeConversationId: 'conv-1',
-        messages: [
-          { id: 'msg-1', role: 'assistant', content: 'Hello', created_at: 100 },
-        ],
+        messages: [{ id: 'msg-1', role: 'assistant', content: 'Hello', created_at: 100 }],
       });
 
       useChatStore.getState().updateMessage('msg-1', { content: 'Updated content' });
@@ -290,9 +288,7 @@ describe('ChatStore', () => {
     it('should not update if conversation ID does not match', () => {
       useChatStore.setState({
         activeConversationId: 'conv-1',
-        messages: [
-          { id: 'msg-1', role: 'assistant', content: 'Hello', created_at: 100 },
-        ],
+        messages: [{ id: 'msg-1', role: 'assistant', content: 'Hello', created_at: 100 }],
       });
 
       useChatStore.getState().updateMessage('msg-1', { content: 'Updated' }, 'conv-2');
@@ -306,7 +302,9 @@ describe('ChatStore', () => {
     it('should delete message', async () => {
       disableElectronMode();
       (localStorage.getItem as jest.Mock).mockReturnValue(
-        JSON.stringify({ 'conv-1': [{ id: 'msg-1', role: 'user', content: 'Hello', created_at: 100 }] })
+        JSON.stringify({
+          'conv-1': [{ id: 'msg-1', role: 'user', content: 'Hello', created_at: 100 }],
+        })
       );
 
       useChatStore.setState({
@@ -864,9 +862,7 @@ describe('ChatStore', () => {
     it('should find messages with matching content', async () => {
       disableElectronMode();
       useChatStore.setState({
-        conversations: [
-          { id: 'conv-1', title: 'Shopping List', created_at: 100, updated_at: 100 },
-        ],
+        conversations: [{ id: 'conv-1', title: 'Shopping List', created_at: 100, updated_at: 100 }],
       });
 
       (localStorage.getItem as jest.Mock).mockReturnValue(
@@ -900,9 +896,7 @@ describe('ChatStore', () => {
             { id: 'msg-1', role: 'user', content: 'I love React', created_at: 100 },
             { id: 'msg-2', role: 'user', content: 'React is great', created_at: 200 },
           ],
-          'conv-2': [
-            { id: 'msg-3', role: 'user', content: 'Hello', created_at: 100 },
-          ],
+          'conv-2': [{ id: 'msg-3', role: 'user', content: 'Hello', created_at: 100 }],
         })
       );
 

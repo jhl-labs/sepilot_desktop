@@ -16,7 +16,8 @@ interface PersonaDialogProps {
 }
 
 export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
-  const { personas, activePersonaId, setActivePersona, addPersona, updatePersona, deletePersona } = useChatStore();
+  const { personas, activePersonaId, setActivePersona, addPersona, updatePersona, deletePersona } =
+    useChatStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,7 +27,7 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
     avatar: '🤖',
   });
 
-  const activePersona = personas.find(p => p.id === activePersonaId);
+  const activePersona = personas.find((p) => p.id === activePersonaId);
 
   const handleStartCreate = () => {
     setIsCreating(true);
@@ -173,7 +174,7 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
 
           {/* 페르소나 상세/편집 */}
           <div className="flex-1">
-            {(isCreating || editingId) ? (
+            {isCreating || editingId ? (
               <div className="space-y-4">
                 <h3 className="text-sm font-medium">
                   {isCreating ? '새 페르소나 추가' : '페르소나 수정'}

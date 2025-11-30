@@ -5,11 +5,7 @@ import { RawDocument, VectorDocument, IndexingOptions } from './types';
 /**
  * 텍스트 청킹 (간단한 구현)
  */
-export function chunkText(
-  text: string,
-  chunkSize: number,
-  chunkOverlap: number
-): string[] {
+export function chunkText(text: string, chunkSize: number, chunkOverlap: number): string[] {
   const chunks: string[] = [];
   let start = 0;
 
@@ -30,10 +26,7 @@ export function chunkText(
 /**
  * Raw 문서를 청크로 분할
  */
-export function chunkDocuments(
-  documents: RawDocument[],
-  options: IndexingOptions
-): RawDocument[] {
+export function chunkDocuments(documents: RawDocument[], options: IndexingOptions): RawDocument[] {
   const chunkedDocs: RawDocument[] = [];
 
   for (const doc of documents) {

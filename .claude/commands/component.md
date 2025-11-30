@@ -1,6 +1,6 @@
 ---
 description: Create a new React component
-argument-hint: "[component-name] [description]"
+argument-hint: '[component-name] [description]'
 ---
 
 # Create React Component
@@ -18,6 +18,7 @@ Create a new React component following SEPilot Desktop conventions.
    - UI primitives: Already in `components/ui/` (use existing)
 
 2. **TypeScript**: Use strict typing
+
    ```typescript
    interface $1Props {
      // Define props with types
@@ -45,6 +46,7 @@ Create a new React component following SEPilot Desktop conventions.
    - Complex logic: Extract to custom hook
 
 6. **IPC communication** (if needed):
+
    ```typescript
    const result = await window.electron.invoke('channel', data);
 

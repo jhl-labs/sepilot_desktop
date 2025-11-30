@@ -170,7 +170,8 @@ export const commandExecuteTool: MCPTool = {
  */
 export const grepSearchTool: MCPTool = {
   name: 'grep_search',
-  description: 'Search for patterns in files using ripgrep (rg). Fast code search across the codebase.',
+  description:
+    'Search for patterns in files using ripgrep (rg). Fast code search across the codebase.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -217,12 +218,14 @@ export async function executeBuiltinTool(
     case 'command_execute':
       return await handleCommandExecute(args as { command: string; cwd?: string });
     case 'grep_search':
-      return await handleGrepSearch(args as {
-        pattern: string;
-        path?: string;
-        file_type?: string;
-        case_sensitive?: boolean;
-      });
+      return await handleGrepSearch(
+        args as {
+          pattern: string;
+          path?: string;
+          file_type?: string;
+          case_sensitive?: boolean;
+        }
+      );
     case 'browser_get_interactive_elements':
       return await handleBrowserGetInteractiveElementsEnhanced();
     case 'browser_get_page_content':
@@ -230,7 +233,10 @@ export async function executeBuiltinTool(
     case 'browser_click_element':
       return await handleBrowserClickElementEnhanced((args as { element_id: string }).element_id);
     case 'browser_type_text':
-      return await handleBrowserTypeTextEnhanced((args as { element_id: string; text: string }).element_id, (args as { element_id: string; text: string }).text);
+      return await handleBrowserTypeTextEnhanced(
+        (args as { element_id: string; text: string }).element_id,
+        (args as { element_id: string; text: string }).text
+      );
     case 'browser_search_elements':
       return await handleBrowserSearchElements((args as { query: string }).query);
     case 'browser_scroll':
@@ -251,9 +257,14 @@ export async function executeBuiltinTool(
       return await handleBrowserGetSelectedText();
     // Vision tools
     case 'browser_capture_annotated_screenshot':
-      return await captureAnnotatedScreenshot(args as { maxMarkers?: number; includeOverlay?: boolean } || {});
+      return await captureAnnotatedScreenshot(
+        (args as { maxMarkers?: number; includeOverlay?: boolean }) || {}
+      );
     case 'browser_click_coordinate':
-      return await clickCoordinate((args as { x: number; y: number }).x, (args as { x: number; y: number }).y);
+      return await clickCoordinate(
+        (args as { x: number; y: number }).x,
+        (args as { x: number; y: number }).y
+      );
     case 'browser_click_marker':
       return await clickMarker((args as { marker_label: string }).marker_label);
     case 'browser_get_clickable_coordinate':
@@ -344,10 +355,7 @@ async function handleFileEdit(args: {
 /**
  * Handle file_list
  */
-async function handleFileList(args: {
-  path?: string;
-  recursive?: boolean;
-}): Promise<string> {
+async function handleFileList(args: { path?: string; recursive?: boolean }): Promise<string> {
   const dirPath = args.path || '.';
   const recursive = args.recursive || false;
 
@@ -507,7 +515,8 @@ async function handleGrepSearch(args: {
  */
 export const browserGetInteractiveElementsTool: MCPTool = {
   name: 'browser_get_interactive_elements',
-  description: 'Get all interactive elements (buttons, links, inputs) from the current browser page. Returns element IDs that can be clicked or filled.',
+  description:
+    'Get all interactive elements (buttons, links, inputs) from the current browser page. Returns element IDs that can be clicked or filled.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -520,7 +529,8 @@ export const browserGetInteractiveElementsTool: MCPTool = {
  */
 export const browserGetPageContentTool: MCPTool = {
   name: 'browser_get_page_content',
-  description: 'Get the text content and HTML of the current browser page. Useful for understanding what the page contains.',
+  description:
+    'Get the text content and HTML of the current browser page. Useful for understanding what the page contains.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -533,7 +543,8 @@ export const browserGetPageContentTool: MCPTool = {
  */
 export const browserClickElementTool: MCPTool = {
   name: 'browser_click_element',
-  description: 'Click an interactive element on the browser page. Use element ID from browser_get_interactive_elements.',
+  description:
+    'Click an interactive element on the browser page. Use element ID from browser_get_interactive_elements.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -552,7 +563,8 @@ export const browserClickElementTool: MCPTool = {
  */
 export const browserTypeTextTool: MCPTool = {
   name: 'browser_type_text',
-  description: 'Type text into an input field on the browser page. Use element ID from browser_get_interactive_elements.',
+  description:
+    'Type text into an input field on the browser page. Use element ID from browser_get_interactive_elements.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -599,14 +611,16 @@ export const browserScrollTool: MCPTool = {
  */
 export const browserNavigateTool: MCPTool = {
   name: 'browser_navigate',
-  description: 'Navigate to a URL in the browser. Use this to go to websites directly (e.g., "naver.com", "https://google.com"). Do NOT use search for simple navigation.',
+  description:
+    'Navigate to a URL in the browser. Use this to go to websites directly (e.g., "naver.com", "https://google.com"). Do NOT use search for simple navigation.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
     properties: {
       url: {
         type: 'string',
-        description: 'URL to navigate to. Can be with or without protocol (http/https will be added automatically)',
+        description:
+          'URL to navigate to. Can be with or without protocol (http/https will be added automatically)',
       },
     },
     required: ['url'],
@@ -615,7 +629,8 @@ export const browserNavigateTool: MCPTool = {
 
 export const browserCreateTabTool: MCPTool = {
   name: 'browser_create_tab',
-  description: 'Create a new browser tab. Opens a new tab with the specified URL or Google homepage.',
+  description:
+    'Create a new browser tab. Opens a new tab with the specified URL or Google homepage.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -630,7 +645,8 @@ export const browserCreateTabTool: MCPTool = {
 
 export const browserSwitchTabTool: MCPTool = {
   name: 'browser_switch_tab',
-  description: 'Switch to a specific browser tab by its ID. Use browser_list_tabs to see all available tabs and their IDs.',
+  description:
+    'Switch to a specific browser tab by its ID. Use browser_list_tabs to see all available tabs and their IDs.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -662,7 +678,8 @@ export const browserCloseTabTool: MCPTool = {
 
 export const browserListTabsTool: MCPTool = {
   name: 'browser_list_tabs',
-  description: 'List all open browser tabs with their IDs, titles, and URLs. Shows which tab is currently active.',
+  description:
+    'List all open browser tabs with their IDs, titles, and URLs. Shows which tab is currently active.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -672,14 +689,16 @@ export const browserListTabsTool: MCPTool = {
 
 export const browserTakeScreenshotTool: MCPTool = {
   name: 'browser_take_screenshot',
-  description: 'Capture a screenshot of the current browser page and get a text preview. Useful for understanding what the user sees.',
+  description:
+    'Capture a screenshot of the current browser page and get a text preview. Useful for understanding what the user sees.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
     properties: {
       fullPage: {
         type: 'boolean',
-        description: 'Whether to capture the full page or just the visible area. Defaults to visible area.',
+        description:
+          'Whether to capture the full page or just the visible area. Defaults to visible area.',
       },
     },
   },
@@ -687,7 +706,8 @@ export const browserTakeScreenshotTool: MCPTool = {
 
 export const browserGetSelectedTextTool: MCPTool = {
   name: 'browser_get_selected_text',
-  description: 'Get the text that is currently selected/highlighted in the browser. Returns empty if nothing is selected.',
+  description:
+    'Get the text that is currently selected/highlighted in the browser. Returns empty if nothing is selected.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -700,14 +720,16 @@ export const browserGetSelectedTextTool: MCPTool = {
  */
 export const browserSearchElementsTool: MCPTool = {
   name: 'browser_search_elements',
-  description: 'Search for elements on the page using natural language queries (e.g., "search button", "login input", "submit form"). Returns matching elements with their IDs.',
+  description:
+    'Search for elements on the page using natural language queries (e.g., "search button", "login input", "submit form"). Returns matching elements with their IDs.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
     properties: {
       query: {
         type: 'string',
-        description: 'Natural language query to search for elements (e.g., "search button", "email input")',
+        description:
+          'Natural language query to search for elements (e.g., "search button", "email input")',
       },
     },
     required: ['query'],
@@ -719,7 +741,8 @@ export const browserSearchElementsTool: MCPTool = {
  */
 export const browserCaptureAnnotatedScreenshotTool: MCPTool = {
   name: 'browser_capture_annotated_screenshot',
-  description: 'Capture a screenshot with labeled interactive elements (Set-of-Mark style). Returns base64 image with markers (A, B, C...) overlaid on elements.',
+  description:
+    'Capture a screenshot with labeled interactive elements (Set-of-Mark style). Returns base64 image with markers (A, B, C...) overlaid on elements.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -741,7 +764,8 @@ export const browserCaptureAnnotatedScreenshotTool: MCPTool = {
  */
 export const browserClickCoordinateTool: MCPTool = {
   name: 'browser_click_coordinate',
-  description: 'Click at specific pixel coordinates (x, y) on the page. Useful when DOM-based clicking fails or when using vision-based detection.',
+  description:
+    'Click at specific pixel coordinates (x, y) on the page. Useful when DOM-based clicking fails or when using vision-based detection.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -764,7 +788,8 @@ export const browserClickCoordinateTool: MCPTool = {
  */
 export const browserClickMarkerTool: MCPTool = {
   name: 'browser_click_marker',
-  description: 'Click an element by its marker label (A, B, C...) from annotated screenshot. Use after browser_capture_annotated_screenshot.',
+  description:
+    'Click an element by its marker label (A, B, C...) from annotated screenshot. Use after browser_capture_annotated_screenshot.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -783,7 +808,8 @@ export const browserClickMarkerTool: MCPTool = {
  */
 export const browserGetClickableCoordinateTool: MCPTool = {
   name: 'browser_get_clickable_coordinate',
-  description: 'Get the exact clickable coordinates for an element by its ID. Returns center point and bounding box.',
+  description:
+    'Get the exact clickable coordinates for an element by its ID. Returns center point and bounding box.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
@@ -802,14 +828,16 @@ export const browserGetClickableCoordinateTool: MCPTool = {
  */
 export const browserAnalyzeWithVisionTool: MCPTool = {
   name: 'browser_analyze_with_vision',
-  description: 'Analyze the page using LLM vision model with annotated screenshot. Provides AI-powered understanding of page layout and suggested actions.',
+  description:
+    'Analyze the page using LLM vision model with annotated screenshot. Provides AI-powered understanding of page layout and suggested actions.',
   serverName: 'builtin',
   inputSchema: {
     type: 'object',
     properties: {
       user_query: {
         type: 'string',
-        description: 'Optional: User query to guide vision analysis (e.g., "Find the login button")',
+        description:
+          'Optional: User query to guide vision analysis (e.g., "Find the login button")',
       },
     },
   },
@@ -981,7 +1009,10 @@ async function _handleBrowserTypeText(args: { element_id: string; text: string }
 /**
  * Handle browser_scroll
  */
-async function handleBrowserScroll(args: { direction: 'up' | 'down'; amount?: number }): Promise<string> {
+async function handleBrowserScroll(args: {
+  direction: 'up' | 'down';
+  amount?: number;
+}): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
     throw new Error('No active browser tab. Please switch to Browser mode first.');
@@ -1014,7 +1045,7 @@ async function handleBrowserNavigate(args: { url: string }): Promise<string> {
     let validUrl = args.url;
     // Add https:// if no protocol specified
     if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
-      validUrl = `https://${  validUrl}`;
+      validUrl = `https://${validUrl}`;
     }
 
     await browserView.webContents.loadURL(validUrl);
@@ -1090,9 +1121,11 @@ async function handleBrowserListTabs(): Promise<string> {
 
     if (result.success && result.data) {
       const { tabs, activeTabId } = result.data;
-      const tabList = tabs.map(tab =>
-        `${tab.isActive ? '✓' : ' '} [${tab.id}] ${tab.title || 'Untitled'} - ${tab.url}`
-      ).join('\n');
+      const tabList = tabs
+        .map(
+          (tab) => `${tab.isActive ? '✓' : ' '} [${tab.id}] ${tab.title || 'Untitled'} - ${tab.url}`
+        )
+        .join('\n');
 
       return `Total tabs: ${tabs.length}\nActive tab: ${activeTabId}\n\n${tabList}`;
     } else {

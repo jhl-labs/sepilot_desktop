@@ -34,7 +34,14 @@ class DatabaseService {
           // Production: WASM file is bundled in node_modules by electron-builder
           // Try multiple possible locations
           const possiblePaths = [
-            path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'sql.js', 'dist', file),
+            path.join(
+              process.resourcesPath,
+              'app.asar.unpacked',
+              'node_modules',
+              'sql.js',
+              'dist',
+              file
+            ),
             path.join(process.resourcesPath, 'app', 'node_modules', 'sql.js', 'dist', file),
             path.join(__dirname, '..', '..', 'node_modules', 'sql.js', 'dist', file),
           ];
@@ -48,7 +55,14 @@ class DatabaseService {
 
           // Fallback to default
           console.warn('[Database] WASM file not found, using default path');
-          return path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'sql.js', 'dist', file);
+          return path.join(
+            process.resourcesPath,
+            'app.asar.unpacked',
+            'node_modules',
+            'sql.js',
+            'dist',
+            file
+          );
         }
       },
     });
@@ -170,7 +184,6 @@ class DatabaseService {
       // Ignore errors if columns already exist
     }
 
-
     console.log('[Database] Tables created successfully');
   }
 
@@ -242,10 +255,11 @@ class DatabaseService {
   updateConversationTitle(id: string, title: string): void {
     if (!this.db) throw new Error('Database not initialized');
 
-    this.db.run(
-      `UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?`,
-      [title, Date.now(), id]
-    );
+    this.db.run(`UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?`, [
+      title,
+      Date.now(),
+      id,
+    ]);
 
     this.saveDatabase();
   }
@@ -262,12 +276,15 @@ class DatabaseService {
     });
 
     if (message.images && message.images.length > 0) {
-      console.log('[Database] Message images:', message.images.map(img => ({
-        id: img.id,
-        filename: img.filename,
-        hasBase64: !!img.base64,
-        base64Length: img.base64?.length || 0,
-      })));
+      console.log(
+        '[Database] Message images:',
+        message.images.map((img) => ({
+          id: img.id,
+          filename: img.filename,
+          hasBase64: !!img.base64,
+          base64Length: img.base64?.length || 0,
+        }))
+      );
     }
 
     this.db.run(
@@ -321,7 +338,7 @@ class DatabaseService {
           id: message.id,
           role: message.role,
           imageCount: message.images.length,
-          images: message.images.map(img => ({
+          images: message.images.map((img) => ({
             id: img.id,
             filename: img.filename,
             hasBase64: !!img.base64,
@@ -336,7 +353,7 @@ class DatabaseService {
     console.log('[Database] Loaded messages:', {
       conversationId,
       count: messages.length,
-      messagesWithImages: messages.filter(m => m.images && m.images.length > 0).length,
+      messagesWithImages: messages.filter((m) => m.images && m.images.length > 0).length,
     });
 
     return messages;
@@ -363,10 +380,7 @@ class DatabaseService {
   setSetting(key: string, value: string): void {
     if (!this.db) throw new Error('Database not initialized');
 
-    this.db.run(
-      `INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`,
-      [key, value]
-    );
+    this.db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, value]);
 
     this.saveDatabase();
   }

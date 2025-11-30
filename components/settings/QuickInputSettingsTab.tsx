@@ -24,7 +24,9 @@ export function QuickInputSettingsTab({
 }: QuickInputSettingsTabProps) {
   // Check for shortcut conflicts
   const getShortcutConflict = (shortcut: string, excludeId?: string): string | null => {
-    if (!shortcut.trim()) {return null;}
+    if (!shortcut.trim()) {
+      return null;
+    }
 
     // Check against Quick Input shortcut
     if (shortcut === config.quickInputShortcut) {
@@ -71,9 +73,7 @@ export function QuickInputSettingsTab({
   const handleUpdateQuestion = (id: string, updates: Partial<QuickQuestion>) => {
     setConfig({
       ...config,
-      quickQuestions: config.quickQuestions.map((q) =>
-        q.id === id ? { ...q, ...updates } : q
-      ),
+      quickQuestions: config.quickQuestions.map((q) => (q.id === id ? { ...q, ...updates } : q)),
     });
   };
 
@@ -86,7 +86,6 @@ export function QuickInputSettingsTab({
       />
 
       <div className="space-y-4">
-
         {/* Quick Input Shortcut */}
         <div className="space-y-3 p-4 rounded-lg border">
           <Label htmlFor="quickInputShortcut" className="text-base font-semibold">
@@ -103,9 +102,7 @@ export function QuickInputSettingsTab({
             }
             placeholder="CommandOrControl+Shift+Space"
           />
-          <p className="text-xs text-muted-foreground">
-            예: CommandOrControl+Shift+Space (기본값)
-          </p>
+          <p className="text-xs text-muted-foreground">예: CommandOrControl+Shift+Space (기본값)</p>
         </div>
 
         {/* Quick Questions */}
@@ -125,13 +122,13 @@ export function QuickInputSettingsTab({
 
           <p className="text-xs text-muted-foreground">
             클립보드 내용을 기반으로 즉시 질문하고 답변을 받는 기능입니다.
+            <br />• <strong>프롬프트</strong>: LLM의 시스템 메시지로 전송되어 역할/지시사항을
+            정의합니다.
+            <br />• <strong>클립보드 내용</strong>: 사용자 메시지로 전송되어 처리할 대상이 됩니다.
             <br />
-            • <strong>프롬프트</strong>: LLM의 시스템 메시지로 전송되어 역할/지시사항을 정의합니다.
             <br />
-            • <strong>클립보드 내용</strong>: 사용자 메시지로 전송되어 처리할 대상이 됩니다.
-            <br />
-            <br />
-            예: 프롬프트 &quot;한국어를 영어로, 영어는 한국어로&quot; → 클립보드의 텍스트를 번역합니다.
+            예: 프롬프트 &quot;한국어를 영어로, 영어는 한국어로&quot; → 클립보드의 텍스트를
+            번역합니다.
           </p>
 
           {config.quickQuestions.length === 0 ? (
@@ -141,10 +138,7 @@ export function QuickInputSettingsTab({
           ) : (
             <div className="space-y-4">
               {config.quickQuestions.map((question, index) => (
-                <div
-                  key={question.id}
-                  className="p-4 rounded-lg border bg-muted/30 space-y-3"
-                >
+                <div key={question.id} className="p-4 rounded-lg border bg-muted/30 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">#{index + 1}</span>
                     <div className="flex items-center gap-2">
@@ -180,9 +174,7 @@ export function QuickInputSettingsTab({
                     <Input
                       id={`qq-name-${question.id}`}
                       value={question.name}
-                      onChange={(e) =>
-                        handleUpdateQuestion(question.id, { name: e.target.value })
-                      }
+                      onChange={(e) => handleUpdateQuestion(question.id, { name: e.target.value })}
                       placeholder="Quick Question 이름"
                     />
                   </div>
@@ -210,9 +202,7 @@ export function QuickInputSettingsTab({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor={`qq-prompt-${question.id}`}>
-                      프롬프트 (시스템 메시지)
-                    </Label>
+                    <Label htmlFor={`qq-prompt-${question.id}`}>프롬프트 (시스템 메시지)</Label>
                     <textarea
                       id={`qq-prompt-${question.id}`}
                       value={question.prompt}

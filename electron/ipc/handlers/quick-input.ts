@@ -26,7 +26,9 @@ export function setupQuickInputHandlers() {
         logger.info('[QuickInput Handler] Main window shown and focused');
 
         // 메인 창에 새 대화 생성 및 메시지 전송 이벤트 발생
-        logger.info('[QuickInput Handler] Sending create-new-chat-with-message event to main window');
+        logger.info(
+          '[QuickInput Handler] Sending create-new-chat-with-message event to main window'
+        );
         mainWindow.webContents.send('create-new-chat-with-message', message);
         logger.info('[QuickInput Handler] Event sent successfully');
       } else {
@@ -56,7 +58,10 @@ export function setupQuickInputHandlers() {
   // Quick Question 핸들러
   ipcMain.handle('quick-question-execute', async (event, prompt: string) => {
     try {
-      logger.info('[QuickQuestion Handler] Executing quick question with prompt:', prompt.substring(0, 100));
+      logger.info(
+        '[QuickQuestion Handler] Executing quick question with prompt:',
+        prompt.substring(0, 100)
+      );
 
       // 클립보드 내용 읽기
       const clipboardContent = clipboard.readText();
@@ -68,7 +73,10 @@ export function setupQuickInputHandlers() {
         userMessage: clipboardContent.trim() || '(클립보드가 비어있습니다)',
       };
       logger.info('[QuickQuestion Handler] System message:', prompt.substring(0, 50));
-      logger.info('[QuickQuestion Handler] User message:', messageData.userMessage.substring(0, 50));
+      logger.info(
+        '[QuickQuestion Handler] User message:',
+        messageData.userMessage.substring(0, 50)
+      );
 
       // 메인 창 가져오기
       const mainWindow = getMainWindow();

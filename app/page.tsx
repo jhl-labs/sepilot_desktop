@@ -13,7 +13,8 @@ import { QuickInputMessageData } from '@/types';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
 
 export default function Home() {
-  const { appMode, createConversation, setActiveConversation, setAppMode, setActiveEditorTab } = useChatStore();
+  const { appMode, createConversation, setActiveConversation, setAppMode, setActiveEditorTab } =
+    useChatStore();
 
   // 앱 시작 시 세션 자동 복원
   const { user, isLoading: isRestoringSession } = useSessionRestore();

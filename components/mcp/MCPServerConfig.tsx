@@ -29,11 +29,7 @@ import {
 import { MCPServerConfig } from '@/lib/mcp/types';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface MCPServerConfigComponentProps {
   onAdd: () => void;
@@ -337,9 +333,7 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
                         {preset.description}
                       </p>
                     </div>
-                    {isSelected && (
-                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    )}
+                    {isSelected && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
                   </button>
                 );
               })}
@@ -377,9 +371,7 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
                         {preset.description}
                       </p>
                     </div>
-                    {isSelected && (
-                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    )}
+                    {isSelected && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
                   </button>
                 );
               })}
@@ -400,7 +392,9 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
           <div className="space-y-2">
             <Label htmlFor="server-name" className="text-sm font-medium flex items-center gap-1.5">
               서버 이름
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">필수</Badge>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                필수
+              </Badge>
             </Label>
             <Input
               id="server-name"
@@ -420,10 +414,15 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
             <>
               {/* Command */}
               <div className="space-y-2">
-                <Label htmlFor="server-command" className="text-sm font-medium flex items-center gap-1.5">
+                <Label
+                  htmlFor="server-command"
+                  className="text-sm font-medium flex items-center gap-1.5"
+                >
                   <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
                   실행 명령어
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">필수</Badge>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                    필수
+                  </Badge>
                 </Label>
                 <Input
                   id="server-command"
@@ -437,7 +436,10 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
 
               {/* Args */}
               <div className="space-y-2">
-                <Label htmlFor="server-args" className="text-sm font-medium flex items-center gap-1.5">
+                <Label
+                  htmlFor="server-args"
+                  className="text-sm font-medium flex items-center gap-1.5"
+                >
                   <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                   실행 인자
                 </Label>
@@ -461,10 +463,15 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
             <>
               {/* URL */}
               <div className="space-y-2">
-                <Label htmlFor="server-url" className="text-sm font-medium flex items-center gap-1.5">
+                <Label
+                  htmlFor="server-url"
+                  className="text-sm font-medium flex items-center gap-1.5"
+                >
                   <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
                   SSE URL
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">필수</Badge>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                    필수
+                  </Badge>
                 </Label>
                 <Input
                   id="server-url"
@@ -481,10 +488,15 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
 
               {/* Headers */}
               <div className="space-y-2">
-                <Label htmlFor="server-headers" className="text-sm font-medium flex items-center gap-1.5">
+                <Label
+                  htmlFor="server-headers"
+                  className="text-sm font-medium flex items-center gap-1.5"
+                >
                   <Key className="h-3.5 w-3.5 text-muted-foreground" />
                   HTTP 헤더
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">선택</Badge>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                    선택
+                  </Badge>
                 </Label>
                 <Textarea
                   id="server-headers"
@@ -508,7 +520,9 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-between h-10 px-3">
             <span className="text-sm text-muted-foreground">고급 옵션</span>
-            <ChevronRight className={cn('h-4 w-4 transition-transform', showAdvanced && 'rotate-90')} />
+            <ChevronRight
+              className={cn('h-4 w-4 transition-transform', showAdvanced && 'rotate-90')}
+            />
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-4 pt-4">
@@ -520,7 +534,9 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
             <div className="p-4 space-y-2">
               <Label htmlFor="server-env" className="text-sm font-medium flex items-center gap-1.5">
                 환경 변수
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">선택</Badge>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                  선택
+                </Badge>
               </Label>
               <Textarea
                 id="server-env"
@@ -531,7 +547,8 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
                 disabled={isAdding}
               />
               <p className="text-[11px] text-muted-foreground">
-                각 환경 변수를 &quot;키=값&quot; 형식으로 새 줄에 입력하세요. API 키 등 민감한 정보에 사용됩니다.
+                각 환경 변수를 &quot;키=값&quot; 형식으로 새 줄에 입력하세요. API 키 등 민감한
+                정보에 사용됩니다.
               </p>
             </div>
           </div>

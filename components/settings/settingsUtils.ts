@@ -1,4 +1,10 @@
-import { LLMConfig, VisionModelConfig, AutocompleteConfig, NetworkConfig, ComfyUIConfig } from '@/types';
+import {
+  LLMConfig,
+  VisionModelConfig,
+  AutocompleteConfig,
+  NetworkConfig,
+  ComfyUIConfig,
+} from '@/types';
 
 export const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 

@@ -44,8 +44,10 @@ async function retryWithBackoff<T>(
 
       if (attempt < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, attempt);
-        console.debug(`[BrowserAgent.Retry] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        console.debug(
+          `[BrowserAgent.Retry] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
@@ -61,11 +63,13 @@ function pruneContextIfNeeded(messages: Message[], maxMessages: number = 50): Me
     return messages;
   }
 
-  console.debug(`[BrowserAgent.Context] Pruning context from ${messages.length} to ${maxMessages} messages`);
+  console.debug(
+    `[BrowserAgent.Context] Pruning context from ${messages.length} to ${maxMessages} messages`
+  );
 
   // 시스템 메시지는 유지하고, 최근 메시지만 유지
-  const systemMessages = messages.filter(m => m.role === 'system');
-  const nonSystemMessages = messages.filter(m => m.role !== 'system');
+  const systemMessages = messages.filter((m) => m.role === 'system');
+  const nonSystemMessages = messages.filter((m) => m.role !== 'system');
   const recentMessages = nonSystemMessages.slice(-maxMessages);
 
   return [...systemMessages, ...recentMessages];
@@ -110,11 +114,16 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
       browserAnalyzeWithVisionTool, // Vision 모델 분석 (향후)
     ];
 
-    console.debug(`[BrowserAgent.Generate] Available Browser Control tools: ${browserTools.length}`);
-    console.debug('[BrowserAgent.Generate] Tool details:', browserTools.map(t => t.name));
+    console.debug(
+      `[BrowserAgent.Generate] Available Browser Control tools: ${browserTools.length}`
+    );
+    console.debug(
+      '[BrowserAgent.Generate] Tool details:',
+      browserTools.map((t) => t.name)
+    );
 
     // OpenAI compatible tools 형식으로 변환
-    const toolsForLLM = browserTools.map(tool => ({
+    const toolsForLLM = browserTools.map((tool) => ({
       type: 'function' as const,
       function: {
         name: tool.name,
@@ -404,10 +413,13 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS and AUTOMATIC RETRY. Use
     // 컨텍스트 pruning 적용
     const messages = pruneContextIfNeeded(allMessages);
 
-    console.debug('[BrowserAgent.Generate] Messages to LLM:', messages.map(m => ({
-      role: m.role,
-      contentPreview: m.content?.substring(0, 50),
-    })));
+    console.debug(
+      '[BrowserAgent.Generate] Messages to LLM:',
+      messages.map((m) => ({
+        role: m.role,
+        contentPreview: m.content?.substring(0, 50),
+      }))
+    );
 
     // LLM 호출 (스트리밍, tools 포함)
     let accumulatedContent: string = '';
@@ -444,7 +456,10 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS and AUTOMATIC RETRY. Use
       throw llmError;
     }
 
-    console.debug('[BrowserAgent.Generate] Streaming complete. Content length:', accumulatedContent.length);
+    console.debug(
+      '[BrowserAgent.Generate] Streaming complete. Content length:',
+      accumulatedContent.length
+    );
 
     // Tool calls 파싱
     const toolCalls = finalToolCalls?.map((tc: any, index: number) => {
@@ -550,20 +565,24 @@ export class BrowserAgentGraph {
     return state;
   }
 
-  async *stream(
-    initialState: AgentState,
-    maxIterations?: number
-  ): AsyncGenerator<any> {
+  async *stream(initialState: AgentState, maxIterations?: number): AsyncGenerator<any> {
     let state = { ...initialState };
     let iterations = 0;
     this.shouldStop = false;
 
     // Browser Agent LLM 설정 가져오기
-    const { browserAgentLLMConfig, addBrowserAgentLog, setBrowserAgentIsRunning, clearBrowserAgentLogs } = useChatStore.getState();
+    const {
+      browserAgentLLMConfig,
+      addBrowserAgentLog,
+      setBrowserAgentIsRunning,
+      clearBrowserAgentLogs,
+    } = useChatStore.getState();
     const actualMaxIterations = maxIterations ?? browserAgentLLMConfig.maxIterations;
 
     console.debug('[BrowserAgent] Starting stream with initial state');
-    console.debug('[BrowserAgent] Available browser tools: get_page_content, get_interactive_elements, click_element, type_text, scroll');
+    console.debug(
+      '[BrowserAgent] Available browser tools: get_page_content, get_interactive_elements, click_element, type_text, scroll'
+    );
     console.debug('[BrowserAgent] Max iterations:', actualMaxIterations);
 
     // Agent 로그 시작
@@ -588,7 +607,9 @@ export class BrowserAgentGraph {
     const LOOP_THRESHOLD = 3; // 같은 호출이 3번 반복되면 루프로 간주
 
     while (iterations < actualMaxIterations && !this.shouldStop) {
-      console.debug(`[BrowserAgent] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`);
+      console.debug(
+        `[BrowserAgent] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`
+      );
 
       // 로그: 반복 시작
       addBrowserAgentLog({
@@ -653,7 +674,7 @@ export class BrowserAgentGraph {
           content: newMessage.content?.substring(0, 100),
           hasToolCalls: !!newMessage.tool_calls,
           toolCallsCount: newMessage.tool_calls?.length,
-          toolNames: newMessage.tool_calls?.map(tc => tc.name),
+          toolNames: newMessage.tool_calls?.map((tc) => tc.name),
         });
 
         state = {
@@ -714,7 +735,7 @@ export class BrowserAgentGraph {
 
       // Emit tool execution progress
       if (toolCalls.length > 0) {
-        const toolNames = toolCalls.map(tc => tc.name).join(', ');
+        const toolNames = toolCalls.map((tc) => tc.name).join(', ');
         yield {
           progress: {
             iteration: iterations + 1,
@@ -740,9 +761,8 @@ export class BrowserAgentGraph {
 
         // Fallback: 도구 실행 실패 시 에러 결과로 대체
         toolsResult = {
-          toolResults: state.messages
-            .slice(-1)[0]
-            ?.tool_calls?.map(tc => ({
+          toolResults:
+            state.messages.slice(-1)[0]?.tool_calls?.map((tc) => ({
               toolCallId: tc.id,
               toolName: tc.name,
               result: null,
@@ -773,7 +793,8 @@ export class BrowserAgentGraph {
               message: `도구 실행 성공: ${result.toolName}`,
               details: {
                 toolName: result.toolName,
-                toolResult: typeof result.result === 'string' ? result.result : JSON.stringify(result.result),
+                toolResult:
+                  typeof result.result === 'string' ? result.result : JSON.stringify(result.result),
                 iteration: iterations + 1,
                 maxIterations,
               },
@@ -799,7 +820,9 @@ export class BrowserAgentGraph {
           );
 
           if (allSame) {
-            console.warn('[BrowserAgent] Loop detected: same tool called multiple times with same arguments');
+            console.warn(
+              '[BrowserAgent] Loop detected: same tool called multiple times with same arguments'
+            );
             hasError = true;
             errorMessage = `같은 작업(${toolCall.name})이 반복되고 있습니다. 다른 방법을 시도해야 할 것 같습니다.`;
             break;
@@ -905,7 +928,10 @@ export class BrowserAgentGraph {
     })();
 
     if (finalReportMessage) {
-      console.debug('[BrowserAgent] Generating final report message:', finalReportMessage.content.substring(0, 100));
+      console.debug(
+        '[BrowserAgent] Generating final report message:',
+        finalReportMessage.content.substring(0, 100)
+      );
       yield {
         reporter: {
           messages: [finalReportMessage],

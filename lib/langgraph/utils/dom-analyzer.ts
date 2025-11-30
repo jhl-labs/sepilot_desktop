@@ -118,12 +118,18 @@ function getImplicitRole(tag: string, attributes: Record<string, string>): strin
       return 'textbox';
     case 'select':
       return 'combobox';
-    case 'h1': return 'heading';
-    case 'h2': return 'heading';
-    case 'h3': return 'heading';
-    case 'h4': return 'heading';
-    case 'h5': return 'heading';
-    case 'h6': return 'heading';
+    case 'h1':
+      return 'heading';
+    case 'h2':
+      return 'heading';
+    case 'h3':
+      return 'heading';
+    case 'h4':
+      return 'heading';
+    case 'h5':
+      return 'heading';
+    case 'h6':
+      return 'heading';
     case 'nav':
       return 'navigation';
     case 'main':
@@ -205,8 +211,17 @@ function getAccessibleLabel(
 function isInteractive(role: string, tag: string, attributes: Record<string, string>): boolean {
   // Role-based
   const interactiveRoles = [
-    'button', 'link', 'textbox', 'searchbox', 'combobox',
-    'checkbox', 'radio', 'switch', 'slider', 'menuitem', 'tab'
+    'button',
+    'link',
+    'textbox',
+    'searchbox',
+    'combobox',
+    'checkbox',
+    'radio',
+    'switch',
+    'slider',
+    'menuitem',
+    'tab',
   ];
 
   if (interactiveRoles.includes(role)) {
@@ -230,11 +245,7 @@ function isInteractive(role: string, tag: string, attributes: Record<string, str
 /**
  * 주변 컨텍스트 생성 (부모, 형제 요소 정보)
  */
-function buildContext(
-  element: any,
-  parentText: string,
-  siblingTexts: string[]
-): string {
+function buildContext(element: any, parentText: string, siblingTexts: string[]): string {
   const parts: string[] = [];
 
   if (parentText) {
@@ -264,7 +275,7 @@ export function generatePageSummary(analysis: DOMAnalysis): string {
   if (pageStructure.headings.length > 0) {
     const headingTexts = pageStructure.headings
       .slice(0, 5)
-      .map(h => `H${h.level}: ${h.text}`)
+      .map((h) => `H${h.level}: ${h.text}`)
       .join(', ');
     parts.push(`Headings: ${headingTexts}`);
   }
@@ -298,7 +309,7 @@ export function filterRelevantElements(
 ): SemanticElement[] {
   const { maxElements = 50, includeHidden = false, roleFilter } = options;
 
-  const filtered = elements.filter(el => {
+  const filtered = elements.filter((el) => {
     // 가시성 필터
     if (!includeHidden && !el.isVisible) {
       return false;
@@ -348,7 +359,7 @@ export function searchElements(
 
   const normalizedQuery = caseSensitive ? query : query.toLowerCase();
 
-  return elements.filter(el => {
+  return elements.filter((el) => {
     const searchText = caseSensitive
       ? `${el.label} ${el.placeholder || ''} ${el.value || ''} ${el.context}`
       : `${el.label} ${el.placeholder || ''} ${el.value || ''} ${el.context}`.toLowerCase();
@@ -356,7 +367,7 @@ export function searchElements(
     if (fuzzy) {
       // 단어 단위 매칭
       const queryWords = normalizedQuery.split(/\s+/);
-      return queryWords.some(word => searchText.includes(word));
+      return queryWords.some((word) => searchText.includes(word));
     } else {
       // 정확한 매칭
       return searchText.includes(normalizedQuery);

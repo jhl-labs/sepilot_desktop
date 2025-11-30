@@ -56,12 +56,15 @@ export function requestToolApproval(
     });
 
     // Set a timeout (5 minutes) to prevent hanging indefinitely
-    setTimeout(() => {
-      if (pendingToolApprovals.has(conversationId)) {
-        pendingToolApprovals.delete(conversationId);
-        reject(new Error('Tool approval timeout'));
-      }
-    }, 5 * 60 * 1000);
+    setTimeout(
+      () => {
+        if (pendingToolApprovals.has(conversationId)) {
+          pendingToolApprovals.delete(conversationId);
+          reject(new Error('Tool approval timeout'));
+        }
+      },
+      5 * 60 * 1000
+    );
   });
 }
 
@@ -81,7 +84,9 @@ export function setupLangGraphHandlers() {
       if (pending) {
         pendingToolApprovals.delete(conversationId);
         pending.resolve(approved);
-        logger.info(`[LangGraph IPC] Tool approval response: ${approved ? 'approved' : 'rejected'} for ${conversationId}`);
+        logger.info(
+          `[LangGraph IPC] Tool approval response: ${approved ? 'approved' : 'rejected'} for ${conversationId}`
+        );
         return { success: true };
       } else {
         logger.warn(`[LangGraph IPC] No pending approval for ${conversationId}`);
@@ -135,7 +140,9 @@ export function setupLangGraphHandlers() {
         // Set ComfyUI config for image generation in Main Process
         if (comfyUIConfig) {
           setCurrentComfyUIConfig(comfyUIConfig);
-          logger.info(`[LangGraph IPC] ComfyUI config set: enabled=${comfyUIConfig.enabled}, url=${comfyUIConfig.httpUrl}`);
+          logger.info(
+            `[LangGraph IPC] ComfyUI config set: enabled=${comfyUIConfig.enabled}, url=${comfyUIConfig.httpUrl}`
+          );
         }
         if (networkConfig) {
           setCurrentNetworkConfig(networkConfig);
@@ -172,7 +179,9 @@ export function setupLangGraphHandlers() {
         const toolApprovalCallback = async (
           toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>
         ): Promise<boolean> => {
-          logger.info(`[LangGraph IPC] Tool approval callback called for ${toolCalls.length} tools`);
+          logger.info(
+            `[LangGraph IPC] Tool approval callback called for ${toolCalls.length} tools`
+          );
 
           // Request approval from user and wait for response
           const approved = await requestToolApproval(
@@ -182,17 +191,18 @@ export function setupLangGraphHandlers() {
             toolCalls
           );
 
-          logger.info(`[LangGraph IPC] Tool approval result: ${approved ? 'approved' : 'rejected'}`);
+          logger.info(
+            `[LangGraph IPC] Tool approval result: ${approved ? 'approved' : 'rejected'}`
+          );
           return approved;
         };
 
         // Stream events to renderer
         try {
-          for await (const streamEvent of GraphFactory.streamWithConfig(
-            graphConfig,
-            messages,
-            { toolApprovalCallback, conversationId: streamId }
-          )) {
+          for await (const streamEvent of GraphFactory.streamWithConfig(graphConfig, messages, {
+            toolApprovalCallback,
+            conversationId: streamId,
+          })) {
             // Check if stream was aborted
             if (abortController.signal.aborted) {
               logger.info(`[LangGraph IPC] Stream aborted for conversationId: ${streamId}`);
@@ -205,13 +215,18 @@ export function setupLangGraphHandlers() {
 
             // Guard: Skip null/undefined events
             if (!streamEvent) {
-              logger.warn(`[LangGraph IPC] Received null/undefined streamEvent for conversationId: ${streamId}`);
+              logger.warn(
+                `[LangGraph IPC] Received null/undefined streamEvent for conversationId: ${streamId}`
+              );
               continue;
             }
 
             // Skip tool_approval_request and tool_approval_result events
             // These are handled internally by the callback
-            if (streamEvent.type === 'tool_approval_request' || streamEvent.type === 'tool_approval_result') {
+            if (
+              streamEvent.type === 'tool_approval_request' ||
+              streamEvent.type === 'tool_approval_result'
+            ) {
               // Send to renderer for UI update
               event.sender.send('langgraph-stream-event', {
                 ...streamEvent,
@@ -295,7 +310,9 @@ export function setupLangGraphHandlers() {
    */
   ipcMain.handle('langgraph-stop-browser-agent', async (_event, conversationId: string) => {
     try {
-      logger.info(`[LangGraph IPC] Stop Browser Agent requested for conversationId: ${conversationId}`);
+      logger.info(
+        `[LangGraph IPC] Stop Browser Agent requested for conversationId: ${conversationId}`
+      );
 
       const { GraphFactory } = await import('../../../lib/langgraph');
       const stopped = GraphFactory.stopBrowserAgent(conversationId);
@@ -304,7 +321,9 @@ export function setupLangGraphHandlers() {
         logger.info(`[LangGraph IPC] Browser Agent stopped for conversationId: ${conversationId}`);
         return { success: true };
       } else {
-        logger.warn(`[LangGraph IPC] No active Browser Agent found for conversationId: ${conversationId}`);
+        logger.warn(
+          `[LangGraph IPC] No active Browser Agent found for conversationId: ${conversationId}`
+        );
         return { success: false, error: 'No active Browser Agent found' };
       }
     } catch (error: any) {

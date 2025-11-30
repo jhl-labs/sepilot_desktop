@@ -87,7 +87,9 @@ export function ConnectionManager({
   };
 
   const handleSaveEdit = () => {
-    if (!editingId) {return;}
+    if (!editingId) {
+      return;
+    }
 
     const { name, provider, baseURL, apiKey } = formData;
     if (!name?.trim() || !baseURL?.trim() || !apiKey?.trim()) {
@@ -150,9 +152,7 @@ export function ConnectionManager({
     const referencedModels = models.filter((m) => m.connectionId === id);
 
     if (referencedModels.length > 0) {
-      const modelNames = referencedModels
-        .map((m) => m.displayName || m.modelId)
-        .join(', ');
+      const modelNames = referencedModels.map((m) => m.displayName || m.modelId).join(', ');
 
       const confirmed = window.confirm(
         `이 Connection을 사용하는 ${referencedModels.length}개의 모델이 있습니다:\n${modelNames}\n\n삭제하시겠습니까? (모델도 함께 삭제됩니다)`
@@ -179,7 +179,11 @@ export function ConnectionManager({
             ? undefined
             : activeAutocompleteModelId;
 
-          if (newBaseId !== activeBaseModelId || newVisionId !== activeVisionModelId || newAutocompleteId !== activeAutocompleteModelId) {
+          if (
+            newBaseId !== activeBaseModelId ||
+            newVisionId !== activeVisionModelId ||
+            newAutocompleteId !== activeAutocompleteModelId
+          ) {
             onActiveModelsChange(newBaseId, newVisionId, newAutocompleteId);
           }
         }
@@ -192,9 +196,7 @@ export function ConnectionManager({
 
   const handleToggleEnabled = (id: string) => {
     onConnectionsChange(
-      connections.map((conn) =>
-        conn.id === id ? { ...conn, enabled: !conn.enabled } : conn
-      )
+      connections.map((conn) => (conn.id === id ? { ...conn, enabled: !conn.enabled } : conn))
     );
   };
 
@@ -204,7 +206,8 @@ export function ConnectionManager({
         <div>
           <h3 className="text-lg font-semibold">Connections</h3>
           <p className="text-sm text-muted-foreground">
-            LLM 서비스 연결을 관리합니다. 여러 Connection을 등록하고 각 Connection의 모델을 사용할 수 있습니다.
+            LLM 서비스 연결을 관리합니다. 여러 Connection을 등록하고 각 Connection의 모델을 사용할
+            수 있습니다.
           </p>
         </div>
         <Button
@@ -253,9 +256,7 @@ export function ConnectionManager({
                     {connection.provider === 'anthropic' && 'Anthropic (Claude)'}
                     {connection.provider === 'custom' && 'Custom (OpenAI Compatible)'}
                   </p>
-                  <p className="text-xs text-muted-foreground font-mono">
-                    {connection.baseURL}
-                  </p>
+                  <p className="text-xs text-muted-foreground font-mono">{connection.baseURL}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button

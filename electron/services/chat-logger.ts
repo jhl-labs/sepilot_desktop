@@ -20,23 +20,24 @@ class ChatLogger {
     const timestamp = new Date(message.created_at).toLocaleString();
     let content = `**[${message.role.toUpperCase()}]** (${timestamp})\n\n`;
     content += `${message.content}\n\n`;
-    
+
     if (message.tool_calls && message.tool_calls.length > 0) {
       content += `*Tool Calls:*\n`;
-      message.tool_calls.forEach(call => {
-        const args = typeof call.arguments === 'string' ? call.arguments : JSON.stringify(call.arguments);
+      message.tool_calls.forEach((call) => {
+        const args =
+          typeof call.arguments === 'string' ? call.arguments : JSON.stringify(call.arguments);
         content += `  - \`${call.name}\` with args: \`${args}\`\n`;
       });
       content += '\n';
     }
 
     if ((message as any).tool_results && (message as any).tool_results.length > 0) {
-        content += `*Tool Results:*\n`;
-        (message as any).tool_results.forEach((result: any) => {
-            content += '```json\n'
-            content += JSON.stringify(result, null, 2);
-            content += '\n```\n\n'
-        });
+      content += `*Tool Results:*\n`;
+      (message as any).tool_results.forEach((result: any) => {
+        content += '```json\n';
+        content += JSON.stringify(result, null, 2);
+        content += '\n```\n\n';
+      });
     }
 
     return content;
@@ -45,7 +46,10 @@ class ChatLogger {
   async logMessage(conversation: Conversation, message: Message): Promise<void> {
     try {
       const filePath = this.getLogFilePath(conversation.id);
-      const fileExists = await fs.access(filePath).then(() => true).catch(() => false);
+      const fileExists = await fs
+        .access(filePath)
+        .then(() => true)
+        .catch(() => false);
 
       let fileContent = '';
       if (!fileExists) {

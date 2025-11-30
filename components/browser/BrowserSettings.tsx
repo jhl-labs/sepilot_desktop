@@ -74,7 +74,9 @@ export function BrowserSettings() {
 
   // Load paths on mount
   useEffect(() => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     const loadPaths = async () => {
       setIsLoading(true);
@@ -95,7 +97,9 @@ export function BrowserSettings() {
   }, []);
 
   const handleOpenSnapshotsFolder = async () => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       await window.electronAPI.shell.openExternal(`file://${snapshotsPath}`);
@@ -105,7 +109,9 @@ export function BrowserSettings() {
   };
 
   const handleOpenBookmarksFolder = async () => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       await window.electronAPI.shell.openExternal(`file://${bookmarksPath}`);
@@ -207,9 +213,7 @@ export function BrowserSettings() {
                   <FolderOpen className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                북마크 데이터가 저장되는 위치입니다.
-              </p>
+              <p className="text-xs text-muted-foreground">북마크 데이터가 저장되는 위치입니다.</p>
             </div>
 
             {/* Browser Agent LLM 설정 */}
@@ -273,9 +277,7 @@ export function BrowserSettings() {
                   step={0.1}
                   className="h-8 text-xs"
                 />
-                <p className="text-xs text-muted-foreground">
-                  응답 다양성 (0-1, 기본값: 1.0)
-                </p>
+                <p className="text-xs text-muted-foreground">응답 다양성 (0-1, 기본값: 1.0)</p>
               </div>
 
               {/* Max Iterations */}
@@ -290,16 +292,11 @@ export function BrowserSettings() {
                   step={1}
                   className="h-8 text-xs"
                 />
-                <p className="text-xs text-muted-foreground">
-                  최대 반복 횟수 (1-50, 기본값: 20)
-                </p>
+                <p className="text-xs text-muted-foreground">최대 반복 횟수 (1-50, 기본값: 20)</p>
               </div>
 
               {/* 저장 버튼 */}
-              <Button
-                onClick={handleSaveLLMConfig}
-                className="w-full h-8 text-xs"
-              >
+              <Button onClick={handleSaveLLMConfig} className="w-full h-8 text-xs">
                 설정 저장
               </Button>
             </div>
@@ -322,10 +319,7 @@ export function BrowserSettings() {
               {/* Font Family */}
               <div className="space-y-1.5">
                 <Label className="text-xs">폰트</Label>
-                <Select
-                  value={fontFamily}
-                  onValueChange={setFontFamily}
-                >
+                <Select value={fontFamily} onValueChange={setFontFamily}>
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue placeholder="폰트를 선택하세요" />
                   </SelectTrigger>
@@ -377,10 +371,7 @@ export function BrowserSettings() {
               </div>
 
               {/* 저장 버튼 */}
-              <Button
-                onClick={handleSaveFontConfig}
-                className="w-full h-8 text-xs"
-              >
+              <Button onClick={handleSaveFontConfig} className="w-full h-8 text-xs">
                 폰트 설정 저장
               </Button>
             </div>

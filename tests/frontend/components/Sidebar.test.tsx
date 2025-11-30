@@ -92,8 +92,18 @@ global.confirm = jest.fn(() => true);
 
 describe('Sidebar', () => {
   const mockConversations: Conversation[] = [
-    { id: 'conv-1', title: 'First Chat', created_at: Date.now() - 3600000, updated_at: Date.now() - 3600000 },
-    { id: 'conv-2', title: 'Second Chat', created_at: Date.now() - 7200000, updated_at: Date.now() - 7200000 },
+    {
+      id: 'conv-1',
+      title: 'First Chat',
+      created_at: Date.now() - 3600000,
+      updated_at: Date.now() - 3600000,
+    },
+    {
+      id: 'conv-2',
+      title: 'Second Chat',
+      created_at: Date.now() - 7200000,
+      updated_at: Date.now() - 7200000,
+    },
   ];
 
   const mockChatStore = {
@@ -318,7 +328,11 @@ describe('Sidebar', () => {
     });
 
     it('should switch to files view mode', () => {
-      const editorMockStore = { ...mockChatStore, appMode: 'editor' as const, editorViewMode: 'search' as const };
+      const editorMockStore = {
+        ...mockChatStore,
+        appMode: 'editor' as const,
+        editorViewMode: 'search' as const,
+      };
       (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
 
       render(<Sidebar />);

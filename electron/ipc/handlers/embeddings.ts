@@ -35,21 +35,17 @@ async function generateEmbedding(
       network: config.networkConfig,
     };
 
-    const response = await fetchWithConfig(
-      url,
-      llmConfig,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: config.model,
-          input: text,
-        }),
-      }
-    );
+    const response = await fetchWithConfig(url, llmConfig, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        input: text,
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -89,21 +85,17 @@ async function generateEmbeddingBatch(
       network: config.networkConfig,
     };
 
-    const response = await fetchWithConfig(
-      url,
-      llmConfig,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: config.model,
-          input: texts,
-        }),
-      }
-    );
+    const response = await fetchWithConfig(url, llmConfig, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        input: texts,
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();

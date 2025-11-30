@@ -34,8 +34,10 @@ export function generateId(): string {
 }
 
 export function truncate(str: string, length: number): string {
-  if (str.length <= length) {return str;}
-  return `${str.substring(0, length)  }...`;
+  if (str.length <= length) {
+    return str;
+  }
+  return `${str.substring(0, length)}...`;
 }
 
 /**

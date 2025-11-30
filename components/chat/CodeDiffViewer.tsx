@@ -63,9 +63,9 @@ export function CodeDiffViewer({
   }, [oldContent, newContent]);
 
   const stats = useMemo(() => {
-    const added = diffLines.filter(l => l.type === 'added').length;
-    const removed = diffLines.filter(l => l.type === 'removed').length;
-    const modified = diffLines.filter(l => l.type === 'modified').length;
+    const added = diffLines.filter((l) => l.type === 'added').length;
+    const removed = diffLines.filter((l) => l.type === 'removed').length;
+    const modified = diffLines.filter((l) => l.type === 'modified').length;
     return { added, removed, modified };
   }, [diffLines]);
 
@@ -77,22 +77,12 @@ export function CodeDiffViewer({
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex w-full items-center gap-2 px-3 py-2 hover:bg-muted/70 transition-colors"
         >
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
+          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <span className="font-mono text-sm font-medium">{filePath}</span>
           <div className="ml-auto flex items-center gap-3 text-xs">
-            {stats.added > 0 && (
-              <span className="text-green-600">+{stats.added}</span>
-            )}
-            {stats.removed > 0 && (
-              <span className="text-red-600">-{stats.removed}</span>
-            )}
-            {stats.modified > 0 && (
-              <span className="text-orange-600">~{stats.modified}</span>
-            )}
+            {stats.added > 0 && <span className="text-green-600">+{stats.added}</span>}
+            {stats.removed > 0 && <span className="text-red-600">-{stats.removed}</span>}
+            {stats.modified > 0 && <span className="text-orange-600">~{stats.modified}</span>}
           </div>
         </button>
       </div>
@@ -130,10 +120,7 @@ export function CodeDiffViewer({
               const displayLine = line.new !== null ? line.new : line.old;
 
               return (
-                <div
-                  key={idx}
-                  className={`flex gap-2 px-2 py-0.5 ${bgClass}`}
-                >
+                <div key={idx} className={`flex gap-2 px-2 py-0.5 ${bgClass}`}>
                   <span className="text-muted-foreground w-8 text-right select-none">
                     {line.lineNum}
                   </span>
@@ -148,12 +135,7 @@ export function CodeDiffViewer({
           {(onAccept || onReject) && (
             <div className="flex items-center justify-end gap-2 border-t px-3 py-2 bg-muted/30">
               {onReject && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={onReject}
-                  className="gap-1"
-                >
+                <Button size="sm" variant="outline" onClick={onReject} className="gap-1">
                   <X className="h-3 w-3" />
                   Reject
                 </Button>

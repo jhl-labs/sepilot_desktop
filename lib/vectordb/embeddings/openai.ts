@@ -31,10 +31,16 @@ export class OpenAIEmbeddings extends EmbeddingProvider {
     this.apiKey = config.apiKey;
     // 명시적으로 모델 처리 - 빈 문자열도 기본값으로 처리
     this.model = config.model && config.model.trim() ? config.model : 'text-embedding-3-small';
-    this.baseURL = config.baseURL && config.baseURL.trim() ? config.baseURL : 'https://api.openai.com/v1';
+    this.baseURL =
+      config.baseURL && config.baseURL.trim() ? config.baseURL : 'https://api.openai.com/v1';
     this.networkConfig = config.networkConfig;
 
-    console.log('[OpenAIEmbeddings] Constructor called with model:', this.model, 'from config.model:', config.model);
+    console.log(
+      '[OpenAIEmbeddings] Constructor called with model:',
+      this.model,
+      'from config.model:',
+      config.model
+    );
 
     // 모델별 차원 설정
     this.dimension = this.model === 'text-embedding-3-large' ? 3072 : 1536;

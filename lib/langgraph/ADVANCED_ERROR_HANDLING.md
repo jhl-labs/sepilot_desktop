@@ -32,16 +32,18 @@ Based on latest research papers (2024-2025) and best practices.
 **Implementation:** `generateReflection()`
 
 ```typescript
-function generateReflection(error: string, context: string, previousAttempts: number): string
+function generateReflection(error: string, context: string, previousAttempts: number): string;
 ```
 
 **Features:**
+
 - Pattern matching for common errors (ENOENT, EACCES, string not found, etc.)
 - Specific actionable advice for each error type
 - Escalating strategies based on attempt count
 - Verbal reinforcement learning signal
 
 **Usage in State:**
+
 ```typescript
 reflections: string[]  // Accumulated reflections
 lastError: string      // Most recent error
@@ -53,19 +55,21 @@ errorHistory: Array<{ error, context, timestamp }>
 **Implementation:** `detectLoop()` and `hashToolCall()`
 
 ```typescript
-function detectLoop(history: Array<{ name, argsHash, timestamp }>): boolean
-function hashToolCall(name: string, args: Record<string, unknown>): string
+function detectLoop(history: Array<{ name; argsHash; timestamp }>): boolean;
+function hashToolCall(name: string, args: Record<string, unknown>): string;
 ```
 
 **Detection Strategies:**
+
 1. **Repetition Detection**: Same tool called with identical arguments >= 3 times in last 10 calls
 2. **Alternating Pattern**: A-B-A-B-A-B pattern in last 6 calls
 
 **Usage in State:**
+
 ```typescript
-toolCallHistory: Array<{ name, argsHash, timestamp }>
-stuckDetected: boolean
-consecutiveFailures: number
+toolCallHistory: Array<{ name; argsHash; timestamp }>;
+stuckDetected: boolean;
+consecutiveFailures: number;
 ```
 
 ### 3. Progressive Hints System
@@ -73,22 +77,25 @@ consecutiveFailures: number
 **Implementation:** `getProgressiveHint()`
 
 ```typescript
-function getProgressiveHint(failureCount: number, lastError: string): string
+function getProgressiveHint(failureCount: number, lastError: string): string;
 ```
 
 **Hint Escalation:**
+
 - **Failure 0**: No hint (first attempt)
 - **Failure 1**: "Re-read files, double-check paths"
 - **Failure 2**: "Break into smaller steps, use grep_search"
 - **Failure 3+**: "Try different approach, ask user for guidance"
 
 **Error-Specific Tips:**
+
 - String not found → "Read file first, copy-paste exact string"
 - Command failed → "Run diagnostic commands first"
 
 **Usage in State:**
+
 ```typescript
-hintsGiven: number  // Count of hints provided
+hintsGiven: number; // Count of hints provided
 ```
 
 ### 4. Context Window Management
@@ -96,29 +103,33 @@ hintsGiven: number  // Count of hints provided
 **Implementation:** `truncateContext()`
 
 ```typescript
-function truncateContext(messages: Message[], maxMessages: number = 20): Message[]
+function truncateContext(messages: Message[], maxMessages: number = 20): Message[];
 ```
 
 **Strategy:**
+
 - Always keep first message (original user request)
 - Keep most recent (maxMessages - 1) messages
 - Default limit: 20 messages
 
 **Usage in State:**
+
 ```typescript
-contextTruncated: boolean
+contextTruncated: boolean;
 ```
 
 ### 5. Retry Logic with Exponential Backoff
 
 **Usage in State:**
+
 ```typescript
-retryCount: number      // Current retry attempt
-maxRetries: number      // Maximum retries (default: 3)
-consecutiveFailures: number  // Track failure streaks
+retryCount: number; // Current retry attempt
+maxRetries: number; // Maximum retries (default: 3)
+consecutiveFailures: number; // Track failure streaks
 ```
 
 **Best Practices (2025 Research):**
+
 - Maximum 3-5 retries
 - Exponential backoff with jitter
 - Explicit failure classification (transient vs permanent)
@@ -141,9 +152,7 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
   }
 
   // 2. Apply context truncation if needed
-  const messages = state.contextTruncated
-    ? state.messages
-    : truncateContext(state.messages, 20);
+  const messages = state.contextTruncated ? state.messages : truncateContext(state.messages, 20);
 
   if (messages.length < state.messages.length) {
     console.log('[Agent] Context truncated');
@@ -200,11 +209,12 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
   const lastMessage = state.messages[state.messages.length - 1];
 
   // Track tool calls for loop detection
-  const newToolCallHistory = lastMessage.tool_calls?.map(call => ({
-    name: call.name,
-    argsHash: hashToolCall(call.name, call.arguments as Record<string, unknown>),
-    timestamp: Date.now(),
-  })) || [];
+  const newToolCallHistory =
+    lastMessage.tool_calls?.map((call) => ({
+      name: call.name,
+      argsHash: hashToolCall(call.name, call.arguments as Record<string, unknown>),
+      timestamp: Date.now(),
+    })) || [];
 
   // Execute tools with error tracking
   const results = await Promise.all(
@@ -238,15 +248,13 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
   );
 
   // Check for errors and update state
-  const hasErrors = results.some(r => r.error);
-  const errorHistory = results
-    .filter(r => r.errorInfo)
-    .map(r => r.errorInfo!);
+  const hasErrors = results.some((r) => r.error);
+  const errorHistory = results.filter((r) => r.errorInfo).map((r) => r.errorInfo!);
 
   return {
     toolCallHistory: newToolCallHistory,
     consecutiveFailures: hasErrors ? 1 : -state.consecutiveFailures, // Increment or reset
-    lastError: hasErrors ? results.find(r => r.error)?.error || '' : '',
+    lastError: hasErrors ? results.find((r) => r.error)?.error || '' : '',
     errorHistory: errorHistory.length > 0 ? errorHistory : [],
   };
 }
@@ -255,26 +263,31 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 ## State Fields Summary
 
 ### Self-Reflection
+
 - `reflections: string[]` - Accumulated reflection text
 - `lastError: string` - Most recent error message
 - `errorHistory: Array<{error, context, timestamp}>` - Full error history
 
 ### Loop Detection
+
 - `toolCallHistory: Array<{name, argsHash, timestamp}>` - Tool call history for loop detection
 - `consecutiveFailures: number` - Track failure streaks
 - `stuckDetected: boolean` - Loop detected flag
 
 ### Retry Logic
+
 - `retryCount: number` - Current retry attempt (0-based)
 - `maxRetries: number` - Maximum retries (default: 3)
 
 ### Progressive Hints
+
 - `hintsGiven: number` - Count of hints provided
 - `contextTruncated: boolean` - Context was truncated
 
 ## Performance Improvements
 
 Based on research:
+
 - **Self-Reflection**: Significant performance improvement (p < 0.001)
 - **Loop Detection**: Prevents infinite loops and wasted compute
 - **Progressive Hints**: Guides agent to success faster

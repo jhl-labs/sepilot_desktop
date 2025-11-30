@@ -39,9 +39,7 @@ describe('BookmarksDialog', () => {
     const mockBookmarks = [
       { id: '1', url: 'https://example.com', title: 'Example', createdAt: Date.now() },
     ];
-    const mockFolders = [
-      { id: 'f1', name: 'My Folder', createdAt: Date.now() },
-    ];
+    const mockFolders = [{ id: 'f1', name: 'My Folder', createdAt: Date.now() }];
 
     (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
       success: true,
@@ -463,11 +461,15 @@ describe('BookmarksDialog', () => {
 
     it('should successfully delete a folder', async () => {
       const mockBookmarks = [
-        { id: 'b1', url: 'https://example.com', title: 'Example', createdAt: Date.now(), folderId: 'f1' },
+        {
+          id: 'b1',
+          url: 'https://example.com',
+          title: 'Example',
+          createdAt: Date.now(),
+          folderId: 'f1',
+        },
       ];
-      const mockFolders = [
-        { id: 'f1', name: 'Test Folder', createdAt: Date.now() },
-      ];
+      const mockFolders = [{ id: 'f1', name: 'Test Folder', createdAt: Date.now() }];
 
       (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
         success: true,
@@ -503,7 +505,9 @@ describe('BookmarksDialog', () => {
       fireEvent.click(deleteButton as HTMLElement);
 
       await waitFor(() => {
-        expect(window.confirm).toHaveBeenCalledWith('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?');
+        expect(window.confirm).toHaveBeenCalledWith(
+          '이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?'
+        );
         expect(screen.queryByText('Test Folder')).not.toBeInTheDocument();
       });
     });

@@ -2,7 +2,12 @@ import initSqlJs, { Database } from 'sql.js';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
-import { VectorDocument, SearchResult, RawDocument, IndexingOptions } from '../../lib/vectordb/types';
+import {
+  VectorDocument,
+  SearchResult,
+  RawDocument,
+  IndexingOptions,
+} from '../../lib/vectordb/types';
 import { chunkDocuments } from '../../lib/vectordb/indexing';
 import { getEmbeddingProvider } from '../../lib/vectordb/embeddings/client';
 
@@ -42,7 +47,14 @@ class VectorDBService {
         } else {
           // Production: WASM file is bundled in node_modules by electron-builder
           const possiblePaths = [
-            path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'sql.js', 'dist', file),
+            path.join(
+              process.resourcesPath,
+              'app.asar.unpacked',
+              'node_modules',
+              'sql.js',
+              'dist',
+              file
+            ),
             path.join(process.resourcesPath, 'app', 'node_modules', 'sql.js', 'dist', file),
             path.join(__dirname, '..', '..', 'node_modules', 'sql.js', 'dist', file),
           ];
@@ -56,7 +68,14 @@ class VectorDBService {
 
           // Fallback to default
           console.warn('[VectorDB] WASM file not found, using default path');
-          return path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'sql.js', 'dist', file);
+          return path.join(
+            process.resourcesPath,
+            'app.asar.unpacked',
+            'node_modules',
+            'sql.js',
+            'dist',
+            file
+          );
         }
       },
     });
@@ -117,10 +136,9 @@ class VectorDBService {
   async indexExists(name: string): Promise<boolean> {
     if (!this.db) throw new Error('Database not connected');
 
-    const result = this.db.exec(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
-      [name]
-    );
+    const result = this.db.exec(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, [
+      name,
+    ]);
 
     return result.length > 0 && result[0].values.length > 0;
   }
@@ -148,7 +166,7 @@ class VectorDBService {
           doc.content,
           JSON.stringify(doc.metadata),
           JSON.stringify(doc.embedding),
-          Date.now()
+          Date.now(),
         ]
       );
     }
@@ -163,9 +181,7 @@ class VectorDBService {
     const indexName = this.config.indexName;
 
     // 모든 문서 가져오기
-    const result = this.db.exec(
-      `SELECT id, content, metadata, embedding FROM ${indexName}`
-    );
+    const result = this.db.exec(`SELECT id, content, metadata, embedding FROM ${indexName}`);
 
     if (result.length === 0) return [];
 
@@ -241,10 +257,7 @@ class VectorDBService {
   /**
    * 문서 인덱싱 (청킹 + 임베딩 + 삽입)
    */
-  async indexDocuments(
-    documents: RawDocument[],
-    options: IndexingOptions
-  ): Promise<void> {
+  async indexDocuments(documents: RawDocument[], options: IndexingOptions): Promise<void> {
     console.log(`[VectorDB] Indexing ${documents.length} documents...`);
 
     // Embedding Provider 가져오기
@@ -266,7 +279,9 @@ class VectorDBService {
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
 
-      console.log(`[VectorDB] Processing batch ${i + 1}/${batches.length} (${batch.length} chunks)...`);
+      console.log(
+        `[VectorDB] Processing batch ${i + 1}/${batches.length} (${batch.length} chunks)...`
+      );
 
       // 임베딩 생성
       const texts = batch.map((doc) => doc.content);

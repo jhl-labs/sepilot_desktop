@@ -202,9 +202,7 @@ describe('LLMStatusBar', () => {
   });
 
   it('should not show compact button when messages <= 2', () => {
-    render(
-      <LLMStatusBar {...defaultProps} messages={[mockMessages[0]]} onCompact={jest.fn()} />
-    );
+    render(<LLMStatusBar {...defaultProps} messages={[mockMessages[0]]} onCompact={jest.fn()} />);
 
     const buttons = screen.getAllByRole('button');
     const compactButton = buttons.find(

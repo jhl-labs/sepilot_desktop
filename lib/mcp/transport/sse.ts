@@ -23,7 +23,11 @@ export class SSEMCPClient extends MCPClient {
   private sessionId: string | null = null;
   private pendingRequests: Map<
     string | number,
-    { resolve: (value: JSONRPCResponse) => void; reject: (error: Error) => void; timeout: NodeJS.Timeout }
+    {
+      resolve: (value: JSONRPCResponse) => void;
+      reject: (error: Error) => void;
+      timeout: NodeJS.Timeout;
+    }
   > = new Map();
 
   async connect(): Promise<void> {
@@ -46,7 +50,10 @@ export class SSEMCPClient extends MCPClient {
             }
 
             // 헤더 디버깅
-            console.log('[SSE MCP] Connecting with headers:', JSON.stringify(this.config.headers, null, 2));
+            console.log(
+              '[SSE MCP] Connecting with headers:',
+              JSON.stringify(this.config.headers, null, 2)
+            );
             console.log('[SSE MCP] URL:', url.toString());
 
             const eventSource = new EventSource(url.toString(), {
@@ -120,12 +127,11 @@ export class SSEMCPClient extends MCPClient {
       this.pendingRequests.set(id, { resolve, reject, timeout });
 
       // HTTP POST로 요청 전송
-      this.sendHTTPRequest(requestWithId)
-        .catch((error) => {
-          clearTimeout(timeout);
-          this.pendingRequests.delete(id);
-          reject(error);
-        });
+      this.sendHTTPRequest(requestWithId).catch((error) => {
+        clearTimeout(timeout);
+        this.pendingRequests.delete(id);
+        reject(error);
+      });
     });
   }
 
@@ -165,7 +171,9 @@ export class SSEMCPClient extends MCPClient {
         this.sessionId = data.sessionId;
         console.log(`[SSE MCP] Session created: ${this.sessionId}`);
       } else {
-        console.warn(`[SSE MCP] Session creation failed (${response.status}), continuing without session`);
+        console.warn(
+          `[SSE MCP] Session creation failed (${response.status}), continuing without session`
+        );
       }
     } catch (error) {
       // 세션 생성 실패는 치명적이지 않음 (일부 서버는 세션이 필요 없음)

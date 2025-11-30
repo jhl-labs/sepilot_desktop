@@ -188,7 +188,10 @@ export type CodingAgentState = typeof CodingAgentStateAnnotation.State;
 /**
  * 초기 Chat 상태 생성
  */
-export function createInitialChatState(messages: Message[] = [], conversationId: string = ''): ChatState {
+export function createInitialChatState(
+  messages: Message[] = [],
+  conversationId: string = ''
+): ChatState {
   return {
     messages,
     context: '',
@@ -199,7 +202,10 @@ export function createInitialChatState(messages: Message[] = [], conversationId:
 /**
  * 초기 RAG 상태 생성
  */
-export function createInitialRAGState(messages: Message[] = [], conversationId: string = ''): RAGState {
+export function createInitialRAGState(
+  messages: Message[] = [],
+  conversationId: string = ''
+): RAGState {
   return {
     messages,
     context: '',
@@ -212,7 +218,10 @@ export function createInitialRAGState(messages: Message[] = [], conversationId: 
 /**
  * 초기 Agent 상태 생성
  */
-export function createInitialAgentState(messages: Message[] = [], conversationId: string = ''): AgentState {
+export function createInitialAgentState(
+  messages: Message[] = [],
+  conversationId: string = ''
+): AgentState {
   return {
     messages,
     context: '',

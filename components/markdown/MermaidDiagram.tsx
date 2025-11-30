@@ -35,9 +35,10 @@ export function MermaidDiagram({ chart, onChartFixed }: MermaidDiagramProps) {
   }, [chart]);
 
   // Auto-fix mermaid syntax using LLM
-  const fixMermaidSyntax = useCallback(async (brokenChart: string, errorMsg: string): Promise<string | null> => {
-    try {
-      const prompt = `Fix the following Mermaid diagram syntax error. Return ONLY the corrected Mermaid code without any explanation or markdown code blocks.
+  const fixMermaidSyntax = useCallback(
+    async (brokenChart: string, errorMsg: string): Promise<string | null> => {
+      try {
+        const prompt = `Fix the following Mermaid diagram syntax error. Return ONLY the corrected Mermaid code without any explanation or markdown code blocks.
 
 Error: ${errorMsg}
 
@@ -46,31 +47,19 @@ ${brokenChart}
 
 Corrected Mermaid code:`;
 
-      const messages = [{ role: 'user' as const, content: prompt, id: 'fix-mermaid', created_at: Date.now() }];
+        const messages = [
+          { role: 'user' as const, content: prompt, id: 'fix-mermaid', created_at: Date.now() },
+        ];
 
-      if (isElectron() && window.electronAPI?.llm) {
-        // Electron: Use IPC llm.chat
-        const result = await window.electronAPI.llm.chat(messages, { maxTokens: 2000, temperature: 0.3 });
-        if (result.success && result.data?.content) {
-          // Clean up the response - remove markdown code blocks if present
-          let fixed = result.data.content.trim();
-          if (fixed.startsWith('```mermaid')) {
-            fixed = fixed.replace(/^```mermaid\n?/, '').replace(/\n?```$/, '');
-          } else if (fixed.startsWith('```')) {
-            fixed = fixed.replace(/^```\n?/, '').replace(/\n?```$/, '');
-          }
-          return fixed.trim();
-        }
-      } else {
-        // Web: Use LLMClient directly
-        const { getLLMClient } = await import('@/lib/llm/client');
-        const client = getLLMClient();
-        if (client.isConfigured()) {
-          const provider = client.getProvider();
-          const webMessages = [{ role: 'user' as const, content: prompt, id: 'fix-mermaid', created_at: Date.now() }];
-          const response = await provider.chat(webMessages, { maxTokens: 2000, temperature: 0.3 });
-          if (response?.content) {
-            let fixed = response.content.trim();
+        if (isElectron() && window.electronAPI?.llm) {
+          // Electron: Use IPC llm.chat
+          const result = await window.electronAPI.llm.chat(messages, {
+            maxTokens: 2000,
+            temperature: 0.3,
+          });
+          if (result.success && result.data?.content) {
+            // Clean up the response - remove markdown code blocks if present
+            let fixed = result.data.content.trim();
             if (fixed.startsWith('```mermaid')) {
               fixed = fixed.replace(/^```mermaid\n?/, '').replace(/\n?```$/, '');
             } else if (fixed.startsWith('```')) {
@@ -78,30 +67,59 @@ Corrected Mermaid code:`;
             }
             return fixed.trim();
           }
+        } else {
+          // Web: Use LLMClient directly
+          const { getLLMClient } = await import('@/lib/llm/client');
+          const client = getLLMClient();
+          if (client.isConfigured()) {
+            const provider = client.getProvider();
+            const webMessages = [
+              { role: 'user' as const, content: prompt, id: 'fix-mermaid', created_at: Date.now() },
+            ];
+            const response = await provider.chat(webMessages, {
+              maxTokens: 2000,
+              temperature: 0.3,
+            });
+            if (response?.content) {
+              let fixed = response.content.trim();
+              if (fixed.startsWith('```mermaid')) {
+                fixed = fixed.replace(/^```mermaid\n?/, '').replace(/\n?```$/, '');
+              } else if (fixed.startsWith('```')) {
+                fixed = fixed.replace(/^```\n?/, '').replace(/\n?```$/, '');
+              }
+              return fixed.trim();
+            }
+          }
         }
+      } catch (err) {
+        console.error('[MermaidDiagram] Failed to fix syntax:', err);
       }
-    } catch (err) {
-      console.error('[MermaidDiagram] Failed to fix syntax:', err);
-    }
-    return null;
-  }, []);
+      return null;
+    },
+    []
+  );
 
   // Try to auto-fix on error
-  const attemptAutoFix = useCallback(async (brokenChart: string, errorMsg: string) => {
-    if (retryCount >= MAX_RETRY_COUNT || isFixing) {return;}
-
-    setIsFixing(true);
-    try {
-      const fixedChart = await fixMermaidSyntax(brokenChart, errorMsg);
-      if (fixedChart && fixedChart !== brokenChart) {
-        setCurrentChart(fixedChart);
-        setRetryCount((prev) => prev + 1);
-        onChartFixed?.(fixedChart);
+  const attemptAutoFix = useCallback(
+    async (brokenChart: string, errorMsg: string) => {
+      if (retryCount >= MAX_RETRY_COUNT || isFixing) {
+        return;
       }
-    } finally {
-      setIsFixing(false);
-    }
-  }, [retryCount, isFixing, fixMermaidSyntax, onChartFixed]);
+
+      setIsFixing(true);
+      try {
+        const fixedChart = await fixMermaidSyntax(brokenChart, errorMsg);
+        if (fixedChart && fixedChart !== brokenChart) {
+          setCurrentChart(fixedChart);
+          setRetryCount((prev) => prev + 1);
+          onChartFixed?.(fixedChart);
+        }
+      } finally {
+        setIsFixing(false);
+      }
+    },
+    [retryCount, isFixing, fixMermaidSyntax, onChartFixed]
+  );
 
   useEffect(() => {
     const isDark = theme === 'dark';
@@ -125,7 +143,9 @@ Corrected Mermaid code:`;
     }
 
     const renderDiagram = async () => {
-      if (!containerRef.current) {return;}
+      if (!containerRef.current) {
+        return;
+      }
 
       const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -205,7 +225,8 @@ Corrected Mermaid code:`;
       <div className="my-4 overflow-hidden rounded-lg border border-destructive/50 bg-destructive/10">
         <div className="flex items-center justify-between border-b border-destructive/50 bg-destructive/20 px-4 py-2">
           <span className="text-xs font-medium text-destructive">
-            Mermaid Diagram Error {retryCount > 0 && `(자동 수정 ${retryCount}/${MAX_RETRY_COUNT}회 시도됨)`}
+            Mermaid Diagram Error{' '}
+            {retryCount > 0 && `(자동 수정 ${retryCount}/${MAX_RETRY_COUNT}회 시도됨)`}
           </span>
           <div className="flex gap-1">
             {retryCount < MAX_RETRY_COUNT && (
@@ -242,7 +263,9 @@ Corrected Mermaid code:`;
         </div>
         <div className="p-4">
           <p className="text-sm text-destructive font-medium">다이어그램을 렌더링할 수 없습니다</p>
-          <p className="text-xs text-destructive/80 mt-1">문법 오류가 있습니다. 복사 버튼을 클릭하여 코드를 확인하세요.</p>
+          <p className="text-xs text-destructive/80 mt-1">
+            문법 오류가 있습니다. 복사 버튼을 클릭하여 코드를 확인하세요.
+          </p>
           {/* 에러 상세 정보는 콘솔에만 출력 - UI에서는 간결하게 */}
         </div>
       </div>
@@ -253,15 +276,8 @@ Corrected Mermaid code:`;
     <div className="group relative my-4 overflow-hidden rounded-lg border bg-muted">
       {/* Header */}
       <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
-        <span className="text-xs font-medium text-muted-foreground">
-          Mermaid Diagram
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCopy}
-          className="h-7 gap-1 px-2"
-        >
+        <span className="text-xs font-medium text-muted-foreground">Mermaid Diagram</span>
+        <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 gap-1 px-2">
           {copied ? (
             <>
               <Check className="h-3 w-3" />

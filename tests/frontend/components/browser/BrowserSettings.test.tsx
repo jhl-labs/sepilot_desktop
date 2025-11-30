@@ -280,9 +280,7 @@ describe('BrowserSettings', () => {
       success: true,
       data: mockSettings,
     });
-    (mockElectronAPI.shell.openExternal as jest.Mock).mockRejectedValue(
-      new Error('Open failed')
-    );
+    (mockElectronAPI.shell.openExternal as jest.Mock).mockRejectedValue(new Error('Open failed'));
 
     render(<BrowserSettings />);
 
@@ -307,9 +305,7 @@ describe('BrowserSettings', () => {
       success: true,
       data: mockSettings,
     });
-    (mockElectronAPI.shell.openExternal as jest.Mock).mockRejectedValue(
-      new Error('Open failed')
-    );
+    (mockElectronAPI.shell.openExternal as jest.Mock).mockRejectedValue(new Error('Open failed'));
 
     render(<BrowserSettings />);
 

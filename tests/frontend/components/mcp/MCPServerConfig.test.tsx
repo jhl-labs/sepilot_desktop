@@ -353,7 +353,9 @@ describe('MCPServerConfig', () => {
     it('should show stdio information', () => {
       render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
 
-      expect(screen.getByText(/stdio 프로토콜을 통해 로컬 프로세스와 통신합니다/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/stdio 프로토콜을 통해 로컬 프로세스와 통신합니다/)
+      ).toBeInTheDocument();
     });
 
     it('should show SSE information when switched', async () => {
@@ -442,7 +444,10 @@ describe('MCPServerConfig', () => {
       await user.type(urlInput, 'http://localhost:3000/sse');
 
       const headersInput = screen.getByLabelText(/HTTP 헤더/);
-      await user.type(headersInput, 'Authorization: Bearer token123\nContent-Type: application/json');
+      await user.type(
+        headersInput,
+        'Authorization: Bearer token123\nContent-Type: application/json'
+      );
 
       const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
       await user.click(addButton);
@@ -454,7 +459,7 @@ describe('MCPServerConfig', () => {
             transport: 'sse',
             url: 'http://localhost:3000/sse',
             headers: {
-              'Authorization': 'Bearer token123',
+              Authorization: 'Bearer token123',
               'Content-Type': 'application/json',
             },
           })
@@ -490,7 +495,7 @@ describe('MCPServerConfig', () => {
         expect(mockElectronAPI.mcp.addServer).toHaveBeenCalledWith(
           expect.objectContaining({
             headers: {
-              'Valid': 'Header',
+              Valid: 'Header',
             },
           })
         );
@@ -559,9 +564,9 @@ describe('MCPServerConfig', () => {
         expect(mockElectronAPI.mcp.addServer).toHaveBeenCalledWith(
           expect.objectContaining({
             env: {
-              'API_KEY': 'secret123',
-              'DEBUG': 'true',
-              'PORT': '8080',
+              API_KEY: 'secret123',
+              DEBUG: 'true',
+              PORT: '8080',
             },
           })
         );
@@ -592,7 +597,7 @@ describe('MCPServerConfig', () => {
         expect(mockElectronAPI.mcp.addServer).toHaveBeenCalledWith(
           expect.objectContaining({
             env: {
-              'VALID': 'yes',
+              VALID: 'yes',
             },
           })
         );

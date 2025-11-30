@@ -262,7 +262,7 @@ describe('InputBox', () => {
 
     // Simulate typing long text
     fireEvent.change(textarea, {
-      target: { value: 'Line 1\nLine 2\nLine 3\nLine 4\nLine 5' }
+      target: { value: 'Line 1\nLine 2\nLine 3\nLine 4\nLine 5' },
     });
 
     // Textarea should exist (auto-resize logic tested in implementation)
@@ -308,17 +308,19 @@ describe('InputBox', () => {
     fireEvent.compositionEnd(textarea);
   });
 
-
   it('should show image generation progress bar when progress exists', () => {
     const storeWithProgress = {
       ...mockChatStore,
       imageGenerationProgress: new Map([
-        ['conv-1', {
-          messageId: 'msg-1',
-          status: 'executing',
-          progress: 50,
-          message: 'Generating...',
-        }],
+        [
+          'conv-1',
+          {
+            messageId: 'msg-1',
+            status: 'executing',
+            progress: 50,
+            message: 'Generating...',
+          },
+        ],
       ]),
     };
     (useChatStore as unknown as jest.Mock).mockReturnValue(storeWithProgress);
@@ -379,9 +381,7 @@ describe('InputBox', () => {
       pendingToolApproval: {
         conversationId: 'conv-1',
         messageId: 'msg-1',
-        toolCalls: [
-          { id: 'tool-1', name: 'file_read', arguments: { path: '/test.txt' } },
-        ],
+        toolCalls: [{ id: 'tool-1', name: 'file_read', arguments: { path: '/test.txt' } }],
         timestamp: Date.now(),
       },
     };
@@ -425,9 +425,9 @@ describe('InputBox', () => {
     render(<InputBox />);
 
     // Thinking mode button should be disabled
-    const modeButton = screen.getAllByRole('button').find(
-      (btn) => btn.getAttribute('title')?.includes('사고 모드')
-    );
+    const modeButton = screen
+      .getAllByRole('button')
+      .find((btn) => btn.getAttribute('title')?.includes('사고 모드'));
     expect(modeButton).toBeDisabled();
   });
 
@@ -482,7 +482,6 @@ describe('InputBox', () => {
     const toolsButton = screen.getByLabelText(/Tools/i);
     expect(toolsButton).toHaveClass('bg-orange-500/10');
   });
-
 
   it('should have all thinking mode options in dropdown', async () => {
     render(<InputBox />);

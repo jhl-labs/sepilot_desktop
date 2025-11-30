@@ -301,9 +301,7 @@ describe('NetworkSettingsTab', () => {
   it('should render description text', () => {
     render(<NetworkSettingsTab {...defaultProps} />);
 
-    expect(
-      screen.getByText(/프록시 및 SSL 인증서 검증 설정을 관리합니다/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/프록시 및 SSL 인증서 검증 설정을 관리합니다/)).toBeInTheDocument();
   });
 
   it('should handle proxy enabled with existing URL', () => {

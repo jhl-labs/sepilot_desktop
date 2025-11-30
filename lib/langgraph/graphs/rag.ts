@@ -20,9 +20,10 @@ async function ragGenerateNode(state: typeof RAGStateAnnotation.State) {
     ...state.messages,
   ];
 
-  const context = state.documents.length > 0
-    ? state.documents.map((doc, i) => `[문서 ${i + 1}]\n${doc.content}`).join('\n\n')
-    : '';
+  const context =
+    state.documents.length > 0
+      ? state.documents.map((doc, i) => `[문서 ${i + 1}]\n${doc.content}`).join('\n\n')
+      : '';
 
   let accumulatedContent = '';
   const messageId = `msg-${Date.now()}`;

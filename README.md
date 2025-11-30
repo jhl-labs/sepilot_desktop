@@ -4,7 +4,7 @@
 
 **A professional LLM desktop application built with Next.js and Electron**
 
-*Claude Desktop과 같은 수준의 LLM 데스크톱 애플리케이션*
+_Claude Desktop과 같은 수준의 LLM 데스크톱 애플리케이션_
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
@@ -48,23 +48,27 @@ SEPilot Desktop is a professional LLM desktop application that provides Claude D
 ### 🏗️ Tech Stack
 
 #### Frontend
+
 - **Framework**: Next.js 14 (App Router), React 18
 - **Styling**: Tailwind CSS, shadcn/ui
 - **State Management**: Zustand
 - **Theme**: next-themes
 
 #### Desktop
+
 - **Runtime**: Electron 31
 - **IPC**: Context Bridge (secure communication)
 - **Storage**: better-sqlite3
 
 #### LLM & AI
+
 - **Workflow**: LangGraph (custom implementation)
 - **Embeddings**: OpenAI text-embedding-3
 - **Vector DB**: SQLite-vec (default)
 - **Protocol**: MCP (Model Context Protocol)
 
 #### Development
+
 - **Language**: TypeScript 5.4 (strict mode)
 - **Linter**: ESLint 8.57
 - **Formatter**: Prettier 3.2
@@ -136,6 +140,7 @@ Built applications will be created in the `dist/` directory.
 Go to [Releases](https://github.com/jhl-labs/sepilot_desktop/releases) and download the installer for your platform.
 
 **Windows:**
+
 1. Download `SEPilot-Setup-*.exe`
 2. If Windows SmartScreen shows a warning:
    - Click "More info" → "Run anyway"
@@ -197,7 +202,7 @@ Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTIN
 
 ### 📸 Screenshots
 
-*(Add screenshots here to showcase your application)*
+_(Add screenshots here to showcase your application)_
 
 ### 🗺️ Roadmap
 
@@ -213,18 +218,21 @@ Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTIN
 <summary>Which LLM providers are supported?</summary>
 
 OpenAI, Anthropic, and any custom LLM server that supports OpenAI Compatible API.
+
 </details>
 
 <details>
 <summary>Can it run locally?</summary>
 
 Yes, SEPilot Desktop is a fully local desktop application. All data is stored on your computer.
+
 </details>
 
 <details>
 <summary>How do I use the RAG feature?</summary>
 
 Configure VectorDB in settings, upload documents in the Documents tab, and select RAG as your chat type.
+
 </details>
 
 ### 📄 License
@@ -273,23 +281,27 @@ SEPilot Desktop은 Claude Desktop 수준의 기능을 제공하는 전문 LLM �
 ### 🏗️ 기술 스택
 
 #### 프론트엔드
+
 - **프레임워크**: Next.js 14 (App Router), React 18
 - **스타일링**: Tailwind CSS, shadcn/ui
 - **상태 관리**: Zustand
 - **테마**: next-themes
 
 #### 데스크톱
+
 - **런타임**: Electron 31
 - **IPC**: Context Bridge (안전한 통신)
 - **저장소**: better-sqlite3
 
 #### LLM & AI
+
 - **워크플로우**: LangGraph (커스텀 구현)
 - **임베딩**: OpenAI text-embedding-3
 - **벡터 DB**: SQLite-vec (기본값)
 - **프로토콜**: MCP (Model Context Protocol)
 
 #### 개발
+
 - **언어**: TypeScript 5.4 (strict mode)
 - **린터**: ESLint 8.57
 - **포매터**: Prettier 3.2
@@ -361,6 +373,7 @@ npm run build:linux    # Linux (AppImage, deb)
 [Releases](https://github.com/jhl-labs/sepilot_desktop/releases)에서 플랫폼에 맞는 설치 파일을 다운로드하세요.
 
 **Windows:**
+
 1. `SEPilot-Setup-*.exe` 다운로드
 2. Windows SmartScreen 경고가 표시되면:
    - "추가 정보" → "실행" 클릭
@@ -422,7 +435,7 @@ gpg --verify SEPilot-Setup-*.exe.asc SEPilot-Setup-*.exe
 
 ### 📸 스크린샷
 
-*(애플리케이션을 소개하는 스크린샷을 추가하세요)*
+_(애플리케이션을 소개하는 스크린샷을 추가하세요)_
 
 ### 🗺️ 로드맵
 
@@ -438,18 +451,21 @@ gpg --verify SEPilot-Setup-*.exe.asc SEPilot-Setup-*.exe
 <summary>어떤 LLM 제공자를 지원하나요?</summary>
 
 OpenAI, Anthropic, 그리고 OpenAI Compatible API를 지원하는 모든 커스텀 LLM 서버를 사용할 수 있습니다.
+
 </details>
 
 <details>
 <summary>로컬에서 실행 가능한가요?</summary>
 
 네, SEPilot Desktop은 완전히 로컬에서 실행되는 데스크톱 애플리케이션입니다. 모든 데이터는 사용자의 컴퓨터에 저장됩니다.
+
 </details>
 
 <details>
 <summary>RAG 기능은 어떻게 사용하나요?</summary>
 
 설정에서 VectorDB를 구성하고, Documents 탭에서 문서를 업로드한 후, 채팅 타입을 RAG로 선택하면 됩니다.
+
 </details>
 
 ### 📄 라이선스

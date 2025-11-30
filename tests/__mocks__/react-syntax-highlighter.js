@@ -16,4 +16,3 @@ module.exports['react-syntax-highlighter/dist/esm/styles/prism'] = {
   oneDark: {},
   oneLight: {},
 };
-

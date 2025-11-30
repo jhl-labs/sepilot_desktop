@@ -135,7 +135,9 @@ export function GalleryView({ onClose }: GalleryViewProps) {
   };
 
   const filteredImages = images.filter((img) => {
-    if (filter === 'all') {return true;}
+    if (filter === 'all') {
+      return true;
+    }
     return img.type === filter;
   });
 
@@ -156,9 +158,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
         <div className="flex items-center gap-3">
           <ImageIcon className="h-6 w-6 text-primary" />
           <h2 className="text-xl font-semibold">이미지 갤러리</h2>
-          <span className="text-sm text-muted-foreground">
-            ({filteredImages.length}개)
-          </span>
+          <span className="text-sm text-muted-foreground">({filteredImages.length}개)</span>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-5 w-5" />
@@ -293,11 +293,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                 >
                   <Download className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSelectedImage(null)}
-                >
+                <Button variant="ghost" size="icon" onClick={() => setSelectedImage(null)}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>

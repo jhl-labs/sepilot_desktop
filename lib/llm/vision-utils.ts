@@ -74,9 +74,9 @@ export function createVisionProvider(
 
   // Detect if using Ollama (default port 11434 or ollama in URL)
   const isOllama =
-    baseURL.includes(':11434') ||     // Any IP/hostname with Ollama default port
-    baseURL.includes('/api/chat') ||  // Ollama native API endpoint
-    baseURL.includes('ollama');       // 'ollama' in hostname/URL
+    baseURL.includes(':11434') || // Any IP/hostname with Ollama default port
+    baseURL.includes('/api/chat') || // Ollama native API endpoint
+    baseURL.includes('ollama'); // 'ollama' in hostname/URL
 
   let provider: BaseLLMProvider;
 
@@ -120,7 +120,8 @@ export function createVisionProvider(
   }
 
   // Set streaming capability based on config
-  (provider as any).streamingEnabled = visionConfig.enableStreaming ?? options?.enableStreaming ?? false;
+  (provider as any).streamingEnabled =
+    visionConfig.enableStreaming ?? options?.enableStreaming ?? false;
 
   return provider;
 }

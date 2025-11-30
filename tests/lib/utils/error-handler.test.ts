@@ -107,11 +107,15 @@ describe('error-handler', () => {
     });
 
     it('should return correct message for 401 error', () => {
-      expect(getHTTPErrorMessage(401, 'default')).toBe('API 키가 유효하지 않습니다. 설정에서 API 키를 확인해주세요.');
+      expect(getHTTPErrorMessage(401, 'default')).toBe(
+        'API 키가 유효하지 않습니다. 설정에서 API 키를 확인해주세요.'
+      );
     });
 
     it('should return correct message for 403 error', () => {
-      expect(getHTTPErrorMessage(403, 'default')).toBe('접근 권한이 없습니다. API 키 권한을 확인해주세요.');
+      expect(getHTTPErrorMessage(403, 'default')).toBe(
+        '접근 권한이 없습니다. API 키 권한을 확인해주세요.'
+      );
     });
 
     it('should return correct message for 404 error', () => {
@@ -119,7 +123,9 @@ describe('error-handler', () => {
     });
 
     it('should return correct message for 429 error', () => {
-      expect(getHTTPErrorMessage(429, 'default')).toBe('API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.');
+      expect(getHTTPErrorMessage(429, 'default')).toBe(
+        'API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.'
+      );
     });
 
     it('should return correct message for 5xx errors', () => {
@@ -157,10 +163,9 @@ describe('error-handler', () => {
     });
 
     it('should handle context parameter', async () => {
-      const result = await safeAsync(
-        async () => { throw new Error('error with context'); },
-        'TestContext'
-      );
+      const result = await safeAsync(async () => {
+        throw new Error('error with context');
+      }, 'TestContext');
 
       expect(result.success).toBe(false);
     });
@@ -168,11 +173,7 @@ describe('error-handler', () => {
 
   describe('combineErrors', () => {
     it('should combine multiple error messages', () => {
-      const errors = [
-        new Error('first error'),
-        'second error',
-        { message: 'third error' },
-      ];
+      const errors = [new Error('first error'), 'second error', { message: 'third error' }];
 
       expect(combineErrors(errors)).toBe('first error; second error; third error');
     });

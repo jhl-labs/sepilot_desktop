@@ -31,7 +31,8 @@ import { isElectron } from '@/lib/platform';
 import path from 'path-browserify';
 
 export function FileExplorer() {
-  const { workingDirectory, setWorkingDirectory, openFile, activeFilePath, loadWorkingDirectory } = useChatStore();
+  const { workingDirectory, setWorkingDirectory, openFile, activeFilePath, loadWorkingDirectory } =
+    useChatStore();
   const [fileTree, setFileTree] = useState<FileNode[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showNewFileDialog, setShowNewFileDialog] = useState(false);
@@ -216,9 +217,7 @@ export function FileExplorer() {
               {workingDirectory}
             </div>
           ) : (
-            <div className="text-xs text-muted-foreground italic">
-              디렉토리를 선택하세요
-            </div>
+            <div className="text-xs text-muted-foreground italic">디렉토리를 선택하세요</div>
           )}
         </div>
       </div>
@@ -261,16 +260,16 @@ export function FileExplorer() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>새 파일 생성</DialogTitle>
-            <DialogDescription>
-              파일 이름을 입력하세요 (확장자 포함)
-            </DialogDescription>
+            <DialogDescription>파일 이름을 입력하세요 (확장자 포함)</DialogDescription>
           </DialogHeader>
           <Input
             ref={newFileInputRef}
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {handleCreateFile();}
+              if (e.key === 'Enter') {
+                handleCreateFile();
+              }
             }}
             placeholder="예: example.txt"
           />
@@ -288,16 +287,16 @@ export function FileExplorer() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>새 폴더 생성</DialogTitle>
-            <DialogDescription>
-              폴더 이름을 입력하세요
-            </DialogDescription>
+            <DialogDescription>폴더 이름을 입력하세요</DialogDescription>
           </DialogHeader>
           <Input
             ref={newFolderInputRef}
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {handleCreateFolder();}
+              if (e.key === 'Enter') {
+                handleCreateFolder();
+              }
             }}
             placeholder="예: my-folder"
           />

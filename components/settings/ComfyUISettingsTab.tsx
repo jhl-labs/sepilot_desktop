@@ -16,7 +16,9 @@ interface ComfyUISettingsTabProps {
   onSave: () => Promise<void>;
   isSaving: boolean;
   message: { type: 'success' | 'error'; text: string } | null;
-  setMessage: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; text: string } | null>>;
+  setMessage: React.Dispatch<
+    React.SetStateAction<{ type: 'success' | 'error'; text: string } | null>
+  >;
 }
 
 export function ComfyUISettingsTab({
@@ -42,7 +44,8 @@ export function ComfyUISettingsTab({
       // Electron 환경: IPC를 통해 Main Process에서 호출 (CORS 없음, Network Config 사용)
       if (typeof window !== 'undefined' && window.electronAPI?.comfyui) {
         // customHeaders는 LLM 전용이므로 ComfyUI에는 전달하지 않음
-        const { customHeaders: _customHeaders, ...networkConfigWithoutCustomHeaders } = networkConfig;
+        const { customHeaders: _customHeaders, ...networkConfigWithoutCustomHeaders } =
+          networkConfig;
         const result = await window.electronAPI.comfyui.testConnection(
           comfyConfig.httpUrl,
           comfyConfig.apiKey,
@@ -56,7 +59,9 @@ export function ComfyUISettingsTab({
         setMessage({ type: 'success', text: 'ComfyUI 서버와 연결되었습니다.' });
       } else {
         // 브라우저 환경 (fallback): 직접 fetch
-        console.warn('[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied');
+        console.warn(
+          '[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied'
+        );
         const normalizedUrl = comfyConfig.httpUrl.replace(/\/$/, '');
         const response = await fetch(`${normalizedUrl}/system_stats`, {
           headers: comfyConfig.apiKey
@@ -96,7 +101,8 @@ export function ComfyUISettingsTab({
           <div>
             <h3 className="text-base font-semibold">ComfyUI 연결</h3>
             <p className="text-xs text-muted-foreground mt-1">
-              이미지 생성을 위해 사용할 ComfyUI REST/WebSocket 엔드포인트와 기본 워크플로우를 설정합니다.
+              이미지 생성을 위해 사용할 ComfyUI REST/WebSocket 엔드포인트와 기본 워크플로우를
+              설정합니다.
             </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
@@ -219,7 +225,9 @@ export function ComfyUISettingsTab({
               }}
               placeholder="-1"
             />
-            <p className="text-xs text-muted-foreground">-1이면 ComfyUI가 자동 Seed를 사용합니다.</p>
+            <p className="text-xs text-muted-foreground">
+              -1이면 ComfyUI가 자동 Seed를 사용합니다.
+            </p>
           </div>
         </div>
 
@@ -316,7 +324,10 @@ export function ComfyUISettingsTab({
         >
           {isTestingComfy ? '테스트 중...' : '연결 테스트'}
         </Button>
-        <Button onClick={onSave} disabled={isSaving || (comfyConfig.enabled && !comfyConfig.httpUrl.trim())}>
+        <Button
+          onClick={onSave}
+          disabled={isSaving || (comfyConfig.enabled && !comfyConfig.httpUrl.trim())}
+        >
           {isSaving ? '저장 중...' : '저장'}
         </Button>
       </div>

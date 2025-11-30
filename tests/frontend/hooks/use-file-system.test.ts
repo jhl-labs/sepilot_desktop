@@ -111,7 +111,10 @@ describe('useFileSystem Hook', () => {
     });
 
     it('should handle createFile error', async () => {
-      mockElectronAPI.fs.createFile.mockResolvedValue({ success: false, error: 'Permission denied' });
+      mockElectronAPI.fs.createFile.mockResolvedValue({
+        success: false,
+        error: 'Permission denied',
+      });
 
       const { result } = renderHook(() => useFileSystem());
 
@@ -167,7 +170,10 @@ describe('useFileSystem Hook', () => {
     });
 
     it('should handle createDirectory error', async () => {
-      mockElectronAPI.fs.createDirectory.mockResolvedValue({ success: false, error: 'Already exists' });
+      mockElectronAPI.fs.createDirectory.mockResolvedValue({
+        success: false,
+        error: 'Already exists',
+      });
 
       const { result } = renderHook(() => useFileSystem());
 
@@ -352,7 +358,10 @@ describe('useFileSystem Hook', () => {
     });
 
     it('should handle readDirectory error', async () => {
-      mockElectronAPI.fs.readDirectory.mockResolvedValue({ success: false, error: 'Permission denied' });
+      mockElectronAPI.fs.readDirectory.mockResolvedValue({
+        success: false,
+        error: 'Permission denied',
+      });
 
       const { result } = renderHook(() => useFileSystem());
 

@@ -160,9 +160,7 @@ describe('MessageBubble', () => {
   describe('편집 기능 (사용자 메시지)', () => {
     it('should show edit button on user message hover', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-        <MessageBubble message={userMessage} onEdit={mockOnEdit} />
-      );
+      const { container } = render(<MessageBubble message={userMessage} onEdit={mockOnEdit} />);
 
       const messageDiv = container.querySelector('.group');
       if (messageDiv) {
@@ -177,9 +175,7 @@ describe('MessageBubble', () => {
 
     it('should enter edit mode on edit button click', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-        <MessageBubble message={userMessage} onEdit={mockOnEdit} />
-      );
+      const { container } = render(<MessageBubble message={userMessage} onEdit={mockOnEdit} />);
 
       const messageDiv = container.querySelector('.group');
       if (messageDiv) {
@@ -200,9 +196,7 @@ describe('MessageBubble', () => {
 
     it('should save edited content', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-        <MessageBubble message={userMessage} onEdit={mockOnEdit} />
-      );
+      const { container } = render(<MessageBubble message={userMessage} onEdit={mockOnEdit} />);
 
       const messageDiv = container.querySelector('.group');
       if (messageDiv) {
@@ -228,9 +222,7 @@ describe('MessageBubble', () => {
 
     it('should cancel edit and restore original content', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-        <MessageBubble message={userMessage} onEdit={mockOnEdit} />
-      );
+      const { container } = render(<MessageBubble message={userMessage} onEdit={mockOnEdit} />);
 
       const messageDiv = container.querySelector('.group');
       if (messageDiv) {
@@ -257,9 +249,7 @@ describe('MessageBubble', () => {
 
     it('should not save empty content', async () => {
       const user = userEvent.setup();
-      const { container } = render(
-        <MessageBubble message={userMessage} onEdit={mockOnEdit} />
-      );
+      const { container } = render(<MessageBubble message={userMessage} onEdit={mockOnEdit} />);
 
       const messageDiv = container.querySelector('.group');
       if (messageDiv) {
@@ -760,9 +750,7 @@ describe('MessageBubble', () => {
       };
 
       // Mock file.read to reject with error (caught by inner try-catch)
-      (mockElectronAPI.file.read as jest.Mock).mockRejectedValue(
-        new Error('Permission denied')
-      );
+      (mockElectronAPI.file.read as jest.Mock).mockRejectedValue(new Error('Permission denied'));
 
       render(<MessageBubble message={messageWithToolCalls} />);
 

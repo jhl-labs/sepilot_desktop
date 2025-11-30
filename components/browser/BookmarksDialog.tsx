@@ -36,7 +36,9 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
 
   // Load bookmarks and folders when dialog opens
   useEffect(() => {
-    if (!open || !isElectron() || !window.electronAPI) {return;}
+    if (!open || !isElectron() || !window.electronAPI) {
+      return;
+    }
 
     const loadData = async () => {
       setIsLoading(true);
@@ -64,7 +66,9 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
   }, [open]);
 
   const handleAddFolder = async () => {
-    if (!newFolderName.trim() || !isElectron() || !window.electronAPI) {return;}
+    if (!newFolderName.trim() || !isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.addBookmarkFolder(newFolderName);
@@ -84,8 +88,12 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
   };
 
   const handleDeleteFolder = async (id: string) => {
-    if (!window.confirm('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?')) {return;}
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!window.confirm('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?')) {
+      return;
+    }
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.deleteBookmarkFolder(id);
@@ -106,8 +114,12 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
   };
 
   const handleDeleteBookmark = async (id: string) => {
-    if (!window.confirm('이 북마크를 삭제하시겠습니까?')) {return;}
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!window.confirm('이 북마크를 삭제하시겠습니까?')) {
+      return;
+    }
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.deleteBookmark(id);
@@ -124,7 +136,9 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
   };
 
   const handleOpenBookmark = async (bookmark: Bookmark) => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.openBookmark(bookmark.id);
@@ -142,7 +156,9 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
   };
 
   const handleAddCurrentPage = async () => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.addBookmark({
@@ -237,8 +253,12 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {handleAddFolder();}
-                    if (e.key === 'Escape') {setIsAddingFolder(false);}
+                    if (e.key === 'Enter') {
+                      handleAddFolder();
+                    }
+                    if (e.key === 'Escape') {
+                      setIsAddingFolder(false);
+                    }
                   }}
                   className="h-8 text-sm"
                   autoFocus
@@ -255,11 +275,7 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
                   ? folders.find((f) => f.id === selectedFolderId)?.name
                   : '전체 북마크'}
               </h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAddCurrentPage}
-              >
+              <Button variant="outline" size="sm" onClick={handleAddCurrentPage}>
                 <Plus className="mr-2 h-4 w-4" />
                 현재 페이지 추가
               </Button>
@@ -275,7 +291,10 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
                 <p className="mt-2 text-xs">현재 페이지를 북마크에 추가하세요</p>
               </div>
             ) : (
-              <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 200px)' }}>
+              <div
+                className="space-y-2 overflow-y-auto"
+                style={{ maxHeight: 'calc(80vh - 200px)' }}
+              >
                 {filteredBookmarks.map((bookmark) => (
                   <div
                     key={bookmark.id}

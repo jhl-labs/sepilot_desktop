@@ -42,7 +42,14 @@ function getTextContent(children: any): string {
 }
 
 // Custom Pre component to handle code blocks
-function CustomPreComponent({ children, isStreaming, ...props }: { children: any; isStreaming?: boolean }) {
+function CustomPreComponent({
+  children,
+  isStreaming,
+  ...props
+}: {
+  children: any;
+  isStreaming?: boolean;
+}) {
   // Check if this is a code block with language
   if (children && typeof children === 'object' && 'props' in (children as any)) {
     const { className, children: code } = (children as any).props || {};
@@ -102,7 +109,6 @@ function CustomCode({ children, ...props }: { children: ReactNode }) {
     </code>
   );
 }
-
 
 export function MarkdownRenderer({
   content,

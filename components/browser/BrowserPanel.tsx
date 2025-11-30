@@ -14,7 +14,30 @@ import {
   DropdownMenuSubContent,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, ArrowRight, RotateCw, Home, Globe, Terminal, Plus, X, ChevronLeft, ChevronRight, MoreVertical, Bookmark, Save, Compass, Eye, MousePointer, Keyboard, ArrowDown, Layout, Camera, FileText, Search } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  RotateCw,
+  Home,
+  Globe,
+  Terminal,
+  Plus,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  MoreVertical,
+  Bookmark,
+  Save,
+  Compass,
+  Eye,
+  MousePointer,
+  Keyboard,
+  ArrowDown,
+  Layout,
+  Camera,
+  FileText,
+  Search,
+} from 'lucide-react';
 import { isElectron } from '@/lib/platform';
 import { useChatStore } from '@/lib/store/chat-store';
 
@@ -143,10 +166,13 @@ export function BrowserPanel() {
 
   // 탭 스크롤 핸들러
   const scrollTabs = (direction: 'left' | 'right') => {
-    if (!tabsContainerRef.current) {return;}
+    if (!tabsContainerRef.current) {
+      return;
+    }
 
     const scrollAmount = 200;
-    const newScrollLeft = tabsContainerRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+    const newScrollLeft =
+      tabsContainerRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
 
     tabsContainerRef.current.scrollTo({
       left: newScrollLeft,
@@ -156,7 +182,9 @@ export function BrowserPanel() {
 
   // 스크롤 상태 업데이트
   const updateScrollState = () => {
-    if (!tabsContainerRef.current) {return;}
+    if (!tabsContainerRef.current) {
+      return;
+    }
 
     const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
     setCanScrollLeft(scrollLeft > 0);
@@ -206,9 +234,18 @@ export function BrowserPanel() {
 
     // Cleanup: 이벤트 리스너만 제거 (BrowserView 숨김은 MainLayout에서 관리)
     return () => {
-      window.electronAPI.browserView.removeListener('browser-view:did-navigate', didNavigateHandler);
-      window.electronAPI.browserView.removeListener('browser-view:loading-state', loadingStateHandler);
-      window.electronAPI.browserView.removeListener('browser-view:title-updated', titleUpdatedHandler);
+      window.electronAPI.browserView.removeListener(
+        'browser-view:did-navigate',
+        didNavigateHandler
+      );
+      window.electronAPI.browserView.removeListener(
+        'browser-view:loading-state',
+        loadingStateHandler
+      );
+      window.electronAPI.browserView.removeListener(
+        'browser-view:title-updated',
+        titleUpdatedHandler
+      );
       window.electronAPI.browserView.removeListener('browser-view:tab-created', tabCreatedHandler);
     };
   }, []);
@@ -254,7 +291,9 @@ export function BrowserPanel() {
 
   // 탭 변경 시 스크롤 상태 업데이트
   useEffect(() => {
-    if (!tabsContainerRef.current) {return;}
+    if (!tabsContainerRef.current) {
+      return;
+    }
 
     updateScrollState();
 
@@ -280,8 +319,7 @@ export function BrowserPanel() {
 
     // Browser 모드가 아닐 때는 bounds 설정하지 않음
     const isBrowserVisible =
-      appMode === 'browser' ||
-      (appMode === 'editor' && activeEditorTab === 'browser');
+      appMode === 'browser' || (appMode === 'editor' && activeEditorTab === 'browser');
 
     if (!isBrowserVisible) {
       return;
@@ -308,7 +346,12 @@ export function BrowserPanel() {
 
       // BrowserView의 위치를 컨테이너에 맞춤
       // Note: BrowserView 좌표는 윈도우 기준이므로 rect의 x, y를 사용
-      console.debug('[BrowserPanel] Setting bounds:', { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+      console.debug('[BrowserPanel] Setting bounds:', {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+      });
       window.electronAPI.browserView.setBounds({
         x: Math.round(rect.x),
         y: Math.round(rect.y),
@@ -373,9 +416,7 @@ export function BrowserPanel() {
               key={tab.id}
               onClick={() => switchToTab(tab.id)}
               className={`group flex min-w-[140px] max-w-[200px] cursor-pointer items-center gap-2 rounded-t-md px-3 py-1.5 text-xs transition-colors ${
-                tab.isActive
-                  ? 'bg-background shadow-sm'
-                  : 'hover:bg-background/50'
+                tab.isActive ? 'bg-background shadow-sm' : 'hover:bg-background/50'
               }`}
             >
               <Globe className="h-3 w-3 shrink-0 text-muted-foreground" />
@@ -419,12 +460,7 @@ export function BrowserPanel() {
         {/* Settings 드롭다운 메뉴 */}
         <DropdownMenu onOpenChange={setDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0"
-              title="브라우저 설정"
-            >
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" title="브라우저 설정">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -526,13 +562,7 @@ export function BrowserPanel() {
 
       {/* 브라우저 컨트롤 */}
       <div className="flex items-center gap-2 border-b p-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleBack}
-          disabled={!canGoBack}
-          title="뒤로"
-        >
+        <Button variant="ghost" size="icon" onClick={handleBack} disabled={!canGoBack} title="뒤로">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <Button
@@ -569,12 +599,7 @@ export function BrowserPanel() {
           />
         </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleToggleDevTools}
-          title="개발자 도구"
-        >
+        <Button variant="ghost" size="icon" onClick={handleToggleDevTools} title="개발자 도구">
           <Terminal className="h-4 w-4" />
         </Button>
       </div>

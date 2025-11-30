@@ -14,10 +14,15 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { GripHorizontal } from 'lucide-react';
 
 // TerminalPanel은 xterm을 사용하므로 SSR 비활성화
-const TerminalPanel = dynamic(() => import('./TerminalPanel').then(mod => ({ default: mod.TerminalPanel })), {
-  ssr: false,
-  loading: () => <div className="flex items-center justify-center h-full">Loading terminal...</div>,
-});
+const TerminalPanel = dynamic(
+  () => import('./TerminalPanel').then((mod) => ({ default: mod.TerminalPanel })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full">Loading terminal...</div>
+    ),
+  }
+);
 
 const MIN_EDITOR_HEIGHT = 100; // 최소 에디터 높이 (px)
 const MIN_TERMINAL_HEIGHT = 100; // 최소 터미널 높이 (px)
@@ -32,31 +37,34 @@ export function EditorWithTerminal() {
   const dragStartHeight = useRef(0);
 
   // 드래그 시작
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-    dragStartY.current = e.clientY;
-    dragStartHeight.current = terminalHeight;
-  }, [terminalHeight]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+      dragStartY.current = e.clientY;
+      dragStartHeight.current = terminalHeight;
+    },
+    [terminalHeight]
+  );
 
   // 드래그 중
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !containerRef.current) {
-      return;
-    }
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging || !containerRef.current) {
+        return;
+      }
 
-    const containerHeight = containerRef.current.clientHeight;
-    const deltaY = dragStartY.current - e.clientY; // 위로 드래그하면 양수
-    const newTerminalHeight = Math.max(
-      MIN_TERMINAL_HEIGHT,
-      Math.min(
-        containerHeight - MIN_EDITOR_HEIGHT,
-        dragStartHeight.current + deltaY
-      )
-    );
+      const containerHeight = containerRef.current.clientHeight;
+      const deltaY = dragStartY.current - e.clientY; // 위로 드래그하면 양수
+      const newTerminalHeight = Math.max(
+        MIN_TERMINAL_HEIGHT,
+        Math.min(containerHeight - MIN_EDITOR_HEIGHT, dragStartHeight.current + deltaY)
+      );
 
-    setTerminalHeight(newTerminalHeight);
-  }, [isDragging]);
+      setTerminalHeight(newTerminalHeight);
+    },
+    [isDragging]
+  );
 
   // 드래그 종료
   const handleMouseUp = useCallback(() => {
@@ -90,7 +98,7 @@ export function EditorWithTerminal() {
     <div ref={containerRef} className="flex h-full flex-col">
       {/* Editor (상단) */}
       <div
-        className={showTerminalPanel ? "min-h-0" : "h-full"}
+        className={showTerminalPanel ? 'min-h-0' : 'h-full'}
         style={showTerminalPanel ? { height: `calc(100% - ${terminalHeight}px)` } : undefined}
       >
         <CodeEditor />

@@ -1,16 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import {
-  Settings,
-  Network,
-  Database,
-  Image,
-  Plug,
-  Github,
-  HardDrive,
-  Zap,
-} from 'lucide-react';
+import { Settings, Network, Database, Image, Plug, Github, HardDrive, Zap } from 'lucide-react';
 
 export type SettingSection =
   | 'llm'
@@ -137,9 +128,7 @@ export function SettingsSidebar({
                   className={cn(
                     'w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
                     'hover:bg-accent hover:text-accent-foreground',
-                    isActive
-                      ? 'bg-accent text-accent-foreground'
-                      : 'text-muted-foreground'
+                    isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
                   )}
                   title={item.description}
                 >

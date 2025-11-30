@@ -708,8 +708,8 @@ describe('BookmarksList', () => {
 
       // Click folder plus button
       const buttons = container.querySelectorAll('button');
-      const folderButton = Array.from(buttons).find(btn =>
-        btn.querySelector('svg') && btn.className.includes('shrink-0')
+      const folderButton = Array.from(buttons).find(
+        (btn) => btn.querySelector('svg') && btn.className.includes('shrink-0')
       );
 
       if (folderButton) {
@@ -744,9 +744,7 @@ describe('BookmarksList', () => {
       });
       (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
         success: true,
-        data: [
-          { id: 'folder-1', name: 'Test Folder', createdAt: Date.now() },
-        ],
+        data: [{ id: 'folder-1', name: 'Test Folder', createdAt: Date.now() }],
       });
       (mockElectronAPI.browserView.deleteBookmarkFolder as jest.Mock).mockRejectedValue(
         new Error('Database error')

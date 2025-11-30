@@ -1,6 +1,6 @@
 /**
  * 사용자 플로우 테스트 케이스
- * 
+ *
  * 실제 사용자 시나리오를 시뮬레이션하여 전체 플로우를 테스트합니다.
  */
 
@@ -27,13 +27,18 @@ jest.mock('next-themes', () => ({
   })),
 }));
 jest.mock('@/components/persona/PersonaDialog', () => ({
-  PersonaDialog: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+  PersonaDialog: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) => (
     <div data-testid="persona-dialog" data-open={open} onClick={() => onOpenChange(false)}>
       Persona Dialog
     </div>
   ),
 }));
-
 
 describe('사용자 플로우 테스트', () => {
   const mockCreateConversation = jest.fn();
@@ -436,9 +441,12 @@ describe('사용자 플로우 테스트', () => {
       await user.type(searchInput, '검색어');
 
       // Sidebar는 내부적으로 debounce를 사용할 수 있으므로 waitFor 사용
-      await waitFor(() => {
-        expect(mockSearchConversations).toHaveBeenCalled();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockSearchConversations).toHaveBeenCalled();
+        },
+        { timeout: 2000 }
+      );
     });
 
     it.skip('검색 결과가 목록에 표시되어야 함', async () => {
@@ -542,4 +550,3 @@ describe('사용자 플로우 테스트', () => {
     });
   });
 });
-

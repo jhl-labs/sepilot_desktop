@@ -94,7 +94,9 @@ function calculateVisualPriority(element: SemanticElement): number {
   let priority = 0;
 
   // 인터랙티브 요소 우선
-  if (element.isInteractive) {priority += 10;}
+  if (element.isInteractive) {
+    priority += 10;
+  }
 
   // Role 기반 우선순위
   const rolePriority: Record<string, number> = {
@@ -109,15 +111,23 @@ function calculateVisualPriority(element: SemanticElement): number {
   priority += rolePriority[element.role] || 0;
 
   // 레이블이 있으면 가산점
-  if (element.label) {priority += 5;}
+  if (element.label) {
+    priority += 5;
+  }
 
   // 크기 고려 (너무 작거나 큰 요소는 감점)
   const area = (element.boundingBox?.width || 0) * (element.boundingBox?.height || 0);
-  if (area < 100) {priority -= 5;} // 너무 작음
-  if (area > 100000) {priority -= 3;} // 너무 큼 (섹션일 가능성)
+  if (area < 100) {
+    priority -= 5;
+  } // 너무 작음
+  if (area > 100000) {
+    priority -= 3;
+  } // 너무 큼 (섹션일 가능성)
 
   // 가시성
-  if (!element.isVisible) {priority -= 100;}
+  if (!element.isVisible) {
+    priority -= 100;
+  }
 
   return priority;
 }
@@ -251,10 +261,7 @@ export function removeMarkerOverlayScript(): string {
 /**
  * Vision 모델을 위한 프롬프트 생성
  */
-export function generateVisionPrompt(
-  markers: VisualMarker[],
-  userQuery?: string
-): string {
+export function generateVisionPrompt(markers: VisualMarker[], userQuery?: string): string {
   const markerDescriptions = markers
     .map(
       (m) =>
@@ -305,14 +312,11 @@ export function coordinateToElement(
   // 좌표를 포함하는 요소 찾기
   const containingElements = elements.filter((el) => {
     const box = el.boundingBox;
-    if (!box) {return false;}
+    if (!box) {
+      return false;
+    }
 
-    return (
-      x >= box.x &&
-      x <= box.x + box.width &&
-      y >= box.y &&
-      y <= box.y + box.height
-    );
+    return x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height;
   });
 
   if (containingElements.length === 0) {
@@ -321,10 +325,8 @@ export function coordinateToElement(
 
   // 가장 작은 요소 선택 (가장 구체적인 요소)
   return containingElements.reduce((smallest, current) => {
-    const smallestArea =
-      (smallest.boundingBox?.width || 0) * (smallest.boundingBox?.height || 0);
-    const currentArea =
-      (current.boundingBox?.width || 0) * (current.boundingBox?.height || 0);
+    const smallestArea = (smallest.boundingBox?.width || 0) * (smallest.boundingBox?.height || 0);
+    const currentArea = (current.boundingBox?.width || 0) * (current.boundingBox?.height || 0);
 
     return currentArea < smallestArea ? current : smallest;
   });
@@ -335,7 +337,9 @@ export function coordinateToElement(
  */
 export function getElementCenter(element: SemanticElement): { x: number; y: number } | null {
   const box = element.boundingBox;
-  if (!box) {return null;}
+  if (!box) {
+    return null;
+  }
 
   return {
     x: box.x + box.width / 2,

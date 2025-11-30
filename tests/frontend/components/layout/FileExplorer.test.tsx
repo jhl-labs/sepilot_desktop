@@ -130,7 +130,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       rerender(<FileExplorer />);
@@ -155,7 +155,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       rerender(<FileExplorer />);
@@ -180,7 +180,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       rerender(<FileExplorer />);
@@ -196,7 +196,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -217,7 +217,11 @@ describe('FileExplorer', () => {
                 path: '/test/directory/folder1',
                 isDirectory: true,
                 children: [
-                  { name: 'nested.js', path: '/test/directory/folder1/nested.js', isDirectory: false },
+                  {
+                    name: 'nested.js',
+                    path: '/test/directory/folder1/nested.js',
+                    isDirectory: false,
+                  },
                 ],
               },
               { name: 'file1.ts', path: '/test/directory/file1.ts', isDirectory: false },
@@ -232,7 +236,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
     });
 
@@ -280,7 +284,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
     });
 
@@ -389,9 +393,7 @@ describe('FileExplorer', () => {
     it('파일 읽기 실패 시 에러를 처리해야 함', async () => {
       const user = userEvent.setup();
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      (mockElectronAPI.fs.readFile as jest.Mock).mockRejectedValue(
-        new Error('Permission denied')
-      );
+      (mockElectronAPI.fs.readFile as jest.Mock).mockRejectedValue(new Error('Permission denied'));
 
       render(<FileExplorer />);
 
@@ -427,7 +429,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: '/test/active.ts',
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -453,9 +455,7 @@ describe('FileExplorer', () => {
         if (path === '/test') {
           return Promise.resolve({
             success: true,
-            data: [
-              { name: 'error-folder', path: '/test/error-folder', isDirectory: true },
-            ],
+            data: [{ name: 'error-folder', path: '/test/error-folder', isDirectory: true }],
           });
         }
         return Promise.reject(new Error('Permission denied'));
@@ -466,7 +466,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -487,21 +487,18 @@ describe('FileExplorer', () => {
     });
   });
 
-
   describe('에러 처리', () => {
     it('loadFileTree 에러 시 로딩 상태가 해제되어야 함', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      (mockElectronAPI.fs.readDirectory as jest.Mock).mockRejectedValue(
-        new Error('Network error')
-      );
+      (mockElectronAPI.fs.readDirectory as jest.Mock).mockRejectedValue(new Error('Network error'));
 
       (useChatStore as unknown as jest.Mock).mockReturnValue({
         workingDirectory: '/test',
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -535,7 +532,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -554,7 +551,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -575,7 +572,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -877,7 +874,7 @@ describe('FileExplorer', () => {
         setWorkingDirectory: mockSetWorkingDirectory,
         openFile: mockOpenFile,
         activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
     });
 
@@ -1036,5 +1033,4 @@ describe('FileExplorer', () => {
       consoleWarnSpy.mockRestore();
     });
   });
-
 });

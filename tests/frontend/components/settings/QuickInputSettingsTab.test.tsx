@@ -41,9 +41,7 @@ describe('QuickInputSettingsTab', () => {
       />
     );
 
-    expect(screen.getByLabelText('Quick Input 단축키')).toHaveValue(
-      'CommandOrControl+Shift+Space'
-    );
+    expect(screen.getByLabelText('Quick Input 단축키')).toHaveValue('CommandOrControl+Shift+Space');
   });
 
   it('should update quick input shortcut', () => {

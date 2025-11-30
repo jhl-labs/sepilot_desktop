@@ -50,10 +50,7 @@ export class LLMService {
   /**
    * Send messages and get a streaming response
    */
-  static async *streamChat(
-    messages: Message[],
-    options?: any
-  ): AsyncGenerator<string> {
+  static async *streamChat(messages: Message[], options?: any): AsyncGenerator<string> {
     // Electron 환경: IPC를 통해 메인 프로세스에서 API 호출 (CORS 문제 해결)
     if (typeof window !== 'undefined' && window.electronAPI?.llm) {
       const hasVisionContent = hasImages(messages);
@@ -196,7 +193,9 @@ export class LLMService {
       } else {
         console.warn('[LLMService] Images present but vision model not configured');
         // Vision 모델이 설정되지 않았으면 에러 발생 (이미지는 일반 모델로 처리 불가)
-        throw new Error('Vision model is not configured. Please enable and configure a vision model in Settings > LLM > Vision Model to analyze images.');
+        throw new Error(
+          'Vision model is not configured. Please enable and configure a vision model in Settings > LLM > Vision Model to analyze images.'
+        );
       }
     }
 
@@ -253,10 +252,14 @@ export class LLMService {
         provider = visionProvider;
       } else {
         console.warn('[LLMService] Images present but vision model not configured');
-        throw new Error('Vision model is not configured. Please enable and configure a vision model in Settings > LLM > Vision Model to analyze images.');
+        throw new Error(
+          'Vision model is not configured. Please enable and configure a vision model in Settings > LLM > Vision Model to analyze images.'
+        );
       }
     } else if (containsImages && hasTools) {
-      console.log('[LLMService] Images detected but tools are provided - using regular LLM for tool calling (Vision models typically do not support tool calling)');
+      console.log(
+        '[LLMService] Images detected but tools are provided - using regular LLM for tool calling (Vision models typically do not support tool calling)'
+      );
     }
 
     try {
@@ -336,12 +339,18 @@ export class LLMService {
         console.log('[LLMService] Using vision model for image analysis');
         provider = visionProvider;
       } else {
-        console.warn('[LLMService] Images present but vision model not configured, using regular model');
+        console.warn(
+          '[LLMService] Images present but vision model not configured, using regular model'
+        );
         // Vision 모델이 설정되지 않았으면 에러 발생 (이미지는 일반 모델로 처리 불가)
-        throw new Error('Vision model is not configured. Please enable and configure a vision model in Settings > LLM > Vision Model to analyze images.');
+        throw new Error(
+          'Vision model is not configured. Please enable and configure a vision model in Settings > LLM > Vision Model to analyze images.'
+        );
       }
     } else if (containsImages && hasTools) {
-      console.log('[LLMService] Images detected but tools are provided - using regular LLM for tool calling (Vision models typically do not support tool calling)');
+      console.log(
+        '[LLMService] Images detected but tools are provided - using regular LLM for tool calling (Vision models typically do not support tool calling)'
+      );
     }
 
     try {

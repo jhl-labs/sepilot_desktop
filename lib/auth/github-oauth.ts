@@ -87,10 +87,7 @@ export class GitHubOAuth {
 
     // 토큰 교환 (Renderer에서는 IPC 통해 Main Process에서 처리)
     if (typeof window !== 'undefined' && window.electronAPI) {
-      const result = await window.electronAPI.auth.exchangeCode(
-        code,
-        codeVerifier,
-      );
+      const result = await window.electronAPI.auth.exchangeCode(code, codeVerifier);
       if (result.success && result.data) {
         return result.data;
       } else {

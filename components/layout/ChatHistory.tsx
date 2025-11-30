@@ -43,7 +43,9 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Array<{conversation: Conversation; matchedMessages: Message[]}>>([]);
+  const [searchResults, setSearchResults] = useState<
+    Array<{ conversation: Conversation; matchedMessages: Message[] }>
+  >([]);
   const [isSearching, setIsSearching] = useState(false);
   const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -176,15 +178,14 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        {conversation.personaId && (() => {
-                          const persona = personas.find(p => p.id === conversation.personaId);
-                          return persona?.avatar ? (
-                            <span className="text-sm flex-shrink-0">{persona.avatar}</span>
-                          ) : null;
-                        })()}
-                        <h3 className="text-sm font-medium line-clamp-1">
-                          {conversation.title}
-                        </h3>
+                        {conversation.personaId &&
+                          (() => {
+                            const persona = personas.find((p) => p.id === conversation.personaId);
+                            return persona?.avatar ? (
+                              <span className="text-sm flex-shrink-0">{persona.avatar}</span>
+                            ) : null;
+                          })()}
+                        <h3 className="text-sm font-medium line-clamp-1">{conversation.title}</h3>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {formatDate(conversation.updated_at)}
@@ -197,7 +198,10 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                   {matchedMessages.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {matchedMessages.slice(0, 2).map((msg) => (
-                        <p key={msg.id} className="text-xs text-muted-foreground line-clamp-2 bg-muted/50 rounded px-2 py-1">
+                        <p
+                          key={msg.id}
+                          className="text-xs text-muted-foreground line-clamp-2 bg-muted/50 rounded px-2 py-1"
+                        >
                           {msg.content}
                         </p>
                       ))}
@@ -225,8 +229,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                 key={conversation.id}
                 className={cn(
                   'group relative flex items-center gap-1 rounded-lg transition-colors hover:bg-accent',
-                  activeConversationId === conversation.id &&
-                    'bg-accent text-accent-foreground'
+                  activeConversationId === conversation.id && 'bg-accent text-accent-foreground'
                 )}
               >
                 {editingId === conversation.id ? (
@@ -256,12 +259,13 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                       className="flex flex-1 flex-col items-start px-3 py-2 text-left"
                     >
                       <div className="flex items-center gap-1.5 w-full">
-                        {conversation.personaId && (() => {
-                          const persona = personas.find(p => p.id === conversation.personaId);
-                          return persona?.avatar ? (
-                            <span className="text-sm flex-shrink-0">{persona.avatar}</span>
-                          ) : null;
-                        })()}
+                        {conversation.personaId &&
+                          (() => {
+                            const persona = personas.find((p) => p.id === conversation.personaId);
+                            return persona?.avatar ? (
+                              <span className="text-sm flex-shrink-0">{persona.avatar}</span>
+                            ) : null;
+                          })()}
                         <span className="text-sm font-medium line-clamp-1">
                           {conversation.title}
                         </span>
@@ -288,9 +292,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                           <Pencil className="mr-2 h-4 w-4" />
                           이름 변경
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleOpenPersonaDialog(conversation.id)}
-                        >
+                        <DropdownMenuItem onClick={() => handleOpenPersonaDialog(conversation.id)}>
                           <User className="mr-2 h-4 w-4" />
                           Persona
                         </DropdownMenuItem>
@@ -316,9 +318,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Persona 선택</DialogTitle>
-            <DialogDescription>
-              이 대화에 적용할 페르소나를 선택하세요
-            </DialogDescription>
+            <DialogDescription>이 대화에 적용할 페르소나를 선택하세요</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-4">
             {/* None option */}
@@ -334,13 +334,9 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
               </div>
               <div className="flex-1 text-left">
                 <div className="font-medium">없음</div>
-                <div className="text-xs text-muted-foreground">
-                  페르소나를 사용하지 않습니다
-                </div>
+                <div className="text-xs text-muted-foreground">페르소나를 사용하지 않습니다</div>
               </div>
-              {!selectedConversation?.personaId && (
-                <Check className="h-5 w-5 text-primary" />
-              )}
+              {!selectedConversation?.personaId && <Check className="h-5 w-5 text-primary" />}
             </button>
 
             {/* Persona options */}
@@ -350,8 +346,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                 onClick={() => handleSetPersona(persona.id)}
                 className={cn(
                   'w-full flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors hover:bg-accent',
-                  selectedConversation?.personaId === persona.id &&
-                    'bg-accent border-primary'
+                  selectedConversation?.personaId === persona.id && 'bg-accent border-primary'
                 )}
               >
                 <div

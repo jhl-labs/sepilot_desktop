@@ -42,10 +42,13 @@ export function DropdownMenu({ children, onOpenChange }: DropdownMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const triggerRef = React.useRef<HTMLDivElement>(null);
 
-  const handleOpenChange = React.useCallback((open: boolean) => {
-    setIsOpen(open);
-    onOpenChange?.(open);
-  }, [onOpenChange]);
+  const handleOpenChange = React.useCallback(
+    (open: boolean) => {
+      setIsOpen(open);
+      onOpenChange?.(open);
+    },
+    [onOpenChange]
+  );
 
   return (
     <DropdownMenuContext.Provider value={{ isOpen, setIsOpen: handleOpenChange, triggerRef }}>
@@ -54,52 +57,56 @@ export function DropdownMenu({ children, onOpenChange }: DropdownMenuProps) {
   );
 }
 
-export const DropdownMenuTrigger = React.forwardRef<
-  HTMLDivElement,
-  DropdownMenuTriggerProps
->(({ asChild, children }, ref) => {
-  const { setIsOpen, isOpen, triggerRef } = React.useContext(DropdownMenuContext);
+export const DropdownMenuTrigger = React.forwardRef<HTMLDivElement, DropdownMenuTriggerProps>(
+  ({ asChild, children }, ref) => {
+    const { setIsOpen, isOpen, triggerRef } = React.useContext(DropdownMenuContext);
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsOpen(!isOpen);
-  };
+    const handleClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setIsOpen(!isOpen);
+    };
 
-  // Merge refs using a ref callback
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const mergedRef = React.useCallback(
-    (node: HTMLDivElement | null) => {
-      // Update context ref
-      if (triggerRef && 'current' in triggerRef) {
-        triggerRef.current = node;
-      }
-      // Update forwarded ref
-      if (typeof ref === 'function') {
-        ref(node);
-      } else if (ref && 'current' in ref) {
-        ref.current = node;
-      }
-    },
-    [ref, triggerRef]
-  );
+    // Merge refs using a ref callback
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const mergedRef = React.useCallback(
+      (node: HTMLDivElement | null) => {
+        // Update context ref
+        if (triggerRef && 'current' in triggerRef) {
+          triggerRef.current = node;
+        }
+        // Update forwarded ref
+        if (typeof ref === 'function') {
+          ref(node);
+        } else if (ref && 'current' in ref) {
+          ref.current = node;
+        }
+      },
+      [ref, triggerRef]
+    );
 
-  if (asChild && React.isValidElement(children)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return React.cloneElement(children as React.ReactElement<any>, {
-      onClick: handleClick,
-      ref: mergedRef,
-    });
+    if (asChild && React.isValidElement(children)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return React.cloneElement(children as React.ReactElement<any>, {
+        onClick: handleClick,
+        ref: mergedRef,
+      });
+    }
+
+    return (
+      <div ref={mergedRef} onClick={handleClick}>
+        {children}
+      </div>
+    );
   }
-
-  return (
-    <div ref={mergedRef} onClick={handleClick}>
-      {children}
-    </div>
-  );
-});
+);
 DropdownMenuTrigger.displayName = 'DropdownMenuTrigger';
 
-export function DropdownMenuContent({ align = 'end', side = 'bottom', children, className }: DropdownMenuContentProps) {
+export function DropdownMenuContent({
+  align = 'end',
+  side = 'bottom',
+  children,
+  className,
+}: DropdownMenuContentProps) {
   const { isOpen, setIsOpen, triggerRef } = React.useContext(DropdownMenuContext);
   const contentRef = React.useRef<HTMLDivElement>(null);
   const [position, setPosition] = React.useState({ top: 0, left: 0 });
@@ -112,7 +119,9 @@ export function DropdownMenuContent({ align = 'end', side = 'bottom', children, 
 
   // Calculate position based on trigger element
   React.useEffect(() => {
-    if (!isOpen || !triggerRef?.current) {return;}
+    if (!isOpen || !triggerRef?.current) {
+      return;
+    }
 
     const updatePosition = () => {
       const triggerRect = triggerRef.current!.getBoundingClientRect();
@@ -158,7 +167,9 @@ export function DropdownMenuContent({ align = 'end', side = 'bottom', children, 
 
   // Close when clicking outside
   React.useEffect(() => {
-    if (!isOpen) {return;}
+    if (!isOpen) {
+      return;
+    }
 
     const handleClickOutside = (e: MouseEvent) => {
       if (contentRef.current && !contentRef.current.contains(e.target as Node)) {
@@ -170,7 +181,9 @@ export function DropdownMenuContent({ align = 'end', side = 'bottom', children, 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, setIsOpen]);
 
-  if (!isOpen || !mounted) {return null;}
+  if (!isOpen || !mounted) {
+    return null;
+  }
 
   const content = (
     <div
@@ -192,11 +205,18 @@ export function DropdownMenuContent({ align = 'end', side = 'bottom', children, 
   return createPortal(content, document.body);
 }
 
-export function DropdownMenuItem({ children, onClick, className, disabled }: DropdownMenuItemProps) {
+export function DropdownMenuItem({
+  children,
+  onClick,
+  className,
+  disabled,
+}: DropdownMenuItemProps) {
   const { setIsOpen } = React.useContext(DropdownMenuContext);
 
   const handleClick = () => {
-    if (disabled) {return;}
+    if (disabled) {
+      return;
+    }
     onClick?.();
     setIsOpen(false);
   };
@@ -218,27 +238,17 @@ export function DropdownMenuItem({ children, onClick, className, disabled }: Dro
 }
 
 export function DropdownMenuSeparator({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn(
-        '-mx-1 my-1 h-px bg-muted',
-        className
-      )}
-    />
-  );
+  return <div className={cn('-mx-1 my-1 h-px bg-muted', className)} />;
 }
 
-export function DropdownMenuLabel({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div
-      className={cn(
-        'px-2 py-1.5 text-sm font-semibold',
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
+export function DropdownMenuLabel({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={cn('px-2 py-1.5 text-sm font-semibold', className)}>{children}</div>;
 }
 
 interface DropdownMenuSubProps {
@@ -263,7 +273,13 @@ export function DropdownMenuSub({ children }: DropdownMenuSubProps) {
   );
 }
 
-export function DropdownMenuSubTrigger({ children, className }: { children: React.ReactNode; className?: string }) {
+export function DropdownMenuSubTrigger({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   const { setIsSubOpen } = React.useContext(DropdownMenuSubContext);
 
   return (
@@ -295,10 +311,18 @@ export function DropdownMenuSubTrigger({ children, className }: { children: Reac
   );
 }
 
-export function DropdownMenuSubContent({ children, className }: { children: React.ReactNode; className?: string }) {
+export function DropdownMenuSubContent({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   const { isSubOpen } = React.useContext(DropdownMenuSubContext);
 
-  if (!isSubOpen) {return null;}
+  if (!isSubOpen) {
+    return null;
+  }
 
   return (
     <div

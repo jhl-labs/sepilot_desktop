@@ -119,7 +119,12 @@ describe('ImageGenerationProgressBar', () => {
   });
 
   it('should render all statuses correctly', () => {
-    const statuses: Array<ImageGenerationProgress['status']> = ['queued', 'executing', 'completed', 'error'];
+    const statuses: Array<ImageGenerationProgress['status']> = [
+      'queued',
+      'executing',
+      'completed',
+      'error',
+    ];
 
     statuses.forEach((status) => {
       const progress: ImageGenerationProgress = {

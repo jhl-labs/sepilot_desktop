@@ -348,8 +348,6 @@ describe('NetworkSettingsTab', () => {
       />
     );
 
-    expect(
-      screen.getByText(/프록시 및 SSL 인증서 검증 설정을 관리합니다/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/프록시 및 SSL 인증서 검증 설정을 관리합니다/)).toBeInTheDocument();
   });
 });

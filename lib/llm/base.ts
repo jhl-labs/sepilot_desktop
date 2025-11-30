@@ -81,18 +81,12 @@ export abstract class BaseLLMProvider {
   /**
    * Send messages and get a complete response
    */
-  abstract chat(
-    messages: Message[],
-    options?: LLMOptions
-  ): Promise<LLMResponse>;
+  abstract chat(messages: Message[], options?: LLMOptions): Promise<LLMResponse>;
 
   /**
    * Send messages and stream the response
    */
-  abstract stream(
-    messages: Message[],
-    options?: LLMOptions
-  ): AsyncGenerator<StreamChunk>;
+  abstract stream(messages: Message[], options?: LLMOptions): AsyncGenerator<StreamChunk>;
 
   /**
    * Get available models
@@ -139,9 +133,8 @@ export abstract class BaseLLMProvider {
             type: tc.type || 'function',
             function: {
               name: tc.name,
-              arguments: typeof tc.arguments === 'string'
-                ? tc.arguments
-                : JSON.stringify(tc.arguments),
+              arguments:
+                typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments),
             },
           })),
         };
@@ -177,14 +170,14 @@ export abstract class BaseLLMProvider {
             mimeType: image.mimeType,
             hasDataPrefix: imageUrl.startsWith('data:'),
             length: imageUrl.length,
-            preview: `${imageUrl.substring(0, 60)  }...`
+            preview: `${imageUrl.substring(0, 60)}...`,
           });
 
           // Skip if no valid image data
           if (!imageUrl || imageUrl.length < 50) {
             console.warn('[LLM] Skipping invalid image:', {
               filename: image.filename,
-              urlLength: imageUrl.length
+              urlLength: imageUrl.length,
             });
             continue;
           }
@@ -203,7 +196,10 @@ export abstract class BaseLLMProvider {
           content,
         };
 
-        console.log('[LLM] Formatted OpenAI Vision message:', `${JSON.stringify(formattedMsg).substring(0, 300)  }...`);
+        console.log(
+          '[LLM] Formatted OpenAI Vision message:',
+          `${JSON.stringify(formattedMsg).substring(0, 300)}...`
+        );
         return formattedMsg;
       }
 

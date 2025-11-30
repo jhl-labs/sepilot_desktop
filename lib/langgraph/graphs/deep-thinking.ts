@@ -27,7 +27,9 @@ export const DeepThinkingStateAnnotation = Annotation.Root({
     reducer: (_existing: string, update: string) => update,
     default: () => '',
   }),
-  perspectives: Annotation<Array<{ id: string; name: string; content: string; deepAnalysis: string }>>({
+  perspectives: Annotation<
+    Array<{ id: string; name: string; content: string; deepAnalysis: string }>
+  >({
     reducer: (_existing: any[], updates: any[]) => updates,
     default: () => [],
   }),
@@ -80,7 +82,11 @@ async function initialAnalysisNode(state: DeepThinkingState) {
   };
 
   let analysis = '';
-  for await (const chunk of LLMService.streamChat([systemMessage, ...state.messages, analysisPrompt])) {
+  for await (const chunk of LLMService.streamChat([
+    systemMessage,
+    ...state.messages,
+    analysisPrompt,
+  ])) {
     analysis += chunk;
     // 실시간 스트리밍 (conversationId로 격리)
     emitStreamingChunk(chunk, state.conversationId);
@@ -109,7 +115,8 @@ async function explorePerspectivesNode(state: DeepThinkingState) {
     { name: '창의적 관점', focus: '혁신적 아이디어, 대안적 접근, 비전통적 사고' },
   ];
 
-  const perspectives: Array<{ id: string; name: string; content: string; deepAnalysis: string }> = [];
+  const perspectives: Array<{ id: string; name: string; content: string; deepAnalysis: string }> =
+    [];
 
   for (const type of perspectiveTypes) {
     // 각 관점 시작 알림
@@ -164,7 +171,12 @@ async function deepAnalysisNode(state: DeepThinkingState) {
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## 🔬 3단계: 관점별 심화 분석 (3/5)\n\n', state.conversationId);
 
-  const deepAnalyzedPerspectives: Array<{ id: string; name: string; content: string; deepAnalysis: string }> = [];
+  const deepAnalyzedPerspectives: Array<{
+    id: string;
+    name: string;
+    content: string;
+    deepAnalysis: string;
+  }> = [];
 
   for (const perspective of state.perspectives) {
     // 각 심화 분석 시작 알림
@@ -309,9 +321,7 @@ async function finalSynthesisNode(state: DeepThinkingState) {
   const systemMessage: Message = {
     id: 'system-final',
     role: 'system',
-    content:
-      `${createBaseSystemMessage() 
-      }\n\n당신은 광범위한 사고 과정을 거쳤습니다.
+    content: `${createBaseSystemMessage()}\n\n당신은 광범위한 사고 과정을 거쳤습니다.
 이제 이 모든 심층 사고의 정점을 나타내는 최종적이고 포괄적이며 잘 구조화된 답변을 제공하세요.
 
 명확하고 통찰력 있으며 질문을 철저히 다루는 답변을 작성하세요. 반드시 한국어로 답변하세요.`,

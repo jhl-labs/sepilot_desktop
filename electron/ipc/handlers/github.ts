@@ -433,7 +433,11 @@ function createHttpAgent(networkConfig: NetworkConfig | null): HttpsAgent | Http
   }
 
   // Proxy 설정
-  if (networkConfig.proxy?.enabled && networkConfig.proxy.mode === 'manual' && networkConfig.proxy.url) {
+  if (
+    networkConfig.proxy?.enabled &&
+    networkConfig.proxy.mode === 'manual' &&
+    networkConfig.proxy.url
+  ) {
     const proxyAgent = new HttpsProxyAgent(networkConfig.proxy.url);
     return proxyAgent as any;
   }

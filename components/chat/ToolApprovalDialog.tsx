@@ -4,14 +4,7 @@ import { useState, useEffect } from 'react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  AlertTriangle,
-  Check,
-  X,
-  ChevronDown,
-  ChevronRight,
-  Wrench,
-} from 'lucide-react';
+import { AlertTriangle, Check, X, ChevronDown, ChevronRight, Wrench } from 'lucide-react';
 import { ToolCall } from '@/types';
 import { CodeDiffViewer } from './CodeDiffViewer';
 
@@ -27,7 +20,11 @@ interface FileToolContent {
   newContent: string;
 }
 
-export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: ToolApprovalDialogProps) {
+export function ToolApprovalDialog({
+  onApprove,
+  onReject,
+  onAlwaysApprove,
+}: ToolApprovalDialogProps) {
   const { pendingToolApproval } = useChatStore();
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
   const [fileContents, setFileContents] = useState<Map<string, FileToolContent>>(new Map());
@@ -40,7 +37,9 @@ export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: Too
 
   // Helper: Load file content for diff display
   useEffect(() => {
-    if (!pendingToolApproval) {return;}
+    if (!pendingToolApproval) {
+      return;
+    }
 
     const toolCalls = pendingToolApproval.toolCalls;
     const loadFileContents = async () => {
@@ -48,7 +47,9 @@ export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: Too
       const loading = new Set<string>();
 
       for (const tool of toolCalls) {
-        if (!isFileEditTool(tool.name)) {continue;}
+        if (!isFileEditTool(tool.name)) {
+          continue;
+        }
 
         loading.add(tool.id);
 
@@ -56,7 +57,9 @@ export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: Too
           const args = tool.arguments as any;
           const filePath = args.path;
 
-          if (!filePath) {continue;}
+          if (!filePath) {
+            continue;
+          }
 
           // Read existing file content (may fail if file doesn't exist)
           let oldContent = '';
@@ -146,10 +149,7 @@ export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: Too
             {toolCalls.map((tool) => {
               const isExpanded = expandedTools.has(tool.id);
               return (
-                <div
-                  key={tool.id}
-                  className="rounded-lg border bg-muted/30 overflow-hidden"
-                >
+                <div key={tool.id} className="rounded-lg border bg-muted/30 overflow-hidden">
                   {/* Tool Header */}
                   <button
                     onClick={() => toggleToolExpand(tool.id)}
@@ -178,9 +178,7 @@ export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: Too
                         </div>
                       ) : loadingFiles.has(tool.id) ? (
                         // Loading state
-                        <p className="text-xs text-muted-foreground">
-                          파일 내용 로딩 중...
-                        </p>
+                        <p className="text-xs text-muted-foreground">파일 내용 로딩 중...</p>
                       ) : (
                         // Default: Show JSON arguments
                         <>
@@ -202,21 +200,12 @@ export function ToolApprovalDialog({ onApprove, onReject, onAlwaysApprove }: Too
 
         {/* Footer - Claude Code style: No / Yes / Always Yes */}
         <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
-          <Button
-            variant="outline"
-            onClick={onReject}
-            className="gap-2"
-          >
+          <Button variant="outline" onClick={onReject} className="gap-2">
             <X className="h-4 w-4" />
             아니오
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => onApprove(toolCalls)}
-            className="gap-2"
-          >
-            <Check className="h-4 w-4" />
-            예
+          <Button variant="outline" onClick={() => onApprove(toolCalls)} className="gap-2">
+            <Check className="h-4 w-4" />예
           </Button>
           {onAlwaysApprove && (
             <Button

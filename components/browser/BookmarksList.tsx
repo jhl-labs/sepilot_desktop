@@ -38,7 +38,9 @@ export function BookmarksList() {
 
   // Load bookmarks and folders on mount
   useEffect(() => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     const loadData = async () => {
       setIsLoading(true);
@@ -66,7 +68,9 @@ export function BookmarksList() {
   }, []);
 
   const handleAddFolder = async () => {
-    if (!newFolderName.trim() || !isElectron() || !window.electronAPI) {return;}
+    if (!newFolderName.trim() || !isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.addBookmarkFolder(newFolderName);
@@ -86,8 +90,12 @@ export function BookmarksList() {
   };
 
   const handleDeleteFolder = async (id: string) => {
-    if (!window.confirm('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?')) {return;}
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!window.confirm('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?')) {
+      return;
+    }
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.deleteBookmarkFolder(id);
@@ -108,8 +116,12 @@ export function BookmarksList() {
   };
 
   const handleDeleteBookmark = async (id: string) => {
-    if (!window.confirm('이 북마크를 삭제하시겠습니까?')) {return;}
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!window.confirm('이 북마크를 삭제하시겠습니까?')) {
+      return;
+    }
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.deleteBookmark(id);
@@ -126,7 +138,9 @@ export function BookmarksList() {
   };
 
   const handleOpenBookmark = async (bookmark: Bookmark) => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.openBookmark(bookmark.id);
@@ -144,7 +158,9 @@ export function BookmarksList() {
   };
 
   const handleAddCurrentPage = async () => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.addBookmark({
@@ -205,10 +221,7 @@ export function BookmarksList() {
                 전체
               </DropdownMenuItem>
               {folders.map((folder) => (
-                <DropdownMenuItem
-                  key={folder.id}
-                  onClick={() => setSelectedFolderId(folder.id)}
-                >
+                <DropdownMenuItem key={folder.id} onClick={() => setSelectedFolderId(folder.id)}>
                   <Globe className="mr-2 h-4 w-4" />
                   <span className="flex-1 truncate">{folder.name}</span>
                   <Button
@@ -238,12 +251,7 @@ export function BookmarksList() {
           </Button>
 
           {/* Add Bookmark Button */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleAddCurrentPage}
-            className="shrink-0"
-          >
+          <Button variant="outline" size="icon" onClick={handleAddCurrentPage} className="shrink-0">
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -255,8 +263,12 @@ export function BookmarksList() {
             value={newFolderName}
             onChange={(e) => setNewFolderName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {handleAddFolder();}
-              if (e.key === 'Escape') {setIsAddingFolder(false);}
+              if (e.key === 'Enter') {
+                handleAddFolder();
+              }
+              if (e.key === 'Escape') {
+                setIsAddingFolder(false);
+              }
             }}
             className="h-8 text-sm"
             autoFocus
@@ -273,7 +285,11 @@ export function BookmarksList() {
         ) : filteredBookmarks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <p className="text-sm">북마크가 없습니다</p>
-            <p className="mt-2 text-xs text-center">현재 페이지를<br />북마크에 추가하세요</p>
+            <p className="mt-2 text-xs text-center">
+              현재 페이지를
+              <br />
+              북마크에 추가하세요
+            </p>
           </div>
         ) : (
           <div className="space-y-2">

@@ -18,22 +18,53 @@ import {
 const FONT_SCALE_KEY = 'sepilot-chat-font-scale';
 const DEFAULT_FONT_SCALE = '100';
 const FONT_SCALE_OPTIONS = [
-  '50', '60', '70', '80', '90', '100', '110', '120', '130', '140', '150', '160', '170', '180', '190', '200'
+  '50',
+  '60',
+  '70',
+  '80',
+  '90',
+  '100',
+  '110',
+  '120',
+  '130',
+  '140',
+  '150',
+  '160',
+  '170',
+  '180',
+  '190',
+  '200',
 ];
 
 export function ChatArea() {
-  const { messages, activeConversationId, getGraphConfig, updateMessage, deleteMessage, addMessage, startStreaming, stopStreaming, streamingConversations, workingDirectory, personas, activePersonaId, conversations } = useChatStore();
+  const {
+    messages,
+    activeConversationId,
+    getGraphConfig,
+    updateMessage,
+    deleteMessage,
+    addMessage,
+    startStreaming,
+    stopStreaming,
+    streamingConversations,
+    workingDirectory,
+    personas,
+    activePersonaId,
+    conversations,
+  } = useChatStore();
 
   // Get current conversation's persona (conversation-specific persona takes precedence)
   const currentConversation = activeConversationId
-    ? conversations.find(c => c.id === activeConversationId)
+    ? conversations.find((c) => c.id === activeConversationId)
     : null;
   const conversationPersonaId = currentConversation?.personaId;
   const effectivePersonaId = conversationPersonaId || activePersonaId;
-  const activePersona = personas.find(p => p.id === effectivePersonaId);
+  const activePersona = personas.find((p) => p.id === effectivePersonaId);
 
   // Get streaming state for current conversation
-  const streamingMessageId = activeConversationId ? streamingConversations.get(activeConversationId) || null : null;
+  const streamingMessageId = activeConversationId
+    ? streamingConversations.get(activeConversationId) || null
+    : null;
   const scrollRef = useRef<HTMLDivElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const rafIdRef = useRef<number | null>(null); // RAF cleanup for handleRegenerate
@@ -65,7 +96,9 @@ export function ChatArea() {
     setIsDragging(false);
 
     const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) {return;}
+    if (files.length === 0) {
+      return;
+    }
 
     const textContents: string[] = [];
     const imageFiles: { filename: string; mimeType: string; base64: string }[] = [];
@@ -159,7 +192,9 @@ export function ChatArea() {
 
   // Handle message regeneration
   const handleRegenerate = async (messageId: string) => {
-    if (!activeConversationId) {return;}
+    if (!activeConversationId) {
+      return;
+    }
 
     // Capture conversationId at function start to prevent race conditions
     const conversationId = activeConversationId;
@@ -172,7 +207,9 @@ export function ChatArea() {
     try {
       // 1. Find the assistant message to regenerate
       const messageIndex = messages.findIndex((m) => m.id === messageId);
-      if (messageIndex === -1 || messages[messageIndex].role !== 'assistant') {return;}
+      if (messageIndex === -1 || messages[messageIndex].role !== 'assistant') {
+        return;
+      }
 
       // 2. Delete the assistant message
       await deleteMessage(messageId);
@@ -226,7 +263,9 @@ export function ChatArea() {
         const eventHandler = window.electronAPI.langgraph.onStreamEvent((event: any) => {
           try {
             // Guard: Check if event exists
-            if (!event) {return;}
+            if (!event) {
+              return;
+            }
 
             // Filter events by conversationId
             if (event.conversationId && event.conversationId !== conversationId) {
@@ -259,9 +298,10 @@ export function ChatArea() {
                   if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
                     if (msg.content) {
                       // Truncate long thinking content
-                      const thinkingContent = msg.content.length > 300
-                        ? `${msg.content.substring(0, 300)  }...`
-                        : msg.content;
+                      const thinkingContent =
+                        msg.content.length > 300
+                          ? `${msg.content.substring(0, 300)}...`
+                          : msg.content;
                       displayContent += `💭 ${thinkingContent}\n\n`;
                     }
                     // Don't show tool calls here - they'll be shown with results
@@ -277,7 +317,9 @@ export function ChatArea() {
                     for (let j = i - 1; j >= 0; j--) {
                       const prevMsg = allMessages[j];
                       if (prevMsg.role === 'assistant' && prevMsg.tool_calls) {
-                        const toolCall = prevMsg.tool_calls.find((tc: any) => tc.id === msg.tool_call_id);
+                        const toolCall = prevMsg.tool_calls.find(
+                          (tc: any) => tc.id === msg.tool_call_id
+                        );
                         if (toolCall) {
                           toolArgs = toolCall.arguments;
                           break;
@@ -286,12 +328,12 @@ export function ChatArea() {
                     }
 
                     // Check if there's an error in the content
-                    const hasError = msg.content && (
-                      msg.content.toLowerCase().includes('error:') ||
-                      msg.content.toLowerCase().includes('failed to') ||
-                      msg.content.toLowerCase().includes('enoent') ||
-                      msg.content.toLowerCase().includes('eacces')
-                    );
+                    const hasError =
+                      msg.content &&
+                      (msg.content.toLowerCase().includes('error:') ||
+                        msg.content.toLowerCase().includes('failed to') ||
+                        msg.content.toLowerCase().includes('enoent') ||
+                        msg.content.toLowerCase().includes('eacces'));
 
                     // Start with tool name and args
                     displayContent += `🔧 ${toolName}`;
@@ -313,10 +355,11 @@ export function ChatArea() {
                       let errorMsg = linesToShow.join('\n');
 
                       if (errorMsg.length > 800) {
-                        errorMsg = `${errorMsg.substring(0, 800)  }\n... (truncated)`;
+                        errorMsg = `${errorMsg.substring(0, 800)}\n... (truncated)`;
                       }
 
-                      const indentedError = errorMsg.split('\n')
+                      const indentedError = errorMsg
+                        .split('\n')
                         .map((line: string) => `   ❌ ${line}`)
                         .join('\n');
                       displayContent += `${indentedError}\n\n`;
@@ -330,7 +373,9 @@ export function ChatArea() {
                           summary = `Modified ${toolArgs.path}`;
                           if (msg.content.includes('lines changed')) {
                             const match = msg.content.match(/(\d+)\s+lines?\s+changed/);
-                            if (match) {summary = `${match[1]} lines changed`;}
+                            if (match) {
+                              summary = `${match[1]} lines changed`;
+                            }
                           }
                         } else {
                           summary = msg.content.split('\n')[0].substring(0, 60);
@@ -339,14 +384,16 @@ export function ChatArea() {
                         const lineCount = msg.content.split('\n').length;
                         summary = `Read ${lineCount} lines`;
                       } else if (toolName === 'file_list') {
-                        const files = msg.content.split('\n').filter((l: string) => l.trim()).length;
+                        const files = msg.content
+                          .split('\n')
+                          .filter((l: string) => l.trim()).length;
                         summary = `Found ${files} items`;
                       } else if (toolName === 'command_execute') {
                         // Show stdout (first few lines)
                         const contentLines = msg.content.split('\n').slice(0, 5);
                         let output = contentLines.join('\n');
                         if (output.length > 200) {
-                          output = `${output.substring(0, 200)  }...`;
+                          output = `${output.substring(0, 200)}...`;
                         }
                         if (output.trim()) {
                           summary = output;
@@ -354,7 +401,9 @@ export function ChatArea() {
                           summary = 'Success (no output)';
                         }
                       } else if (toolName === 'grep_search') {
-                        const matches = msg.content.split('\n').filter((l: string) => l.trim()).length;
+                        const matches = msg.content
+                          .split('\n')
+                          .filter((l: string) => l.trim()).length;
                         summary = `Found ${matches} matches`;
                       } else {
                         // Generic summary - first line
@@ -367,7 +416,10 @@ export function ChatArea() {
                   }
 
                   // Final assistant message (no tool calls)
-                  if (msg.role === 'assistant' && (!msg.tool_calls || msg.tool_calls.length === 0)) {
+                  if (
+                    msg.role === 'assistant' &&
+                    (!msg.tool_calls || msg.tool_calls.length === 0)
+                  ) {
                     if (msg.content) {
                       displayContent += `${msg.content}\n\n`;
                     }
@@ -377,7 +429,7 @@ export function ChatArea() {
                 // Update with formatted content
                 scheduleUpdate({
                   content: displayContent.trim(),
-                  referenced_documents: allMessages[allMessages.length - 1]?.referenced_documents
+                  referenced_documents: allMessages[allMessages.length - 1]?.referenced_documents,
                 });
               }
             }
@@ -458,9 +510,7 @@ export function ChatArea() {
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
         <MessageSquare className="mb-4 h-16 w-16 opacity-20" />
         <h2 className="mb-2 text-xl font-semibold">SEPilot에 오신 것을 환영합니다</h2>
-        <p className="text-center text-sm">
-          새 대화를 시작하거나 기존 대화를 선택하세요
-        </p>
+        <p className="text-center text-sm">새 대화를 시작하거나 기존 대화를 선택하세요</p>
       </div>
     );
   }
@@ -518,8 +568,7 @@ export function ChatArea() {
             {messages.map((message, index) => {
               // Determine if this is the last assistant message
               const isLastAssistantMessage =
-                message.role === 'assistant' &&
-                index === messages.length - 1;
+                message.role === 'assistant' && index === messages.length - 1;
 
               // Check if this message is currently streaming
               const isMessageStreaming = streamingMessageId === message.id;

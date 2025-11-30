@@ -88,10 +88,13 @@ gpg --import sepilot-release-key.asc
 
 **서명 검증:**
 \`\`\`bash
+
 # .exe 파일 검증
+
 gpg --verify SEPilot-Setup-0.6.0.exe.asc SEPilot-Setup-0.6.0.exe
 
 # 체크섬 파일 검증
+
 gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt
 sha256sum -c SHA256SUMS.txt
 \`\`\`
@@ -127,6 +130,7 @@ gpg --verify test.txt.asc test.txt
 ### 6.2 GitHub Actions 테스트
 
 1. 새 태그 생성:
+
    ```bash
    git tag v0.6.1-test
    git push origin v0.6.1-test
@@ -174,11 +178,13 @@ gpg --keyserver keys.openpgp.org --send-keys YOUR_KEY_ID
 ### GPG 명령어가 없음
 
 **Ubuntu/Debian:**
+
 ```bash
 sudo apt-get install gnupg
 ```
 
 **macOS:**
+
 ```bash
 brew install gnupg
 ```
@@ -189,6 +195,7 @@ brew install gnupg
 ### 키 서버 연결 실패
 
 다른 키 서버 시도:
+
 ```bash
 gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEY_ID
 gpg --keyserver pgp.mit.edu --send-keys YOUR_KEY_ID

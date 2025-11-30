@@ -75,7 +75,9 @@ describe('ActivityPanel', () => {
 
     await waitFor(() => {
       expect(screen.getByText('아직 실행된 도구가 없습니다')).toBeInTheDocument();
-      expect(screen.getByText('Coding 모드에서 도구가 실행되면 여기에 표시됩니다')).toBeInTheDocument();
+      expect(
+        screen.getByText('Coding 모드에서 도구가 실행되면 여기에 표시됩니다')
+      ).toBeInTheDocument();
     });
   });
 
@@ -246,7 +248,9 @@ describe('ActivityPanel', () => {
       data: [],
     });
 
-    const { container } = render(<ActivityPanel conversationId="conv-1" className="custom-class" />);
+    const { container } = render(
+      <ActivityPanel conversationId="conv-1" className="custom-class" />
+    );
 
     expect(container.querySelector('.custom-class')).toBeInTheDocument();
   });
@@ -299,10 +303,12 @@ describe('ActivityPanel', () => {
   it('should format duration correctly for milliseconds', async () => {
     (mockElectronAPI.activity.loadActivities as jest.Mock).mockResolvedValue({
       success: true,
-      data: [{
-        ...mockActivities[0],
-        duration_ms: 500,
-      }],
+      data: [
+        {
+          ...mockActivities[0],
+          duration_ms: 500,
+        },
+      ],
     });
 
     render(<ActivityPanel conversationId="conv-1" />);
@@ -315,10 +321,12 @@ describe('ActivityPanel', () => {
   it('should handle missing duration', async () => {
     (mockElectronAPI.activity.loadActivities as jest.Mock).mockResolvedValue({
       success: true,
-      data: [{
-        ...mockActivities[0],
-        duration_ms: undefined,
-      }],
+      data: [
+        {
+          ...mockActivities[0],
+          duration_ms: undefined,
+        },
+      ],
     });
 
     render(<ActivityPanel conversationId="conv-1" />);
@@ -334,10 +342,12 @@ describe('ActivityPanel', () => {
   it('should handle zero duration', async () => {
     (mockElectronAPI.activity.loadActivities as jest.Mock).mockResolvedValue({
       success: true,
-      data: [{
-        ...mockActivities[0],
-        duration_ms: 0,
-      }],
+      data: [
+        {
+          ...mockActivities[0],
+          duration_ms: 0,
+        },
+      ],
     });
 
     render(<ActivityPanel conversationId="conv-1" />);
@@ -355,10 +365,12 @@ describe('ActivityPanel', () => {
     const longValue = 'a'.repeat(100);
     (mockElectronAPI.activity.loadActivities as jest.Mock).mockResolvedValue({
       success: true,
-      data: [{
-        ...mockActivities[0],
-        tool_args: { longPath: longValue },
-      }],
+      data: [
+        {
+          ...mockActivities[0],
+          tool_args: { longPath: longValue },
+        },
+      ],
     });
 
     render(<ActivityPanel conversationId="conv-1" />);

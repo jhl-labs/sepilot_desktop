@@ -49,7 +49,9 @@ export function DocumentEditDialog({
       return;
     }
 
-    if (!document) {return;}
+    if (!document) {
+      return;
+    }
 
     setIsSaving(true);
     setMessage(null);

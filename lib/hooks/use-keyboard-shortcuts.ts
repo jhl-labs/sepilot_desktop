@@ -16,12 +16,11 @@ export interface KeyboardShortcut {
  * @param shortcuts - 등록할 단축키 배열
  * @param enabled - 단축키 활성화 여부 (기본: true)
  */
-export function useKeyboardShortcuts(
-  shortcuts: KeyboardShortcut[],
-  enabled: boolean = true
-): void {
+export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[], enabled: boolean = true): void {
   useEffect(() => {
-    if (!enabled) {return;}
+    if (!enabled) {
+      return;
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       for (const shortcut of shortcuts) {
@@ -56,7 +55,9 @@ export function useKeyboardShortcuts(
  * 플랫폼별 수정키 이름 가져오기
  */
 export function getModifierKey(): 'Cmd' | 'Ctrl' {
-  if (typeof window === 'undefined') {return 'Ctrl';}
+  if (typeof window === 'undefined') {
+    return 'Ctrl';
+  }
 
   return window.electronAPI?.platform === 'darwin' ? 'Cmd' : 'Ctrl';
 }
@@ -71,10 +72,18 @@ export function formatShortcut(shortcut: Omit<KeyboardShortcut, 'handler'>): str
   const parts: string[] = [];
   const modifier = getModifierKey();
 
-  if (shortcut.ctrl) {parts.push('Ctrl');}
-  if (shortcut.alt) {parts.push('Alt');}
-  if (shortcut.shift) {parts.push('Shift');}
-  if (shortcut.meta) {parts.push(modifier);}
+  if (shortcut.ctrl) {
+    parts.push('Ctrl');
+  }
+  if (shortcut.alt) {
+    parts.push('Alt');
+  }
+  if (shortcut.shift) {
+    parts.push('Shift');
+  }
+  if (shortcut.meta) {
+    parts.push(modifier);
+  }
 
   parts.push(shortcut.key.toUpperCase());
 

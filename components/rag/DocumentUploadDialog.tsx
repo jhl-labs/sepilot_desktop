@@ -24,11 +24,7 @@ interface DocumentUploadDialogProps {
   onUpload: (documents: { content: string; metadata: Record<string, any> }[]) => Promise<void>;
 }
 
-export function DocumentUploadDialog({
-  open,
-  onOpenChange,
-  onUpload,
-}: DocumentUploadDialogProps) {
+export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentUploadDialogProps) {
   const [sourceType, setSourceType] = useState<DocumentSourceType>('manual');
   const [title, setTitle] = useState('');
   const [source, setSource] = useState('');
@@ -45,7 +41,9 @@ export function DocumentUploadDialog({
 
   const [cleanWithLLM, setCleanWithLLM] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(
+    null
+  );
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleUpload = async () => {
@@ -86,13 +84,15 @@ export function DocumentUploadDialog({
           url: httpUrl.trim(),
         });
 
-        let processedDocs: { content: string; metadata: Record<string, any> }[] = fetchedDocs.map((doc) => ({
-          content: doc.content,
-          metadata: {
-            ...doc.metadata,
-            title: title.trim() || doc.metadata.title || 'Untitled',
-          },
-        }));
+        let processedDocs: { content: string; metadata: Record<string, any> }[] = fetchedDocs.map(
+          (doc) => ({
+            content: doc.content,
+            metadata: {
+              ...doc.metadata,
+              title: title.trim() || doc.metadata.title || 'Untitled',
+            },
+          })
+        );
 
         // LLM으로 정제
         if (cleanWithLLM) {
@@ -120,13 +120,15 @@ export function DocumentUploadDialog({
           token: githubToken.trim() || undefined,
         });
 
-        let processedDocs: { content: string; metadata: Record<string, any> }[] = fetchedDocs.map((doc) => ({
-          content: doc.content,
-          metadata: {
-            ...doc.metadata,
-            title: doc.metadata.title || 'Untitled',
-          },
-        }));
+        let processedDocs: { content: string; metadata: Record<string, any> }[] = fetchedDocs.map(
+          (doc) => ({
+            content: doc.content,
+            metadata: {
+              ...doc.metadata,
+              title: doc.metadata.title || 'Untitled',
+            },
+          })
+        );
 
         // LLM으로 정제
         if (cleanWithLLM) {
@@ -341,7 +343,8 @@ export function DocumentUploadDialog({
               <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-3 text-xs text-blue-600 dark:text-blue-400">
                 <p className="font-medium">Private Repository 접근 시:</p>
                 <p className="mt-1">
-                  GitHub Personal Access Token이 필요합니다. Settings → Developer settings → Personal access tokens에서 생성할 수 있습니다.
+                  GitHub Personal Access Token이 필요합니다. Settings → Developer settings →
+                  Personal access tokens에서 생성할 수 있습니다.
                 </p>
               </div>
 

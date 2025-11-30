@@ -10,12 +10,7 @@ import { registerHandlers, removeHandlerIfExists } from '../utils';
 
 export function setupPersonaHandlers() {
   // Remove existing handlers (for hot reload)
-  const channels = [
-    'persona-load-all',
-    'persona-save',
-    'persona-update',
-    'persona-delete',
-  ];
+  const channels = ['persona-load-all', 'persona-save', 'persona-update', 'persona-delete'];
   channels.forEach(removeHandlerIfExists);
 
   registerHandlers([

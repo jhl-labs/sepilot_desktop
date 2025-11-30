@@ -1,9 +1,4 @@
-import {
-  BaseLLMProvider,
-  LLMOptions,
-  LLMResponse,
-  StreamChunk,
-} from '../base';
+import { BaseLLMProvider, LLMOptions, LLMResponse, StreamChunk } from '../base';
 import { Message } from '@/types';
 import { fetchWithConfig, createAuthHeader } from '../http-utils';
 
@@ -88,27 +83,21 @@ export class OpenAIProvider extends BaseLLMProvider {
         requestBody.tool_choice = 'auto';
       }
 
-      const response = await fetchWithConfig(
-        `${this.baseURL}/chat/completions`,
-        this.config,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders,
-            ...(this.config.customHeaders || {}),
-          },
-          body: JSON.stringify(requestBody),
-        }
-      );
+      const response = await fetchWithConfig(`${this.baseURL}/chat/completions`, this.config, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+          ...(this.config.customHeaders || {}),
+        },
+        body: JSON.stringify(requestBody),
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
         try {
           const error = JSON.parse(errorText);
-          throw new Error(
-            error.error?.message || `API error: ${response.status}`
-          );
+          throw new Error(error.error?.message || `API error: ${response.status}`);
         } catch {
           throw new Error(`API error: ${response.status} - ${errorText.substring(0, 500)}`);
         }
@@ -122,7 +111,10 @@ export class OpenAIProvider extends BaseLLMProvider {
         data = JSON.parse(responseText);
       } catch {
         // If JSON parsing fails, try to extract the first valid JSON object
-        log.error('[OpenAI] JSON parse error, response text (first 500 chars):', responseText.substring(0, 500));
+        log.error(
+          '[OpenAI] JSON parse error, response text (first 500 chars):',
+          responseText.substring(0, 500)
+        );
 
         // Try to find and parse the first complete JSON object
         const firstBraceIndex = responseText.indexOf('{');
@@ -131,8 +123,12 @@ export class OpenAIProvider extends BaseLLMProvider {
           let endIndex = -1;
 
           for (let i = firstBraceIndex; i < responseText.length; i++) {
-            if (responseText[i] === '{') {braceCount++;}
-            if (responseText[i] === '}') {braceCount--;}
+            if (responseText[i] === '{') {
+              braceCount++;
+            }
+            if (responseText[i] === '}') {
+              braceCount--;
+            }
             if (braceCount === 0) {
               endIndex = i + 1;
               break;
@@ -145,10 +141,14 @@ export class OpenAIProvider extends BaseLLMProvider {
               data = JSON.parse(firstJsonStr);
               log.warn('[OpenAI] Successfully extracted first JSON object from malformed response');
             } catch {
-              throw new Error(`unmarshal: invalid character '{' after top-level value (response: ${responseText.substring(0, 200)})`);
+              throw new Error(
+                `unmarshal: invalid character '{' after top-level value (response: ${responseText.substring(0, 200)})`
+              );
             }
           } else {
-            throw new Error(`Failed to extract valid JSON from response: ${responseText.substring(0, 200)}`);
+            throw new Error(
+              `Failed to extract valid JSON from response: ${responseText.substring(0, 200)}`
+            );
           }
         } else {
           throw new Error(`No JSON object found in response: ${responseText.substring(0, 200)}`);
@@ -156,7 +156,9 @@ export class OpenAIProvider extends BaseLLMProvider {
       }
 
       if (!data || !data.choices || !data.choices[0]) {
-        throw new Error(`Invalid API response structure: ${JSON.stringify(data).substring(0, 200)}`);
+        throw new Error(
+          `Invalid API response structure: ${JSON.stringify(data).substring(0, 200)}`
+        );
       }
 
       const message = data.choices[0].message;
@@ -187,10 +189,7 @@ export class OpenAIProvider extends BaseLLMProvider {
     }
   }
 
-  async *stream(
-    messages: Message[],
-    options?: LLMOptions
-  ): AsyncGenerator<StreamChunk> {
+  async *stream(messages: Message[], options?: LLMOptions): AsyncGenerator<StreamChunk> {
     const isElectron = typeof process !== 'undefined' && process.versions?.electron;
     log.info('[OpenAIProvider] stream() called, isElectron:', isElectron, 'baseURL:', this.baseURL);
 
@@ -250,30 +249,32 @@ export class OpenAIProvider extends BaseLLMProvider {
           if (msg.content && Array.isArray(msg.content)) {
             msg.content.forEach((item: any, itemIdx: number) => {
               if (item.type === 'image_url' && item.image_url) {
-                log.info(`[OpenAI] Message ${idx} item ${itemIdx}: image_url with length ${item.image_url.url?.length || 0}`);
+                log.info(
+                  `[OpenAI] Message ${idx} item ${itemIdx}: image_url with length ${item.image_url.url?.length || 0}`
+                );
               } else if (item.type === 'text') {
-                log.info(`[OpenAI] Message ${idx} item ${itemIdx}: text with length ${item.text?.length || 0}`);
+                log.info(
+                  `[OpenAI] Message ${idx} item ${itemIdx}: text with length ${item.text?.length || 0}`
+                );
               }
             });
           } else {
-            log.info(`[OpenAI] Message ${idx}: ${msg.role} with content length ${msg.content?.length || 0}`);
+            log.info(
+              `[OpenAI] Message ${idx}: ${msg.role} with content length ${msg.content?.length || 0}`
+            );
           }
         });
       }
 
-      const response = await fetchWithConfig(
-        requestUrl,
-        this.config,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders,
-            ...(this.config.customHeaders || {}),
-          },
-          body: JSON.stringify(requestBody),
-        }
-      );
+      const response = await fetchWithConfig(requestUrl, this.config, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+          ...(this.config.customHeaders || {}),
+        },
+        body: JSON.stringify(requestBody),
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -285,7 +286,9 @@ export class OpenAIProvider extends BaseLLMProvider {
 
         try {
           const errorJson = JSON.parse(errorText);
-          throw new Error(errorJson.error?.message || `${response.status} ${response.statusText}: ${errorText}`);
+          throw new Error(
+            errorJson.error?.message || `${response.status} ${response.statusText}: ${errorText}`
+          );
         } catch {
           throw new Error(`${response.status} ${response.statusText}: ${errorText}`);
         }
@@ -307,16 +310,17 @@ export class OpenAIProvider extends BaseLLMProvider {
 
         if (done) {
           // Convert accumulated tool calls to array
-          const toolCalls = toolCallsAccumulator.size > 0
-            ? Array.from(toolCallsAccumulator.values()).map((tc: any) => ({
-                id: tc.id,
-                type: tc.type || 'function',
-                function: {
-                  name: tc.function.name,
-                  arguments: tc.function.arguments,
-                },
-              }))
-            : undefined;
+          const toolCalls =
+            toolCallsAccumulator.size > 0
+              ? Array.from(toolCallsAccumulator.values()).map((tc: any) => ({
+                  id: tc.id,
+                  type: tc.type || 'function',
+                  function: {
+                    name: tc.function.name,
+                    arguments: tc.function.arguments,
+                  },
+                }))
+              : undefined;
 
           yield { content: '', done: true, toolCalls };
           break;
@@ -328,7 +332,9 @@ export class OpenAIProvider extends BaseLLMProvider {
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed || trimmed === 'data: [DONE]') {continue;}
+          if (!trimmed || trimmed === 'data: [DONE]') {
+            continue;
+          }
 
           if (trimmed.startsWith('data: ')) {
             const jsonStr = trimmed.slice(6);
@@ -353,7 +359,9 @@ export class OpenAIProvider extends BaseLLMProvider {
               if (toolCallsDeltas && Array.isArray(toolCallsDeltas)) {
                 for (const tcDelta of toolCallsDeltas) {
                   const index = tcDelta.index;
-                  if (index === undefined) {continue;}
+                  if (index === undefined) {
+                    continue;
+                  }
 
                   // Get or create tool call accumulator for this index
                   let toolCall = toolCallsAccumulator.get(index);
@@ -400,13 +408,9 @@ export class OpenAIProvider extends BaseLLMProvider {
     try {
       const authHeaders = createAuthHeader(this.config.provider, this.apiKey);
 
-      const response = await fetchWithConfig(
-        `${this.baseURL}/models`,
-        this.config,
-        {
-          headers: authHeaders,
-        }
-      );
+      const response = await fetchWithConfig(`${this.baseURL}/models`, this.config, {
+        headers: authHeaders,
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch models: ${response.status}`);
@@ -424,13 +428,9 @@ export class OpenAIProvider extends BaseLLMProvider {
     try {
       const authHeaders = createAuthHeader(this.config.provider, this.apiKey);
 
-      const response = await fetchWithConfig(
-        `${this.baseURL}/models`,
-        this.config,
-        {
-          headers: authHeaders,
-        }
-      );
+      const response = await fetchWithConfig(`${this.baseURL}/models`, this.config, {
+        headers: authHeaders,
+      });
 
       return response.ok;
     } catch {

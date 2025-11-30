@@ -45,10 +45,7 @@ describe('VectorDBSettings', () => {
       };
 
       render(
-        <VectorDBSettings
-          onSave={mockOnSave}
-          initialVectorDBConfig={initialVectorDBConfig}
-        />
+        <VectorDBSettings onSave={mockOnSave} initialVectorDBConfig={initialVectorDBConfig} />
       );
 
       const indexName = screen.getByLabelText('Index Name') as HTMLInputElement;
@@ -65,10 +62,7 @@ describe('VectorDBSettings', () => {
       };
 
       render(
-        <VectorDBSettings
-          onSave={mockOnSave}
-          initialEmbeddingConfig={initialEmbeddingConfig}
-        />
+        <VectorDBSettings onSave={mockOnSave} initialEmbeddingConfig={initialEmbeddingConfig} />
       );
 
       const baseURL = screen.getByLabelText('Base URL') as HTMLInputElement;
@@ -168,9 +162,7 @@ describe('VectorDBSettings', () => {
       await user.click(refreshButton);
 
       await waitFor(() => {
-        expect(
-          screen.getByText('Base URL과 API Key를 먼저 입력해주세요.')
-        ).toBeInTheDocument();
+        expect(screen.getByText('Base URL과 API Key를 먼저 입력해주세요.')).toBeInTheDocument();
       });
     });
 
@@ -227,9 +219,7 @@ describe('VectorDBSettings', () => {
       await user.click(refreshButton);
 
       await waitFor(() => {
-        expect(
-          screen.getByText(/모델 목록을 가져오는데 실패했습니다/)
-        ).toBeInTheDocument();
+        expect(screen.getByText(/모델 목록을 가져오는데 실패했습니다/)).toBeInTheDocument();
       });
     });
   });
@@ -309,9 +299,7 @@ describe('VectorDBSettings', () => {
 
     it('should disable save button while saving', async () => {
       const user = userEvent.setup();
-      const slowOnSave = jest.fn(
-        () => new Promise((resolve) => setTimeout(resolve, 100))
-      );
+      const slowOnSave = jest.fn(() => new Promise((resolve) => setTimeout(resolve, 100)));
 
       render(<VectorDBSettings onSave={slowOnSave} />);
 
@@ -413,10 +401,7 @@ describe('VectorDBSettings', () => {
 
     it('should handle array response format', async () => {
       const user = userEvent.setup();
-      const mockModels = [
-        { id: 'text-embedding-3-small' },
-        { id: 'text-embedding-3-large' },
-      ];
+      const mockModels = [{ id: 'text-embedding-3-small' }, { id: 'text-embedding-3-large' }];
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -463,10 +448,7 @@ describe('VectorDBSettings', () => {
     it('should set dimension to 3072 for large models', async () => {
       const user = userEvent.setup();
       const mockModels = {
-        data: [
-          { id: 'text-embedding-3-large' },
-          { id: 'text-embedding-ada-002' },
-        ],
+        data: [{ id: 'text-embedding-3-large' }, { id: 'text-embedding-ada-002' }],
       };
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -495,9 +477,7 @@ describe('VectorDBSettings', () => {
     it('should set dimension to 1536 for small models', async () => {
       const user = userEvent.setup();
       const mockModels = {
-        data: [
-          { id: 'text-embedding-3-small' },
-        ],
+        data: [{ id: 'text-embedding-3-small' }],
       };
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -539,7 +519,7 @@ describe('VectorDBSettings', () => {
       expect(modelSelect.value).toBe('custom-embedding-model');
 
       // The custom model should appear as first option
-      const options = Array.from(modelSelect.options).map(opt => opt.value);
+      const options = Array.from(modelSelect.options).map((opt) => opt.value);
       expect(options[0]).toBe('custom-embedding-model');
     });
 
@@ -555,7 +535,7 @@ describe('VectorDBSettings', () => {
       await waitFor(() => {
         const modelSelect = screen.getByLabelText('Model') as HTMLSelectElement;
         expect(modelSelect.value).toBe('brand-new-model-2025');
-        const options = Array.from(modelSelect.options).map(opt => opt.value);
+        const options = Array.from(modelSelect.options).map((opt) => opt.value);
         expect(options).toContain('brand-new-model-2025');
       });
     });
@@ -624,6 +604,5 @@ describe('VectorDBSettings', () => {
         expect(dimensionInput.value).toBe('1536');
       });
     });
-
   });
 });

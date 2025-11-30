@@ -40,15 +40,8 @@ export function CodeBlock({ language, code }: CodeBlockProps) {
     <div className="group relative my-4 overflow-hidden rounded-lg border bg-muted">
       {/* Header */}
       <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
-        <span className="text-xs font-medium text-muted-foreground">
-          {language}
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCopy}
-          className="h-7 gap-1 px-2"
-        >
+        <span className="text-xs font-medium text-muted-foreground">{language}</span>
+        <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 gap-1 px-2">
           {copied ? (
             <>
               <Check className="h-3 w-3" />

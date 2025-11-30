@@ -18,7 +18,9 @@ export class StdioMCPClient extends MCPClient {
   async connect(): Promise<void> {
     // Main Process 전용 메서드로 리다이렉트
     // spawn은 여기서 직접 import할 수 없으므로 connectInMainProcess를 직접 호출해야 함
-    throw new Error('StdioMCPClient.connect() must use connectInMainProcess() with spawn parameter');
+    throw new Error(
+      'StdioMCPClient.connect() must use connectInMainProcess() with spawn parameter'
+    );
   }
 
   async disconnect(): Promise<void> {
@@ -102,7 +104,7 @@ export class StdioMCPClient extends MCPClient {
       this.pendingRequests.set(id, { resolve, reject });
 
       // 요청 전송
-      const message = `${JSON.stringify(requestWithId)  }\n`;
+      const message = `${JSON.stringify(requestWithId)}\n`;
       this.process.stdin.write(message);
 
       // 타임아웃 설정 (30초)

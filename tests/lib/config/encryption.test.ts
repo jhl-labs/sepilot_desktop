@@ -145,7 +145,11 @@ describe('encryption', () => {
           index: 'documents',
         },
         mcp: [
-          { name: 'server1', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem'] },
+          {
+            name: 'server1',
+            command: 'npx',
+            args: ['-y', '@modelcontextprotocol/server-filesystem'],
+          },
         ],
       };
 

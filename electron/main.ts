@@ -8,7 +8,16 @@ const pathModule = require('path');
 // We need to point @ to resources/app.asar/dist/electron
 moduleAlias.addAlias('@', pathModule.join(__dirname, '..'));
 
-import { app, BrowserWindow, session, Tray, Menu, globalShortcut, nativeImage, protocol } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  session,
+  Tray,
+  Menu,
+  globalShortcut,
+  nativeImage,
+  protocol,
+} from 'electron';
 import path from 'path';
 import serve from 'electron-serve';
 import { databaseService } from './services/database';
@@ -42,61 +51,61 @@ function toggleMenuVisibility() {
 
   if (isMenuVisible) {
     // Show default menu
-    Menu.setApplicationMenu(Menu.buildFromTemplate([
-      {
-        label: 'File',
-        submenu: [
-          { role: 'quit' }
-        ]
-      },
-      {
-        label: 'Edit',
-        submenu: [
-          { role: 'undo' },
-          { role: 'redo' },
-          { type: 'separator' },
-          { role: 'cut' },
-          { role: 'copy' },
-          { role: 'paste' },
-          { role: 'selectAll' }
-        ]
-      },
-      {
-        label: 'View',
-        submenu: [
-          { role: 'reload' },
-          { role: 'forceReload' },
-          { role: 'toggleDevTools' },
-          { type: 'separator' },
-          { role: 'resetZoom' },
-          { role: 'zoomIn' },
-          { role: 'zoomOut' },
-          { type: 'separator' },
-          { role: 'togglefullscreen' }
-        ]
-      },
-      {
-        label: 'Window',
-        submenu: [
-          { role: 'minimize' },
-          { role: 'zoom' },
-          { type: 'separator' },
-          { role: 'close' }
-        ]
-      },
-      {
-        label: 'Help',
-        submenu: [
-          {
-            label: 'About SEPilot',
-            click: async () => {
-              const { shell } = require('electron');
-              await shell.openExternal('https://github.com/yourusername/sepilot_desktop');
-            }
-          }
-        ]
-      }
-    ]));
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate([
+        {
+          label: 'File',
+          submenu: [{ role: 'quit' }],
+        },
+        {
+          label: 'Edit',
+          submenu: [
+            { role: 'undo' },
+            { role: 'redo' },
+            { type: 'separator' },
+            { role: 'cut' },
+            { role: 'copy' },
+            { role: 'paste' },
+            { role: 'selectAll' },
+          ],
+        },
+        {
+          label: 'View',
+          submenu: [
+            { role: 'reload' },
+            { role: 'forceReload' },
+            { role: 'toggleDevTools' },
+            { type: 'separator' },
+            { role: 'resetZoom' },
+            { role: 'zoomIn' },
+            { role: 'zoomOut' },
+            { type: 'separator' },
+            { role: 'togglefullscreen' },
+          ],
+        },
+        {
+          label: 'Window',
+          submenu: [
+            { role: 'minimize' },
+            { role: 'zoom' },
+            { type: 'separator' },
+            { role: 'close' },
+          ],
+        },
+        {
+          label: 'Help',
+          submenu: [
+            {
+              label: 'About SEPilot',
+              click: async () => {
+                const { shell } = require('electron');
+                await shell.openExternal('https://github.com/yourusername/sepilot_desktop');
+              },
+            },
+          ],
+        },
+      ])
+    );
     logger.info('Menu bar shown');
   } else {
     // Hide menu
@@ -264,7 +273,8 @@ async function registerShortcuts() {
     const quickInputConfig = config?.quickInput;
 
     // Register Quick Input shortcut
-    const quickInputShortcut = quickInputConfig?.quickInputShortcut || 'CommandOrControl+Shift+Space';
+    const quickInputShortcut =
+      quickInputConfig?.quickInputShortcut || 'CommandOrControl+Shift+Space';
     const quickInputRegistered = globalShortcut.register(quickInputShortcut, () => {
       logger.info(`[Shortcuts] Quick Input triggered: ${quickInputShortcut}`);
       showQuickInputWindow();
@@ -309,8 +319,12 @@ async function registerShortcuts() {
             userMessage: clipboardContent.trim() || '(클립보드가 비어있습니다)',
           };
 
-          logger.info(`[Shortcuts] Sending message with system prompt: ${question.prompt.substring(0, 50)}...`);
-          logger.info(`[Shortcuts] User message (clipboard): ${messageData.userMessage.substring(0, 50)}...`);
+          logger.info(
+            `[Shortcuts] Sending message with system prompt: ${question.prompt.substring(0, 50)}...`
+          );
+          logger.info(
+            `[Shortcuts] User message (clipboard): ${messageData.userMessage.substring(0, 50)}...`
+          );
           mainWindow.webContents.send('create-new-chat-with-message', messageData);
           logger.info('[Shortcuts] Message sent successfully');
         } else {
@@ -320,9 +334,13 @@ async function registerShortcuts() {
 
       if (registered) {
         registeredShortcuts.push(question.shortcut);
-        logger.info(`[Shortcuts] Registered Quick Question: ${question.name} (${question.shortcut})`);
+        logger.info(
+          `[Shortcuts] Registered Quick Question: ${question.name} (${question.shortcut})`
+        );
       } else {
-        logger.error(`[Shortcuts] Failed to register Quick Question: ${question.name} (${question.shortcut})`);
+        logger.error(
+          `[Shortcuts] Failed to register Quick Question: ${question.name} (${question.shortcut})`
+        );
       }
     }
 
@@ -418,9 +436,7 @@ app.whenReady().then(async () => {
   // Register custom protocol for OAuth
   if (process.defaultApp) {
     if (process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient('sepilot', process.execPath, [
-        path.resolve(process.argv[1]),
-      ]);
+      app.setAsDefaultProtocolClient('sepilot', process.execPath, [path.resolve(process.argv[1])]);
     }
   } else {
     app.setAsDefaultProtocolClient('sepilot');
@@ -560,7 +576,7 @@ app.on('open-url', async (event, url) => {
 
     // Here, you would typically validate the 'state' parameter
     // For simplicity, we'll proceed directly to code exchange.
-    
+
     // The code verifier should have been stored before initiating login.
     // Since we are in the main process, we need a way to get it.
     // The `github-oauth.ts` stores it in sessionStorage, which is renderer-specific.
@@ -570,17 +586,15 @@ app.on('open-url', async (event, url) => {
     // For now, we'll call an IPC handler that we assume the renderer will trigger.
     // The renderer will get the code from this event, and then call the exchange handler.
     // This is a simplification. A robust implementation would handle this in the main process.
-    
+
     if (mainWindow) {
       mainWindow.webContents.send('oauth-callback', url);
       mainWindow.focus();
     }
-
   } catch (error) {
     logger.error('Failed to handle OAuth callback:', error);
   }
 });
-
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

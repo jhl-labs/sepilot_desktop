@@ -106,11 +106,9 @@ describe('http-utils', () => {
         json: jest.fn().mockResolvedValue({ result: 'success' }),
       });
 
-      const response = await fetchWithConfig(
-        'https://api.example.com/endpoint',
-        baseConfig,
-        { method: 'GET' }
-      );
+      const response = await fetchWithConfig('https://api.example.com/endpoint', baseConfig, {
+        method: 'GET',
+      });
 
       expect(response.ok).toBe(true);
       expect(global.fetch).toHaveBeenCalledWith(
@@ -134,10 +132,7 @@ describe('http-utils', () => {
         },
       };
 
-      await fetchWithConfig(
-        'https://api.example.com/endpoint',
-        configWithHeaders
-      );
+      await fetchWithConfig('https://api.example.com/endpoint', configWithHeaders);
 
       expect(global.fetch).toHaveBeenCalledWith(
         'https://api.example.com/endpoint',
@@ -169,9 +164,9 @@ describe('http-utils', () => {
     it('should propagate fetch errors', async () => {
       (global.fetch as jest.Mock).mockRejectedValue(new Error('Network failure'));
 
-      await expect(
-        fetchWithConfig('https://api.example.com/endpoint', baseConfig)
-      ).rejects.toThrow('Network failure');
+      await expect(fetchWithConfig('https://api.example.com/endpoint', baseConfig)).rejects.toThrow(
+        'Network failure'
+      );
     });
 
     it('should use default timeout of 5 minutes', async () => {
@@ -208,10 +203,7 @@ describe('http-utils', () => {
         },
       };
 
-      await fetchWithConfig(
-        'https://api.example.com/endpoint',
-        configWithDisabledProxy
-      );
+      await fetchWithConfig('https://api.example.com/endpoint', configWithDisabledProxy);
 
       expect(global.fetch).toHaveBeenCalled();
     });
@@ -259,10 +251,7 @@ describe('http-utils', () => {
         status: 200,
       });
 
-      const response = await fetchWithConfig(
-        'https://api.example.com/endpoint',
-        baseConfig
-      );
+      const response = await fetchWithConfig('https://api.example.com/endpoint', baseConfig);
 
       expect(response.ok).toBe(true);
     });
@@ -284,12 +273,7 @@ describe('http-utils', () => {
 
       const customTimeout = 100;
       await expect(
-        fetchWithConfig(
-          'https://api.example.com/slow',
-          baseConfig,
-          {},
-          customTimeout
-        )
+        fetchWithConfig('https://api.example.com/slow', baseConfig, {}, customTimeout)
       ).rejects.toThrow(`Request timeout after ${customTimeout}ms`);
     });
 
@@ -298,9 +282,9 @@ describe('http-utils', () => {
       customError.name = 'NetworkError';
       (global.fetch as jest.Mock).mockRejectedValue(customError);
 
-      await expect(
-        fetchWithConfig('https://api.example.com/endpoint', baseConfig)
-      ).rejects.toThrow('Custom network error');
+      await expect(fetchWithConfig('https://api.example.com/endpoint', baseConfig)).rejects.toThrow(
+        'Custom network error'
+      );
     });
   });
 

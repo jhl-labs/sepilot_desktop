@@ -10,10 +10,10 @@ import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
  */
 async function chatGenerateNode(state: typeof ChatStateAnnotation.State) {
   // 이미지 유무 체크
-  const hasImages = state.messages.some(msg => msg.images && msg.images.length > 0);
+  const hasImages = state.messages.some((msg) => msg.images && msg.images.length > 0);
 
   // Check if there's already a system message (e.g., from Quick Question)
-  const hasSystemMessage = state.messages.some(msg => msg.role === 'system');
+  const hasSystemMessage = state.messages.some((msg) => msg.role === 'system');
 
   let messages: Message[];
 
@@ -23,9 +23,7 @@ async function chatGenerateNode(state: typeof ChatStateAnnotation.State) {
     console.log('[ChatGraph] Using existing system message from state');
   } else {
     // 시스템 메시지 구성
-    const additionalContext = state.context
-      ? `# 추가 컨텍스트\n\n${state.context}`
-      : undefined;
+    const additionalContext = state.context ? `# 추가 컨텍스트\n\n${state.context}` : undefined;
 
     // 이미지가 있으면 짧은 시스템 메시지 사용 (Ollama vision 호환성)
     const systemContent = hasImages

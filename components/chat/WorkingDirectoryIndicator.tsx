@@ -40,7 +40,9 @@ export function WorkingDirectoryIndicator() {
   // Get short path (show only last 2 segments)
   const getShortPath = (path: string) => {
     const segments = path.split(/[/\\]/);
-    if (segments.length <= 2) {return path;}
+    if (segments.length <= 2) {
+      return path;
+    }
     return `.../${segments.slice(-2).join('/')}`;
   };
 

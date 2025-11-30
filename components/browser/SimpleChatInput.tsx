@@ -190,7 +190,7 @@ export function SimpleChatInput() {
             'browser-chat-temp', // Temporary conversation ID for browser chat
             undefined, // comfyUIConfig
             undefined, // networkConfig
-            undefined  // workingDirectory
+            undefined // workingDirectory
           );
         } catch (streamError) {
           console.error('[SimpleChatInput] Stream error:', streamError);

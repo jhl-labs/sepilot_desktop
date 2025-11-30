@@ -47,9 +47,7 @@ describe('Avatar', () => {
     });
 
     it('should pass through additional props', () => {
-      const { container } = render(
-        <Avatar data-testid="test-avatar" id="avatar-id" />
-      );
+      const { container } = render(<Avatar data-testid="test-avatar" id="avatar-id" />);
 
       const avatar = container.firstChild as HTMLElement;
       expect(avatar).toHaveAttribute('data-testid', 'test-avatar');

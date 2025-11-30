@@ -76,7 +76,9 @@ export class ConfigSync {
    * GitHub에서 설정 읽기
    */
   async syncFromGitHub(masterPassword: string): Promise<AppConfig | null> {
-    if (!this.octokit) {throw new Error('Not initialized');}
+    if (!this.octokit) {
+      throw new Error('Not initialized');
+    }
 
     try {
       // 저장소 확인
@@ -116,7 +118,9 @@ export class ConfigSync {
    * GitHub에 설정 쓰기
    */
   async syncToGitHub(config: AppConfig, masterPassword: string): Promise<void> {
-    if (!this.octokit) {throw new Error('Not initialized');}
+    if (!this.octokit) {
+      throw new Error('Not initialized');
+    }
 
     // 저장소 확인 및 생성
     if (!(await this.repoExists())) {
@@ -173,7 +177,9 @@ export class ConfigSync {
    * 설정 삭제
    */
   async deleteConfig(): Promise<void> {
-    if (!this.octokit) {throw new Error('Not initialized');}
+    if (!this.octokit) {
+      throw new Error('Not initialized');
+    }
 
     try {
       const { data } = await this.octokit.repos.getContent({

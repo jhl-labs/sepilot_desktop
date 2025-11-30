@@ -38,11 +38,11 @@ export function CodeEditor() {
   const activeFile = openFiles.find((f) => f.path === activeFilePath);
 
   // Markdown 파일인지 확인 (language가 'markdown'이거나 확장자가 .md, .mdx인 경우)
-  const isMarkdownFile = activeFile && (
-    activeFile.language === 'markdown' ||
-    activeFile.path.toLowerCase().endsWith('.md') ||
-    activeFile.path.toLowerCase().endsWith('.mdx')
-  );
+  const isMarkdownFile =
+    activeFile &&
+    (activeFile.language === 'markdown' ||
+      activeFile.path.toLowerCase().endsWith('.md') ||
+      activeFile.path.toLowerCase().endsWith('.mdx'));
 
   const handleEditorChange = (value: string | undefined) => {
     if (activeFilePath && value !== undefined) {
@@ -71,56 +71,75 @@ export function CodeEditor() {
     }
   };
 
-  const handleEditorAction = useCallback(async (
-    action:
-      | 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve'
-      | 'continue' | 'make-shorter' | 'make-longer' | 'simplify' | 'fix-grammar'
-      | 'change-tone-professional' | 'change-tone-casual' | 'change-tone-friendly'
-      | 'find-action-items' | 'create-outline',
-    selectedText: string,
-    targetLanguage?: string
-  ) => {
-    if (!window.electronAPI?.llm) {
-      console.error('LLM API is not available. Please check your settings.');
-      window.alert('LLM API is not available. Please check your settings.');
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      const result = await window.electronAPI.llm.editorAction({
-        action,
-        text: selectedText,
-        language: activeFile?.language,
-        targetLanguage,
-      });
-
-      if (result.success && result.data) {
-        // Insert or replace result in editor
-        if (editor) {
-          const selection = editor.getSelection();
-          if (selection) {
-            editor.executeEdits('', [
-              {
-                range: selection,
-                text: result.data.result,
-                forceMoveMarkers: true,
-              },
-            ]);
-            console.log(`${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully`);
-          }
-        }
-      } else {
-        console.error('Editor action failed:', result.error);
-        window.alert(`Failed: ${result.error || 'Unknown error'}`);
+  const handleEditorAction = useCallback(
+    async (
+      action:
+        | 'summarize'
+        | 'translate'
+        | 'complete'
+        | 'explain'
+        | 'fix'
+        | 'improve'
+        | 'continue'
+        | 'make-shorter'
+        | 'make-longer'
+        | 'simplify'
+        | 'fix-grammar'
+        | 'change-tone-professional'
+        | 'change-tone-casual'
+        | 'change-tone-friendly'
+        | 'find-action-items'
+        | 'create-outline',
+      selectedText: string,
+      targetLanguage?: string
+    ) => {
+      if (!window.electronAPI?.llm) {
+        console.error('LLM API is not available. Please check your settings.');
+        window.alert('LLM API is not available. Please check your settings.');
+        return;
       }
-    } catch (error) {
-      console.error('Editor action error:', error);
-      window.alert(`Error: ${error instanceof Error ? error.message : 'An unexpected error occurred'}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [editor, activeFile?.language]);
+
+      setIsProcessing(true);
+      try {
+        const result = await window.electronAPI.llm.editorAction({
+          action,
+          text: selectedText,
+          language: activeFile?.language,
+          targetLanguage,
+        });
+
+        if (result.success && result.data) {
+          // Insert or replace result in editor
+          if (editor) {
+            const selection = editor.getSelection();
+            if (selection) {
+              editor.executeEdits('', [
+                {
+                  range: selection,
+                  text: result.data.result,
+                  forceMoveMarkers: true,
+                },
+              ]);
+              console.log(
+                `${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully`
+              );
+            }
+          }
+        } else {
+          console.error('Editor action failed:', result.error);
+          window.alert(`Failed: ${result.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Editor action error:', error);
+        window.alert(
+          `Error: ${error instanceof Error ? error.message : 'An unexpected error occurred'}`
+        );
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [editor, activeFile?.language]
+  );
 
   const handleCloseFile = (path: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -152,7 +171,9 @@ export function CodeEditor() {
 
   // Register inline completion provider for autocomplete
   useEffect(() => {
-    if (!editor) {return;}
+    if (!editor) {
+      return;
+    }
 
     // Get monaco instance from the editor
     const monacoInstance = (window as any).monaco;
@@ -280,7 +301,7 @@ export function CodeEditor() {
 
     // Register provider for ALL languages (not just current file's language)
     const provider = monacoInstance.languages.registerInlineCompletionsProvider(
-      '*',  // All languages
+      '*', // All languages
       providerObject
     );
 
@@ -297,7 +318,9 @@ export function CodeEditor() {
 
   // Register Monaco context menu actions
   useEffect(() => {
-    if (!editor) {return;}
+    if (!editor) {
+      return;
+    }
 
     // === Writing Tools (Notion style) ===
     const continueAction = editor.addAction({
@@ -603,13 +626,15 @@ export function CodeEditor() {
 
   // Update editor options when appearance config changes
   useEffect(() => {
-    if (!editor) {return;}
+    if (!editor) {
+      return;
+    }
 
     editor.updateOptions({
       fontSize: editorAppearanceConfig.fontSize,
       fontFamily: editorAppearanceConfig.fontFamily,
       minimap: {
-        enabled: previewMode === 'split' ? false : editorAppearanceConfig.minimap
+        enabled: previewMode === 'split' ? false : editorAppearanceConfig.minimap,
       },
       wordWrap: editorAppearanceConfig.wordWrap,
       tabSize: editorAppearanceConfig.tabSize,
@@ -622,9 +647,7 @@ export function CodeEditor() {
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
         <FileText className="mb-4 h-16 w-16 opacity-20" />
         <h2 className="mb-2 text-xl font-semibold">SEPilot Editor</h2>
-        <p className="text-center text-sm">
-          파일 탐색기에서 파일을 선택하세요
-        </p>
+        <p className="text-center text-sm">파일 탐색기에서 파일을 선택하세요</p>
       </div>
     );
   }
@@ -670,9 +693,7 @@ export function CodeEditor() {
                 <span>Processing...</span>
               </div>
             )}
-            {activeFile.isDirty && (
-              <span className="text-xs text-orange-500">Unsaved changes</span>
-            )}
+            {activeFile.isDirty && <span className="text-xs text-orange-500">Unsaved changes</span>}
             {/* Markdown Preview Toggle Buttons */}
             {isMarkdownFile && (
               <div className="flex items-center gap-1 border-r pr-2 mr-2">
@@ -725,10 +746,7 @@ export function CodeEditor() {
         <div className="flex-1 overflow-hidden flex">
           {/* Monaco Editor */}
           {(previewMode === 'editor' || previewMode === 'split') && (
-            <div className={cn(
-              "overflow-hidden",
-              previewMode === 'split' ? 'flex-1' : 'w-full'
-            )}>
+            <div className={cn('overflow-hidden', previewMode === 'split' ? 'flex-1' : 'w-full')}>
               <MonacoEditor
                 height="100%"
                 language={activeFile.language || 'plaintext'}
@@ -737,7 +755,7 @@ export function CodeEditor() {
                 onMount={(editor, monaco) => {
                   setEditor(editor);
                   // Store monaco instance globally for InlineCompletionProvider
-                  if (!((window as any).monaco)) {
+                  if (!(window as any).monaco) {
                     (window as any).monaco = monaco;
                     console.log('Monaco instance stored globally');
                   }
@@ -747,7 +765,7 @@ export function CodeEditor() {
                   fontSize: editorAppearanceConfig.fontSize,
                   fontFamily: editorAppearanceConfig.fontFamily,
                   minimap: {
-                    enabled: previewMode === 'split' ? false : editorAppearanceConfig.minimap
+                    enabled: previewMode === 'split' ? false : editorAppearanceConfig.minimap,
                   },
                   scrollBeyondLastLine: false,
                   wordWrap: editorAppearanceConfig.wordWrap,
@@ -784,10 +802,12 @@ export function CodeEditor() {
 
           {/* Markdown Preview */}
           {isMarkdownFile && (previewMode === 'preview' || previewMode === 'split') && (
-            <div className={cn(
-              "overflow-auto border-l",
-              previewMode === 'split' ? 'flex-1' : 'w-full'
-            )}>
+            <div
+              className={cn(
+                'overflow-auto border-l',
+                previewMode === 'split' ? 'flex-1' : 'w-full'
+              )}
+            >
               <div className="p-6">
                 <MarkdownRenderer content={activeFile.content} />
               </div>

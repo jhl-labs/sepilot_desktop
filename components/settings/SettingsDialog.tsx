@@ -8,7 +8,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { AppConfig, ComfyUIConfig, LLMConfig, LLMConfigV2, NetworkConfig, QuickInputConfig } from '@/types';
+import {
+  AppConfig,
+  ComfyUIConfig,
+  LLMConfig,
+  LLMConfigV2,
+  NetworkConfig,
+  QuickInputConfig,
+} from '@/types';
 import { initializeLLMClient } from '@/lib/llm/client';
 import { VectorDBSettings } from '@/components/rag/VectorDBSettings';
 import { VectorDBConfig, EmbeddingConfig } from '@/lib/vectordb/types';
@@ -52,12 +59,17 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [configV2, setConfigV2] = useState<LLMConfigV2 | null>(null); // New V2 config
   const [networkConfig, setNetworkConfig] = useState<NetworkConfig>(createDefaultNetworkConfig());
   const [githubConfig, setGithubConfig] = useState<GitHubOAuthConfig | null>(null);
-  const [quickInputConfig, setQuickInputConfig] = useState<QuickInputConfig>(createDefaultQuickInputConfig());
+  const [quickInputConfig, setQuickInputConfig] = useState<QuickInputConfig>(
+    createDefaultQuickInputConfig()
+  );
 
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isComfySaving, setIsComfySaving] = useState(false);
-  const [comfyMessage, setComfyMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [comfyMessage, setComfyMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   // VectorDB & Embedding 설정 상태
   const [vectorDBConfig, setVectorDBConfig] = useState<VectorDBConfig | null>(null);
@@ -327,9 +339,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       }
 
       // Notify other components about config update
-      window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
-        detail: { llm: v1Config, network: networkConfig }
-      }));
+      window.dispatchEvent(
+        new CustomEvent('sepilot:config-updated', {
+          detail: { llm: v1Config, network: networkConfig },
+        })
+      );
 
       setMessage({ type: 'success', text: '설정이 저장되었습니다!' });
     } catch (error: any) {
@@ -374,9 +388,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       }
 
       // Notify other components about network config update
-      window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
-        detail: { network: networkConfig }
-      }));
+      window.dispatchEvent(
+        new CustomEvent('sepilot:config-updated', {
+          detail: { network: networkConfig },
+        })
+      );
 
       setMessage({ type: 'success', text: '네트워크 설정이 저장되었습니다!' });
     } catch (error: any) {
@@ -414,9 +430,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       }
 
       // Notify InputBox and other components about config update
-      window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
-        detail: { comfyUI: comfyConfig }
-      }));
+      window.dispatchEvent(
+        new CustomEvent('sepilot:config-updated', {
+          detail: { comfyUI: comfyConfig },
+        })
+      );
 
       setComfyMessage({ type: 'success', text: 'ComfyUI 설정이 저장되었습니다!' });
     } catch (error: any) {
@@ -489,9 +507,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       }
 
       // Notify other components about config update
-      window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
-        detail: { quickInput: quickInputConfig }
-      }));
+      window.dispatchEvent(
+        new CustomEvent('sepilot:config-updated', {
+          detail: { quickInput: quickInputConfig },
+        })
+      );
 
       // Reload shortcuts in Main Process
       if (isElectron() && window.electronAPI) {
@@ -527,7 +547,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         networkConfig: networkConfigWithoutCustomHeaders,
       };
 
-      console.log('[SettingsDialog] Saving embedding config with model:', embeddingConfig.model, 'networkConfig:', !!networkConfig);
+      console.log(
+        '[SettingsDialog] Saving embedding config with model:',
+        embeddingConfig.model,
+        'networkConfig:',
+        !!networkConfig
+      );
 
       // Save to database or localStorage (LLM 설정과 동일한 방식)
       if (isElectron() && window.electronAPI) {
@@ -574,9 +599,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       }
 
       // Notify other components about VectorDB config update
-      window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
-        detail: { vectorDB: vectorDBConfig, embedding: embeddingConfigWithNetwork }
-      }));
+      window.dispatchEvent(
+        new CustomEvent('sepilot:config-updated', {
+          detail: { vectorDB: vectorDBConfig, embedding: embeddingConfigWithNetwork },
+        })
+      );
 
       console.log('VectorDB and Embedding configuration saved and initialized successfully');
     } catch (error: any) {
@@ -594,9 +621,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         <div className="px-6 pt-6 pb-4 border-b">
           <DialogHeader>
             <DialogTitle>설정</DialogTitle>
-            <DialogDescription>
-              LLM, VectorDB, MCP 등의 설정을 구성하세요.
-            </DialogDescription>
+            <DialogDescription>LLM, VectorDB, MCP 등의 설정을 구성하세요.</DialogDescription>
           </DialogHeader>
         </div>
 
@@ -616,7 +641,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 setConfig={(update) => {
                   if (typeof update === 'function') {
                     setConfigV2((prev) => {
-                      if (!prev) {return prev;}
+                      if (!prev) {
+                        return prev;
+                      }
                       const newV2 = update(prev);
                       // Also update V1 config for compatibility
                       try {
@@ -672,9 +699,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               />
             )}
 
-            {activeTab === 'mcp' && (
-              <MCPSettingsTab />
-            )}
+            {activeTab === 'mcp' && <MCPSettingsTab />}
 
             {activeTab === 'github' && (
               <GitHubOAuthSettings
@@ -693,16 +718,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   }
 
                   // Notify other components about GitHub config update
-                  window.dispatchEvent(new CustomEvent('sepilot:config-updated', {
-                    detail: { github: newConfig }
-                  }));
+                  window.dispatchEvent(
+                    new CustomEvent('sepilot:config-updated', {
+                      detail: { github: newConfig },
+                    })
+                  );
                 }}
               />
             )}
 
-            {activeTab === 'backup' && (
-              <BackupRestoreSettings />
-            )}
+            {activeTab === 'backup' && <BackupRestoreSettings />}
 
             {activeTab === 'quickinput' && (
               <QuickInputSettingsTab

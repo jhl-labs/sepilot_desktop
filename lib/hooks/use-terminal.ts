@@ -64,21 +64,24 @@ export function useTerminal(options?: UseTerminalOptions): UseTerminalReturn {
   }, []);
 
   // 세션 생성
-  const createSession = useCallback(async (cwd?: string, cols?: number, rows?: number): Promise<TerminalSession | null> => {
-    try {
-      const response = await window.electronAPI.terminal.createSession(cwd, cols, rows);
+  const createSession = useCallback(
+    async (cwd?: string, cols?: number, rows?: number): Promise<TerminalSession | null> => {
+      try {
+        const response = await window.electronAPI.terminal.createSession(cwd, cols, rows);
 
-      if (response.success && response.data) {
-        return response.data;
-      } else {
-        console.error('[Terminal] Failed to create session:', response.error);
+        if (response.success && response.data) {
+          return response.data;
+        } else {
+          console.error('[Terminal] Failed to create session:', response.error);
+          return null;
+        }
+      } catch (error) {
+        console.error('[Terminal] Error creating session:', error);
         return null;
       }
-    } catch (error) {
-      console.error('[Terminal] Error creating session:', error);
-      return null;
-    }
-  }, []);
+    },
+    []
+  );
 
   // 데이터 쓰기
   const write = useCallback(async (sessionId: string, data: string): Promise<boolean> => {
@@ -92,15 +95,18 @@ export function useTerminal(options?: UseTerminalOptions): UseTerminalReturn {
   }, []);
 
   // 리사이즈
-  const resize = useCallback(async (sessionId: string, cols: number, rows: number): Promise<boolean> => {
-    try {
-      const response = await window.electronAPI.terminal.resize(sessionId, cols, rows);
-      return response.success;
-    } catch (error) {
-      console.error('[Terminal] Error resizing terminal:', error);
-      return false;
-    }
-  }, []);
+  const resize = useCallback(
+    async (sessionId: string, cols: number, rows: number): Promise<boolean> => {
+      try {
+        const response = await window.electronAPI.terminal.resize(sessionId, cols, rows);
+        return response.success;
+      } catch (error) {
+        console.error('[Terminal] Error resizing terminal:', error);
+        return false;
+      }
+    },
+    []
+  );
 
   // 세션 종료
   const killSession = useCallback(async (sessionId: string): Promise<boolean> => {

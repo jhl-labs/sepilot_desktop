@@ -30,7 +30,10 @@ describe('DocumentList', () => {
     },
     {
       id: 'doc-2',
-      content: 'This is a very long document content that should be truncated when not expanded. '.repeat(10),
+      content:
+        'This is a very long document content that should be truncated when not expanded. '.repeat(
+          10
+        ),
       metadata: {
         title: 'Document 2',
         source: 'manual',
@@ -271,10 +274,13 @@ describe('DocumentList', () => {
       const deleteButtons = screen.getAllByTitle('삭제');
       fireEvent.click(deleteButtons[0]);
 
-      await waitFor(() => {
-        expect(mockOnDelete).toHaveBeenCalled();
-        expect(screen.getByText('문서가 삭제되었습니다.')).toBeInTheDocument();
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(mockOnDelete).toHaveBeenCalled();
+          expect(screen.getByText('문서가 삭제되었습니다.')).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
     });
 
     it('should show error message on delete failure', async () => {
@@ -350,10 +356,12 @@ describe('DocumentList', () => {
       const editButtons = screen.getAllByTitle('편집');
       fireEvent.click(editButtons[0]);
 
-      expect(mockOnEdit).toHaveBeenCalledWith(expect.objectContaining({
-        id: 'doc-1',
-        content: 'This is the first document content',
-      }));
+      expect(mockOnEdit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'doc-1',
+          content: 'This is the first document content',
+        })
+      );
     });
 
     it('should disable edit button when onEdit not provided', async () => {

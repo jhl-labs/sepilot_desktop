@@ -23,7 +23,9 @@ export function SnapshotsList() {
 
   // Load snapshots on mount
   useEffect(() => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     const loadSnapshots = async () => {
       setIsLoading(true);
@@ -45,9 +47,13 @@ export function SnapshotsList() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('이 스냅샷을 삭제하시겠습니까?')) {return;}
+    if (!window.confirm('이 스냅샷을 삭제하시겠습니까?')) {
+      return;
+    }
 
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.deleteSnapshot(id);
@@ -65,7 +71,9 @@ export function SnapshotsList() {
   };
 
   const handleOpen = async (snapshot: Snapshot) => {
-    if (!isElectron() || !window.electronAPI) {return;}
+    if (!isElectron() || !window.electronAPI) {
+      return;
+    }
 
     try {
       const result = await window.electronAPI.browserView.openSnapshot(snapshot.id);
@@ -106,7 +114,11 @@ export function SnapshotsList() {
         ) : snapshots.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <p className="text-sm">저장된 스냅샷이 없습니다</p>
-            <p className="mt-2 text-xs text-center">페이지 캡처 버튼을 눌러<br />현재 페이지를 저장하세요</p>
+            <p className="mt-2 text-xs text-center">
+              페이지 캡처 버튼을 눌러
+              <br />
+              현재 페이지를 저장하세요
+            </p>
           </div>
         ) : (
           <div className="space-y-3">

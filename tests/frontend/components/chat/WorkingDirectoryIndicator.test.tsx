@@ -154,7 +154,8 @@ describe('WorkingDirectoryIndicator', () => {
 
   it('should show selecting state while selecting', async () => {
     mockElectronAPI.file.selectDirectory.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ success: true, data: '/dir' }), 100))
+      () =>
+        new Promise((resolve) => setTimeout(() => resolve({ success: true, data: '/dir' }), 100))
     );
 
     render(<WorkingDirectoryIndicator />);

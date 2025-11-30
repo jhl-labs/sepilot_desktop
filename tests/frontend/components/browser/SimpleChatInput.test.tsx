@@ -20,16 +20,17 @@ jest.mock('@/lib/platform', () => ({
 }));
 
 // Mock WebLLMClient with delay
-const createSlowStreamMock = () => async function* () {
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  yield { content: 'Hello', done: false };
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  yield { content: ' ', done: false };
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  yield { content: 'World', done: false };
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  yield { done: true };
-};
+const createSlowStreamMock = () =>
+  async function* () {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    yield { content: 'Hello', done: false };
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    yield { content: ' ', done: false };
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    yield { content: 'World', done: false };
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    yield { done: true };
+  };
 
 jest.mock('@/lib/llm/web-client', () => ({
   getWebLLMClient: jest.fn(() => ({
@@ -175,7 +176,6 @@ describe('SimpleChatInput', () => {
     });
   });
 
-
   it('should handle composition events', async () => {
     render(<SimpleChatInput />);
 
@@ -211,7 +211,6 @@ describe('SimpleChatInput', () => {
       });
     });
   });
-
 
   it('should enable textarea after streaming completes', async () => {
     const user = userEvent.setup();
@@ -274,11 +273,7 @@ describe('SimpleChatInput', () => {
       await user.click(sendButton);
 
       // Wait for stop button
-      const stopButton = await screen.findByRole(
-        'button',
-        { name: /중지/ },
-        { timeout: 3000 }
-      );
+      const stopButton = await screen.findByRole('button', { name: /중지/ }, { timeout: 3000 });
       await user.click(stopButton);
 
       // Should show send button again
@@ -337,11 +332,7 @@ describe('SimpleChatInput', () => {
       await user.type(textarea, 'Second message');
 
       // Stop button should be shown
-      const stopButton = await screen.findByRole(
-        'button',
-        { name: /중지/ },
-        { timeout: 3000 }
-      );
+      const stopButton = await screen.findByRole('button', { name: /중지/ }, { timeout: 3000 });
       expect(stopButton).toBeInTheDocument();
 
       // Enter should not send while streaming
@@ -372,10 +363,9 @@ describe('SimpleChatInput', () => {
 
       // Should update assistant message with error
       await waitFor(() => {
-        expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith(
-          'msg-2',
-          { content: 'Error: Network error' }
-        );
+        expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith('msg-2', {
+          content: 'Error: Network error',
+        });
       });
     });
 
@@ -398,10 +388,9 @@ describe('SimpleChatInput', () => {
 
       // Should update with generic error message
       await waitFor(() => {
-        expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith(
-          'msg-2',
-          { content: 'Error: Failed to get response' }
-        );
+        expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith('msg-2', {
+          content: 'Error: Failed to get response',
+        });
       });
     });
   });
@@ -964,9 +953,7 @@ describe('SimpleChatInput', () => {
     it('should call stopBrowserAgent when stop button clicked in Electron', async () => {
       const user = userEvent.setup();
       mockStopBrowserAgent.mockResolvedValue(undefined);
-      mockStream.mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 1000))
-      );
+      mockStream.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 1000)));
 
       render(<SimpleChatInput />);
 
@@ -993,9 +980,7 @@ describe('SimpleChatInput', () => {
       const user = userEvent.setup();
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
       mockStopBrowserAgent.mockRejectedValue(new Error('Stop failed'));
-      mockStream.mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 1000))
-      );
+      mockStream.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 1000)));
 
       render(<SimpleChatInput />);
 
@@ -1023,5 +1008,4 @@ describe('SimpleChatInput', () => {
       consoleErrorSpy.mockRestore();
     });
   });
-
 });

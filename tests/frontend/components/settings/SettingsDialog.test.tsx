@@ -29,7 +29,9 @@ jest.mock('@/components/settings/LLMSettingsTab', () => ({
         value={config.model}
         onChange={(e) => setConfig({ ...config, model: e.target.value })}
       />
-      <button onClick={onSave} data-testid="llm-save">Save LLM</button>
+      <button onClick={onSave} data-testid="llm-save">
+        Save LLM
+      </button>
       {message && <div data-testid="llm-message">{message.text}</div>}
     </div>
   ),
@@ -39,7 +41,9 @@ jest.mock('@/components/settings/NetworkSettingsTab', () => ({
   NetworkSettingsTab: ({ onSave, message }: any) => (
     <div data-testid="network-settings">
       <div>Network Settings</div>
-      <button onClick={onSave} data-testid="network-save">Save Network</button>
+      <button onClick={onSave} data-testid="network-save">
+        Save Network
+      </button>
       {message && <div data-testid="network-message">{message.text}</div>}
     </div>
   ),
@@ -65,7 +69,9 @@ jest.mock('@/components/settings/ComfyUISettingsTab', () => ({
         value={comfyConfig.workflowId}
         onChange={(e) => setComfyConfig({ ...comfyConfig, workflowId: e.target.value })}
       />
-      <button onClick={onSave} data-testid="comfy-save">Save ComfyUI</button>
+      <button onClick={onSave} data-testid="comfy-save">
+        Save ComfyUI
+      </button>
       {message && <div data-testid="comfy-message">{message.text}</div>}
     </div>
   ),
@@ -611,7 +617,14 @@ describe('SettingsDialog', () => {
           load: jest.fn().mockResolvedValue({
             success: true,
             data: {
-              llm: { provider: 'openai', apiKey: '', model: '', temperature: 0.7, maxTokens: 2000, baseURL: '' },
+              llm: {
+                provider: 'openai',
+                apiKey: '',
+                model: '',
+                temperature: 0.7,
+                maxTokens: 2000,
+                baseURL: '',
+              },
               network: { useProxy: false, sslVerification: true },
               mcp: [],
             },
@@ -727,7 +740,14 @@ describe('SettingsDialog', () => {
           load: jest.fn().mockResolvedValue({
             success: true,
             data: {
-              llm: { provider: 'openai', apiKey: '', model: '', temperature: 0.7, maxTokens: 2000, baseURL: '' },
+              llm: {
+                provider: 'openai',
+                apiKey: '',
+                model: '',
+                temperature: 0.7,
+                maxTokens: 2000,
+                baseURL: '',
+              },
               network: { useProxy: false, sslVerification: true },
               mcp: [],
             },
@@ -944,7 +964,14 @@ describe('SettingsDialog', () => {
           load: jest.fn().mockResolvedValue({
             success: true,
             data: {
-              llm: { provider: 'openai', apiKey: '', model: '', temperature: 0.7, maxTokens: 2000, baseURL: '' },
+              llm: {
+                provider: 'openai',
+                apiKey: '',
+                model: '',
+                temperature: 0.7,
+                maxTokens: 2000,
+                baseURL: '',
+              },
               network: { useProxy: false, sslVerification: true },
               mcp: [],
             },
@@ -1018,7 +1045,14 @@ describe('SettingsDialog', () => {
           load: jest.fn().mockResolvedValue({
             success: true,
             data: {
-              llm: { provider: 'openai', apiKey: '', model: '', temperature: 0.7, maxTokens: 2000, baseURL: '' },
+              llm: {
+                provider: 'openai',
+                apiKey: '',
+                model: '',
+                temperature: 0.7,
+                maxTokens: 2000,
+                baseURL: '',
+              },
               network: { useProxy: false, sslVerification: true },
               mcp: [],
             },

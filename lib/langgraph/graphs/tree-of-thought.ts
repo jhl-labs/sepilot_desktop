@@ -75,7 +75,11 @@ async function decomposeNode(state: TreeOfThoughtState) {
   };
 
   let decomposition = '';
-  for await (const chunk of LLMService.streamChat([systemMessage, ...state.messages, decomposePrompt])) {
+  for await (const chunk of LLMService.streamChat([
+    systemMessage,
+    ...state.messages,
+    decomposePrompt,
+  ])) {
     decomposition += chunk;
     // 실시간 스트리밍 (conversationId로 격리)
     emitStreamingChunk(chunk, state.conversationId);
@@ -210,7 +214,10 @@ async function evaluateBranchesNode(state: TreeOfThoughtState) {
   const sortedBranches = evaluatedBranches.sort((a, b) => b.score - a.score);
   const selectedBranch = sortedBranches[0].content;
 
-  emitStreamingChunk(`\n\n**🏆 최고 점수 경로 선택됨 (점수: ${sortedBranches[0].score})**\n`, state.conversationId);
+  emitStreamingChunk(
+    `\n\n**🏆 최고 점수 경로 선택됨 (점수: ${sortedBranches[0].score})**\n`,
+    state.conversationId
+  );
 
   console.log('[ToT] Best branch selected');
 

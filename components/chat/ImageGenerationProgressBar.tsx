@@ -9,7 +9,10 @@ interface ImageGenerationProgressBarProps {
   className?: string;
 }
 
-export function ImageGenerationProgressBar({ progress, className }: ImageGenerationProgressBarProps) {
+export function ImageGenerationProgressBar({
+  progress,
+  className,
+}: ImageGenerationProgressBarProps) {
   const getStatusIcon = () => {
     switch (progress.status) {
       case 'queued':

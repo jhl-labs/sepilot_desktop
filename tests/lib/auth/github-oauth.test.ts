@@ -3,7 +3,12 @@
  */
 
 import { GitHubOAuth, githubOAuth } from '@/lib/auth/github-oauth';
-import { enableElectronMode, disableElectronMode, mockElectronAPI, mockSessionStorage } from '../../setup';
+import {
+  enableElectronMode,
+  disableElectronMode,
+  mockElectronAPI,
+  mockSessionStorage,
+} from '../../setup';
 
 // Mock btoa if not available
 if (typeof global.btoa === 'undefined') {
@@ -79,10 +84,7 @@ describe('GitHubOAuth', () => {
 
       const token = await oauth.handleCallback('test-code');
 
-      expect(mockElectronAPI.auth.exchangeCode).toHaveBeenCalledWith(
-        'test-code',
-        'test-verifier'
-      );
+      expect(mockElectronAPI.auth.exchangeCode).toHaveBeenCalledWith('test-code', 'test-verifier');
       expect(token.access_token).toBe('test-token');
       expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('oauth_code_verifier');
     });

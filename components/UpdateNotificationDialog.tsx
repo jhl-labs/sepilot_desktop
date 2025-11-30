@@ -82,13 +82,10 @@ export function UpdateNotificationDialog() {
         <DialogHeader>
           <DialogTitle>
             <div className="flex items-center gap-2">
-              <Download className="h-5 w-5" />
-              새 업데이트 사용 가능
+              <Download className="h-5 w-5" />새 업데이트 사용 가능
             </div>
           </DialogTitle>
-          <DialogDescription>
-            SEPilot Desktop의 새로운 버전이 릴리스되었습니다.
-          </DialogDescription>
+          <DialogDescription>SEPilot Desktop의 새로운 버전이 릴리스되었습니다.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -99,18 +96,14 @@ export function UpdateNotificationDialog() {
             </div>
             <div>
               <p className="text-muted-foreground">최신 버전</p>
-              <p className="font-mono font-semibold text-primary">
-                {updateInfo.latestVersion}
-              </p>
+              <p className="font-mono font-semibold text-primary">{updateInfo.latestVersion}</p>
             </div>
           </div>
 
           {updateInfo.releaseInfo?.name && (
             <div>
               <p className="text-sm font-semibold mb-1">릴리스 정보</p>
-              <p className="text-sm text-muted-foreground">
-                {updateInfo.releaseInfo.name}
-              </p>
+              <p className="text-sm text-muted-foreground">{updateInfo.releaseInfo.name}</p>
             </div>
           )}
 
@@ -141,11 +134,7 @@ export function UpdateNotificationDialog() {
           </Button>
 
           {updateInfo.releaseInfo?.htmlUrl && (
-            <Button
-              variant="outline"
-              onClick={handleViewRelease}
-              className="w-full sm:w-auto"
-            >
+            <Button variant="outline" onClick={handleViewRelease} className="w-full sm:w-auto">
               <ExternalLink className="h-4 w-4 mr-2" />
               GitHub에서 보기
             </Button>

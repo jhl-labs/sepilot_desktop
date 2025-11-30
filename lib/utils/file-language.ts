@@ -85,7 +85,9 @@ const LANGUAGE_MAP: Record<string, string> = {
  */
 export function getLanguageFromFilename(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase();
-  if (!ext) {return 'plaintext';}
+  if (!ext) {
+    return 'plaintext';
+  }
 
   return LANGUAGE_MAP[ext] || 'plaintext';
 }
@@ -103,7 +105,9 @@ export function getLanguageFromExtension(extension: string): string {
  */
 export function isCodeFile(filename: string): boolean {
   const ext = filename.split('.').pop()?.toLowerCase();
-  if (!ext) {return false;}
+  if (!ext) {
+    return false;
+  }
 
   return !!LANGUAGE_MAP[ext];
 }
@@ -113,6 +117,8 @@ export function isCodeFile(filename: string): boolean {
  */
 export function getFileExtension(filename: string): string {
   const parts = filename.split('.');
-  if (parts.length < 2) {return '';}
+  if (parts.length < 2) {
+    return '';
+  }
   return parts[parts.length - 1].toLowerCase();
 }

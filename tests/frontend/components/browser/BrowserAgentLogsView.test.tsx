@@ -37,7 +37,9 @@ describe('BrowserAgentLogsView', () => {
       render(<BrowserAgentLogsView />);
 
       expect(screen.getByText('Agent 실행 로그가 여기에 표시됩니다')).toBeInTheDocument();
-      expect(screen.getByText(/Browser Agent를 실행하면 상세한 실행 과정을 확인할 수 있습니다/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Browser Agent를 실행하면 상세한 실행 과정을 확인할 수 있습니다/)
+      ).toBeInTheDocument();
     });
 
     it('should render empty state icon', () => {

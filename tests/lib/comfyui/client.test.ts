@@ -125,9 +125,7 @@ describe('ComfyUIClient', () => {
       const result = await client.testConnection();
 
       expect(result).toBe(true);
-      expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:8188/system_stats'
-      );
+      expect(global.fetch).toHaveBeenCalledWith('http://localhost:8188/system_stats');
     });
 
     it('should return false when server does not respond', async () => {
@@ -256,11 +254,10 @@ describe('ComfyUIClient', () => {
   describe('browser fallback', () => {
     it('should use direct fetch in browser environment', async () => {
       // Mock successful queue response
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: jest.fn().mockResolvedValue({ prompt_id: 'prompt-123' }),
-        });
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ prompt_id: 'prompt-123' }),
+      });
 
       const client = new ComfyUIClient(mockConfig);
 

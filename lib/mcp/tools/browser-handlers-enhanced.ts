@@ -6,7 +6,11 @@
 
 import { getActiveBrowserView } from '../../../electron/ipc/handlers/browser-control';
 import type { SemanticElement, DOMAnalysis } from '../../langgraph/utils/dom-analyzer';
-import { filterRelevantElements, searchElements, generatePageSummary } from '../../langgraph/utils/dom-analyzer';
+import {
+  filterRelevantElements,
+  searchElements,
+  generatePageSummary,
+} from '../../langgraph/utils/dom-analyzer';
 
 /**
  * 브라우저에서 접근성 트리 기반 DOM 분석 실행
@@ -317,13 +321,11 @@ export async function analyzePage(browserView: any): Promise<DOMAnalysis> {
   const interactiveElements = {
     buttons: result.elements.filter((el: SemanticElement) => el.role === 'button'),
     links: result.elements.filter((el: SemanticElement) => el.role === 'link'),
-    inputs: result.elements.filter((el: SemanticElement) =>
-      el.role === 'textbox' || el.role === 'searchbox'
+    inputs: result.elements.filter(
+      (el: SemanticElement) => el.role === 'textbox' || el.role === 'searchbox'
     ),
     selects: result.elements.filter((el: SemanticElement) => el.role === 'combobox'),
-    textareas: result.elements.filter((el: SemanticElement) =>
-      el.tag === 'textarea'
-    ),
+    textareas: result.elements.filter((el: SemanticElement) => el.tag === 'textarea'),
   };
 
   const analysis: DOMAnalysis = {
@@ -361,7 +363,7 @@ export async function handleBrowserGetInteractiveElementsEnhanced(): Promise<str
   // Format for LLM
   const output = {
     summary: analysis.summary,
-    interactive_elements: relevantElements.map(el => ({
+    interactive_elements: relevantElements.map((el) => ({
       id: el.id,
       role: el.role,
       label: el.label,
@@ -400,17 +402,21 @@ export async function handleBrowserSearchElements(query: string): Promise<string
   // Take top 10 results
   const topResults = results.slice(0, 10);
 
-  return JSON.stringify({
-    query,
-    results_count: results.length,
-    top_matches: topResults.map(el => ({
-      id: el.id,
-      role: el.role,
-      label: el.label,
-      context: el.context,
-      relevance: 'high', // Could implement scoring in the future
-    })),
-  }, null, 2);
+  return JSON.stringify(
+    {
+      query,
+      results_count: results.length,
+      top_matches: topResults.map((el) => ({
+        id: el.id,
+        role: el.role,
+        label: el.label,
+        context: el.context,
+        relevance: 'high', // Could implement scoring in the future
+      })),
+    },
+    null,
+    2
+  );
 }
 
 /**
@@ -443,7 +449,7 @@ export async function handleBrowserGetPageContentEnhanced(): Promise<string> {
     main_content_preview: mainContent.substring(0, 1000),
     structure: {
       forms: analysis.pageStructure.forms.length,
-      interactive_elements: analysis.elements.filter(el => el.isInteractive).length,
+      interactive_elements: analysis.elements.filter((el) => el.isInteractive).length,
       sections: analysis.pageStructure.sections,
     },
   };

@@ -22,15 +22,15 @@ jest.mock('@/components/markdown/CodeBlock', () => ({
 // Mock MermaidDiagram component
 jest.mock('@/components/markdown/MermaidDiagram', () => ({
   MermaidDiagram: ({ chart }: { chart: string }) => (
-    <div className="mermaid-diagram" data-testid="mermaid-diagram">{chart}</div>
+    <div className="mermaid-diagram" data-testid="mermaid-diagram">
+      {chart}
+    </div>
   ),
 }));
 
 // Mock PlotlyChart component
 jest.mock('@/components/markdown/PlotlyChart', () => ({
-  PlotlyChart: ({ data }: { data: string }) => (
-    <div data-testid="plotly-chart">{data}</div>
-  ),
+  PlotlyChart: ({ data }: { data: string }) => <div data-testid="plotly-chart">{data}</div>,
 }));
 
 describe('MarkdownRenderer', () => {
@@ -150,7 +150,11 @@ describe('MarkdownRenderer', () => {
   });
 
   it('should render Plotly charts (non-streaming)', () => {
-    const plotlyContent = ['```plotly', '{"data": [{"x": [1, 2, 3], "y": [2, 4, 6], "type": "scatter"}]}', '```'].join('\n');
+    const plotlyContent = [
+      '```plotly',
+      '{"data": [{"x": [1, 2, 3], "y": [2, 4, 6], "type": "scatter"}]}',
+      '```',
+    ].join('\n');
     const { container } = render(<MarkdownRenderer content={plotlyContent} />);
 
     // When not streaming, plotly is rendered as PlotlyChart component
@@ -170,7 +174,7 @@ describe('MarkdownRenderer', () => {
       'const x = 10;',
       '```',
       '',
-      '[Link](https://example.com)'
+      '[Link](https://example.com)',
     ].join('\n');
 
     const { container } = render(<MarkdownRenderer content={mixedContent} />);
@@ -243,9 +247,7 @@ describe('MarkdownRenderer', () => {
   });
 
   it('should apply custom className', () => {
-    const { container } = render(
-      <MarkdownRenderer content="Test" className="custom-class" />
-    );
+    const { container } = render(<MarkdownRenderer content="Test" className="custom-class" />);
 
     const element = container.querySelector('.custom-class');
     expect(element).toBeInTheDocument();
@@ -267,7 +269,7 @@ describe('MarkdownRenderer', () => {
   });
 
   it('should handle special characters', () => {
-    render(<MarkdownRenderer content="Special: &lt; &gt; &amp; &quot;" />);
+    render(<MarkdownRenderer content='Special: &lt; &gt; &amp; "' />);
 
     expect(screen.getByText(/Special:/)).toBeInTheDocument();
   });
@@ -275,7 +277,9 @@ describe('MarkdownRenderer', () => {
   describe('Streaming mode', () => {
     it('should render mermaid content during streaming', () => {
       const mermaidContent = ['```mermaid', 'graph TD', 'A-->B', '```'].join('\n');
-      const { container } = render(<MarkdownRenderer content={mermaidContent} isStreaming={true} />);
+      const { container } = render(
+        <MarkdownRenderer content={mermaidContent} isStreaming={true} />
+      );
 
       // Content should be rendered (either as CodeBlock or in code element)
       expect(screen.getByText(/graph TD/)).toBeInTheDocument();
@@ -339,7 +343,9 @@ describe('MarkdownRenderer', () => {
     });
 
     it('should handle multiline code blocks', () => {
-      const codeContent = ['```javascript', 'function test() {', '  return true;', '}', '```'].join('\n');
+      const codeContent = ['```javascript', 'function test() {', '  return true;', '}', '```'].join(
+        '\n'
+      );
       const { container } = render(<MarkdownRenderer content={codeContent} />);
 
       const codeElement = container.querySelector('code');

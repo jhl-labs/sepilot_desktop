@@ -63,13 +63,16 @@ export function createVisionSystemMessage(): string {
  * RAG용 시스템 메시지 생성
  */
 export function createRAGSystemMessage(documents: any[]): string {
-  const context = documents.length > 0
-    ? documents.map((doc, i) => {
-        const title = doc.metadata?.title || '제목 없음';
-        const source = doc.metadata?.source || 'manual';
-        return `[문서 ${i + 1}: ${source} - ${title}]\n${doc.content}`;
-      }).join('\n\n')
-    : '';
+  const context =
+    documents.length > 0
+      ? documents
+          .map((doc, i) => {
+            const title = doc.metadata?.title || '제목 없음';
+            const source = doc.metadata?.source || 'manual';
+            return `[문서 ${i + 1}: ${source} - ${title}]\n${doc.content}`;
+          })
+          .join('\n\n')
+      : '';
 
   const ragInstructions = context
     ? `# 문서 컨텍스트\n\n다음 문서들을 참고하여 사용자의 질문에 답변하세요. 문서의 정보를 바탕으로 정확하게 답변하되, 출처 표기는 하지 마세요. 참조된 문서는 자동으로 표시됩니다.\n\n${context}`

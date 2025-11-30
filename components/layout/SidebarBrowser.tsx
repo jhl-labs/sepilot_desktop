@@ -12,11 +12,7 @@ import { BrowserToolsList } from '@/components/browser/BrowserToolsList';
 import { isElectron } from '@/lib/platform';
 
 export function SidebarBrowser() {
-  const {
-    clearBrowserChat,
-    browserViewMode,
-    setBrowserViewMode,
-  } = useChatStore();
+  const { clearBrowserChat, browserViewMode, setBrowserViewMode } = useChatStore();
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -58,78 +54,78 @@ export function SidebarBrowser() {
       {/* Footer (tools 모드에서는 숨김) */}
       {browserViewMode !== 'tools' && (
         <div className="shrink-0 border-t p-2">
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              if (window.confirm('현재 대화 내역을 모두 삭제하시겠습니까?')) {
-                clearBrowserChat();
-                setBrowserViewMode('chat');
-              }
-            }}
-            title="새 대화"
-            className="flex-1"
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={async () => {
-              if (!isElectron() || !window.electronAPI) {
-                console.warn('[SidebarBrowser] Not in Electron environment');
-                return;
-              }
-
-              try {
-                const result = await window.electronAPI.browserView.capturePage();
-
-                if (result.success) {
-                  window.alert('페이지가 스냅샷으로 저장되었습니다.');
-                } else {
-                  console.error('[SidebarBrowser] Failed to capture page:', result.error);
-                  window.alert(`페이지 캡처 실패: ${result.error}`);
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                if (window.confirm('현재 대화 내역을 모두 삭제하시겠습니까?')) {
+                  clearBrowserChat();
+                  setBrowserViewMode('chat');
                 }
-              } catch (error) {
-                console.error('[SidebarBrowser] Error capturing page:', error);
-                window.alert('페이지 캡처 중 오류가 발생했습니다.');
-              }
-            }}
-            title="페이지 캡처"
-            className="flex-1"
-          >
-            <Camera className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setBrowserViewMode('snapshots')}
-            title="스냅샷 관리"
-            className="flex-1"
-          >
-            <Album className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setBrowserViewMode('bookmarks')}
-            title="북마크"
-            className="flex-1"
-          >
-            <Bookmark className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setBrowserViewMode('settings')}
-            title="Browser 설정"
-            className="flex-1"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
+              }}
+              title="새 대화"
+              className="flex-1"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={async () => {
+                if (!isElectron() || !window.electronAPI) {
+                  console.warn('[SidebarBrowser] Not in Electron environment');
+                  return;
+                }
+
+                try {
+                  const result = await window.electronAPI.browserView.capturePage();
+
+                  if (result.success) {
+                    window.alert('페이지가 스냅샷으로 저장되었습니다.');
+                  } else {
+                    console.error('[SidebarBrowser] Failed to capture page:', result.error);
+                    window.alert(`페이지 캡처 실패: ${result.error}`);
+                  }
+                } catch (error) {
+                  console.error('[SidebarBrowser] Error capturing page:', error);
+                  window.alert('페이지 캡처 중 오류가 발생했습니다.');
+                }
+              }}
+              title="페이지 캡처"
+              className="flex-1"
+            >
+              <Camera className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setBrowserViewMode('snapshots')}
+              title="스냅샷 관리"
+              className="flex-1"
+            >
+              <Album className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setBrowserViewMode('bookmarks')}
+              title="북마크"
+              className="flex-1"
+            >
+              <Bookmark className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setBrowserViewMode('settings')}
+              title="Browser 설정"
+              className="flex-1"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
-      </div>
       )}
     </div>
   );

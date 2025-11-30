@@ -141,7 +141,9 @@ describe('ComfyUISettingsTab', () => {
         />
       );
 
-      expect(screen.getByText(/토글을 활성화하면 아래 설정을 편집할 수 있습니다/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/토글을 활성화하면 아래 설정을 편집할 수 있습니다/i)
+      ).toBeInTheDocument();
     });
   });
 

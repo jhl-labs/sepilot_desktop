@@ -1,6 +1,6 @@
 ---
 description: Debug an issue or error
-argument-hint: "[error-or-description]"
+argument-hint: '[error-or-description]'
 ---
 
 # Debug Issue
@@ -35,6 +35,7 @@ Use the **debugger subagent** to investigate and fix this issue.
 ## Fix
 
 Provide:
+
 - Clear explanation of the root cause
 - Minimal, targeted fix
 - Code before/after comparison
@@ -44,6 +45,7 @@ Provide:
 ## Validation
 
 After fix:
+
 - Run `pnpm run type-check`
 - Run `pnpm run lint`
 - Test the specific scenario

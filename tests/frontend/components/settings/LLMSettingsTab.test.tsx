@@ -471,7 +471,9 @@ describe('LLMSettingsTab', () => {
       );
 
       const deleteButtons = screen.getAllByRole('button');
-      const deleteButton = deleteButtons.find((btn) => btn.querySelector('svg path[d*="M6 18L18 6"]'));
+      const deleteButton = deleteButtons.find((btn) =>
+        btn.querySelector('svg path[d*="M6 18L18 6"]')
+      );
 
       if (deleteButton) {
         await user.click(deleteButton);
@@ -518,9 +520,13 @@ describe('LLMSettingsTab', () => {
       );
 
       // Find checkbox in Vision section by looking for the description text unique to Vision section
-      const visionDescription = screen.getByText(/이미지 이해\/해석이 필요한 멀티모달 요청 시 사용할 Vision 모델을 별도로 지정할 수 있습니다/i);
+      const visionDescription = screen.getByText(
+        /이미지 이해\/해석이 필요한 멀티모달 요청 시 사용할 Vision 모델을 별도로 지정할 수 있습니다/i
+      );
       const visionSection = visionDescription.closest('div')!.parentElement!;
-      const visionCheckbox = visionSection.querySelector('input[type="checkbox"].sr-only') as HTMLInputElement;
+      const visionCheckbox = visionSection.querySelector(
+        'input[type="checkbox"].sr-only'
+      ) as HTMLInputElement;
 
       expect(visionCheckbox).toBeInTheDocument();
       await user.click(visionCheckbox);
@@ -532,9 +538,11 @@ describe('LLMSettingsTab', () => {
       const updaterFn = mockSetConfig.mock.calls[0][0];
       if (typeof updaterFn === 'function') {
         const result = updaterFn(defaultConfig);
-        expect(result.vision).toEqual(expect.objectContaining({
-          enabled: true,
-        }));
+        expect(result.vision).toEqual(
+          expect.objectContaining({
+            enabled: true,
+          })
+        );
       }
     });
 
@@ -570,7 +578,9 @@ describe('LLMSettingsTab', () => {
 
       // Vision-specific placeholders/text
       expect(screen.getByPlaceholderText(/비워두면 기본 API 키 사용/i)).toBeInTheDocument();
-      expect(screen.getByText(/Vision 모델에 다른 API 키를 사용하려면 입력하세요/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Vision 모델에 다른 API 키를 사용하려면 입력하세요/i)
+      ).toBeInTheDocument();
     });
 
     it('should fetch vision models when refresh button clicked', async () => {
@@ -738,7 +748,9 @@ describe('LLMSettingsTab', () => {
       );
 
       // Autocomplete-specific text
-      expect(screen.getByText(/자동완성 모델에 다른 API 키를 사용하려면 입력하세요/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/자동완성 모델에 다른 API 키를 사용하려면 입력하세요/i)
+      ).toBeInTheDocument();
     });
 
     it('should fetch autocomplete models when refresh button clicked', async () => {

@@ -82,8 +82,12 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!onDelete) {return;}
-    if (!window.confirm('이 문서를 삭제하시겠습니까?')) {return;}
+    if (!onDelete) {
+      return;
+    }
+    if (!window.confirm('이 문서를 삭제하시겠습니까?')) {
+      return;
+    }
 
     try {
       // 원본 문서 ID와 매칭되는 모든 청크 ID 찾기
@@ -121,9 +125,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         <div className="flex items-center gap-2 text-lg font-semibold">
           <FileText className="h-5 w-5" />
           <h3>업로드된 문서</h3>
-          <span className="text-sm font-normal text-muted-foreground">
-            ({documents.length}개)
-          </span>
+          <span className="text-sm font-normal text-muted-foreground">({documents.length}개)</span>
         </div>
         <Button
           variant="outline"
@@ -186,7 +188,9 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                         ? new Date(doc.metadata.uploadedAt).toLocaleString('ko-KR')
                         : '알 수 없음'}
                     </p>
-                    <div className={`text-sm text-muted-foreground ${isExpanded ? '' : 'line-clamp-3 min-h-[60px]'}`}>
+                    <div
+                      className={`text-sm text-muted-foreground ${isExpanded ? '' : 'line-clamp-3 min-h-[60px]'}`}
+                    >
                       {isExpanded ? content : contentPreview}
                       {!isExpanded && hasMore && '...'}
                     </div>

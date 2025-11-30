@@ -11,7 +11,14 @@ export * from './types';
 
 // 그래프 생성 함수들은 dynamic import 필요
 import type { Message } from '@/types';
-import type { GraphType, GraphOptions, StreamEvent, ThinkingMode, GraphConfig, ToolApprovalCallback } from './types';
+import type {
+  GraphType,
+  GraphOptions,
+  StreamEvent,
+  ThinkingMode,
+  GraphConfig,
+  ToolApprovalCallback,
+} from './types';
 
 /**
  * 그래프 팩토리 - LangGraph StateGraph를 사용한 그래프 관리
@@ -199,9 +206,12 @@ export class GraphFactory {
     messages: Message[] = [],
     conversationId: string = ''
   ) {
-    const { createInitialChatState, createInitialRAGState, createInitialAgentState, createInitialCodingAgentState } = await import(
-      './state'
-    );
+    const {
+      createInitialChatState,
+      createInitialRAGState,
+      createInitialAgentState,
+      createInitialCodingAgentState,
+    } = await import('./state');
 
     switch (type) {
       case 'chat':

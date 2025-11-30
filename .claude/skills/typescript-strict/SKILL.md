@@ -72,7 +72,7 @@ async function fetchData(id: string): Promise<ToolResult<Data>> {
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -117,11 +117,7 @@ function parseResponse(data: unknown): ConversationMessage {
 
 function isConversationMessage(data: unknown): data is ConversationMessage {
   return (
-    typeof data === 'object' &&
-    data !== null &&
-    'id' in data &&
-    'role' in data &&
-    'content' in data
+    typeof data === 'object' && data !== null && 'id' in data && 'role' in data && 'content' in data
   );
 }
 
@@ -148,7 +144,7 @@ async function fetchApi<T>(url: string): Promise<ApiResponse<T>> {
   return {
     data: data as T,
     status: response.status,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
 }
 ```
@@ -181,13 +177,10 @@ ipcMain.handle(
 );
 
 // Use in frontend
-const response = await window.electron.invoke(
-  'langgraph:execute',
-  {
-    prompt: 'Analyze this...',
-    graph: 'deep-thinking'
-  } satisfies LangGraphRequest
-);
+const response = await window.electron.invoke('langgraph:execute', {
+  prompt: 'Analyze this...',
+  graph: 'deep-thinking',
+} satisfies LangGraphRequest);
 ```
 
 ## Enums vs Union Types
@@ -202,7 +195,7 @@ type Theme = 'light' | 'dark' | 'auto';
 enum GraphType {
   DeepThinking = 'deep-thinking',
   Sequential = 'sequential',
-  TreeOfThought = 'tree-of-thought'
+  TreeOfThought = 'tree-of-thought',
 }
 ```
 
@@ -258,28 +251,27 @@ function isString(value: unknown): value is string {
   return typeof value === 'string';
 }
 
-function isArrayOf<T>(
-  value: unknown,
-  guard: (item: unknown) => item is T
-): value is T[] {
+function isArrayOf<T>(value: unknown, guard: (item: unknown) => item is T): value is T[] {
   return Array.isArray(value) && value.every(guard);
 }
 
 // Usage
 if (isArrayOf(data, isString)) {
   // data is now typed as string[]
-  data.forEach(str => console.log(str.toUpperCase()));
+  data.forEach((str) => console.log(str.toUpperCase()));
 }
 ```
 
 ## Validation
 
 Run type checking:
+
 ```bash
 pnpm run type-check
 ```
 
 Run lint:
+
 ```bash
 pnpm run lint
 ```
@@ -287,18 +279,22 @@ pnpm run lint
 ## Common Mistakes
 
 ❌ **Avoid:**
+
 ```typescript
 // Using 'any'
-function process(data: any) { }
+function process(data: any) {}
 
 // Implicit return type
-function getData() { return data; }
+function getData() {
+  return data;
+}
 
 // Unsafe cast
 const result = response as MyType;
 ```
 
 ✅ **Prefer:**
+
 ```typescript
 // Use unknown and validate
 function process(data: unknown): void {

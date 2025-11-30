@@ -218,19 +218,23 @@ export class EditorAgentGraph {
     // Get available tools based on editor context
     const tools = this.getEditorTools(state.editorContext);
 
-    console.log('[EditorAgent] Calling LLM with tools:', tools.map(t => t.function.name));
+    console.log(
+      '[EditorAgent] Calling LLM with tools:',
+      tools.map((t) => t.function.name)
+    );
 
     const response = await provider.chat(state.messages, {
       tools: tools.length > 0 ? tools : undefined,
     });
 
     // Convert LLM provider's ToolCall format to Message's ToolCall format
-    const toolCalls = response.toolCalls?.map(tc => ({
+    const toolCalls = response.toolCalls?.map((tc) => ({
       id: tc.id,
       name: tc.function.name,
-      arguments: typeof tc.function.arguments === 'string'
-        ? JSON.parse(tc.function.arguments)
-        : tc.function.arguments,
+      arguments:
+        typeof tc.function.arguments === 'string'
+          ? JSON.parse(tc.function.arguments)
+          : tc.function.arguments,
     }));
 
     const newMessage: Message = {
@@ -287,7 +291,11 @@ export class EditorAgentGraph {
   private shouldUseTool(state: EditorAgentState): 'tools' | 'end' {
     const lastMessage = state.messages[state.messages.length - 1];
 
-    if (lastMessage?.role === 'assistant' && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+    if (
+      lastMessage?.role === 'assistant' &&
+      lastMessage.tool_calls &&
+      lastMessage.tool_calls.length > 0
+    ) {
       return 'tools';
     }
 
@@ -306,7 +314,8 @@ export class EditorAgentGraph {
         type: 'function',
         function: {
           name: 'get_file_context',
-          description: 'Get context about the current file including imports, types, and surrounding code',
+          description:
+            'Get context about the current file including imports, types, and surrounding code',
           parameters: {
             type: 'object',
             properties: {

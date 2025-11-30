@@ -26,7 +26,8 @@ class EmbeddingClientClass {
 
         // 모델 명시적 처리 - 설정된 모델 우선, 없으면 기본값
         const model = config.model && config.model.trim() ? config.model : 'text-embedding-3-small';
-        const baseURL = config.baseURL && config.baseURL.trim() ? config.baseURL : 'https://api.openai.com/v1';
+        const baseURL =
+          config.baseURL && config.baseURL.trim() ? config.baseURL : 'https://api.openai.com/v1';
 
         this.provider = new OpenAIEmbeddings({
           apiKey: config.apiKey,

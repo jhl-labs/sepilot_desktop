@@ -21,12 +21,8 @@ export function EditorChatInput() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const {
-    addEditorChatMessage,
-    updateEditorChatMessage,
-    editorChatMessages,
-    workingDirectory,
-  } = useChatStore();
+  const { addEditorChatMessage, updateEditorChatMessage, editorChatMessages, workingDirectory } =
+    useChatStore();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -125,7 +121,7 @@ export function EditorChatInput() {
                 maxIterations?: number;
                 status?: string;
                 message?: string;
-              }
+              };
             };
 
             // Handle progress events
@@ -265,15 +261,15 @@ export function EditorChatInput() {
                 <span>
                   {agentProgress.status === 'thinking' && '🤔 생각 중...'}
                   {agentProgress.status === 'executing' && '⚙️ 실행 중...'}
-                  {agentProgress.status !== 'thinking' && agentProgress.status !== 'executing' && '🔄 작업 중...'}
+                  {agentProgress.status !== 'thinking' &&
+                    agentProgress.status !== 'executing' &&
+                    '🔄 작업 중...'}
                 </span>
                 <span className="text-muted-foreground">
                   ({agentProgress.iteration}/{agentProgress.maxIterations})
                 </span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground truncate">
-                {agentProgress.message}
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground truncate">{agentProgress.message}</p>
             </div>
             <Button
               onClick={handleStop}

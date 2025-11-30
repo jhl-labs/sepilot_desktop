@@ -144,7 +144,13 @@ describe('MCPClient', () => {
       client.setMockResponse('tools/list', {
         jsonrpc: '2.0',
         result: {
-          tools: [{ name: 'test_tool', description: 'Test', inputSchema: { type: 'object', properties: {} } }],
+          tools: [
+            {
+              name: 'test_tool',
+              description: 'Test',
+              inputSchema: { type: 'object', properties: {} },
+            },
+          ],
         },
       });
 
@@ -170,9 +176,7 @@ describe('MCPClient', () => {
       client.setMockResponse('tools/call', {
         jsonrpc: '2.0',
         result: {
-          content: [
-            { type: 'text', text: 'File content here' },
-          ],
+          content: [{ type: 'text', text: 'File content here' }],
         },
       });
 
@@ -243,9 +247,7 @@ describe('MCPClient', () => {
       client.setMockResponse('resources/read', {
         jsonrpc: '2.0',
         result: {
-          contents: [
-            { text: 'Resource content here', mimeType: 'text/plain' },
-          ],
+          contents: [{ text: 'Resource content here', mimeType: 'text/plain' }],
         },
       });
 

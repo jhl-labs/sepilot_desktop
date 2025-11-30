@@ -40,13 +40,7 @@ interface FileTreeItemProps {
   parentPath: string;
 }
 
-export function FileTreeItem({
-  node,
-  level,
-  isActive,
-  onFileClick,
-  onRefresh,
-}: FileTreeItemProps) {
+export function FileTreeItem({ node, level, isActive, onFileClick, onRefresh }: FileTreeItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(node.name);
@@ -173,7 +167,10 @@ export function FileTreeItem({
             <Edit3 className="mr-2 h-4 w-4" />
             이름 변경
           </ContextMenuItem>
-          <ContextMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+          <ContextMenuItem
+            onClick={handleDelete}
+            className="text-destructive focus:text-destructive"
+          >
             <Trash2 className="mr-2 h-4 w-4" />
             삭제
           </ContextMenuItem>

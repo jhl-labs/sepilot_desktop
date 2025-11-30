@@ -138,9 +138,7 @@ describe('FileTreeItem Component', () => {
         name: 'folder',
         path: '/folder',
         isDirectory: true,
-        children: [
-          { name: 'child.txt', path: '/folder/child.txt', isDirectory: false },
-        ],
+        children: [{ name: 'child.txt', path: '/folder/child.txt', isDirectory: false }],
       };
 
       render(
@@ -537,5 +535,4 @@ describe('FileTreeItem Component', () => {
       });
     });
   });
-
 });

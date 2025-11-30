@@ -78,7 +78,9 @@ export function LLMStatusBar({
       return;
     }
     setEditingField(field);
-    setEditValue(field === 'maxTokens' ? String(llmConfig.maxTokens) : String(llmConfig.temperature));
+    setEditValue(
+      field === 'maxTokens' ? String(llmConfig.maxTokens) : String(llmConfig.temperature)
+    );
   };
 
   // Save edited field
@@ -187,7 +189,11 @@ export function LLMStatusBar({
                       <span>{tools.length} tools</span>
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 max-h-96 overflow-y-auto" side="top" align="start">
+                  <PopoverContent
+                    className="w-80 max-h-96 overflow-y-auto"
+                    side="top"
+                    align="start"
+                  >
                     <div className="space-y-3">
                       <div className="font-semibold text-sm border-b pb-2">
                         사용 가능한 툴 ({tools.length}개)
@@ -196,7 +202,9 @@ export function LLMStatusBar({
                         <div key={serverName} className="space-y-1">
                           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                             {serverName === 'builtin' ? 'Built-in Tools' : serverName}
-                            <span className="ml-1 text-muted-foreground/70">({serverTools.length})</span>
+                            <span className="ml-1 text-muted-foreground/70">
+                              ({serverTools.length})
+                            </span>
                           </div>
                           <div className="space-y-1 pl-2">
                             {serverTools.map((tool) => (

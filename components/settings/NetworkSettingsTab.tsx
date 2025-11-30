@@ -31,11 +31,12 @@ export function NetworkSettingsTab({
       />
 
       <div className="space-y-4">
-
         {/* Proxy Settings */}
         <div className="space-y-3 p-4 rounded-lg border">
           <div className="flex items-center justify-between">
-            <Label htmlFor="proxyEnabled" className="text-base font-semibold">프록시 설정</Label>
+            <Label htmlFor="proxyEnabled" className="text-base font-semibold">
+              프록시 설정
+            </Label>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 id="proxyEnabled"
@@ -76,9 +77,15 @@ export function NetworkSettingsTab({
                   }
                   className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
                 >
-                  <option value="none" className="bg-background text-foreground">사용 안 함</option>
-                  <option value="system" className="bg-background text-foreground">시스템 프록시 사용</option>
-                  <option value="manual" className="bg-background text-foreground">수동 설정</option>
+                  <option value="none" className="bg-background text-foreground">
+                    사용 안 함
+                  </option>
+                  <option value="system" className="bg-background text-foreground">
+                    시스템 프록시 사용
+                  </option>
+                  <option value="manual" className="bg-background text-foreground">
+                    수동 설정
+                  </option>
                 </select>
               </div>
 
@@ -114,7 +121,9 @@ export function NetworkSettingsTab({
         <div className="space-y-2 p-4 rounded-lg border">
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="sslVerify" className="text-base font-semibold">SSL 인증서 검증</Label>
+              <Label htmlFor="sslVerify" className="text-base font-semibold">
+                SSL 인증서 검증
+              </Label>
               <p className="text-xs text-muted-foreground mt-1">
                 자체 서명 인증서 사용 시 비활성화하세요
               </p>

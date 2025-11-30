@@ -107,7 +107,9 @@ async function initializeMCPServers(): Promise<void> {
       // Config 저장
       serverConfigs.set(config.name, config);
 
-      console.log(`[MCP] Server initialized: ${config.name} (${tools.length} tools, transport: ${config.transport})`);
+      console.log(
+        `[MCP] Server initialized: ${config.name} (${tools.length} tools, transport: ${config.transport})`
+      );
     } catch (error: any) {
       console.error(`[MCP] Failed to initialize server ${config.name}:`, error);
       // 실패해도 계속 진행 (다른 서버들은 시작)
@@ -170,7 +172,9 @@ export function setupMCPHandlers() {
       serverConfigs.set(config.name, config);
       saveMCPConfigs(Array.from(serverConfigs.values()));
 
-      console.log(`[MCP] Server added: ${config.name} (${tools.length} tools, transport: ${config.transport})`);
+      console.log(
+        `[MCP] Server added: ${config.name} (${tools.length} tools, transport: ${config.transport})`
+      );
 
       return {
         success: true,
@@ -256,28 +260,31 @@ export function setupMCPHandlers() {
   /**
    * 도구 호출
    */
-  ipcMain.handle('mcp-call-tool', async (_event, serverName: string, toolName: string, args: any) => {
-    try {
-      const server = MCPServerManager.getServerInMainProcess(serverName);
+  ipcMain.handle(
+    'mcp-call-tool',
+    async (_event, serverName: string, toolName: string, args: any) => {
+      try {
+        const server = MCPServerManager.getServerInMainProcess(serverName);
 
-      if (!server) {
-        throw new Error(`MCP Server '${serverName}' not found`);
+        if (!server) {
+          throw new Error(`MCP Server '${serverName}' not found`);
+        }
+
+        const result = await server.callTool(toolName, args);
+
+        return {
+          success: true,
+          data: result,
+        };
+      } catch (error: any) {
+        console.error('[MCP] Failed to call tool:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to call tool',
+        };
       }
-
-      const result = await server.callTool(toolName, args);
-
-      return {
-        success: true,
-        data: result,
-      };
-    } catch (error: any) {
-      console.error('[MCP] Failed to call tool:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to call tool',
-      };
     }
-  });
+  );
 
   /**
    * MCP 서버 토글 (활성화/비활성화)

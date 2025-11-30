@@ -7,7 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Upload, FileText, Loader2, Globe, File, Sparkles, CheckCircle2, AlertTriangle } from 'lucide-react';
+import {
+  Upload,
+  FileText,
+  Loader2,
+  Globe,
+  File,
+  Sparkles,
+  CheckCircle2,
+  AlertTriangle,
+} from 'lucide-react';
 
 interface DocumentUploaderProps {
   onUpload: (documents: { content: string; metadata: Record<string, any> }[]) => Promise<void>;
@@ -92,24 +101,22 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
     setMessage(null);
 
     try {
-      const result = await window.electronAPI.llm.chat(
-        [
-          {
-            id: 'system',
-            role: 'system',
-            content: `당신은 문서를 정제하고 핵심 내용을 추출하는 전문가입니다.
+      const result = await window.electronAPI.llm.chat([
+        {
+          id: 'system',
+          role: 'system',
+          content: `당신은 문서를 정제하고 핵심 내용을 추출하는 전문가입니다.
 주어진 문서에서 중요한 정보만 추출하고, 불필요한 내용(광고, 네비게이션, 푸터 등)은 제거하세요.
 결과는 깔끔한 마크다운 형식으로 작성하고, 구조화하여 반환하세요.`,
-            created_at: Date.now(),
-          },
-          {
-            id: 'user',
-            role: 'user',
-            content: `다음 문서를 정제해주세요:\n\n${content}`,
-            created_at: Date.now(),
-          },
-        ]
-      );
+          created_at: Date.now(),
+        },
+        {
+          id: 'user',
+          role: 'user',
+          content: `다음 문서를 정제해주세요:\n\n${content}`,
+          created_at: Date.now(),
+        },
+      ]);
 
       if (!result.success || !result.data) {
         throw new Error(result.error || 'LLM 문서 정제에 실패했습니다.');
@@ -139,24 +146,22 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
 
       // LLM 정제 옵션이 활성화되어 있고 아직 정제하지 않았다면
       if (useLLMRefinement) {
-        const refineResult = await window.electronAPI.llm.chat(
-          [
-            {
-              id: 'system',
-              role: 'system',
-              content: `당신은 문서를 정제하고 핵심 내용을 추출하는 전문가입니다.
+        const refineResult = await window.electronAPI.llm.chat([
+          {
+            id: 'system',
+            role: 'system',
+            content: `당신은 문서를 정제하고 핵심 내용을 추출하는 전문가입니다.
 주어진 문서에서 중요한 정보만 추출하고, 불필요한 내용(광고, 네비게이션, 푸터 등)은 제거하세요.
 결과는 깔끔한 마크다운 형식으로 작성하고, 구조화하여 반환하세요.`,
-              created_at: Date.now(),
-            },
-            {
-              id: 'user',
-              role: 'user',
-              content: `다음 문서를 정제해주세요:\n\n${finalContent}`,
-              created_at: Date.now(),
-            },
-          ]
-        );
+            created_at: Date.now(),
+          },
+          {
+            id: 'user',
+            role: 'user',
+            content: `다음 문서를 정제해주세요:\n\n${finalContent}`,
+            created_at: Date.now(),
+          },
+        ]);
 
         if (refineResult.success && refineResult.data) {
           finalContent = refineResult.data.content;
@@ -354,9 +359,7 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
                 선택
               </Button>
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              지원 형식: TXT, PDF, MD, DOCX
-            </p>
+            <p className="text-[11px] text-muted-foreground">지원 형식: TXT, PDF, MD, DOCX</p>
           </div>
 
           {content && (
@@ -402,7 +405,8 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
                   업로드 전에 LLM으로 문서 정제하기
                 </Label>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  LLM이 문서에서 핵심 내용만 추출하고 불필요한 내용(광고, 네비게이션 등)을 제거합니다
+                  LLM이 문서에서 핵심 내용만 추출하고 불필요한 내용(광고, 네비게이션 등)을
+                  제거합니다
                 </p>
               </div>
               <Switch

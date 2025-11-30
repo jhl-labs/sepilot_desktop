@@ -1,6 +1,6 @@
 /**
  * 사용자 인터랙션 테스트 케이스
- * 
+ *
  * 버튼 클릭, 폼 입력, 드래그앤드롭, 키보드 단축키 등을 테스트합니다.
  */
 
@@ -29,13 +29,18 @@ jest.mock('next-themes', () => ({
   })),
 }));
 jest.mock('@/components/persona/PersonaDialog', () => ({
-  PersonaDialog: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+  PersonaDialog: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) => (
     <div data-testid="persona-dialog" data-open={open} onClick={() => onOpenChange(false)}>
       Persona Dialog
     </div>
   ),
 }));
-
 
 describe('사용자 인터랙션 테스트', () => {
   const mockCreateConversation = jest.fn();
@@ -82,12 +87,12 @@ describe('사용자 인터랙션 테스트', () => {
       clearImageGenerationProgress: jest.fn(),
       enableImageGeneration: false,
       setEnableImageGeneration: jest.fn(),
-    personas: [],
+      personas: [],
       activePersonaId: null,
       workingDirectory: null,
       alwaysApproveToolsForSession: false,
       setAlwaysApproveToolsForSession: jest.fn(),
-        };
+    };
 
     (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
     (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -218,10 +223,7 @@ describe('사용자 인터랙션 테스트', () => {
     it('파일 드롭 시 파일이 처리되어야 함', async () => {
       const handleDrop = jest.fn();
       const { container } = render(
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={handleDrop}
-        >
+        <div onDragOver={(e) => e.preventDefault()} onDrop={handleDrop}>
           드롭 영역
         </div>
       );
@@ -326,12 +328,12 @@ describe('사용자 인터랙션 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      personas: [],
-      activePersonaId: null,
-      workingDirectory: null,
-      alwaysApproveToolsForSession: false,
-      setAlwaysApproveToolsForSession: jest.fn(),
-          };
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
+      };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -350,9 +352,7 @@ describe('사용자 인터랙션 테스트', () => {
       const user = userEvent.setup();
       const handleDoubleClick = jest.fn();
 
-      render(
-        <div onDoubleClick={handleDoubleClick}>더블 클릭 영역</div>
-      );
+      render(<div onDoubleClick={handleDoubleClick}>더블 클릭 영역</div>);
 
       const element = screen.getByText('더블 클릭 영역');
       await user.dblClick(element);
@@ -379,9 +379,7 @@ describe('사용자 인터랙션 테스트', () => {
       const user = userEvent.setup();
       const handleContextMenu = jest.fn((e) => e.preventDefault());
 
-      render(
-        <div onContextMenu={handleContextMenu}>우클릭 영역</div>
-      );
+      render(<div onContextMenu={handleContextMenu}>우클릭 영역</div>);
 
       const element = screen.getByText('우클릭 영역');
       await user.pointer({ keys: '[MouseRight>]', target: element });
@@ -436,4 +434,3 @@ describe('사용자 인터랙션 테스트', () => {
     });
   });
 });
-

@@ -12,7 +12,7 @@ import {
   XCircle,
   Clock,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -195,9 +195,7 @@ export function ActivityPanel({ conversationId, className }: ActivityPanelProps)
 
                   {/* Result */}
                   <div>
-                    <div className="text-xs font-semibold text-muted-foreground mb-1">
-                      결과:
-                    </div>
+                    <div className="text-xs font-semibold text-muted-foreground mb-1">결과:</div>
                     <pre className="text-xs bg-muted p-2 rounded overflow-x-auto max-h-64 overflow-y-auto">
                       {activity.result}
                     </pre>

@@ -17,7 +17,10 @@ interface BackupData {
 export function BackupRestoreSettings() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [statusMessage, setStatusMessage] = useState<{
+    type: 'success' | 'error' | 'info';
+    text: string;
+  } | null>(null);
 
   /**
    * Export all conversations and messages to XML
@@ -366,8 +369,8 @@ export function BackupRestoreSettings() {
             statusMessage.type === 'success'
               ? 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-500'
               : statusMessage.type === 'error'
-              ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-500'
-              : 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-500'
+                ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-500'
+                : 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-500'
           }`}
         >
           {statusMessage.type === 'success' ? (

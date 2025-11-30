@@ -1,6 +1,6 @@
 /**
  * 에러 처리 및 로딩 상태 테스트 케이스
- * 
+ *
  * 에러 상황, 로딩 상태, 경계 케이스 등을 테스트합니다.
  */
 
@@ -26,13 +26,18 @@ jest.mock('next-themes', () => ({
   })),
 }));
 jest.mock('@/components/persona/PersonaDialog', () => ({
-  PersonaDialog: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+  PersonaDialog: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }) => (
     <div data-testid="persona-dialog" data-open={open} onClick={() => onOpenChange(false)}>
       Persona Dialog
     </div>
   ),
 }));
-
 
 describe('에러 처리 테스트', () => {
   beforeEach(() => {
@@ -112,12 +117,12 @@ describe('에러 처리 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      personas: [],
-      activePersonaId: null,
-      workingDirectory: null,
-      alwaysApproveToolsForSession: false,
-      setAlwaysApproveToolsForSession: jest.fn(),
-          };
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
+      };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -140,9 +145,7 @@ describe('에러 처리 테스트', () => {
     it('타임아웃 에러가 적절히 처리되어야 함', async () => {
       (mockElectronAPI.llm.streamChat as jest.Mock).mockImplementation(
         () =>
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Request timeout')), 100)
-          )
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), 100))
       );
 
       (useChatStore as jest.Mock).mockReturnValue({
@@ -220,12 +223,12 @@ describe('에러 처리 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      personas: [],
-      activePersonaId: null,
-      workingDirectory: null,
-      alwaysApproveToolsForSession: false,
-      setAlwaysApproveToolsForSession: jest.fn(),
-          };
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
+      };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -268,12 +271,12 @@ describe('에러 처리 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      personas: [],
-      activePersonaId: null,
-      workingDirectory: null,
-      alwaysApproveToolsForSession: false,
-      setAlwaysApproveToolsForSession: jest.fn(),
-          };
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
+      };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -317,12 +320,12 @@ describe('에러 처리 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      personas: [],
-      activePersonaId: null,
-      workingDirectory: null,
-      alwaysApproveToolsForSession: false,
-      setAlwaysApproveToolsForSession: jest.fn(),
-          };
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
+      };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -505,12 +508,12 @@ describe('로딩 상태 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      personas: [],
-      activePersonaId: null,
-      workingDirectory: null,
-      alwaysApproveToolsForSession: false,
-      setAlwaysApproveToolsForSession: jest.fn(),
-          };
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
+      };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -550,12 +553,12 @@ describe('로딩 상태 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      personas: [],
-      activePersonaId: null,
-      workingDirectory: null,
-      alwaysApproveToolsForSession: false,
-      setAlwaysApproveToolsForSession: jest.fn(),
-          };
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
+      };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -750,12 +753,12 @@ describe('경계 케이스 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      personas: [],
-      activePersonaId: null,
-      workingDirectory: null,
-      alwaysApproveToolsForSession: false,
-      setAlwaysApproveToolsForSession: jest.fn(),
-          };
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
+      };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -799,12 +802,12 @@ describe('경계 케이스 테스트', () => {
         clearImageGenerationProgress: jest.fn(),
         enableImageGeneration: false,
         setEnableImageGeneration: jest.fn(),
-      personas: [],
-      activePersonaId: null,
-      workingDirectory: null,
-      alwaysApproveToolsForSession: false,
-      setAlwaysApproveToolsForSession: jest.fn(),
-          };
+        personas: [],
+        activePersonaId: null,
+        workingDirectory: null,
+        alwaysApproveToolsForSession: false,
+        setAlwaysApproveToolsForSession: jest.fn(),
+      };
 
       (useChatStore as jest.Mock).mockReturnValue(mockStoreState);
       (useChatStore as any).getState = jest.fn(() => mockStoreState);
@@ -818,4 +821,3 @@ describe('경계 케이스 테스트', () => {
     });
   });
 });
-

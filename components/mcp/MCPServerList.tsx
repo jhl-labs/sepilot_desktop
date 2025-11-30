@@ -28,12 +28,7 @@ import {
 import { MCPServerConfig } from '@/lib/mcp/types';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -145,7 +140,9 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
 
   const handleRemove = async () => {
     const name = deleteDialog.serverName;
-    if (!name) {return;}
+    if (!name) {
+      return;
+    }
 
     try {
       if (window.electronAPI) {
@@ -163,14 +160,30 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
   };
 
   const getServerIcon = (server: MCPServerConfig) => {
-    if (server.transport === 'sse') {return Cloud;}
+    if (server.transport === 'sse') {
+      return Cloud;
+    }
 
     const lowerName = server.name.toLowerCase();
-    if (lowerName.includes('filesystem') || lowerName.includes('file')) {return FileText;}
-    if (lowerName.includes('github')) {return Globe;}
-    if (lowerName.includes('git')) {return Code;}
-    if (lowerName.includes('database') || lowerName.includes('db') || lowerName.includes('sqlite')) {return Database;}
-    if (lowerName.includes('search') || lowerName.includes('brave')) {return Search;}
+    if (lowerName.includes('filesystem') || lowerName.includes('file')) {
+      return FileText;
+    }
+    if (lowerName.includes('github')) {
+      return Globe;
+    }
+    if (lowerName.includes('git')) {
+      return Code;
+    }
+    if (
+      lowerName.includes('database') ||
+      lowerName.includes('db') ||
+      lowerName.includes('sqlite')
+    ) {
+      return Database;
+    }
+    if (lowerName.includes('search') || lowerName.includes('brave')) {
+      return Search;
+    }
     return Terminal;
   };
 
@@ -234,7 +247,8 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
         </div>
         <h3 className="text-lg font-semibold mt-6 mb-2">MCP 서버를 추가하세요</h3>
         <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-          MCP 서버를 등록하면 AI 어시스턴트가 파일 시스템, 데이터베이스, 웹 검색 등 다양한 도구를 사용할 수 있습니다.
+          MCP 서버를 등록하면 AI 어시스턴트가 파일 시스템, 데이터베이스, 웹 검색 등 다양한 도구를
+          사용할 수 있습니다.
         </p>
         <div className="flex items-center justify-center gap-6 mt-8 text-xs text-muted-foreground">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
@@ -258,12 +272,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
           <p className="text-sm text-muted-foreground">
             총 <span className="font-semibold text-foreground">{servers.length}</span>개 서버
           </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={loadServers}
-            className="h-8 gap-1.5"
-          >
+          <Button variant="ghost" size="sm" onClick={loadServers} className="h-8 gap-1.5">
             <RefreshCw className={cn('h-3.5 w-3.5', isLoading && 'animate-spin')} />
             새로고침
           </Button>
@@ -309,7 +318,10 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                     <h4 className="font-semibold text-base truncate">{server.name}</h4>
                     <Badge
                       variant="outline"
-                      className={cn('text-[10px] px-1.5 py-0 h-5 font-medium', getStatusColor(server.status))}
+                      className={cn(
+                        'text-[10px] px-1.5 py-0 h-5 font-medium',
+                        getStatusColor(server.status)
+                      )}
                     >
                       {getStatusIcon(server.status)}
                       <span className="ml-1">{getStatusText(server.status)}</span>
@@ -341,9 +353,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                       </span>
                     )}
                     {server.transport === 'stdio' && server.command && (
-                      <span className="truncate font-mono text-[10px]">
-                        {server.command}
-                      </span>
+                      <span className="truncate font-mono text-[10px]">{server.command}</span>
                     )}
                   </div>
                 </div>
@@ -436,7 +446,9 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                           ) : (
                             <Terminal className="h-4 w-4 text-blue-500" />
                           )}
-                          <span className="text-sm font-medium">{server.transport.toUpperCase()}</span>
+                          <span className="text-sm font-medium">
+                            {server.transport.toUpperCase()}
+                          </span>
                         </div>
                       </div>
                       <div className="space-y-1">
@@ -484,7 +496,10 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                             <p className="text-xs font-medium text-muted-foreground">실행 인자</p>
                             <div className="rounded-lg bg-background border p-3 space-y-1">
                               {server.args?.map((arg, index) => (
-                                <code key={index} className="block font-mono text-xs text-foreground/80">
+                                <code
+                                  key={index}
+                                  className="block font-mono text-xs text-foreground/80"
+                                >
                                   {arg}
                                 </code>
                               ))}
@@ -505,8 +520,15 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                             <p className="text-xs font-medium text-muted-foreground">HTTP 헤더</p>
                             <div className="rounded-lg bg-background border p-3 space-y-1">
                               {Object.entries(server.headers).map(([key, value]) => (
-                                <code key={key} className="block font-mono text-xs text-foreground/80">
-                                  {key}: {key.toLowerCase().includes('auth') || key.toLowerCase().includes('key') ? '••••••••' : value}
+                                <code
+                                  key={key}
+                                  className="block font-mono text-xs text-foreground/80"
+                                >
+                                  {key}:{' '}
+                                  {key.toLowerCase().includes('auth') ||
+                                  key.toLowerCase().includes('key')
+                                    ? '••••••••'
+                                    : value}
                                 </code>
                               ))}
                             </div>
@@ -518,14 +540,12 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                     {/* Tools List */}
                     {server.tools && server.tools.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">사용 가능한 도구</p>
+                        <p className="text-xs font-medium text-muted-foreground">
+                          사용 가능한 도구
+                        </p>
                         <div className="flex flex-wrap gap-1.5">
                           {server.tools.map((tool) => (
-                            <Badge
-                              key={tool}
-                              variant="secondary"
-                              className="text-xs font-mono"
-                            >
+                            <Badge key={tool} variant="secondary" className="text-xs font-mono">
                               {tool}
                             </Badge>
                           ))}
@@ -537,8 +557,8 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                     <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/10 p-3">
                       <Zap className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       <p className="text-xs text-muted-foreground">
-                        Agent 모드에서 이 서버의 도구를 LLM이 사용할 수 있습니다.
-                        도구를 사용하려면 서버가 활성화되어 있어야 합니다.
+                        Agent 모드에서 이 서버의 도구를 LLM이 사용할 수 있습니다. 도구를 사용하려면
+                        서버가 활성화되어 있어야 합니다.
                       </p>
                     </div>
                   </div>
@@ -550,14 +570,19 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, serverName: open ? deleteDialog.serverName : null })}>
+      <AlertDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) =>
+          setDeleteDialog({ open, serverName: open ? deleteDialog.serverName : null })
+        }
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>서버 삭제</AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-semibold">&apos;{deleteDialog.serverName}&apos;</span> 서버를 삭제하시겠습니까?
-              <br />
-              이 작업은 취소할 수 없습니다.
+              <span className="font-semibold">&apos;{deleteDialog.serverName}&apos;</span> 서버를
+              삭제하시겠습니까?
+              <br />이 작업은 취소할 수 없습니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

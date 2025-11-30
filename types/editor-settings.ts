@@ -43,17 +43,22 @@ export const DEFAULT_EDITOR_APPEARANCE: EditorAppearanceConfig = {
  * 기본 Editor LLM 프롬프트
  */
 export const DEFAULT_EDITOR_LLM_PROMPTS: EditorLLMPromptsConfig = {
-  autoCompletePrompt: 'Complete the following code based on the context. Only return the completion, no explanation.',
+  autoCompletePrompt:
+    'Complete the following code based on the context. Only return the completion, no explanation.',
 
   explainCodePrompt: 'Explain what the following code does in Korean. Be concise and clear.',
 
-  refactorCodePrompt: 'Refactor the following code to improve readability, performance, and maintainability. Explain the changes in Korean.',
+  refactorCodePrompt:
+    'Refactor the following code to improve readability, performance, and maintainability. Explain the changes in Korean.',
 
-  fixBugPrompt: 'Analyze the following code for potential bugs and suggest fixes. Explain the issues and solutions in Korean.',
+  fixBugPrompt:
+    'Analyze the following code for potential bugs and suggest fixes. Explain the issues and solutions in Korean.',
 
-  addCommentsPrompt: 'Add clear and concise comments to the following code. Use Korean for comments.',
+  addCommentsPrompt:
+    'Add clear and concise comments to the following code. Use Korean for comments.',
 
-  generateTestPrompt: 'Generate unit tests for the following code. Use a popular testing framework appropriate for the language.',
+  generateTestPrompt:
+    'Generate unit tests for the following code. Use a popular testing framework appropriate for the language.',
 };
 
 /**

@@ -73,7 +73,9 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
 
   const handlePrivateKeyUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) {return;}
+    if (!file) {
+      return;
+    }
 
     try {
       const content = await file.text();
@@ -131,7 +133,10 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
       }
     } catch (error: any) {
       console.error('Failed to open installation page:', error);
-      setMessage({ type: 'error', text: error.message || 'GitHub App 설치 페이지를 열지 못했습니다.' });
+      setMessage({
+        type: 'error',
+        text: error.message || 'GitHub App 설치 페이지를 열지 못했습니다.',
+      });
     }
   };
 
@@ -162,7 +167,10 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
 
         if (result.success && result.data) {
           setRepositories(result.data);
-          setMessage({ type: 'success', text: `연결 성공! ${result.data.length}개의 레포지토리를 찾았습니다.` });
+          setMessage({
+            type: 'success',
+            text: `연결 성공! ${result.data.length}개의 레포지토리를 찾았습니다.`,
+          });
           setCurrentStep('repository');
         } else {
           throw new Error(result.error || '레포지토리 목록을 가져오지 못했습니다.');
@@ -207,7 +215,10 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
         );
 
         if (result.success) {
-          setMessage({ type: 'success', text: '연결 테스트 성공! 레포지토리에 접근할 수 있습니다.' });
+          setMessage({
+            type: 'success',
+            text: '연결 테스트 성공! 레포지토리에 접근할 수 있습니다.',
+          });
         } else {
           throw new Error(result.error || '연결 테스트에 실패했습니다.');
         }
@@ -264,8 +275,12 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
     const currentIndex = steps.indexOf(currentStep);
     const stepIndex = steps.indexOf(step);
 
-    if (stepIndex < currentIndex) {return 'completed';}
-    if (stepIndex === currentIndex) {return 'current';}
+    if (stepIndex < currentIndex) {
+      return 'completed';
+    }
+    if (stepIndex === currentIndex) {
+      return 'current';
+    }
     return 'pending';
   };
 
@@ -305,8 +320,8 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
                     status === 'current'
                       ? 'bg-blue-500/10 border border-blue-500/20'
                       : status === 'completed'
-                      ? 'bg-green-500/10 border border-green-500/20'
-                      : 'bg-gray-500/5 border border-gray-500/10'
+                        ? 'bg-green-500/10 border border-green-500/20'
+                        : 'bg-gray-500/5 border border-gray-500/10'
                   }`}
                 >
                   <span className="text-xl">{icon}</span>
@@ -315,14 +330,18 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
                       status === 'current'
                         ? 'text-blue-600 dark:text-blue-400'
                         : status === 'completed'
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-gray-500'
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-gray-500'
                     }`}
                   >
                     {label}
                   </span>
-                  {status === 'completed' && <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />}
-                  {status === 'current' && <ChevronRight className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
+                  {status === 'completed' && (
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  )}
+                  {status === 'current' && (
+                    <ChevronRight className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  )}
                 </div>
               );
             })}
@@ -412,7 +431,11 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
           {currentStep === 'config' && (
             <Button
               onClick={() => {
-                if (!appId.trim() || (serverType === 'ghes' && !ghesUrl.trim()) || !privateKeyUploaded) {
+                if (
+                  !appId.trim() ||
+                  (serverType === 'ghes' && !ghesUrl.trim()) ||
+                  !privateKeyUploaded
+                ) {
                   setMessage({ type: 'error', text: '모든 필드를 입력해주세요.' });
                   return;
                 }
@@ -442,7 +465,10 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
                 <li>아래 버튼을 클릭하여 GitHub App 설치 페이지를 엽니다.</li>
                 <li>설치할 레포지토리를 선택합니다 (All repositories 또는 특정 레포지토리).</li>
                 <li>Install 버튼을 클릭합니다.</li>
-                <li>설치 후 URL에서 Installation ID를 확인합니다 (예: /settings/installations/12345678).</li>
+                <li>
+                  설치 후 URL에서 Installation ID를 확인합니다 (예:
+                  /settings/installations/12345678).
+                </li>
               </ol>
             </div>
 
@@ -497,65 +523,68 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
       )}
 
       {/* Step 4: Repository Selection */}
-      {(currentStep === 'repository' || getStepStatus('repository') === 'completed') && repositories.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>4. 동기화 레포지토리 선택</CardTitle>
-            <CardDescription>
-              설정과 데이터를 동기화할 레포지토리를 선택하세요.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="selectedRepo">레포지토리</Label>
-              <select
-                id="selectedRepo"
-                value={selectedRepo}
-                onChange={(e) => setSelectedRepo(e.target.value)}
-                disabled={currentStep !== 'repository'}
-                className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm disabled:opacity-50"
-              >
-                <option value="" className="bg-background text-foreground">
-                  레포지토리를 선택하세요
-                </option>
-                {repositories.map((repo) => (
-                  <option key={repo.id} value={repo.full_name} className="bg-background text-foreground">
-                    {repo.full_name} {repo.private ? '(Private)' : '(Public)'}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-muted-foreground">
-                {selectedRepo
-                  ? `선택된 레포지토리: ${selectedRepo}`
-                  : '암호화된 설정을 저장할 레포지토리를 선택하세요.'}
-              </p>
-            </div>
-
-            {currentStep === 'repository' && selectedRepo && (
+      {(currentStep === 'repository' || getStepStatus('repository') === 'completed') &&
+        repositories.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>4. 동기화 레포지토리 선택</CardTitle>
+              <CardDescription>설정과 데이터를 동기화할 레포지토리를 선택하세요.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Button
-                  onClick={handleTestConnection}
-                  disabled={isTesting}
-                  variant="outline"
-                  className="w-full"
+                <Label htmlFor="selectedRepo">레포지토리</Label>
+                <select
+                  id="selectedRepo"
+                  value={selectedRepo}
+                  onChange={(e) => setSelectedRepo(e.target.value)}
+                  disabled={currentStep !== 'repository'}
+                  className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm disabled:opacity-50"
                 >
-                  {isTesting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <TestTube2 className="mr-2 h-4 w-4" />
-                  )}
-                  연결 테스트
-                </Button>
-
-                <Button onClick={handleSaveAll} disabled={isSaving} className="w-full">
-                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  모든 설정 저장
-                </Button>
+                  <option value="" className="bg-background text-foreground">
+                    레포지토리를 선택하세요
+                  </option>
+                  {repositories.map((repo) => (
+                    <option
+                      key={repo.id}
+                      value={repo.full_name}
+                      className="bg-background text-foreground"
+                    >
+                      {repo.full_name} {repo.private ? '(Private)' : '(Public)'}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  {selectedRepo
+                    ? `선택된 레포지토리: ${selectedRepo}`
+                    : '암호화된 설정을 저장할 레포지토리를 선택하세요.'}
+                </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+
+              {currentStep === 'repository' && selectedRepo && (
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleTestConnection}
+                    disabled={isTesting}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {isTesting ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <TestTube2 className="mr-2 h-4 w-4" />
+                    )}
+                    연결 테스트
+                  </Button>
+
+                  <Button onClick={handleSaveAll} disabled={isSaving} className="w-full">
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    모든 설정 저장
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
       {/* Step 5: Complete */}
       {currentStep === 'complete' && (
@@ -575,11 +604,7 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
               </ul>
             </div>
 
-            <Button
-              onClick={() => setCurrentStep('config')}
-              variant="outline"
-              className="w-full"
-            >
+            <Button onClick={() => setCurrentStep('config')} variant="outline" className="w-full">
               설정 수정하기
             </Button>
           </CardContent>

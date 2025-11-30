@@ -211,7 +211,7 @@ describe('constants', () => {
     });
 
     it('should have Anthropic models', () => {
-      expect(DEFAULT_MODELS.ANTHROPIC.some(m => m.includes('claude'))).toBe(true);
+      expect(DEFAULT_MODELS.ANTHROPIC.some((m) => m.includes('claude'))).toBe(true);
     });
 
     it('should have embedding models', () => {

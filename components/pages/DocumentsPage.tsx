@@ -5,7 +5,12 @@ import { DocumentList } from '@/components/rag/DocumentList';
 import { DocumentUploadDialog } from '@/components/rag/DocumentUploadDialog';
 import { DocumentEditDialog } from '@/components/rag/DocumentEditDialog';
 import { VectorDBConfig, EmbeddingConfig, VectorDocument } from '@/lib/vectordb/types';
-import { getVectorDB, getEmbeddingProvider, deleteDocuments, getAllDocuments } from '@/lib/vectordb';
+import {
+  getVectorDB,
+  getEmbeddingProvider,
+  deleteDocuments,
+  getAllDocuments,
+} from '@/lib/vectordb';
 import { generateId } from '@/lib/utils';
 import { indexDocuments } from '@/lib/vectordb/indexing';
 import { isElectron } from '@/lib/platform';
@@ -86,7 +91,10 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         setVectorDBConfig(event.detail.vectorDB);
       }
       if (event.detail.embedding) {
-        console.log('[DocumentsPage] Updating Embedding config from event:', event.detail.embedding);
+        console.log(
+          '[DocumentsPage] Updating Embedding config from event:',
+          event.detail.embedding
+        );
         setEmbeddingConfig(event.detail.embedding);
       }
     };
@@ -124,7 +132,9 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
 
       // 브라우저 환경에서 SQLite-vec 사용 시 경고
       if (!isElectron() && vectorDBConfig?.type === 'sqlite-vec') {
-        throw new Error('SQLite-vec는 Electron 환경에서만 사용 가능합니다. 웹 브라우저에서는 문서를 업로드할 수 없습니다.');
+        throw new Error(
+          'SQLite-vec는 Electron 환경에서만 사용 가능합니다. 웹 브라우저에서는 문서를 업로드할 수 없습니다.'
+        );
       }
 
       // Raw documents 생성
@@ -135,8 +145,8 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
       }));
 
       const indexingOptions = {
-        chunkSize: 2500,      // 2500자 (약 600-750 토큰): 적절한 맥락 유지
-        chunkOverlap: 250,     // 10% 오버랩: 경계 부분 맥락 보존
+        chunkSize: 2500, // 2500자 (약 600-750 토큰): 적절한 맥락 유지
+        chunkOverlap: 250, // 10% 오버랩: 경계 부분 맥락 보존
         batchSize: 10,
       };
 
@@ -159,7 +169,9 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         try {
           embedder = getEmbeddingProvider();
         } catch {
-          throw new Error('Embedding이 초기화되지 않았습니다. 먼저 설정에서 Embedding 설정을 완료해주세요.');
+          throw new Error(
+            'Embedding이 초기화되지 않았습니다. 먼저 설정에서 Embedding 설정을 완료해주세요.'
+          );
         }
 
         // VectorDB가 초기화되었는지 확인
@@ -167,7 +179,9 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         try {
           vectorDB = getVectorDB();
         } catch {
-          throw new Error('VectorDB가 초기화되지 않았습니다. 먼저 설정에서 VectorDB 설정을 완료해주세요.');
+          throw new Error(
+            'VectorDB가 초기화되지 않았습니다. 먼저 설정에서 VectorDB 설정을 완료해주세요.'
+          );
         }
 
         if (!vectorDB || !embedder) {
@@ -197,7 +211,9 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
     try {
       // 브라우저 환경에서 SQLite-vec 사용 시 경고
       if (!isElectron() && vectorDBConfig?.type === 'sqlite-vec') {
-        throw new Error('SQLite-vec는 Electron 환경에서만 사용 가능합니다. 웹 브라우저에서는 문서를 편집할 수 없습니다.');
+        throw new Error(
+          'SQLite-vec는 Electron 환경에서만 사용 가능합니다. 웹 브라우저에서는 문서를 편집할 수 없습니다.'
+        );
       }
 
       // 새 문서 데이터
@@ -210,8 +226,8 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
       ];
 
       const indexingOptions = {
-        chunkSize: 2500,      // 2500자 (약 600-750 토큰): 적절한 맥락 유지
-        chunkOverlap: 250,     // 10% 오버랩: 경계 부분 맥락 보존
+        chunkSize: 2500, // 2500자 (약 600-750 토큰): 적절한 맥락 유지
+        chunkOverlap: 250, // 10% 오버랩: 경계 부분 맥락 보존
         batchSize: 10,
       };
 
@@ -275,12 +291,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {onBack && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onBack}
-                title="대화로 돌아가기"
-              >
+              <Button variant="ghost" size="icon" onClick={onBack} title="대화로 돌아가기">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
@@ -309,37 +320,75 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
           {!isConfigured ? (
             <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-500">
               <div className="flex items-start gap-2">
-                <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <svg
+                  className="w-5 h-5 mt-0.5 flex-shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
                 </svg>
                 <div>
                   <p className="font-medium">VectorDB 설정 필요</p>
-                  <p className="mt-1">문서를 업로드하려면 먼저 설정에서 VectorDB와 Embedding 설정을 완료해주세요.</p>
+                  <p className="mt-1">
+                    문서를 업로드하려면 먼저 설정에서 VectorDB와 Embedding 설정을 완료해주세요.
+                  </p>
                 </div>
               </div>
             </div>
           ) : isDisabled ? (
             <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-500">
               <div className="flex items-start gap-2">
-                <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <svg
+                  className="w-5 h-5 mt-0.5 flex-shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
                 </svg>
                 <div>
                   <p className="font-medium">SQLite-vec는 Electron 전용</p>
-                  <p className="mt-1">웹 브라우저에서는 SQLite-vec를 사용할 수 없습니다. Electron 앱을 사용하거나 다른 VectorDB(OpenSearch, Elasticsearch 등)를 선택해주세요.</p>
+                  <p className="mt-1">
+                    웹 브라우저에서는 SQLite-vec를 사용할 수 없습니다. Electron 앱을 사용하거나 다른
+                    VectorDB(OpenSearch, Elasticsearch 등)를 선택해주세요.
+                  </p>
                 </div>
               </div>
             </div>
           ) : (
             <div className="rounded-md bg-green-500/10 border border-green-500/20 px-4 py-3 text-sm text-green-600 dark:text-green-500">
               <div className="flex items-start gap-2">
-                <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-5 h-5 mt-0.5 flex-shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 <div>
                   <p className="font-medium">VectorDB 설정 완료</p>
                   <p className="mt-1">
-                    {vectorDBConfig.type === 'sqlite-vec' ? 'SQLite-vec' : vectorDBConfig.type} / {embeddingConfig.provider === 'openai' ? `OpenAI ${embeddingConfig.model}` : embeddingConfig.provider}
+                    {vectorDBConfig.type === 'sqlite-vec' ? 'SQLite-vec' : vectorDBConfig.type} /{' '}
+                    {embeddingConfig.provider === 'openai'
+                      ? `OpenAI ${embeddingConfig.model}`
+                      : embeddingConfig.provider}
                   </p>
                 </div>
               </div>

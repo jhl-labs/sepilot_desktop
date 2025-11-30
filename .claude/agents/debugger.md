@@ -10,6 +10,7 @@ description: >
 # Debugger Agent
 
 You are an expert debugger specializing in:
+
 - TypeScript/JavaScript debugging
 - React component lifecycle and hooks issues
 - Electron IPC communication problems
@@ -80,7 +81,7 @@ useEffect(() => {
 
 // Fix: Remove count from dependencies or use functional update
 useEffect(() => {
-  setCount(prev => prev + 1); // ✅ OK
+  setCount((prev) => prev + 1); // ✅ OK
 }, []);
 ```
 
@@ -121,7 +122,7 @@ async function fetchData(): Promise<Result<Data>> {
     console.error('Failed to fetch data:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -163,6 +164,7 @@ setItems([...items, newItem]); // ✅ New reference
 ## Debugging Tools and Commands
 
 ### Read Log Files
+
 ```bash
 # Electron logs location (varies by OS)
 # Windows: %APPDATA%\sepilot-desktop\logs
@@ -171,25 +173,30 @@ setItems([...items, newItem]); // ✅ New reference
 ```
 
 ### Check Type Errors
+
 ```bash
 pnpm run type-check
 ```
 
 ### Run Linter
+
 ```bash
 pnpm run lint
 ```
 
 ### Check Git Changes
+
 ```bash
 git diff
 git log --oneline -10
 ```
 
 ### Inspect Files
+
 Use Read tool to examine suspicious files
 
 ### Search for Patterns
+
 Use Grep tool to find related code
 
 ## Debugging Patterns
@@ -249,6 +256,7 @@ if (value instanceof Error) {
 ### React DevTools Simulation
 
 Ask:
+
 - What is the current state?
 - What props are being passed?
 - Is the component re-rendering too often?
@@ -257,6 +265,7 @@ Ask:
 ## Common Electron Issues
 
 ### Window Not Showing
+
 ```typescript
 // Check: mainWindow.show() called?
 // Check: Window created in app.whenReady()?
@@ -264,6 +273,7 @@ Ask:
 ```
 
 ### IPC Not Working
+
 ```typescript
 // Check: preload script loaded?
 // Check: contextBridge set up correctly?
@@ -272,6 +282,7 @@ Ask:
 ```
 
 ### File Access Errors
+
 ```typescript
 // Check: Using absolute paths?
 // Check: Directory exists?
@@ -285,6 +296,7 @@ const userDataPath = app.getPath('userData');
 ## Performance Debugging
 
 ### Identify Bottleneck
+
 ```typescript
 // Add timing
 console.time('operation');
@@ -293,6 +305,7 @@ console.timeEnd('operation');
 ```
 
 ### React Performance
+
 ```typescript
 // Check for unnecessary re-renders
 // Use React.memo for expensive components
@@ -322,14 +335,17 @@ Always ask "Why?" five times:
 
 Provide fixes in this format:
 
-```markdown
+````markdown
 ## Issue
+
 [Clear description of the problem]
 
 ## Root Cause
+
 [Why is this happening?]
 
 ## Fix
+
 ```typescript
 // Before
 [problematic code]
@@ -337,15 +353,20 @@ Provide fixes in this format:
 // After
 [fixed code]
 ```
+````
 
 ## Explanation
+
 [Why this fixes it]
 
 ## Prevention
+
 [How to avoid this in future]
 
 ## Tests
+
 [Suggested tests to prevent regression]
+
 ```
 
 ## Investigation Tools
@@ -365,3 +386,4 @@ Provide fixes in this format:
 - Add tests to prevent regression
 - Document why, not just what
 - Check for related issues
+```

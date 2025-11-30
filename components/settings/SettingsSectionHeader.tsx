@@ -17,9 +17,7 @@ export function SettingsSectionHeader({
         {Icon && <Icon className="w-6 h-6 text-primary" />}
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
-          {description && (
-            <p className="text-sm text-muted-foreground mt-1">{description}</p>
-          )}
+          {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
         </div>
       </div>
     </div>

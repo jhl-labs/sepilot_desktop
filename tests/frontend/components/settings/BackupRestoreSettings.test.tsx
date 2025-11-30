@@ -72,7 +72,9 @@ describe('BackupRestoreSettings', () => {
     render(<BackupRestoreSettings />);
 
     expect(screen.getByText(/백업 및 복구/)).toBeInTheDocument();
-    expect(screen.getByText(/모든 대화 내용을 XML 파일로 내보내거나 가져올 수 있습니다/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/모든 대화 내용을 XML 파일로 내보내거나 가져올 수 있습니다/)
+    ).toBeInTheDocument();
     expect(screen.getByText(/모든 대화와 메시지를 XML 파일로 내보냅니다/)).toBeInTheDocument();
     expect(screen.getByText(/XML 백업 파일에서 대화를 복원합니다/)).toBeInTheDocument();
   });
@@ -158,7 +160,13 @@ describe('BackupRestoreSettings', () => {
       const mockLoadMessages = jest.fn().mockResolvedValue({
         success: true,
         data: [
-          { id: 'msg1', conversation_id: 'conv1', role: 'user', content: 'Hello', created_at: 1234567890 },
+          {
+            id: 'msg1',
+            conversation_id: 'conv1',
+            role: 'user',
+            content: 'Hello',
+            created_at: 1234567890,
+          },
         ],
       });
 
@@ -681,5 +689,4 @@ describe('BackupRestoreSettings', () => {
       expect(xmlContent).toContain('"dark"');
     });
   });
-
 });

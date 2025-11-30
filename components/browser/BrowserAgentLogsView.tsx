@@ -2,7 +2,16 @@
 
 import { useEffect, useRef } from 'react';
 import { useChatStore } from '@/lib/store/chat-store';
-import { ChevronLeft, X, Brain, Wrench, CheckCircle2, XCircle, AlertCircle, Zap } from 'lucide-react';
+import {
+  ChevronLeft,
+  X,
+  Brain,
+  Wrench,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Zap,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { BrowserAgentLogEntry, BrowserAgentLogLevel } from '@/types/browser-agent';
 import { cn } from '@/lib/utils';
@@ -13,12 +22,8 @@ import { cn } from '@/lib/utils';
  * SidebarBrowser에서 독립된 화면으로 Agent 실행 로그를 표시
  */
 export function BrowserAgentLogsView() {
-  const {
-    browserAgentLogs,
-    browserAgentIsRunning,
-    clearBrowserAgentLogs,
-    setBrowserViewMode,
-  } = useChatStore();
+  const { browserAgentLogs, browserAgentIsRunning, clearBrowserAgentLogs, setBrowserViewMode } =
+    useChatStore();
 
   const logContainerRef = useRef<HTMLDivElement>(null);
 
@@ -66,15 +71,14 @@ export function BrowserAgentLogsView() {
       </div>
 
       {/* Logs */}
-      <div
-        ref={logContainerRef}
-        className="flex-1 overflow-y-auto p-3 space-y-2"
-      >
+      <div ref={logContainerRef} className="flex-1 overflow-y-auto p-3 space-y-2">
         {browserAgentLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
             <Brain className="h-12 w-12 mb-3 opacity-50" />
             <p className="text-sm">Agent 실행 로그가 여기에 표시됩니다</p>
-            <p className="text-xs mt-1">Browser Agent를 실행하면 상세한 실행 과정을 확인할 수 있습니다.</p>
+            <p className="text-xs mt-1">
+              Browser Agent를 실행하면 상세한 실행 과정을 확인할 수 있습니다.
+            </p>
           </div>
         ) : (
           browserAgentLogs.map((log) => <LogEntry key={log.id} log={log} />)
@@ -143,7 +147,9 @@ function LogEntry({ log }: { log: BrowserAgentLogEntry }) {
             <div className="bg-green-500/10 p-2 rounded border border-green-500/20">
               <div className="flex items-center gap-2 mb-1">
                 <CheckCircle2 className="h-3 w-3 text-green-600" />
-                <span className="text-xs text-green-700 dark:text-green-400 font-semibold">결과</span>
+                <span className="text-xs text-green-700 dark:text-green-400 font-semibold">
+                  결과
+                </span>
               </div>
               <pre className="text-[10px] text-foreground/80 overflow-x-auto max-h-32 bg-background/50 p-2 rounded mt-1">
                 {log.details.toolResult.substring(0, 1000)}
@@ -170,7 +176,10 @@ function LogEntry({ log }: { log: BrowserAgentLogEntry }) {
             <div className="flex items-center gap-2 text-xs">
               <Zap className="h-3 w-3 text-yellow-600" />
               <span>
-                다음: <span className="font-semibold">{log.details.decision === 'continue' ? '계속 진행' : '완료'}</span>
+                다음:{' '}
+                <span className="font-semibold">
+                  {log.details.decision === 'continue' ? '계속 진행' : '완료'}
+                </span>
               </span>
               {log.details.nextAction && (
                 <span className="text-muted-foreground">→ {log.details.nextAction}</span>

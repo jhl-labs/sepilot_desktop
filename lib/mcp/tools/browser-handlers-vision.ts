@@ -24,10 +24,12 @@ import { analyzePage } from './browser-handlers-enhanced';
 /**
  * 주석이 달린 스크린샷 캡처 (Set-of-Mark 오버레이 포함)
  */
-export async function handleBrowserCaptureAnnotatedScreenshot(options: {
-  maxMarkers?: number;
-  includeOverlay?: boolean;
-} = {}): Promise<string> {
+export async function handleBrowserCaptureAnnotatedScreenshot(
+  options: {
+    maxMarkers?: number;
+    includeOverlay?: boolean;
+  } = {}
+): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
     throw new Error('No active browser tab. Please switch to Browser mode first.');
@@ -74,11 +76,7 @@ export async function handleBrowserCaptureAnnotatedScreenshot(options: {
   `);
 
   // 7. 컨텍스트 생성
-  const context = generateScreenshotContext(
-    markers,
-    viewportSize.width,
-    viewportSize.height
-  );
+  const context = generateScreenshotContext(markers, viewportSize.width, viewportSize.height);
 
   // 8. 결과 반환 (이미지는 base64로 인코딩)
   const result = {
@@ -106,10 +104,7 @@ export async function handleBrowserCaptureAnnotatedScreenshot(options: {
 /**
  * 좌표 기반 클릭 (Pixel counting 방식)
  */
-export async function handleBrowserClickCoordinate(
-  x: number,
-  y: number
-): Promise<string> {
+export async function handleBrowserClickCoordinate(x: number, y: number): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
     throw new Error('No active browser tab.');
@@ -176,9 +171,7 @@ export async function handleBrowserClickCoordinate(
 /**
  * 마커 라벨로 요소 클릭 (Set-of-Mark 방식)
  */
-export async function handleBrowserClickMarker(
-  markerLabel: string
-): Promise<string> {
+export async function handleBrowserClickMarker(markerLabel: string): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
     throw new Error('No active browser tab.');
@@ -219,9 +212,7 @@ export async function handleBrowserClickMarker(
  * Note: 실제 LLM Vision API 호출이 필요
  * 현재는 구조만 제공
  */
-export async function handleBrowserAnalyzeWithVision(
-  userQuery?: string
-): Promise<string> {
+export async function handleBrowserAnalyzeWithVision(userQuery?: string): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
     throw new Error('No active browser tab.');
@@ -282,9 +273,7 @@ export async function handleBrowserAnalyzeWithVision(
 /**
  * 요소의 정확한 클릭 가능 좌표 찾기 (Hybrid 접근)
  */
-export async function handleBrowserGetClickableCoordinate(
-  elementId: string
-): Promise<string> {
+export async function handleBrowserGetClickableCoordinate(elementId: string): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
     throw new Error('No active browser tab.');
@@ -335,9 +324,7 @@ export async function handleBrowserGetClickableCoordinate(
   }
 
   if (!result.coordinates.isClickable) {
-    console.warn(
-      `[BrowserVision] Warning: Element ${elementId} center point may be obscured`
-    );
+    console.warn(`[BrowserVision] Warning: Element ${elementId} center point may be obscured`);
   }
 
   return JSON.stringify(result, null, 2);

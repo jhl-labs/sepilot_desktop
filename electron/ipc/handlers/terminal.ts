@@ -27,24 +27,27 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
   /**
    * 터미널 세션 생성
    */
-  ipcMain.handle('terminal:create-session', async (_event, cwd?: string, cols?: number, rows?: number) => {
-    try {
-      logger.info('[Terminal IPC] Creating session:', { cwd, cols, rows });
+  ipcMain.handle(
+    'terminal:create-session',
+    async (_event, cwd?: string, cols?: number, rows?: number) => {
+      try {
+        logger.info('[Terminal IPC] Creating session:', { cwd, cols, rows });
 
-      const result = ptyManager.createSession({ cwd, cols, rows });
+        const result = ptyManager.createSession({ cwd, cols, rows });
 
-      return {
-        success: true,
-        data: result,
-      };
-    } catch (error: any) {
-      logger.error('[Terminal IPC] Error creating session:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to create terminal session',
-      };
+        return {
+          success: true,
+          data: result,
+        };
+      } catch (error: any) {
+        logger.error('[Terminal IPC] Error creating session:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to create terminal session',
+        };
+      }
     }
-  });
+  );
 
   /**
    * 터미널에 데이터 쓰기
@@ -69,22 +72,25 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
   /**
    * 터미널 리사이즈
    */
-  ipcMain.handle('terminal:resize', async (_event, sessionId: string, cols: number, rows: number) => {
-    try {
-      const success = ptyManager.resize(sessionId, cols, rows);
+  ipcMain.handle(
+    'terminal:resize',
+    async (_event, sessionId: string, cols: number, rows: number) => {
+      try {
+        const success = ptyManager.resize(sessionId, cols, rows);
 
-      return {
-        success,
-        error: success ? undefined : 'Failed to resize terminal',
-      };
-    } catch (error: any) {
-      logger.error('[Terminal IPC] Error resizing terminal:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to resize terminal',
-      };
+        return {
+          success,
+          error: success ? undefined : 'Failed to resize terminal',
+        };
+      } catch (error: any) {
+        logger.error('[Terminal IPC] Error resizing terminal:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to resize terminal',
+        };
+      }
     }
-  });
+  );
 
   /**
    * 터미널 세션 종료

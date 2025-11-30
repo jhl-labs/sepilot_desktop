@@ -30,7 +30,9 @@ const SIDEBAR_WIDTH_KEYS = {
 
 // Load sidebar width from localStorage
 function loadSidebarWidth(mode: 'chat' | 'editor' | 'browser'): number {
-  if (typeof window === 'undefined') {return DEFAULT_SIDEBAR_WIDTH;}
+  if (typeof window === 'undefined') {
+    return DEFAULT_SIDEBAR_WIDTH;
+  }
 
   const key = SIDEBAR_WIDTH_KEYS[mode];
   const saved = localStorage.getItem(key);
@@ -47,7 +49,9 @@ function loadSidebarWidth(mode: 'chat' | 'editor' | 'browser'): number {
 
 // Save sidebar width to localStorage
 function saveSidebarWidth(mode: 'chat' | 'editor' | 'browser', width: number) {
-  if (typeof window === 'undefined') {return;}
+  if (typeof window === 'undefined') {
+    return;
+  }
 
   const key = SIDEBAR_WIDTH_KEYS[mode];
   localStorage.setItem(key, width.toString());
@@ -57,7 +61,17 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
-  const { createConversation, messages, activeConversationId, streamingConversations, loadConversations, setAppMode, appMode, activeEditorTab, browserViewMode } = useChatStore();
+  const {
+    createConversation,
+    messages,
+    activeConversationId,
+    streamingConversations,
+    loadConversations,
+    setAppMode,
+    appMode,
+    activeEditorTab,
+    browserViewMode,
+  } = useChatStore();
 
   // Mode-specific sidebar widths - always start with default to avoid hydration mismatch
   const [chatSidebarWidth, setChatSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
@@ -72,7 +86,12 @@ export function MainLayout({ children }: MainLayoutProps) {
   }, []);
 
   // Get current sidebar width based on app mode
-  const sidebarWidth = appMode === 'chat' ? chatSidebarWidth : appMode === 'editor' ? editorSidebarWidth : browserSidebarWidth;
+  const sidebarWidth =
+    appMode === 'chat'
+      ? chatSidebarWidth
+      : appMode === 'editor'
+        ? editorSidebarWidth
+        : browserSidebarWidth;
 
   // Set sidebar width based on app mode
   const setSidebarWidth = (width: number) => {
@@ -89,7 +108,9 @@ export function MainLayout({ children }: MainLayoutProps) {
   };
 
   // Determine if current conversation is streaming
-  const isStreaming = activeConversationId ? streamingConversations.has(activeConversationId) : false;
+  const isStreaming = activeConversationId
+    ? streamingConversations.has(activeConversationId)
+    : false;
   const startXRef = useRef(0);
   const startWidthRef = useRef(sidebarWidth);
 
@@ -112,11 +133,14 @@ export function MainLayout({ children }: MainLayoutProps) {
         console.log('[MainLayout] Settings shortcut (Cmd+,) pressed - hiding BrowserView');
         // Settings 열기 전에 BrowserView 숨김
         if (isElectron() && window.electronAPI) {
-          window.electronAPI.browserView.hideAll().then(() => {
-            console.log('[MainLayout] BrowserView hidden before opening Settings (shortcut)');
-          }).catch((err) => {
-            console.error('[MainLayout] Failed to hide BrowserView:', err);
-          });
+          window.electronAPI.browserView
+            .hideAll()
+            .then(() => {
+              console.log('[MainLayout] BrowserView hidden before opening Settings (shortcut)');
+            })
+            .catch((err) => {
+              console.error('[MainLayout] Failed to hide BrowserView:', err);
+            });
         }
         setSettingsOpen(true);
       },
@@ -128,9 +152,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       meta: true,
       shift: true,
       handler: async () => {
-        const lastAssistantMessage = [...messages]
-          .reverse()
-          .find((m) => m.role === 'assistant');
+        const lastAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant');
 
         if (lastAssistantMessage) {
           await navigator.clipboard.writeText(lastAssistantMessage.content);
@@ -152,16 +174,21 @@ export function MainLayout({ children }: MainLayoutProps) {
     },
   ]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    startXRef.current = e.clientX;
-    startWidthRef.current = sidebarWidth;
-  }, [sidebarWidth]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+      startXRef.current = e.clientX;
+      startWidthRef.current = sidebarWidth;
+    },
+    [sidebarWidth]
+  );
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!isResizing) {return;}
+      if (!isResizing) {
+        return;
+      }
 
       const delta = e.clientX - startXRef.current;
       const newWidth = Math.min(
@@ -202,7 +229,9 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Initialize VectorDB and Embedding from config
   const initializeFromConfig = useCallback(async (vectorDBConfig?: any, embeddingConfig?: any) => {
-    if (typeof window === 'undefined') {return;}
+    if (typeof window === 'undefined') {
+      return;
+    }
 
     try {
       // VectorDB 초기화
@@ -239,7 +268,9 @@ export function MainLayout({ children }: MainLayoutProps) {
   // Auto-initialize VectorDB and Embedding on app start
   useEffect(() => {
     const autoInitialize = async () => {
-      if (typeof window === 'undefined') {return;}
+      if (typeof window === 'undefined') {
+        return;
+      }
 
       try {
         let vectorDBConfig = null;
@@ -320,7 +351,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       const { vectorDB, embedding } = customEvent.detail || {};
 
       if (vectorDB || embedding) {
-        console.log('[MainLayout] Config update received:', { vectorDB: !!vectorDB, embedding: !!embedding });
+        console.log('[MainLayout] Config update received:', {
+          vectorDB: !!vectorDB,
+          embedding: !!embedding,
+        });
         await initializeFromConfig(vectorDB, embedding);
       }
     };
@@ -340,49 +374,95 @@ export function MainLayout({ children }: MainLayoutProps) {
 
     // Settings/Documents/Gallery가 열려있으면 항상 숨김
     if (settingsOpen || viewMode === 'documents' || viewMode === 'gallery') {
-      console.log('[MainLayout] Hiding BrowserView for overlay (settingsOpen:', settingsOpen, 'viewMode:', viewMode, ')');
-      window.electronAPI.browserView.hideAll().then(() => {
-        console.log('[MainLayout] BrowserView hidden successfully');
-      }).catch((err) => {
-        console.error('[MainLayout] Failed to hide BrowserView for overlay:', err);
-      });
+      console.log(
+        '[MainLayout] Hiding BrowserView for overlay (settingsOpen:',
+        settingsOpen,
+        'viewMode:',
+        viewMode,
+        ')'
+      );
+      window.electronAPI.browserView
+        .hideAll()
+        .then(() => {
+          console.log('[MainLayout] BrowserView hidden successfully');
+        })
+        .catch((err) => {
+          console.error('[MainLayout] Failed to hide BrowserView for overlay:', err);
+        });
       return;
     }
 
     // Browser 모드에서 browserViewMode가 'chat'이 아니면 숨김
     // 단, 'settings'와 'tools'는 Sidebar 내부에서만 표시되므로 BrowserView를 숨기지 않음
-    if (appMode === 'browser' && browserViewMode !== 'chat' &&
-        browserViewMode !== 'settings' && browserViewMode !== 'tools') {
-      console.log('[MainLayout] Hiding BrowserView for browser overlay (browserViewMode:', browserViewMode, ')');
-      window.electronAPI.browserView.hideAll().then(() => {
-        console.log('[MainLayout] BrowserView hidden successfully');
-      }).catch((err) => {
-        console.error('[MainLayout] Failed to hide BrowserView for browser overlay:', err);
-      });
+    if (
+      appMode === 'browser' &&
+      browserViewMode !== 'chat' &&
+      browserViewMode !== 'settings' &&
+      browserViewMode !== 'tools'
+    ) {
+      console.log(
+        '[MainLayout] Hiding BrowserView for browser overlay (browserViewMode:',
+        browserViewMode,
+        ')'
+      );
+      window.electronAPI.browserView
+        .hideAll()
+        .then(() => {
+          console.log('[MainLayout] BrowserView hidden successfully');
+        })
+        .catch((err) => {
+          console.error('[MainLayout] Failed to hide BrowserView for browser overlay:', err);
+        });
       return;
     }
 
     // Editor 모드이고 Browser 탭이 활성화되어 있으면 표시
     if (appMode === 'editor' && activeEditorTab === 'browser') {
-      console.log('[MainLayout] Showing BrowserView (appMode:', appMode, 'activeEditorTab:', activeEditorTab, ')');
-      window.electronAPI.browserView.showActive().then(() => {
-        console.log('[MainLayout] BrowserView shown successfully');
-      }).catch((err) => {
-        console.error('[MainLayout] Failed to show BrowserView:', err);
-      });
+      console.log(
+        '[MainLayout] Showing BrowserView (appMode:',
+        appMode,
+        'activeEditorTab:',
+        activeEditorTab,
+        ')'
+      );
+      window.electronAPI.browserView
+        .showActive()
+        .then(() => {
+          console.log('[MainLayout] BrowserView shown successfully');
+        })
+        .catch((err) => {
+          console.error('[MainLayout] Failed to show BrowserView:', err);
+        });
     }
     // Browser 모드 (standalone)일 때도 표시
     else if (appMode === 'browser' && viewMode === 'chat' && browserViewMode === 'chat') {
-      console.log('[MainLayout] Showing BrowserView (appMode:', appMode, 'viewMode:', viewMode, 'browserViewMode:', browserViewMode, ')');
-      window.electronAPI.browserView.showActive().then(() => {
-        console.log('[MainLayout] BrowserView shown successfully');
-      }).catch((err) => {
-        console.error('[MainLayout] Failed to show BrowserView:', err);
-      });
+      console.log(
+        '[MainLayout] Showing BrowserView (appMode:',
+        appMode,
+        'viewMode:',
+        viewMode,
+        'browserViewMode:',
+        browserViewMode,
+        ')'
+      );
+      window.electronAPI.browserView
+        .showActive()
+        .then(() => {
+          console.log('[MainLayout] BrowserView shown successfully');
+        })
+        .catch((err) => {
+          console.error('[MainLayout] Failed to show BrowserView:', err);
+        });
     }
     // 그 외의 경우 숨김
     else {
-      console.log('[MainLayout] Hiding BrowserView (appMode:', appMode, 'activeEditorTab:', activeEditorTab, ')');
+      console.log(
+        '[MainLayout] Hiding BrowserView (appMode:',
+        appMode,
+        'activeEditorTab:',
+        activeEditorTab,
+        ')'
+      );
       window.electronAPI.browserView.hideAll().catch((err) => {
         console.error('[MainLayout] Failed to hide BrowserView:', err);
       });
@@ -414,12 +494,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {viewMode === 'chat' && children}
-        {viewMode === 'documents' && (
-          <DocumentsPage onBack={() => setViewMode('chat')} />
-        )}
-        {viewMode === 'gallery' && (
-          <GalleryView onClose={() => setViewMode('chat')} />
-        )}
+        {viewMode === 'documents' && <DocumentsPage onBack={() => setViewMode('chat')} />}
+        {viewMode === 'gallery' && <GalleryView onClose={() => setViewMode('chat')} />}
       </div>
 
       {/* Settings Dialog */}

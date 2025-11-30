@@ -88,9 +88,7 @@ describe('MCPServerList', () => {
 
       await waitFor(() => {
         expect(screen.getByText('MCP 서버를 추가하세요')).toBeInTheDocument();
-        expect(
-          screen.getByText(/MCP 서버를 등록하면 AI 어시스턴트가/)
-        ).toBeInTheDocument();
+        expect(screen.getByText(/MCP 서버를 등록하면 AI 어시스턴트가/)).toBeInTheDocument();
       });
     });
   });
@@ -178,7 +176,6 @@ describe('MCPServerList', () => {
       });
     });
   });
-
 
   describe('에러 처리', () => {
     it('should handle listServers error gracefully', async () => {

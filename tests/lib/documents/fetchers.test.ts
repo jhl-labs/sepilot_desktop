@@ -107,10 +107,7 @@ describe('document fetchers', () => {
         json: jest.fn().mockResolvedValue(mockFileResponse),
       });
 
-      const result = await fetchGitHubDocument(
-        'https://github.com/owner/repo',
-        'docs/README.md'
-      );
+      const result = await fetchGitHubDocument('https://github.com/owner/repo', 'docs/README.md');
 
       expect(result.content).toBe('# Hello\n\nThis is content');
       expect(result.metadata.source).toBe('github');
@@ -125,11 +122,7 @@ describe('document fetchers', () => {
         json: jest.fn().mockResolvedValue(mockFileResponse),
       });
 
-      await fetchGitHubDocument(
-        'https://github.com/owner/repo',
-        'file.md',
-        'ghp_token123'
-      );
+      await fetchGitHubDocument('https://github.com/owner/repo', 'file.md', 'ghp_token123');
 
       expect(global.fetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -147,12 +140,7 @@ describe('document fetchers', () => {
         json: jest.fn().mockResolvedValue(mockFileResponse),
       });
 
-      await fetchGitHubDocument(
-        'https://github.com/owner/repo',
-        'file.md',
-        undefined,
-        'develop'
-      );
+      await fetchGitHubDocument('https://github.com/owner/repo', 'file.md', undefined, 'develop');
 
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('ref=develop'),
@@ -161,9 +149,9 @@ describe('document fetchers', () => {
     });
 
     it('should throw error for invalid GitHub URL', async () => {
-      await expect(
-        fetchGitHubDocument('https://gitlab.com/owner/repo', 'file.md')
-      ).rejects.toThrow('Invalid GitHub repository URL');
+      await expect(fetchGitHubDocument('https://gitlab.com/owner/repo', 'file.md')).rejects.toThrow(
+        'Invalid GitHub repository URL'
+      );
     });
 
     it('should throw error for 404 response', async () => {
@@ -194,9 +182,9 @@ describe('document fetchers', () => {
         json: jest.fn().mockResolvedValue({ type: 'dir' }),
       });
 
-      await expect(
-        fetchGitHubDocument('https://github.com/owner/repo', 'docs')
-      ).rejects.toThrow('Path must point to a file');
+      await expect(fetchGitHubDocument('https://github.com/owner/repo', 'docs')).rejects.toThrow(
+        'Path must point to a file'
+      );
     });
 
     it('should handle repo URL with .git suffix', async () => {
@@ -222,9 +210,7 @@ describe('document fetchers', () => {
       { type: 'dir', name: 'subdir', path: 'docs/subdir' },
     ];
 
-    const mockSubDirResponse = [
-      { type: 'file', name: 'nested.md', path: 'docs/subdir/nested.md' },
-    ];
+    const mockSubDirResponse = [{ type: 'file', name: 'nested.md', path: 'docs/subdir/nested.md' }];
 
     const mockFileContent = {
       type: 'file',
@@ -258,10 +244,7 @@ describe('document fetchers', () => {
     });
 
     it('should fetch all files in directory with valid extensions', async () => {
-      const docs = await fetchGitHubDirectory(
-        'https://github.com/owner/repo',
-        'docs'
-      );
+      const docs = await fetchGitHubDirectory('https://github.com/owner/repo', 'docs');
 
       // Should include .md and .json, exclude .png
       expect(docs.length).toBeGreaterThanOrEqual(2);
@@ -299,9 +282,9 @@ describe('document fetchers', () => {
     });
 
     it('should throw error for invalid GitHub URL', async () => {
-      await expect(
-        fetchGitHubDirectory('https://gitlab.com/owner/repo', 'docs')
-      ).rejects.toThrow('Invalid GitHub repository URL');
+      await expect(fetchGitHubDirectory('https://gitlab.com/owner/repo', 'docs')).rejects.toThrow(
+        'Invalid GitHub repository URL'
+      );
     });
 
     it('should throw error when path points to file', async () => {
@@ -370,9 +353,9 @@ describe('document fetchers', () => {
     it('should fetch GitHub directory when path has no extension', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
-        json: jest.fn().mockResolvedValue([
-          { type: 'file', name: 'file.md', path: 'docs/file.md' },
-        ]),
+        json: jest
+          .fn()
+          .mockResolvedValue([{ type: 'file', name: 'file.md', path: 'docs/file.md' }]),
       });
 
       const source: DocumentSource = {
@@ -397,9 +380,7 @@ describe('document fetchers', () => {
         repoUrl: 'https://github.com/owner/repo',
       };
 
-      await expect(fetchDocument(source)).rejects.toThrow(
-        'Repository URL and path are required'
-      );
+      await expect(fetchDocument(source)).rejects.toThrow('Repository URL and path are required');
     });
 
     it('should throw error for manual document type', async () => {

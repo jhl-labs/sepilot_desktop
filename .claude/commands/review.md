@@ -1,6 +1,6 @@
 ---
 description: Code review for quality, security, and best practices
-argument-hint: "[file-or-directory]"
+argument-hint: '[file-or-directory]'
 ---
 
 # Code Review Request
@@ -10,6 +10,7 @@ Please review the code at: **$1**
 Use the **code-reviewer subagent** to perform a comprehensive review.
 
 Check for:
+
 - Type safety and TypeScript best practices
 - Security vulnerabilities (XSS, injection, hardcoded secrets)
 - Electron IPC patterns and security
@@ -19,6 +20,7 @@ Check for:
 - Error handling
 
 Provide:
+
 1. Overall assessment
 2. Critical issues (blocking) 🔴
 3. Important improvements 🟡

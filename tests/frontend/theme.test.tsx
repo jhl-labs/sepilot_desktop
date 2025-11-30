@@ -1,6 +1,6 @@
 /**
  * 테마 및 UI 상태 테스트 케이스
- * 
+ *
  * 다크/라이트 모드 전환, UI 상태 관리 등을 테스트합니다.
  */
 
@@ -227,20 +227,20 @@ describe('UI 상태 관리 테스트', () => {
 });
 
 describe('반응형 디자인', () => {
-    it('작은 화면에서 사이드바가 숨겨질 수 있어야 함', () => {
-      // 실제 구현에 따라 다를 수 있음
-      // Tailwind의 반응형 클래스를 사용한다면
-      const { container } = render(
-        <div className="hidden md:block">
-          <nav>사이드바</nav>
-        </div>
-      );
+  it('작은 화면에서 사이드바가 숨겨질 수 있어야 함', () => {
+    // 실제 구현에 따라 다를 수 있음
+    // Tailwind의 반응형 클래스를 사용한다면
+    const { container } = render(
+      <div className="hidden md:block">
+        <nav>사이드바</nav>
+      </div>
+    );
 
-      const nav = screen.getByText('사이드바');
-      // Tailwind 클래스는 JSDOM에서 실제로 적용되지 않지만, 클래스명은 확인 가능
-      expect(nav).toBeInTheDocument();
-      expect(container.querySelector('div')).toHaveClass('hidden', 'md:block');
-    });
+    const nav = screen.getByText('사이드바');
+    // Tailwind 클래스는 JSDOM에서 실제로 적용되지 않지만, 클래스명은 확인 가능
+    expect(nav).toBeInTheDocument();
+    expect(container.querySelector('div')).toHaveClass('hidden', 'md:block');
+  });
 
   it('모바일에서 햄버거 메뉴가 표시되어야 함', () => {
     render(
@@ -256,4 +256,3 @@ describe('반응형 디자인', () => {
     expect(menuButton).toHaveClass('md:hidden');
   });
 });
-

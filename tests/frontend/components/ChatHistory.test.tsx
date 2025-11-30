@@ -26,9 +26,24 @@ global.confirm = jest.fn(() => true);
 
 describe('ChatHistory', () => {
   const mockConversations: Conversation[] = [
-    { id: 'conv-1', title: 'First Chat', created_at: Date.now() - 3600000, updated_at: Date.now() - 3600000 },
-    { id: 'conv-2', title: 'Second Chat', created_at: Date.now() - 7200000, updated_at: Date.now() - 7200000 },
-    { id: 'conv-3', title: 'Third Chat', created_at: Date.now() - 10800000, updated_at: Date.now() - 10800000 },
+    {
+      id: 'conv-1',
+      title: 'First Chat',
+      created_at: Date.now() - 3600000,
+      updated_at: Date.now() - 3600000,
+    },
+    {
+      id: 'conv-2',
+      title: 'Second Chat',
+      created_at: Date.now() - 7200000,
+      updated_at: Date.now() - 7200000,
+    },
+    {
+      id: 'conv-3',
+      title: 'Third Chat',
+      created_at: Date.now() - 10800000,
+      updated_at: Date.now() - 10800000,
+    },
   ];
 
   const mockChatStore = {
@@ -203,8 +218,8 @@ describe('ChatHistory', () => {
     // Find all buttons and locate the menu button by aria-label or icon
     const buttons = screen.getAllByRole('button');
     // The menu button should be a small icon button, let's find it by size class
-    const menuButton = buttons.find(btn =>
-      btn.className.includes('h-8') && btn.className.includes('w-8')
+    const menuButton = buttons.find(
+      (btn) => btn.className.includes('h-8') && btn.className.includes('w-8')
     );
 
     expect(menuButton).toBeDefined();
@@ -227,8 +242,8 @@ describe('ChatHistory', () => {
     render(<ChatHistory />);
 
     const buttons = screen.getAllByRole('button');
-    const menuButton = buttons.find(btn =>
-      btn.className.includes('h-8') && btn.className.includes('w-8')
+    const menuButton = buttons.find(
+      (btn) => btn.className.includes('h-8') && btn.className.includes('w-8')
     );
 
     expect(menuButton).toBeDefined();
@@ -254,8 +269,8 @@ describe('ChatHistory', () => {
     render(<ChatHistory />);
 
     const buttons = screen.getAllByRole('button');
-    const menuButton = buttons.find(btn =>
-      btn.className.includes('h-8') && btn.className.includes('w-8')
+    const menuButton = buttons.find(
+      (btn) => btn.className.includes('h-8') && btn.className.includes('w-8')
     );
 
     expect(menuButton).toBeDefined();
@@ -281,8 +296,8 @@ describe('ChatHistory', () => {
     render(<ChatHistory />);
 
     const buttons = screen.getAllByRole('button');
-    const menuButton = buttons.find(btn =>
-      btn.className.includes('h-8') && btn.className.includes('w-8')
+    const menuButton = buttons.find(
+      (btn) => btn.className.includes('h-8') && btn.className.includes('w-8')
     );
 
     expect(menuButton).toBeDefined();
@@ -308,8 +323,8 @@ describe('ChatHistory', () => {
     render(<ChatHistory />);
 
     const buttons = screen.getAllByRole('button');
-    const menuButton = buttons.find(btn =>
-      btn.className.includes('h-8') && btn.className.includes('w-8')
+    const menuButton = buttons.find(
+      (btn) => btn.className.includes('h-8') && btn.className.includes('w-8')
     );
 
     expect(menuButton).toBeDefined();
@@ -331,8 +346,8 @@ describe('ChatHistory', () => {
     render(<ChatHistory />);
 
     const buttons = screen.getAllByRole('button');
-    const menuButton = buttons.find(btn =>
-      btn.className.includes('h-8') && btn.className.includes('w-8')
+    const menuButton = buttons.find(
+      (btn) => btn.className.includes('h-8') && btn.className.includes('w-8')
     );
 
     expect(menuButton).toBeDefined();
@@ -353,9 +368,24 @@ describe('ChatHistory', () => {
       {
         conversation: mockConversations[0],
         matchedMessages: [
-          { id: 'msg-1', role: 'user', content: 'First message', created_at: Date.now() } as Message,
-          { id: 'msg-2', role: 'assistant', content: 'Second message', created_at: Date.now() } as Message,
-          { id: 'msg-3', role: 'user', content: 'Third message', created_at: Date.now() } as Message,
+          {
+            id: 'msg-1',
+            role: 'user',
+            content: 'First message',
+            created_at: Date.now(),
+          } as Message,
+          {
+            id: 'msg-2',
+            role: 'assistant',
+            content: 'Second message',
+            created_at: Date.now(),
+          } as Message,
+          {
+            id: 'msg-3',
+            role: 'user',
+            content: 'Third message',
+            created_at: Date.now(),
+          } as Message,
         ],
       },
     ];
@@ -377,8 +407,8 @@ describe('ChatHistory', () => {
     render(<ChatHistory />);
 
     const buttons = screen.getAllByRole('button');
-    const menuButton = buttons.find(btn =>
-      btn.className.includes('h-8') && btn.className.includes('w-8')
+    const menuButton = buttons.find(
+      (btn) => btn.className.includes('h-8') && btn.className.includes('w-8')
     );
 
     expect(menuButton).toBeDefined();
@@ -511,7 +541,13 @@ describe('ChatHistory', () => {
     ];
 
     const mockConversationsWithPersona: Conversation[] = [
-      { id: 'conv-1', title: 'First Chat', created_at: Date.now(), updated_at: Date.now(), personaId: 'p1' },
+      {
+        id: 'conv-1',
+        title: 'First Chat',
+        created_at: Date.now(),
+        updated_at: Date.now(),
+        personaId: 'p1',
+      },
       { id: 'conv-2', title: 'Second Chat', created_at: Date.now(), updated_at: Date.now() },
     ];
 
@@ -747,8 +783,22 @@ describe('ChatHistory', () => {
 
   describe('Search with Persona', () => {
     const mockPersonasForSearch = [
-      { id: 'p1', name: '번역가', avatar: '🌐', systemPrompt: 'Translator', color: '#3b82f6', description: 'Translation assistant' },
-      { id: 'p2', name: '개발자', avatar: '👨\u200d💻', systemPrompt: 'Developer', color: '#10b981', description: 'Coding assistant' },
+      {
+        id: 'p1',
+        name: '번역가',
+        avatar: '🌐',
+        systemPrompt: 'Translator',
+        color: '#3b82f6',
+        description: 'Translation assistant',
+      },
+      {
+        id: 'p2',
+        name: '개발자',
+        avatar: '👨\u200d💻',
+        systemPrompt: 'Developer',
+        color: '#10b981',
+        description: 'Coding assistant',
+      },
     ];
 
     it('should display persona avatar in search results', async () => {
@@ -764,7 +814,12 @@ describe('ChatHistory', () => {
         {
           conversation: conversationWithPersona,
           matchedMessages: [
-            { id: 'msg-1', role: 'user', content: 'translate this', created_at: Date.now() } as Message,
+            {
+              id: 'msg-1',
+              role: 'user',
+              content: 'translate this',
+              created_at: Date.now(),
+            } as Message,
           ],
         },
       ];

@@ -128,10 +128,7 @@ export function AccountProfile() {
         throw new Error('토큰을 가져올 수 없습니다.');
       }
 
-      const result = await window.electronAPI.auth.syncFromGitHub(
-        tokenResult.data,
-        masterPassword
-      );
+      const result = await window.electronAPI.auth.syncFromGitHub(tokenResult.data, masterPassword);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to sync from GitHub');
@@ -223,9 +220,7 @@ export function AccountProfile() {
         <Card>
           <CardHeader>
             <CardTitle>GitHub 로그인</CardTitle>
-            <CardDescription>
-              GitHub 계정으로 로그인하여 설정을 동기화하세요.
-            </CardDescription>
+            <CardDescription>GitHub 계정으로 로그인하여 설정을 동기화하세요.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button onClick={handleLogin} disabled={isLoading} className="w-full">
@@ -253,17 +248,10 @@ export function AccountProfile() {
                 <div className="flex-1 space-y-1">
                   <h3 className="font-semibold">{user.name || user.login}</h3>
                   <p className="text-sm text-muted-foreground">@{user.login}</p>
-                  {user.email && (
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                  )}
+                  {user.email && <p className="text-sm text-muted-foreground">{user.email}</p>}
                   {user.bio && <p className="text-sm mt-2">{user.bio}</p>}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  disabled={isLoading}
-                >
+                <Button variant="outline" size="sm" onClick={handleLogout} disabled={isLoading}>
                   <LogOut className="mr-2 h-4 w-4" />
                   로그아웃
                 </Button>
@@ -290,8 +278,8 @@ export function AccountProfile() {
                   disabled={isSyncing}
                 />
                 <p className="text-sm text-muted-foreground">
-                  설정은 AES-256-GCM으로 암호화되어 저장됩니다. 이 비밀번호를 잊어버리면
-                  복구할 수 없습니다.
+                  설정은 AES-256-GCM으로 암호화되어 저장됩니다. 이 비밀번호를 잊어버리면 복구할 수
+                  없습니다.
                 </p>
               </div>
 

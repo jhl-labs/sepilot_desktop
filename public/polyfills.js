@@ -1,7 +1,7 @@
 // Critical polyfills for Node.js globals in browser
 // This file must be loaded before any other JavaScript
 
-(function() {
+(function () {
   'use strict';
 
   // Fix: global is not defined
@@ -20,28 +20,40 @@
       versions: {},
       platform: 'browser',
       browser: true,
-      cwd: function() { return '/'; },
-      nextTick: function(callback) {
+      cwd: function () {
+        return '/';
+      },
+      nextTick: function (callback) {
         var args = Array.prototype.slice.call(arguments, 1);
-        setTimeout(function() {
+        setTimeout(function () {
           callback.apply(null, args);
         }, 0);
       },
       argv: [],
-      binding: function() {
+      binding: function () {
         throw new Error('process.binding is not supported in browser');
       },
-      umask: function() { return 0; }
+      umask: function () {
+        return 0;
+      },
     };
   }
 
   // Fix: Buffer is not defined
   if (typeof Buffer === 'undefined') {
     window.Buffer = {
-      from: function(data) { return data; },
-      isBuffer: function() { return false; },
-      alloc: function(size) { return new Uint8Array(size); },
-      allocUnsafe: function(size) { return new Uint8Array(size); }
+      from: function (data) {
+        return data;
+      },
+      isBuffer: function () {
+        return false;
+      },
+      alloc: function (size) {
+        return new Uint8Array(size);
+      },
+      allocUnsafe: function (size) {
+        return new Uint8Array(size);
+      },
     };
   }
 

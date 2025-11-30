@@ -1,9 +1,4 @@
-import {
-  BaseLLMProvider,
-  LLMOptions,
-  LLMResponse,
-  StreamChunk,
-} from '../base';
+import { BaseLLMProvider, LLMOptions, LLMResponse, StreamChunk } from '../base';
 import { Message } from '@/types';
 import { fetchWithConfig } from '../http-utils';
 
@@ -16,25 +11,21 @@ export class OllamaProvider extends BaseLLMProvider {
     const mergedOptions = this.mergeOptions(options);
 
     try {
-      const response = await fetchWithConfig(
-        `${this.baseURL}/api/chat`,
-        this.config,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+      const response = await fetchWithConfig(`${this.baseURL}/api/chat`, this.config, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: this.formatMessagesForOllama(messages),
+          stream: false,
+          options: {
+            temperature: mergedOptions.temperature,
+            num_predict: mergedOptions.maxTokens,
           },
-          body: JSON.stringify({
-            model: this.model,
-            messages: this.formatMessagesForOllama(messages),
-            stream: false,
-            options: {
-              temperature: mergedOptions.temperature,
-              num_predict: mergedOptions.maxTokens,
-            },
-          }),
-        }
-      );
+        }),
+      });
 
       if (!response.ok) {
         const error = await response.text();
@@ -53,32 +44,25 @@ export class OllamaProvider extends BaseLLMProvider {
     }
   }
 
-  async *stream(
-    messages: Message[],
-    options?: LLMOptions
-  ): AsyncGenerator<StreamChunk> {
+  async *stream(messages: Message[], options?: LLMOptions): AsyncGenerator<StreamChunk> {
     const mergedOptions = this.mergeOptions(options);
 
     try {
-      const response = await fetchWithConfig(
-        `${this.baseURL}/api/chat`,
-        this.config,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+      const response = await fetchWithConfig(`${this.baseURL}/api/chat`, this.config, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: this.formatMessagesForOllama(messages),
+          stream: true,
+          options: {
+            temperature: mergedOptions.temperature,
+            num_predict: mergedOptions.maxTokens,
           },
-          body: JSON.stringify({
-            model: this.model,
-            messages: this.formatMessagesForOllama(messages),
-            stream: true,
-            options: {
-              temperature: mergedOptions.temperature,
-              num_predict: mergedOptions.maxTokens,
-            },
-          }),
-        }
-      );
+        }),
+      });
 
       if (!response.ok) {
         const error = await response.text();
@@ -128,10 +112,7 @@ export class OllamaProvider extends BaseLLMProvider {
 
   async getModels(): Promise<string[]> {
     try {
-      const response = await fetchWithConfig(
-        `${this.baseURL}/api/tags`,
-        this.config
-      );
+      const response = await fetchWithConfig(`${this.baseURL}/api/tags`, this.config);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch models: ${response.status}`);
@@ -147,10 +128,7 @@ export class OllamaProvider extends BaseLLMProvider {
 
   async validate(): Promise<boolean> {
     try {
-      const response = await fetchWithConfig(
-        `${this.baseURL}/api/tags`,
-        this.config
-      );
+      const response = await fetchWithConfig(`${this.baseURL}/api/tags`, this.config);
       return response.ok;
     } catch {
       return false;
@@ -168,9 +146,7 @@ export class OllamaProvider extends BaseLLMProvider {
         const imageBase64Strings = msg.images.map((image) => {
           const base64 = image.base64 || '';
           // Remove data:image/...;base64, prefix
-          return base64.includes('base64,')
-            ? base64.split('base64,')[1]
-            : base64;
+          return base64.includes('base64,') ? base64.split('base64,')[1] : base64;
         });
 
         console.log('[Ollama] Formatting message with images:', {

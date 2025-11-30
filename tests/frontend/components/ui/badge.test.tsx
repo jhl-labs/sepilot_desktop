@@ -59,9 +59,7 @@ describe('Badge', () => {
   });
 
   it('should merge custom className with variant classes', () => {
-    const { container } = render(
-      <Badge className="custom-class">Test</Badge>
-    );
+    const { container } = render(<Badge className="custom-class">Test</Badge>);
 
     const badge = container.firstChild as HTMLElement;
     expect(badge).toHaveClass('custom-class');

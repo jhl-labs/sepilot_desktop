@@ -245,9 +245,7 @@ describe('AlertDialog Components', () => {
       render(
         <AlertDialog open>
           <AlertDialogContent>
-            <AlertDialogDescription className="custom-desc">
-              Description
-            </AlertDialogDescription>
+            <AlertDialogDescription className="custom-desc">Description</AlertDialogDescription>
           </AlertDialogContent>
         </AlertDialog>
       );
@@ -358,9 +356,7 @@ describe('AlertDialog Components', () => {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone.
-              </AlertDialogDescription>
+              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>

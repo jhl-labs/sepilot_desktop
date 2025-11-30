@@ -36,12 +36,7 @@ interface DialogContentProps {
 
 export function DialogContent({ className, children, onClose }: DialogContentProps) {
   return (
-    <div
-      className={cn(
-        'relative w-full rounded-lg border bg-background p-6 shadow-lg',
-        className
-      )}
-    >
+    <div className={cn('relative w-full rounded-lg border bg-background p-6 shadow-lg', className)}>
       {onClose && (
         <button
           onClick={onClose}

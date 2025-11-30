@@ -74,12 +74,9 @@ describe('ContextMenu Components', () => {
     });
   });
 
-
   describe('ContextMenuLabel', () => {
     it('should render label', () => {
-      const { container } = render(
-        <ContextMenuLabel>Label Text</ContextMenuLabel>
-      );
+      const { container } = render(<ContextMenuLabel>Label Text</ContextMenuLabel>);
 
       expect(container.textContent).toContain('Label Text');
     });
@@ -109,18 +106,14 @@ describe('ContextMenu Components', () => {
 
   describe('ContextMenuSeparator', () => {
     it('should render separator', () => {
-      const { container } = render(
-        <ContextMenuSeparator />
-      );
+      const { container } = render(<ContextMenuSeparator />);
 
       const separator = container.firstChild as HTMLElement;
       expect(separator).toBeInTheDocument();
     });
 
     it('should apply custom className', () => {
-      render(
-        <ContextMenuSeparator className="custom-separator" data-testid="separator" />
-      );
+      render(<ContextMenuSeparator className="custom-separator" data-testid="separator" />);
 
       const separator = screen.getByTestId('separator');
       expect(separator).toHaveClass('custom-separator');
@@ -129,35 +122,26 @@ describe('ContextMenu Components', () => {
 
   describe('ContextMenuShortcut', () => {
     it('should render shortcut', () => {
-      render(
-        <ContextMenuShortcut>⌘K</ContextMenuShortcut>
-      );
+      render(<ContextMenuShortcut>⌘K</ContextMenuShortcut>);
 
       expect(screen.getByText('⌘K')).toBeInTheDocument();
     });
 
     it('should apply custom className', () => {
-      render(
-        <ContextMenuShortcut className="custom-shortcut">
-          ⌘S
-        </ContextMenuShortcut>
-      );
+      render(<ContextMenuShortcut className="custom-shortcut">⌘S</ContextMenuShortcut>);
 
       const shortcut = screen.getByText('⌘S');
       expect(shortcut).toHaveClass('custom-shortcut');
     });
 
     it('should have default styles', () => {
-      render(
-        <ContextMenuShortcut>⌘C</ContextMenuShortcut>
-      );
+      render(<ContextMenuShortcut>⌘C</ContextMenuShortcut>);
 
       const shortcut = screen.getByText('⌘C');
       expect(shortcut).toHaveClass('ml-auto');
       expect(shortcut).toHaveClass('text-xs');
     });
   });
-
 
   describe('Complete ContextMenu', () => {
     it('should render complete context menu', () => {
@@ -198,12 +182,8 @@ describe('ContextMenu Components', () => {
             <div>Trigger</div>
           </ContextMenuTrigger>
           <ContextMenuContent>
-            <ContextMenuCheckboxItem checked>
-              Option 1
-            </ContextMenuCheckboxItem>
-            <ContextMenuCheckboxItem>
-              Option 2
-            </ContextMenuCheckboxItem>
+            <ContextMenuCheckboxItem checked>Option 1</ContextMenuCheckboxItem>
+            <ContextMenuCheckboxItem>Option 2</ContextMenuCheckboxItem>
           </ContextMenuContent>
         </ContextMenu>
       );
@@ -219,12 +199,8 @@ describe('ContextMenu Components', () => {
           </ContextMenuTrigger>
           <ContextMenuContent>
             <ContextMenuRadioGroup value="option1">
-              <ContextMenuRadioItem value="option1">
-                Choice 1
-              </ContextMenuRadioItem>
-              <ContextMenuRadioItem value="option2">
-                Choice 2
-              </ContextMenuRadioItem>
+              <ContextMenuRadioItem value="option1">Choice 1</ContextMenuRadioItem>
+              <ContextMenuRadioItem value="option2">Choice 2</ContextMenuRadioItem>
             </ContextMenuRadioGroup>
           </ContextMenuContent>
         </ContextMenu>
@@ -265,9 +241,7 @@ describe('ContextMenu Components', () => {
           </ContextMenuTrigger>
           <ContextMenuContent>
             <ContextMenuSub>
-              <ContextMenuSubTrigger inset>
-                Indented Submenu
-              </ContextMenuSubTrigger>
+              <ContextMenuSubTrigger inset>Indented Submenu</ContextMenuSubTrigger>
               <ContextMenuSubContent>
                 <ContextMenuItem>Item</ContextMenuItem>
               </ContextMenuSubContent>

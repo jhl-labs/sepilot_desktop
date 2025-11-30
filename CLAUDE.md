@@ -1,6 +1,7 @@
 # SEPilot Desktop
 
 Electron + Next.js 기반 LLM Desktop Application
+
 - 다중 대화 세션 관리, 이미지 생성/해석, RAG, MCP Tool calling, LangGraph Agent 지원
 - Frontend: Next.js (React, TypeScript, shadcn/ui)
 - Backend: Electron Main Process (Node.js, TypeScript)
@@ -20,16 +21,19 @@ Electron + Next.js 기반 LLM Desktop Application
 ## 아키텍처 원칙
 
 ### Electron IPC 통신
+
 - **Frontend → Backend**: `window.electron.invoke('channel-name', data)`
 - **Backend → Frontend**: `event.sender.send('channel-name', data)`
 - 스트리밍 데이터는 반드시 IPC 이벤트로 전송 (HTTP 불가)
 - IPC 핸들러는 `electron/ipc/handlers/` 에 배치
 
 ### 데이터 저장
+
 - 임시/캐시: localStorage 사용 가능
 - 영구 저장: Electron fs API로 파일 시스템에 저장 (`app.getPath('userData')`)
 
 ### 컴포넌트 설계
+
 - 작고 재사용 가능한 컴포넌트 구성
 - shadcn/ui 컴포넌트 활용 (`components/ui/`)
 - 비즈니스 로직과 UI 분리
@@ -37,11 +41,13 @@ Electron + Next.js 기반 LLM Desktop Application
 ## 보안 및 커밋
 
 ### 필수 검증
+
 - API 키, 토큰, 비밀번호 하드코딩 금지
 - 사용자 경로, 개인정보 포함 시 커밋 전 경고
 - XSS, SQL Injection, Command Injection 방지
 
 ### 커밋 규칙
+
 - **한국어** 커밋 메시지 작성
 - Semantic Commit 형식: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`
 - 관련 파일끼리 그룹화하여 분할 커밋
@@ -96,6 +102,7 @@ Skills는 자동으로 적용되며, 별도로 호출할 필요 없음.
 - **debugger**: 버그 추적, 원인 분석, 수정 제안
 
 사용 예:
+
 ```
 "Use the architect subagent to design the multi-user feature"
 "Have the code-reviewer check electron/ipc/handlers/"

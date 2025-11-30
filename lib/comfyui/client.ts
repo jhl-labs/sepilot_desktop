@@ -59,9 +59,8 @@ export class ComfyUIClient {
       const workflow = this.buildWorkflow(options);
 
       // Network Config 가져오기
-      const networkConfigStr = typeof localStorage !== 'undefined'
-        ? localStorage.getItem('sepilot_network_config')
-        : null;
+      const networkConfigStr =
+        typeof localStorage !== 'undefined' ? localStorage.getItem('sepilot_network_config') : null;
       const networkConfig = networkConfigStr ? JSON.parse(networkConfigStr) : null;
 
       // Electron 환경: IPC를 통해 Main Process에서 호출
@@ -103,7 +102,9 @@ export class ComfyUIClient {
         };
       } else {
         // 브라우저 환경 (fallback): 직접 fetch
-        console.warn('[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied');
+        console.warn(
+          '[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied'
+        );
         const queueResponse = await fetch(`${this.config.httpUrl}/prompt`, {
           method: 'POST',
           headers: {
@@ -400,7 +401,9 @@ export class ComfyUIClient {
       return result.data;
     } else {
       // 브라우저 환경 (fallback): 직접 fetch
-      console.warn('[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied');
+      console.warn(
+        '[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied'
+      );
       const imageUrl = `${this.config.httpUrl}/view?filename=${imageInfo.filename}&subfolder=${imageInfo.subfolder || ''}&type=${imageInfo.type || 'output'}`;
 
       const response = await fetch(imageUrl);

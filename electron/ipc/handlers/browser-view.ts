@@ -145,7 +145,9 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
   // Handle navigation errors
   view.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
     if (errorCode !== -3) {
-      logger.error(`[BrowserView] Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`);
+      logger.error(
+        `[BrowserView] Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`
+      );
     }
   });
 
@@ -455,24 +457,27 @@ export function setupBrowserViewHandlers() {
     }
   });
 
-  ipcMain.handle('browser-view:set-bounds', async (event, bounds: { x: number; y: number; width: number; height: number }) => {
-    try {
-      if (!activeTabId) {
-        return { success: false, error: 'No active tab' };
-      }
+  ipcMain.handle(
+    'browser-view:set-bounds',
+    async (event, bounds: { x: number; y: number; width: number; height: number }) => {
+      try {
+        if (!activeTabId) {
+          return { success: false, error: 'No active tab' };
+        }
 
-      const tab = tabs.get(activeTabId);
-      if (!tab) {
-        return { success: false, error: 'Active tab not found' };
-      }
+        const tab = tabs.get(activeTabId);
+        if (!tab) {
+          return { success: false, error: 'Active tab not found' };
+        }
 
-      tab.view.setBounds(bounds);
-      return { success: true };
-    } catch (error) {
-      logger.error('Failed to set bounds:', error);
-      return { success: false, error: String(error) };
+        tab.view.setBounds(bounds);
+        return { success: true };
+      } catch (error) {
+        logger.error('Failed to set bounds:', error);
+        return { success: false, error: String(error) };
+      }
     }
-  });
+  );
 
   ipcMain.handle('browser-view:get-state', async () => {
     try {
@@ -689,7 +694,9 @@ export function setupBrowserViewHandlers() {
           ...snapshot,
           thumbnail: `sepilot-file:///${snapshot.thumbnail.replace(/\\/g, '/')}`,
           screenshotPath: `sepilot-file:///${snapshot.screenshotPath.replace(/\\/g, '/')}`,
-          mhtmlPath: snapshot.mhtmlPath ? `sepilot-file:///${snapshot.mhtmlPath.replace(/\\/g, '/')}` : '',
+          mhtmlPath: snapshot.mhtmlPath
+            ? `sepilot-file:///${snapshot.mhtmlPath.replace(/\\/g, '/')}`
+            : '',
         }));
 
         return {
@@ -823,62 +830,65 @@ export function setupBrowserViewHandlers() {
   // ===== Bookmarks Management =====
 
   // Add bookmark (current page or specific URL)
-  ipcMain.handle('browser-view:add-bookmark', async (event, options?: { url?: string; title?: string; folderId?: string }) => {
-    try {
-      // Ensure bookmarks directory exists
-      const bookmarksDir = getBookmarksDir();
-      await fs.mkdir(bookmarksDir, { recursive: true });
-
-      // Get current page info if not provided
-      let url = options?.url;
-      let title = options?.title;
-
-      if (!url && activeTabId) {
-        const tab = tabs.get(activeTabId);
-        if (tab) {
-          url = tab.view.webContents.getURL();
-          title = title || tab.view.webContents.getTitle() || 'Untitled';
-        }
-      }
-
-      if (!url) {
-        return { success: false, error: 'No URL provided and no active tab' };
-      }
-
-      // Create bookmark
-      const bookmark: Bookmark = {
-        id: randomUUID(),
-        url,
-        title: title || 'Untitled',
-        folderId: options?.folderId,
-        createdAt: Date.now(),
-      };
-
-      // Load existing bookmarks
-      let bookmarks: Bookmark[] = [];
+  ipcMain.handle(
+    'browser-view:add-bookmark',
+    async (event, options?: { url?: string; title?: string; folderId?: string }) => {
       try {
-        const data = await fs.readFile(getBookmarksMetaPath(), 'utf-8');
-        bookmarks = JSON.parse(data);
+        // Ensure bookmarks directory exists
+        const bookmarksDir = getBookmarksDir();
+        await fs.mkdir(bookmarksDir, { recursive: true });
+
+        // Get current page info if not provided
+        let url = options?.url;
+        let title = options?.title;
+
+        if (!url && activeTabId) {
+          const tab = tabs.get(activeTabId);
+          if (tab) {
+            url = tab.view.webContents.getURL();
+            title = title || tab.view.webContents.getTitle() || 'Untitled';
+          }
+        }
+
+        if (!url) {
+          return { success: false, error: 'No URL provided and no active tab' };
+        }
+
+        // Create bookmark
+        const bookmark: Bookmark = {
+          id: randomUUID(),
+          url,
+          title: title || 'Untitled',
+          folderId: options?.folderId,
+          createdAt: Date.now(),
+        };
+
+        // Load existing bookmarks
+        let bookmarks: Bookmark[] = [];
+        try {
+          const data = await fs.readFile(getBookmarksMetaPath(), 'utf-8');
+          bookmarks = JSON.parse(data);
+        } catch (error) {
+          logger.info('[Bookmark] Creating new bookmarks file');
+        }
+
+        // Add new bookmark
+        bookmarks.push(bookmark);
+
+        // Save updated bookmarks
+        await fs.writeFile(getBookmarksMetaPath(), JSON.stringify(bookmarks, null, 2));
+
+        logger.info(`Bookmark added: ${bookmark.id}`);
+        return {
+          success: true,
+          data: bookmark,
+        };
       } catch (error) {
-        logger.info('[Bookmark] Creating new bookmarks file');
+        logger.error('Failed to add bookmark:', error);
+        return { success: false, error: String(error) };
       }
-
-      // Add new bookmark
-      bookmarks.push(bookmark);
-
-      // Save updated bookmarks
-      await fs.writeFile(getBookmarksMetaPath(), JSON.stringify(bookmarks, null, 2));
-
-      logger.info(`Bookmark added: ${bookmark.id}`);
-      return {
-        success: true,
-        data: bookmark,
-      };
-    } catch (error) {
-      logger.error('Failed to add bookmark:', error);
-      return { success: false, error: String(error) };
     }
-  });
+  );
 
   // Get all bookmarks
   ipcMain.handle('browser-view:get-bookmarks', async () => {

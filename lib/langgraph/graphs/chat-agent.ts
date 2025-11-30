@@ -62,7 +62,10 @@ export class ChatAgentGraph {
     let iterations = 0;
 
     console.log('[AgentGraph] Starting stream with initial state');
-    console.log('[AgentGraph] Tool approval callback:', toolApprovalCallback ? 'provided' : 'not provided');
+    console.log(
+      '[AgentGraph] Tool approval callback:',
+      toolApprovalCallback ? 'provided' : 'not provided'
+    );
 
     let hasError = false;
     let errorMessage = '';
@@ -125,7 +128,10 @@ export class ChatAgentGraph {
       // 3. Human-in-the-loop: Tool approval
       const lastMessage = state.messages[state.messages.length - 1];
       if (toolApprovalCallback && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
-        console.log('[AgentGraph] Requesting tool approval for:', lastMessage.tool_calls.map(tc => tc.name));
+        console.log(
+          '[AgentGraph] Requesting tool approval for:',
+          lastMessage.tool_calls.map((tc) => tc.name)
+        );
 
         // Yield tool approval request event
         yield {
@@ -236,7 +242,10 @@ export class ChatAgentGraph {
     })();
 
     if (finalReportMessage) {
-      console.log('[AgentGraph] Generating final report message:', finalReportMessage.content.substring(0, 100));
+      console.log(
+        '[AgentGraph] Generating final report message:',
+        finalReportMessage.content.substring(0, 100)
+      );
       yield {
         reporter: {
           messages: [finalReportMessage],

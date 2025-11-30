@@ -89,9 +89,7 @@ export function ModelListView({
     setIsLoadingModels(false);
 
     if (errors.length > 0) {
-      const errorMsg = errors
-        .map((e) => `- ${e.connection}: ${e.error}`)
-        .join('\n');
+      const errorMsg = errors.map((e) => `- ${e.connection}: ${e.error}`).join('\n');
       setLoadError(`일부 Connection에서 모델을 가져오지 못했습니다:\n${errorMsg}`);
     } else if (allModels.length === 0) {
       setLoadError('활성화된 Connection에서 모델을 가져오지 못했습니다.');
@@ -103,9 +101,7 @@ export function ModelListView({
 
   const handleAddModel = (availableModel: AvailableModel) => {
     const existingModel = models.find(
-      (m) =>
-        m.connectionId === availableModel.connectionId &&
-        m.modelId === availableModel.modelId
+      (m) => m.connectionId === availableModel.connectionId && m.modelId === availableModel.modelId
     );
 
     if (existingModel) {
@@ -148,11 +144,11 @@ export function ModelListView({
   const handleToggleTag = (modelId: string, tag: ModelRoleTag) => {
     onModelsChange(
       models.map((m) => {
-        if (m.id !== modelId) {return m;}
+        if (m.id !== modelId) {
+          return m;
+        }
 
-        const tags = m.tags.includes(tag)
-          ? m.tags.filter((t) => t !== tag)
-          : [...m.tags, tag];
+        const tags = m.tags.includes(tag) ? m.tags.filter((t) => t !== tag) : [...m.tags, tag];
 
         return { ...m, tags };
       })
@@ -161,9 +157,7 @@ export function ModelListView({
 
   // Update model configuration
   const handleUpdateModel = (modelId: string, updates: Partial<ModelConfig>) => {
-    onModelsChange(
-      models.map((m) => (m.id === modelId ? { ...m, ...updates } : m))
-    );
+    onModelsChange(models.map((m) => (m.id === modelId ? { ...m, ...updates } : m)));
   };
 
   // Set active model
@@ -183,9 +177,7 @@ export function ModelListView({
 
   const isModelAdded = (availableModel: AvailableModel) => {
     return models.some(
-      (m) =>
-        m.connectionId === availableModel.connectionId &&
-        m.modelId === availableModel.modelId
+      (m) => m.connectionId === availableModel.connectionId && m.modelId === availableModel.modelId
     );
   };
 
@@ -210,13 +202,9 @@ export function ModelListView({
           </Button>
         </div>
 
-        {loadError && (
-          <p className="text-sm text-destructive">{loadError}</p>
-        )}
+        {loadError && <p className="text-sm text-destructive">{loadError}</p>}
 
-        {duplicateError && (
-          <p className="text-sm text-destructive">{duplicateError}</p>
-        )}
+        {duplicateError && <p className="text-sm text-destructive">{duplicateError}</p>}
 
         {availableModels.length > 0 && (
           <div className="max-h-60 overflow-y-auto space-y-1 border rounded-lg p-2">
@@ -414,9 +402,7 @@ function ModelSettings({
 
       {/* Temperature */}
       <div className="space-y-2">
-        <Label htmlFor={`temperature-${model.id}`}>
-          Temperature ({model.temperature ?? 0.7})
-        </Label>
+        <Label htmlFor={`temperature-${model.id}`}>Temperature ({model.temperature ?? 0.7})</Label>
         <input
           id={`temperature-${model.id}`}
           type="range"

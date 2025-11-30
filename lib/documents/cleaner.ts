@@ -45,13 +45,13 @@ Provide only the cleaned content:`;
           id: 'system-1',
           role: 'system',
           content: systemPrompt,
-          created_at: Date.now()
+          created_at: Date.now(),
         },
         {
           id: 'user-1',
           role: 'user',
           content: userPrompt,
-          created_at: Date.now()
+          created_at: Date.now(),
         },
       ],
       {
