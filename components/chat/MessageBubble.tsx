@@ -206,13 +206,23 @@ export function MessageBubble({
                 onChange={(e) => setEditContent(e.target.value)}
                 className="min-h-[100px] text-sm resize-none"
                 autoFocus
+                aria-label="메시지 편집"
               />
               <div className="flex gap-2 justify-end">
-                <Button size="sm" variant="outline" onClick={handleEditCancel}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleEditCancel}
+                  aria-label="편집 취소"
+                >
                   <X className="h-3 w-3 mr-1" />
                   취소
                 </Button>
-                <Button size="sm" onClick={handleEditSave}>
+                <Button
+                  size="sm"
+                  onClick={handleEditSave}
+                  aria-label="편집 저장"
+                >
                   <Check className="h-3 w-3 mr-1" />
                   저장
                 </Button>
@@ -381,7 +391,11 @@ export function MessageBubble({
 
       {/* Action Buttons - Float on top right */}
       {!isEditing && isHovered && (
-        <div className="absolute top-4 right-4 flex gap-1 bg-background/80 backdrop-blur-sm rounded-lg border shadow-sm p-0.5">
+        <div
+          className="absolute top-4 right-4 flex gap-1 bg-background/80 backdrop-blur-sm rounded-lg border shadow-sm p-0.5"
+          role="toolbar"
+          aria-label="메시지 작업"
+        >
           {/* 복사 버튼 - 모든 메시지에 표시 */}
           <Button
             size="icon"
@@ -389,6 +403,7 @@ export function MessageBubble({
             onClick={handleCopy}
             className="h-7 w-7 rounded-md hover:bg-muted"
             title={copied ? '복사됨' : '복사'}
+            aria-label={copied ? '메시지 복사됨' : '메시지 복사'}
           >
             {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
           </Button>
@@ -401,6 +416,7 @@ export function MessageBubble({
               onClick={() => setIsEditing(true)}
               className="h-7 w-7 rounded-md hover:bg-muted"
               title="편집"
+              aria-label="메시지 편집"
             >
               <Edit2 className="h-3.5 w-3.5" />
             </Button>
@@ -414,6 +430,7 @@ export function MessageBubble({
               onClick={handleRegenerate}
               className="h-7 w-7 rounded-md hover:bg-muted"
               title="재생성"
+              aria-label="응답 재생성"
             >
               <RefreshCw className="h-3.5 w-3.5" />
             </Button>

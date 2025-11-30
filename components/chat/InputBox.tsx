@@ -1553,6 +1553,8 @@ export function InputBox() {
             className="flex-1 min-h-[52px] max-h-[200px] resize-none border-0 bg-transparent px-4 py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
             disabled={isStreaming}
             rows={1}
+            aria-label="메시지 입력"
+            aria-disabled={isStreaming}
           />
           <div className="flex items-center gap-1 pb-2 pr-2">
             {/* Thinking Mode Selector */}
@@ -1719,6 +1721,7 @@ export function InputBox() {
                 size="icon"
                 className="h-9 w-9 rounded-xl shrink-0"
                 title="이미지 추가"
+                aria-label="이미지 파일 선택"
                 disabled={isStreaming}
               >
                 <ImagePlus className="h-4 w-4" />
@@ -1741,6 +1744,8 @@ export function InputBox() {
                   enableImageGeneration ? 'bg-primary/10 text-primary hover:bg-primary/20' : ''
                 }`}
                 title={enableImageGeneration ? '이미지 생성 비활성화' : '이미지 생성 활성화 (Tools 자동 활성화)'}
+                aria-label={enableImageGeneration ? '이미지 생성 비활성화' : '이미지 생성 활성화'}
+                aria-pressed={enableImageGeneration}
                 disabled={isStreaming}
               >
                 <Sparkles className="h-4 w-4" />
@@ -1755,6 +1760,7 @@ export function InputBox() {
                 size="icon"
                 className="h-9 w-9 rounded-xl shrink-0"
                 title="중지 (Esc)"
+                aria-label="스트리밍 중지"
               >
                 <Square className="h-4 w-4" />
               </Button>
@@ -1765,6 +1771,7 @@ export function InputBox() {
                 size="icon"
                 className="h-9 w-9 rounded-xl shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-50"
                 title="전송 (Enter)"
+                aria-label="메시지 전송"
                 data-send-button
               >
                 <Send className="h-4 w-4" />
