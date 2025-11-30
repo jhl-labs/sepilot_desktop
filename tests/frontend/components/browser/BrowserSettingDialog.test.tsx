@@ -228,7 +228,7 @@ describe('BrowserSettingDialog', () => {
     expect(mockElectronAPI.shell.openExternal).not.toHaveBeenCalled();
   });
 
-  it('should show future settings message', async () => {
+  it('should show font settings section', async () => {
     (mockElectronAPI.browserView.getBrowserSettings as jest.Mock).mockResolvedValue({
       success: true,
       data: {
@@ -240,7 +240,9 @@ describe('BrowserSettingDialog', () => {
     render(<BrowserSettingDialog open={true} onOpenChange={jest.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText('추가 설정이 향후 지원될 예정입니다.')).toBeInTheDocument();
+      expect(screen.getByText('Browser Chat 폰트 설정')).toBeInTheDocument();
+      expect(screen.getByText('폰트')).toBeInTheDocument();
+      expect(screen.getByText('폰트 크기 (px)')).toBeInTheDocument();
     });
   });
 
