@@ -203,6 +203,12 @@ export function setupLangGraphHandlers() {
               break;
             }
 
+            // Guard: Skip null/undefined events
+            if (!streamEvent) {
+              logger.warn(`[LangGraph IPC] Received null/undefined streamEvent for conversationId: ${streamId}`);
+              continue;
+            }
+
             // Skip tool_approval_request and tool_approval_result events
             // These are handled internally by the callback
             if (streamEvent.type === 'tool_approval_request' || streamEvent.type === 'tool_approval_result') {
