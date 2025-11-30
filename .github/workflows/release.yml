@@ -117,25 +117,6 @@ jobs:
           sha256sum *.yml >> SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      - name: Import GPG key
-        if: secrets.GPG_PRIVATE_KEY != ''
-        run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-          gpg --list-keys
-
-      - name: Sign release files with GPG
-        if: secrets.GPG_PRIVATE_KEY != ''
-        run: |
-          cd artifacts/windows-build
-          # Sign all .exe and .yml files
-          for file in *.exe *.yml SHA256SUMS.txt; do
-            if [ -f "$file" ]; then
-              gpg --batch --yes --detach-sign --armor "$file"
-              echo "Signed: $file"
-            fi
-          done
-          ls -la
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -143,7 +124,6 @@ jobs:
             artifacts/windows-build/*.exe
             artifacts/windows-build/*.exe.blockmap
             artifacts/windows-build/*.yml
-            artifacts/windows-build/*.asc
             artifacts/windows-build/SHA256SUMS.txt
           draft: false
           prerelease: false
@@ -163,15 +143,6 @@ jobs:
             **SHA256 체크섬 확인:**
             ```bash
             sha256sum -c SHA256SUMS.txt
-            ```
-
-            **GPG 서명 검증 (선택사항):**
-            ```bash
-            # GPG 공개키 가져오기
-            gpg --keyserver keys.openpgp.org --recv-keys YOUR_KEY_ID
-
-            # 서명 검증
-            gpg --verify SEPilot-Setup-*.exe.asc SEPilot-Setup-*.exe
             ```
 
             ### ⚙️ 자동 업데이트
