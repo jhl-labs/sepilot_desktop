@@ -3,6 +3,7 @@
  * - Migrates from LLMConfig (v1) to LLMConfigV2 (Connection-based architecture)
  */
 
+import { nanoid } from 'nanoid';
 import { LLMConfig, LLMConfigV2, LLMConnection, ModelConfig } from '@/types';
 
 /**
@@ -13,7 +14,7 @@ export function migrateLLMConfig(oldConfig: LLMConfig): LLMConfigV2 {
   const models: ModelConfig[] = [];
 
   // Create main connection from base LLM config
-  const mainConnectionId = `conn-main-${Date.now()}`;
+  const mainConnectionId = `conn-main-${nanoid()}`;
   connections.push({
     id: mainConnectionId,
     name: 'Main LLM',
@@ -25,7 +26,7 @@ export function migrateLLMConfig(oldConfig: LLMConfig): LLMConfigV2 {
   });
 
   // Create base model config
-  const baseModelId = `model-base-${Date.now()}`;
+  const baseModelId = `model-base-${nanoid()}`;
   models.push({
     id: baseModelId,
     connectionId: mainConnectionId,
@@ -45,7 +46,7 @@ export function migrateLLMConfig(oldConfig: LLMConfig): LLMConfigV2 {
       oldConfig.vision.provider !== oldConfig.provider ||
       oldConfig.vision.baseURL !== oldConfig.baseURL ||
       oldConfig.vision.apiKey
-        ? `conn-vision-${Date.now()}`
+        ? `conn-vision-${nanoid()}`
         : mainConnectionId;
 
     // Create separate connection if vision uses different provider/baseURL/apiKey
@@ -61,7 +62,7 @@ export function migrateLLMConfig(oldConfig: LLMConfig): LLMConfigV2 {
       });
     }
 
-    const visionModelId = `model-vision-${Date.now()}`;
+    const visionModelId = `model-vision-${nanoid()}`;
     models.push({
       id: visionModelId,
       connectionId: visionConnectionId,
@@ -80,7 +81,7 @@ export function migrateLLMConfig(oldConfig: LLMConfig): LLMConfigV2 {
       oldConfig.autocomplete.provider !== oldConfig.provider ||
       oldConfig.autocomplete.baseURL !== oldConfig.baseURL ||
       oldConfig.autocomplete.apiKey
-        ? `conn-autocomplete-${Date.now()}`
+        ? `conn-autocomplete-${nanoid()}`
         : mainConnectionId;
 
     // Create separate connection if autocomplete uses different provider/baseURL/apiKey
@@ -96,7 +97,7 @@ export function migrateLLMConfig(oldConfig: LLMConfig): LLMConfigV2 {
       });
     }
 
-    const autocompleteModelId = `model-autocomplete-${Date.now()}`;
+    const autocompleteModelId = `model-autocomplete-${nanoid()}`;
     models.push({
       id: autocompleteModelId,
       connectionId: autocompleteConnectionId,

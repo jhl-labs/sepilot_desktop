@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { nanoid } from 'nanoid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -88,6 +89,8 @@ export function ModelListView({
   };
 
   // Add model to configuration
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+
   const handleAddModel = (availableModel: AvailableModel) => {
     const existingModel = models.find(
       (m) =>
@@ -96,11 +99,15 @@ export function ModelListView({
     );
 
     if (existingModel) {
-      return; // Already added
+      setDuplicateError(`"${availableModel.modelId}"는 이미 추가되었습니다.`);
+      setTimeout(() => setDuplicateError(null), 3000);
+      return;
     }
 
+    setDuplicateError(null);
+
     const newModel: ModelConfig = {
-      id: `model-${Date.now()}`,
+      id: `model-${nanoid()}`,
       connectionId: availableModel.connectionId,
       modelId: availableModel.modelId,
       tags: [],
@@ -195,6 +202,10 @@ export function ModelListView({
 
         {loadError && (
           <p className="text-sm text-destructive">{loadError}</p>
+        )}
+
+        {duplicateError && (
+          <p className="text-sm text-destructive">{duplicateError}</p>
         )}
 
         {availableModels.length > 0 && (
@@ -414,8 +425,15 @@ function ModelSettings({
         <Input
           id={`max-tokens-${model.id}`}
           type="number"
+          min={1}
+          max={100000}
           value={model.maxTokens ?? 2000}
-          onChange={(e) => onUpdate({ maxTokens: parseInt(e.target.value, 10) })}
+          onChange={(e) => {
+            const value = parseInt(e.target.value, 10);
+            if (!isNaN(value) && value > 0) {
+              onUpdate({ maxTokens: value });
+            }
+          }}
         />
       </div>
 
@@ -427,8 +445,15 @@ function ModelSettings({
             <Input
               id={`max-image-tokens-${model.id}`}
               type="number"
+              min={1}
+              max={100000}
               value={model.maxImageTokens ?? 4096}
-              onChange={(e) => onUpdate({ maxImageTokens: parseInt(e.target.value, 10) })}
+              onChange={(e) => {
+                const value = parseInt(e.target.value, 10);
+                if (!isNaN(value) && value > 0) {
+                  onUpdate({ maxImageTokens: value });
+                }
+              }}
             />
           </div>
           <div className="flex items-center space-x-2">
@@ -453,8 +478,15 @@ function ModelSettings({
           <Input
             id={`debounce-${model.id}`}
             type="number"
+            min={0}
+            max={5000}
             value={model.debounceMs ?? 300}
-            onChange={(e) => onUpdate({ debounceMs: parseInt(e.target.value, 10) })}
+            onChange={(e) => {
+              const value = parseInt(e.target.value, 10);
+              if (!isNaN(value) && value >= 0) {
+                onUpdate({ debounceMs: value });
+              }
+            }}
           />
         </div>
       )}

@@ -86,6 +86,12 @@ export function LLMSettingsTabV2({
           <ConnectionManager
             connections={config.connections}
             onConnectionsChange={handleConnectionsChange}
+            models={config.models}
+            onModelsChange={handleModelsChange}
+            activeBaseModelId={config.activeBaseModelId}
+            activeVisionModelId={config.activeVisionModelId}
+            activeAutocompleteModelId={config.activeAutocompleteModelId}
+            onActiveModelsChange={handleActiveModelsChange}
           />
         )}
 

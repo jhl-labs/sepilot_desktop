@@ -1,18 +1,34 @@
 'use client';
 
 import { useState } from 'react';
+import { nanoid } from 'nanoid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LLMConnection } from '@/types';
+import { LLMConnection, ModelConfig } from '@/types';
 import { Plus, Trash2, Edit2, Check, X } from 'lucide-react';
 
 interface ConnectionManagerProps {
   connections: LLMConnection[];
   onConnectionsChange: (connections: LLMConnection[]) => void;
+  models?: ModelConfig[]; // For reference integrity check
+  onModelsChange?: (models: ModelConfig[]) => void;
+  activeBaseModelId?: string;
+  activeVisionModelId?: string;
+  activeAutocompleteModelId?: string;
+  onActiveModelsChange?: (baseId?: string, visionId?: string, autocompleteId?: string) => void;
 }
 
-export function ConnectionManager({ connections, onConnectionsChange }: ConnectionManagerProps) {
+export function ConnectionManager({
+  connections,
+  onConnectionsChange,
+  models = [],
+  onModelsChange,
+  activeBaseModelId,
+  activeVisionModelId,
+  activeAutocompleteModelId,
+  onActiveModelsChange,
+}: ConnectionManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<LLMConnection>>({
@@ -25,16 +41,18 @@ export function ConnectionManager({ connections, onConnectionsChange }: Connecti
   });
 
   const handleAdd = () => {
-    if (!formData.name?.trim() || !formData.baseURL?.trim() || !formData.apiKey?.trim()) {
+    const { name, baseURL, apiKey, provider } = formData;
+
+    if (!name?.trim() || !baseURL?.trim() || !apiKey?.trim()) {
       return;
     }
 
     const newConnection: LLMConnection = {
-      id: `conn-${Date.now()}`,
-      name: formData.name,
-      provider: formData.provider || 'openai',
-      baseURL: formData.baseURL,
-      apiKey: formData.apiKey,
+      id: `conn-${nanoid()}`,
+      name: name.trim(),
+      provider: provider || 'openai',
+      baseURL: baseURL.trim(),
+      apiKey: apiKey.trim(),
       customHeaders: formData.customHeaders || {},
       enabled: formData.enabled ?? true,
     };
@@ -57,7 +75,10 @@ export function ConnectionManager({ connections, onConnectionsChange }: Connecti
   };
 
   const handleSaveEdit = () => {
-    if (!editingId || !formData.name?.trim() || !formData.baseURL?.trim() || !formData.apiKey?.trim()) {
+    if (!editingId) return;
+
+    const { name, provider, baseURL, apiKey } = formData;
+    if (!name?.trim() || !baseURL?.trim() || !apiKey?.trim()) {
       return;
     }
 
@@ -66,10 +87,10 @@ export function ConnectionManager({ connections, onConnectionsChange }: Connecti
         conn.id === editingId
           ? {
               ...conn,
-              name: formData.name!,
-              provider: formData.provider!,
-              baseURL: formData.baseURL!,
-              apiKey: formData.apiKey!,
+              name: name.trim(),
+              provider: provider || 'openai',
+              baseURL: baseURL.trim(),
+              apiKey: apiKey.trim(),
               customHeaders: formData.customHeaders || {},
               enabled: formData.enabled ?? true,
             }
@@ -101,6 +122,47 @@ export function ConnectionManager({ connections, onConnectionsChange }: Connecti
   };
 
   const handleDelete = (id: string) => {
+    // Find models that reference this connection
+    const referencedModels = models.filter((m) => m.connectionId === id);
+
+    if (referencedModels.length > 0) {
+      const modelNames = referencedModels
+        .map((m) => m.displayName || m.modelId)
+        .join(', ');
+
+      const confirmed = window.confirm(
+        `이 Connection을 사용하는 ${referencedModels.length}개의 모델이 있습니다:\n${modelNames}\n\n삭제하시겠습니까? (모델도 함께 삭제됩니다)`
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      // Delete associated models
+      if (onModelsChange) {
+        const modelIdsToDelete = referencedModels.map((m) => m.id);
+        onModelsChange(models.filter((m) => !modelIdsToDelete.includes(m.id)));
+
+        // Clear active model selections if they reference deleted models
+        if (onActiveModelsChange) {
+          const newBaseId = modelIdsToDelete.includes(activeBaseModelId || '')
+            ? undefined
+            : activeBaseModelId;
+          const newVisionId = modelIdsToDelete.includes(activeVisionModelId || '')
+            ? undefined
+            : activeVisionModelId;
+          const newAutocompleteId = modelIdsToDelete.includes(activeAutocompleteModelId || '')
+            ? undefined
+            : activeAutocompleteModelId;
+
+          if (newBaseId !== activeBaseModelId || newVisionId !== activeVisionModelId || newAutocompleteId !== activeAutocompleteModelId) {
+            onActiveModelsChange(newBaseId, newVisionId, newAutocompleteId);
+          }
+        }
+      }
+    }
+
+    // Delete connection
     onConnectionsChange(connections.filter((conn) => conn.id !== id));
   };
 
