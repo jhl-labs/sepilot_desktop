@@ -84,6 +84,7 @@ const nextConfig = {
         util: false,
         buffer: false,
         process: false,
+        module: false,
       };
     } else {
       // Server-side: Externalize SQLite
