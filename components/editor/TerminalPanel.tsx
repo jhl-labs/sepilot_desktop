@@ -189,7 +189,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       write(session.sessionId, data);
     });
 
-    const tabId = `tab-${Date.now()}`;
+    const tabId = `tab-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     // 기존 탭 비활성화 및 새 탭 추가
     setTabs((prevTabs) => {
