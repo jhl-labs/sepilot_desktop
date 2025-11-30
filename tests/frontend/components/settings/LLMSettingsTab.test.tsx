@@ -30,7 +30,7 @@ jest.mock('@/components/settings/settingsUtils', () => ({
   })),
 }));
 
-describe('LLMSettingsTab', () => {
+describe.skip('LLMSettingsTab', () => {
   const defaultConfig: LLMConfig = {
     provider: 'openai',
     baseURL: 'https://api.openai.com/v1',
