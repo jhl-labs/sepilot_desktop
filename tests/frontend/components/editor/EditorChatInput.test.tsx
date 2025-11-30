@@ -615,4 +615,420 @@ describe('EditorChatInput', () => {
       expect(innerContainer).toBeInTheDocument();
     });
   });
+
+  describe('Electron Environment - Editor Agent', () => {
+    const mockAbort = jest.fn();
+    const mockStream = jest.fn();
+    const mockOnStreamEvent = jest.fn();
+    let eventHandlerCleanup: (() => void) | null = null;
+
+    beforeEach(() => {
+      // Mock Electron environment
+      const { isElectron } = require('@/lib/platform');
+      (isElectron as jest.Mock).mockReturnValue(true);
+
+      // Setup electronAPI mock
+      eventHandlerCleanup = jest.fn();
+      mockOnStreamEvent.mockReturnValue(eventHandlerCleanup);
+
+      (window as any).electronAPI = {
+        langgraph: {
+          abort: mockAbort,
+          stream: mockStream,
+          onStreamEvent: mockOnStreamEvent,
+        },
+      };
+
+      jest.clearAllMocks();
+
+      // Setup store with editor-specific properties
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        addEditorChatMessage: mockAddEditorChatMessage,
+        updateEditorChatMessage: mockUpdateEditorChatMessage,
+        editorChatMessages: [],
+        workingDirectory: '/test/workspace',
+        openFiles: [],
+      });
+
+      (useChatStore as any).getState = jest.fn(() => ({
+        editorChatMessages: [
+          { id: 'msg-1', role: 'user', content: 'Test', created_at: Date.now() },
+          { id: 'msg-2', role: 'assistant', content: '', created_at: Date.now() },
+        ],
+      }));
+    });
+
+    afterEach(() => {
+      const { isElectron } = require('@/lib/platform');
+      (isElectron as jest.Mock).mockReturnValue(false);
+      delete (window as any).electronAPI;
+    });
+
+    it('should call Editor Agent when sending message in Electron', async () => {
+      const user = userEvent.setup();
+      mockStream.mockResolvedValue(undefined);
+
+      render(<EditorChatInput />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test Editor Agent');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      await waitFor(() => {
+        expect(mockStream).toHaveBeenCalled();
+      });
+
+      // Check stream was called with correct parameters
+      const streamCall = mockStream.mock.calls[0];
+      expect(streamCall[0]).toEqual({
+        thinkingMode: 'editor-agent',
+        enableRAG: false,
+        enableTools: true,
+        enableImageGeneration: false,
+      });
+      expect(streamCall[2]).toBe('editor-chat-temp');
+      expect(streamCall[5]).toBe('/test/workspace'); // workingDirectory
+    });
+
+    it('should handle streaming events from Editor Agent', async () => {
+      const user = userEvent.setup();
+      let capturedEventHandler: ((event: any) => void) | null = null;
+
+      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
+        capturedEventHandler = handler;
+        return eventHandlerCleanup;
+      });
+
+      mockStream.mockImplementation(async () => {
+        // Simulate streaming events
+        if (capturedEventHandler) {
+          capturedEventHandler({ type: 'streaming', chunk: 'Hello' });
+          capturedEventHandler({ type: 'streaming', chunk: ' World' });
+        }
+      });
+
+      render(<EditorChatInput />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      await waitFor(() => {
+        expect(mockUpdateEditorChatMessage).toHaveBeenCalled();
+      });
+
+      // Check that content was accumulated
+      expect(mockUpdateEditorChatMessage).toHaveBeenCalledWith('msg-2', {
+        content: expect.stringContaining('Hello'),
+      });
+    });
+
+    it('should handle progress events from Editor Agent', async () => {
+      const user = userEvent.setup();
+      let capturedEventHandler: ((event: any) => void) | null = null;
+
+      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
+        capturedEventHandler = handler;
+        return eventHandlerCleanup;
+      });
+
+      mockStream.mockImplementation(async () => {
+        if (capturedEventHandler) {
+          capturedEventHandler({
+            type: 'progress',
+            data: {
+              iteration: 2,
+              maxIterations: 50,
+              status: 'thinking',
+              message: 'Analyzing code...',
+            },
+          });
+        }
+      });
+
+      render(<EditorChatInput />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      await waitFor(() => {
+        expect(mockOnStreamEvent).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle node events from Editor Agent', async () => {
+      const user = userEvent.setup();
+      let capturedEventHandler: ((event: any) => void) | null = null;
+
+      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
+        capturedEventHandler = handler;
+        return eventHandlerCleanup;
+      });
+
+      mockStream.mockImplementation(async () => {
+        if (capturedEventHandler) {
+          capturedEventHandler({
+            type: 'node',
+            data: {
+              messages: [
+                { role: 'user', content: 'Test' },
+                { role: 'assistant', content: 'Node response' },
+              ],
+            },
+          });
+        }
+      });
+
+      render(<EditorChatInput />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      await waitFor(() => {
+        expect(mockUpdateEditorChatMessage).toHaveBeenCalledWith('msg-2', {
+          content: 'Node response',
+        });
+      });
+    });
+
+    it('should cleanup event listeners after streaming', async () => {
+      const user = userEvent.setup();
+      mockStream.mockResolvedValue(undefined);
+
+      render(<EditorChatInput />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      await waitFor(() => {
+        expect(eventHandlerCleanup).toHaveBeenCalled();
+      });
+    });
+
+    it('should call abort when stop button clicked in Electron', async () => {
+      const user = userEvent.setup();
+      mockAbort.mockResolvedValue(undefined);
+
+      // Make stream keep running
+      mockStream.mockImplementation(async () => {
+        return new Promise(() => {});
+      });
+
+      render(<EditorChatInput />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      // Wait for stop button to appear
+      const stopButton = await screen.findByRole(
+        'button',
+        { name: /중지/ },
+        { timeout: 3000 }
+      );
+      await user.click(stopButton);
+
+      await waitFor(() => {
+        expect(mockAbort).toHaveBeenCalledWith('editor-chat-temp');
+      });
+    });
+
+    it('should handle abort errors gracefully', async () => {
+      const user = userEvent.setup();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockAbort.mockRejectedValue(new Error('Abort failed'));
+
+      mockStream.mockImplementation(async () => {
+        return new Promise(() => {});
+      });
+
+      render(<EditorChatInput />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      const stopButton = await screen.findByRole(
+        'button',
+        { name: /중지/ },
+        { timeout: 3000 }
+      );
+      await user.click(stopButton);
+
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('[EditorChatInput] Failed to abort stream:'),
+          expect.anything()
+        );
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should handle null stream events', async () => {
+      const user = userEvent.setup();
+      let capturedEventHandler: ((event: any) => void) | null = null;
+
+      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
+        capturedEventHandler = handler;
+        return eventHandlerCleanup;
+      });
+
+      mockStream.mockImplementation(async () => {
+        if (capturedEventHandler) {
+          // Send null event (should be ignored - line 111)
+          capturedEventHandler(null);
+          capturedEventHandler(undefined);
+          // Then send valid event
+          capturedEventHandler({ type: 'streaming', chunk: 'test' });
+        }
+      });
+
+      render(<EditorChatInput />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      await waitFor(() => {
+        expect(mockUpdateEditorChatMessage).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle stream event errors gracefully', async () => {
+      const user = userEvent.setup();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      let capturedEventHandler: ((event: any) => void) | null = null;
+
+      // Store original getState
+      const originalGetState = (useChatStore as any).getState;
+
+      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
+        capturedEventHandler = handler;
+        return eventHandlerCleanup;
+      });
+
+      // Mock to throw error
+      (useChatStore as any).getState = jest.fn(() => {
+        throw new Error('getState error');
+      });
+
+      mockStream.mockImplementation(async () => {
+        if (capturedEventHandler) {
+          capturedEventHandler({ type: 'streaming', chunk: 'test' });
+        }
+      });
+
+      render(<EditorChatInput />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('[EditorChatInput] Stream event error:'),
+          expect.anything()
+        );
+      });
+
+      // Restore original getState
+      (useChatStore as any).getState = originalGetState;
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should ignore events when aborted', async () => {
+      const user = userEvent.setup();
+      let capturedEventHandler: ((event: any) => void) | null = null;
+
+      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
+        capturedEventHandler = handler;
+        return eventHandlerCleanup;
+      });
+
+      // Keep stream open for abort test
+      mockStream.mockImplementation(async () => {
+        return new Promise(() => {});
+      });
+
+      render(<EditorChatInput />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      // Wait for stop button
+      const stopButton = await screen.findByRole(
+        'button',
+        { name: /중지/ },
+        { timeout: 3000 }
+      );
+      await user.click(stopButton);
+
+      // Clear previous calls
+      mockUpdateEditorChatMessage.mockClear();
+
+      // Now send event after abort - should be ignored
+      if (capturedEventHandler) {
+        capturedEventHandler({ type: 'streaming', chunk: 'Should not appear' });
+      }
+
+      // Wait a bit to ensure no update happens
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(mockUpdateEditorChatMessage).not.toHaveBeenCalled();
+    });
+
+    it('should pass workingDirectory to stream call', async () => {
+      const user = userEvent.setup();
+      mockStream.mockResolvedValue(undefined);
+
+      // Set different workingDirectory
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        addEditorChatMessage: mockAddEditorChatMessage,
+        updateEditorChatMessage: mockUpdateEditorChatMessage,
+        editorChatMessages: [],
+        workingDirectory: '/custom/path',
+        openFiles: [],
+      });
+
+      render(<EditorChatInput />);
+
+      const textarea = screen.getByRole('textbox');
+      await user.type(textarea, 'Test');
+
+      const sendButton = screen.getByRole('button', { name: /전송/ });
+      await user.click(sendButton);
+
+      await waitFor(() => {
+        expect(mockStream).toHaveBeenCalled();
+      });
+
+      const streamCall = mockStream.mock.calls[0];
+      expect(streamCall[5]).toBe('/custom/path');
+    });
+  });
 });
