@@ -88,7 +88,7 @@ export async function fetchWithConfig(
             rejectUnauthorized: config.network.ssl?.verify ?? true,
           });
           (fetchOptions as any).agent = agent;
-        } catch (error) {
+        } catch {
           console.warn('https-proxy-agent not available, using default fetch');
         }
       } else if (config.network.proxy.mode === 'system') {
@@ -100,7 +100,7 @@ export async function fetchWithConfig(
 
     // SSL 검증 비활성화 (Node.js only)
     if (config.network?.ssl?.verify === false && typeof window === 'undefined') {
-      // @ts-ignore - Node.js specific option
+      // @ts-expect-error - Node.js specific option
       if (!fetchOptions.agent) {
         try {
           const https = await import('node:https');
@@ -108,7 +108,7 @@ export async function fetchWithConfig(
             rejectUnauthorized: false,
           });
           (fetchOptions as any).agent = agent;
-        } catch (error) {
+        } catch {
           console.warn('Could not create custom HTTPS agent');
         }
       }

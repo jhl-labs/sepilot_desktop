@@ -152,7 +152,7 @@ export class OllamaProvider extends BaseLLMProvider {
         this.config
       );
       return response.ok;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

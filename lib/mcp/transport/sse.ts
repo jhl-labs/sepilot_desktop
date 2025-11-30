@@ -1,6 +1,7 @@
 import { MCPClient } from '../client';
 import { JSONRPCRequest, JSONRPCResponse } from '../types';
- 
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { EventSource } = require('eventsource');
 
 // EventSource 인터페이스 정의

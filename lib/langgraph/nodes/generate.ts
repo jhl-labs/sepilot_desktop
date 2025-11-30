@@ -243,7 +243,7 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
             } else {
               content = JSON.stringify({ success: false, error: resultData.error });
             }
-          } catch (parseError) {
+          } catch {
             content = 'Image generation completed (result parsing failed)';
           }
         } else {

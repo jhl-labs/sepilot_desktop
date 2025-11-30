@@ -1,13 +1,9 @@
 import { StateGraph, END } from '@langchain/langgraph';
 import { CodingAgentStateAnnotation, CodingAgentState } from '../state';
-import { generateWithToolsNode } from '../nodes/generate';
-import { toolsNode, shouldUseTool } from '../nodes/tools';
 import { LLMService } from '@/lib/llm/service';
 import { Message, Activity } from '@/types';
-import { createBaseSystemMessage } from '../utils/system-message';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
 import { executeBuiltinTool, getBuiltinTools } from '@/lib/mcp/tools/builtin-tools';
-import type { MCPTool } from '@/lib/mcp/types';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';

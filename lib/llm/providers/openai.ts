@@ -13,7 +13,7 @@ const log = {
     if (typeof process !== 'undefined' && process.versions?.electron) {
       // Electron Main Process
       try {
-         
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { logger } = require('../../../electron/services/logger');
         logger.info(...args);
       } catch {
@@ -26,7 +26,7 @@ const log = {
   warn: (...args: any[]) => {
     if (typeof process !== 'undefined' && process.versions?.electron) {
       try {
-         
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { logger } = require('../../../electron/services/logger');
         logger.warn?.(...args) || logger.info(...args);
       } catch {
@@ -39,7 +39,7 @@ const log = {
   error: (...args: any[]) => {
     if (typeof process !== 'undefined' && process.versions?.electron) {
       try {
-         
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { logger } = require('../../../electron/services/logger');
         logger.error(...args);
       } catch {
@@ -108,7 +108,7 @@ export class OpenAIProvider extends BaseLLMProvider {
           throw new Error(
             error.error?.message || `API error: ${response.status}`
           );
-        } catch (parseError) {
+        } catch {
           throw new Error(`API error: ${response.status} - ${errorText.substring(0, 500)}`);
         }
       }
@@ -119,7 +119,7 @@ export class OpenAIProvider extends BaseLLMProvider {
 
       try {
         data = JSON.parse(responseText);
-      } catch (parseError) {
+      } catch {
         // If JSON parsing fails, try to extract the first valid JSON object
         log.error('[OpenAI] JSON parse error, response text (first 500 chars):', responseText.substring(0, 500));
 
@@ -143,7 +143,7 @@ export class OpenAIProvider extends BaseLLMProvider {
             try {
               data = JSON.parse(firstJsonStr);
               log.warn('[OpenAI] Successfully extracted first JSON object from malformed response');
-            } catch (extractError) {
+            } catch {
               throw new Error(`unmarshal: invalid character '{' after top-level value (response: ${responseText.substring(0, 200)})`);
             }
           } else {
@@ -285,7 +285,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         try {
           const errorJson = JSON.parse(errorText);
           throw new Error(errorJson.error?.message || `${response.status} ${response.statusText}: ${errorText}`);
-        } catch (parseError) {
+        } catch {
           throw new Error(`${response.status} ${response.statusText}: ${errorText}`);
         }
       }
@@ -432,7 +432,7 @@ export class OpenAIProvider extends BaseLLMProvider {
       );
 
       return response.ok;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

@@ -170,6 +170,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       );
       setSidebarWidth(newWidth);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/preserve-manual-memoization
     [isResizing]
   );
 

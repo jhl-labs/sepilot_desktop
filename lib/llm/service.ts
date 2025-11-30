@@ -1,4 +1,4 @@
-import { Message, LLMConfig, AppConfig } from '@/types';
+import { Message, AppConfig } from '@/types';
 import { getLLMClient } from './client';
 import { BaseLLMProvider, StreamChunk } from './base';
 import { hasImages, getVisionProviderFromConfig, createVisionProvider } from './vision-utils';
@@ -11,7 +11,7 @@ async function getDatabaseService() {
     try {
       // Dynamic import for Main Process only
       databaseServiceModule = await import('../../electron/services/database');
-    } catch (e) {
+    } catch {
       // Not in Electron main process
     }
   }

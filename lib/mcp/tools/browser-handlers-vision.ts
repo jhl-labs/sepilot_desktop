@@ -9,7 +9,6 @@
  */
 
 import { getActiveBrowserView } from '../../../electron/ipc/handlers/browser-control';
-import type { SemanticElement } from '../../langgraph/utils/dom-analyzer';
 import {
   createVisualMarkers,
   generateMarkerOverlayScript,
@@ -19,8 +18,6 @@ import {
   getElementCenter,
   findElementByMarkerLabel,
   generateScreenshotContext,
-  type VisualMarker,
-  type AnnotatedScreenshot,
 } from '../../langgraph/utils/screenshot-analyzer';
 import { analyzePage } from './browser-handlers-enhanced';
 

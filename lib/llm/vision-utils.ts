@@ -3,7 +3,7 @@
  * LLM 메시지에서 이미지 감지 및 비전 모델 프로바이더 생성
  */
 
-import { Message, LLMConfig, AppConfig } from '@/types';
+import { Message, LLMConfig } from '@/types';
 import { OpenAIProvider } from './providers/openai';
 import { OllamaProvider } from './providers/ollama';
 import { BaseLLMProvider } from './base';
@@ -13,7 +13,7 @@ const log = {
   info: (...args: any[]) => {
     if (typeof process !== 'undefined' && process.versions?.electron) {
       try {
-         
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { logger } = require('../../electron/services/logger');
         logger.info(...args);
       } catch {

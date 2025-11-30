@@ -24,6 +24,9 @@ module.exports = [
       'hooks/**/*.js',
       'eslint.config.js',
       'jest.config.js',
+      'next.config.js',
+      'tailwind.config.ts',
+      'hooks/use-confirm-dialog.ts',
     ],
   },
 

@@ -431,7 +431,7 @@ export class ComfyUIClient {
     try {
       const response = await fetch(`${this.config.httpUrl}/system_stats`);
       return response.ok;
-    } catch (_error) {
+    } catch {
       return false;
     }
   }

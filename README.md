@@ -129,6 +129,33 @@ npm run build:linux    # Linux (AppImage, deb)
 
 Built applications will be created in the `dist/` directory.
 
+### 📥 Installation
+
+**Download the latest release:**
+
+Go to [Releases](https://github.com/jhl-labs/sepilot_desktop/releases) and download the installer for your platform.
+
+**Windows:**
+1. Download `SEPilot-Setup-*.exe`
+2. If Windows SmartScreen shows a warning:
+   - Click "More info" → "Run anyway"
+3. Follow the installation wizard
+
+**Security Verification (Optional):**
+
+All release files are signed with GPG and include SHA256 checksums for verification.
+
+```bash
+# Verify SHA256 checksum
+sha256sum -c SHA256SUMS.txt
+
+# Verify GPG signature
+gpg --keyserver keys.openpgp.org --recv-keys YOUR_KEY_ID
+gpg --verify SEPilot-Setup-*.exe.asc SEPilot-Setup-*.exe
+```
+
+See [GPG Setup Guide](.github/GPG_SETUP.md) for detailed verification instructions.
+
 ### 🎯 Getting Started
 
 1. **Configure LLM Settings**
@@ -326,6 +353,33 @@ npm run build:linux    # Linux (AppImage, deb)
 ```
 
 빌드된 애플리케이션은 `dist/` 디렉토리에 생성됩니다.
+
+### 📥 설치
+
+**최신 릴리즈 다운로드:**
+
+[Releases](https://github.com/jhl-labs/sepilot_desktop/releases)에서 플랫폼에 맞는 설치 파일을 다운로드하세요.
+
+**Windows:**
+1. `SEPilot-Setup-*.exe` 다운로드
+2. Windows SmartScreen 경고가 표시되면:
+   - "추가 정보" → "실행" 클릭
+3. 설치 마법사 진행
+
+**보안 검증 (선택사항):**
+
+모든 릴리즈 파일은 GPG 서명 및 SHA256 체크섬을 제공합니다.
+
+```bash
+# SHA256 체크섬 확인
+sha256sum -c SHA256SUMS.txt
+
+# GPG 서명 검증
+gpg --keyserver keys.openpgp.org --recv-keys YOUR_KEY_ID
+gpg --verify SEPilot-Setup-*.exe.asc SEPilot-Setup-*.exe
+```
+
+자세한 검증 방법은 [GPG 설정 가이드](.github/GPG_SETUP.md)를 참고하세요.
 
 ### 🎯 시작하기
 

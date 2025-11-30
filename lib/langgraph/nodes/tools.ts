@@ -168,9 +168,7 @@ function waitForCompletionInMainProcess(
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(`${wsUrl}?clientId=${clientId}`);
-    let timeout: NodeJS.Timeout;
-
-    timeout = setTimeout(() => {
+    const timeout = setTimeout(() => {
       ws.close();
       reject(new Error('Image generation timeout (60s)'));
     }, 60000);
@@ -227,7 +225,7 @@ function waitForCompletionInMainProcess(
           ws.close();
           reject(new Error(`Execution error: ${JSON.stringify(message.data)}`));
         }
-      } catch (parseError) {
+      } catch {
         // Ignore parse errors for non-JSON messages
       }
     });
@@ -327,7 +325,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
               toolName: call.name,
               result: builtinResult,
             };
-          } catch (builtinError: any) {
+          } catch {
             // Built-in tool이 아니면 에러 발생 - MCP tool 확인으로 넘어감
             console.log(`[Tools] Not a built-in tool (${call.name}), checking MCP tools...`);
           }
