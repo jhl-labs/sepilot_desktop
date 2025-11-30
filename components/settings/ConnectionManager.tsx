@@ -47,6 +47,18 @@ export function ConnectionManager({
       return;
     }
 
+    // Validate baseURL format
+    if (!baseURL.match(/^https?:\/\/.+/)) {
+      alert('Base URL은 http:// 또는 https://로 시작해야 합니다.');
+      return;
+    }
+
+    // Validate API key length
+    if (apiKey.trim().length < 20) {
+      alert('API 키는 최소 20자 이상이어야 합니다.');
+      return;
+    }
+
     const newConnection: LLMConnection = {
       id: `conn-${nanoid()}`,
       name: name.trim(),
@@ -79,6 +91,18 @@ export function ConnectionManager({
 
     const { name, provider, baseURL, apiKey } = formData;
     if (!name?.trim() || !baseURL?.trim() || !apiKey?.trim()) {
+      return;
+    }
+
+    // Validate baseURL format
+    if (!baseURL.match(/^https?:\/\/.+/)) {
+      alert('Base URL은 http:// 또는 https://로 시작해야 합니다.');
+      return;
+    }
+
+    // Validate API key length
+    if (apiKey.trim().length < 20) {
+      alert('API 키는 최소 20자 이상이어야 합니다.');
       return;
     }
 
