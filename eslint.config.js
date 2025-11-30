@@ -27,6 +27,9 @@ module.exports = [
       'next.config.js',
       'tailwind.config.ts',
       'hooks/use-confirm-dialog.ts',
+      '.dependency-cruiser.js',
+      'backstop.json',
+      'lighthouserc.json',
     ],
   },
 

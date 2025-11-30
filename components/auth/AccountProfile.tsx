@@ -30,7 +30,6 @@ export function AccountProfile() {
     loadUserInfo();
 
     const handleAuthSuccess = () => {
-      console.log('Authentication successful, reloading user info.');
       loadUserInfo();
       setMessage({ type: 'success', text: '로그인되었습니다!' });
     };
