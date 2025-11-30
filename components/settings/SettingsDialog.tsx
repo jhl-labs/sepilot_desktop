@@ -19,7 +19,7 @@ import { configureWebLLMClient } from '@/lib/llm/web-client';
 import { GitHubOAuthSettings } from '@/components/settings/GitHubOAuthSettings';
 import { GitHubOAuthConfig } from '@/types';
 import { BackupRestoreSettings } from '@/components/settings/BackupRestoreSettings';
-import { LLMSettingsTabV2 } from './LLMSettingsTabV2';
+import { LLMSettingsTab } from './LLMSettingsTab';
 import { NetworkSettingsTab } from './NetworkSettingsTab';
 import { ComfyUISettingsTab } from './ComfyUISettingsTab';
 import { MCPSettingsTab } from './MCPSettingsTab';
@@ -597,7 +597,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto p-6">
             {activeTab === 'llm' && configV2 && (
-              <LLMSettingsTabV2
+              <LLMSettingsTab
                 config={configV2}
                 setConfig={(update) => {
                   if (typeof update === 'function') {

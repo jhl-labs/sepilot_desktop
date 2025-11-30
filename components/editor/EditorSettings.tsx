@@ -56,7 +56,8 @@ export function EditorSettings() {
       minimap,
       lineNumbers,
     });
-    window.alert('외형 설정이 저장되었습니다.');
+    // 설정이 즉시 적용되므로 alert 없이 Files 뷰로 자동 전환
+    setEditorViewMode('files');
   };
 
   // 외형 설정 초기화
@@ -71,7 +72,8 @@ export function EditorSettings() {
       setWordWrap(config.wordWrap);
       setMinimap(config.minimap);
       setLineNumbers(config.lineNumbers);
-      window.alert('외형 설정이 초기화되었습니다.');
+      // 초기화 후 자동으로 Files 뷰로 전환
+      setEditorViewMode('files');
     }
   };
 
@@ -85,7 +87,8 @@ export function EditorSettings() {
       addCommentsPrompt,
       generateTestPrompt,
     });
-    window.alert('LLM 프롬프트 설정이 저장되었습니다.');
+    // 저장 후 자동으로 Files 뷰로 전환
+    setEditorViewMode('files');
   };
 
   // LLM 프롬프트 초기화
