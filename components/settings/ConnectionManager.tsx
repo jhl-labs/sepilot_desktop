@@ -222,7 +222,7 @@ export function ConnectionManager({
 
       {/* Connection List */}
       <div className="space-y-2">
-        {connections.map((connection) => (
+        {connections?.map((connection) => (
           <div
             key={connection.id}
             className={`p-4 rounded-lg border ${
