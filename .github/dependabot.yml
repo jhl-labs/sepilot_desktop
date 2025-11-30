@@ -27,6 +27,9 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "electron"
         update-types: ["version-update:semver-major"]
+      # Ignore tmp - no patched version available for security advisory
+      # This is a dev dependency with low severity impact
+      - dependency-name: "tmp"
     groups:
       # Group Radix UI packages
       radix-ui:
