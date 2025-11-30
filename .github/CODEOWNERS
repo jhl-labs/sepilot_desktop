@@ -1,0 +1,34 @@
+# CODEOWNERS file for SEPilot Desktop
+# This file defines individuals or teams that are responsible for code in this repository.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @declue
+
+# GitHub Actions workflows - require review for CI/CD changes
+/.github/workflows/ @declue
+/.github/dependabot.yml @declue
+
+# Security-sensitive files
+/electron/ipc/ @declue
+/lib/llm/ @declue
+/lib/mcp/ @declue
+
+# Package management - require review for dependency changes
+/package.json @declue
+/pnpm-lock.yaml @declue
+
+# Build and configuration files
+/electron-builder.yml @declue
+/next.config.mjs @declue
+/tsconfig.json @declue
+/electron/tsconfig.json @declue
+
+# Testing configuration
+/jest.config.js @declue
+/.dependency-cruiser.js @declue
+
+# Documentation
+/README.md @declue
+/CONTRIBUTING.md @declue
+/LICENSE @declue

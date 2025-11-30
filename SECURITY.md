@@ -8,8 +8,9 @@ SEPilot Desktop 프로젝트의 보안을 유지하는 것은 매우 중요합�
 
 | 버전    | 보안 업데이트 지원 |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
-| < 0.1.0 | :x:                |
+| 0.6.x   | :white_check_mark: |
+| 0.5.x   | :white_check_mark: |
+| < 0.5.0 | :x:                |
 
 ## 보안 취약점 보고 (Reporting a Vulnerability)
 
@@ -152,6 +153,44 @@ SEPilot Desktop 사용자를 위한 보안 권장사항:
 - **암호화되지 않은 데이터**: 채팅 히스토리는 평문으로 저장 (향후 암호화 예정)
 - **GitHub 동기화**: config.json만 암호화하여 동기화
 
+## CI/CD 보안 (CI/CD Security)
+
+### 구현된 보안 기능
+
+프로젝트는 다음과 같은 CI/CD 보안 기능을 구현하고 있습니다:
+
+1. **Branch Protection Rules**
+   - main branch에 직접 push 불가
+   - PR 필수 (최소 1명의 리뷰 필요)
+   - Status checks 통과 필수 (Lint, Type Check, Test & Coverage, Build)
+   - Stale reviews 자동 dismiss
+   - Conversation resolution 필수
+
+2. **Automated Security Scanning**
+   - CodeQL (정적 코드 분석)
+   - Snyk (의존성 취약점 스캔)
+   - Trivy (종합 보안 스캔)
+   - NPM Audit (의존성 감사)
+   - License Compliance Check
+
+3. **Workflow Security**
+   - Explicit permissions (최소 권한 원칙)
+   - Fork PR의 secrets 접근 제한
+   - Dependabot auto-merge 보안 검증
+
+4. **SBOM (Software Bill of Materials)**
+   - CycloneDX 형식의 SBOM 자동 생성
+   - GitHub Dependency Graph 통합
+
+### CODEOWNERS
+
+코드베이스의 중요한 부분에 대해 CODEOWNERS를 통한 리뷰 프로세스를 강제합니다:
+
+- GitHub Actions 워크플로우
+- 보안 관련 코드 (IPC, LLM, MCP)
+- 의존성 파일 (package.json, pnpm-lock.yaml)
+- 빌드 설정 파일
+
 ## 보안 개선 로드맵
 
 다음 보안 개선사항이 계획되어 있습니다:
@@ -160,7 +199,7 @@ SEPilot Desktop 사용자를 위한 보안 권장사항:
 - [ ] 데이터베이스 전체 암호화
 - [ ] 2FA (Two-Factor Authentication) 지원
 - [ ] 보안 감사 로그
-- [ ] 자동 보안 스캔 CI/CD 통합
+- [x] 자동 보안 스캔 CI/CD 통합 (완료)
 - [ ] 코드 서명 (Code Signing)
 
 ## 책임 있는 공개 (Responsible Disclosure)
@@ -176,7 +215,7 @@ SEPilot Desktop 사용자를 위한 보안 권장사항:
 
 이 보안 정책은 주기적으로 검토 및 업데이트됩니다.
 
-**최종 업데이트**: 2025-01-21
+**최종 업데이트**: 2025-12-01
 
 ---
 
