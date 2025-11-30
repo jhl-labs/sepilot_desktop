@@ -4,9 +4,30 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { FolderOpen, ChevronLeft, RotateCcw } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
 import { useChatStore } from '@/lib/store/chat-store';
+
+// 사용 가능한 폰트 목록
+const AVAILABLE_FONTS = [
+  { value: 'system-ui, -apple-system, sans-serif', label: 'System Font' },
+  { value: 'Arial, sans-serif', label: 'Arial' },
+  { value: 'Helvetica, sans-serif', label: 'Helvetica' },
+  { value: 'Georgia, serif', label: 'Georgia' },
+  { value: 'Times New Roman, serif', label: 'Times New Roman' },
+  { value: 'Courier New, monospace', label: 'Courier New' },
+  { value: 'Verdana, sans-serif', label: 'Verdana' },
+  { value: 'Consolas, monospace', label: 'Consolas' },
+  { value: '"Noto Sans KR", sans-serif', label: 'Noto Sans KR' },
+  { value: '"Malgun Gothic", sans-serif', label: 'Malgun Gothic' },
+];
 
 export function BrowserSettings() {
   const [snapshotsPath, setSnapshotsPath] = useState<string>('');
@@ -16,7 +37,10 @@ export function BrowserSettings() {
     setBrowserViewMode,
     browserAgentLLMConfig,
     setBrowserAgentLLMConfig,
-    resetBrowserAgentLLMConfig
+    resetBrowserAgentLLMConfig,
+    browserChatFontConfig,
+    setBrowserChatFontConfig,
+    resetBrowserChatFontConfig,
   } = useChatStore();
 
   // LLM 설정 로컬 상태
@@ -24,6 +48,29 @@ export function BrowserSettings() {
   const [temperature, setTemperature] = useState(browserAgentLLMConfig.temperature);
   const [topP, setTopP] = useState(browserAgentLLMConfig.topP);
   const [maxIterations, setMaxIterations] = useState(browserAgentLLMConfig.maxIterations);
+
+  // 폰트 설정 로컬 상태
+  const [fontFamily, setFontFamily] = useState(browserChatFontConfig.fontFamily);
+  const [fontSize, setFontSize] = useState(browserChatFontConfig.fontSize);
+
+  // 폰트 설정 저장
+  const handleSaveFontConfig = () => {
+    setBrowserChatFontConfig({
+      fontFamily,
+      fontSize,
+    });
+    window.alert('폰트 설정이 저장되었습니다.');
+  };
+
+  // 폰트 설정 초기화
+  const handleResetFontConfig = () => {
+    if (window.confirm('폰트 설정을 기본값으로 초기화하시겠습니까?')) {
+      resetBrowserChatFontConfig();
+      setFontFamily('system-ui, -apple-system, sans-serif');
+      setFontSize(14);
+      window.alert('폰트 설정이 초기화되었습니다.');
+    }
+  };
 
   // Load paths on mount
   useEffect(() => {
@@ -254,6 +301,87 @@ export function BrowserSettings() {
                 className="w-full h-8 text-xs"
               >
                 설정 저장
+              </Button>
+            </div>
+
+            {/* Browser Chat 폰트 설정 */}
+            <div className="border-t pt-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold">Browser Chat 폰트 설정</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetFontConfig}
+                  className="h-7 text-xs gap-1"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  초기화
+                </Button>
+              </div>
+
+              {/* Font Family */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">폰트</Label>
+                <Select
+                  value={fontFamily}
+                  onValueChange={setFontFamily}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="폰트를 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AVAILABLE_FONTS.map((font) => (
+                      <SelectItem key={font.value} value={font.value}>
+                        <span style={{ fontFamily: font.value }}>{font.label}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  채팅 메시지에 사용할 폰트를 선택하세요.
+                </p>
+              </div>
+
+              {/* Font Size */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">폰트 크기 (px)</Label>
+                <Input
+                  type="number"
+                  value={fontSize}
+                  onChange={(e) => setFontSize(parseInt(e.target.value, 10))}
+                  min={10}
+                  max={24}
+                  step={1}
+                  className="h-8 text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  채팅 메시지의 폰트 크기 (10-24px, 기본값: 14px)
+                </p>
+              </div>
+
+              {/* 미리보기 */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">미리보기</Label>
+                <div
+                  className="rounded-md border bg-muted p-2 text-xs"
+                  style={{
+                    fontFamily,
+                    fontSize: `${fontSize}px`,
+                  }}
+                >
+                  <p>사용자: 안녕하세요!</p>
+                  <p className="mt-1">AI: 안녕하세요! 무엇을 도와드릴까요?</p>
+                  <p className="mt-1">English: Hello, how can I help you?</p>
+                  <p className="mt-1">日本語: こんにちは、お手伝いできますか？</p>
+                </div>
+              </div>
+
+              {/* 저장 버튼 */}
+              <Button
+                onClick={handleSaveFontConfig}
+                className="w-full h-8 text-xs"
+              >
+                폰트 설정 저장
               </Button>
             </div>
           </div>
