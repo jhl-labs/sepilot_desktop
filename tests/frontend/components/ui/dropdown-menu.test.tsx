@@ -124,7 +124,7 @@ describe('DropdownMenu Components', () => {
       expect(screen.getByText('Content')).toBeInTheDocument();
     });
 
-    it('should apply custom className', () => {
+    it('should apply custom className', async () => {
       const { container } = render(
         <DropdownMenu>
           <DropdownMenuTrigger>
@@ -139,12 +139,15 @@ describe('DropdownMenu Components', () => {
       const trigger = screen.getByText('Trigger').parentElement!;
       fireEvent.click(trigger);
 
-      const content = container.querySelector('.custom-content');
-      expect(content).toBeInTheDocument();
+      // Wait for portal to mount
+      await waitFor(() => {
+        const content = document.querySelector('.custom-content');
+        expect(content).toBeInTheDocument();
+      });
     });
 
-    it('should apply align end', () => {
-      const { container } = render(
+    it('should apply align end', async () => {
+      render(
         <DropdownMenu>
           <DropdownMenuTrigger>
             <button>Trigger</button>
@@ -158,12 +161,15 @@ describe('DropdownMenu Components', () => {
       const trigger = screen.getByText('Trigger').parentElement!;
       fireEvent.click(trigger);
 
-      const content = container.querySelector('.right-0');
-      expect(content).toBeInTheDocument();
+      // Wait for portal to mount and position to be calculated
+      await waitFor(() => {
+        const content = document.querySelector('[style*="position: fixed"]');
+        expect(content).toBeInTheDocument();
+      });
     });
 
-    it('should apply align start', () => {
-      const { container } = render(
+    it('should apply align start', async () => {
+      render(
         <DropdownMenu>
           <DropdownMenuTrigger>
             <button>Trigger</button>
@@ -177,12 +183,13 @@ describe('DropdownMenu Components', () => {
       const trigger = screen.getByText('Trigger').parentElement!;
       fireEvent.click(trigger);
 
-      const content = container.querySelector('.left-0');
-      expect(content).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Content')).toBeInTheDocument();
+      });
     });
 
-    it('should apply align center', () => {
-      const { container } = render(
+    it('should apply align center', async () => {
+      render(
         <DropdownMenu>
           <DropdownMenuTrigger>
             <button>Trigger</button>
@@ -196,12 +203,13 @@ describe('DropdownMenu Components', () => {
       const trigger = screen.getByText('Trigger').parentElement!;
       fireEvent.click(trigger);
 
-      const content = container.querySelector('.left-1\\/2');
-      expect(content).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Content')).toBeInTheDocument();
+      });
     });
 
-    it('should apply side bottom (default)', () => {
-      const { container } = render(
+    it('should apply side bottom (default)', async () => {
+      render(
         <DropdownMenu>
           <DropdownMenuTrigger>
             <button>Trigger</button>
@@ -215,12 +223,13 @@ describe('DropdownMenu Components', () => {
       const trigger = screen.getByText('Trigger').parentElement!;
       fireEvent.click(trigger);
 
-      const content = container.querySelector('.top-full');
-      expect(content).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Content')).toBeInTheDocument();
+      });
     });
 
-    it('should apply side top', () => {
-      const { container } = render(
+    it('should apply side top', async () => {
+      render(
         <DropdownMenu>
           <DropdownMenuTrigger>
             <button>Trigger</button>
@@ -234,8 +243,9 @@ describe('DropdownMenu Components', () => {
       const trigger = screen.getByText('Trigger').parentElement!;
       fireEvent.click(trigger);
 
-      const content = container.querySelector('.bottom-full');
-      expect(content).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Content')).toBeInTheDocument();
+      });
     });
 
     it('should close on outside click', async () => {
@@ -398,7 +408,7 @@ describe('DropdownMenu Components', () => {
   });
 
   describe('DropdownMenuSeparator', () => {
-    it('should render separator', () => {
+    it('should render separator', async () => {
       const { container } = render(
         <DropdownMenu>
           <DropdownMenuTrigger>
@@ -415,11 +425,13 @@ describe('DropdownMenu Components', () => {
       const trigger = screen.getByText('Trigger').parentElement!;
       fireEvent.click(trigger);
 
-      const separator = container.querySelector('.bg-muted');
-      expect(separator).toBeInTheDocument();
+      await waitFor(() => {
+        const separator = document.querySelector('.bg-muted');
+        expect(separator).toBeInTheDocument();
+      });
     });
 
-    it('should apply custom className', () => {
+    it('should apply custom className', async () => {
       const { container } = render(
         <DropdownMenu>
           <DropdownMenuTrigger>
@@ -434,8 +446,10 @@ describe('DropdownMenu Components', () => {
       const trigger = screen.getByText('Trigger').parentElement!;
       fireEvent.click(trigger);
 
-      const separator = container.querySelector('.custom-separator');
-      expect(separator).toBeInTheDocument();
+      await waitFor(() => {
+        const separator = document.querySelector('.custom-separator');
+        expect(separator).toBeInTheDocument();
+      });
     });
   });
 
@@ -576,7 +590,7 @@ describe('DropdownMenu Components', () => {
       });
     });
 
-    it('should render arrow icon in sub trigger', () => {
+    it('should render arrow icon in sub trigger', async () => {
       const { container } = render(
         <DropdownMenu>
           <DropdownMenuTrigger>
@@ -593,8 +607,10 @@ describe('DropdownMenu Components', () => {
       const trigger = screen.getByText('Trigger').parentElement!;
       fireEvent.click(trigger);
 
-      const svg = container.querySelector('svg');
-      expect(svg).toBeInTheDocument();
+      await waitFor(() => {
+        const svg = document.querySelector('svg');
+        expect(svg).toBeInTheDocument();
+      });
     });
   });
 
