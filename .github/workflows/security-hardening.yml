@@ -1,0 +1,264 @@
+name: Security Hardening
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'electron/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  workflow-security:
+    name: Workflow Security Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "🔍 Checking for hardcoded secrets..."
+
+          # Check for common secret patterns
+          if grep -r -E "(apikey|api_key|api-key|password|secret|token|credential)" --include="*.{ts,tsx,js,jsx,json,yml,yaml}" --exclude-dir={node_modules,.next,dist,out} . | grep -v "GITHUB_TOKEN\|secrets\." | grep -v "^Binary" || true; then
+            echo "⚠️ Potential secrets found. Please review the matches above."
+            echo "::warning::Potential hardcoded secrets detected"
+          else
+            echo "✅ No hardcoded secrets found"
+          fi
+
+      - name: Check workflow permissions
+        run: |
+          echo "🔒 Checking workflow permissions..."
+
+          for workflow in .github/workflows/*.yml; do
+            if ! grep -q "^permissions:" "$workflow"; then
+              echo "⚠️ $workflow does not define permissions"
+              echo "::warning file=$workflow::Workflow does not define explicit permissions"
+            fi
+          done
+
+      - name: Check for pinned action versions
+        run: |
+          echo "📌 Checking for pinned action versions..."
+
+          unpinned=$(grep -r "uses:.*@v[0-9]" .github/workflows/ || true)
+          if [ -n "$unpinned" ]; then
+            echo "⚠️ Found actions using tag versions instead of commit SHA:"
+            echo "$unpinned"
+            echo "::warning::Consider pinning actions to commit SHA for better security"
+          else
+            echo "✅ All actions are properly pinned"
+          fi
+
+  dependency-security:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for known vulnerabilities
+        run: |
+          echo "🔍 Running security audit..."
+          pnpm audit --audit-level=moderate || {
+            echo "⚠️ Vulnerabilities found. Review the output above."
+            exit 0
+          }
+
+      - name: Check for outdated dependencies
+        run: |
+          echo "📦 Checking for outdated dependencies..."
+          pnpm outdated || echo "Some dependencies are outdated"
+
+  license-compliance:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install license checker
+        run: pnpm add -D license-checker
+
+      - name: Check licenses
+        run: |
+          echo "📜 Checking dependency licenses..."
+          npx license-checker --summary
+
+          # Check for problematic licenses
+          npx license-checker --json --out licenses.json
+
+          if grep -q "GPL" licenses.json; then
+            echo "⚠️ GPL-licensed dependencies found. Please review for compatibility."
+            echo "::warning::GPL-licensed dependencies detected"
+          fi
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: license-report
+          path: licenses.json
+          retention-days: 30
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for console statements in production code
+        run: |
+          echo "🔍 Checking for console statements..."
+
+          console_count=$(grep -r "console\.(log|debug|info|warn|error)" app/ components/ lib/ --include="*.{ts,tsx}" | wc -l || echo "0")
+
+          if [ "$console_count" -gt 0 ]; then
+            echo "⚠️ Found $console_count console statements in production code"
+            echo "::warning::Console statements found in production code. Consider using a proper logging system."
+          else
+            echo "✅ No console statements found"
+          fi
+
+      - name: Check for TODO/FIXME comments
+        run: |
+          echo "📝 Checking for TODO/FIXME comments..."
+
+          todos=$(grep -r "TODO\|FIXME\|XXX\|HACK" app/ components/ lib/ electron/ --include="*.{ts,tsx,js}" || echo "")
+
+          if [ -n "$todos" ]; then
+            echo "$todos" | head -20
+            echo "::notice::Found TODO/FIXME comments. Consider creating issues for tracking."
+          fi
+
+  docker-security:
+    name: Docker Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check for Dockerfile
+        id: check_dockerfile
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Hadolint (Dockerfile linter)
+        if: steps.check_dockerfile.outputs.found == 'true'
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+
+  sbom-generation:
+    name: Generate SBOM (Software Bill of Materials)
+    runs-on: ubuntu-latest
+    continue-on-error: true  # SBOM generation is optional
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate SBOM using pnpm
+        run: |
+          echo "📋 Generating Software Bill of Materials..."
+          # Use pnpm list to generate a dependency tree
+          pnpm list --json --depth Infinity > pnpm-list.json || true
+
+          # Create a simple SBOM file
+          cat > sbom.json <<EOF
+          {
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.4",
+            "version": 1,
+            "metadata": {
+              "component": {
+                "type": "application",
+                "name": "sepilot-desktop",
+                "version": "0.6.0"
+              },
+              "tools": [
+                {
+                  "vendor": "pnpm",
+                  "name": "pnpm list"
+                }
+              ]
+            }
+          }
+          EOF
+
+          echo "✅ Basic SBOM generated"
+        continue-on-error: true
+
+      - name: Upload SBOM
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: sbom
+          path: |
+            sbom.json
+            pnpm-list.json
+          retention-days: 90
