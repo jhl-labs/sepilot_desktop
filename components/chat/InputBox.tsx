@@ -24,6 +24,7 @@ import { initializeComfyUIClient } from '@/lib/comfyui/client';
 import { generateConversationTitle, shouldGenerateTitle } from '@/lib/chat/title-generator';
 import { isElectron } from '@/lib/platform';
 import { getWebLLMClient, configureWebLLMClient } from '@/lib/llm/web-client';
+import { isTextFile } from '@/lib/utils';
 import { ImageAttachment, Message, ToolCall, ComfyUIConfig, NetworkConfig, LLMConfig, QuickInputMessageData } from '@/types';
 import { ToolApprovalDialog } from './ToolApprovalDialog';
 import { ImageGenerationProgressBar } from './ImageGenerationProgressBar';
@@ -52,7 +53,6 @@ export function InputBox() {
   const [personaAutocompleteIndex, setPersonaAutocompleteIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const streamingConversationIdRef = useRef<string | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const autocompleteRef = useRef<HTMLDivElement>(null);
 
@@ -143,7 +143,6 @@ export function InputBox() {
   // Handle compact conversation (summarize older messages)
   const handleCompact = async () => {
     // TODO: Implement context compaction/summarization
-    console.log('[InputBox] Compact requested - not yet implemented');
   };
 
   // Set mounted state to avoid hydration mismatch with Tooltip
@@ -253,11 +252,6 @@ export function InputBox() {
               // Check if ComfyUI is enabled and has httpUrl configured
               const isAvailable = result.data.comfyUI.enabled && !!result.data.comfyUI.httpUrl;
               setComfyUIAvailable(isAvailable);
-              console.log('[InputBox] ComfyUI client initialized:', {
-                enabled: result.data.comfyUI.enabled,
-                httpUrl: result.data.comfyUI.httpUrl,
-                available: isAvailable,
-              });
             } else {
               setComfyUIAvailable(false);
               setComfyUIConfig(null);
@@ -301,11 +295,6 @@ export function InputBox() {
           setComfyUIConfig(config);
           const isAvailable = config.enabled && !!config.httpUrl;
           setComfyUIAvailable(isAvailable);
-          console.log('[InputBox] ComfyUI config updated from storage:', {
-            enabled: config.enabled,
-            httpUrl: config.httpUrl,
-            available: isAvailable,
-          });
         } catch (error) {
           console.error('Failed to parse ComfyUI config from storage:', error);
         }
@@ -322,17 +311,9 @@ export function InputBox() {
         if (isElectron() && window.electronAPI) {
           // Electron: IPC를 통해 LLM 클라이언트 재초기화
           initializeLLMClient(llm);
-          console.log('[InputBox] LLM config updated from event (Electron):', {
-            provider: llm.provider,
-            model: llm.model,
-          });
         } else {
           // Web: WebLLMClient 재초기화
           configureWebLLMClient(llm);
-          console.log('[InputBox] LLM config updated from event (Web):', {
-            provider: llm.provider,
-            model: llm.model,
-          });
         }
       }
 
@@ -342,11 +323,6 @@ export function InputBox() {
         setComfyUIConfig(comfyUI);
         const isAvailable = comfyUI.enabled && !!comfyUI.httpUrl;
         setComfyUIAvailable(isAvailable);
-        console.log('[InputBox] ComfyUI config updated from event:', {
-          enabled: comfyUI.enabled,
-          httpUrl: comfyUI.httpUrl,
-          available: isAvailable,
-        });
       }
     }) as EventListener;
 
@@ -381,34 +357,24 @@ export function InputBox() {
   // (Multimodal models and image generation require using agent.ts which works best with Instant mode)
   useEffect(() => {
     if ((selectedImages.length > 0 || enableImageGeneration) && thinkingMode !== 'instant') {
-      const reason = enableImageGeneration ? 'image generation enabled' : 'images detected';
-      console.log(`[InputBox] ${reason}, switching to Instant mode for multimodal support`);
       setThinkingMode('instant');
     }
   }, [selectedImages, enableImageGeneration, thinkingMode, setThinkingMode]);
 
   // Stop streaming handler
   const handleStop = useCallback(async () => {
-    console.log('[InputBox] handleStop called');
-
     if (abortControllerRef.current) {
-      console.log('[InputBox] Aborting AbortController');
       abortControllerRef.current.abort();
     }
 
-    // Use activeConversationId instead of ref to support both InputBox and ChatArea streaming
-    const conversationId = streamingConversationIdRef.current || activeConversationId;
-    console.log('[InputBox] Streaming conversationId (ref):', streamingConversationIdRef.current);
-    console.log('[InputBox] Active conversationId:', activeConversationId);
-    console.log('[InputBox] Using conversationId:', conversationId);
+    // Use activeConversationId - store's streamingConversations tracks which conversations are streaming
+    const conversationId = activeConversationId;
 
     if (conversationId) {
       // Abort streaming in Main Process
       if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.langgraph) {
         try {
-          console.log('[InputBox] Sending abort to Main Process for:', conversationId);
-          const result = await window.electronAPI.langgraph.abort(conversationId);
-          console.log('[InputBox] Abort result:', result);
+          await window.electronAPI.langgraph.abort(conversationId);
         } catch (error) {
           console.error('[InputBox] Failed to abort stream:', error);
         }
@@ -416,11 +382,9 @@ export function InputBox() {
       }
 
       // Stop streaming UI state
-      console.log('[InputBox] Stopping streaming UI state');
       stopStreaming(conversationId);
 
-      // Reset refs
-      streamingConversationIdRef.current = null;
+      // Reset abort controller
       abortControllerRef.current = null;
     } else {
       console.warn('[InputBox] No active conversationId found for abort');
@@ -576,30 +540,7 @@ export function InputBox() {
 
     for (const file of files) {
       // 텍스트 파일인지 확인
-      const isTextFile =
-        file.type.startsWith('text/') ||
-        file.name.endsWith('.txt') ||
-        file.name.endsWith('.md') ||
-        file.name.endsWith('.json') ||
-        file.name.endsWith('.js') ||
-        file.name.endsWith('.ts') ||
-        file.name.endsWith('.tsx') ||
-        file.name.endsWith('.jsx') ||
-        file.name.endsWith('.css') ||
-        file.name.endsWith('.html') ||
-        file.name.endsWith('.xml') ||
-        file.name.endsWith('.yaml') ||
-        file.name.endsWith('.yml') ||
-        file.name.endsWith('.py') ||
-        file.name.endsWith('.java') ||
-        file.name.endsWith('.c') ||
-        file.name.endsWith('.cpp') ||
-        file.name.endsWith('.h') ||
-        file.name.endsWith('.sh') ||
-        file.name.endsWith('.sql') ||
-        file.name.endsWith('.csv');
-
-      if (isTextFile) {
+      if (isTextFile(file)) {
         try {
           const text = await file.text();
           textContents.push(`📄 **${file.name}**\n\`\`\`\n${text}\n\`\`\``);
@@ -655,7 +596,8 @@ export function InputBox() {
     const systemMessage = quickSystemMessage; // Capture current system message
     setInput('');
     setSelectedImages([]);
-    setQuickSystemMessage(null); // Clear immediately after capturing
+    // NOTE: Don't clear quickSystemMessage here - it will be cleared in executeStreamingInBackground's finally block
+    // This prevents clearing it too early when user sends multiple messages quickly
 
     // Execute streaming in background (don't await - allows user to switch conversations)
     executeStreamingInBackground(targetConversationId, userMessage, messagImages, systemMessage);
@@ -678,6 +620,11 @@ export function InputBox() {
     let accumulatedContent = '';
     let accumulatedMessage: Partial<Message> = {};
     let rafId: number | null = null;
+
+    // Track cleanup functions for proper memory management
+    let cleanupEventHandler: (() => void) | null = null;
+    let cleanupDoneHandler: (() => void) | null = null;
+    let cleanupErrorHandler: (() => void) | null = null;
 
     try {
       // Add user message with images if present (specify conversation ID)
@@ -745,9 +692,6 @@ export function InputBox() {
       // Use conversation-specific streaming state
       startStreaming(conversationId, assistantMessageId);
 
-      // Track streaming conversation ID for abort handling
-      streamingConversationIdRef.current = conversationId;
-
       // Create abort controller for cancellation
       abortControllerRef.current = new AbortController();
 
@@ -783,11 +727,6 @@ export function InputBox() {
       };
 
       // Stream response from IPC (Electron) or Web
-      // Track cleanup functions for proper memory management
-      let cleanupEventHandler: (() => void) | null = null;
-      let cleanupDoneHandler: (() => void) | null = null;
-      let cleanupErrorHandler: (() => void) | null = null;
-
       try {
         if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.langgraph) {
           // Electron: Use IPC to stream LangGraph responses (CORS 없음)
@@ -1337,7 +1276,6 @@ export function InputBox() {
 
       // Stop streaming for this conversation
       stopStreaming(conversationId);
-      streamingConversationIdRef.current = null;
       abortControllerRef.current = null;
 
       // Clear Quick Question system message

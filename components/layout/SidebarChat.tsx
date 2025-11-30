@@ -65,12 +65,9 @@ export function SidebarChat({
             variant="ghost"
             size="icon"
             onClick={() => {
-              console.log('[SidebarChat] Gallery button clicked - hiding BrowserView');
               // Gallery 열기 전에 BrowserView 숨김
               if (isElectron() && window.electronAPI) {
-                window.electronAPI.browserView.hideAll().then(() => {
-                  console.log('[SidebarChat] BrowserView hidden before opening Gallery');
-                }).catch((err) => {
+                window.electronAPI.browserView.hideAll().catch((err) => {
                   console.error('[SidebarChat] Failed to hide BrowserView:', err);
                 });
               }
@@ -85,12 +82,9 @@ export function SidebarChat({
             variant="ghost"
             size="icon"
             onClick={() => {
-              console.log('[SidebarChat] Settings button clicked - hiding BrowserView');
               // Settings 열기 전에 BrowserView 숨김
               if (isElectron() && window.electronAPI) {
-                window.electronAPI.browserView.hideAll().then(() => {
-                  console.log('[SidebarChat] BrowserView hidden before opening Settings');
-                }).catch((err) => {
+                window.electronAPI.browserView.hideAll().catch((err) => {
                   console.error('[SidebarChat] Failed to hide BrowserView:', err);
                 });
               }

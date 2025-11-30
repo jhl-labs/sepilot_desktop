@@ -6,6 +6,7 @@ import { MessageBubble } from './MessageBubble';
 import { useChatStore } from '@/lib/store/chat-store';
 import { MessageSquare, ZoomIn } from 'lucide-react';
 import { Message } from '@/types';
+import { isTextFile } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -71,30 +72,7 @@ export function ChatArea() {
 
     for (const file of files) {
       // 텍스트 파일인지 확인
-      const isTextFile =
-        file.type.startsWith('text/') ||
-        file.name.endsWith('.txt') ||
-        file.name.endsWith('.md') ||
-        file.name.endsWith('.json') ||
-        file.name.endsWith('.js') ||
-        file.name.endsWith('.ts') ||
-        file.name.endsWith('.tsx') ||
-        file.name.endsWith('.jsx') ||
-        file.name.endsWith('.css') ||
-        file.name.endsWith('.html') ||
-        file.name.endsWith('.xml') ||
-        file.name.endsWith('.yaml') ||
-        file.name.endsWith('.yml') ||
-        file.name.endsWith('.py') ||
-        file.name.endsWith('.java') ||
-        file.name.endsWith('.c') ||
-        file.name.endsWith('.cpp') ||
-        file.name.endsWith('.h') ||
-        file.name.endsWith('.sh') ||
-        file.name.endsWith('.sql') ||
-        file.name.endsWith('.csv');
-
-      if (isTextFile) {
+      if (isTextFile(file)) {
         try {
           const text = await file.text();
           textContents.push(`📄 **${file.name}**\n\`\`\`\n${text}\n\`\`\``);
