@@ -24,7 +24,7 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
   );
   const [ghesUrl, setGhesUrl] = useState(config?.ghesUrl || '');
   const [appId, setAppId] = useState(config?.appId || '');
-  const [privateKeyFile, setPrivateKeyFile] = useState<File | null>(null);
+  const [_privateKeyFile, setPrivateKeyFile] = useState<File | null>(null);
   const [privateKeyUploaded, setPrivateKeyUploaded] = useState(false);
   const [installationId, setInstallationId] = useState(config?.installationId || '');
   const [selectedRepo, setSelectedRepo] = useState(config?.selectedRepo || '');
