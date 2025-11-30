@@ -2,7 +2,7 @@
  * lib/utils.ts 테스트
  */
 
-import { cn, formatDate, generateId, truncate } from '@/lib/utils';
+import { cn, formatDate, generateId, truncate, isTextFile } from '@/lib/utils';
 
 describe('utils', () => {
   describe('cn', () => {
@@ -131,6 +131,53 @@ describe('utils', () => {
       const result = truncate(longString, 10);
       expect(result).toBe('aaaaaaaaaa...');
       expect(result.length).toBe(13); // 10 + '...'
+    });
+  });
+
+  describe('isTextFile', () => {
+    it('should return true for text/* MIME types', () => {
+      const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+      expect(isTextFile(file)).toBe(true);
+    });
+
+    it('should return true for .txt files', () => {
+      const file = new File(['content'], 'test.txt', { type: '' });
+      expect(isTextFile(file)).toBe(true);
+    });
+
+    it('should return true for .md files', () => {
+      const file = new File(['content'], 'README.md', { type: '' });
+      expect(isTextFile(file)).toBe(true);
+    });
+
+    it('should return true for .json files', () => {
+      const file = new File(['{}'], 'data.json', { type: '' });
+      expect(isTextFile(file)).toBe(true);
+    });
+
+    it('should return true for .js files', () => {
+      const file = new File(['code'], 'script.js', { type: '' });
+      expect(isTextFile(file)).toBe(true);
+    });
+
+    it('should return true for .ts files', () => {
+      const file = new File(['code'], 'app.ts', { type: '' });
+      expect(isTextFile(file)).toBe(true);
+    });
+
+    it('should return true for .tsx files', () => {
+      const file = new File(['code'], 'Component.tsx', { type: '' });
+      expect(isTextFile(file)).toBe(true);
+    });
+
+    it('should return false for binary files', () => {
+      const file = new File(['binary'], 'image.png', { type: 'image/png' });
+      expect(isTextFile(file)).toBe(false);
+    });
+
+    it('should return false for unknown file types', () => {
+      const file = new File(['data'], 'file.bin', { type: '' });
+      expect(isTextFile(file)).toBe(false);
     });
   });
 });
