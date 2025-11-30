@@ -2,6 +2,7 @@
 /node_modules
 /.pnp
 .pnp.js
+package-lock.json  # pnpm 프로젝트이므로 npm lockfile 제외
 
 # testing
 /coverage
