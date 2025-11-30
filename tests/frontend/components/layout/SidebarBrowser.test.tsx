@@ -37,6 +37,14 @@ jest.mock('@/components/browser/BrowserAgentLog', () => ({
   BrowserAgentLog: () => <div data-testid="browser-agent-log">Agent Log</div>,
 }));
 
+jest.mock('@/components/browser/BrowserAgentLogsView', () => ({
+  BrowserAgentLogsView: () => <div data-testid="browser-agent-logs-view">Agent Logs View</div>,
+}));
+
+jest.mock('@/components/browser/BrowserToolsList', () => ({
+  BrowserToolsList: () => <div data-testid="browser-tools-list">Tools List</div>,
+}));
+
 describe('SidebarBrowser', () => {
   const mockClearBrowserChat = jest.fn();
   const mockSetBrowserViewMode = jest.fn();
@@ -374,6 +382,146 @@ describe('SidebarBrowser', () => {
       });
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Tools and Logs view', () => {
+    it('should render tools view', () => {
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        clearBrowserChat: mockClearBrowserChat,
+        browserViewMode: 'tools',
+        setBrowserViewMode: mockSetBrowserViewMode,
+      });
+
+      render(<SidebarBrowser />);
+
+      expect(screen.getByTestId('browser-tools-list')).toBeInTheDocument();
+      expect(screen.queryByTestId('simple-chat-area')).not.toBeInTheDocument();
+    });
+
+    it('should render logs view', () => {
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        clearBrowserChat: mockClearBrowserChat,
+        browserViewMode: 'logs',
+        setBrowserViewMode: mockSetBrowserViewMode,
+      });
+
+      render(<SidebarBrowser />);
+
+      expect(screen.getByTestId('browser-agent-logs-view')).toBeInTheDocument();
+      expect(screen.queryByTestId('simple-chat-area')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Header buttons in chat mode', () => {
+    it('should render Tools and Logs buttons in chat mode', () => {
+      render(<SidebarBrowser />);
+
+      expect(screen.getByTitle('사용 가능한 도구 보기')).toBeInTheDocument();
+      expect(screen.getByTitle('Agent 실행 로그 보기')).toBeInTheDocument();
+    });
+
+    it('should switch to tools view when Tools button clicked', () => {
+      render(<SidebarBrowser />);
+
+      const toolsButton = screen.getByTitle('사용 가능한 도구 보기');
+      fireEvent.click(toolsButton);
+
+      expect(mockSetBrowserViewMode).toHaveBeenCalledWith('tools');
+    });
+
+    it('should hide BrowserView before switching to tools in Electron', async () => {
+      enableElectronMode();
+      (mockElectronAPI.browserView.hideAll as jest.Mock).mockResolvedValue(undefined);
+
+      render(<SidebarBrowser />);
+
+      const toolsButton = screen.getByTitle('사용 가능한 도구 보기');
+      fireEvent.click(toolsButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.browserView.hideAll).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle hideAll error when switching to tools', async () => {
+      enableElectronMode();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      (mockElectronAPI.browserView.hideAll as jest.Mock).mockRejectedValue(
+        new Error('Hide failed')
+      );
+
+      render(<SidebarBrowser />);
+
+      const toolsButton = screen.getByTitle('사용 가능한 도구 보기');
+      fireEvent.click(toolsButton);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          '[SidebarBrowser] Failed to hide BrowserView:',
+          expect.any(Error)
+        );
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should switch to logs view when Logs button clicked', () => {
+      render(<SidebarBrowser />);
+
+      const logsButton = screen.getByTitle('Agent 실행 로그 보기');
+      fireEvent.click(logsButton);
+
+      expect(mockSetBrowserViewMode).toHaveBeenCalledWith('logs');
+    });
+
+    it('should hide BrowserView before switching to logs in Electron', async () => {
+      enableElectronMode();
+      (mockElectronAPI.browserView.hideAll as jest.Mock).mockResolvedValue(undefined);
+
+      render(<SidebarBrowser />);
+
+      const logsButton = screen.getByTitle('Agent 실행 로그 보기');
+      fireEvent.click(logsButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.browserView.hideAll).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle hideAll error when switching to logs', async () => {
+      enableElectronMode();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      (mockElectronAPI.browserView.hideAll as jest.Mock).mockRejectedValue(
+        new Error('Hide failed')
+      );
+
+      render(<SidebarBrowser />);
+
+      const logsButton = screen.getByTitle('Agent 실행 로그 보기');
+      fireEvent.click(logsButton);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          '[SidebarBrowser] Failed to hide BrowserView:',
+          expect.any(Error)
+        );
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should not render Tools and Logs buttons in non-chat modes', () => {
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        clearBrowserChat: mockClearBrowserChat,
+        browserViewMode: 'snapshots',
+        setBrowserViewMode: mockSetBrowserViewMode,
+      });
+
+      render(<SidebarBrowser />);
+
+      expect(screen.queryByTitle('사용 가능한 도구 보기')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Agent 실행 로그 보기')).not.toBeInTheDocument();
     });
   });
 });
