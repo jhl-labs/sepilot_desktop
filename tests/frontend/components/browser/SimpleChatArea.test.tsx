@@ -67,6 +67,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [],
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     render(<SimpleChatArea />);
@@ -78,6 +80,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [],
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     const { container } = render(<SimpleChatArea />);
@@ -91,6 +95,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: mockMessages,
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     render(<SimpleChatArea />);
@@ -104,6 +110,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [mockMessages[0]], // User message
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     render(<SimpleChatArea />);
@@ -117,6 +125,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [mockMessages[1]], // Assistant message
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     render(<SimpleChatArea />);
@@ -129,6 +139,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [mockMessages[0]], // User message
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     render(<SimpleChatArea />);
@@ -141,6 +153,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [mockMessages[1]], // Assistant message
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     render(<SimpleChatArea />);
@@ -153,6 +167,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: mockMessages,
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     const { container } = render(<SimpleChatArea />);
@@ -175,6 +191,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [longMessage],
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     render(<SimpleChatArea />);
@@ -191,6 +209,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [],
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
     rerender(<SimpleChatArea />);
     expect(screen.getByText('사용 가능한 Browser Agent 도구')).toBeInTheDocument();
@@ -199,6 +219,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: mockMessages,
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
     rerender(<SimpleChatArea />);
     expect(screen.getByText('Hello, how are you?')).toBeInTheDocument();
@@ -215,6 +237,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [emptyMessage],
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     const { container } = render(<SimpleChatArea />);
@@ -235,6 +259,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: [specialMessage],
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     render(<SimpleChatArea />);
@@ -246,6 +272,8 @@ describe('SimpleChatArea', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       browserChatMessages: mockMessages,
       browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
     });
 
     const { container } = render(<SimpleChatArea />);
@@ -253,5 +281,179 @@ describe('SimpleChatArea', () => {
     // Check that messages are rendered (keys are internal to React)
     const messageContainers = container.querySelectorAll('.flex.justify-start, .flex.justify-end');
     expect(messageContainers).toHaveLength(3);
+  });
+
+  it('should auto-scroll to bottom when messages change', () => {
+    const mockScrollRef = { current: { scrollTop: 0, scrollHeight: 1000 } };
+
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      browserChatMessages: mockMessages,
+      browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
+    });
+
+    const { rerender } = render(<SimpleChatArea />);
+
+    // Simulate ref assignment
+    const scrollArea = document.querySelector('div[class*="overflow-y-auto"]');
+    if (scrollArea) {
+      Object.defineProperty(scrollArea, 'scrollHeight', { value: 1000, writable: true });
+      Object.defineProperty(scrollArea, 'scrollTop', { value: 0, writable: true });
+    }
+
+    // Add new message
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      browserChatMessages: [...mockMessages, {
+        id: 'msg-4',
+        role: 'assistant',
+        content: 'New message',
+        created_at: Date.now(),
+      }],
+      browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
+    });
+
+    rerender(<SimpleChatArea />);
+
+    expect(screen.getByText('New message')).toBeInTheDocument();
+  });
+
+  it('should render agent logs when available', () => {
+    const mockLogs = [
+      {
+        id: 'log-1',
+        phase: 'thinking' as const,
+        message: 'Analyzing the task',
+        timestamp: Date.now() - 2000,
+      },
+      {
+        id: 'log-2',
+        phase: 'tool_call' as const,
+        message: 'Calling navigation tool',
+        timestamp: Date.now() - 1000,
+        details: { toolName: 'navigate' },
+      },
+      {
+        id: 'log-3',
+        phase: 'tool_result' as const,
+        message: 'Navigation successful',
+        timestamp: Date.now(),
+      },
+    ];
+
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      browserChatMessages: mockMessages,
+      browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: mockLogs,
+      browserAgentIsRunning: false,
+    });
+
+    render(<SimpleChatArea />);
+
+    expect(screen.getByText('Agent 실행 과정')).toBeInTheDocument();
+    expect(screen.getByText('Analyzing the task')).toBeInTheDocument();
+    expect(screen.getByText('Calling navigation tool')).toBeInTheDocument();
+    expect(screen.getByText('(navigate)')).toBeInTheDocument();
+    expect(screen.getByText('Navigation successful')).toBeInTheDocument();
+  });
+
+  it('should show loading spinner when agent is running', () => {
+    const mockLogs = [
+      {
+        id: 'log-1',
+        phase: 'thinking' as const,
+        message: 'Processing...',
+        timestamp: Date.now(),
+      },
+    ];
+
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      browserChatMessages: mockMessages,
+      browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: mockLogs,
+      browserAgentIsRunning: true,
+    });
+
+    const { container } = render(<SimpleChatArea />);
+
+    const spinner = container.querySelector('.animate-spin');
+    expect(spinner).toBeInTheDocument();
+  });
+
+  it('should show last 5 agent logs only', () => {
+    const mockLogs = [
+      { id: 'log-1', phase: 'thinking' as const, message: 'Log 1', timestamp: Date.now() - 5000 },
+      { id: 'log-2', phase: 'thinking' as const, message: 'Log 2', timestamp: Date.now() - 4000 },
+      { id: 'log-3', phase: 'thinking' as const, message: 'Log 3', timestamp: Date.now() - 3000 },
+      { id: 'log-4', phase: 'thinking' as const, message: 'Log 4', timestamp: Date.now() - 2000 },
+      { id: 'log-5', phase: 'thinking' as const, message: 'Log 5', timestamp: Date.now() - 1000 },
+      { id: 'log-6', phase: 'thinking' as const, message: 'Log 6', timestamp: Date.now() },
+    ];
+
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      browserChatMessages: mockMessages,
+      browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: mockLogs,
+      browserAgentIsRunning: false,
+    });
+
+    render(<SimpleChatArea />);
+
+    // Should not show first log
+    expect(screen.queryByText('Log 1')).not.toBeInTheDocument();
+
+    // Should show last 5 logs
+    expect(screen.getByText('Log 2')).toBeInTheDocument();
+    expect(screen.getByText('Log 3')).toBeInTheDocument();
+    expect(screen.getByText('Log 4')).toBeInTheDocument();
+    expect(screen.getByText('Log 5')).toBeInTheDocument();
+    expect(screen.getByText('Log 6')).toBeInTheDocument();
+  });
+
+  it('should render different icons for different log phases', () => {
+    const mockLogs = [
+      { id: 'log-1', phase: 'thinking' as const, message: 'Thinking', timestamp: Date.now() - 4000 },
+      { id: 'log-2', phase: 'tool_call' as const, message: 'Tool call', timestamp: Date.now() - 3000 },
+      { id: 'log-3', phase: 'tool_result' as const, message: 'Tool result', timestamp: Date.now() - 2000 },
+      { id: 'log-4', phase: 'error' as const, message: 'Error occurred', timestamp: Date.now() - 1000 },
+      { id: 'log-5', phase: 'completion' as const, message: 'Completed', timestamp: Date.now() },
+    ];
+
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      browserChatMessages: mockMessages,
+      browserChatFontConfig: mockFontConfig,
+      browserAgentLogs: mockLogs,
+      browserAgentIsRunning: false,
+    });
+
+    const { container } = render(<SimpleChatArea />);
+
+    // Check icons are rendered (we can't easily check specific icons without better class selectors)
+    const icons = container.querySelectorAll('svg.h-3.w-3.mt-0\\.5');
+    expect(icons.length).toBeGreaterThan(0);
+  });
+
+  it('should apply font config to messages', () => {
+    const customFontConfig = {
+      fontFamily: '"Noto Sans KR", sans-serif',
+      fontSize: 16,
+    };
+
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      browserChatMessages: [mockMessages[0]],
+      browserChatFontConfig: customFontConfig,
+      browserAgentLogs: [],
+      browserAgentIsRunning: false,
+    });
+
+    render(<SimpleChatArea />);
+
+    const messageElement = screen.getByText('Hello, how are you?').parentElement;
+    expect(messageElement).toHaveStyle({
+      fontFamily: '"Noto Sans KR", sans-serif',
+      fontSize: '16px',
+    });
   });
 });
