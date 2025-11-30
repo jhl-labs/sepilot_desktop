@@ -254,6 +254,37 @@ export function EditorSettings() {
             </p>
           </div>
 
+          {/* 미리보기 */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">미리보기</Label>
+            <div
+              className="rounded-md border bg-muted p-3 font-mono overflow-x-auto"
+              style={{
+                fontSize: `${fontSize}px`,
+                fontFamily,
+                whiteSpace: wordWrap === 'on' ? 'pre-wrap' : 'pre',
+              }}
+            >
+              <div className="flex gap-2">
+                {lineNumbers === 'on' && (
+                  <div className="text-muted-foreground select-none">
+                    <div>1</div>
+                    <div>2</div>
+                    <div>3</div>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div>function hello() {'{'}</div>
+                  <div>  console.log('Hello, World!');</div>
+                  <div>{'}'}</div>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              현재 설정이 적용된 코드 미리보기
+            </p>
+          </div>
+
           {/* 저장 버튼 */}
           <Button
             onClick={handleSaveAppearance}
