@@ -734,4 +734,85 @@ describe('ChatHistory', () => {
       }
     });
   });
+
+  describe('Search with Persona', () => {
+    const mockPersonasForSearch = [
+      { id: 'p1', name: '번역가', avatar: '🌐', systemPrompt: 'Translator', color: '#3b82f6', description: 'Translation assistant' },
+      { id: 'p2', name: '개발자', avatar: '👨\u200d💻', systemPrompt: 'Developer', color: '#10b981', description: 'Coding assistant' },
+    ];
+
+    it('should display persona avatar in search results', async () => {
+      const conversationWithPersona: Conversation = {
+        id: 'conv-persona',
+        title: 'Translation Chat',
+        created_at: Date.now(),
+        updated_at: Date.now(),
+        personaId: 'p1',
+      };
+
+      const searchResults = [
+        {
+          conversation: conversationWithPersona,
+          matchedMessages: [
+            { id: 'msg-1', role: 'user', content: 'translate this', created_at: Date.now() } as Message,
+          ],
+        },
+      ];
+
+      const storeWithPersonas = {
+        ...mockChatStore,
+        personas: mockPersonasForSearch,
+        searchConversations: jest.fn().mockResolvedValue(searchResults),
+      };
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue(storeWithPersonas);
+
+      render(<ChatHistory />);
+
+      const searchInput = screen.getByPlaceholderText('대화 검색...');
+      fireEvent.change(searchInput, { target: { value: 'translate' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Translation Chat')).toBeInTheDocument();
+        expect(screen.getByText('🌐')).toBeInTheDocument();
+      });
+    });
+
+    it('should not display persona avatar in search results when persona not found', async () => {
+      const conversationWithInvalidPersona: Conversation = {
+        id: 'conv-invalid',
+        title: 'Invalid Persona Chat',
+        created_at: Date.now(),
+        updated_at: Date.now(),
+        personaId: 'invalid-id',
+      };
+
+      const searchResults = [
+        {
+          conversation: conversationWithInvalidPersona,
+          matchedMessages: [],
+        },
+      ];
+
+      const storeWithPersonas = {
+        ...mockChatStore,
+        personas: mockPersonasForSearch,
+        searchConversations: jest.fn().mockResolvedValue(searchResults),
+      };
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue(storeWithPersonas);
+
+      render(<ChatHistory />);
+
+      const searchInput = screen.getByPlaceholderText('대화 검색...');
+      fireEvent.change(searchInput, { target: { value: 'invalid' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Invalid Persona Chat')).toBeInTheDocument();
+        // Persona avatar should not be displayed
+        expect(screen.queryByText('🌐')).not.toBeInTheDocument();
+        expect(screen.queryByText('👨\u200d💻')).not.toBeInTheDocument();
+      });
+    });
+  });
 });
