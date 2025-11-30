@@ -35,6 +35,7 @@ export function ChatArea() {
   const streamingMessageId = activeConversationId ? streamingConversations.get(activeConversationId) || null : null;
   const scrollRef = useRef<HTMLDivElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  const rafIdRef = useRef<number | null>(null); // RAF cleanup for handleRegenerate
   const [isDragging, setIsDragging] = useState(false);
 
   // Handle drag events for text files
@@ -181,7 +182,6 @@ export function ChatArea() {
     let accumulatedContent = '';
     let accumulatedMessage: Partial<Message> = {};
     let pendingUpdate = false;
-    let rafId: number | null = null;
 
     try {
       // 1. Find the assistant message to regenerate
@@ -208,9 +208,9 @@ export function ChatArea() {
 
         if (force) {
           // 강제 업데이트 (스트리밍 완료 시)
-          if (rafId !== null) {
-            cancelAnimationFrame(rafId);
-            rafId = null;
+          if (rafIdRef.current !== null) {
+            cancelAnimationFrame(rafIdRef.current);
+            rafIdRef.current = null;
           }
           updateMessage(assistantMessageId, accumulatedMessage);
           pendingUpdate = false;
@@ -223,10 +223,10 @@ export function ChatArea() {
         }
 
         pendingUpdate = true;
-        rafId = requestAnimationFrame(() => {
+        rafIdRef.current = requestAnimationFrame(() => {
           updateMessage(assistantMessageId, accumulatedMessage);
           pendingUpdate = false;
-          rafId = null;
+          rafIdRef.current = null;
         });
       };
 
@@ -442,8 +442,9 @@ export function ChatArea() {
       console.error('Regeneration error:', error);
     } finally {
       // Cleanup: cancel any pending animation frame
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
       }
       stopStreaming(conversationId);
     }
@@ -455,6 +456,16 @@ export function ChatArea() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+    };
+  }, []);
 
   if (!activeConversationId) {
     return (

@@ -609,7 +609,7 @@ export class BrowserAgentGraph {
             message: `도구 호출: ${toolCall.name}`,
             details: {
               toolName: toolCall.name,
-              toolArgs: toolCall.arguments,
+              toolArgs: toolCall.arguments as Record<string, string | number | boolean | null>,
               iteration: iterations + 1,
               maxIterations,
             },

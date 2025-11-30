@@ -349,10 +349,9 @@ export function MainLayout({ children }: MainLayoutProps) {
     }
 
     // Browser 모드에서 browserViewMode가 'chat'이 아니면 숨김
-    // 단, 'settings'는 Sidebar 내부에서만 표시되므로 BrowserView를 숨기지 않음
-    // 'logs'와 'tools'도 Sidebar 내부에서만 표시되므로 숨기지 않음
+    // 단, 'settings'와 'tools'는 Sidebar 내부에서만 표시되므로 BrowserView를 숨기지 않음
     if (appMode === 'browser' && browserViewMode !== 'chat' &&
-        browserViewMode !== 'settings' && browserViewMode !== 'logs' && browserViewMode !== 'tools') {
+        browserViewMode !== 'settings' && browserViewMode !== 'tools') {
       console.log('[MainLayout] Hiding BrowserView for browser overlay (browserViewMode:', browserViewMode, ')');
       window.electronAPI.browserView.hideAll().then(() => {
         console.log('[MainLayout] BrowserView hidden successfully');

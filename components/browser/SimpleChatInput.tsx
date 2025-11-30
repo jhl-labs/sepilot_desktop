@@ -8,6 +8,34 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { isElectron } from '@/lib/platform';
 import { getWebLLMClient } from '@/lib/llm/web-client';
 
+// Stream event types
+interface StreamEventProgress {
+  type: 'progress';
+  data: {
+    iteration: number;
+    maxIterations: number;
+    status: string;
+    message: string;
+  };
+}
+
+interface StreamEventStreaming {
+  type: 'streaming';
+  chunk: string;
+}
+
+interface StreamEventNode {
+  type: 'node';
+  data: {
+    messages: Array<{
+      role: 'system' | 'user' | 'assistant';
+      content: string;
+    }>;
+  };
+}
+
+type StreamEvent = StreamEventProgress | StreamEventStreaming | StreamEventNode;
+
 export function SimpleChatInput() {
   const [input, setInput] = useState('');
   const [isComposing, setIsComposing] = useState(false);
@@ -110,32 +138,21 @@ export function SimpleChatInput() {
               return;
             }
 
-            // Cast to any for event property access
-            const evt = event as {
-              type?: string;
-              chunk?: string;
-              data?: {
-                messages?: Array<{ role: string; content?: string }>;
-                iteration?: number;
-                maxIterations?: number;
-                status?: string;
-                message?: string;
-              }
-            };
+            const evt = event as StreamEvent;
 
             // Handle progress events
-            if (evt.type === 'progress' && evt.data) {
+            if (evt.type === 'progress') {
               setAgentProgress({
-                iteration: evt.data.iteration || 0,
-                maxIterations: evt.data.maxIterations || 30,
-                status: evt.data.status || 'working',
-                message: evt.data.message || 'AI 작업 중...',
+                iteration: evt.data.iteration,
+                maxIterations: evt.data.maxIterations,
+                status: evt.data.status,
+                message: evt.data.message,
               });
               return;
             }
 
             // Handle real-time streaming chunks from LLM
-            if (evt.type === 'streaming' && evt.chunk) {
+            if (evt.type === 'streaming') {
               accumulatedContent += evt.chunk;
               // Update the last assistant message
               const messages = useChatStore.getState().browserChatMessages;
@@ -147,9 +164,9 @@ export function SimpleChatInput() {
             }
 
             // Handle node execution results
-            if (evt.type === 'node' && evt.data?.messages) {
+            if (evt.type === 'node') {
               const allMessages = evt.data.messages;
-              if (allMessages && allMessages.length > 0) {
+              if (allMessages.length > 0) {
                 const lastMsg = allMessages[allMessages.length - 1];
                 if (lastMsg.role === 'assistant' && lastMsg.content) {
                   const messages = useChatStore.getState().browserChatMessages;
@@ -175,11 +192,17 @@ export function SimpleChatInput() {
             undefined, // networkConfig
             undefined  // workingDirectory
           );
+        } catch (streamError) {
+          console.error('[SimpleChatInput] Stream error:', streamError);
+          throw streamError;
         } finally {
           // Cleanup event listener
-          if (eventHandler) {
-            eventHandler();
+          eventHandler?.();
+          // Ensure abort controller is cleaned up
+          if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
+            abortControllerRef.current.abort();
           }
+          abortControllerRef.current = null;
         }
       } else {
         // Web: WebLLMClient directly

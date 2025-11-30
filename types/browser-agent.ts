@@ -34,7 +34,7 @@ export interface BrowserAgentLogEntry {
 
     // Tool call phase
     toolName?: string;
-    toolArgs?: Record<string, any>;
+    toolArgs?: Record<string, string | number | boolean | null>;
 
     // Tool result phase
     toolResult?: string;

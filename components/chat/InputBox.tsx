@@ -667,10 +667,16 @@ export function InputBox() {
     messagImages?: ImageAttachment[],
     systemMessage?: string | null
   ) => {
+    // Validate conversation exists - prevent race condition when switching conversations
+    const conversationExists = conversations.find((c) => c.id === conversationId);
+    if (!conversationExists) {
+      console.warn('[InputBox] Conversation no longer exists, aborting streaming:', conversationId);
+      return;
+    }
+
     // Variables for streaming animation
     let accumulatedContent = '';
     let accumulatedMessage: Partial<Message> = {};
-    const pendingUpdate = false;
     let rafId: number | null = null;
 
     try {
@@ -777,6 +783,11 @@ export function InputBox() {
       };
 
       // Stream response from IPC (Electron) or Web
+      // Track cleanup functions for proper memory management
+      let cleanupEventHandler: (() => void) | null = null;
+      let cleanupDoneHandler: (() => void) | null = null;
+      let cleanupErrorHandler: (() => void) | null = null;
+
       try {
         if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.langgraph) {
           // Electron: Use IPC to stream LangGraph responses (CORS 없음)
@@ -784,7 +795,7 @@ export function InputBox() {
 
           // Setup stream event listeners
           // 이벤트에 포함된 conversationId로 필터링하여 다른 대화의 이벤트 무시
-          const eventHandler = window.electronAPI.langgraph.onStreamEvent((event: any) => {
+          cleanupEventHandler = window.electronAPI.langgraph.onStreamEvent((event: any) => {
             try {
               // Filter events by conversationId - ignore events from other conversations
               if (event.conversationId && event.conversationId !== conversationId) {
@@ -1169,7 +1180,7 @@ export function InputBox() {
               }
             });
 
-          const doneHandler = window.electronAPI.langgraph.onStreamDone(
+          cleanupDoneHandler = window.electronAPI.langgraph.onStreamDone(
             (data?: { conversationId?: string }) => {
               try {
                 // Filter by conversationId - ignore done events from other conversations
@@ -1189,7 +1200,7 @@ export function InputBox() {
             }
           );
 
-          const errorHandler = window.electronAPI.langgraph.onStreamError(
+          cleanupErrorHandler = window.electronAPI.langgraph.onStreamError(
             (data: { error: string; conversationId?: string }) => {
               // Filter by conversationId - ignore error events from other conversations
               if (data?.conversationId && data.conversationId !== conversationId) {
@@ -1313,9 +1324,15 @@ export function InputBox() {
         cancelAnimationFrame(rafId);
       }
 
-      // Cleanup: remove all IPC event listeners (Electron only)
-      if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.langgraph) {
-        window.electronAPI.langgraph.removeAllStreamListeners();
+      // Cleanup: remove IPC event listeners individually for this conversation
+      if (cleanupEventHandler) {
+        cleanupEventHandler();
+      }
+      if (cleanupDoneHandler) {
+        cleanupDoneHandler();
+      }
+      if (cleanupErrorHandler) {
+        cleanupErrorHandler();
       }
 
       // Stop streaming for this conversation

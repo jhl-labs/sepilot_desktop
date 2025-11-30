@@ -233,4 +233,50 @@ describe('ContextMenu Components', () => {
       expect(screen.getByText('Trigger')).toBeInTheDocument();
     });
   });
+
+  describe('ContextMenuSub', () => {
+    it('should render sub menu with trigger and content', () => {
+      render(
+        <ContextMenu>
+          <ContextMenuTrigger>
+            <div>Main Trigger</div>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem>Regular Item</ContextMenuItem>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>More Options</ContextMenuSubTrigger>
+              <ContextMenuSubContent>
+                <ContextMenuItem>Sub Item 1</ContextMenuItem>
+                <ContextMenuItem>Sub Item 2</ContextMenuItem>
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          </ContextMenuContent>
+        </ContextMenu>
+      );
+
+      expect(screen.getByText('Main Trigger')).toBeInTheDocument();
+    });
+
+    it('should render sub menu with inset option', () => {
+      render(
+        <ContextMenu>
+          <ContextMenuTrigger>
+            <div>Trigger</div>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger inset>
+                Indented Submenu
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent>
+                <ContextMenuItem>Item</ContextMenuItem>
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          </ContextMenuContent>
+        </ContextMenu>
+      );
+
+      expect(screen.getByText('Trigger')).toBeInTheDocument();
+    });
+  });
 });

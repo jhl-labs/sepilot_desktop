@@ -126,7 +126,7 @@ interface ChatStore {
 
   // Browser Mode Chat (simple side chat)
   browserChatMessages: Message[];
-  browserViewMode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'logs' | 'tools';
+  browserViewMode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools';
 
   // Browser Agent Logs (실행 과정 가시성)
   browserAgentLogs: BrowserAgentLogEntry[];
@@ -206,7 +206,7 @@ interface ChatStore {
   addBrowserChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => void;
   updateBrowserChatMessage: (id: string, updates: Partial<Message>) => void;
   clearBrowserChat: () => void;
-  setBrowserViewMode: (mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'logs' | 'tools') => void;
+  setBrowserViewMode: (mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools') => void;
 
   // Actions - Browser Agent Logs
   addBrowserAgentLog: (log: Omit<BrowserAgentLogEntry, 'id' | 'timestamp'>) => void;
@@ -1042,7 +1042,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ browserChatMessages: [] });
   },
 
-  setBrowserViewMode: (mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'logs' | 'tools') => {
+  setBrowserViewMode: (mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools') => {
     set({ browserViewMode: mode });
   },
 
