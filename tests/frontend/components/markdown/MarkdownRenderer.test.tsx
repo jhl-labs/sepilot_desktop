@@ -629,4 +629,36 @@ z = 30
       expect(container).toBeInTheDocument();
     });
   });
+
+  describe('Streaming mode special cases', () => {
+    it('should render mermaid as CodeBlock when isStreaming=true', () => {
+      const content = '```mermaid\ngraph TD\n  A-->B\n```';
+
+      render(<MarkdownRenderer content={content} isStreaming={true} />);
+
+      // Should show as code block, not render as diagram
+      expect(screen.getByText('mermaid')).toBeInTheDocument();
+      expect(screen.getByText(/graph TD/)).toBeInTheDocument();
+    });
+
+    it('should render plotly as CodeBlock when isStreaming=true', () => {
+      const content = '```plotly\n{"data": []}\n```';
+
+      render(<MarkdownRenderer content={content} isStreaming={true} />);
+
+      // Should show as JSON code block, not render as chart
+      expect(screen.getByText('json')).toBeInTheDocument();
+      expect(screen.getByText(/"data":/)).toBeInTheDocument();
+    });
+
+    it('should handle lang- prefix in className', () => {
+      // This tests the lang- prefix handling in line 60-62
+      const content = '```python\nprint("hello")\n```';
+
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByText('python')).toBeInTheDocument();
+      expect(screen.getByText('print("hello")')).toBeInTheDocument();
+    });
+  });
 });
