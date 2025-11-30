@@ -29,15 +29,7 @@ export function SidebarBrowser() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => {
-                console.warn('[SidebarBrowser] Tools button clicked - hiding BrowserView');
-                if (isElectron() && window.electronAPI) {
-                  window.electronAPI.browserView.hideAll().catch((err) => {
-                    console.error('[SidebarBrowser] Failed to hide BrowserView:', err);
-                  });
-                }
-                setBrowserViewMode('tools');
-              }}
+              onClick={() => setBrowserViewMode('tools')}
               title="사용 가능한 도구 보기"
               className="h-8 w-8"
             >
@@ -46,15 +38,7 @@ export function SidebarBrowser() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => {
-                console.warn('[SidebarBrowser] Logs button clicked - hiding BrowserView');
-                if (isElectron() && window.electronAPI) {
-                  window.electronAPI.browserView.hideAll().catch((err) => {
-                    console.error('[SidebarBrowser] Failed to hide BrowserView:', err);
-                  });
-                }
-                setBrowserViewMode('logs');
-              }}
+              onClick={() => setBrowserViewMode('logs')}
               title="Agent 실행 로그 보기"
               className="h-8 w-8"
             >
