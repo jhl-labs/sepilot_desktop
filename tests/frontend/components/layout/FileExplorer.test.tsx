@@ -588,6 +588,281 @@ describe('FileExplorer', () => {
         expect(screen.getByPlaceholderText('예: my-folder')).toBeInTheDocument();
       });
     });
+
+    it('새 파일 dialog에서 파일 생성 성공', async () => {
+      const user = userEvent.setup();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
+      });
+
+      (mockElectronAPI.fs.createFile as jest.Mock).mockResolvedValue({
+        success: true,
+      });
+
+      (mockElectronAPI.fs.readDirectory as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      render(<FileExplorer />);
+
+      const newFileButton = screen.getByTitle('새 파일');
+      await user.click(newFileButton);
+
+      const input = await screen.findByPlaceholderText('예: example.txt');
+      await user.type(input, 'test.txt');
+
+      const createButton = screen.getByText('생성');
+      await user.click(createButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.fs.createFile).toHaveBeenCalledWith('/test/test.txt', '');
+        expect(mockElectronAPI.fs.readDirectory).toHaveBeenCalledWith('/test');
+      });
+    });
+
+    it('새 파일 dialog에서 Enter 키로 파일 생성', async () => {
+      const user = userEvent.setup();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
+      });
+
+      (mockElectronAPI.fs.createFile as jest.Mock).mockResolvedValue({
+        success: true,
+      });
+
+      (mockElectronAPI.fs.readDirectory as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      render(<FileExplorer />);
+
+      const newFileButton = screen.getByTitle('새 파일');
+      await user.click(newFileButton);
+
+      const input = await screen.findByPlaceholderText('예: example.txt');
+      await user.type(input, 'test.txt{Enter}');
+
+      await waitFor(() => {
+        expect(mockElectronAPI.fs.createFile).toHaveBeenCalledWith('/test/test.txt', '');
+      });
+    });
+
+    it('새 파일 dialog 취소 버튼', async () => {
+      const user = userEvent.setup();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
+      });
+
+      render(<FileExplorer />);
+
+      const newFileButton = screen.getByTitle('새 파일');
+      await user.click(newFileButton);
+
+      await screen.findByText('새 파일 생성');
+
+      const cancelButton = screen.getByText('취소');
+      await user.click(cancelButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText('새 파일 생성')).not.toBeInTheDocument();
+      });
+    });
+
+    it('새 파일 생성 실패 시 alert 표시', async () => {
+      const user = userEvent.setup();
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
+      });
+
+      (mockElectronAPI.fs.createFile as jest.Mock).mockResolvedValue({
+        success: false,
+      });
+
+      render(<FileExplorer />);
+
+      const newFileButton = screen.getByTitle('새 파일');
+      await user.click(newFileButton);
+
+      const input = await screen.findByPlaceholderText('예: example.txt');
+      await user.type(input, 'test.txt');
+
+      const createButton = screen.getByText('생성');
+      await user.click(createButton);
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith('파일 생성 실패');
+      });
+
+      alertSpy.mockRestore();
+    });
+
+    it('새 폴더 dialog에서 폴더 생성 성공', async () => {
+      const user = userEvent.setup();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
+      });
+
+      (mockElectronAPI.fs.createDirectory as jest.Mock).mockResolvedValue({
+        success: true,
+      });
+
+      (mockElectronAPI.fs.readDirectory as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      render(<FileExplorer />);
+
+      const newFolderButton = screen.getByTitle('새 폴더');
+      await user.click(newFolderButton);
+
+      const input = await screen.findByPlaceholderText('예: my-folder');
+      await user.type(input, 'new-folder');
+
+      const createButton = screen.getByText('생성');
+      await user.click(createButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.fs.createDirectory).toHaveBeenCalledWith('/test/new-folder');
+        expect(mockElectronAPI.fs.readDirectory).toHaveBeenCalledWith('/test');
+      });
+    });
+
+    it('새 폴더 dialog에서 Enter 키로 폴더 생성', async () => {
+      const user = userEvent.setup();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
+      });
+
+      (mockElectronAPI.fs.createDirectory as jest.Mock).mockResolvedValue({
+        success: true,
+      });
+
+      (mockElectronAPI.fs.readDirectory as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      render(<FileExplorer />);
+
+      const newFolderButton = screen.getByTitle('새 폴더');
+      await user.click(newFolderButton);
+
+      const input = await screen.findByPlaceholderText('예: my-folder');
+      await user.type(input, 'new-folder{Enter}');
+
+      await waitFor(() => {
+        expect(mockElectronAPI.fs.createDirectory).toHaveBeenCalledWith('/test/new-folder');
+      });
+    });
+
+    it('새 폴더 dialog 취소 버튼', async () => {
+      const user = userEvent.setup();
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
+      });
+
+      render(<FileExplorer />);
+
+      const newFolderButton = screen.getByTitle('새 폴더');
+      await user.click(newFolderButton);
+
+      await screen.findByText('새 폴더 생성');
+
+      const cancelButton = screen.getByText('취소');
+      await user.click(cancelButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText('새 폴더 생성')).not.toBeInTheDocument();
+      });
+    });
+
+    it('새 폴더 생성 실패 시 alert 표시', async () => {
+      const user = userEvent.setup();
+      const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
+      });
+
+      (mockElectronAPI.fs.createDirectory as jest.Mock).mockResolvedValue({
+        success: false,
+      });
+
+      render(<FileExplorer />);
+
+      const newFolderButton = screen.getByTitle('새 폴더');
+      await user.click(newFolderButton);
+
+      const input = await screen.findByPlaceholderText('예: my-folder');
+      await user.type(input, 'new-folder');
+
+      const createButton = screen.getByText('생성');
+      await user.click(createButton);
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith('폴더 생성 실패');
+      });
+
+      alertSpy.mockRestore();
+    });
+
+    it('빈 디렉토리 메시지 표시', async () => {
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
+      });
+
+      (mockElectronAPI.fs.readDirectory as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      render(<FileExplorer />);
+
+      await waitFor(() => {
+        expect(screen.getByText('빈 디렉토리')).toBeInTheDocument();
+      });
+    });
   });
 
   describe('다양한 파일 확장자 언어 감지', () => {
