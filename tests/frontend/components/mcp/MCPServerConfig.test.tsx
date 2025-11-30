@@ -368,4 +368,309 @@ describe('MCPServerConfig', () => {
       });
     });
   });
+
+  describe('Validation 에러', () => {
+    it('should show error when server name is empty', async () => {
+      const user = userEvent.setup();
+      render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
+
+      // Name is empty, but command has default value 'npx'
+      const nameInput = screen.getByLabelText(/서버 이름/);
+      await user.clear(nameInput);
+
+      const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
+
+      // Button should be disabled when name is empty
+      expect(addButton).toBeDisabled();
+    });
+
+    it('should show error when command is empty for stdio', async () => {
+      const user = userEvent.setup();
+      render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
+
+      const nameInput = screen.getByLabelText(/서버 이름/);
+      await user.type(nameInput, 'test-server');
+
+      const commandInput = screen.getByLabelText(/실행 명령어/);
+      await user.clear(commandInput);
+
+      const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
+      expect(addButton).toBeDisabled();
+    });
+
+    it('should show error when SSE URL is empty', async () => {
+      const user = userEvent.setup();
+      render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
+
+      // Switch to SSE tab
+      const sseTab = screen.getByRole('tab', { name: /SSE/ });
+      await user.click(sseTab);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/SSE URL/)).toBeInTheDocument();
+      });
+
+      const nameInput = screen.getByLabelText(/서버 이름/);
+      await user.type(nameInput, 'sse-server');
+
+      // URL input should exist but be empty
+      const urlInput = screen.getByLabelText(/SSE URL/);
+      expect(urlInput).toHaveValue('');
+
+      const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
+      expect(addButton).toBeDisabled();
+    });
+  });
+
+  describe('SSE Headers 파싱', () => {
+    it('should parse SSE headers correctly', async () => {
+      const user = userEvent.setup();
+      render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
+
+      // Switch to SSE
+      const sseTab = screen.getByRole('tab', { name: /SSE/ });
+      await user.click(sseTab);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/SSE URL/)).toBeInTheDocument();
+      });
+
+      const nameInput = screen.getByLabelText(/서버 이름/);
+      await user.type(nameInput, 'sse-server');
+
+      const urlInput = screen.getByLabelText(/SSE URL/);
+      await user.type(urlInput, 'http://localhost:3000/sse');
+
+      const headersInput = screen.getByLabelText(/HTTP 헤더/);
+      await user.type(headersInput, 'Authorization: Bearer token123\nContent-Type: application/json');
+
+      const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.mcp.addServer).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'sse-server',
+            transport: 'sse',
+            url: 'http://localhost:3000/sse',
+            headers: {
+              'Authorization': 'Bearer token123',
+              'Content-Type': 'application/json',
+            },
+          })
+        );
+      });
+    });
+
+    it('should handle SSE headers without colons', async () => {
+      const user = userEvent.setup();
+      render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
+
+      const sseTab = screen.getByRole('tab', { name: /SSE/ });
+      await user.click(sseTab);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/SSE URL/)).toBeInTheDocument();
+      });
+
+      const nameInput = screen.getByLabelText(/서버 이름/);
+      await user.type(nameInput, 'sse-server');
+
+      const urlInput = screen.getByLabelText(/SSE URL/);
+      await user.type(urlInput, 'http://localhost:3000/sse');
+
+      // Invalid header format (no colon)
+      const headersInput = screen.getByLabelText(/HTTP 헤더/);
+      await user.type(headersInput, 'InvalidHeader\nValid: Header');
+
+      const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.mcp.addServer).toHaveBeenCalledWith(
+          expect.objectContaining({
+            headers: {
+              'Valid': 'Header',
+            },
+          })
+        );
+      });
+    });
+
+    it('should handle empty headers for SSE', async () => {
+      const user = userEvent.setup();
+      render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
+
+      const sseTab = screen.getByRole('tab', { name: /SSE/ });
+      await user.click(sseTab);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/SSE URL/)).toBeInTheDocument();
+      });
+
+      const nameInput = screen.getByLabelText(/서버 이름/);
+      await user.type(nameInput, 'sse-server');
+
+      const urlInput = screen.getByLabelText(/SSE URL/);
+      await user.type(urlInput, 'http://localhost:3000/sse');
+
+      const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.mcp.addServer).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'sse-server',
+            transport: 'sse',
+            url: 'http://localhost:3000/sse',
+          })
+        );
+      });
+
+      // headers should be undefined when empty
+      const call = mockElectronAPI.mcp.addServer.mock.calls[0][0];
+      expect(call.headers).toBeUndefined();
+    });
+  });
+
+  describe('환경변수 파싱', () => {
+    it('should parse environment variables correctly', async () => {
+      const user = userEvent.setup();
+      render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
+
+      const nameInput = screen.getByLabelText(/서버 이름/);
+      await user.type(nameInput, 'test-server');
+
+      // Open advanced options
+      const advancedButton = screen.getByRole('button', { name: /고급 옵션/ });
+      await user.click(advancedButton);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/환경 변수/)).toBeInTheDocument();
+      });
+
+      const envInput = screen.getByLabelText(/환경 변수/);
+      await user.type(envInput, 'API_KEY=secret123\nDEBUG=true\nPORT=8080');
+
+      const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.mcp.addServer).toHaveBeenCalledWith(
+          expect.objectContaining({
+            env: {
+              'API_KEY': 'secret123',
+              'DEBUG': 'true',
+              'PORT': '8080',
+            },
+          })
+        );
+      });
+    });
+
+    it('should handle env vars without equals sign', async () => {
+      const user = userEvent.setup();
+      render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
+
+      const nameInput = screen.getByLabelText(/서버 이름/);
+      await user.type(nameInput, 'test-server');
+
+      const advancedButton = screen.getByRole('button', { name: /고급 옵션/ });
+      await user.click(advancedButton);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/환경 변수/)).toBeInTheDocument();
+      });
+
+      const envInput = screen.getByLabelText(/환경 변수/);
+      await user.type(envInput, 'INVALID\nVALID=yes');
+
+      const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.mcp.addServer).toHaveBeenCalledWith(
+          expect.objectContaining({
+            env: {
+              'VALID': 'yes',
+            },
+          })
+        );
+      });
+    });
+
+    it('should handle empty environment variables', async () => {
+      const user = userEvent.setup();
+      render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
+
+      const nameInput = screen.getByLabelText(/서버 이름/);
+      await user.type(nameInput, 'test-server');
+
+      const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.mcp.addServer).toHaveBeenCalled();
+      });
+
+      // env should be undefined when empty
+      const call = mockElectronAPI.mcp.addServer.mock.calls[0][0];
+      expect(call.env).toBeUndefined();
+    });
+  });
+
+  describe('에러 처리', () => {
+    it('should handle exception during addServer', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockElectronAPI.mcp.addServer.mockRejectedValueOnce(new Error('Network error'));
+
+      const user = userEvent.setup();
+      render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
+
+      const nameInput = screen.getByLabelText(/서버 이름/);
+      await user.type(nameInput, 'test-server');
+
+      const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'Failed to add MCP server:',
+          expect.any(Error)
+        );
+      });
+
+      // Should show error message
+      await waitFor(() => {
+        expect(screen.getByText(/Network error/)).toBeInTheDocument();
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should handle unknown error type', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockElectronAPI.mcp.addServer.mockRejectedValueOnce('Unknown error');
+
+      const user = userEvent.setup();
+      render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
+
+      const nameInput = screen.getByLabelText(/서버 이름/);
+      await user.type(nameInput, 'test-server');
+
+      const addButton = screen.getByRole('button', { name: /MCP 서버 추가/ });
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalled();
+      });
+
+      // Should show generic error message
+      await waitFor(() => {
+        expect(screen.getByText(/서버 추가에 실패했습니다/)).toBeInTheDocument();
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+  });
 });
