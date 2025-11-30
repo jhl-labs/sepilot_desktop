@@ -17,6 +17,13 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
 
   const ptyManager = getPTYManager(mainWindowRef || undefined);
 
+  // 기존 핸들러 제거 (중복 등록 방지)
+  ipcMain.removeHandler('terminal:create-session');
+  ipcMain.removeHandler('terminal:write');
+  ipcMain.removeHandler('terminal:resize');
+  ipcMain.removeHandler('terminal:kill-session');
+  ipcMain.removeHandler('terminal:get-sessions');
+
   /**
    * 터미널 세션 생성
    */
