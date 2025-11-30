@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { BrowserSettingDialog } from '@/components/browser/BrowserSettingDialog';
 import { enableElectronMode, mockElectronAPI } from '../../../setup';
@@ -278,5 +279,110 @@ describe('BrowserSettingDialog', () => {
     });
 
     consoleSpy.mockRestore();
+  });
+
+  it('should save font configuration', async () => {
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
+
+    (mockElectronAPI.browserView.getBrowserSettings as jest.Mock).mockResolvedValue({
+      success: true,
+      data: {
+        snapshotsPath: '/path',
+        bookmarksPath: '/path',
+      },
+    });
+
+    render(<BrowserSettingDialog open={true} onOpenChange={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Browser Chat 폰트 설정')).toBeInTheDocument();
+    });
+
+    const saveButton = screen.getByRole('button', { name: /저장/i });
+    fireEvent.click(saveButton);
+
+    expect(alertSpy).toHaveBeenCalledWith('폰트 설정이 저장되었습니다.');
+
+    alertSpy.mockRestore();
+  });
+
+  it('should reset font configuration', async () => {
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+
+    (mockElectronAPI.browserView.getBrowserSettings as jest.Mock).mockResolvedValue({
+      success: true,
+      data: {
+        snapshotsPath: '/path',
+        bookmarksPath: '/path',
+      },
+    });
+
+    render(<BrowserSettingDialog open={true} onOpenChange={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Browser Chat 폰트 설정')).toBeInTheDocument();
+    });
+
+    const resetButton = screen.getByRole('button', { name: /초기화/i });
+    fireEvent.click(resetButton);
+
+    expect(confirmSpy).toHaveBeenCalledWith('폰트 설정을 기본값으로 초기화하시겠습니까?');
+    expect(alertSpy).toHaveBeenCalledWith('폰트 설정이 초기화되었습니다.');
+
+    confirmSpy.mockRestore();
+    alertSpy.mockRestore();
+  });
+
+  it('should not reset when user cancels', async () => {
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+
+    (mockElectronAPI.browserView.getBrowserSettings as jest.Mock).mockResolvedValue({
+      success: true,
+      data: {
+        snapshotsPath: '/path',
+        bookmarksPath: '/path',
+      },
+    });
+
+    render(<BrowserSettingDialog open={true} onOpenChange={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Browser Chat 폰트 설정')).toBeInTheDocument();
+    });
+
+    const resetButton = screen.getByRole('button', { name: /초기화/i });
+    fireEvent.click(resetButton);
+
+    expect(confirmSpy).toHaveBeenCalledWith('폰트 설정을 기본값으로 초기화하시겠습니까?');
+    expect(alertSpy).not.toHaveBeenCalled();
+
+    confirmSpy.mockRestore();
+    alertSpy.mockRestore();
+  });
+
+  it('should update font size', async () => {
+    const user = userEvent.setup();
+
+    (mockElectronAPI.browserView.getBrowserSettings as jest.Mock).mockResolvedValue({
+      success: true,
+      data: {
+        snapshotsPath: '/path',
+        bookmarksPath: '/path',
+      },
+    });
+
+    render(<BrowserSettingDialog open={true} onOpenChange={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Browser Chat 폰트 설정')).toBeInTheDocument();
+    });
+
+    const fontSizeInput = screen.getByDisplayValue('14');
+    await user.clear(fontSizeInput);
+    await user.type(fontSizeInput, '18');
+
+    expect(fontSizeInput).toHaveValue(18);
   });
 });
