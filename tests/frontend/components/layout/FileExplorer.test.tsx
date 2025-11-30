@@ -944,4 +944,97 @@ describe('FileExplorer', () => {
     });
   });
 
+  describe('Validation 및 Guard 체크', () => {
+    it('should warn when trying to select directory in non-Electron environment', async () => {
+      const { isElectron } = require('@/lib/platform');
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      // Temporarily set isElectron to false
+      (isElectron as jest.Mock).mockReturnValue(false);
+
+      render(<FileExplorer />);
+
+      const selectButton = screen.getByTitle('디렉토리 선택');
+      await userEvent.click(selectButton);
+
+      await waitFor(() => {
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          '[FileExplorer] Directory selection is only available in Electron'
+        );
+      });
+
+      // Restore
+      (isElectron as jest.Mock).mockReturnValue(true);
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should warn when trying to create file without name', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
+      });
+
+      render(<FileExplorer />);
+
+      // Open new file dialog
+      const newFileButton = screen.getByTitle('새 파일');
+      await userEvent.click(newFileButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('새 파일 생성')).toBeInTheDocument();
+      });
+
+      // Try to create without entering name
+      const createButton = screen.getByRole('button', { name: /생성/i });
+      await userEvent.click(createButton);
+
+      await waitFor(() => {
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          '[FileExplorer] Cannot create file - missing name or working directory'
+        );
+      });
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should warn when trying to create folder without name', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      (useChatStore as unknown as jest.Mock).mockReturnValue({
+        workingDirectory: '/test',
+        setWorkingDirectory: mockSetWorkingDirectory,
+        openFile: mockOpenFile,
+        activeFilePath: null,
+        loadWorkingDirectory: mockLoadWorkingDirectory,
+      });
+
+      render(<FileExplorer />);
+
+      // Open new folder dialog
+      const newFolderButton = screen.getByTitle('새 폴더');
+      await userEvent.click(newFolderButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('새 폴더 생성')).toBeInTheDocument();
+      });
+
+      // Try to create without entering name
+      const createButton = screen.getByRole('button', { name: /생성/i });
+      await userEvent.click(createButton);
+
+      await waitFor(() => {
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          '[FileExplorer] Cannot create folder - missing name or working directory'
+        );
+      });
+
+      consoleWarnSpy.mockRestore();
+    });
+  });
+
 });
