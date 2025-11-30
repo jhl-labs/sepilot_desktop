@@ -82,29 +82,21 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setChatViewMode('history')}
-              title="대화 기록"
-              className={chatViewMode === 'history' ? 'bg-accent' : ''}
+              onClick={async () => {
+                await createConversation();
+                setChatViewMode('history');
+              }}
+              title="새 대화"
             >
-              <History className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setChatViewMode('chat')}
-              title="AI 어시스턴트"
-              className={chatViewMode === 'chat' ? 'bg-accent' : ''}
+              onClick={handleDeleteAll}
+              title="전체 대화 삭제"
             >
-              <MessageSquare className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setChatViewMode('documents')}
-              title="문서 관리"
-              className={chatViewMode === 'documents' ? 'bg-accent' : ''}
-            >
-              <FileText className="h-5 w-5" />
+              <Trash className="h-5 w-5" />
             </Button>
           </div>
         )}
