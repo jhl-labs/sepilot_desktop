@@ -421,6 +421,94 @@ describe('BookmarksDialog', () => {
     });
   });
 
+  describe('폴더 관리 성공 케이스', () => {
+    it('should successfully add a new folder', async () => {
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+      (mockElectronAPI.browserView.addBookmarkFolder as jest.Mock).mockResolvedValue({
+        success: true,
+        data: {
+          id: 'folder-new',
+          name: 'New Folder',
+        },
+      });
+
+      const { container } = render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('폴더')).toBeInTheDocument();
+      });
+
+      // Click folder add button
+      const plusButtons = container.querySelectorAll('button');
+      const folderAddButton = Array.from(plusButtons).find((btn) =>
+        btn.parentElement?.textContent?.includes('폴더')
+      );
+      fireEvent.click(folderAddButton as HTMLElement);
+
+      const input = await screen.findByPlaceholderText('폴더 이름');
+      fireEvent.change(input, { target: { value: 'New Folder' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      await waitFor(() => {
+        expect(screen.getByText('New Folder')).toBeInTheDocument();
+      });
+    });
+
+    it('should successfully delete a folder', async () => {
+      const mockBookmarks = [
+        { id: 'b1', url: 'https://example.com', title: 'Example', createdAt: Date.now(), folderId: 'f1' },
+      ];
+      const mockFolders = [
+        { id: 'f1', name: 'Test Folder', createdAt: Date.now() },
+      ];
+
+      (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
+        success: true,
+        data: mockBookmarks,
+      });
+      (mockElectronAPI.browserView.getBookmarkFolders as jest.Mock).mockResolvedValue({
+        success: true,
+        data: mockFolders,
+      });
+      (mockElectronAPI.browserView.deleteBookmarkFolder as jest.Mock).mockResolvedValue({
+        success: true,
+      });
+
+      window.confirm = jest.fn().mockReturnValue(true);
+
+      const { container } = render(<BookmarksDialog open={true} onOpenChange={jest.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Test Folder')).toBeInTheDocument();
+      });
+
+      // First select the folder
+      const folderNameElement = screen.getByText('Test Folder');
+      fireEvent.click(folderNameElement);
+
+      // Find the folder item and its delete button
+      const folderElement = folderNameElement.closest('.group');
+      expect(folderElement).toBeInTheDocument();
+
+      const deleteButton = folderElement?.querySelector('button');
+      expect(deleteButton).toBeInTheDocument();
+
+      fireEvent.click(deleteButton as HTMLElement);
+
+      await waitFor(() => {
+        expect(window.confirm).toHaveBeenCalledWith('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?');
+        expect(screen.queryByText('Test Folder')).not.toBeInTheDocument();
+      });
+    });
+  });
+
   describe('에러 처리', () => {
     beforeEach(() => {
       window.alert = jest.fn();
