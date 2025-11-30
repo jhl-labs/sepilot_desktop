@@ -14,6 +14,14 @@ export interface BrowserAgentLLMConfig {
   maxIterations: number;
 }
 
+/**
+ * Browser 채팅 폰트 설정
+ */
+export interface BrowserChatFontConfig {
+  fontFamily: string;
+  fontSize: number; // px 단위
+}
+
 export interface BrowserAgentLogEntry {
   id: string;
   timestamp: number;

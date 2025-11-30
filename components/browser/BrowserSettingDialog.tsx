@@ -4,18 +4,51 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { FolderOpen } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { FolderOpen, RotateCcw } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
+import { useChatStore } from '@/lib/store/chat-store';
 
 interface BrowserSettingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+// 사용 가능한 폰트 목록
+const AVAILABLE_FONTS = [
+  { value: 'system-ui, -apple-system, sans-serif', label: 'System Font' },
+  { value: 'Arial, sans-serif', label: 'Arial' },
+  { value: 'Helvetica, sans-serif', label: 'Helvetica' },
+  { value: 'Georgia, serif', label: 'Georgia' },
+  { value: 'Times New Roman, serif', label: 'Times New Roman' },
+  { value: 'Courier New, monospace', label: 'Courier New' },
+  { value: 'Verdana, sans-serif', label: 'Verdana' },
+  { value: 'Consolas, monospace', label: 'Consolas' },
+  { value: '"Noto Sans KR", sans-serif', label: 'Noto Sans KR' },
+  { value: '"Malgun Gothic", sans-serif', label: 'Malgun Gothic' },
+];
+
 export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialogProps) {
   const [snapshotsPath, setSnapshotsPath] = useState<string>('');
   const [bookmarksPath, setBookmarksPath] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const {
+    browserChatFontConfig,
+    setBrowserChatFontConfig,
+    resetBrowserChatFontConfig,
+  } = useChatStore();
+
+  // 폰트 설정 로컬 상태
+  const [fontFamily, setFontFamily] = useState(browserChatFontConfig.fontFamily);
+  const [fontSize, setFontSize] = useState(browserChatFontConfig.fontSize);
 
   // Load paths when dialog opens
   useEffect(() => {
@@ -56,6 +89,25 @@ export function BrowserSettingDialog({ open, onOpenChange }: BrowserSettingDialo
       await window.electronAPI.shell.openExternal(`file://${bookmarksPath}`);
     } catch (error) {
       console.error('[BrowserSettingDialog] Error opening bookmarks folder:', error);
+    }
+  };
+
+  // 폰트 설정 저장
+  const handleSaveFontConfig = () => {
+    setBrowserChatFontConfig({
+      fontFamily,
+      fontSize,
+    });
+    alert('폰트 설정이 저장되었습니다.');
+  };
+
+  // 폰트 설정 초기화
+  const handleResetFontConfig = () => {
+    if (confirm('폰트 설정을 기본값으로 초기화하시겠습니까?')) {
+      resetBrowserChatFontConfig();
+      setFontFamily('system-ui, -apple-system, sans-serif');
+      setFontSize(14);
+      alert('폰트 설정이 초기화되었습니다.');
     }
   };
 
