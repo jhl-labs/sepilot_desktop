@@ -609,12 +609,8 @@ export function InputBox() {
     messagImages?: ImageAttachment[],
     systemMessage?: string | null
   ) => {
-    // Validate conversation exists - prevent race condition when switching conversations
-    const conversationExists = conversations.find((c) => c.id === conversationId);
-    if (!conversationExists) {
-      console.warn('[InputBox] Conversation no longer exists, aborting streaming:', conversationId);
-      return;
-    }
+    // Note: Don't validate conversation existence here as it may not be in the store yet
+    // due to async state updates. The conversationId is already validated in handleSend.
 
     // Variables for streaming animation
     let accumulatedContent = '';
