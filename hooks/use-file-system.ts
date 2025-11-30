@@ -139,9 +139,18 @@ export function useFileSystem(): UseFileSystemReturn {
       logOperation('readFile', { filePath });
       const result = await window.electronAPI.fs.readFile(filePath);
 
-      if (result.success && result.data) {
-        console.log(`[FileSystem] File read successfully: ${filePath} (${result.data.length} bytes)`);
-        return result.data;
+      console.log('[FileSystem] readFile result:', {
+        success: result.success,
+        hasData: result.data !== undefined,
+        dataLength: result.data?.length,
+        error: result.error,
+        code: (result as any).code,
+      });
+
+      if (result.success) {
+        // success가 true면 data가 빈 문자열('')이어도 성공으로 처리
+        console.log(`[FileSystem] File read successfully: ${filePath} (${result.data?.length || 0} bytes)`);
+        return result.data || '';
       } else {
         // 에러 객체를 제대로 생성 (code 포함)
         const error: any = new Error(result.error || 'Failed to read file');
