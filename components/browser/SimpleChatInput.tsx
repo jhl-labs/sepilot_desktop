@@ -165,8 +165,8 @@ export function SimpleChatInput() {
 
             // Handle node execution results
             if (evt.type === 'node') {
-              const allMessages = evt.data.messages;
-              if (allMessages.length > 0) {
+              const allMessages = evt.data?.messages;
+              if (allMessages && allMessages.length > 0) {
                 const lastMsg = allMessages[allMessages.length - 1];
                 if (lastMsg.role === 'assistant' && lastMsg.content) {
                   const messages = useChatStore.getState().browserChatMessages;
