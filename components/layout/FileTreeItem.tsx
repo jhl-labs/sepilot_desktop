@@ -55,8 +55,6 @@ export function FileTreeItem({
 
   const handleClick = async () => {
     if (node.isDirectory) {
-      setIsExpanded(!isExpanded);
-
       // Lazy load children if not loaded yet
       if (!node.children && isAvailable) {
         console.log(`[FileTreeItem] Lazy loading directory: ${node.path}`);
@@ -65,6 +63,9 @@ export function FileTreeItem({
           node.children = children;
           setIsExpanded(true);
         }
+      } else {
+        // Toggle if children already loaded
+        setIsExpanded(!isExpanded);
       }
     } else {
       onFileClick(node.path, node.name);

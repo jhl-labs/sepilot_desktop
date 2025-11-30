@@ -41,11 +41,15 @@ export function Sidebar({ onDocumentsClick, onGalleryClick, onConversationClick 
     if (conversations.length === 0) {return;}
 
     if (confirm(`모든 대화(${conversations.length}개)를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`)) {
+      // 먼저 새 대화를 생성하여 activeConversationId가 null이 되는 것을 방지
+      const newConversationId = await createConversation();
+
+      // 그 다음 기존 대화들을 삭제 (새로 만든 대화는 제외)
       for (const conversation of conversations) {
-        await deleteConversation(conversation.id);
+        if (conversation.id !== newConversationId) {
+          await deleteConversation(conversation.id);
+        }
       }
-      // 모든 대화 삭제 후 새 대화 자동 생성
-      await createConversation();
     }
   };
 
