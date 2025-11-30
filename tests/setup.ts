@@ -248,5 +248,10 @@ global.ResizeObserver = class ResizeObserver {
   disconnect = jest.fn();
 };
 
+// Mock nanoid to avoid ESM issues
+jest.mock('nanoid', () => ({
+  nanoid: jest.fn(() => 'mock-nano-id-123456'),
+}));
+
 // Export localStorage mock for direct access
 export { mockLocalStorage, mockSessionStorage };

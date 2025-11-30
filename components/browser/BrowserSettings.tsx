@@ -44,14 +44,14 @@ export function BrowserSettings() {
   } = useChatStore();
 
   // LLM 설정 로컬 상태
-  const [maxTokens, setMaxTokens] = useState(browserAgentLLMConfig.maxTokens);
-  const [temperature, setTemperature] = useState(browserAgentLLMConfig.temperature);
-  const [topP, setTopP] = useState(browserAgentLLMConfig.topP);
-  const [maxIterations, setMaxIterations] = useState(browserAgentLLMConfig.maxIterations);
+  const [maxTokens, setMaxTokens] = useState(browserAgentLLMConfig?.maxTokens ?? 4000);
+  const [temperature, setTemperature] = useState(browserAgentLLMConfig?.temperature ?? 0.7);
+  const [topP, setTopP] = useState(browserAgentLLMConfig?.topP ?? 1.0);
+  const [maxIterations, setMaxIterations] = useState(browserAgentLLMConfig?.maxIterations ?? 10);
 
   // 폰트 설정 로컬 상태
-  const [fontFamily, setFontFamily] = useState(browserChatFontConfig.fontFamily);
-  const [fontSize, setFontSize] = useState(browserChatFontConfig.fontSize);
+  const [fontFamily, setFontFamily] = useState(browserChatFontConfig?.fontFamily ?? 'system-ui, -apple-system, sans-serif');
+  const [fontSize, setFontSize] = useState(browserChatFontConfig?.fontSize ?? 14);
 
   // 폰트 설정 저장
   const handleSaveFontConfig = () => {

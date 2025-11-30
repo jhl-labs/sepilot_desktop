@@ -33,10 +33,6 @@ jest.mock('@/components/browser/BrowserSettings', () => ({
   BrowserSettings: () => <div data-testid="browser-settings">Settings</div>,
 }));
 
-jest.mock('@/components/browser/BrowserAgentLog', () => ({
-  BrowserAgentLog: () => <div data-testid="browser-agent-log">Agent Log</div>,
-}));
-
 jest.mock('@/components/browser/BrowserAgentLogsView', () => ({
   BrowserAgentLogsView: () => <div data-testid="browser-agent-logs-view">Agent Logs View</div>,
 }));

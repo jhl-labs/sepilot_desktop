@@ -58,11 +58,6 @@ jest.mock('@/components/editor/EditorChatArea', () => ({
   EditorChatArea: () => <div data-testid="editor-chat-area">Editor Chat Area</div>,
 }));
 
-// Mock BrowserAgentLog
-jest.mock('@/components/browser/BrowserAgentLog', () => ({
-  BrowserAgentLog: () => <div data-testid="browser-agent-log">Browser Agent Log</div>,
-}));
-
 // Mock SidebarChat, SidebarEditor, SidebarBrowser
 jest.mock('@/components/layout/SidebarChat', () => ({
   SidebarChat: ({ onGalleryClick, onConversationClick, onSettingsClick }: any) => (

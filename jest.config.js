@@ -47,7 +47,7 @@ const config = {
       moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
       testPathIgnorePatterns: ['/node_modules/', '/dist/', '/.next/'],
       transformIgnorePatterns: [
-        '/node_modules/(?!(@langchain|langchain|react-syntax-highlighter|refractor|mermaid)/)',
+        '/node_modules/(?!(@langchain|langchain|react-syntax-highlighter|refractor|mermaid|nanoid)/)',
       ],
     },
 
