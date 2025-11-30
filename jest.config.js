@@ -105,6 +105,22 @@ const config = {
     },
   },
   verbose: true,
+
+  // Test reporters (JUnit XML for Codecov)
+  reporters: [
+    'default',
+    [
+      'jest-junit',
+      {
+        outputDirectory: 'test-results',
+        outputName: 'junit.xml',
+        classNameTemplate: '{classname}',
+        titleTemplate: '{title}',
+        ancestorSeparator: ' › ',
+        usePathForSuiteName: true,
+      },
+    ],
+  ],
 };
 
 module.exports = config;

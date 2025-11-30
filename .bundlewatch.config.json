@@ -1,0 +1,19 @@
+{
+  "files": [
+    {
+      "path": "out/_next/static/chunks/*.js",
+      "maxSize": "500kb",
+      "compression": "gzip"
+    },
+    {
+      "path": "out/_next/static/css/*.css",
+      "maxSize": "100kb",
+      "compression": "gzip"
+    }
+  ],
+  "ci": {
+    "trackBranches": ["main", "develop"],
+    "repoBranchBase": "main"
+  },
+  "defaultCompression": "gzip"
+}

@@ -76,16 +76,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests with coverage
-        run: pnpm run test:coverage
+      - name: Run frontend tests with coverage
+        run: pnpm run test:coverage:frontend
 
-      - name: Upload coverage to Codecov
+      - name: Run backend tests with coverage
+        run: pnpm run test:coverage:backend
+
+      - name: Upload frontend coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
+          flags: frontend
+          name: frontend-coverage
+          fail_ci_if_error: false
+
+      - name: Upload backend coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: backend
+          name: backend-coverage
           fail_ci_if_error: false
 
       - name: Upload test results to Codecov
@@ -93,6 +105,7 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./test-results/junit.xml
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v5
@@ -199,3 +212,33 @@ jobs:
           files: .next/analyze/__bundle_analysis.json
           flags: bundle-analysis
           fail_ci_if_error: false
+
+      - name: Check bundle size
+        run: |
+          echo "📦 Checking bundle sizes..."
+
+          # Get total JS bundle size
+          total_js=$(find out/_next/static/chunks -name "*.js" -type f -exec gzip -c {} \; | wc -c)
+          total_js_mb=$(echo "scale=2; $total_js / 1024 / 1024" | bc)
+
+          # Get total CSS size
+          total_css=$(find out/_next/static/css -name "*.css" -type f -exec gzip -c {} \; 2>/dev/null | wc -c || echo 0)
+          total_css_kb=$(echo "scale=2; $total_css / 1024" | bc)
+
+          echo "📊 Bundle Sizes (gzipped):"
+          echo "  JavaScript: ${total_js_mb}MB"
+          echo "  CSS: ${total_css_kb}KB"
+
+          # Warning thresholds
+          js_limit=5242880  # 5MB in bytes
+          css_limit=102400  # 100KB in bytes
+
+          if [ "$total_js" -gt "$js_limit" ]; then
+            echo "⚠️  WARNING: JavaScript bundle size (${total_js_mb}MB) exceeds 5MB threshold"
+            echo "::warning::JavaScript bundle size is too large. Consider code splitting or lazy loading."
+          fi
+
+          if [ "$total_css" -gt "$css_limit" ]; then
+            echo "⚠️  WARNING: CSS bundle size (${total_css_kb}KB) exceeds 100KB threshold"
+            echo "::warning::CSS bundle size is too large. Consider optimizing styles."
+          fi
