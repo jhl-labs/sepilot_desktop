@@ -7,6 +7,11 @@ package-lock.json  # pnpm 프로젝트이므로 npm lockfile 제외
 # testing
 /coverage
 /test-results
+/backstop_data/bitmaps_test
+/backstop_data/html_report
+/backstop_data/ci_report
+/.lighthouseci
+dependency-graph.svg
 
 # next.js
 /.next/

@@ -32,7 +32,9 @@
     "test:watch:backend": "jest --selectProjects backend --watch",
     "test:coverage": "jest --coverage",
     "test:coverage:frontend": "jest --selectProjects frontend --coverage",
-    "test:coverage:backend": "jest --selectProjects backend --coverage"
+    "test:coverage:backend": "jest --selectProjects backend --coverage",
+    "depcruise": "depcruise app components lib electron --config .dependency-cruiser.js",
+    "depcruise:graph": "depcruise app components lib electron --include-only '^(app|components|lib|electron)' --output-type dot | dot -T svg > dependency-graph.svg"
   },
   "dependencies": {
     "@langchain/core": "^1.1.0",
@@ -91,6 +93,7 @@
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
     "@eslint/eslintrc": "^3.3.1",
+    "@lhci/cli": "^0.15.1",
     "@next/bundle-analyzer": "^16.0.5",
     "@tailwindcss/postcss": "^4.1.17",
     "@testing-library/jest-dom": "^6.9.1",
@@ -112,11 +115,13 @@
     "@typescript-eslint/parser": "^8.48.0",
     "app-builder-bin": "5.0.0-alpha.6",
     "autoprefixer": "^10.4.22",
+    "backstopjs": "^6.3.25",
     "buffer": "^6.0.3",
     "canvas": "^3.2.0",
     "concurrently": "^9.2.1",
     "copy-webpack-plugin": "^13.0.1",
     "cross-env": "^10.1.0",
+    "dependency-cruiser": "^17.3.1",
     "electron": "^39.2.4",
     "electron-builder": "^26.0.12",
     "electron-builder-squirrel-windows": "26.0.12",
