@@ -661,4 +661,125 @@ z = 30
       expect(screen.getByText('print("hello")')).toBeInTheDocument();
     });
   });
+
+  describe('getTextContent edge cases with complex code blocks', () => {
+    it('should handle code blocks with React element children containing numbers', () => {
+      // Test case that would trigger number type in getTextContent (line 28-29)
+      // Markdown parsers can produce numeric children
+      const content = '```javascript\n42\n```';
+
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByText('javascript')).toBeInTheDocument();
+      expect(screen.getByText('42')).toBeInTheDocument();
+    });
+
+    it('should handle code blocks with multiple nested spans (array children)', () => {
+      // Test case to trigger array children path (line 31-32)
+      // Complex markdown inside code blocks
+      const content = '```bash\necho "line1"\necho "line2"\necho "line3"\n```';
+
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByText('bash')).toBeInTheDocument();
+      // Check that multiline content is rendered
+      expect(screen.getByText(/echo "line1"/)).toBeInTheDocument();
+    });
+
+    it('should handle code blocks with deeply nested React elements', () => {
+      // Test case for object with props path (line 34-37)
+      // Markdown-to-jsx can create nested structures
+      const content = '```typescript\ninterface User {\n  name: string;\n  age: number;\n}\n```';
+
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByText('typescript')).toBeInTheDocument();
+      expect(screen.getByText(/interface User/)).toBeInTheDocument();
+    });
+
+    it('should handle empty code blocks gracefully', () => {
+      // Test empty return case (line 41)
+      const content = '```python\n\n```';
+
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByText('python')).toBeInTheDocument();
+      // Empty code block should still render
+      const codeBlock = screen.getByTestId('code-block');
+      expect(codeBlock).toBeInTheDocument();
+    });
+
+    it('should handle code blocks with only spaces', () => {
+      // Another case for empty string return
+      const content = '```ruby\n   \n```';
+
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByText('ruby')).toBeInTheDocument();
+    });
+
+    it('should extract text from complex nested markdown in code', () => {
+      // Test the full path: object → props → children → recursive call
+      const content = '```json\n{\n  "key": "value",\n  "nested": {\n    "deep": "data"\n  }\n}\n```';
+
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByText('json')).toBeInTheDocument();
+      expect(screen.getByText(/nested/)).toBeInTheDocument();
+    });
+
+    it('should handle mermaid with complex graph syntax', () => {
+      // Test mermaid rendering with non-streaming (line 76)
+      const content = '```mermaid\ngraph LR\n  A[Start] --> B[Process]\n  B --> C[End]\n```';
+
+      render(<MarkdownRenderer content={content} isStreaming={false} />);
+
+      expect(screen.getByTestId('mermaid-diagram')).toBeInTheDocument();
+    });
+
+    it('should handle plotly with complex data', () => {
+      // Test plotly rendering with non-streaming (line 85)
+      const plotlyData = JSON.stringify({
+        data: [
+          {
+            x: [1, 2, 3, 4],
+            y: [10, 15, 13, 17],
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: 'Sales'
+          }
+        ],
+        layout: {
+          title: 'Sales Data'
+        }
+      });
+
+      const content = '```plotly\n' + plotlyData + '\n```';
+
+      render(<MarkdownRenderer content={content} isStreaming={false} />);
+
+      expect(screen.getByTestId('plotly-chart')).toBeInTheDocument();
+    });
+
+    it('should handle code with mixed array and string children', () => {
+      // Comprehensive test for getTextContent with various types
+      const content = '```javascript\nconst arr = [1, 2, 3];\nconst sum = arr.reduce((a, b) => a + b, 0);\nconsole.log(sum);\n```';
+
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByText('javascript')).toBeInTheDocument();
+      expect(screen.getByText(/const arr/)).toBeInTheDocument();
+      expect(screen.getByText(/reduce/)).toBeInTheDocument();
+    });
+
+    it('should handle code blocks with special markdown characters', () => {
+      // Test edge case with characters that markdown might parse
+      const content = '```markdown\n# This is a heading\n**Bold** and *italic*\n```';
+
+      render(<MarkdownRenderer content={content} />);
+
+      expect(screen.getByText('markdown')).toBeInTheDocument();
+      expect(screen.getByText(/# This is a heading/)).toBeInTheDocument();
+    });
+  });
 });
