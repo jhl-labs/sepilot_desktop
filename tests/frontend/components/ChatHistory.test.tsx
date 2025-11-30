@@ -200,121 +200,129 @@ describe('ChatHistory', () => {
   it('should enter edit mode on edit button click', async () => {
     render(<ChatHistory />);
 
-    // Find the first conversation and hover to show menu
-    const firstConv = screen.getByText('First Chat').closest('div');
-    const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+    // Find all buttons and locate the menu button by aria-label or icon
+    const buttons = screen.getAllByRole('button');
+    // The menu button should be a small icon button, let's find it by size class
+    const menuButton = buttons.find(btn =>
+      btn.className.includes('h-8') && btn.className.includes('w-8')
+    );
 
-    if (menuButton) {
-      fireEvent.click(menuButton);
+    expect(menuButton).toBeDefined();
+    fireEvent.click(menuButton!);
 
-      await waitFor(() => {
-        const editButton = screen.getByText('이름 변경');
-        fireEvent.click(editButton);
-      });
+    // Wait for dropdown menu to open (portal rendering)
+    await waitFor(() => {
+      const editButton = screen.getByText('이름 변경');
+      fireEvent.click(editButton);
+    });
 
-      await waitFor(() => {
-        const input = screen.getByDisplayValue('First Chat');
-        expect(input).toBeInTheDocument();
-      });
-    }
+    // Verify input appears
+    await waitFor(() => {
+      const input = screen.getByDisplayValue('First Chat');
+      expect(input).toBeInTheDocument();
+    });
   });
 
   it('should save edited title on Enter key', async () => {
     render(<ChatHistory />);
 
-    const firstConv = screen.getByText('First Chat').closest('div');
-    const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+    const buttons = screen.getAllByRole('button');
+    const menuButton = buttons.find(btn =>
+      btn.className.includes('h-8') && btn.className.includes('w-8')
+    );
 
-    if (menuButton) {
-      fireEvent.click(menuButton);
+    expect(menuButton).toBeDefined();
+    fireEvent.click(menuButton!);
 
-      await waitFor(() => {
-        const editButton = screen.getByText('이름 변경');
-        fireEvent.click(editButton);
-      });
+    await waitFor(() => {
+      const editButton = screen.getByText('이름 변경');
+      fireEvent.click(editButton);
+    });
 
-      await waitFor(() => {
-        const input = screen.getByDisplayValue('First Chat') as HTMLInputElement;
-        fireEvent.change(input, { target: { value: 'Updated Title' } });
-        fireEvent.keyDown(input, { key: 'Enter' });
-      });
+    await waitFor(() => {
+      const input = screen.getByDisplayValue('First Chat') as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'Updated Title' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
 
-      await waitFor(() => {
-        expect(mockChatStore.updateConversationTitle).toHaveBeenCalledWith('conv-1', 'Updated Title');
-      });
-    }
+    await waitFor(() => {
+      expect(mockChatStore.updateConversationTitle).toHaveBeenCalledWith('conv-1', 'Updated Title');
+    });
   });
 
   it('should cancel edit on Escape key', async () => {
     render(<ChatHistory />);
 
-    const firstConv = screen.getByText('First Chat').closest('div');
-    const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+    const buttons = screen.getAllByRole('button');
+    const menuButton = buttons.find(btn =>
+      btn.className.includes('h-8') && btn.className.includes('w-8')
+    );
 
-    if (menuButton) {
-      fireEvent.click(menuButton);
+    expect(menuButton).toBeDefined();
+    fireEvent.click(menuButton!);
 
-      await waitFor(() => {
-        const editButton = screen.getByText('이름 변경');
-        fireEvent.click(editButton);
-      });
+    await waitFor(() => {
+      const editButton = screen.getByText('이름 변경');
+      fireEvent.click(editButton);
+    });
 
-      await waitFor(() => {
-        const input = screen.getByDisplayValue('First Chat') as HTMLInputElement;
-        fireEvent.change(input, { target: { value: 'New Title' } });
-        fireEvent.keyDown(input, { key: 'Escape' });
-      });
+    await waitFor(() => {
+      const input = screen.getByDisplayValue('First Chat') as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'New Title' } });
+      fireEvent.keyDown(input, { key: 'Escape' });
+    });
 
-      await waitFor(() => {
-        expect(mockChatStore.updateConversationTitle).not.toHaveBeenCalled();
-      });
-    }
+    await waitFor(() => {
+      expect(mockChatStore.updateConversationTitle).not.toHaveBeenCalled();
+    });
   });
 
   it('should save edit on blur', async () => {
     render(<ChatHistory />);
 
-    const firstConv = screen.getByText('First Chat').closest('div');
-    const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+    const buttons = screen.getAllByRole('button');
+    const menuButton = buttons.find(btn =>
+      btn.className.includes('h-8') && btn.className.includes('w-8')
+    );
 
-    if (menuButton) {
-      fireEvent.click(menuButton);
+    expect(menuButton).toBeDefined();
+    fireEvent.click(menuButton!);
 
-      await waitFor(() => {
-        const editButton = screen.getByText('이름 변경');
-        fireEvent.click(editButton);
-      });
+    await waitFor(() => {
+      const editButton = screen.getByText('이름 변경');
+      fireEvent.click(editButton);
+    });
 
-      await waitFor(() => {
-        const input = screen.getByDisplayValue('First Chat') as HTMLInputElement;
-        fireEvent.change(input, { target: { value: 'Blurred Title' } });
-        fireEvent.blur(input);
-      });
+    await waitFor(() => {
+      const input = screen.getByDisplayValue('First Chat') as HTMLInputElement;
+      fireEvent.change(input, { target: { value: 'Blurred Title' } });
+      fireEvent.blur(input);
+    });
 
-      await waitFor(() => {
-        expect(mockChatStore.updateConversationTitle).toHaveBeenCalledWith('conv-1', 'Blurred Title');
-      });
-    }
+    await waitFor(() => {
+      expect(mockChatStore.updateConversationTitle).toHaveBeenCalledWith('conv-1', 'Blurred Title');
+    });
   });
 
   it('should delete conversation on delete button click', async () => {
     render(<ChatHistory />);
 
-    const firstConv = screen.getByText('First Chat').closest('div');
-    const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+    const buttons = screen.getAllByRole('button');
+    const menuButton = buttons.find(btn =>
+      btn.className.includes('h-8') && btn.className.includes('w-8')
+    );
 
-    if (menuButton) {
-      fireEvent.click(menuButton);
+    expect(menuButton).toBeDefined();
+    fireEvent.click(menuButton!);
 
-      await waitFor(() => {
-        const deleteButton = screen.getByText('삭제');
-        fireEvent.click(deleteButton);
-      });
+    await waitFor(() => {
+      const deleteButton = screen.getByText('삭제');
+      fireEvent.click(deleteButton);
+    });
 
-      await waitFor(() => {
-        expect(mockChatStore.deleteConversation).toHaveBeenCalledWith('conv-1');
-      });
-    }
+    await waitFor(() => {
+      expect(mockChatStore.deleteConversation).toHaveBeenCalledWith('conv-1');
+    });
   });
 
   it('should not delete if user cancels confirmation', async () => {
@@ -322,21 +330,22 @@ describe('ChatHistory', () => {
 
     render(<ChatHistory />);
 
-    const firstConv = screen.getByText('First Chat').closest('div');
-    const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+    const buttons = screen.getAllByRole('button');
+    const menuButton = buttons.find(btn =>
+      btn.className.includes('h-8') && btn.className.includes('w-8')
+    );
 
-    if (menuButton) {
-      fireEvent.click(menuButton);
+    expect(menuButton).toBeDefined();
+    fireEvent.click(menuButton!);
 
-      await waitFor(() => {
-        const deleteButton = screen.getByText('삭제');
-        fireEvent.click(deleteButton);
-      });
+    await waitFor(() => {
+      const deleteButton = screen.getByText('삭제');
+      fireEvent.click(deleteButton);
+    });
 
-      await waitFor(() => {
-        expect(mockChatStore.deleteConversation).not.toHaveBeenCalled();
-      });
-    }
+    await waitFor(() => {
+      expect(mockChatStore.deleteConversation).not.toHaveBeenCalled();
+    });
   });
 
   it('should show message preview in search results', async () => {
@@ -367,27 +376,28 @@ describe('ChatHistory', () => {
   it('should not save empty title on edit', async () => {
     render(<ChatHistory />);
 
-    const firstConv = screen.getByText('First Chat').closest('div');
-    const menuButton = firstConv?.querySelector('button[class*="opacity-0"]');
+    const buttons = screen.getAllByRole('button');
+    const menuButton = buttons.find(btn =>
+      btn.className.includes('h-8') && btn.className.includes('w-8')
+    );
 
-    if (menuButton) {
-      fireEvent.click(menuButton);
+    expect(menuButton).toBeDefined();
+    fireEvent.click(menuButton!);
 
-      await waitFor(() => {
-        const editButton = screen.getByText('이름 변경');
-        fireEvent.click(editButton);
-      });
+    await waitFor(() => {
+      const editButton = screen.getByText('이름 변경');
+      fireEvent.click(editButton);
+    });
 
-      await waitFor(() => {
-        const input = screen.getByDisplayValue('First Chat') as HTMLInputElement;
-        fireEvent.change(input, { target: { value: '   ' } });
-        fireEvent.keyDown(input, { key: 'Enter' });
-      });
+    await waitFor(() => {
+      const input = screen.getByDisplayValue('First Chat') as HTMLInputElement;
+      fireEvent.change(input, { target: { value: '   ' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
 
-      await waitFor(() => {
-        expect(mockChatStore.updateConversationTitle).not.toHaveBeenCalled();
-      });
-    }
+    await waitFor(() => {
+      expect(mockChatStore.updateConversationTitle).not.toHaveBeenCalled();
+    });
   });
 
   it('should handle search error gracefully', async () => {
