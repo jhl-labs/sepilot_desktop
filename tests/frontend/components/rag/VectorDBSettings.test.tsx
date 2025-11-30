@@ -460,5 +460,88 @@ describe('VectorDBSettings', () => {
       });
     });
 
+    it('should set dimension to 3072 for large models', async () => {
+      const user = userEvent.setup();
+      const mockModels = {
+        data: [
+          { id: 'text-embedding-3-large' },
+          { id: 'text-embedding-ada-002' },
+        ],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockModels,
+      });
+
+      render(<VectorDBSettings onSave={mockOnSave} />);
+
+      const apiKey = screen.getByLabelText('API Key') as HTMLInputElement;
+      await user.type(apiKey, 'sk-test-key');
+
+      const refreshButton = screen.getByTitle('사용 가능한 모델 목록 가져오기');
+      await user.click(refreshButton);
+
+      await waitFor(() => {
+        const modelSelect = screen.getByLabelText('Model') as HTMLSelectElement;
+        expect(modelSelect.value).toBe('text-embedding-3-large');
+      });
+
+      // Dimension should be set to 3072 for large model
+      const dimensionInput = screen.getByLabelText('Dimension') as HTMLInputElement;
+      expect(dimensionInput.value).toBe('3072');
+    });
+
+    it('should set dimension to 1536 for small models', async () => {
+      const user = userEvent.setup();
+      const mockModels = {
+        data: [
+          { id: 'text-embedding-3-small' },
+        ],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockModels,
+      });
+
+      render(<VectorDBSettings onSave={mockOnSave} />);
+
+      const apiKey = screen.getByLabelText('API Key') as HTMLInputElement;
+      await user.type(apiKey, 'sk-test-key');
+
+      const refreshButton = screen.getByTitle('사용 가능한 모델 목록 가져오기');
+      await user.click(refreshButton);
+
+      await waitFor(() => {
+        const modelSelect = screen.getByLabelText('Model') as HTMLSelectElement;
+        expect(modelSelect.value).toBe('text-embedding-3-small');
+      });
+
+      // Dimension should be set to 1536 for small model
+      const dimensionInput = screen.getByLabelText('Dimension') as HTMLInputElement;
+      expect(dimensionInput.value).toBe('1536');
+    });
+
+    it('should handle custom model saved in config', async () => {
+      const customConfig = {
+        provider: 'openai' as const,
+        baseURL: 'https://api.openai.com/v1',
+        apiKey: 'sk-test',
+        model: 'custom-embedding-model',
+        dimension: 2048,
+      };
+
+      render(<VectorDBSettings onSave={mockOnSave} initialEmbeddingConfig={customConfig} />);
+
+      // Custom model should be in the list
+      const modelSelect = screen.getByLabelText('Model') as HTMLSelectElement;
+      expect(modelSelect.value).toBe('custom-embedding-model');
+
+      // The custom model should appear as first option
+      const options = Array.from(modelSelect.options).map(opt => opt.value);
+      expect(options[0]).toBe('custom-embedding-model');
+    });
+
   });
 });
