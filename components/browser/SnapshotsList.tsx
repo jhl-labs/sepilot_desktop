@@ -70,7 +70,7 @@ export function SnapshotsList() {
     try {
       const result = await window.electronAPI.browserView.openSnapshot(snapshot.id);
       if (result.success) {
-        console.log('[SnapshotsList] Snapshot opened:', snapshot.id);
+        console.debug('[SnapshotsList] Snapshot opened:', snapshot.id);
         setBrowserViewMode('chat');
       } else {
         console.error('[SnapshotsList] Failed to open snapshot:', result.error);

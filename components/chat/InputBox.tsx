@@ -734,7 +734,7 @@ export function InputBox() {
 
           // Setup stream event listeners
           // 이벤트에 포함된 conversationId로 필터링하여 다른 대화의 이벤트 무시
-          cleanupEventHandler = window.electronAPI.langgraph.onStreamEvent((event: any) => {
+          cleanupEventHandler = window.electronAPI.langgraph.onStreamEvent((event) => {
             try {
               // Filter events by conversationId - ignore events from other conversations
               if (event.conversationId && event.conversationId !== conversationId) {
@@ -785,13 +785,19 @@ export function InputBox() {
               if (event.type === 'tool_approval_request') {
                 console.log('[InputBox] Tool approval request received:', event.toolCalls);
 
+                // Type guard - ensure required fields exist
+                if (!event.conversationId || !event.messageId || !event.toolCalls) {
+                  console.error('[InputBox] Invalid tool approval request event');
+                  return;
+                }
+
                 // Auto-approve if session-wide approval is enabled (Claude Code style)
                 const currentStore = useChatStore.getState();
                 if (currentStore.alwaysApproveToolsForSession) {
                   console.log('[InputBox] Auto-approving tools (session-wide approval enabled)');
                   (async () => {
                     try {
-                      if (isElectron() && window.electronAPI?.langgraph) {
+                      if (isElectron() && window.electronAPI?.langgraph && event.conversationId) {
                         await window.electronAPI.langgraph.respondToolApproval(
                           event.conversationId,
                           true

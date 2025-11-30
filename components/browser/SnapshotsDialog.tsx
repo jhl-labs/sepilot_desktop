@@ -73,7 +73,7 @@ export function SnapshotsDialog({ open, onOpenChange }: SnapshotsDialogProps) {
     try {
       const result = await window.electronAPI.browserView.openSnapshot(snapshot.id);
       if (result.success) {
-        console.log('[SnapshotsDialog] Snapshot opened:', snapshot.id);
+        console.debug('[SnapshotsDialog] Snapshot opened:', snapshot.id);
         onOpenChange(false);
       } else {
         console.error('[SnapshotsDialog] Failed to open snapshot:', result.error);

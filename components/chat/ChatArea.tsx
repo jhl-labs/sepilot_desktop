@@ -69,6 +69,7 @@ export function ChatArea() {
 
     const textContents: string[] = [];
     const imageFiles: { filename: string; mimeType: string; base64: string }[] = [];
+    const failedFiles: string[] = [];
 
     for (const file of files) {
       // 텍스트 파일인지 확인
@@ -78,6 +79,7 @@ export function ChatArea() {
           textContents.push(`📄 **${file.name}**\n\`\`\`\n${text}\n\`\`\``);
         } catch (error) {
           console.error(`Failed to read file ${file.name}:`, error);
+          failedFiles.push(file.name);
         }
       } else if (file.type.startsWith('image/')) {
         // 이미지 파일 처리
@@ -95,8 +97,14 @@ export function ChatArea() {
           });
         } catch (error) {
           console.error(`Failed to read image ${file.name}:`, error);
+          failedFiles.push(file.name);
         }
       }
+    }
+
+    // Show error notification for failed files
+    if (failedFiles.length > 0) {
+      alert(`다음 파일을 읽을 수 없습니다:\n${failedFiles.join('\n')}`);
     }
 
     // Dispatch custom event to InputBox

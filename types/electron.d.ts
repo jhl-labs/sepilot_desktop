@@ -167,19 +167,64 @@ interface GraphConfig {
 }
 
 // LangGraph 스트리밍 이벤트 타입 (conversationId 포함)
-interface LangGraphStreamEvent {
-  type: string;
+// LangGraph Stream Event Base
+interface LangGraphStreamEventBase {
   conversationId?: string;
-  chunk?: string;
-  node?: string;
-  data?: any;
-  progress?: any;
-  error?: string;
-  // Tool approval specific fields
-  messageId?: string;
-  toolCalls?: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
-  approved?: boolean;
+  type: string;
 }
+
+interface LangGraphStreamingEvent extends LangGraphStreamEventBase {
+  type: 'streaming';
+  chunk: string;
+}
+
+interface LangGraphImageProgressEvent extends LangGraphStreamEventBase {
+  type: 'image_progress';
+  progress: {
+    status: 'queued' | 'executing' | 'completed' | 'error';
+    message: string;
+    progress?: number;
+    currentStep?: number;
+    totalSteps?: number;
+  };
+}
+
+interface LangGraphToolApprovalRequestEvent extends LangGraphStreamEventBase {
+  type: 'tool_approval_request';
+  messageId: string;
+  toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+}
+
+interface LangGraphToolApprovalResultEvent extends LangGraphStreamEventBase {
+  type: 'tool_approval_result';
+  approved: boolean;
+}
+
+interface LangGraphNodeEvent extends LangGraphStreamEventBase {
+  type: 'node';
+  node: string;
+  data?: {
+    messages?: Message[];
+    toolResults?: Array<{
+      toolName: string;
+      result: unknown;
+      error?: string;
+    }>;
+  };
+}
+
+interface LangGraphErrorEvent extends LangGraphStreamEventBase {
+  type: 'error';
+  error: string;
+}
+
+type LangGraphStreamEvent =
+  | LangGraphStreamingEvent
+  | LangGraphImageProgressEvent
+  | LangGraphToolApprovalRequestEvent
+  | LangGraphToolApprovalResultEvent
+  | LangGraphNodeEvent
+  | LangGraphErrorEvent;
 
 // Tool approval request data type
 interface LangGraphToolApprovalRequest {

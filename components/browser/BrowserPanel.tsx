@@ -221,12 +221,12 @@ export function BrowserPanel() {
 
     // React Strict Mode에서 중복 실행 방지
     if (isInitializedRef.current) {
-      console.log('[BrowserPanel] Already initialized, skipping');
+      console.debug('[BrowserPanel] Already initialized, skipping');
       return;
     }
 
     const initializeTabs = async () => {
-      console.log('[BrowserPanel] Initializing tabs...');
+      console.debug('[BrowserPanel] Initializing tabs...');
       isInitializedRef.current = true;
 
       // 먼저 기존 탭 목록 확인
@@ -237,10 +237,10 @@ export function BrowserPanel() {
 
         if (existingTabs.length === 0) {
           // 탭이 없을 때만 새로 생성
-          console.log('[BrowserPanel] No existing tabs, creating initial tab');
+          console.debug('[BrowserPanel] No existing tabs, creating initial tab');
           await window.electronAPI.browserView.createTab(currentUrl);
         } else {
-          console.log('[BrowserPanel] Found existing tabs:', existingTabs.length);
+          console.debug('[BrowserPanel] Found existing tabs:', existingTabs.length);
         }
 
         // 탭 목록 로드하여 상태 업데이트
@@ -296,7 +296,7 @@ export function BrowserPanel() {
 
       // 드롭다운 메뉴가 열려있으면 BrowserView를 화면 밖으로 이동
       if (dropdownOpen) {
-        console.log('[BrowserPanel] Dropdown open, hiding BrowserView');
+        console.debug('[BrowserPanel] Dropdown open, hiding BrowserView');
         window.electronAPI.browserView.setBounds({
           x: 0,
           y: -10000, // 화면 밖으로 이동
@@ -308,7 +308,7 @@ export function BrowserPanel() {
 
       // BrowserView의 위치를 컨테이너에 맞춤
       // Note: BrowserView 좌표는 윈도우 기준이므로 rect의 x, y를 사용
-      console.log('[BrowserPanel] Setting bounds:', { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+      console.debug('[BrowserPanel] Setting bounds:', { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
       window.electronAPI.browserView.setBounds({
         x: Math.round(rect.x),
         y: Math.round(rect.y),

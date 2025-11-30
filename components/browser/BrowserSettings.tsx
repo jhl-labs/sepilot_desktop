@@ -133,7 +133,7 @@ export function BrowserSettings() {
         maxTokens: 4096,
         temperature: 0.7,
         topP: 1.0,
-        maxIterations: 20,
+        maxIterations: 30,
       };
       setMaxTokens(defaultConfig.maxTokens);
       setTemperature(defaultConfig.temperature);

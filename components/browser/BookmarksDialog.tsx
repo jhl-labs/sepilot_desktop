@@ -129,7 +129,7 @@ export function BookmarksDialog({ open, onOpenChange }: BookmarksDialogProps) {
     try {
       const result = await window.electronAPI.browserView.openBookmark(bookmark.id);
       if (result.success) {
-        console.log('[BookmarksDialog] Bookmark opened:', bookmark.id);
+        console.debug('[BookmarksDialog] Bookmark opened:', bookmark.id);
         onOpenChange(false);
       } else {
         console.error('[BookmarksDialog] Failed to open bookmark:', result.error);

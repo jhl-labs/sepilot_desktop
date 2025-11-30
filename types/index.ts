@@ -287,3 +287,5 @@ export interface Activity {
   created_at: number;
   duration_ms?: number; // Execution duration in milliseconds
 }
+
+// LangGraph Stream Event Types are defined in electron.d.ts

@@ -27,12 +27,57 @@ import {
 } from '@/lib/mcp/tools/builtin-tools';
 
 /**
+ * Exponential Backoff 재시도 유틸리티
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.debug(`[BrowserAgent.Retry] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/**
+ * 컨텍스트 크기 관리 - 오래된 메시지 정리
+ */
+function pruneContextIfNeeded(messages: Message[], maxMessages: number = 50): Message[] {
+  if (messages.length <= maxMessages) {
+    return messages;
+  }
+
+  console.debug(`[BrowserAgent.Context] Pruning context from ${messages.length} to ${maxMessages} messages`);
+
+  // 시스템 메시지는 유지하고, 최근 메시지만 유지
+  const systemMessages = messages.filter(m => m.role === 'system');
+  const nonSystemMessages = messages.filter(m => m.role !== 'system');
+  const recentMessages = nonSystemMessages.slice(-maxMessages);
+
+  return [...systemMessages, ...recentMessages];
+}
+
+/**
  * Browser Agent용 generate 노드 - Browser Control Tools 포함
  */
 async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<AgentState>> {
   try {
-    console.log('[BrowserAgent.Generate] ===== generateWithBrowserToolsNode called =====');
-    console.log('[BrowserAgent.Generate] Current state:', {
+    console.debug('[BrowserAgent.Generate] ===== generateWithBrowserToolsNode called =====');
+    console.debug('[BrowserAgent.Generate] Current state:', {
       messageCount: state.messages.length,
       lastMessageRole: state.messages[state.messages.length - 1]?.role,
       toolResultsCount: state.toolResults.length,
@@ -65,8 +110,8 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
       browserAnalyzeWithVisionTool, // Vision 모델 분석 (향후)
     ];
 
-    console.log(`[BrowserAgent.Generate] Available Browser Control tools: ${browserTools.length}`);
-    console.log('[BrowserAgent.Generate] Tool details:', browserTools.map(t => t.name));
+    console.debug(`[BrowserAgent.Generate] Available Browser Control tools: ${browserTools.length}`);
+    console.debug('[BrowserAgent.Generate] Tool details:', browserTools.map(t => t.name));
 
     // OpenAI compatible tools 형식으로 변환
     const toolsForLLM = browserTools.map(tool => ({
@@ -93,7 +138,7 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
         content = 'No result';
       }
 
-      console.log('[BrowserAgent.Generate] Creating tool result message:', {
+      console.debug('[BrowserAgent.Generate] Creating tool result message:', {
         toolCallId: result.toolCallId,
         toolName: result.toolName,
         hasError: !!result.error,
@@ -301,61 +346,111 @@ Examples of good reasoning:
 - "The textbox with placeholder 'Enter email' and context 'Parent: login form' is the email input."
 - "Using browser_search_elements to find 'submit button' returned ai-element-42 with label 'Submit Form'."
 
+# ERROR RECOVERY STRATEGIES
+
+When a tool fails, DON'T GIVE UP! Try these recovery strategies:
+
+**Navigation Failures:**
+1. If browser_navigate fails:
+   - Check if URL is correct (add https:// if needed)
+   - Try alternative domain (.com vs .net)
+   - Use browser_create_tab with URL as fallback
+
+**Element Not Found:**
+1. If browser_search_elements returns empty:
+   - Try browser_get_interactive_elements for full list
+   - Use broader search terms ("button" instead of "submit button")
+   - Try browser_capture_annotated_screenshot for visual identification
+
+**Click/Type Failures:**
+1. If browser_click_element fails (disabled, hidden):
+   - Use browser_scroll to bring element into view
+   - Wait and retry (page might still be loading)
+   - Try browser_click_coordinate with element position
+   - Use browser_capture_annotated_screenshot to verify element exists
+
+2. If browser_type_text fails:
+   - Click element first to focus it
+   - Check if element is disabled or readonly
+   - Try alternative input elements (search for similar ones)
+
+**Page Load Issues:**
+1. If page content seems incomplete:
+   - Use browser_scroll to load dynamic content
+   - Wait briefly and call browser_get_page_content again
+   - Check browser_list_tabs to verify correct tab is active
+
+**General Strategy:**
+- Tool failures are TEMPORARY - always try an alternative approach
+- Combine tools creatively (screenshot + coordinate click, search + scroll, etc.)
+- Verify assumptions with additional tool calls
+- Report progress even when encountering obstacles
+
 # SUCCESS CRITERIA
 
 - You have ACTUAL browser access - use it!
 - Use semantic roles and context for accurate element selection
 - Search with natural language when element location is ambiguous
 - ALWAYS verify after actions (check page changed, form submitted, etc.)
+- Apply error recovery strategies when tools fail
 - Be concise but thorough in your responses
 
-Remember: This is a REAL browser with SEMANTIC ANALYSIS. Use the enhanced tools!`,
+Remember: This is a REAL browser with SEMANTIC ANALYSIS and AUTOMATIC RETRY. Use the enhanced tools!`,
       created_at: Date.now(),
     };
 
-    const messages = [systemMessage, ...state.messages, ...toolMessages];
+    const allMessages = [systemMessage, ...state.messages, ...toolMessages];
 
-    console.log('[BrowserAgent.Generate] Messages to LLM:', messages.map(m => ({
+    // 컨텍스트 pruning 적용
+    const messages = pruneContextIfNeeded(allMessages);
+
+    console.debug('[BrowserAgent.Generate] Messages to LLM:', messages.map(m => ({
       role: m.role,
       contentPreview: m.content?.substring(0, 50),
     })));
 
     // LLM 호출 (스트리밍, tools 포함)
-    let accumulatedContent = '';
+    let accumulatedContent: string = '';
     let finalToolCalls: any[] | undefined = undefined;
 
     // Browser Agent LLM 설정 가져오기
     const { browserAgentLLMConfig } = useChatStore.getState();
 
-    console.log('[BrowserAgent.Generate] Starting streaming with browser tools...');
-    console.log('[BrowserAgent.Generate] LLM Config:', browserAgentLLMConfig);
+    console.debug('[BrowserAgent.Generate] Starting streaming with browser tools...');
+    console.debug('[BrowserAgent.Generate] LLM Config:', browserAgentLLMConfig);
 
-    for await (const chunk of LLMService.streamChatWithChunks(messages, {
-      tools: toolsForLLM,
-      max_tokens: browserAgentLLMConfig.maxTokens,
-      temperature: browserAgentLLMConfig.temperature,
-      top_p: browserAgentLLMConfig.topP,
-    })) {
-      // Accumulate content and emit to renderer
-      if (!chunk.done && chunk.content) {
-        accumulatedContent += chunk.content;
-        emitStreamingChunk(chunk.content, state.conversationId);
-      }
+    // LLM 호출 (재시도 로직 포함)
+    try {
+      for await (const chunk of LLMService.streamChatWithChunks(messages, {
+        tools: toolsForLLM,
+        max_tokens: browserAgentLLMConfig.maxTokens,
+        temperature: browserAgentLLMConfig.temperature,
+        top_p: browserAgentLLMConfig.topP,
+      })) {
+        // Accumulate content and emit to renderer
+        if (!chunk.done && chunk.content) {
+          accumulatedContent += chunk.content;
+          emitStreamingChunk(chunk.content, state.conversationId);
+        }
 
-      // Last chunk contains tool calls (if any)
-      if (chunk.done && chunk.toolCalls) {
-        finalToolCalls = chunk.toolCalls;
-        console.log('[BrowserAgent.Generate] Received tool calls from stream:', finalToolCalls);
+        // Last chunk contains tool calls (if any)
+        if (chunk.done && chunk.toolCalls) {
+          finalToolCalls = chunk.toolCalls;
+          console.debug('[BrowserAgent.Generate] Received tool calls from stream:', finalToolCalls);
+        }
       }
+    } catch (llmError) {
+      console.error('[BrowserAgent.Generate] LLM call failed:', llmError);
+      throw llmError;
     }
 
-    console.log('[BrowserAgent.Generate] Streaming complete. Content length:', accumulatedContent.length);
+    console.debug('[BrowserAgent.Generate] Streaming complete. Content length:', accumulatedContent.length);
 
     // Tool calls 파싱
     const toolCalls = finalToolCalls?.map((tc: any, index: number) => {
       const toolCallId = tc.id || `call_${Date.now()}_${index}`;
 
-      console.log('[BrowserAgent.Generate] Tool call:', {
+      console.debug('[BrowserAgent.Generate] Tool call:', {
         id: toolCallId,
         name: tc.function.name,
         arguments: tc.function.arguments,
@@ -377,7 +472,7 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS. Use the enhanced tools!
       tool_calls: toolCalls,
     };
 
-    console.log('[BrowserAgent.Generate] Assistant message created:', {
+    console.debug('[BrowserAgent.Generate] Assistant message created:', {
       hasContent: !!assistantMessage.content,
       hasToolCalls: !!assistantMessage.tool_calls,
       toolCallsCount: assistantMessage.tool_calls?.length,
@@ -467,9 +562,9 @@ export class BrowserAgentGraph {
     const { browserAgentLLMConfig, addBrowserAgentLog, setBrowserAgentIsRunning, clearBrowserAgentLogs } = useChatStore.getState();
     const actualMaxIterations = maxIterations ?? browserAgentLLMConfig.maxIterations;
 
-    console.log('[BrowserAgent] Starting stream with initial state');
-    console.log('[BrowserAgent] Available browser tools: get_page_content, get_interactive_elements, click_element, type_text, scroll');
-    console.log('[BrowserAgent] Max iterations:', actualMaxIterations);
+    console.debug('[BrowserAgent] Starting stream with initial state');
+    console.debug('[BrowserAgent] Available browser tools: get_page_content, get_interactive_elements, click_element, type_text, scroll');
+    console.debug('[BrowserAgent] Max iterations:', actualMaxIterations);
 
     // Agent 로그 시작
     clearBrowserAgentLogs();
@@ -493,7 +588,7 @@ export class BrowserAgentGraph {
     const LOOP_THRESHOLD = 3; // 같은 호출이 3번 반복되면 루프로 간주
 
     while (iterations < actualMaxIterations && !this.shouldStop) {
-      console.log(`[BrowserAgent] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`);
+      console.debug(`[BrowserAgent] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`);
 
       // 로그: 반복 시작
       addBrowserAgentLog({
@@ -519,7 +614,7 @@ export class BrowserAgentGraph {
       // 1. generate with Browser Control Tools
       let generateResult;
       try {
-        console.log('[BrowserAgent] Calling generateWithBrowserToolsNode...');
+        console.debug('[BrowserAgent] Calling generateWithBrowserToolsNode...');
 
         addBrowserAgentLog({
           level: 'thinking',
@@ -532,7 +627,7 @@ export class BrowserAgentGraph {
         });
 
         generateResult = await generateWithBrowserToolsNode(state);
-        console.log('[BrowserAgent] generateWithBrowserToolsNode completed');
+        console.debug('[BrowserAgent] generateWithBrowserToolsNode completed');
       } catch (error: any) {
         console.error('[BrowserAgent] Generate node error:', error);
 
@@ -554,7 +649,7 @@ export class BrowserAgentGraph {
       if (generateResult.messages && generateResult.messages.length > 0) {
         const newMessage = generateResult.messages[0];
 
-        console.log('[BrowserAgent] Generated message:', {
+        console.debug('[BrowserAgent] Generated message:', {
           content: newMessage.content?.substring(0, 100),
           hasToolCalls: !!newMessage.tool_calls,
           toolCallsCount: newMessage.tool_calls?.length,
@@ -577,10 +672,10 @@ export class BrowserAgentGraph {
 
       // 2. 도구 사용 여부 판단
       const decision = shouldUseTool(state);
-      console.log('[BrowserAgent] Decision:', decision);
+      console.debug('[BrowserAgent] Decision:', decision);
 
       if (decision === 'end') {
-        console.log('[BrowserAgent] Ending - no more tools to call');
+        console.debug('[BrowserAgent] Ending - no more tools to call');
 
         addBrowserAgentLog({
           level: 'success',
@@ -630,9 +725,31 @@ export class BrowserAgentGraph {
         };
       }
 
-      // 3. tools 노드 실행 (자동 실행, 승인 불필요)
-      console.log('[BrowserAgent] Executing browser tools node');
-      const toolsResult = await toolsNode(state);
+      // 3. tools 노드 실행 (자동 실행, 승인 불필요, 재시도 포함)
+      console.debug('[BrowserAgent] Executing browser tools node');
+      let toolsResult;
+
+      try {
+        toolsResult = await retryWithBackoff(
+          async () => await toolsNode(state),
+          2, // 도구 실행은 2번만 재시도
+          500 // 500ms base delay
+        );
+      } catch (toolError) {
+        console.error('[BrowserAgent] Tool execution failed after retries:', toolError);
+
+        // Fallback: 도구 실행 실패 시 에러 결과로 대체
+        toolsResult = {
+          toolResults: state.messages
+            .slice(-1)[0]
+            ?.tool_calls?.map(tc => ({
+              toolCallId: tc.id,
+              toolName: tc.name,
+              result: null,
+              error: `도구 실행 실패 (재시도 후): ${toolError instanceof Error ? toolError.message : String(toolError)}`,
+            })) || [],
+        };
+      }
 
       // 로그: 도구 결과
       if (toolsResult.toolResults) {
@@ -707,14 +824,14 @@ export class BrowserAgentGraph {
         toolResults: toolsResult.toolResults || [],
       };
 
-      console.log('[BrowserAgent] Tool results:', toolsResult.toolResults);
+      console.debug('[BrowserAgent] Tool results:', toolsResult.toolResults);
 
       yield { tools: toolsResult };
 
       iterations++;
     }
 
-    console.log('[BrowserAgent] Stream completed, total iterations:', iterations);
+    console.debug('[BrowserAgent] Stream completed, total iterations:', iterations);
 
     // Agent 로그 종료
     setBrowserAgentIsRunning(false);
@@ -789,7 +906,7 @@ export class BrowserAgentGraph {
     })();
 
     if (finalReportMessage) {
-      console.log('[BrowserAgent] Generating final report message:', finalReportMessage.content.substring(0, 100));
+      console.debug('[BrowserAgent] Generating final report message:', finalReportMessage.content.substring(0, 100));
       yield {
         reporter: {
           messages: [finalReportMessage],

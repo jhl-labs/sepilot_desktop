@@ -131,7 +131,7 @@ export function BookmarksList() {
     try {
       const result = await window.electronAPI.browserView.openBookmark(bookmark.id);
       if (result.success) {
-        console.log('[BookmarksList] Bookmark opened:', bookmark.id);
+        console.debug('[BookmarksList] Bookmark opened:', bookmark.id);
         setBrowserViewMode('chat');
       } else {
         console.error('[BookmarksList] Failed to open bookmark:', result.error);
