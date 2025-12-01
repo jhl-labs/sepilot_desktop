@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { FileText, Trash2, RefreshCw, Edit } from 'lucide-react';
-import { getAllDocuments } from '@/lib/vectordb/client';
+import { FileText, Trash2, RefreshCw, Edit, Download, Upload } from 'lucide-react';
+import { getAllDocuments, exportDocuments, importDocuments } from '@/lib/vectordb/client';
 import { VectorDocument } from '@/lib/vectordb/types';
 
 interface DocumentListProps {
@@ -18,6 +18,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadDocuments = async () => {
     setIsLoading(true);
@@ -119,6 +120,77 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     setExpandedDocs(newExpanded);
   };
 
+  const handleExport = async () => {
+    try {
+      setIsLoading(true);
+      setMessage(null);
+
+      const exportData = await exportDocuments();
+
+      // JSON 파일 다운로드
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `vectordb-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setMessage({
+        type: 'success',
+        text: `${exportData.totalCount}개의 문서를 Export했습니다.`,
+      });
+    } catch (error: any) {
+      console.error('Failed to export documents:', error);
+      setMessage({ type: 'error', text: error.message || '문서 Export 실패' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setMessage(null);
+
+      const text = await file.text();
+      const exportData = JSON.parse(text);
+
+      // Import 실행 (중복 시 overwrite)
+      const result = await importDocuments(exportData, { overwrite: true });
+
+      setMessage({
+        type: 'success',
+        text: `Import 완료: 신규 ${result.imported}개, 덮어쓰기 ${result.overwritten}개, 건너뛰기 ${result.skipped}개`,
+      });
+
+      // 문서 목록 새로고침
+      await loadDocuments();
+    } catch (error: any) {
+      console.error('Failed to import documents:', error);
+      setMessage({ type: 'error', text: error.message || '문서 Import 실패' });
+    } finally {
+      setIsLoading(false);
+      // 파일 입력 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -127,15 +199,44 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           <h3>업로드된 문서</h3>
           <span className="text-sm font-normal text-muted-foreground">({documents.length}개)</span>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={loadDocuments}
-          disabled={isLoading || disabled}
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={isLoading || disabled || documents.length === 0}
+            title="문서 Export (JSON)"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleImportClick}
+            disabled={isLoading || disabled}
+            title="문서 Import (JSON)"
+          >
+            <Upload className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadDocuments}
+            disabled={isLoading || disabled}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
+
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleImportFile}
+        style={{ display: 'none' }}
+      />
 
       {/* Message */}
       {message && (

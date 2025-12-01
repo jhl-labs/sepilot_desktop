@@ -79,3 +79,23 @@ export interface RawDocument {
   content: string;
   metadata: Record<string, any>;
 }
+
+/**
+ * Export/Import용 문서 포맷
+ */
+export interface ExportedDocument {
+  id: string;
+  content: string;
+  metadata: Record<string, any>;
+  embedding?: number[];
+}
+
+/**
+ * Export 데이터 포맷
+ */
+export interface ExportData {
+  version: string;
+  exportedAt: string;
+  documents: ExportedDocument[];
+  totalCount: number;
+}

@@ -1,5 +1,5 @@
 import { VectorDB } from './interface';
-import { VectorDBConfig, VectorDocument } from './types';
+import { VectorDBConfig, VectorDocument, ExportData } from './types';
 import { isElectron } from '@/lib/platform';
 
 /**
@@ -171,4 +171,128 @@ export async function deleteDocuments(ids: string[]): Promise<void> {
   // 브라우저 환경: 직접 VectorDB 클라이언트 사용
   const db = VectorDBClient.getDB();
   await db.delete(ids);
+}
+
+/**
+ * 모든 문서를 JSON 형식으로 Export
+ * Electron 환경에서는 IPC를 통해 Main 프로세스에서 처리합니다.
+ */
+export async function exportDocuments(): Promise<ExportData> {
+  // Electron 환경: IPC를 통해 Main 프로세스에서 Export
+  if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.vectorDB) {
+    const result = await window.electronAPI.vectorDB.export();
+
+    if (!result.success || !result.data) {
+      throw new Error(result.error || '문서 Export 실패');
+    }
+
+    return result.data;
+  }
+
+  // 브라우저 환경: 직접 VectorDB 클라이언트 사용
+  const documents = await getAllDocuments();
+  return {
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    documents: documents,
+    totalCount: documents.length,
+  };
+}
+
+/**
+ * JSON 형식의 문서를 Import (중복 시 overwrite)
+ * Electron 환경에서는 IPC를 통해 Main 프로세스에서 처리합니다.
+ *
+ * 중복 판단 기준:
+ * 1. originalId (청크된 문서의 경우) 또는 id가 동일한 경우
+ * 2. metadata.title과 metadata.source가 모두 동일한 경우
+ *
+ * 중복된 문서가 발견되면 기존 문서의 모든 청크를 삭제하고 새로운 문서로 교체합니다.
+ */
+export async function importDocuments(
+  exportData: ExportData,
+  options?: { overwrite?: boolean }
+): Promise<{ imported: number; overwritten: number; skipped: number }> {
+  const overwrite = options?.overwrite ?? true;
+
+  // Electron 환경: IPC를 통해 Main 프로세스에서 Import
+  if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.vectorDB) {
+    const result = await window.electronAPI.vectorDB.import(exportData, { overwrite });
+
+    if (!result.success || !result.data) {
+      throw new Error(result.error || '문서 Import 실패');
+    }
+
+    return result.data;
+  }
+
+  // 브라우저 환경: 직접 VectorDB 클라이언트 사용
+  const existingDocuments = await getAllDocuments();
+  let imported = 0;
+  let overwritten = 0;
+  let skipped = 0;
+
+  // 중복 판단을 위한 맵 생성
+  const existingMap = new Map<string, VectorDocument>();
+  for (const doc of existingDocuments) {
+    const originalId = doc.metadata?.originalId || doc.id;
+    existingMap.set(originalId, doc);
+
+    // title + source 조합도 체크
+    if (doc.metadata?.title && doc.metadata?.source) {
+      const key = `${doc.metadata.title}::${doc.metadata.source}`;
+      existingMap.set(key, doc);
+    }
+  }
+
+  // Import할 문서 처리
+  const documentsToDelete: string[] = [];
+  const documentsToInsert: VectorDocument[] = [];
+
+  for (const doc of exportData.documents) {
+    const originalId = doc.metadata?.originalId || doc.id;
+    const titleSourceKey =
+      doc.metadata?.title && doc.metadata?.source
+        ? `${doc.metadata.title}::${doc.metadata.source}`
+        : null;
+
+    // 중복 체크
+    const isDuplicate =
+      existingMap.has(originalId) || (titleSourceKey && existingMap.has(titleSourceKey));
+
+    if (isDuplicate) {
+      if (overwrite) {
+        // 기존 문서의 모든 청크 찾기
+        const allExistingDocs = await getAllDocuments();
+        const chunkIdsToDelete = allExistingDocs
+          .filter((existingDoc) => {
+            const existingOriginalId = existingDoc.metadata?.originalId || existingDoc.id;
+            return existingOriginalId === originalId;
+          })
+          .map((d) => d.id);
+
+        documentsToDelete.push(...chunkIdsToDelete);
+        documentsToInsert.push(doc);
+        overwritten++;
+      } else {
+        skipped++;
+      }
+    } else {
+      documentsToInsert.push(doc);
+      imported++;
+    }
+  }
+
+  // 기존 문서 삭제 (overwrite 모드)
+  if (documentsToDelete.length > 0) {
+    await deleteDocuments(documentsToDelete);
+  }
+
+  // 새 문서 삽입
+  if (documentsToInsert.length > 0) {
+    const db = VectorDBClient.getDB();
+    await db.insert(documentsToInsert);
+  }
+
+  return { imported, overwritten, skipped };
 }
