@@ -269,6 +269,7 @@ export interface AppConfig {
   comfyUI?: ComfyUIConfig;
   github?: GitHubOAuthConfig;
   quickInput?: QuickInputConfig;
+  theme?: 'light' | 'dark' | 'system';
 }
 
 /**
