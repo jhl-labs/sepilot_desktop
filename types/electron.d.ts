@@ -449,6 +449,7 @@ interface FileSystemAPI {
     dirPath: string,
     options?: SearchOptions
   ) => Promise<IPCResponse<SearchResponse>>;
+  saveClipboardImage: (destDir: string) => Promise<IPCResponse<{ filename: string; path: string }>>;
 }
 
 interface GitHubAPI {

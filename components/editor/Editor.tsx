@@ -9,6 +9,7 @@ import { X, Save, FileText, Loader2, Eye, Code } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isElectron } from '@/lib/platform';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
+import path from 'path-browserify';
 
 // Load Editor component without SSR
 // For now, we'll allow Monaco to use CDN in development
@@ -28,6 +29,7 @@ export function CodeEditor() {
     markFileDirty,
     clearInitialPosition,
     editorAppearanceConfig,
+    workingDirectory,
   } = useChatStore();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -601,6 +603,98 @@ export function CodeEditor() {
       completeAction.dispose();
     };
   }, [editor, handleEditorAction]);
+
+  // Handle clipboard image paste (Ctrl+V)
+  useEffect(() => {
+    if (!editor || !isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    const handlePaste = async (e: ClipboardEvent) => {
+      // Markdown 파일에서만 이미지 붙여넣기 지원
+      if (!isMarkdownFile || !activeFile || !workingDirectory) {
+        return;
+      }
+
+      const clipboardData = e.clipboardData;
+      if (!clipboardData) {
+        return;
+      }
+
+      // 클립보드에 이미지가 있는지 확인
+      const hasImage = Array.from(clipboardData.types).some((type) => type.startsWith('image/'));
+
+      if (!hasImage) {
+        return;
+      }
+
+      // 기본 paste 동작 방지
+      e.preventDefault();
+      e.stopPropagation();
+
+      console.log('[Editor] Image paste detected');
+
+      try {
+        // 클립보드 이미지를 working directory에 저장
+        const result = await window.electronAPI.fs.saveClipboardImage(workingDirectory);
+
+        if (result.success && result.data) {
+          const { filename } = result.data;
+          console.log('[Editor] Image saved:', filename);
+
+          // 파일이 위치한 디렉토리 기준으로 이미지의 상대 경로 계산
+          const fileDir = path.dirname(activeFile.path);
+          const relativePath = path.relative(fileDir, path.join(workingDirectory, filename));
+
+          // Markdown 이미지 문법으로 삽입
+          const imageMarkdown = `![${filename}](${relativePath})`;
+
+          // 현재 커서 위치에 삽입
+          const position = editor.getPosition();
+          if (position) {
+            editor.executeEdits('paste-image', [
+              {
+                range: new (window as any).monaco.Range(
+                  position.lineNumber,
+                  position.column,
+                  position.lineNumber,
+                  position.column
+                ),
+                text: imageMarkdown,
+                forceMoveMarkers: true,
+              },
+            ]);
+
+            // 커서를 삽입된 텍스트 끝으로 이동
+            const newPosition = {
+              lineNumber: position.lineNumber,
+              column: position.column + imageMarkdown.length,
+            };
+            editor.setPosition(newPosition);
+            editor.focus();
+
+            console.log('[Editor] Image markdown inserted:', imageMarkdown);
+          }
+        } else {
+          console.error('[Editor] Failed to save clipboard image:', result.error);
+        }
+      } catch (error) {
+        console.error('[Editor] Error handling clipboard image:', error);
+      }
+    };
+
+    // DOM 요소에 이벤트 리스너 추가
+    const editorDomNode = editor.getDomNode();
+    if (editorDomNode) {
+      editorDomNode.addEventListener('paste', handlePaste);
+
+      return () => {
+        editorDomNode.removeEventListener('paste', handlePaste);
+      };
+    }
+
+    return undefined;
+  }, [editor, isMarkdownFile, activeFile, workingDirectory]);
 
   // Navigate to initialPosition when file is opened
   useEffect(() => {

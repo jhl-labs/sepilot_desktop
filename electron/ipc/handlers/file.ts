@@ -685,6 +685,66 @@ export function registerFileHandlers() {
     }
   });
 
+  // 클립보드 이미지를 파일로 저장 (Markdown editor용)
+  ipcMain.handle('fs:save-clipboard-image', async (_event, destDir: string) => {
+    try {
+      const { clipboard, nativeImage } = require('electron');
+
+      // 클립보드에서 이미지 가져오기
+      const image = clipboard.readImage();
+
+      if (image.isEmpty()) {
+        console.log('[File] No image in clipboard');
+        return {
+          success: false,
+          error: 'No image in clipboard',
+        };
+      }
+
+      console.log('[File] Image found in clipboard');
+
+      // 고유한 파일명 생성 (타임스탬프 기반)
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      let filename = `image-${timestamp}.png`;
+      let destPath = path.join(destDir, filename);
+      let counter = 1;
+
+      // 파일명 중복 확인 및 처리
+      while (true) {
+        try {
+          await fs.access(destPath);
+          // 파일이 존재하면 카운터 추가
+          filename = `image-${timestamp}-${counter}.png`;
+          destPath = path.join(destDir, filename);
+          counter++;
+        } catch {
+          // 파일이 없으면 사용 가능
+          break;
+        }
+      }
+
+      // 이미지를 PNG 버퍼로 변환하여 저장
+      const buffer = image.toPNG();
+      await fs.writeFile(destPath, buffer);
+
+      console.log('[File] Clipboard image saved:', destPath);
+
+      return {
+        success: true,
+        data: {
+          filename,
+          path: destPath,
+        },
+      };
+    } catch (error: any) {
+      console.error('[File] Error saving clipboard image:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to save clipboard image',
+      };
+    }
+  });
+
   // 파일 전체 검색 (ripgrep 사용)
   ipcMain.handle(
     'fs:search-files',

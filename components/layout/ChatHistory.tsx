@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageSquare, Pencil, Trash2, Search, X, User, Check } from 'lucide-react';
+import { MessageSquare, Pencil, Trash2, Search, X, User, Check, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -23,6 +23,12 @@ import {
 } from '@/components/ui/dialog';
 import type { Conversation, Message } from '@/types';
 import { MoreHorizontal } from 'lucide-react';
+import { SaveKnowledgeDialog } from '@/components/chat/SaveKnowledgeDialog';
+import { indexDocuments } from '@/lib/vectordb/indexing';
+import { getVectorDB } from '@/lib/vectordb/client';
+import { getEmbeddingProvider } from '@/lib/vectordb/embeddings/client';
+import { RawDocument } from '@/lib/vectordb/types';
+import { isElectron } from '@/lib/platform';
 
 interface ChatHistoryProps {
   onConversationClick?: () => void;
@@ -49,6 +55,9 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [saveKnowledgeDialogOpen, setSaveKnowledgeDialogOpen] = useState(false);
+  const [knowledgeConversation, setKnowledgeConversation] = useState<Conversation | null>(null);
+  const [knowledgeMessages, setKnowledgeMessages] = useState<Message[]>([]);
   const editInputRef = useRef<HTMLInputElement>(null);
 
   // Focus input when editing starts
@@ -93,6 +102,88 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
       await updateConversationPersona(selectedConversationId, personaId);
       setPersonaDialogOpen(false);
       setSelectedConversationId(null);
+    }
+  };
+
+  const handleOpenSaveKnowledgeDialog = async (conversationId: string) => {
+    const conversation = conversations.find((c) => c.id === conversationId);
+    if (!conversation) {
+      return;
+    }
+
+    // Load messages for this conversation
+    let messages: Message[] = [];
+
+    if (isElectron() && window.electronAPI) {
+      try {
+        const result = await window.electronAPI.chat.loadMessages(conversationId);
+        if (result.success && result.data) {
+          messages = result.data;
+        }
+      } catch (error) {
+        console.error('Failed to load messages:', error);
+        // TODO: Show error toast to user
+        return;
+      }
+    } else {
+      // Web: localStorage에서 로드
+      try {
+        const allMessages = localStorage.getItem('sepilot_messages');
+        if (allMessages) {
+          const parsed = JSON.parse(allMessages) as Record<string, Message[]>;
+          messages = parsed[conversationId] || [];
+        }
+      } catch (error) {
+        console.error('Failed to load messages from localStorage:', error);
+        // TODO: Show error toast to user
+        return;
+      }
+    }
+
+    if (messages.length === 0) {
+      console.error('No messages found in conversation');
+      // TODO: Show error toast to user
+      return;
+    }
+
+    setKnowledgeConversation(conversation);
+    setKnowledgeMessages(messages);
+    setSaveKnowledgeDialogOpen(true);
+  };
+
+  const handleSaveKnowledge = async (doc: {
+    title: string;
+    content: string;
+    metadata: Record<string, any>;
+  }) => {
+    try {
+      // Create RawDocument
+      const rawDoc: RawDocument = {
+        id: `knowledge_${Date.now()}`,
+        content: doc.content,
+        metadata: {
+          ...doc.metadata,
+          title: doc.title,
+          source: 'conversation',
+          uploadedAt: Date.now(),
+        },
+      };
+
+      // Get VectorDB and Embedder
+      const vectorDB = await getVectorDB();
+      const embedder = await getEmbeddingProvider();
+
+      // Index document with default options
+      await indexDocuments(vectorDB, embedder, [rawDoc], {
+        chunkSize: 500,
+        chunkOverlap: 50,
+        batchSize: 10,
+      });
+
+      console.log('Knowledge saved successfully:', doc.title);
+    } catch (error: any) {
+      console.error('Failed to save knowledge:', error);
+      throw new Error(error.message || '지식 저장에 실패했습니다.');
     }
   };
 
@@ -297,6 +388,12 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                           Persona
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          onClick={() => handleOpenSaveKnowledgeDialog(conversation.id)}
+                        >
+                          <BookOpen className="mr-2 h-4 w-4" />
+                          지식 저장
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={() => handleDelete(conversation.id)}
                           className="text-destructive focus:text-destructive"
                         >
@@ -369,6 +466,15 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Save Knowledge Dialog */}
+      <SaveKnowledgeDialog
+        open={saveKnowledgeDialogOpen}
+        onOpenChange={setSaveKnowledgeDialogOpen}
+        conversation={knowledgeConversation}
+        messages={knowledgeMessages}
+        onSave={handleSaveKnowledge}
+      />
     </>
   );
 }

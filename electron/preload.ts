@@ -260,6 +260,7 @@ const electronAPI = {
     duplicate: (sourcePath: string) => ipcRenderer.invoke('fs:duplicate', sourcePath),
     searchFiles: (query: string, dirPath: string, options?: any) =>
       ipcRenderer.invoke('fs:search-files', query, dirPath, options),
+    saveClipboardImage: (destDir: string) => ipcRenderer.invoke('fs:save-clipboard-image', destDir),
   },
 
   // GitHub operations
