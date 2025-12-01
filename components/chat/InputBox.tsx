@@ -17,6 +17,7 @@ import {
   Wrench,
   Code,
   Check,
+  Globe,
 } from 'lucide-react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { initializeLLMClient } from '@/lib/llm/client';
@@ -970,114 +971,12 @@ export function InputBox() {
                             : msg.content;
                         displayContent += `💭 ${thinkingContent}\n\n`;
                       }
-                      // Don't show tool calls here - they'll be shown with results
+                      // Don't show tool calls here - they'll be shown by coding-agent.ts
                       continue;
                     }
 
-                    // Tool result messages - Show tool call + result together
-                    if (msg.role === 'tool' && msg.tool_call_id) {
-                      const toolName = msg.name || 'tool';
-
-                      // Find the corresponding tool call to get arguments
-                      let toolArgs: any = null;
-                      for (let j = i - 1; j >= 0; j--) {
-                        const prevMsg = allMessages[j];
-                        if (prevMsg.role === 'assistant' && prevMsg.tool_calls) {
-                          const toolCall = prevMsg.tool_calls.find(
-                            (tc: any) => tc.id === msg.tool_call_id
-                          );
-                          if (toolCall) {
-                            toolArgs = toolCall.arguments;
-                            break;
-                          }
-                        }
-                      }
-
-                      // Check if there's an error in the content
-                      const hasError =
-                        msg.content &&
-                        (msg.content.toLowerCase().includes('error:') ||
-                          msg.content.toLowerCase().includes('failed to') ||
-                          msg.content.toLowerCase().includes('enoent') ||
-                          msg.content.toLowerCase().includes('eacces'));
-
-                      // Start with tool name and args
-                      displayContent += `🔧 ${toolName}`;
-                      if (toolArgs) {
-                        if (toolArgs.command) {
-                          displayContent += ` \`${toolArgs.command}\``;
-                        } else if (toolArgs.path) {
-                          displayContent += ` \`${toolArgs.path}\``;
-                        } else if (toolArgs.pattern) {
-                          displayContent += ` \`${toolArgs.pattern}\``;
-                        }
-                      }
-                      displayContent += '\n';
-
-                      if (hasError) {
-                        // Show error details
-                        const errorLines = msg.content.split('\n');
-                        const linesToShow = errorLines.slice(0, 10);
-                        let errorMsg = linesToShow.join('\n');
-
-                        if (errorMsg.length > 800) {
-                          errorMsg = `${errorMsg.substring(0, 800)}\n... (truncated)`;
-                        }
-
-                        const indentedError = errorMsg
-                          .split('\n')
-                          .map((line: string) => `   ❌ ${line}`)
-                          .join('\n');
-                        displayContent += `${indentedError}\n\n`;
-                      } else {
-                        // Show success with summary
-                        let summary = '';
-
-                        if (toolName === 'file_write' || toolName === 'file_edit') {
-                          // Show file modification summary
-                          if (toolArgs?.path) {
-                            summary = `Modified ${toolArgs.path}`;
-                            if (msg.content.includes('lines changed')) {
-                              const match = msg.content.match(/(\d+)\s+lines?\s+changed/);
-                              if (match) {
-                                summary = `${match[1]} lines changed`;
-                              }
-                            }
-                          } else {
-                            summary = msg.content.split('\n')[0].substring(0, 60);
-                          }
-                        } else if (toolName === 'file_read') {
-                          const lines = msg.content.split('\n').length;
-                          summary = `Read ${lines} lines`;
-                        } else if (toolName === 'file_list') {
-                          const files = msg.content
-                            .split('\n')
-                            .filter((l: string) => l.trim()).length;
-                          summary = `Found ${files} items`;
-                        } else if (toolName === 'command_execute') {
-                          // Show stdout (first few lines)
-                          const lines = msg.content.split('\n').slice(0, 5);
-                          let output = lines.join('\n');
-                          if (output.length > 200) {
-                            output = `${output.substring(0, 200)}...`;
-                          }
-                          if (output.trim()) {
-                            summary = output;
-                          } else {
-                            summary = 'Success (no output)';
-                          }
-                        } else if (toolName === 'grep_search') {
-                          const matches = msg.content
-                            .split('\n')
-                            .filter((l: string) => l.trim()).length;
-                          summary = `Found ${matches} matches`;
-                        } else {
-                          // Generic summary - first line
-                          summary = msg.content.split('\n')[0].substring(0, 60);
-                        }
-
-                        displayContent += `   ✅ ${summary}\n\n`;
-                      }
+                    // Skip tool result messages - they're already shown by coding-agent.ts
+                    if (msg.role === 'tool') {
                       continue;
                     }
 
@@ -1651,7 +1550,9 @@ export function InputBox() {
                                     ? 'Tree of Thought'
                                     : thinkingMode === 'deep'
                                       ? 'Deep Thinking'
-                                      : 'Coding (beta)'
+                                      : thinkingMode === 'deep-web-research'
+                                        ? 'Deep Web Research'
+                                        : 'Coding (beta)'
                             }`
                       }
                       disabled={isStreaming || enableImageGeneration}
@@ -1660,6 +1561,7 @@ export function InputBox() {
                       {thinkingMode === 'sequential' && <Brain className="h-4 w-4" />}
                       {thinkingMode === 'tree-of-thought' && <Network className="h-4 w-4" />}
                       {thinkingMode === 'deep' && <Sparkles className="h-4 w-4" />}
+                      {thinkingMode === 'deep-web-research' && <Globe className="h-4 w-4" />}
                       {thinkingMode === 'coding' && <Code className="h-4 w-4" />}
                       <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
                     </Button>
@@ -1707,6 +1609,16 @@ export function InputBox() {
                         <span className="text-xs text-muted-foreground">
                           깊은 사고 - 최고 품질 (느림)
                         </span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setThinkingMode('deep-web-research')}
+                      className={thinkingMode === 'deep-web-research' ? 'bg-accent' : ''}
+                    >
+                      <Globe className="mr-2 h-4 w-4 text-orange-500" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Deep Web Research</span>
+                        <span className="text-xs text-muted-foreground">심층 웹 검색 및 분석</span>
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem
