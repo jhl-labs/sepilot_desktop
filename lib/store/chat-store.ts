@@ -152,7 +152,7 @@ interface ChatStore {
   editorLLMPromptsConfig: EditorLLMPromptsConfig;
 
   // Chat Mode View
-  chatViewMode: 'history' | 'documents' | 'chat'; // history, documents, or chat view in Chat sidebar
+  chatViewMode: 'history' | 'documents'; // history or documents view in Chat sidebar
 
   // Persona (AI Bot Role/System Prompt)
   personas: Persona[]; // 사용 가능한 페르소나 목록 (기본 + 사용자 생성)
@@ -245,7 +245,7 @@ interface ChatStore {
   resetEditorLLMPromptsConfig: () => void;
 
   // Actions - Chat Mode View
-  setChatViewMode: (mode: 'history' | 'documents' | 'chat') => void;
+  setChatViewMode: (mode: 'history' | 'documents') => void;
 
   // Actions - Initialization
   loadWorkingDirectory: () => Promise<void>;
@@ -1327,7 +1327,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   // Chat Mode View Actions
-  setChatViewMode: (mode: 'history' | 'documents' | 'chat') => {
+  setChatViewMode: (mode: 'history' | 'documents') => {
     set({ chatViewMode: mode });
   },
 
