@@ -4,6 +4,8 @@ import { Message } from '@/types';
 import { LLMService } from '@/lib/llm/service';
 import { createBaseSystemMessage } from '../utils/system-message';
 import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-callback';
+import { generateWithToolsNode } from '../nodes/generate';
+import { toolsNode } from '../nodes/tools';
 
 /**
  * Tree of Thought Graph
@@ -61,6 +63,90 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
 }
 
 /**
+ * 0단계: 정보 수집 (Research)
+ */
+async function researchNode(state: TreeOfThoughtState) {
+  console.log('[ToT] Step 0: Researching...');
+  emitStreamingChunk('\n\n## 🔎 0단계: 정보 수집 (Research)\n\n', state.conversationId);
+
+  // RAG 검색
+  const query = state.messages[state.messages.length - 1].content;
+  const ragContext = await retrieveContextIfEnabled(query);
+
+  let gatheredInfo = ragContext ? `[RAG 검색 결과]\n${ragContext}\n\n` : '';
+
+  // 도구 사용 루프 (최대 5회)
+  let currentMessages = [...state.messages];
+
+  // 시스템 메시지: 정보 수집가 페르소나
+  const researchSystemMsg: Message = {
+    id: 'system-research',
+    role: 'system',
+    content: `당신은 사용자의 질문에 대해 심층 분석을 하기 전, 필요한 배경 지식과 최신 정보를 수집하는 연구원입니다.
+주어진 도구(검색 등)를 활용하여 필요한 정보를 수집하세요.
+이미 충분한 정보가 있거나 도구가 없다면 즉시 종료하세요.
+최대 5회의 기회가 있습니다.`,
+    created_at: Date.now(),
+  };
+
+  currentMessages = [researchSystemMsg, ...currentMessages];
+
+  for (let i = 0; i < 5; i++) {
+    // Generate (도구 사용 결정)
+    // AgentState 호환성을 위해 toolResults 추가
+    const genResult = await generateWithToolsNode({
+      ...state,
+      messages: currentMessages,
+      toolResults: [],
+    } as any);
+    const responseMsg = genResult.messages?.[0];
+
+    if (!responseMsg) {
+      break;
+    }
+
+    currentMessages.push(responseMsg);
+
+    if (!responseMsg.tool_calls || responseMsg.tool_calls.length === 0) {
+      break;
+    }
+
+    // Tools Execute
+    const toolNames = responseMsg.tool_calls.map((tc) => tc.name).join(', ');
+    emitStreamingChunk(`\n🛠️ **정보 수집 중:** ${toolNames}...\n`, state.conversationId);
+
+    const toolResult = await toolsNode({
+      ...state,
+      messages: currentMessages,
+      toolResults: [],
+    } as any);
+
+    // 결과 메시지 생성
+    const toolMessages = (toolResult.toolResults || []).map((res) => ({
+      role: 'tool' as const,
+      tool_call_id: res.toolCallId,
+      name: res.toolName,
+      content: res.result || res.error || '',
+      id: `tool-${res.toolCallId}`,
+      created_at: Date.now(),
+    }));
+
+    currentMessages.push(...toolMessages);
+
+    // 수집된 정보 누적
+    gatheredInfo += `[도구 실행 결과: ${toolNames}]\n${toolMessages.map((m) => m.content).join('\n')}\n\n`;
+
+    emitStreamingChunk(`✅ **수집 완료**\n`, state.conversationId);
+  }
+
+  console.log('[ToT] Research complete');
+
+  return {
+    context: gatheredInfo,
+  };
+}
+
+/**
  * Tree of Thought State
  */
 export const TreeOfThoughtStateAnnotation = Annotation.Root({
@@ -96,50 +182,67 @@ async function decomposeNode(state: TreeOfThoughtState) {
   console.log('[ToT] Step 1: Decomposing problem...');
 
   // 단계 시작 알림
+
   emitStreamingChunk('\n\n## 🌳 1단계: 문제 분해\n\n', state.conversationId);
+
   emitStreamingChunk(
     '**단계 진행 중:** 문제를 핵심 측면으로 분해 중입니다...\n\n',
     state.conversationId
   );
 
-  // RAG 컨텍스트 가져오기
-  const query = state.messages[state.messages.length - 1].content;
-  const ragContext = await retrieveContextIfEnabled(query);
+  // 수집된 정보(Research/RAG) 가져오기
 
-  if (ragContext) {
+  const query = state.messages[state.messages.length - 1].content;
+
+  const researchContext = state.context;
+
+  if (researchContext) {
     emitStreamingChunk(
-      `\n📚 **관련 문서 ${ragContext.split('[참고 문서').length - 1}개를 참조합니다.**\n\n`,
+      `\n📚 **사전 수집된 정보를 참조합니다.**\n\n`,
+
       state.conversationId
     );
   }
 
   const systemMessage: Message = {
     id: 'system',
+
     role: 'system',
+
     content: `당신은 복잡한 문제를 핵심 측면과 고려사항으로 분해하는 분석적 AI입니다.
 
-질문을 분석하고 다음을 파악하세요:
-1. 핵심 질문
-2. 고려해야 할 주요 측면들
-3. 답변에 대한 가능한 접근 방식들
+  
 
-포괄적이면서도 간결하게 작성하세요. 반드시 한국어로 답변하세요.`,
+  질문을 분석하고 다음을 파악하세요:
+
+  1. 핵심 질문
+
+  2. 고려해야 할 주요 측면들
+
+  3. 답변에 대한 가능한 접근 방식들
+
+  
+
+  포괄적이면서도 간결하게 작성하세요. 반드시 한국어로 답변하세요.`,
+
     created_at: Date.now(),
   };
 
   const decomposePrompt: Message = {
     id: 'decompose-prompt',
+
     role: 'user',
-    content: `다음 질문을 핵심 측면들로 분해하세요:\n\n${query}\n\n${ragContext ? `참고 문서:\n${ragContext}\n\n` : ''}위 참고 문서를 활용하여 분해하세요.`,
+
+    content: `다음 질문을 핵심 측면들로 분해하세요:\n\n${query}\n\n${researchContext ? `수집된 정보:\n${researchContext}\n\n` : ''}위 정보를 활용하여 분해하세요.`,
+
     created_at: Date.now(),
   };
 
   let decomposition = '';
-  for await (const chunk of LLMService.streamChat([
-    systemMessage,
-    ...state.messages,
-    decomposePrompt,
-  ])) {
+  for await (const chunk of LLMService.streamChat(
+    [systemMessage, ...state.messages, decomposePrompt],
+    { tools: [] }
+  )) {
     decomposition += chunk;
     // 실시간 스트리밍 (conversationId로 격리)
     emitStreamingChunk(chunk, state.conversationId);
@@ -197,7 +300,7 @@ ${approaches[i].desc}
     };
 
     let branchContent = '';
-    for await (const chunk of LLMService.streamChat([systemMessage, branchPrompt])) {
+    for await (const chunk of LLMService.streamChat([systemMessage, branchPrompt], { tools: [] })) {
       branchContent += chunk;
       // 실시간 스트리밍 (conversationId로 격리)
       emitStreamingChunk(chunk, state.conversationId);
@@ -260,7 +363,7 @@ async function evaluateBranchesNode(state: TreeOfThoughtState) {
     };
 
     let scoreText = '';
-    for await (const chunk of LLMService.streamChat([systemMessage, evalPrompt])) {
+    for await (const chunk of LLMService.streamChat([systemMessage, evalPrompt], { tools: [] })) {
       scoreText += chunk;
       // 실시간 스트리밍 (conversationId로 격리)
       emitStreamingChunk(chunk, state.conversationId);
@@ -340,7 +443,9 @@ ${topBranches}
   let finalAnswer = '';
   const messageId = `msg-${Date.now()}`;
 
-  for await (const chunk of LLMService.streamChat([systemMessage, synthesizePrompt])) {
+  for await (const chunk of LLMService.streamChat([systemMessage, synthesizePrompt], {
+    tools: [],
+  })) {
     finalAnswer += chunk;
     // Send each chunk to renderer via callback for real-time streaming (conversationId로 격리)
     emitStreamingChunk(chunk, state.conversationId);
@@ -366,12 +471,14 @@ ${topBranches}
 export function createTreeOfThoughtGraph() {
   const workflow = new StateGraph(TreeOfThoughtStateAnnotation)
     // 노드 추가
+    .addNode('research', researchNode)
     .addNode('decompose', decomposeNode)
     .addNode('generate_branches', generateBranchesNode)
     .addNode('evaluate', evaluateBranchesNode)
     .addNode('synthesize', synthesizeNode)
     // 순차적 엣지
-    .addEdge('__start__', 'decompose')
+    .addEdge('__start__', 'research')
+    .addEdge('research', 'decompose')
     .addEdge('decompose', 'generate_branches')
     .addEdge('generate_branches', 'evaluate')
     .addEdge('evaluate', 'synthesize')

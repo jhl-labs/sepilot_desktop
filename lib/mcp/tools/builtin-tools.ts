@@ -5,6 +5,7 @@
  */
 
 import * as fs from 'fs/promises';
+import { existsSync } from 'fs';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -45,6 +46,52 @@ import {
 } from './google-search-handlers';
 
 const execPromise = promisify(exec);
+
+/**
+ * Resolve a usable shell for command execution.
+ * - On Windows: prefer ComSpec/cmd, fall back to PowerShell if unavailable.
+ * - On POSIX: prefer $SHELL, otherwise common shells with /bin/sh as a final fallback.
+ */
+function resolveShellForExec(): string {
+  if (process.platform === 'win32') {
+    const candidates = [
+      process.env.ComSpec,
+      'C:\\Windows\\System32\\cmd.exe',
+      'cmd.exe',
+      'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      'powershell.exe',
+    ];
+
+    for (const candidate of candidates) {
+      if (!candidate) {
+        continue;
+      }
+
+      // Absolute paths must exist; relative ones may be resolved via PATH
+      if (path.isAbsolute(candidate) && !existsSync(candidate)) {
+        continue;
+      }
+
+      return candidate;
+    }
+
+    return 'cmd.exe';
+  }
+
+  const envShell = process.env.SHELL;
+  if (envShell && existsSync(envShell)) {
+    return envShell;
+  }
+
+  const posixCandidates = ['/bin/bash', '/bin/zsh', '/bin/sh'];
+  for (const candidate of posixCandidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return '/bin/sh';
+}
 
 /**
  * Resolve path relative to working directory
@@ -454,13 +501,19 @@ async function handleCommandExecute(args: { command: string; cwd?: string }): Pr
     // Treat empty string as null/undefined
     const cwdArg = args.cwd && args.cwd.trim() !== '' ? args.cwd : null;
     const workingDir = cwdArg || getCurrentWorkingDirectory() || process.cwd();
-    console.log(`[Builtin Tools] Executing command: ${args.command} in ${workingDir}`);
+    const shell = resolveShellForExec();
+    console.log(
+      `[Builtin Tools] Executing command: ${args.command} in ${workingDir} using shell ${shell}`
+    );
 
-    const { stdout, stderr } = await execPromise(args.command, {
+    const execOptions = {
       cwd: workingDir,
       maxBuffer: 1024 * 1024 * 10, // 10MB buffer
       timeout: 300000, // 5 minutes timeout
-    });
+      shell,
+    };
+
+    const { stdout, stderr } = await execPromise(args.command, execOptions);
 
     let result = '';
     if (stdout) {

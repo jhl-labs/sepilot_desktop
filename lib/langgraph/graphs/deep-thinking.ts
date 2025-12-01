@@ -4,6 +4,8 @@ import { Message } from '@/types';
 import { LLMService } from '@/lib/llm/service';
 import { createBaseSystemMessage } from '../utils/system-message';
 import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-callback';
+import { generateWithToolsNode } from '../nodes/generate';
+import { toolsNode } from '../nodes/tools';
 
 /**
  * Deep Thinking Graph
@@ -63,12 +65,99 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
   return '';
 }
 
+/**
+ * 0단계: 정보 수집 (Research)
+ */
+async function researchNode(state: DeepThinkingState) {
+  console.log('[Deep] Step 0: Researching...');
+  emitStreamingChunk('\n\n## 🔎 0단계: 정보 수집 (Research)\n\n', state.conversationId);
+
+  // RAG 검색
+  const query = state.messages[state.messages.length - 1].content;
+  const ragContext = await retrieveContextIfEnabled(query);
+
+  let gatheredInfo = ragContext ? `[RAG 검색 결과]\n${ragContext}\n\n` : '';
+
+  // 도구 사용 루프 (최대 5회)
+  let currentMessages = [...state.messages];
+
+  // 시스템 메시지: 정보 수집가 페르소나
+  const researchSystemMsg: Message = {
+    id: 'system-research',
+    role: 'system',
+    content: `당신은 사용자의 질문에 대해 심층 분석을 하기 전, 필요한 배경 지식과 최신 정보를 수집하는 연구원입니다.
+주어진 도구(검색 등)를 활용하여 필요한 정보를 수집하세요.
+이미 충분한 정보가 있거나 도구가 없다면 즉시 종료하세요.
+최대 5회의 기회가 있습니다.`,
+    created_at: Date.now(),
+  };
+
+  currentMessages = [researchSystemMsg, ...currentMessages];
+
+  for (let i = 0; i < 5; i++) {
+    // Generate (도구 사용 결정)
+    const genResult = await generateWithToolsNode({
+      ...state,
+      messages: currentMessages,
+      toolResults: [],
+    } as any);
+    const responseMsg = genResult.messages?.[0];
+
+    if (!responseMsg) {
+      break;
+    }
+
+    currentMessages.push(responseMsg);
+
+    if (!responseMsg.tool_calls || responseMsg.tool_calls.length === 0) {
+      break;
+    }
+
+    // Tools Execute
+    const toolNames = responseMsg.tool_calls.map((tc) => tc.name).join(', ');
+    emitStreamingChunk(`\n🛠️ **정보 수집 중:** ${toolNames}...\n`, state.conversationId);
+
+    const toolResult = await toolsNode({
+      ...state,
+      messages: currentMessages,
+      toolResults: [],
+    } as any);
+
+    // 결과 메시지 생성
+    const toolMessages = (toolResult.toolResults || []).map((res) => ({
+      role: 'tool' as const,
+      tool_call_id: res.toolCallId,
+      name: res.toolName,
+      content: res.result || res.error || '',
+      id: `tool-${res.toolCallId}`,
+      created_at: Date.now(),
+    }));
+
+    currentMessages.push(...toolMessages);
+
+    // 수집된 정보 누적
+    gatheredInfo += `[도구 실행 결과: ${toolNames}]\n${toolMessages.map((m) => m.content).join('\n')}\n\n`;
+
+    emitStreamingChunk(`✅ **수집 완료**\n`, state.conversationId);
+  }
+
+  console.log('[Deep] Research complete');
+
+  return {
+    researchContext: gatheredInfo,
+  };
+}
+
 export const DeepThinkingStateAnnotation = Annotation.Root({
   messages: Annotation<Message[]>({
     reducer: (existing: Message[], updates: Message[]) => [...existing, ...updates],
     default: () => [],
   }),
   initialAnalysis: Annotation<string>({
+    reducer: (_existing: string, update: string) => update,
+    default: () => '',
+  }),
+  researchContext: Annotation<string>({
     reducer: (_existing: string, update: string) => update,
     default: () => '',
   }),
@@ -108,15 +197,12 @@ async function initialAnalysisNode(state: DeepThinkingState) {
     state.conversationId
   );
 
-  // RAG 컨텍스트 가져오기
+  // 수집된 정보(Research/RAG) 가져오기
   const query = state.messages[state.messages.length - 1].content;
-  const ragContext = await retrieveContextIfEnabled(query);
+  const researchContext = state.researchContext;
 
-  if (ragContext) {
-    emitStreamingChunk(
-      `\n📚 **관련 문서 ${ragContext.split('[참고 문서').length - 1}개를 참조합니다.**\n\n`,
-      state.conversationId
-    );
+  if (researchContext) {
+    emitStreamingChunk(`\n📚 **사전 수집된 정보를 참조합니다.**\n\n`, state.conversationId);
   }
 
   const systemMessage: Message = {
@@ -137,16 +223,15 @@ async function initialAnalysisNode(state: DeepThinkingState) {
   const analysisPrompt: Message = {
     id: 'analysis-prompt',
     role: 'user',
-    content: `다음 질문에 대해 포괄적인 초기 분석을 수행하세요:\n\n${query}\n\n${ragContext ? `참고 문서:\n${ragContext}\n\n` : ''}위 참고 문서를 활용하여 분석하세요.`,
+    content: `다음 질문에 대해 포괄적인 초기 분석을 수행하세요:\n\n${query}\n\n${researchContext ? `수집된 정보:\n${researchContext}\n\n` : ''}위 정보를 활용하여 분석하세요.`,
     created_at: Date.now(),
   };
 
   let analysis = '';
-  for await (const chunk of LLMService.streamChat([
-    systemMessage,
-    ...state.messages,
-    analysisPrompt,
-  ])) {
+  for await (const chunk of LLMService.streamChat(
+    [systemMessage, ...state.messages, analysisPrompt],
+    { tools: [] }
+  )) {
     analysis += chunk;
     // 실시간 스트리밍 (conversationId로 격리)
     emitStreamingChunk(chunk, state.conversationId);
@@ -205,7 +290,9 @@ async function explorePerspectivesNode(state: DeepThinkingState) {
     };
 
     let content = '';
-    for await (const chunk of LLMService.streamChat([systemMessage, perspectivePrompt])) {
+    for await (const chunk of LLMService.streamChat([systemMessage, perspectivePrompt], {
+      tools: [],
+    })) {
       content += chunk;
       // 실시간 스트리밍 (conversationId로 격리)
       emitStreamingChunk(chunk, state.conversationId);
@@ -273,7 +360,9 @@ async function deepAnalysisNode(state: DeepThinkingState) {
     };
 
     let deepAnalysis = '';
-    for await (const chunk of LLMService.streamChat([systemMessage, deepAnalysisPrompt])) {
+    for await (const chunk of LLMService.streamChat([systemMessage, deepAnalysisPrompt], {
+      tools: [],
+    })) {
       deepAnalysis += chunk;
       // 실시간 스트리밍 (conversationId로 격리)
       emitStreamingChunk(chunk, state.conversationId);
@@ -333,7 +422,9 @@ async function integrateAndVerifyNode(state: DeepThinkingState) {
   };
 
   let integration = '';
-  for await (const chunk of LLMService.streamChat([systemMessage1, integratePrompt])) {
+  for await (const chunk of LLMService.streamChat([systemMessage1, integratePrompt], {
+    tools: [],
+  })) {
     integration += chunk;
     // 실시간 스트리밍 (conversationId로 격리)
     emitStreamingChunk(chunk, state.conversationId);
@@ -367,7 +458,7 @@ async function integrateAndVerifyNode(state: DeepThinkingState) {
   };
 
   let verification = '';
-  for await (const chunk of LLMService.streamChat([systemMessage2, verifyPrompt])) {
+  for await (const chunk of LLMService.streamChat([systemMessage2, verifyPrompt], { tools: [] })) {
     verification += chunk;
     // 실시간 스트리밍 (conversationId로 격리)
     emitStreamingChunk(chunk, state.conversationId);
@@ -428,7 +519,7 @@ ${state.verification}
   let finalAnswer = '';
   const messageId = `msg-${Date.now()}`;
 
-  for await (const chunk of LLMService.streamChat([systemMessage, finalPrompt])) {
+  for await (const chunk of LLMService.streamChat([systemMessage, finalPrompt], { tools: [] })) {
     finalAnswer += chunk;
     // Send each chunk to renderer via callback for real-time streaming (conversationId로 격리)
     emitStreamingChunk(chunk, state.conversationId);
@@ -454,13 +545,15 @@ ${state.verification}
 export function createDeepThinkingGraph() {
   const workflow = new StateGraph(DeepThinkingStateAnnotation)
     // 노드 추가
+    .addNode('research', researchNode)
     .addNode('initial_analysis', initialAnalysisNode)
     .addNode('explore_perspectives', explorePerspectivesNode)
     .addNode('deep_analysis', deepAnalysisNode)
     .addNode('integrate_verify', integrateAndVerifyNode)
     .addNode('final_synthesis', finalSynthesisNode)
     // 순차적 엣지
-    .addEdge('__start__', 'initial_analysis')
+    .addEdge('__start__', 'research')
+    .addEdge('research', 'initial_analysis')
     .addEdge('initial_analysis', 'explore_perspectives')
     .addEdge('explore_perspectives', 'deep_analysis')
     .addEdge('deep_analysis', 'integrate_verify')
