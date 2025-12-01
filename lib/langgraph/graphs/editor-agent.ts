@@ -403,6 +403,16 @@ ${ragContext}
     ]);
     tools.push(...fileTools);
 
+    // Always include tab management tools from registry
+    const tabTools = editorToolsRegistry.toOpenAIFormat([
+      'list_open_tabs',
+      'open_tab',
+      'close_tab',
+      'switch_tab',
+      'get_active_file',
+    ]);
+    tools.push(...tabTools);
+
     // For autocomplete: add context-aware tools
     if (context?.action === 'autocomplete') {
       tools.push({
