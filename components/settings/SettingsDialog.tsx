@@ -305,11 +305,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       let savedConfig: AppConfig | null = null;
       if (isElectron() && window.electronAPI) {
         try {
-          // Save V1 config for backward compatibility
-          savedConfig = await persistAppConfig({ llm: v1Config, network: networkConfig });
+          // Save V2 config to DB (V2 is the source of truth)
+          savedConfig = await persistAppConfig({ llm: configV2 as any, network: networkConfig });
           if (savedConfig) {
-            // Initialize Main Process LLM client
-            await window.electronAPI.llm.init(savedConfig);
+            // Initialize Main Process LLM client with V1 config
+            const configForInit = { ...savedConfig, llm: v1Config };
+            await window.electronAPI.llm.init(configForInit);
           }
         } catch (error) {
           console.error('Error saving config to DB:', error);
