@@ -12,12 +12,23 @@
 'use client';
 
 import { useState } from 'react';
-import { Folder, FolderOpen, File, ChevronRight, ChevronDown, Edit3, Trash2 } from 'lucide-react';
+import {
+  Folder,
+  FolderOpen,
+  File,
+  ChevronRight,
+  ChevronDown,
+  Edit3,
+  Trash2,
+  FilePlus,
+  FolderPlus,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
@@ -38,9 +49,19 @@ interface FileTreeItemProps {
   onFileClick: (path: string, filename: string) => void;
   onRefresh: () => void;
   parentPath: string;
+  onNewFile: (parentPath: string) => void;
+  onNewFolder: (parentPath: string) => void;
 }
 
-export function FileTreeItem({ node, level, isActive, onFileClick, onRefresh }: FileTreeItemProps) {
+export function FileTreeItem({
+  node,
+  level,
+  isActive,
+  onFileClick,
+  onRefresh,
+  onNewFile,
+  onNewFolder,
+}: FileTreeItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(node.name);
@@ -163,6 +184,17 @@ export function FileTreeItem({ node, level, isActive, onFileClick, onRefresh }: 
           )}
         </ContextMenuTrigger>
         <ContextMenuContent>
+          {node.isDirectory && (
+            <>
+              <ContextMenuItem onClick={() => onNewFile(node.path)}>
+                <FilePlus className="mr-2 h-4 w-4" />새 파일
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => onNewFolder(node.path)}>
+                <FolderPlus className="mr-2 h-4 w-4" />새 폴더
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+            </>
+          )}
           <ContextMenuItem onClick={() => setIsRenaming(true)}>
             <Edit3 className="mr-2 h-4 w-4" />
             이름 변경
@@ -188,6 +220,8 @@ export function FileTreeItem({ node, level, isActive, onFileClick, onRefresh }: 
               onFileClick={onFileClick}
               onRefresh={onRefresh}
               parentPath={node.path}
+              onNewFile={onNewFile}
+              onNewFolder={onNewFolder}
             />
           ))}
         </div>

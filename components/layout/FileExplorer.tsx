@@ -12,7 +12,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Folder, FolderPlus, FilePlus } from 'lucide-react';
+import { Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,6 +23,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useFileSystem } from '@/hooks/use-file-system';
 import { getLanguageFromFilename } from '@/lib/utils/file-language';
@@ -35,14 +41,14 @@ export function FileExplorer() {
     useChatStore();
   const [fileTree, setFileTree] = useState<FileNode[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showNewFileDialog, setShowNewFileDialog] = useState(false);
-  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const [showNewItemDialog, setShowNewItemDialog] = useState(false);
+  const [newItemType, setNewItemType] = useState<'file' | 'folder'>('file');
+  const [newItemParentPath, setNewItemParentPath] = useState<string>('');
   const [newItemName, setNewItemName] = useState('');
   const { readDirectory, readFile, createFile, createDirectory } = useFileSystem();
 
-  // Refs for dialog inputs
-  const newFileInputRef = useRef<HTMLInputElement>(null);
-  const newFolderInputRef = useRef<HTMLInputElement>(null);
+  // Ref for dialog input
+  const newItemInputRef = useRef<HTMLInputElement>(null);
 
   // Restore saved working directory on mount
   useEffect(() => {
@@ -59,29 +65,17 @@ export function FileExplorer() {
     loadFileTree(workingDirectory);
   }, [workingDirectory]);
 
-  // Focus input when new file dialog opens
+  // Focus input when new item dialog opens
   useEffect(() => {
-    if (showNewFileDialog) {
+    if (showNewItemDialog) {
       // Use setTimeout to wait for Dialog animation to complete
       const timer = setTimeout(() => {
-        newFileInputRef.current?.focus();
+        newItemInputRef.current?.focus();
       }, 100);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [showNewFileDialog]);
-
-  // Focus input when new folder dialog opens
-  useEffect(() => {
-    if (showNewFolderDialog) {
-      // Use setTimeout to wait for Dialog animation to complete
-      const timer = setTimeout(() => {
-        newFolderInputRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [showNewFolderDialog]);
+  }, [showNewItemDialog]);
 
   const loadFileTree = async (dirPath: string) => {
     console.log(`[FileExplorer] Loading file tree: ${dirPath}`);
@@ -133,42 +127,34 @@ export function FileExplorer() {
     }
   };
 
-  const handleCreateFile = async () => {
-    if (!newItemName || !workingDirectory) {
-      console.warn('[FileExplorer] Cannot create file - missing name or working directory');
+  const handleCreateItem = async () => {
+    if (!newItemName || !newItemParentPath) {
+      console.warn('[FileExplorer] Cannot create item - missing name or parent path');
       return;
     }
 
-    const filePath = path.join(workingDirectory, newItemName);
-    console.log(`[FileExplorer] Creating file: ${filePath}`);
-    const success = await createFile(filePath, '');
+    const itemPath = path.join(newItemParentPath, newItemName);
+    console.log(`[FileExplorer] Creating ${newItemType}: ${itemPath}`);
+
+    const success =
+      newItemType === 'file' ? await createFile(itemPath, '') : await createDirectory(itemPath);
 
     if (success) {
-      setShowNewFileDialog(false);
+      setShowNewItemDialog(false);
       setNewItemName('');
-      loadFileTree(workingDirectory);
+      if (workingDirectory) {
+        loadFileTree(workingDirectory);
+      }
     } else {
-      window.alert(`파일 생성 실패`);
+      window.alert(`${newItemType === 'file' ? '파일' : '폴더'} 생성 실패`);
     }
   };
 
-  const handleCreateFolder = async () => {
-    if (!newItemName || !workingDirectory) {
-      console.warn('[FileExplorer] Cannot create folder - missing name or working directory');
-      return;
-    }
-
-    const dirPath = path.join(workingDirectory, newItemName);
-    console.log(`[FileExplorer] Creating folder: ${dirPath}`);
-    const success = await createDirectory(dirPath);
-
-    if (success) {
-      setShowNewFolderDialog(false);
-      setNewItemName('');
-      loadFileTree(workingDirectory);
-    } else {
-      window.alert(`폴더 생성 실패`);
-    }
+  const openNewItemDialog = (type: 'file' | 'folder', parentPath: string) => {
+    setNewItemType(type);
+    setNewItemParentPath(parentPath);
+    setNewItemName('');
+    setShowNewItemDialog(true);
   };
 
   return (
@@ -180,37 +166,15 @@ export function FileExplorer() {
             <span className="text-xs font-semibold text-muted-foreground uppercase">
               Working Directory
             </span>
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowNewFileDialog(true)}
-                title="새 파일"
-                className="h-7 w-7"
-                disabled={!workingDirectory}
-              >
-                <FilePlus className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowNewFolderDialog(true)}
-                title="새 폴더"
-                className="h-7 w-7"
-                disabled={!workingDirectory}
-              >
-                <FolderPlus className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSelectDirectory}
-                title="디렉토리 선택"
-                className="h-7 w-7"
-              >
-                <Folder className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSelectDirectory}
+              title="디렉토리 선택"
+              className="h-7 w-7"
+            >
+              <Folder className="h-4 w-4" />
+            </Button>
           </div>
           {workingDirectory ? (
             <div className="text-xs text-muted-foreground break-all bg-muted/50 rounded px-2 py-1.5">
@@ -223,88 +187,81 @@ export function FileExplorer() {
       </div>
 
       {/* File Tree */}
-      <div className="flex-1 overflow-y-auto px-2 py-2">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-            로딩 중...
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div className="flex-1 overflow-y-auto px-2 py-2">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                로딩 중...
+              </div>
+            ) : !workingDirectory ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                <Folder className="mb-2 h-8 w-8 opacity-50" />
+                <p className="text-sm">디렉토리를 선택하세요</p>
+                <p className="mt-1 text-xs">파일 탐색을 시작합니다</p>
+              </div>
+            ) : fileTree && fileTree.length > 0 ? (
+              <div className="space-y-0.5">
+                {fileTree.map((node) => (
+                  <FileTreeItem
+                    key={node.path}
+                    node={node}
+                    level={0}
+                    isActive={activeFilePath === node.path}
+                    onFileClick={handleFileClick}
+                    onRefresh={() => loadFileTree(workingDirectory!)}
+                    parentPath={workingDirectory!}
+                    onNewFile={(parentPath) => openNewItemDialog('file', parentPath)}
+                    onNewFolder={(parentPath) => openNewItemDialog('folder', parentPath)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                빈 디렉토리
+              </div>
+            )}
           </div>
-        ) : !workingDirectory ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-            <Folder className="mb-2 h-8 w-8 opacity-50" />
-            <p className="text-sm">디렉토리를 선택하세요</p>
-            <p className="mt-1 text-xs">파일 탐색을 시작합니다</p>
-          </div>
-        ) : fileTree && fileTree.length > 0 ? (
-          <div className="space-y-0.5">
-            {fileTree.map((node) => (
-              <FileTreeItem
-                key={node.path}
-                node={node}
-                level={0}
-                isActive={activeFilePath === node.path}
-                onFileClick={handleFileClick}
-                onRefresh={() => loadFileTree(workingDirectory!)}
-                parentPath={workingDirectory!}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-            빈 디렉토리
-          </div>
+        </ContextMenuTrigger>
+        {workingDirectory && (
+          <ContextMenuContent>
+            <ContextMenuItem onClick={() => openNewItemDialog('file', workingDirectory)}>
+              새 파일
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => openNewItemDialog('folder', workingDirectory)}>
+              새 폴더
+            </ContextMenuItem>
+          </ContextMenuContent>
         )}
-      </div>
+      </ContextMenu>
 
-      {/* New File Dialog */}
-      <Dialog open={showNewFileDialog} onOpenChange={setShowNewFileDialog}>
+      {/* New Item Dialog */}
+      <Dialog open={showNewItemDialog} onOpenChange={setShowNewItemDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>새 파일 생성</DialogTitle>
-            <DialogDescription>파일 이름을 입력하세요 (확장자 포함)</DialogDescription>
+            <DialogTitle>새 {newItemType === 'file' ? '파일' : '폴더'} 생성</DialogTitle>
+            <DialogDescription>
+              {newItemType === 'file'
+                ? '파일 이름을 입력하세요 (확장자 포함)'
+                : '폴더 이름을 입력하세요'}
+            </DialogDescription>
           </DialogHeader>
           <Input
-            ref={newFileInputRef}
+            ref={newItemInputRef}
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                handleCreateFile();
+                handleCreateItem();
               }
             }}
-            placeholder="예: example.txt"
+            placeholder={newItemType === 'file' ? '예: example.txt' : '예: my-folder'}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewFileDialog(false)}>
+            <Button variant="outline" onClick={() => setShowNewItemDialog(false)}>
               취소
             </Button>
-            <Button onClick={handleCreateFile}>생성</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* New Folder Dialog */}
-      <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>새 폴더 생성</DialogTitle>
-            <DialogDescription>폴더 이름을 입력하세요</DialogDescription>
-          </DialogHeader>
-          <Input
-            ref={newFolderInputRef}
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleCreateFolder();
-              }
-            }}
-            placeholder="예: my-folder"
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewFolderDialog(false)}>
-              취소
-            </Button>
-            <Button onClick={handleCreateFolder}>생성</Button>
+            <Button onClick={handleCreateItem}>생성</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
