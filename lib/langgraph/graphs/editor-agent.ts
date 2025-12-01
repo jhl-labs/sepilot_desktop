@@ -448,80 +448,14 @@ ${ragContext}
 
     console.log('[EditorAgent] Executing tool:', name, 'with args:', parsedArgs);
 
-    // Try to execute from Tool Registry first
+    // All tools are now in the Tool Registry
     const registryTool = editorToolsRegistry.get(name);
     if (registryTool) {
       return editorToolsRegistry.execute(name, parsedArgs, state);
     }
 
-    // Fallback to built-in tools (for autocomplete/code-action specific tools)
-    switch (name) {
-      case 'get_file_context':
-        return this.getFileContext(parsedArgs, state);
-
-      case 'search_similar_code':
-        return this.searchSimilarCode(parsedArgs, state);
-
-      case 'get_documentation':
-        return this.getDocumentation(parsedArgs, state);
-
-      default:
-        throw new Error(`Unknown tool: ${name}`);
-    }
-  }
-
-  /**
-   * Tool: Get file context
-   */
-  private async getFileContext(args: any, _state: EditorAgentState): Promise<string> {
-    const { includeImports = true, includeTypes = true, linesBefore = 10, linesAfter = 5 } = args;
-    const context = _state.editorContext;
-
-    if (!context) {
-      return 'No editor context available';
-    }
-
-    // This is a placeholder - actual implementation would read from file system
-    return `File context for ${context.filePath || 'current file'}:
-Language: ${context.language || 'unknown'}
-Cursor position: ${context.cursorPosition || 0}
-
-Note: Full file context extraction not yet implemented.
-This would include:
-- Imports: ${includeImports ? 'Yes' : 'No'}
-- Types: ${includeTypes ? 'Yes' : 'No'}
-- Lines before: ${linesBefore}
-- Lines after: ${linesAfter}`;
-  }
-
-  /**
-   * Tool: Search similar code
-   */
-  private async searchSimilarCode(args: any, _state: EditorAgentState): Promise<string> {
-    const { pattern, language } = args;
-
-    // Placeholder - would use ripgrep or similar
-    return `Search results for pattern: "${pattern}" in ${language || 'all'} files:
-
-Note: Code search not yet implemented.
-This would use ripgrep to find similar patterns across the project.`;
-  }
-
-  /**
-   * Tool: Get documentation
-   */
-  private async getDocumentation(args: any, _state: EditorAgentState): Promise<string> {
-    const { query } = args;
-
-    // Placeholder - would fetch from online docs or local cache
-    return `Documentation for: "${query}"
-
-Note: Documentation search not yet implemented.
-This would fetch documentation from:
-- MDN (for web APIs)
-- DevDocs (for frameworks)
-- Local type definitions
-- Online API references`;
+    // Unknown tool
+    throw new Error(`Unknown tool: ${name}`);
   }
 
   /**
