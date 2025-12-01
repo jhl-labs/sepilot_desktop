@@ -244,12 +244,18 @@ export function setupBrowserViewHandlers() {
 
       tabs.set(tabId, tab);
 
-      // If this is the first tab, make it active
-      if (!activeTabId) {
-        activeTabId = tabId;
-        mainWindow.addBrowserView(view);
-        setActiveBrowserView(view); // For browser control
+      // Hide current active tab if exists
+      if (activeTabId) {
+        const currentTab = tabs.get(activeTabId);
+        if (currentTab) {
+          mainWindow.removeBrowserView(currentTab.view);
+        }
       }
+
+      // Make new tab active
+      activeTabId = tabId;
+      mainWindow.addBrowserView(view);
+      setActiveBrowserView(view); // For browser control
 
       // Load URL
       await view.webContents.loadURL(defaultUrl);
@@ -1134,12 +1140,18 @@ export async function browserCreateTab(url?: string) {
 
     tabs.set(tabId, tab);
 
-    // If this is the first tab, make it active
-    if (!activeTabId) {
-      activeTabId = tabId;
-      mainWindowRef.addBrowserView(view);
-      setActiveBrowserView(view); // For browser control
+    // Hide current active tab if exists
+    if (activeTabId) {
+      const currentTab = tabs.get(activeTabId);
+      if (currentTab) {
+        mainWindowRef.removeBrowserView(currentTab.view);
+      }
     }
+
+    // Make new tab active
+    activeTabId = tabId;
+    mainWindowRef.addBrowserView(view);
+    setActiveBrowserView(view); // For browser control
 
     // Load URL
     await view.webContents.loadURL(defaultUrl);
