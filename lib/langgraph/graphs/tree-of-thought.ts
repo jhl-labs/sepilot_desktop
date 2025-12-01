@@ -3,7 +3,7 @@ import { Annotation } from '@langchain/langgraph';
 import { Message } from '@/types';
 import { LLMService } from '@/lib/llm/service';
 import { createBaseSystemMessage } from '../utils/system-message';
-import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-callback';
 
 /**
  * Tree of Thought Graph
@@ -14,6 +14,51 @@ import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
  * 3. 각 경로 평가 (Evaluate)
  * 4. 최선의 경로 선택 및 답변 생성 (Select & Synthesize)
  */
+
+/**
+ * RAG 검색 헬퍼 함수
+ */
+async function retrieveContextIfEnabled(query: string): Promise<string> {
+  const config = getCurrentGraphConfig();
+  if (!config?.enableRAG) {
+    return '';
+  }
+
+  try {
+    // Main Process 전용 로직
+    if (typeof window !== 'undefined') {
+      return '';
+    }
+
+    console.log('[ToT] RAG enabled, retrieving documents...');
+    const { vectorDBService } = await import('../../../electron/services/vectordb');
+    const { databaseService } = await import('../../../electron/services/database');
+    const { initializeEmbedding, getEmbeddingProvider } =
+      await import('@/lib/vectordb/embeddings/client');
+
+    const configStr = databaseService.getSetting('app_config');
+    if (!configStr) {
+      return '';
+    }
+    const appConfig = JSON.parse(configStr);
+    if (!appConfig.embedding) {
+      return '';
+    }
+
+    initializeEmbedding(appConfig.embedding);
+    const embedder = getEmbeddingProvider();
+    const queryEmbedding = await embedder.embed(query);
+    const results = await vectorDBService.searchByVector(queryEmbedding, 5);
+
+    if (results.length > 0) {
+      console.log(`[ToT] Found ${results.length} documents`);
+      return results.map((doc, i) => `[참고 문서 ${i + 1}]\n${doc.content}`).join('\n\n');
+    }
+  } catch (error) {
+    console.error('[ToT] RAG retrieval failed:', error);
+  }
+  return '';
+}
 
 /**
  * Tree of Thought State
@@ -53,6 +98,17 @@ async function decomposeNode(state: TreeOfThoughtState) {
   // 단계 시작 알림
   emitStreamingChunk('\n\n## 🌳 1단계: 문제 분해\n\n', state.conversationId);
 
+  // RAG 컨텍스트 가져오기
+  const query = state.messages[state.messages.length - 1].content;
+  const ragContext = await retrieveContextIfEnabled(query);
+
+  if (ragContext) {
+    emitStreamingChunk(
+      `\n📚 **관련 문서 ${ragContext.split('[참고 문서').length - 1}개를 참조합니다.**\n\n`,
+      state.conversationId
+    );
+  }
+
   const systemMessage: Message = {
     id: 'system',
     role: 'system',
@@ -70,7 +126,7 @@ async function decomposeNode(state: TreeOfThoughtState) {
   const decomposePrompt: Message = {
     id: 'decompose-prompt',
     role: 'user',
-    content: `다음 질문을 핵심 측면들로 분해하세요:\n\n${state.messages[state.messages.length - 1].content}`,
+    content: `다음 질문을 핵심 측면들로 분해하세요:\n\n${query}\n\n${ragContext ? `참고 문서:\n${ragContext}\n\n` : ''}위 참고 문서를 활용하여 분해하세요.`,
     created_at: Date.now(),
   };
 

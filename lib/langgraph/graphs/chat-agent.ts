@@ -184,19 +184,12 @@ export class ChatAgentGraph {
       console.log('[AgentGraph] Executing tools node');
       const toolsResult = await toolsNode(state);
 
-      // Remove tool_calls from the last message to prevent duplicate execution
-      const updatedMessages = [...state.messages];
-      const lastMessageIndex = updatedMessages.length - 1;
-      if (lastMessageIndex >= 0 && updatedMessages[lastMessageIndex].tool_calls) {
-        updatedMessages[lastMessageIndex] = {
-          ...updatedMessages[lastMessageIndex],
-          tool_calls: undefined,
-        };
-      }
+      // tool_calls를 유지하여 히스토리 무결성 보장 (이전에는 삭제했었음)
+      // LLM은 tool_calls가 있는 메시지 뒤에 tool 메시지가 오기를 기대함
 
       state = {
         ...state,
-        messages: updatedMessages,
+        messages: state.messages, // 메시지 변경 없음 (tool_calls 유지)
         toolResults: toolsResult.toolResults || [],
       };
 

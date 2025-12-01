@@ -3,7 +3,7 @@ import { ChatStateAnnotation, ChatState } from '../state';
 import { LLMService } from '@/lib/llm/service';
 import { Message } from '@/types';
 import { createBaseSystemMessage } from '../utils/system-message';
-import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-callback';
 
 /**
  * Sequential Thinking Graph
@@ -16,6 +16,51 @@ import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
  */
 
 /**
+ * RAG 검색 헬퍼 함수
+ */
+async function retrieveContextIfEnabled(query: string): Promise<string> {
+  const config = getCurrentGraphConfig();
+  if (!config?.enableRAG) {
+    return '';
+  }
+
+  try {
+    // Main Process 전용 로직
+    if (typeof window !== 'undefined') {
+      return '';
+    }
+
+    console.log('[Sequential] RAG enabled, retrieving documents...');
+    const { vectorDBService } = await import('../../../electron/services/vectordb');
+    const { databaseService } = await import('../../../electron/services/database');
+    const { initializeEmbedding, getEmbeddingProvider } =
+      await import('@/lib/vectordb/embeddings/client');
+
+    const configStr = databaseService.getSetting('app_config');
+    if (!configStr) {
+      return '';
+    }
+    const appConfig = JSON.parse(configStr);
+    if (!appConfig.embedding) {
+      return '';
+    }
+
+    initializeEmbedding(appConfig.embedding);
+    const embedder = getEmbeddingProvider();
+    const queryEmbedding = await embedder.embed(query);
+    const results = await vectorDBService.searchByVector(queryEmbedding, 5);
+
+    if (results.length > 0) {
+      console.log(`[Sequential] Found ${results.length} documents`);
+      return results.map((doc, i) => `[참고 문서 ${i + 1}]\n${doc.content}`).join('\n\n');
+    }
+  } catch (error) {
+    console.error('[Sequential] RAG retrieval failed:', error);
+  }
+  return '';
+}
+
+/**
  * 1단계: 문제 분석
  */
 async function analyzeNode(state: ChatState) {
@@ -24,6 +69,17 @@ async function analyzeNode(state: ChatState) {
   // 단계 시작 알림 + 로딩 표시
   emitStreamingChunk('\n\n## 🔍 1단계: 문제 분석\n\n', state.conversationId);
   emitStreamingChunk('*분석 중...*\n\n', state.conversationId);
+
+  // RAG 컨텍스트 가져오기
+  const query = state.messages[state.messages.length - 1].content;
+  const ragContext = await retrieveContextIfEnabled(query);
+
+  if (ragContext) {
+    emitStreamingChunk(
+      `\n📚 **관련 문서 ${ragContext.split('[참고 문서').length - 1}개를 참조합니다.**\n\n`,
+      state.conversationId
+    );
+  }
 
   const systemMessage: Message = {
     id: 'system',
@@ -42,7 +98,7 @@ async function analyzeNode(state: ChatState) {
   const analysisPrompt: Message = {
     id: 'analysis-prompt',
     role: 'user',
-    content: `다음 질문을 분석하고 분해하세요:\n\n${state.messages[state.messages.length - 1].content}`,
+    content: `다음 질문을 분석하고 분해하세요:\n\n${query}\n\n${ragContext ? `참고 문서:\n${ragContext}\n\n` : ''}위 참고 문서를 활용하여 분석하세요.`,
     created_at: Date.now(),
   };
 
