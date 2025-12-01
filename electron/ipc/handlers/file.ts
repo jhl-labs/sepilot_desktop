@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron';
+import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { exec, spawn } from 'child_process';
@@ -612,6 +612,75 @@ export function registerFileHandlers() {
       return {
         success: false,
         error: error.message || 'Failed to get relative path',
+      };
+    }
+  });
+
+  // 시스템 탐색기에서 파일/폴더 열기
+  ipcMain.handle('fs:show-in-folder', async (_event, itemPath: string) => {
+    try {
+      // Check if path exists
+      await fs.access(itemPath);
+
+      // Show item in folder (works for both files and directories)
+      shell.showItemInFolder(itemPath);
+      console.log('[File] Showed in folder:', itemPath);
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error showing in folder:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to show in folder',
+      };
+    }
+  });
+
+  // 파일 복제 (같은 폴더에 복사본 생성)
+  ipcMain.handle('fs:duplicate', async (_event, sourcePath: string) => {
+    try {
+      const dir = path.dirname(sourcePath);
+      const ext = path.extname(sourcePath);
+      const basename = path.basename(sourcePath, ext);
+
+      // Generate unique name for duplicate
+      let counter = 1;
+      let destPath = path.join(dir, `${basename} copy${ext}`);
+
+      // Check if file exists and increment counter
+      while (true) {
+        try {
+          await fs.access(destPath);
+          // File exists, try next number
+          destPath = path.join(dir, `${basename} copy ${counter}${ext}`);
+          counter++;
+        } catch {
+          // File doesn't exist, we can use this name
+          break;
+        }
+      }
+
+      // Copy the file or directory
+      const stats = await fs.stat(sourcePath);
+      if (stats.isDirectory()) {
+        await fs.cp(sourcePath, destPath, { recursive: true });
+        console.log('[File] Directory duplicated:', sourcePath, '->', destPath);
+      } else {
+        await fs.copyFile(sourcePath, destPath);
+        console.log('[File] File duplicated:', sourcePath, '->', destPath);
+      }
+
+      return {
+        success: true,
+        data: destPath,
+      };
+    } catch (error: any) {
+      console.error('[File] Error duplicating:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to duplicate',
       };
     }
   });

@@ -41,6 +41,8 @@ import {
   mergeComfyConfig,
 } from './settingsUtils';
 import { migrateLLMConfig, convertV2ToV1, isLLMConfigV2 } from '@/lib/config/llm-config-migration';
+import { SettingsJsonEditor } from './SettingsJsonEditor';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -54,6 +56,7 @@ const createDefaultQuickInputConfig = (): QuickInputConfig => ({
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<SettingSection>('llm');
+  const [viewMode, setViewMode] = useState<'ui' | 'json'>('ui');
 
   const [config, setConfig] = useState<LLMConfig>(createDefaultLLMConfig());
   const [configV2, setConfigV2] = useState<LLMConfigV2 | null>(null); // New V2 config
@@ -613,133 +616,255 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     }
   };
 
+  // JSON 모드에서 전체 설정 저장
+  const handleJsonSave = async (newConfig: AppConfig) => {
+    try {
+      // Validate and migrate LLM config if needed
+      let llmConfig: LLMConfig;
+      let llmConfigV2: LLMConfigV2 | null = null;
+
+      if (isLLMConfigV2(newConfig.llm)) {
+        llmConfigV2 = newConfig.llm as LLMConfigV2;
+        llmConfig = convertV2ToV1(llmConfigV2);
+      } else {
+        llmConfig = mergeLLMConfig(newConfig.llm);
+        llmConfigV2 = migrateLLMConfig(llmConfig);
+      }
+
+      // Save to database or localStorage
+      if (isElectron() && window.electronAPI) {
+        const savedConfig = await persistAppConfig({
+          ...newConfig,
+          llm: llmConfigV2 as any,
+        });
+        if (savedConfig) {
+          await window.electronAPI.llm.init({ ...savedConfig, llm: llmConfig });
+        }
+      } else {
+        localStorage.setItem('sepilot_llm_config', JSON.stringify(llmConfig));
+        localStorage.setItem('sepilot_llm_config_v2', JSON.stringify(llmConfigV2));
+        localStorage.setItem('sepilot_network_config', JSON.stringify(newConfig.network));
+        if (newConfig.comfyUI) {
+          localStorage.setItem('sepilot_comfyui_config', JSON.stringify(newConfig.comfyUI));
+        }
+        if (newConfig.quickInput) {
+          localStorage.setItem('sepilot_quickinput_config', JSON.stringify(newConfig.quickInput));
+        }
+        if (newConfig.vectorDB) {
+          localStorage.setItem('sepilot_vectordb_config', JSON.stringify(newConfig.vectorDB));
+        }
+        if (newConfig.embedding) {
+          localStorage.setItem('sepilot_embedding_config', JSON.stringify(newConfig.embedding));
+        }
+      }
+
+      // Update state
+      setConfig(llmConfig);
+      setConfigV2(llmConfigV2);
+      setNetworkConfig(newConfig.network ?? createDefaultNetworkConfig());
+      setComfyConfig(newConfig.comfyUI ?? createDefaultComfyUIConfig());
+      setGithubConfig(newConfig.github ?? null);
+      setQuickInputConfig(newConfig.quickInput ?? createDefaultQuickInputConfig());
+      setVectorDBConfig(newConfig.vectorDB ?? null);
+      setEmbeddingConfig(newConfig.embedding ?? null);
+      setAppConfigSnapshot(newConfig);
+
+      // Initialize clients
+      if (isElectron() && typeof initializeLLMClient !== 'undefined') {
+        initializeLLMClient(llmConfig);
+      } else {
+        configureWebLLMClient(llmConfig);
+      }
+
+      if (newConfig.embedding) {
+        initializeEmbedding(newConfig.embedding);
+      }
+
+      if (newConfig.vectorDB) {
+        if (newConfig.vectorDB.type !== 'sqlite-vec' || (isElectron() && window.electronAPI)) {
+          await initializeVectorDB(newConfig.vectorDB);
+        }
+      }
+
+      // Reload shortcuts if quickInput changed
+      if (isElectron() && window.electronAPI && newConfig.quickInput) {
+        await window.electronAPI.quickInput.reloadShortcuts();
+      }
+
+      // Notify other components
+      window.dispatchEvent(
+        new CustomEvent('sepilot:config-updated', {
+          detail: newConfig,
+        })
+      );
+    } catch (error: any) {
+      console.error('Failed to save JSON config:', error);
+      throw error;
+    }
+  };
+
+  // Get current AppConfig for JSON editor
+  const getCurrentAppConfig = (): AppConfig => {
+    return {
+      llm: (configV2 as any) || config,
+      network: networkConfig,
+      mcp: appConfigSnapshot?.mcp ?? [],
+      vectorDB: vectorDBConfig ?? undefined,
+      embedding: embeddingConfig ?? undefined,
+      comfyUI: comfyConfig,
+      github: githubConfig ?? undefined,
+      quickInput: quickInputConfig,
+    };
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-w-6xl max-h-[90vh] p-0 gap-0"
         onClose={() => onOpenChange(false)}
       >
-        <div className="px-6 pt-6 pb-4 border-b">
+        <div className="px-6 pt-6 pb-3 border-b">
           <DialogHeader>
             <DialogTitle>설정</DialogTitle>
             <DialogDescription>LLM, VectorDB, MCP 등의 설정을 구성하세요.</DialogDescription>
           </DialogHeader>
+
+          {/* UI/JSON Toggle Tabs (VSCode-style) */}
+          <Tabs
+            value={viewMode}
+            onValueChange={(v) => setViewMode(v as 'ui' | 'json')}
+            className="mt-4"
+          >
+            <TabsList className="grid w-[200px] grid-cols-2">
+              <TabsTrigger value="ui">UI</TabsTrigger>
+              <TabsTrigger value="json">JSON</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        <div className="flex h-[calc(90vh-8rem)] overflow-hidden">
-          {/* Sidebar Navigation */}
-          <SettingsSidebar
-            activeSection={activeTab}
-            onSectionChange={setActiveTab}
-            className="flex-shrink-0 overflow-y-auto"
-          />
+        <div className="flex h-[calc(90vh-9rem)] overflow-hidden">
+          {viewMode === 'ui' ? (
+            <>
+              {/* Sidebar Navigation */}
+              <SettingsSidebar
+                activeSection={activeTab}
+                onSectionChange={setActiveTab}
+                className="flex-shrink-0 overflow-y-auto"
+              />
 
-          {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-6">
-            {activeTab === 'llm' && configV2 && (
-              <LLMSettingsTab
-                config={configV2}
-                setConfig={(update) => {
-                  if (typeof update === 'function') {
-                    setConfigV2((prev) => {
-                      if (!prev) {
-                        return prev;
+              {/* Content Area */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {activeTab === 'llm' && configV2 && (
+                  <LLMSettingsTab
+                    config={configV2}
+                    setConfig={(update) => {
+                      if (typeof update === 'function') {
+                        setConfigV2((prev) => {
+                          if (!prev) {
+                            return prev;
+                          }
+                          const newV2 = update(prev);
+                          // Also update V1 config for compatibility
+                          try {
+                            setConfig(convertV2ToV1(newV2));
+                          } catch (err) {
+                            console.error('Failed to convert V2 to V1:', err);
+                          }
+                          return newV2;
+                        });
+                      } else {
+                        setConfigV2(update);
+                        try {
+                          setConfig(convertV2ToV1(update));
+                        } catch (err) {
+                          console.error('Failed to convert V2 to V1:', err);
+                        }
                       }
-                      const newV2 = update(prev);
-                      // Also update V1 config for compatibility
-                      try {
-                        setConfig(convertV2ToV1(newV2));
-                      } catch (err) {
-                        console.error('Failed to convert V2 to V1:', err);
+                    }}
+                    networkConfig={networkConfig}
+                    onSave={handleSave}
+                    isSaving={isSaving}
+                    message={message}
+                  />
+                )}
+
+                {activeTab === 'network' && (
+                  <NetworkSettingsTab
+                    networkConfig={networkConfig}
+                    setNetworkConfig={setNetworkConfig}
+                    onSave={handleNetworkSave}
+                    isSaving={isSaving}
+                    message={message}
+                  />
+                )}
+
+                {activeTab === 'vectordb' && (
+                  <VectorDBSettings
+                    onSave={handleVectorDBSave}
+                    initialVectorDBConfig={vectorDBConfig || undefined}
+                    initialEmbeddingConfig={embeddingConfig || undefined}
+                  />
+                )}
+
+                {activeTab === 'comfyui' && (
+                  <ComfyUISettingsTab
+                    comfyConfig={comfyConfig}
+                    setComfyConfig={setComfyConfig}
+                    networkConfig={networkConfig}
+                    onSave={handleComfySave}
+                    isSaving={isComfySaving}
+                    message={comfyMessage}
+                    setMessage={setComfyMessage}
+                  />
+                )}
+
+                {activeTab === 'mcp' && <MCPSettingsTab />}
+
+                {activeTab === 'github' && (
+                  <GitHubOAuthSettings
+                    config={githubConfig}
+                    onSave={async (newConfig) => {
+                      setGithubConfig(newConfig);
+                      let savedConfig: AppConfig | null = null;
+                      if (isElectron() && window.electronAPI) {
+                        savedConfig = await persistAppConfig({ github: newConfig });
                       }
-                      return newV2;
-                    });
-                  } else {
-                    setConfigV2(update);
-                    try {
-                      setConfig(convertV2ToV1(update));
-                    } catch (err) {
-                      console.error('Failed to convert V2 to V1:', err);
-                    }
-                  }
-                }}
-                networkConfig={networkConfig}
-                onSave={handleSave}
-                isSaving={isSaving}
-                message={message}
-              />
-            )}
+                      if (!savedConfig) {
+                        const currentAppConfig = localStorage.getItem('sepilot_app_config');
+                        const appConfig = currentAppConfig ? JSON.parse(currentAppConfig) : {};
+                        appConfig.github = newConfig;
+                        localStorage.setItem('sepilot_app_config', JSON.stringify(appConfig));
+                      }
 
-            {activeTab === 'network' && (
-              <NetworkSettingsTab
-                networkConfig={networkConfig}
-                setNetworkConfig={setNetworkConfig}
-                onSave={handleNetworkSave}
-                isSaving={isSaving}
-                message={message}
-              />
-            )}
+                      // Notify other components about GitHub config update
+                      window.dispatchEvent(
+                        new CustomEvent('sepilot:config-updated', {
+                          detail: { github: newConfig },
+                        })
+                      );
+                    }}
+                  />
+                )}
 
-            {activeTab === 'vectordb' && (
-              <VectorDBSettings
-                onSave={handleVectorDBSave}
-                initialVectorDBConfig={vectorDBConfig || undefined}
-                initialEmbeddingConfig={embeddingConfig || undefined}
-              />
-            )}
+                {activeTab === 'backup' && <BackupRestoreSettings />}
 
-            {activeTab === 'comfyui' && (
-              <ComfyUISettingsTab
-                comfyConfig={comfyConfig}
-                setComfyConfig={setComfyConfig}
-                networkConfig={networkConfig}
-                onSave={handleComfySave}
-                isSaving={isComfySaving}
-                message={comfyMessage}
-                setMessage={setComfyMessage}
-              />
-            )}
-
-            {activeTab === 'mcp' && <MCPSettingsTab />}
-
-            {activeTab === 'github' && (
-              <GitHubOAuthSettings
-                config={githubConfig}
-                onSave={async (newConfig) => {
-                  setGithubConfig(newConfig);
-                  let savedConfig: AppConfig | null = null;
-                  if (isElectron() && window.electronAPI) {
-                    savedConfig = await persistAppConfig({ github: newConfig });
-                  }
-                  if (!savedConfig) {
-                    const currentAppConfig = localStorage.getItem('sepilot_app_config');
-                    const appConfig = currentAppConfig ? JSON.parse(currentAppConfig) : {};
-                    appConfig.github = newConfig;
-                    localStorage.setItem('sepilot_app_config', JSON.stringify(appConfig));
-                  }
-
-                  // Notify other components about GitHub config update
-                  window.dispatchEvent(
-                    new CustomEvent('sepilot:config-updated', {
-                      detail: { github: newConfig },
-                    })
-                  );
-                }}
-              />
-            )}
-
-            {activeTab === 'backup' && <BackupRestoreSettings />}
-
-            {activeTab === 'quickinput' && (
-              <QuickInputSettingsTab
-                config={quickInputConfig}
-                setConfig={setQuickInputConfig}
-                onSave={handleQuickInputSave}
-                isSaving={isSaving}
-                message={message}
-              />
-            )}
-          </div>
+                {activeTab === 'quickinput' && (
+                  <QuickInputSettingsTab
+                    config={quickInputConfig}
+                    setConfig={setQuickInputConfig}
+                    onSave={handleQuickInputSave}
+                    isSaving={isSaving}
+                    message={message}
+                  />
+                )}
+              </div>
+            </>
+          ) : (
+            /* JSON Editor Mode */
+            <div className="flex-1 p-6">
+              <SettingsJsonEditor config={getCurrentAppConfig()} onSave={handleJsonSave} />
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

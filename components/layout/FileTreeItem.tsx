@@ -179,6 +179,51 @@ export function FileTreeItem({
     }
   };
 
+  const handleShowInFolder = async () => {
+    if (!isAvailable || !window.electronAPI) {
+      console.warn('[FileTreeItem] API unavailable');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.fs.showInFolder(node.path);
+      if (result.success) {
+        console.log('[FileTreeItem] Showed in folder:', node.path);
+      }
+    } catch (error) {
+      console.error('[FileTreeItem] Error showing in folder:', error);
+    }
+  };
+
+  const handleOpenInTerminal = () => {
+    // Get the directory path (if file, use parent directory)
+    const dirPath = node.isDirectory ? node.path : path.dirname(node.path);
+
+    // Set working directory and show terminal panel
+    useChatStore.getState().setWorkingDirectory(dirPath);
+    useChatStore.getState().setShowTerminalPanel(true);
+
+    console.log('[FileTreeItem] Opening terminal in:', dirPath);
+  };
+
+  const handleDuplicate = async () => {
+    if (!isAvailable || !window.electronAPI) {
+      console.warn('[FileTreeItem] API unavailable');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.fs.duplicate(node.path);
+      if (result.success && result.data) {
+        console.log('[FileTreeItem] Duplicated:', node.path, '->', result.data);
+        onRefresh();
+      }
+    } catch (error) {
+      console.error('[FileTreeItem] Error duplicating:', error);
+      window.alert('복제 실패');
+    }
+  };
+
   return (
     <div>
       <FileTreeContextMenu
@@ -193,6 +238,9 @@ export function FileTreeItem({
         onNewFolder={node.isDirectory ? () => onNewFolder(node.path) : undefined}
         onCopyPath={handleCopyPath}
         onCopyRelativePath={handleCopyRelativePath}
+        onShowInFolder={handleShowInFolder}
+        onOpenInTerminal={handleOpenInTerminal}
+        onDuplicate={handleDuplicate}
       >
         {isRenaming ? (
           <Input

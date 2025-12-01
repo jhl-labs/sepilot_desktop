@@ -20,6 +20,9 @@ import {
   Scissors,
   ClipboardPaste,
   FileText,
+  FolderOpen,
+  Terminal,
+  Files,
 } from 'lucide-react';
 import {
   ContextMenu,
@@ -45,6 +48,9 @@ interface FileTreeContextMenuProps {
   onNewFolder?: () => void;
   onCopyPath?: () => void;
   onCopyRelativePath?: () => void;
+  onShowInFolder?: () => void;
+  onOpenInTerminal?: () => void;
+  onDuplicate?: () => void;
 }
 
 export function FileTreeContextMenu({
@@ -61,6 +67,9 @@ export function FileTreeContextMenu({
   onNewFolder,
   onCopyPath,
   onCopyRelativePath,
+  onShowInFolder,
+  onOpenInTerminal,
+  onDuplicate,
 }: FileTreeContextMenuProps) {
   const { canPaste } = useFileClipboard();
 
@@ -149,6 +158,31 @@ export function FileTreeContextMenu({
                   <ContextMenuItem onClick={onCopyRelativePath}>
                     <FileText className="mr-2 h-4 w-4" />
                     상대 경로 복사
+                  </ContextMenuItem>
+                )}
+              </>
+            )}
+
+            {/* System integration */}
+            {(onShowInFolder || onOpenInTerminal || onDuplicate) && (
+              <>
+                <ContextMenuSeparator />
+                {onShowInFolder && (
+                  <ContextMenuItem onClick={onShowInFolder}>
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    탐색기에서 열기
+                  </ContextMenuItem>
+                )}
+                {onOpenInTerminal && (
+                  <ContextMenuItem onClick={onOpenInTerminal}>
+                    <Terminal className="mr-2 h-4 w-4" />
+                    터미널에서 열기
+                  </ContextMenuItem>
+                )}
+                {onDuplicate && (
+                  <ContextMenuItem onClick={onDuplicate}>
+                    <Files className="mr-2 h-4 w-4" />
+                    복제
                   </ContextMenuItem>
                 )}
               </>
