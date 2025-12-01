@@ -15,10 +15,11 @@ import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
  */
 export class ChatAgentGraph {
   async invoke(initialState: AgentState, maxIterations = 50): Promise<AgentState> {
+    const actualMaxIterations = Math.max(maxIterations, 50);
     let state = { ...initialState };
     let iterations = 0;
 
-    while (iterations < maxIterations) {
+    while (iterations < actualMaxIterations) {
       // 1. generate 노드 실행
       const generateResult = await generateWithToolsNode(state);
       state = {
@@ -59,10 +60,14 @@ export class ChatAgentGraph {
     maxIterations = 50,
     toolApprovalCallback?: ToolApprovalCallback
   ): AsyncGenerator<any> {
+    // Force minimum 50 iterations to prevent premature stopping
+    const actualMaxIterations = Math.max(maxIterations, 50);
     let state = { ...initialState };
     let iterations = 0;
 
-    console.log('[AgentGraph] Starting stream with initial state');
+    console.log(
+      `[AgentGraph] Starting stream with initial state (Max iterations: ${actualMaxIterations})`
+    );
     console.log(
       '[AgentGraph] Tool approval callback:',
       toolApprovalCallback ? 'provided' : 'not provided'
@@ -71,8 +76,8 @@ export class ChatAgentGraph {
     let hasError = false;
     let errorMessage = '';
 
-    while (iterations < maxIterations) {
-      console.log(`[AgentGraph] ===== Iteration ${iterations + 1}/${maxIterations} =====`);
+    while (iterations < actualMaxIterations) {
+      console.log(`[AgentGraph] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`);
       console.log('[AgentGraph] Current state before generate:', {
         messageCount: state.messages.length,
         lastMessageRole: state.messages[state.messages.length - 1]?.role,
@@ -225,38 +230,65 @@ export class ChatAgentGraph {
 
     console.log('[AgentGraph] Stream completed, total iterations:', iterations);
 
-    // Reporter node: Always generate a final summary message
-    const finalReportMessage: Message = (() => {
-      if (hasError) {
-        return {
-          id: `msg-${Date.now()}`,
-          role: 'assistant',
-          content: `❌ 작업 중 오류가 발생했습니다: ${errorMessage}`,
-          created_at: Date.now(),
-        };
-      } else if (iterations >= maxIterations) {
-        return {
-          id: `msg-${Date.now()}`,
-          role: 'assistant',
-          content: `⚠️ 최대 반복 횟수(${maxIterations})에 도달했습니다. 작업이 복잡하여 완료하지 못했을 수 있습니다.`,
-          created_at: Date.now(),
-        };
-      } else {
-        // Normal completion - no additional message needed
-        return null as any;
-      }
-    })();
-
-    if (finalReportMessage) {
-      console.log(
-        '[AgentGraph] Generating final report message:',
-        finalReportMessage.content.substring(0, 100)
-      );
+    // Reporter node
+    if (hasError) {
+      const errorReportMessage: Message = {
+        id: `msg-${Date.now()}`,
+        role: 'assistant',
+        content: `❌ 작업 중 오류가 발생했습니다: ${errorMessage}`,
+        created_at: Date.now(),
+      };
       yield {
         reporter: {
-          messages: [finalReportMessage],
+          messages: [errorReportMessage],
         },
       };
+    } else if (iterations >= actualMaxIterations) {
+      console.log('[AgentGraph] Max iterations reached, requesting summary from LLM...');
+
+      // Add summary request system message
+      const summarySystemMessage: Message = {
+        id: `system-summary-${Date.now()}`,
+        role: 'system',
+        content: `최대 반복 횟수(${actualMaxIterations})에 도달하여 작업을 중단합니다.
+지금까지 수행한 도구 실행 결과와 내용을 바탕으로, 현재까지의 진행 상황을 요약하고 완료된 부분과 남은 작업을 명확히 정리해서 답변하세요.
+마지막에는 사용자가 이어서 작업을 요청할 수 있도록 안내하세요.`,
+        created_at: Date.now(),
+      };
+
+      // Update state
+      state = {
+        ...state,
+        messages: [...state.messages, summarySystemMessage],
+      };
+
+      // Generate summary using the same node (will stream automatically)
+      try {
+        const generateResult = await generateWithToolsNode(state);
+        if (generateResult.messages && generateResult.messages.length > 0) {
+          yield {
+            generate: {
+              messages: generateResult.messages,
+            },
+          };
+        }
+      } catch (summaryError: any) {
+        console.error('[AgentGraph] Summary generation failed:', summaryError);
+        // Fallback message
+        const fallbackMessage: Message = {
+          id: `msg-${Date.now()}`,
+          role: 'assistant',
+          content: `⚠️ 최대 반복 횟수(${actualMaxIterations})에 도달했습니다. 작업이 복잡하여 완료하지 못했을 수 있습니다. (요약 생성 실패)`,
+          created_at: Date.now(),
+        };
+        yield {
+          reporter: {
+            messages: [fallbackMessage],
+          },
+        };
+      }
+    } else {
+      // Normal completion - no additional message needed
     }
   }
 }
