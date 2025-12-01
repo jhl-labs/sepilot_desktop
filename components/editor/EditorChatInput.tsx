@@ -301,26 +301,25 @@ export function EditorChatInput() {
           onKeyDown={handleKeyDown}
           onCompositionStart={() => setIsComposing(true)}
           onCompositionEnd={() => setIsComposing(false)}
-          placeholder="메시지를 입력하세요..."
+          placeholder={isStreaming ? '응답 생성 중... (ESC로 중단 가능)' : '메시지를 입력하세요...'}
           className="flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent px-3 py-2 text-xs focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
-          disabled={isStreaming}
           rows={1}
         />
         <div className="flex items-center pb-1 pr-1">
           {isStreaming ? (
             <Button
               onClick={handleStop}
-              variant="ghost"
+              variant="destructive"
               size="icon"
               className="h-7 w-7 rounded-md shrink-0"
               title="중지 (Esc)"
             >
-              <Square className="h-3.5 w-3.5" />
+              <Square className="h-3.5 w-3.5 fill-current" />
             </Button>
           ) : (
             <Button
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || isStreaming}
               size="icon"
               className="h-7 w-7 rounded-md shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-50"
               title="전송 (Enter)"
