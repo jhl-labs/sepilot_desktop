@@ -197,7 +197,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       );
       setSidebarWidth(newWidth);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/preserve-manual-memoization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isResizing]
   );
 
@@ -435,7 +435,12 @@ export function MainLayout({ children }: MainLayoutProps) {
         });
     }
     // Browser 모드 (standalone)일 때도 표시
-    else if (appMode === 'browser' && viewMode === 'chat' && browserViewMode === 'chat') {
+    // settings/tools 모드에서도 BrowserView를 계속 표시 (Sidebar에서만 UI 변경)
+    else if (
+      appMode === 'browser' &&
+      viewMode === 'chat' &&
+      (browserViewMode === 'chat' || browserViewMode === 'settings' || browserViewMode === 'tools')
+    ) {
       console.log(
         '[MainLayout] Showing BrowserView (appMode:',
         appMode,
