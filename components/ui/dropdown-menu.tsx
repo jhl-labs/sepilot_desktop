@@ -67,7 +67,7 @@ export const DropdownMenuTrigger = React.forwardRef<HTMLDivElement, DropdownMenu
     };
 
     // Merge refs using a ref callback
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     const mergedRef = React.useCallback(
       (node: HTMLDivElement | null) => {
         // Update context ref

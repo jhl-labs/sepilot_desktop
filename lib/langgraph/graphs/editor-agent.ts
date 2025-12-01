@@ -426,82 +426,14 @@ ${ragContext}
     ]);
     tools.push(...gitTools);
 
-    // For autocomplete: add context-aware tools
-    if (context?.action === 'autocomplete') {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'get_file_context',
-          description:
-            'Get context about the current file including imports, types, and surrounding code',
-          parameters: {
-            type: 'object',
-            properties: {
-              includeImports: {
-                type: 'boolean',
-                description: 'Include import statements',
-              },
-              includeTypes: {
-                type: 'boolean',
-                description: 'Include type definitions',
-              },
-              linesBefore: {
-                type: 'number',
-                description: 'Number of lines before cursor to include',
-              },
-              linesAfter: {
-                type: 'number',
-                description: 'Number of lines after cursor to include',
-              },
-            },
-            required: [],
-          },
-        },
-      });
-
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'search_similar_code',
-          description: 'Search for similar code patterns in the project',
-          parameters: {
-            type: 'object',
-            properties: {
-              pattern: {
-                type: 'string',
-                description: 'Code pattern to search for',
-              },
-              language: {
-                type: 'string',
-                description: 'Programming language',
-              },
-            },
-            required: ['pattern'],
-          },
-        },
-      });
-    }
-
-    // For code actions: add documentation tool
-    if (context?.action === 'code-action') {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'get_documentation',
-          description: 'Get documentation for a function or library',
-          parameters: {
-            type: 'object',
-            properties: {
-              query: {
-                type: 'string',
-                description: 'Function name or library to search documentation for',
-              },
-            },
-            required: ['query'],
-          },
-        },
-      });
-    }
+    // Always include code analysis tools from registry
+    const codeTools = editorToolsRegistry.toOpenAIFormat([
+      'get_file_context',
+      'search_similar_code',
+      'get_documentation',
+      'find_definition',
+    ]);
+    tools.push(...codeTools);
 
     return tools;
   }

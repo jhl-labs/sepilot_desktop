@@ -9,6 +9,7 @@ import { registerFileTools } from './file-tools';
 import { registerTabTools } from './tab-tools';
 import { registerTerminalTools } from './terminal-tools';
 import { registerGitTools } from './git-tools';
+import { registerCodeTools } from './code-tools';
 
 /**
  * 모든 Tool 등록
@@ -26,9 +27,8 @@ export function registerAllEditorTools(): void {
   registerTerminalTools(editorToolsRegistry);
   registerGitTools(editorToolsRegistry);
 
-  // TODO: Phase 5에서 코드 분석 Tools 등록
-  // import { registerCodeTools } from './code-tools';
-  // registerCodeTools(editorToolsRegistry);
+  // Phase 5: 코드 분석 Tools 등록
+  registerCodeTools(editorToolsRegistry);
 
   // Placeholder: RAG Tool은 이미 editor-agent.ts에 구현되어 있음
   editorToolsRegistry.register({

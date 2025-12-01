@@ -361,9 +361,9 @@ const searchFilesTool: EditorTool = {
 
       // ripgrep 명령 구성
       let rgCommand = 'rg --json';
-      if (!caseSensitive) rgCommand += ' -i';
-      if (filePattern) rgCommand += ` -g "${filePattern}"`;
-      if (maxResults) rgCommand += ` --max-count ${maxResults}`;
+      if (!caseSensitive) {rgCommand += ' -i';}
+      if (filePattern) {rgCommand += ` -g "${filePattern}"`;}
+      if (maxResults) {rgCommand += ` --max-count ${maxResults}`;}
       rgCommand += ` "${query}" "${searchDir}"`;
 
       console.log('[search_files] Running:', rgCommand);

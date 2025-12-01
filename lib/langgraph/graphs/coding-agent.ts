@@ -300,7 +300,28 @@ async function triageNode(state: CodingAgentState): Promise<Partial<CodingAgentS
   }
 
   const lowerPrompt = userPrompt.toLowerCase();
-  const modificationKeywords = ['make', 'create', 'build', 'fix', 'implement', 'generate', 'run '];
+  const modificationKeywords = [
+    'make',
+    'create',
+    'build',
+    'fix',
+    'implement',
+    'generate',
+    'run ',
+    'install',
+    'edit',
+    'update',
+    // Korean action cues
+    '만들',
+    '생성',
+    '작성',
+    '수정',
+    '변경',
+    '편집',
+    '설치',
+    '실행',
+    '빌드',
+  ];
   const isLikelyModification = modificationKeywords.some((k) => lowerPrompt.includes(k));
 
   // Simple heuristic: keep direct responses to short, clear questions without action verbs
@@ -524,6 +545,9 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     if (lastUserMessage && lastUserMessage.content) {
       ragContext = await retrieveContextIfEnabled(lastUserMessage.content);
       if (ragContext) {
+        if (ragContext.startsWith('[RAG retrieval failed')) {
+          emitStreamingChunk('⚠️ RAG 컨텍스트를 불러오지 못했습니다. 자체 지식으로 진행합니다.\n', state.conversationId);
+        }
         emitStreamingChunk(
           `\n📚 **관련 문서 ${ragContext.split('[참고 문서').length - 1}개를 참조합니다.**\n\n`,
           state.conversationId
@@ -532,6 +556,7 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     }
   } catch (e) {
     console.error('[CodingAgent.Agent] RAG error:', e);
+    emitStreamingChunk('⚠️ RAG 컨텍스트 조회 중 오류가 발생했습니다. 자체 지식으로 진행합니다.\n', state.conversationId);
   }
 
   // Debug: Log message count and sizes
@@ -716,7 +741,7 @@ PRIORITIES:
 - Don't overthink - take action and adjust based on results
 
 ITERATION BUDGET:
-- You have up to 50 iterations to complete complex tasks
+- You have up to 10 iterations to complete complex tasks
 - Use them wisely: batch related operations, verify as you go
 - If stuck after several iterations, try a different approach or ask for guidance`,
     created_at: Date.now(),
@@ -834,6 +859,10 @@ async function approvalNode(state: CodingAgentState): Promise<Partial<CodingAgen
   if (toolCalls.length === 0) {
     return {
       lastApprovalStatus: 'approved',
+      approvalHistory: [
+        ...(state.approvalHistory || []),
+        `[${new Date().toISOString()}] no tools -> auto-approved`,
+      ],
     };
   }
 
@@ -891,6 +920,10 @@ async function approvalNode(state: CodingAgentState): Promise<Partial<CodingAgen
     return {
       lastApprovalStatus: 'denied',
       alwaysApproveTools: alwaysApprove,
+      approvalHistory: [
+        ...(state.approvalHistory || []),
+        `[${new Date().toISOString()}] denied dangerous: ${blocked.arguments.command}`,
+      ],
       messages: [
         {
           id: `approval-${Date.now()}`,
@@ -904,13 +937,17 @@ async function approvalNode(state: CodingAgentState): Promise<Partial<CodingAgen
 
   if (needsApproval && !alwaysApprove && !oneTimeApprove) {
     const note =
-      '⚠️ 네트워크/패키지 설치 명령은 승인 후 실행됩니다. 승인하려면 "승인", 항상 승인하려면 "항상 승인"이라고 답변해주세요. 명령: ' +
-      needsApproval.arguments.command;
+      `⚠️ 네트워크/패키지 설치 명령은 승인 후 실행됩니다. 승인하려면 "승인", 항상 승인하려면 "항상 승인"이라고 답변해주세요. 명령: ${ 
+      needsApproval.arguments.command}`;
     emitStreamingChunk(note, state.conversationId);
     console.log('[Approval] Network/install command requires explicit approval');
     return {
       lastApprovalStatus: 'feedback',
       alwaysApproveTools: alwaysApprove,
+      approvalHistory: [
+        ...(state.approvalHistory || []),
+        `[${new Date().toISOString()}] pending approval (network/install): ${needsApproval.arguments.command}`,
+      ],
       messages: [
         {
           id: `approval-${Date.now()}`,
@@ -933,6 +970,10 @@ async function approvalNode(state: CodingAgentState): Promise<Partial<CodingAgen
   return {
     lastApprovalStatus: 'approved',
     alwaysApproveTools: alwaysApprove,
+    approvalHistory: [
+      ...(state.approvalHistory || []),
+      `[${new Date().toISOString()}] approved${alwaysApprove ? ' (always)' : ''}`,
+    ],
   };
 }
 
@@ -973,7 +1014,7 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
   // Log tool execution start (Detailed)
   if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
     const currentIter = (state.iterationCount || 0) + 1;
-    const maxIter = state.maxIterations || 50;
+    const maxIter = state.maxIterations || 10;
     let logMessage = `\n\n---\n🔄 **Iteration ${currentIter}/${maxIter}**\n`;
 
     for (const toolCall of lastMessage.tool_calls) {

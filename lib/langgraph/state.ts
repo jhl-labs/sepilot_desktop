@@ -159,6 +159,10 @@ export const CodingAgentStateAnnotation = Annotation.Root({
     reducer: (_existing: string, update: string) => update,
     default: () => '',
   }),
+  approvalHistory: Annotation<string[]>({
+    reducer: (existing: string[], updates: string[]) => [...existing, ...updates],
+    default: () => [],
+  }),
   lastApprovalStatus: Annotation<string>({
     reducer: (_existing: string, update: string) => update,
     default: () => '',
@@ -249,6 +253,8 @@ export function createInitialCodingAgentState(
     toolCalls: [],
     toolResults: [],
     conversationId,
+    alwaysApproveTools: false,
+    approvalHistory: [],
     planningNotes: [],
     verificationNotes: [],
     planCreated: false,
