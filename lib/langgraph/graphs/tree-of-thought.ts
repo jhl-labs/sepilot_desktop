@@ -85,20 +85,21 @@ async function researchNode(state: TreeOfThoughtState) {
     content: `당신은 사용자의 질문에 대해 심층 분석을 하기 전, 필요한 배경 지식과 최신 정보를 수집하는 연구원입니다.
 주어진 도구(검색 등)를 활용하여 필요한 정보를 수집하세요.
 이미 충분한 정보가 있거나 도구가 없다면 즉시 종료하세요.
-최대 5회의 기회가 있습니다.`,
+최대 3회의 기회가 있습니다.`,
     created_at: Date.now(),
   };
 
   currentMessages = [researchSystemMsg, ...currentMessages];
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 3; i++) {
     // Generate (도구 사용 결정)
-    // AgentState 호환성을 위해 toolResults 추가
+    // AgentState 호환성을 위해 toolCalls와 toolResults 추가
     const genResult = await generateWithToolsNode({
       ...state,
       messages: currentMessages,
+      toolCalls: [],
       toolResults: [],
-    } as any);
+    });
     const responseMsg = genResult.messages?.[0];
 
     if (!responseMsg) {
@@ -118,8 +119,9 @@ async function researchNode(state: TreeOfThoughtState) {
     const toolResult = await toolsNode({
       ...state,
       messages: currentMessages,
+      toolCalls: [],
       toolResults: [],
-    } as any);
+    });
 
     // 결과 메시지 생성
     const toolMessages = (toolResult.toolResults || []).map((res) => ({
@@ -241,7 +243,7 @@ async function decomposeNode(state: TreeOfThoughtState) {
   let decomposition = '';
   for await (const chunk of LLMService.streamChat(
     [systemMessage, ...state.messages, decomposePrompt],
-    { tools: [] }
+    { tools: [], tool_choice: 'none' }
   )) {
     decomposition += chunk;
     // 실시간 스트리밍 (conversationId로 격리)
@@ -300,7 +302,10 @@ ${approaches[i].desc}
     };
 
     let branchContent = '';
-    for await (const chunk of LLMService.streamChat([systemMessage, branchPrompt], { tools: [] })) {
+    for await (const chunk of LLMService.streamChat([systemMessage, branchPrompt], {
+      tools: [],
+      tool_choice: 'none',
+    })) {
       branchContent += chunk;
       // 실시간 스트리밍 (conversationId로 격리)
       emitStreamingChunk(chunk, state.conversationId);
@@ -363,7 +368,10 @@ async function evaluateBranchesNode(state: TreeOfThoughtState) {
     };
 
     let scoreText = '';
-    for await (const chunk of LLMService.streamChat([systemMessage, evalPrompt], { tools: [] })) {
+    for await (const chunk of LLMService.streamChat([systemMessage, evalPrompt], {
+      tools: [],
+      tool_choice: 'none',
+    })) {
       scoreText += chunk;
       // 실시간 스트리밍 (conversationId로 격리)
       emitStreamingChunk(chunk, state.conversationId);
@@ -445,6 +453,7 @@ ${topBranches}
 
   for await (const chunk of LLMService.streamChat([systemMessage, synthesizePrompt], {
     tools: [],
+    tool_choice: 'none',
   })) {
     finalAnswer += chunk;
     // Send each chunk to renderer via callback for real-time streaming (conversationId로 격리)
