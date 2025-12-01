@@ -1,6 +1,5 @@
 import { StateGraph, END } from '@langchain/langgraph';
 import { AgentStateAnnotation, AgentState } from '../state';
-import { generateWithToolsNode } from '../nodes/generate';
 import { toolsNode } from '../nodes/tools';
 import type { Message } from '@/types';
 import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-callback';
@@ -23,13 +22,17 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
     console.log('[DeepWebResearch] RAG enabled, retrieving documents...');
     const { vectorDBService } = await import('../../../electron/services/vectordb');
     const { databaseService } = await import('../../../electron/services/database');
-    const { initializeEmbedding, getEmbeddingProvider } = 
+    const { initializeEmbedding, getEmbeddingProvider } =
       await import('@/lib/vectordb/embeddings/client');
 
     const configStr = databaseService.getSetting('app_config');
-    if (!configStr) return '';
+    if (!configStr) {
+      return '';
+    }
     const appConfig = JSON.parse(configStr);
-    if (!appConfig.embedding) return '';
+    if (!appConfig.embedding) {
+      return '';
+    }
 
     initializeEmbedding(appConfig.embedding);
     const embedder = getEmbeddingProvider();
@@ -38,8 +41,12 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
 
     if (results.length > 0) {
       console.log(`[DeepWebResearch] Found ${results.length} documents`);
-      return results.map((doc, i) => `[참고 문서 ${i + 1}]
-${doc.content}`).join('\n\n');
+      return results
+        .map(
+          (doc, i) => `[참고 문서 ${i + 1}]
+${doc.content}`
+        )
+        .join('\n\n');
     }
   } catch (error) {
     console.error('[DeepWebResearch] RAG retrieval failed:', error);
@@ -66,14 +73,20 @@ async function planNode(state: AgentState): Promise<Partial<AgentState>> {
   if (isFirstStep) {
     emitStreamingChunk('\n\n## 🧠 심층 웹 연구 시작\n\n', state.conversationId);
   } else {
-    emitStreamingChunk(`\n\n### 🔄 추가 정보 수집 (단계 ${iteration + 1}/${MAX_ITERATIONS})\n\n`, state.conversationId);
+    emitStreamingChunk(
+      `\n\n### 🔄 추가 정보 수집 (단계 ${iteration + 1}/${MAX_ITERATIONS})\n\n`,
+      state.conversationId
+    );
   }
 
   // 이전 검색 결과 요약 문자열 생성
   const toolResults = state.toolResults || [];
   // 너무 길면 최근 것만? 일단 전체 포함 (LLM Context Window가 크다고 가정)
   const previousResults = toolResults
-    .map((r, i) => `[검색 결과 ${i + 1}] (${r.toolName}):\n${typeof r.result === 'string' ? r.result.substring(0, 1000) : JSON.stringify(r.result).substring(0, 1000)}...`)
+    .map(
+      (r, i) =>
+        `[검색 결과 ${i + 1}] (${r.toolName}):\n${typeof r.result === 'string' ? r.result.substring(0, 1000) : JSON.stringify(r.result).substring(0, 1000)}...`
+    )
     .join('\n\n');
 
   const systemMessage: Message = {
@@ -112,13 +125,16 @@ ${ragContext ? `[사전 RAG 정보]\n${ragContext}\n\n` : ''}
 [현재까지 수집된 정보]
 ${previousResults || '(없음)'}
 
-위 정보를 바탕으로 다음 검색 계획을 JSON으로 작성하세요.`, 
+위 정보를 바탕으로 다음 검색 계획을 JSON으로 작성하세요.`,
     created_at: Date.now(),
   };
 
   let planOutput = '';
   // 도구 호출 없이 순수 텍스트 생성을 위해 tools: []
-  for await (const chunk of LLMService.streamChat([systemMessage, planPrompt], { tools: [], tool_choice: 'none' })) {
+  for await (const chunk of LLMService.streamChat([systemMessage, planPrompt], {
+    tools: [],
+    tool_choice: 'none',
+  })) {
     // 계획 생성 과정은 사용자에게 보여주지 않거나 간략히만 보여줄 수 있음
     // 여기서는 디버깅을 위해 로그로만 남기고, 실제 계획된 쿼리는 아래에서 출력
     planOutput += chunk;
@@ -149,7 +165,7 @@ ${previousResults || '(없음)'}
     emitStreamingChunk(`🤔 **생각:** ${thought}\n\n`, state.conversationId);
   }
   if (plannedQueries.length > 0) {
-    const queryList = plannedQueries.map(q => `- "${q.parameters.query}"`).join('\n');
+    const queryList = plannedQueries.map((q) => `- "${q.parameters.query}"`).join('\n');
     emitStreamingChunk(`📝 **검색 계획:**\n${queryList}\n\n`, state.conversationId);
   } else {
     emitStreamingChunk(`✅ **정보 수집 완료. 답변을 생성합니다.**\n\n`, state.conversationId);
@@ -160,8 +176,8 @@ ${previousResults || '(없음)'}
     planningNotes: {
       queries: plannedQueries,
       iteration: iteration + 1,
-      thought
-    }
+      thought,
+    },
   };
 }
 
@@ -193,7 +209,7 @@ async function searchNode(state: AgentState): Promise<Partial<AgentState>> {
   const tempToolCalls = queries.map((q: any, idx: number) => ({
     id: `call-${Date.now()}-${idx}`,
     name: q.tool_name,
-    arguments: q.parameters
+    arguments: q.parameters,
   }));
 
   const tempMessage: Message = {
@@ -201,55 +217,52 @@ async function searchNode(state: AgentState): Promise<Partial<AgentState>> {
     role: 'assistant',
     content: '',
     tool_calls: tempToolCalls,
-    created_at: Date.now()
+    created_at: Date.now(),
   };
 
   // toolsNode 호출
   try {
     const resultState = await toolsNode({
       ...state,
-      messages: [...state.messages, tempMessage]
+      messages: [...state.messages, tempMessage],
     } as any); // AgentState 호환성
 
     newToolResults = resultState.toolResults || [];
-    
+
     // 결과 로깅
     for (const res of newToolResults) {
-        if (res.error) {
-            emitStreamingChunk(`❌ **실패:** ${res.toolName} - ${res.error}\n`, state.conversationId);
-        } else {
-            // 결과가 너무 길면 요약해서 보여줄 수도 있음
-            emitStreamingChunk(`✅ **완료:** ${res.toolName}\n`, state.conversationId);
-        }
-    }
-
-      } catch (e: any) {
-        emitStreamingChunk(`❌ **검색 실패:** ${e.message}\n`, state.conversationId);
-        toolResults.push({ error: e.message, toolName: 'tavily_search' });
-
-        // Rate Limit이나 치명적 에러 감지
-        if (
-          e.message.includes('429') ||
-          e.message.toLowerCase().includes('limit') ||
-          e.message.toLowerCase().includes('quota') ||
-          e.message.toLowerCase().includes('unauthorized')
-        ) {
-          emitStreamingChunk(
-            `⚠️ **검색 제한 감지:** 추가 검색을 중단하고 현재 정보로 답변을 생성합니다.\n`,
-            state.conversationId
-          );
-          return {
-            toolResults: [...(state.toolResults || []), ...toolResults],
-            planningNotes: { ...(state.planningNotes as object), forceSynthesize: true },
-          };
-        }
+      if (res.error) {
+        emitStreamingChunk(`❌ **실패:** ${res.toolName} - ${res.error}\n`, state.conversationId);
+      } else {
+        // 결과가 너무 길면 요약해서 보여줄 수도 있음
+        emitStreamingChunk(`✅ **완료:** ${res.toolName}\n`, state.conversationId);
       }
+    }
+  } catch (e: any) {
+    emitStreamingChunk(`❌ **검색 실패:** ${e.message}\n`, state.conversationId);
+    newToolResults.push({ error: e.message, toolName: 'tavily_search' } as any);
+
+    // Rate Limit이나 치명적 에러 감지
+    if (
+      e.message.includes('429') ||
+      e.message.toLowerCase().includes('limit') ||
+      e.message.toLowerCase().includes('quota') ||
+      e.message.toLowerCase().includes('unauthorized')
+    ) {
+      emitStreamingChunk(
+        `⚠️ **검색 제한 감지:** 추가 검색을 중단하고 현재 정보로 답변을 생성합니다.\n`,
+        state.conversationId
+      );
+      return {
+        toolResults: [...(state.toolResults || []), ...newToolResults],
+        planningNotes: { ...(state.planningNotes as object), forceSynthesize: true },
+      };
     }
   }
 
   return {
     // 기존 toolResults에 누적
-    toolResults: [...(state.toolResults || []), ...toolResults],
+    toolResults: [...(state.toolResults || []), ...newToolResults],
   };
 }
 
@@ -268,12 +281,12 @@ function checkPlan(state: AgentState) {
   if (!notes || !notes.queries || notes.queries.length === 0) {
     return 'synthesize';
   }
-  
+
   // 최대 반복 횟수 초과 시 종료
   if (notes.iteration > MAX_ITERATIONS) {
     return 'synthesize';
   }
-  
+
   return 'search';
 }
 
@@ -283,13 +296,19 @@ function checkPlan(state: AgentState) {
 async function synthesizeNode(state: AgentState): Promise<Partial<AgentState>> {
   console.log('[DeepWebResearch] Step 3: Synthesizing answer...');
   emitStreamingChunk('\n\n## ✨ 최종 답변 생성\n\n', state.conversationId);
-  emitStreamingChunk('**단계 진행 중:** 수집된 방대한 정보를 바탕으로 최종 답변을 작성합니다...\n\n', state.conversationId);
+  emitStreamingChunk(
+    '**단계 진행 중:** 수집된 방대한 정보를 바탕으로 최종 답변을 작성합니다...\n\n',
+    state.conversationId
+  );
 
-  const allSearchOutputs = state.toolResults?.map(r => {
-      const content = typeof r.result === 'string' ? r.result : JSON.stringify(r.result);
-      return `[출처: ${r.toolName}]\n${content.substring(0, 2000)}... (생략됨)`; // 컨텍스트 제한 고려
-  }).join('\n\n---\n\n') || '검색 결과 없음';
-  
+  const allSearchOutputs =
+    state.toolResults
+      ?.map((r) => {
+        const content = typeof r.result === 'string' ? r.result : JSON.stringify(r.result);
+        return `[출처: ${r.toolName}]\n${content.substring(0, 2000)}... (생략됨)`; // 컨텍스트 제한 고려
+      })
+      .join('\n\n---\n\n') || '검색 결과 없음';
+
   const systemMessage: Message = {
     id: 'system-synth',
     role: 'system',
@@ -299,7 +318,7 @@ async function synthesizeNode(state: AgentState): Promise<Partial<AgentState>> {
 만약 검색 결과가 없거나 불충분하다면(검색 실패, 제한 등), 당신의 내부 지식을 최대한 활용하여 답변하고 검색에 어려움이 있었음을 사용자에게 알리세요.`,
     created_at: Date.now(),
   };
-  
+
   const synthesizePrompt: Message = {
     id: 'synth-prompt',
     role: 'user',
@@ -308,16 +327,16 @@ async function synthesizeNode(state: AgentState): Promise<Partial<AgentState>> {
 [수집된 연구 자료]
 ${allSearchOutputs}
 
-위 자료를 바탕으로 최종 보고서를 작성하세요.`, 
+위 자료를 바탕으로 최종 보고서를 작성하세요.`,
     created_at: Date.now(),
   };
 
   let finalAnswer = '';
   // 사고 모델과 달리 도구를 사용하지 않으므로 { tools: [], tool_choice: 'none' }
-  for await (const chunk of LLMService.streamChat(
-    [systemMessage, synthesizePrompt],
-    { tools: [], tool_choice: 'none' }
-  )) {
+  for await (const chunk of LLMService.streamChat([systemMessage, synthesizePrompt], {
+    tools: [],
+    tool_choice: 'none',
+  })) {
     finalAnswer += chunk;
     emitStreamingChunk(chunk, state.conversationId);
   }
@@ -380,18 +399,18 @@ export function createDeepWebResearchGraph() {
     .addNode('plan', planNode)
     .addNode('search', searchNode)
     .addNode('synthesize', synthesizeNode)
-    
+
     .addEdge('__start__', 'plan')
-    
+
     // plan -> checkPlan -> (search | synthesize)
     .addConditionalEdges('plan', checkPlan, {
-        search: 'search',
-        synthesize: 'synthesize'
+      search: 'search',
+      synthesize: 'synthesize',
     })
-    
+
     // search -> plan (Loop)
     .addEdge('search', 'plan')
-    
+
     .addEdge('synthesize', END);
 
   return workflow.compile();
