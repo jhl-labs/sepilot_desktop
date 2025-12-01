@@ -25,6 +25,9 @@ import {
   Link2,
   Key,
   ArrowRight,
+  Brain,
+  Lightbulb,
+  Chrome,
 } from 'lucide-react';
 import { MCPServerConfig } from '@/lib/mcp/types';
 import { cn } from '@/lib/utils';
@@ -69,10 +72,10 @@ const PRESETS = {
     {
       name: 'Web Search',
       icon: Search,
-      description: '웹 검색 도구 (Brave)',
+      description: '웹 검색 도구 (Tailvy)',
       command: 'npx',
-      args: '-y\n@modelcontextprotocol/server-brave-search',
-      env: 'BRAVE_API_KEY=',
+      args: '-y\n@modelcontextprotocol/server-tailvy-search',
+      env: 'TAILVY_API_KEY=',
       color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
       iconColor: 'text-orange-500',
     },
@@ -84,6 +87,42 @@ const PRESETS = {
       args: '-y\n@modelcontextprotocol/server-git\n--repository\n/path/to/git/repo',
       color: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
       iconColor: 'text-red-500',
+    },
+    {
+      name: 'Context7',
+      icon: Sparkles, // Or another suitable icon
+      description: '고급 컨텍스트 처리 MCP',
+      command: 'npx',
+      args: '-y\n@modelcontextprotocol/server-context7',
+      color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+      iconColor: 'text-indigo-500',
+    },
+    {
+      name: 'Memory',
+      icon: Brain,
+      description: '지식 그래프 기반 장기 기억',
+      command: 'npx',
+      args: '-y\n@modelcontextprotocol/server-memory',
+      color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+      iconColor: 'text-rose-500',
+    },
+    {
+      name: 'Thinking',
+      icon: Lightbulb,
+      description: '복잡한 문제 해결을 위한 순차적 사고',
+      command: 'npx',
+      args: '-y\n@modelcontextprotocol/server-sequential-thinking',
+      color: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
+      iconColor: 'text-yellow-500',
+    },
+    {
+      name: 'Puppeteer',
+      icon: Chrome,
+      description: '브라우저 자동화 및 웹 스크래핑',
+      command: 'npx',
+      args: '-y\n@modelcontextprotocol/server-puppeteer',
+      color: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+      iconColor: 'text-cyan-500',
     },
   ],
   sse: [
