@@ -7,6 +7,8 @@
 import { editorToolsRegistry } from './editor-tools-registry';
 import { registerFileTools } from './file-tools';
 import { registerTabTools } from './tab-tools';
+import { registerTerminalTools } from './terminal-tools';
+import { registerGitTools } from './git-tools';
 
 /**
  * 모든 Tool 등록
@@ -20,11 +22,9 @@ export function registerAllEditorTools(): void {
   // Phase 3: 탭 제어 Tools 등록
   registerTabTools(editorToolsRegistry);
 
-  // TODO: Phase 4에서 터미널 & Git Tools 등록
-  // import { registerTerminalTools } from './terminal-tools';
-  // import { registerGitTools } from './git-tools';
-  // registerTerminalTools(editorToolsRegistry);
-  // registerGitTools(editorToolsRegistry);
+  // Phase 4: 터미널 & Git Tools 등록
+  registerTerminalTools(editorToolsRegistry);
+  registerGitTools(editorToolsRegistry);
 
   // TODO: Phase 5에서 코드 분석 Tools 등록
   // import { registerCodeTools } from './code-tools';

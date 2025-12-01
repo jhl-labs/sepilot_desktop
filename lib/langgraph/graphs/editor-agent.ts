@@ -413,6 +413,19 @@ ${ragContext}
     ]);
     tools.push(...tabTools);
 
+    // Always include terminal tools from registry
+    const terminalTools = editorToolsRegistry.toOpenAIFormat(['run_command']);
+    tools.push(...terminalTools);
+
+    // Always include git tools from registry
+    const gitTools = editorToolsRegistry.toOpenAIFormat([
+      'git_status',
+      'git_diff',
+      'git_log',
+      'git_branch',
+    ]);
+    tools.push(...gitTools);
+
     // For autocomplete: add context-aware tools
     if (context?.action === 'autocomplete') {
       tools.push({
