@@ -72,10 +72,9 @@ const PRESETS = {
     {
       name: 'Web Search',
       icon: Search,
-      description: '웹 검색 도구 (Tailvy)',
+      description: '웹 검색 도구 (Tavily Remote)',
       command: 'npx',
-      args: '-y\n@modelcontextprotocol/server-tailvy-search',
-      env: 'TAILVY_API_KEY=',
+      args: '-y\nmcp-remote\nhttps://mcp.tavily.com/mcp/?tavilyApiKey=YOUR_API_KEY',
       color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
       iconColor: 'text-orange-500',
     },
