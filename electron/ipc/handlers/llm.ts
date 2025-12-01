@@ -9,6 +9,7 @@ import { getLLMClient, initializeLLMClient } from '../../../lib/llm/client';
 import { hasImages, createVisionProvider } from '../../../lib/llm/vision-utils';
 import { logger } from '../../services/logger';
 import { databaseService } from '../../services/database';
+import { isLLMConfigV2, convertV2ToV1 } from '../../../lib/config/llm-config-migration';
 
 /**
  * Get vision provider from database config (Electron main process)
@@ -23,11 +24,17 @@ function getVisionProviderFromDB() {
       return null;
     }
 
-    const config = JSON.parse(configStr) as AppConfig;
+    let config = JSON.parse(configStr) as AppConfig;
 
     if (!config?.llm) {
       logger.info('[LLM IPC] No LLM config found in app_config');
       return null;
+    }
+
+    // Convert V2 to V1 if needed
+    if (isLLMConfigV2(config.llm)) {
+      logger.info('[LLM IPC] Converting V2 config to V1 for vision provider');
+      config.llm = convertV2ToV1(config.llm);
     }
 
     logger.info('[LLM IPC] Vision provider config:', {
@@ -505,7 +512,14 @@ Return ONLY the title, without quotes or additional text.`,
           throw new Error('App config not found');
         }
 
-        const config = JSON.parse(configStr) as AppConfig;
+        let config = JSON.parse(configStr) as AppConfig;
+
+        // Convert V2 to V1 if needed
+        if (config.llm && isLLMConfigV2(config.llm)) {
+          logger.info('[EditorAgent/Autocomplete] Converting V2 config to V1');
+          config.llm = convertV2ToV1(config.llm);
+        }
+
         logger.info('[EditorAgent/Autocomplete] Autocomplete config:', {
           enabled: config.llm?.autocomplete?.enabled,
           provider: config.llm?.autocomplete?.provider,
@@ -705,7 +719,13 @@ CRITICAL RULES:
           throw new Error('App config not found');
         }
 
-        const config = JSON.parse(configStr) as AppConfig;
+        let config = JSON.parse(configStr) as AppConfig;
+
+        // Convert V2 to V1 if needed
+        if (config.llm && isLLMConfigV2(config.llm)) {
+          logger.info('[EditorAgent/Action] Converting V2 config to V1');
+          config.llm = convertV2ToV1(config.llm);
+        }
 
         // Initialize LLM client with main config (not autocomplete)
         const { initializeLLMClient } = await import('../../../lib/llm/client');
