@@ -259,6 +259,11 @@ export async function executeBuiltinTool(
       return await handleBrowserSearchElements((args as { query: string }).query);
     case 'browser_scroll':
       return await handleBrowserScroll(args as { direction: 'up' | 'down'; amount?: number });
+    case 'browser_wait_for_element':
+      return await handleBrowserWaitForElement(
+        (args as { selector: string; timeout_ms?: number }).selector,
+        (args as { selector: string; timeout_ms?: number }).timeout_ms
+      );
     case 'browser_navigate':
       return await handleBrowserNavigate(args as { url: string });
     case 'browser_create_tab':
@@ -640,6 +645,30 @@ export const browserScrollTool: MCPTool = {
       },
     },
     required: ['direction'],
+  },
+};
+
+/**
+ * Browser Wait for Element Tool
+ */
+export const browserWaitForElementTool: MCPTool = {
+  name: 'browser_wait_for_element',
+  description:
+    'Wait until a DOM element matching the selector appears. Use this after navigation or dynamic loads.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      selector: {
+        type: 'string',
+        description: 'CSS selector to wait for (e.g., "input[name=email]", "button[type=submit]")',
+      },
+      timeout_ms: {
+        type: 'number',
+        description: 'Timeout in milliseconds (default: 5000)',
+      },
+    },
+    required: ['selector'],
   },
 };
 
@@ -1070,6 +1099,54 @@ async function handleBrowserScroll(args: {
 }
 
 /**
+ * Handle browser_wait_for_element
+ */
+async function handleBrowserWaitForElement(selector: string, timeout_ms?: number): Promise<string> {
+  const browserView = getActiveBrowserView();
+  if (!browserView) {
+    throw new Error('No active browser tab. Please switch to Browser mode first.');
+  }
+
+  const timeout = typeof timeout_ms === 'number' ? timeout_ms : 5000;
+
+  try {
+    const result = await browserView.webContents.executeJavaScript(`
+      (function() {
+        const selector = ${JSON.stringify(selector)};
+        const timeoutMs = ${timeout};
+        return new Promise((resolve) => {
+          const start = Date.now();
+          const check = () => {
+            const el = document.querySelector(selector);
+            if (el) {
+              const rect = el.getBoundingClientRect();
+              resolve({
+                success: true,
+                found: true,
+                position: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+              });
+            } else if (Date.now() - start > timeoutMs) {
+              resolve({ success: false, error: 'Timeout waiting for element' });
+            } else {
+              setTimeout(check, 100);
+            }
+          };
+          check();
+        });
+      })();
+    `);
+
+    if (!result?.success) {
+      throw new Error(result?.error || 'Timeout waiting for element');
+    }
+
+    return `Element "${selector}" appeared. Position: ${JSON.stringify(result.position)}`;
+  } catch (error: any) {
+    throw new Error(`Failed to wait for element: ${error.message}`);
+  }
+}
+
+/**
  * Handle browser_navigate
  */
 async function handleBrowserNavigate(args: { url: string }): Promise<string> {
@@ -1086,6 +1163,23 @@ async function handleBrowserNavigate(args: { url: string }): Promise<string> {
     }
 
     await browserView.webContents.loadURL(validUrl);
+
+    // Wait for load completion/readyState
+    const start = Date.now();
+    const timeoutMs = 8000;
+    while (true) {
+      const isLoading = browserView.webContents.isLoading();
+      const readyState: string =
+        await browserView.webContents.executeJavaScript('document.readyState');
+      if (!isLoading && readyState === 'complete') {
+        break;
+      }
+      if (Date.now() - start > timeoutMs) {
+        console.warn('[BrowserNavigate] Load wait timeout, continuing');
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
 
     return `Successfully navigated to: ${validUrl}`;
   } catch (error: any) {
@@ -1242,6 +1336,7 @@ export function getBuiltinTools(): MCPTool[] {
     browserClickElementTool,
     browserTypeTextTool,
     browserScrollTool,
+    browserWaitForElementTool,
     browserSearchElementsTool,
     // Browser tab management
     browserCreateTabTool,
