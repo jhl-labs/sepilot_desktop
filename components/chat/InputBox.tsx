@@ -25,6 +25,7 @@ import { generateConversationTitle, shouldGenerateTitle } from '@/lib/chat/title
 import { isElectron } from '@/lib/platform';
 import { getWebLLMClient, configureWebLLMClient } from '@/lib/llm/web-client';
 import { isTextFile } from '@/lib/utils';
+import { isLLMConfigV2, convertV2ToV1 } from '@/lib/config/llm-config-migration';
 import {
   ImageAttachment,
   Message,
@@ -258,8 +259,14 @@ export function InputBox() {
           if (result.success && result.data) {
             // Initialize LLM client
             if (result.data.llm) {
-              initializeLLMClient(result.data.llm);
-              setLlmConfig(result.data.llm);
+              let llmConfig = result.data.llm;
+              // Convert V2 to V1 if needed
+              if (isLLMConfigV2(llmConfig)) {
+                console.log('[InputBox] Converting V2 config to V1 for LLM client');
+                llmConfig = convertV2ToV1(llmConfig);
+              }
+              initializeLLMClient(llmConfig);
+              setLlmConfig(llmConfig);
             }
 
             // Initialize ComfyUI client
