@@ -1,6 +1,15 @@
 'use client';
 
-import { ChevronLeft, Wrench, Navigation, Eye, MousePointer, Layers, Camera } from 'lucide-react';
+import {
+  ChevronLeft,
+  Wrench,
+  Navigation,
+  Eye,
+  MousePointer,
+  Layers,
+  Camera,
+  Search,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +43,7 @@ export function BrowserToolsList() {
       {/* Tools List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         <div className="text-xs text-muted-foreground mb-3">
-          Browser Agent가 사용할 수 있는 총 18개의 도구입니다.
+          Browser Agent가 사용할 수 있는 총 27개의 도구입니다.
         </div>
 
         {/* Navigation Tools */}
@@ -138,6 +147,61 @@ export function BrowserToolsList() {
               description="Vision LLM으로 화면 분석 (향후 지원)"
               badge="SOON"
             />
+          </CardContent>
+        </Card>
+
+        {/* Google Search Tools */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              <CardTitle className="text-sm">Google Search Tools (9)</CardTitle>
+            </div>
+            <CardDescription className="text-xs">Perplexity 수준의 고급 검색 도구</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="text-xs font-semibold text-muted-foreground mb-1">Search (5)</div>
+            <ToolItem
+              name="google_search"
+              description="기본 웹 검색 (날짜, 언어/지역, 사이트/파일타입 필터)"
+              badge="NEW"
+            />
+            <ToolItem name="google_search_news" description="뉴스 검색" badge="NEW" />
+            <ToolItem
+              name="google_search_scholar"
+              description="학술 검색 (Google Scholar)"
+              badge="NEW"
+            />
+            <ToolItem name="google_search_images" description="이미지 검색" badge="NEW" />
+            <ToolItem
+              name="google_search_advanced"
+              description="고급 검색 (정확한 문구, 제외 단어, OR 연산)"
+              badge="NEW"
+            />
+
+            <div className="text-xs font-semibold text-muted-foreground mt-3 mb-1">
+              Extraction (2)
+            </div>
+            <ToolItem
+              name="google_extract_results"
+              description="검색 결과 추출 (제목, URL, 스니펫, 날짜, 출처)"
+              badge="NEW"
+            />
+            <ToolItem
+              name="google_get_related_searches"
+              description="관련 검색어 추출"
+              badge="NEW"
+            />
+
+            <div className="text-xs font-semibold text-muted-foreground mt-3 mb-1">
+              Navigation (2)
+            </div>
+            <ToolItem
+              name="google_visit_result"
+              description="검색 결과 방문 및 콘텐츠 추출 (text/markdown/summary)"
+              badge="NEW"
+            />
+            <ToolItem name="google_next_page" description="다음 페이지 이동" badge="NEW" />
           </CardContent>
         </Card>
 
