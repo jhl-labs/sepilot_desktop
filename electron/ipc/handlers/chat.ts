@@ -19,6 +19,7 @@ export function setupChatHandlers() {
     'save-message',
     'load-messages',
     'delete-message',
+    'delete-conversation-messages',
   ];
   channels.forEach(removeHandlerIfExists);
 
@@ -81,6 +82,13 @@ export function setupChatHandlers() {
       handler: (id: string) => {
         logger.debug('Deleting message', { id });
         databaseService.deleteMessage(id);
+      },
+    },
+    {
+      channel: 'delete-conversation-messages',
+      handler: (conversationId: string) => {
+        logger.debug('Deleting all messages for conversation', { conversationId });
+        databaseService.deleteConversationMessages(conversationId);
       },
     },
   ]);

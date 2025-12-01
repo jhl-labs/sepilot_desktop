@@ -26,6 +26,7 @@ interface ChatAPI {
   saveMessage: (message: Message) => Promise<IPCResponse>;
   loadMessages: (conversationId: string) => Promise<IPCResponse<Message[]>>;
   deleteMessage: (id: string) => Promise<IPCResponse>;
+  deleteConversationMessages: (conversationId: string) => Promise<IPCResponse>;
 }
 
 interface ActivityAPI {

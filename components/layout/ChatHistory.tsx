@@ -10,6 +10,7 @@ import {
   Check,
   BookOpen,
   Copy,
+  FileArchive,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,6 +24,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -34,6 +41,7 @@ import {
 import type { Conversation, Message } from '@/types';
 import { MoreHorizontal } from 'lucide-react';
 import { SaveKnowledgeDialog } from '@/components/chat/SaveKnowledgeDialog';
+import { CompressConversationDialog } from '@/components/chat/CompressConversationDialog';
 import { indexDocuments } from '@/lib/vectordb/indexing';
 import { getVectorDB } from '@/lib/vectordb/client';
 import { getEmbeddingProvider } from '@/lib/vectordb/embeddings/client';
@@ -69,6 +77,9 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   const [saveKnowledgeDialogOpen, setSaveKnowledgeDialogOpen] = useState(false);
   const [knowledgeConversation, setKnowledgeConversation] = useState<Conversation | null>(null);
   const [knowledgeMessages, setKnowledgeMessages] = useState<Message[]>([]);
+  const [compressDialogOpen, setCompressDialogOpen] = useState(false);
+  const [compressConversation, setCompressConversation] = useState<Conversation | null>(null);
+  const [compressMessages, setCompressMessages] = useState<Message[]>([]);
   const editInputRef = useRef<HTMLInputElement>(null);
 
   // Focus input when editing starts
@@ -113,6 +124,52 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
       console.error('Failed to duplicate conversation:', error);
       // TODO: Show error toast to user
     }
+  };
+
+  const handleCompress = async (conversationId: string) => {
+    const conversation = conversations.find((c) => c.id === conversationId);
+    if (!conversation) {
+      return;
+    }
+
+    // Load messages for this conversation
+    let messages: Message[] = [];
+
+    if (isElectron() && window.electronAPI) {
+      try {
+        const result = await window.electronAPI.chat.loadMessages(conversationId);
+        if (result.success && result.data) {
+          messages = result.data;
+        }
+      } catch (error) {
+        console.error('Failed to load messages:', error);
+        // TODO: Show error toast to user
+        return;
+      }
+    } else {
+      // Web: localStorage에서 로드
+      try {
+        const allMessages = localStorage.getItem('sepilot_messages');
+        if (allMessages) {
+          const parsed = JSON.parse(allMessages) as Record<string, Message[]>;
+          messages = parsed[conversationId] || [];
+        }
+      } catch (error) {
+        console.error('Failed to load messages from localStorage:', error);
+        // TODO: Show error toast to user
+        return;
+      }
+    }
+
+    if (messages.length === 0) {
+      console.error('No messages found in conversation');
+      // TODO: Show error toast to user
+      return;
+    }
+
+    setCompressConversation(conversation);
+    setCompressMessages(messages);
+    setCompressDialogOpen(true);
   };
 
   const handleOpenPersonaDialog = (conversationId: string) => {
@@ -207,6 +264,43 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     } catch (error: any) {
       console.error('Failed to save knowledge:', error);
       throw new Error(error.message || '지식 저장에 실패했습니다.');
+    }
+  };
+
+  const handleCompressConversation = async (compressedMessages: Message[]) => {
+    if (!compressConversation) {
+      throw new Error('No conversation to compress');
+    }
+
+    try {
+      // Delete all existing messages for this conversation
+      if (isElectron() && window.electronAPI) {
+        await window.electronAPI.chat.deleteConversationMessages(compressConversation.id);
+
+        // Save compressed messages
+        for (const message of compressedMessages) {
+          await window.electronAPI.chat.saveMessage({
+            ...message,
+            conversation_id: compressConversation.id,
+          });
+        }
+      } else {
+        // Web: localStorage에 저장
+        const allMessages = localStorage.getItem('sepilot_messages');
+        const parsed = allMessages ? JSON.parse(allMessages) : {};
+        parsed[compressConversation.id] = compressedMessages;
+        localStorage.setItem('sepilot_messages', JSON.stringify(parsed));
+      }
+
+      // Reload the active conversation if it's the compressed one
+      if (activeConversationId === compressConversation.id) {
+        await setActiveConversation(compressConversation.id);
+      }
+
+      console.log('Conversation compressed successfully');
+    } catch (error: any) {
+      console.error('Failed to compress conversation:', error);
+      throw new Error(error.message || '대화 압축에 실패했습니다.');
     }
   };
 
@@ -365,29 +459,68 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                   </div>
                 ) : (
                   <>
-                    <button
-                      onClick={() => {
-                        setActiveConversation(conversation.id);
-                        onConversationClick?.();
-                      }}
-                      className="flex flex-1 flex-col items-start px-3 py-2 text-left"
-                    >
-                      <div className="flex items-center gap-1.5 w-full">
-                        {conversation.personaId &&
-                          (() => {
-                            const persona = personas.find((p) => p.id === conversation.personaId);
-                            return persona?.avatar ? (
-                              <span className="text-sm flex-shrink-0">{persona.avatar}</span>
-                            ) : null;
-                          })()}
-                        <span className="text-sm font-medium line-clamp-1">
-                          {conversation.title}
-                        </span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(conversation.updated_at)}
-                      </span>
-                    </button>
+                    <ContextMenu>
+                      <ContextMenuTrigger asChild>
+                        <button
+                          onClick={() => {
+                            setActiveConversation(conversation.id);
+                            onConversationClick?.();
+                          }}
+                          className="flex flex-1 flex-col items-start px-3 py-2 text-left"
+                        >
+                          <div className="flex items-center gap-1.5 w-full">
+                            {conversation.personaId &&
+                              (() => {
+                                const persona = personas.find(
+                                  (p) => p.id === conversation.personaId
+                                );
+                                return persona?.avatar ? (
+                                  <span className="text-sm flex-shrink-0">{persona.avatar}</span>
+                                ) : null;
+                              })()}
+                            <span className="text-sm font-medium line-clamp-1">
+                              {conversation.title}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(conversation.updated_at)}
+                          </span>
+                        </button>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <ContextMenuItem
+                          onClick={() => handleStartEdit(conversation.id, conversation.title)}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          이름 변경
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => handleOpenPersonaDialog(conversation.id)}>
+                          <User className="mr-2 h-4 w-4" />
+                          Persona
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onClick={() => handleOpenSaveKnowledgeDialog(conversation.id)}
+                        >
+                          <BookOpen className="mr-2 h-4 w-4" />
+                          지식 저장
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => handleDuplicate(conversation.id)}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          대화 복제
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => handleCompress(conversation.id)}>
+                          <FileArchive className="mr-2 h-4 w-4" />
+                          대화 압축
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onClick={() => handleDelete(conversation.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          삭제
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -419,6 +552,10 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                         <DropdownMenuItem onClick={() => handleDuplicate(conversation.id)}>
                           <Copy className="mr-2 h-4 w-4" />
                           대화 복제
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCompress(conversation.id)}>
+                          <FileArchive className="mr-2 h-4 w-4" />
+                          대화 압축
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDelete(conversation.id)}
@@ -501,6 +638,15 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
         conversation={knowledgeConversation}
         messages={knowledgeMessages}
         onSave={handleSaveKnowledge}
+      />
+
+      {/* Compress Conversation Dialog */}
+      <CompressConversationDialog
+        open={compressDialogOpen}
+        onOpenChange={setCompressDialogOpen}
+        conversation={compressConversation}
+        messages={compressMessages}
+        onCompress={handleCompressConversation}
       />
     </>
   );

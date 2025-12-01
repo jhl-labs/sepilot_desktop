@@ -366,6 +366,13 @@ class DatabaseService {
     this.saveDatabase();
   }
 
+  deleteConversationMessages(conversationId: string): void {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run('DELETE FROM messages WHERE conversation_id = ?', [conversationId]);
+    this.saveDatabase();
+  }
+
   // Settings
   getSetting(key: string): string | null {
     if (!this.db) throw new Error('Database not initialized');

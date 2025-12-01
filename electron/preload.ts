@@ -21,6 +21,8 @@ const electronAPI = {
     saveMessage: (message: any) => ipcRenderer.invoke('save-message', message),
     loadMessages: (conversationId: string) => ipcRenderer.invoke('load-messages', conversationId),
     deleteMessage: (id: string) => ipcRenderer.invoke('delete-message', id),
+    deleteConversationMessages: (conversationId: string) =>
+      ipcRenderer.invoke('delete-conversation-messages', conversationId),
   },
 
   // Activity operations (도구 실행 이력)
