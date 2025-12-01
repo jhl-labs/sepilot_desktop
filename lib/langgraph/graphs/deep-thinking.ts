@@ -102,6 +102,7 @@ async function researchNode(state: DeepThinkingState) {
       context: '',
       toolCalls: [],
       toolResults: [],
+      planningNotes: {},
     });
     const responseMsg = genResult.messages?.[0];
 
@@ -122,6 +123,7 @@ async function researchNode(state: DeepThinkingState) {
     const toolResult = await toolsNode({
       ...state,
       messages: currentMessages,
+      planningNotes: {},
       context: '',
       toolCalls: [],
       toolResults: [],

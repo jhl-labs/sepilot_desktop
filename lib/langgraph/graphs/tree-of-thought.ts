@@ -99,6 +99,7 @@ async function researchNode(state: TreeOfThoughtState) {
       messages: currentMessages,
       toolCalls: [],
       toolResults: [],
+      planningNotes: {},
     });
     const responseMsg = genResult.messages?.[0];
 
@@ -121,6 +122,7 @@ async function researchNode(state: TreeOfThoughtState) {
       messages: currentMessages,
       toolCalls: [],
       toolResults: [],
+      planningNotes: {},
     });
 
     // 결과 메시지 생성

@@ -73,6 +73,14 @@ export const AgentStateAnnotation = Annotation.Root({
     reducer: (_existing: string, update: string) => update || _existing,
     default: () => '',
   }),
+  // Deep Web Research용 planning notes (iteration, forceSynthesize 등)
+  planningNotes: Annotation<Record<string, any>>({
+    reducer: (_existing: Record<string, any>, update: Record<string, any>) => ({
+      ..._existing,
+      ...update,
+    }),
+    default: () => ({}),
+  }),
 });
 
 /**
@@ -130,6 +138,10 @@ export const CodingAgentStateAnnotation = Annotation.Root({
     default: () => 0,
   }),
   modifiedFiles: Annotation<string[]>({
+    reducer: (existing: string[], updates: string[]) => [...existing, ...updates],
+    default: () => [],
+  }),
+  deletedFiles: Annotation<string[]>({
     reducer: (existing: string[], updates: string[]) => [...existing, ...updates],
     default: () => [],
   }),
@@ -236,6 +248,7 @@ export function createInitialAgentState(
     toolCalls: [],
     toolResults: [],
     conversationId,
+    planningNotes: {},
   };
 }
 
@@ -263,6 +276,7 @@ export function createInitialCodingAgentState(
     requiredFiles: [],
     fileChangesCount: 0,
     modifiedFiles: [],
+    deletedFiles: [],
     iterationCount: 0,
     maxIterations,
     forceTermination: false,

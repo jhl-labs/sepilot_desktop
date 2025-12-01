@@ -7,7 +7,6 @@
  */
 
 import type { EditorTool } from './editor-tools-registry';
-import type { EditorAgentState } from '../graphs/editor-agent';
 
 /**
  * Tool: 열린 탭 목록 조회
@@ -22,7 +21,7 @@ const listOpenTabsTool: EditorTool = {
     properties: {},
     required: [],
   },
-  execute: async (_args, state) => {
+  execute: async (_args, _state) => {
     // Renderer Process에서만 실행 (Zustand store 접근)
     if (typeof window === 'undefined') {
       return {
@@ -80,7 +79,7 @@ const openTabTool: EditorTool = {
     },
     required: ['filePath'],
   },
-  execute: async (args, state) => {
+  execute: async (args, _state) => {
     const { filePath, cursorPosition } = args as { filePath: string; cursorPosition?: number };
 
     if (typeof window === 'undefined') {
@@ -100,7 +99,7 @@ const openTabTool: EditorTool = {
       }
 
       const fileResult = await window.electronAPI.fs.readFile(filePath);
-      if (!fileResult.success || !fileResult.content) {
+      if (!fileResult.success || !fileResult.data) {
         return {
           success: false,
           error: fileResult.error || 'Failed to read file',
@@ -127,11 +126,14 @@ const openTabTool: EditorTool = {
       const { useChatStore } = await import('@/lib/store/chat-store');
       const { openFile } = useChatStore.getState();
 
+      const filename = filePath.split('/').pop() || filePath;
+
       openFile({
         path: filePath,
-        content: fileResult.content,
+        filename,
+        content: fileResult.data,
         language,
-        initialCursorPosition: cursorPosition,
+        initialPosition: cursorPosition ? { lineNumber: cursorPosition, column: 0 } : undefined,
       });
 
       return {
@@ -167,7 +169,7 @@ const closeTabTool: EditorTool = {
     },
     required: ['filePath'],
   },
-  execute: async (args, state) => {
+  execute: async (args, _state) => {
     const { filePath } = args as { filePath: string };
 
     if (typeof window === 'undefined') {
@@ -224,7 +226,7 @@ const switchTabTool: EditorTool = {
     },
     required: ['filePath'],
   },
-  execute: async (args, state) => {
+  execute: async (args, _state) => {
     const { filePath } = args as { filePath: string };
 
     if (typeof window === 'undefined') {
@@ -281,7 +283,7 @@ const getActiveFileTool: EditorTool = {
     },
     required: [],
   },
-  execute: async (args, state) => {
+  execute: async (args, _state) => {
     const { includeContent = false } = args as { includeContent?: boolean };
 
     if (typeof window === 'undefined') {

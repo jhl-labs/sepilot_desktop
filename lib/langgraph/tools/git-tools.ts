@@ -6,7 +6,6 @@
  */
 
 import type { EditorTool } from './editor-tools-registry';
-import type { EditorAgentState } from '../graphs/editor-agent';
 
 /**
  * Git 명령 실행 헬퍼 함수
@@ -20,7 +19,7 @@ async function executeGitCommand(
     const { promisify } = await import('util');
     const execAsync = promisify(exec);
 
-    const { stdout, stderr } = await execAsync(`git ${command}`, {
+    const { stdout } = await execAsync(`git ${command}`, {
       cwd,
       timeout: 10000,
       maxBuffer: 1024 * 1024 * 5, // 5MB
@@ -128,7 +127,11 @@ const gitDiffTool: EditorTool = {
     required: [],
   },
   execute: async (args, state) => {
-    const { cwd, filePath, staged = false } = args as {
+    const {
+      cwd,
+      filePath,
+      staged = false,
+    } = args as {
       cwd?: string;
       filePath?: string;
       staged?: boolean;
@@ -207,7 +210,12 @@ const gitLogTool: EditorTool = {
     required: [],
   },
   execute: async (args, state) => {
-    const { cwd, limit = 10, filePath, oneline = true } = args as {
+    const {
+      cwd,
+      limit = 10,
+      filePath,
+      oneline = true,
+    } = args as {
       cwd?: string;
       limit?: number;
       filePath?: string;
@@ -334,12 +342,7 @@ const gitBranchTool: EditorTool = {
 /**
  * 모든 Git Tools 내보내기
  */
-export const gitTools: EditorTool[] = [
-  gitStatusTool,
-  gitDiffTool,
-  gitLogTool,
-  gitBranchTool,
-];
+export const gitTools: EditorTool[] = [gitStatusTool, gitDiffTool, gitLogTool, gitBranchTool];
 
 /**
  * Registry에 Git Tools 등록

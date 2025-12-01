@@ -58,7 +58,7 @@ ${doc.content}`
  * 1단계: 검색 계획 수립 (Plan Node)
  */
 async function planNode(state: AgentState): Promise<Partial<AgentState>> {
-  const iteration = (state.planningNotes as any)?.iteration || 0;
+  const iteration = state.planningNotes?.iteration || 0;
   const isFirstStep = iteration === 0;
   const query = state.messages[state.messages.length - 1].content;
 
@@ -185,7 +185,7 @@ ${previousResults || '(없음)'}
  * 2단계: 웹 검색 실행 (Search Node)
  */
 async function searchNode(state: AgentState): Promise<Partial<AgentState>> {
-  const notes = state.planningNotes as any;
+  const notes = state.planningNotes;
   const queries = notes?.queries || [];
 
   if (queries.length === 0) {
@@ -255,7 +255,7 @@ async function searchNode(state: AgentState): Promise<Partial<AgentState>> {
       );
       return {
         toolResults: [...(state.toolResults || []), ...newToolResults],
-        planningNotes: { ...(state.planningNotes as object), forceSynthesize: true },
+        planningNotes: { ...state.planningNotes, forceSynthesize: true },
       };
     }
   }
@@ -270,7 +270,7 @@ async function searchNode(state: AgentState): Promise<Partial<AgentState>> {
  * 조건부 엣지 함수
  */
 function checkPlan(state: AgentState) {
-  const notes = state.planningNotes as any;
+  const notes = state.planningNotes;
 
   // 강제 종료 플래그 확인
   if (notes?.forceSynthesize) {

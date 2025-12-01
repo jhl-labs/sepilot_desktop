@@ -199,7 +199,8 @@ interface GraphConfig {
     | 'deep'
     | 'coding'
     | 'browser-agent'
-    | 'editor-agent';
+    | 'editor-agent'
+    | 'deep-web-research';
   enableRAG: boolean;
   enableTools: boolean;
 }

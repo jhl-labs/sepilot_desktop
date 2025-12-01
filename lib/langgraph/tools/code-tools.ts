@@ -5,7 +5,6 @@
  */
 
 import type { EditorTool } from './editor-tools-registry';
-import type { EditorAgentState } from '../graphs/editor-agent';
 
 /**
  * Tool: 파일 컨텍스트 가져오기
@@ -38,13 +37,17 @@ const getFileContextTool: EditorTool = {
     required: [],
   },
   execute: async (args, state) => {
-    const { includeImports = true, includeTypes = true, linesBefore = 10, linesAfter = 5 } =
-      args as {
-        includeImports?: boolean;
-        includeTypes?: boolean;
-        linesBefore?: number;
-        linesAfter?: number;
-      };
+    const {
+      includeImports = true,
+      includeTypes = true,
+      linesBefore = 10,
+      linesAfter = 5,
+    } = args as {
+      includeImports?: boolean;
+      includeTypes?: boolean;
+      linesBefore?: number;
+      linesAfter?: number;
+    };
 
     const context = state.editorContext;
 
@@ -158,7 +161,12 @@ const searchSimilarCodeTool: EditorTool = {
     required: ['pattern'],
   },
   execute: async (args, state) => {
-    const { pattern, language, contextLines = 2, maxResults = 20 } = args as {
+    const {
+      pattern,
+      language,
+      contextLines = 2,
+      maxResults = 20,
+    } = args as {
       pattern: string;
       language?: string;
       contextLines?: number;
@@ -280,7 +288,7 @@ const getDocumentationTool: EditorTool = {
     },
     required: ['query'],
   },
-  execute: async (args, state) => {
+  execute: async (args, _state) => {
     const { query, source } = args as { query: string; source?: string };
 
     if (typeof window !== 'undefined') {

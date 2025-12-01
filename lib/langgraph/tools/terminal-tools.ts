@@ -6,7 +6,6 @@
  */
 
 import type { EditorTool } from './editor-tools-registry';
-import type { EditorAgentState } from '../graphs/editor-agent';
 
 /**
  * Tool: 터미널 명령 실행
@@ -36,7 +35,11 @@ const runCommandTool: EditorTool = {
     required: ['command'],
   },
   execute: async (args, state) => {
-    const { command, cwd, timeout = 30000 } = args as {
+    const {
+      command,
+      cwd,
+      timeout = 30000,
+    } = args as {
       command: string;
       cwd?: string;
       timeout?: number;
