@@ -25,6 +25,17 @@ import {
   browserGetClickableCoordinateTool,
   browserAnalyzeWithVisionTool,
 } from '@/lib/mcp/tools/builtin-tools';
+import {
+  googleSearchTool,
+  googleSearchNewsTool,
+  googleSearchScholarTool,
+  googleSearchImagesTool,
+  googleSearchAdvancedTool,
+  googleExtractResultsTool,
+  googleGetRelatedSearchesTool,
+  googleVisitResultTool,
+  googleNextPageTool,
+} from '@/lib/mcp/tools/google-search-tools';
 
 /**
  * Exponential Backoff 재시도 유틸리티
@@ -87,7 +98,7 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
       toolResultsCount: state.toolResults.length,
     });
 
-    // Browser Control Tools (18개 도구 - Vision 포함)
+    // Browser Control Tools (27개 도구 - Vision + Google Search 포함)
     const browserTools = [
       // Navigation
       browserNavigateTool, // URL 직접 이동 (최우선)
@@ -106,12 +117,22 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
       browserCreateTabTool,
       browserSwitchTabTool,
       browserCloseTabTool,
-      // Vision-based tools (NEW)
+      // Vision-based tools
       browserCaptureAnnotatedScreenshotTool, // Set-of-Mark 스크린샷
       browserClickCoordinateTool, // 좌표 기반 클릭
       browserClickMarkerTool, // 마커 라벨로 클릭
       browserGetClickableCoordinateTool, // 요소의 클릭 가능 좌표
       browserAnalyzeWithVisionTool, // Vision 모델 분석 (향후)
+      // Google Search tools (NEW)
+      googleSearchTool, // 기본 웹 검색
+      googleSearchNewsTool, // 뉴스 검색
+      googleSearchScholarTool, // 학술 검색
+      googleSearchImagesTool, // 이미지 검색
+      googleSearchAdvancedTool, // 고급 검색
+      googleExtractResultsTool, // 검색 결과 추출
+      googleGetRelatedSearchesTool, // 관련 검색어
+      googleVisitResultTool, // 검색 결과 방문
+      googleNextPageTool, // 다음 페이지
     ];
 
     console.debug(
@@ -194,7 +215,32 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
 
 # AVAILABLE TOOLS
 
-## Navigation (USE THIS FIRST for URLs!)
+## Google Search Tools (NEW - Perplexity-level search capabilities!)
+
+**Search Tools:**
+- **google_search**: 기본 웹 검색 (날짜, 사이트, 파일타입, 언어/지역 필터 지원)
+  - Example: google_search({ query: "최신 AI 뉴스", dateFilter: "week", language: "ko" })
+- **google_search_news**: 뉴스 검색 (최신 기사)
+- **google_search_scholar**: 학술 검색 (Google Scholar, 논문/연구 자료)
+- **google_search_images**: 이미지 검색
+- **google_search_advanced**: 고급 검색 (정확한 문구, 제외 단어, OR 연산)
+
+**Extraction Tools:**
+- **google_extract_results**: 검색 결과 추출 (제목, URL, 스니펫, 날짜, 출처)
+- **google_get_related_searches**: 관련 검색어 추출 (검색 쿼리 확장)
+
+**Navigation Tools:**
+- **google_visit_result**: 특정 순위의 검색 결과 방문 및 콘텐츠 추출
+  - Example: google_visit_result({ rank: 1, extractType: "summary" })
+- **google_next_page**: 다음 페이지 이동 (더 많은 결과 탐색)
+
+**Typical Google Search Workflow:**
+1. google_search({ query: "검색어", dateFilter: "week" }) // 검색 수행
+2. google_extract_results({ maxResults: 10 }) // 결과 추출
+3. google_visit_result({ rank: 1, extractType: "summary" }) // 상위 결과 방문
+4. google_get_related_searches() // 관련 검색어 확인 (선택)
+
+## Browser Navigation (Direct URL navigation)
 - **browser_navigate**: Navigate to a URL directly
   - Use for ANY request to "go to", "visit", "open", or "접속" a website
   - Examples:

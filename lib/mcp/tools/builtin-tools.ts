@@ -289,6 +289,25 @@ export async function executeBuiltinTool(
       return await getClickableCoordinate((args as { element_id: string }).element_id);
     case 'browser_analyze_with_vision':
       return await analyzeWithVision((args as { user_query?: string }).user_query);
+    // Google Search tools
+    case 'google_search':
+      return await handleGoogleSearch(args as any);
+    case 'google_search_news':
+      return await handleGoogleSearch({ ...args, type: 'news' } as any);
+    case 'google_search_scholar':
+      return await handleGoogleSearch({ ...args, type: 'scholar' } as any);
+    case 'google_search_images':
+      return await handleGoogleSearch({ ...args, type: 'images' } as any);
+    case 'google_search_advanced':
+      return await handleGoogleSearch(args as any);
+    case 'google_extract_results':
+      return await handleGoogleExtractResults(args as any);
+    case 'google_get_related_searches':
+      return await handleGoogleGetRelatedSearches();
+    case 'google_visit_result':
+      return await handleGoogleVisitResult(args as any);
+    case 'google_next_page':
+      return await handleGoogleNextPage();
     default:
       throw new Error(`Unknown builtin tool: ${toolName}`);
   }
@@ -954,7 +973,7 @@ async function _handleBrowserGetPageContent(): Promise<string> {
 /**
  * Handle browser_click_element
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 async function _handleBrowserClickElement(args: { element_id: string }): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
@@ -995,7 +1014,7 @@ async function _handleBrowserClickElement(args: { element_id: string }): Promise
 /**
  * Handle browser_type_text
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 async function _handleBrowserTypeText(args: { element_id: string; text: string }): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {

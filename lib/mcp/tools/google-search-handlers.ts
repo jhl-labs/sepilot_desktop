@@ -155,8 +155,6 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
     // Google 검색 URL 생성
     const searchURL = buildGoogleSearchURL(searchOptions);
 
-    console.log('[GoogleSearch] Searching:', searchURL);
-
     // 검색 페이지로 이동
     await browserView.webContents.loadURL(searchURL);
 
@@ -186,9 +184,10 @@ URL: ${searchURL}
 - google_visit_result: 특정 결과 방문`;
 
     return result;
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('[GoogleSearch] Error:', error);
-    throw new Error(`Google 검색 실패: ${error.message}`);
+    throw new Error(`Google 검색 실패: ${message}`);
   }
 }
 
@@ -290,9 +289,10 @@ export async function handleGoogleExtractResults(
 - google_next_page: 다음 페이지의 결과 확인`;
 
     return output;
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('[GoogleExtractResults] Error:', error);
-    throw new Error(`검색 결과 추출 실패: ${error.message}`);
+    throw new Error(`검색 결과 추출 실패: ${message}`);
   }
 }
 
@@ -337,18 +337,17 @@ export async function handleGoogleGetRelatedSearches(): Promise<string> {
 예: google_search({ query: "${relatedSearches[0]}" })`;
 
     return output;
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('[GoogleGetRelatedSearches] Error:', error);
-    throw new Error(`관련 검색어 추출 실패: ${error.message}`);
+    throw new Error(`관련 검색어 추출 실패: ${message}`);
   }
 }
 
 /**
  * Google 검색 결과 방문
  */
-export async function handleGoogleVisitResult(
-  options: GoogleVisitResultOptions
-): Promise<string> {
+export async function handleGoogleVisitResult(options: GoogleVisitResultOptions): Promise<string> {
   try {
     const browserView = getActiveBrowserView();
     if (!browserView) {
@@ -481,7 +480,7 @@ export async function handleGoogleVisitResult(
     // 콘텐츠 길이 제한 (너무 길면 요약)
     const maxLength = 5000;
     if (content.length > maxLength) {
-      content = content.substring(0, maxLength) + '\n\n... (내용이 잘렸습니다)';
+      content = `${content.substring(0, maxLength)}\n\n... (내용이 잘렸습니다)`;
     }
 
     let output = `페이지 방문 완료\n\n`;
@@ -489,17 +488,24 @@ export async function handleGoogleVisitResult(
     output += `URL: ${url}\n`;
     output += `추출 타입: ${extractType}\n\n`;
 
-    if (metadata.author) output += `작성자: ${metadata.author}\n`;
-    if (metadata.publishDate) output += `게시일: ${metadata.publishDate}\n`;
-    if (metadata.description) output += `설명: ${metadata.description}\n`;
+    if (metadata.author) {
+      output += `작성자: ${metadata.author}\n`;
+    }
+    if (metadata.publishDate) {
+      output += `게시일: ${metadata.publishDate}\n`;
+    }
+    if (metadata.description) {
+      output += `설명: ${metadata.description}\n`;
+    }
 
     output += `\n━━━━━━━━━━━━━━━━━━━━\n`;
     output += `콘텐츠:\n\n${content}`;
 
     return output;
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('[GoogleVisitResult] Error:', error);
-    throw new Error(`검색 결과 방문 실패: ${error.message}`);
+    throw new Error(`검색 결과 방문 실패: ${message}`);
   }
 }
 
@@ -542,8 +548,9 @@ export async function handleGoogleNextPage(): Promise<string> {
     return `다음 페이지로 이동했습니다.
 
 이제 google_extract_results를 사용하여 새로운 검색 결과를 확인하세요.`;
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('[GoogleNextPage] Error:', error);
-    throw new Error(`다음 페이지 이동 실패: ${error.message}`);
+    throw new Error(`다음 페이지 이동 실패: ${message}`);
   }
 }
