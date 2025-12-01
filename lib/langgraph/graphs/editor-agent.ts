@@ -3,6 +3,7 @@ import type { Message, ToolCall } from '@/types';
 import type { ToolApprovalCallback } from '../types';
 import { getLLMClient } from '@/lib/llm/client';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import { editorToolsRegistry, registerAllEditorTools } from '@/lib/langgraph/tools/index';
 
 /**
  * Editor Agent Graph
@@ -46,6 +47,9 @@ export class EditorAgentGraph {
 
   constructor(maxIterations = 50) {
     this.maxIterations = maxIterations;
+
+    // Register all editor tools
+    registerAllEditorTools();
   }
 
   /**
@@ -388,6 +392,17 @@ ${ragContext}
   private getEditorTools(context?: EditorAgentState['editorContext']): any[] {
     const tools: any[] = [];
 
+    // Always include file management tools from registry
+    const fileTools = editorToolsRegistry.toOpenAIFormat([
+      'read_file',
+      'write_file',
+      'edit_file',
+      'list_files',
+      'search_files',
+      'delete_file',
+    ]);
+    tools.push(...fileTools);
+
     // For autocomplete: add context-aware tools
     if (context?.action === 'autocomplete') {
       tools.push({
@@ -478,6 +493,13 @@ ${ragContext}
 
     console.log('[EditorAgent] Executing tool:', name, 'with args:', parsedArgs);
 
+    // Try to execute from Tool Registry first
+    const registryTool = editorToolsRegistry.get(name);
+    if (registryTool) {
+      return editorToolsRegistry.execute(name, parsedArgs, state);
+    }
+
+    // Fallback to built-in tools (for autocomplete/code-action specific tools)
     switch (name) {
       case 'get_file_context':
         return this.getFileContext(parsedArgs, state);

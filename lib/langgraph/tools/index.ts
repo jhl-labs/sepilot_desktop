@@ -5,6 +5,7 @@
  */
 
 import { editorToolsRegistry } from './editor-tools-registry';
+import { registerFileTools } from './file-tools';
 
 /**
  * 모든 Tool 등록
@@ -12,9 +13,8 @@ import { editorToolsRegistry } from './editor-tools-registry';
 export function registerAllEditorTools(): void {
   console.log('[EditorTools] Registering all tools...');
 
-  // TODO: Phase 2에서 파일 관리 Tools 등록
-  // import { registerFileTools } from './file-tools';
-  // registerFileTools(editorToolsRegistry);
+  // Phase 2: 파일 관리 Tools 등록
+  registerFileTools(editorToolsRegistry);
 
   // TODO: Phase 3에서 탭 제어 Tools 등록
   // import { registerTabTools } from './tab-tools';
