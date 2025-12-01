@@ -121,7 +121,8 @@ export function MarkdownRenderer({
   // Custom link component with URI error handling
   const CustomLink = ({ href, children, ...props }: any) => {
     // Validate and sanitize href to prevent URI malformed errors
-    let safeHref = href;
+    let safeHref = '#';
+
     try {
       // Try to construct URL to validate
       if (href && typeof href === 'string') {
@@ -130,30 +131,54 @@ export function MarkdownRenderer({
           safeHref = href;
         } else if (href.startsWith('http://') || href.startsWith('https://')) {
           // Validate absolute URLs
-          new URL(href);
-          safeHref = href;
+          try {
+            new URL(href);
+            safeHref = href;
+          } catch {
+            // If URL construction fails, try to encode it
+            try {
+              safeHref = encodeURI(href);
+            } catch {
+              // If encoding also fails, use placeholder
+              console.warn('[MarkdownRenderer] Cannot encode URL:', href);
+              safeHref = '#invalid-url';
+            }
+          }
         } else {
           // For other cases, encode special characters
-          safeHref = encodeURI(href);
+          try {
+            safeHref = encodeURI(href);
+          } catch (encodeError) {
+            // If encoding fails, escape manually
+            console.warn('[MarkdownRenderer] Cannot encode URL:', href, encodeError);
+            safeHref = href.replace(/[^\w\s\-._~:/?#[\]@!$&'()*+,;=]/g, '');
+          }
         }
       }
     } catch (error) {
-      // If URL validation fails, encode the href
-      console.warn('[MarkdownRenderer] Invalid URL:', href, error);
-      safeHref = encodeURI(href || '');
+      // Final fallback
+      console.error('[MarkdownRenderer] URL processing failed:', href, error);
+      safeHref = '#error';
     }
 
-    return (
-      <a
-        href={safeHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-primary underline underline-offset-4 hover:text-primary/80"
-        {...props}
-      >
-        {children}
-      </a>
-    );
+    // Extra safety: wrap the entire return in try-catch
+    try {
+      return (
+        <a
+          href={safeHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline underline-offset-4 hover:text-primary/80"
+          {...props}
+        >
+          {children}
+        </a>
+      );
+    } catch (renderError) {
+      // If even rendering fails, return plain text
+      console.error('[MarkdownRenderer] Link render failed:', renderError);
+      return <span className="text-primary">{children}</span>;
+    }
   };
 
   // Render markdown content
