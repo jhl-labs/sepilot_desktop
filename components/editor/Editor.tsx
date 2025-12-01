@@ -616,31 +616,17 @@ export function CodeEditor() {
         return;
       }
 
-      const clipboardData = e.clipboardData;
-      if (!clipboardData) {
-        return;
-      }
-
-      // 클립보드에 이미지가 있는지 확인
-      const hasImage = Array.from(clipboardData.types).some((type) => type.startsWith('image/'));
-
-      if (!hasImage) {
-        return;
-      }
-
-      // 기본 paste 동작 방지
-      e.preventDefault();
-      e.stopPropagation();
-
-      console.log('[Editor] Image paste detected');
-
       try {
-        // 클립보드 이미지를 working directory에 저장
+        // Electron 클립보드에 이미지가 있는지 먼저 확인
+        // (웹 ClipboardEvent는 Electron 네이티브 클립보드와 다를 수 있음)
         const result = await window.electronAPI.fs.saveClipboardImage(workingDirectory);
 
         if (result.success && result.data) {
+          // 클립보드에 이미지가 있었음 - 기본 paste 동작 방지
+          e.preventDefault();
+          e.stopPropagation();
+
           const { filename } = result.data;
-          console.log('[Editor] Image saved:', filename);
 
           // 파일이 위치한 디렉토리 기준으로 이미지의 상대 경로 계산
           const fileDir = path.dirname(activeFile.path);
@@ -672,24 +658,22 @@ export function CodeEditor() {
             };
             editor.setPosition(newPosition);
             editor.focus();
-
-            console.log('[Editor] Image markdown inserted:', imageMarkdown);
           }
-        } else {
-          console.error('[Editor] Failed to save clipboard image:', result.error);
         }
       } catch (error) {
         console.error('[Editor] Error handling clipboard image:', error);
+        // 에러 발생 시에도 기본 paste 동작 허용
       }
     };
 
     // DOM 요소에 이벤트 리스너 추가
     const editorDomNode = editor.getDomNode();
     if (editorDomNode) {
-      editorDomNode.addEventListener('paste', handlePaste);
+      // capture phase에서 이벤트를 먼저 잡음
+      editorDomNode.addEventListener('paste', handlePaste, true);
 
       return () => {
-        editorDomNode.removeEventListener('paste', handlePaste);
+        editorDomNode.removeEventListener('paste', handlePaste, true);
       };
     }
 

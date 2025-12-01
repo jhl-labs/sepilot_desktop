@@ -25,6 +25,24 @@ import {
   analyzeWithVision,
   getClickableCoordinate,
 } from './browser-handlers-vision';
+import {
+  googleSearchTool,
+  googleSearchNewsTool,
+  googleSearchScholarTool,
+  googleSearchImagesTool,
+  googleSearchAdvancedTool,
+  googleExtractResultsTool,
+  googleGetRelatedSearchesTool,
+  googleVisitResultTool,
+  googleNextPageTool,
+} from './google-search-tools';
+import {
+  handleGoogleSearch,
+  handleGoogleExtractResults,
+  handleGoogleGetRelatedSearches,
+  handleGoogleVisitResult,
+  handleGoogleNextPage,
+} from './google-search-handlers';
 
 const execPromise = promisify(exec);
 
@@ -1220,5 +1238,15 @@ export function getBuiltinTools(): MCPTool[] {
     browserClickMarkerTool,
     browserGetClickableCoordinateTool,
     browserAnalyzeWithVisionTool,
+    // Google Search (NEW)
+    googleSearchTool,
+    googleSearchNewsTool,
+    googleSearchScholarTool,
+    googleSearchImagesTool,
+    googleSearchAdvancedTool,
+    googleExtractResultsTool,
+    googleGetRelatedSearchesTool,
+    googleVisitResultTool,
+    googleNextPageTool,
   ];
 }
