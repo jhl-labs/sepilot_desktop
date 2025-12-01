@@ -161,17 +161,20 @@ const electronAPI = {
     onStreamEvent: (callback: (event: any) => void) => {
       const handler = (_: any, event: any) => callback(event);
       ipcRenderer.on('langgraph-stream-event', handler);
-      return handler;
+      // Return cleanup function instead of handler
+      return () => ipcRenderer.removeListener('langgraph-stream-event', handler);
     },
     onStreamDone: (callback: (data?: { conversationId?: string }) => void) => {
       const handler = (_: any, data?: { conversationId?: string }) => callback(data);
       ipcRenderer.on('langgraph-stream-done', handler);
-      return handler;
+      // Return cleanup function instead of handler
+      return () => ipcRenderer.removeListener('langgraph-stream-done', handler);
     },
     onStreamError: (callback: (data: { error: string; conversationId?: string }) => void) => {
       const handler = (_: any, data: { error: string; conversationId?: string }) => callback(data);
       ipcRenderer.on('langgraph-stream-error', handler);
-      return handler;
+      // Return cleanup function instead of handler
+      return () => ipcRenderer.removeListener('langgraph-stream-error', handler);
     },
     // Tool Approval (Human-in-the-loop)
     onToolApprovalRequest: (
@@ -183,7 +186,8 @@ const electronAPI = {
     ) => {
       const handler = (_: any, data: any) => callback(data);
       ipcRenderer.on('langgraph-tool-approval-request', handler);
-      return handler;
+      // Return cleanup function instead of handler
+      return () => ipcRenderer.removeListener('langgraph-tool-approval-request', handler);
     },
     respondToolApproval: (conversationId: string, approved: boolean) =>
       ipcRenderer.invoke('langgraph-tool-approval-response', conversationId, approved),
