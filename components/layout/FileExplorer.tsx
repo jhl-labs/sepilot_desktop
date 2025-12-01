@@ -239,7 +239,7 @@ export function FileExplorer() {
 
       {/* New Item Dialog */}
       <Dialog open={showNewItemDialog} onOpenChange={setShowNewItemDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>새 {newItemType === 'file' ? '파일' : '폴더'} 생성</DialogTitle>
             <DialogDescription>
