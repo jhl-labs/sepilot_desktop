@@ -181,9 +181,59 @@ export function MarkdownRenderer({
     }
   };
 
+  // Sanitize markdown content to prevent URI malformed errors
+  const sanitizeMarkdownContent = (rawContent: string): string => {
+    try {
+      // Replace problematic URLs in markdown links [text](url) format
+      return rawContent.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+        try {
+          // Validate the URL
+          if (url.startsWith('#') || url.startsWith('/')) {
+            return match; // Keep relative URLs as-is
+          }
+
+          if (url.startsWith('http://') || url.startsWith('https://')) {
+            try {
+              new URL(url);
+              return match; // Valid URL, keep as-is
+            } catch {
+              // Invalid URL, try to encode it
+              try {
+                const encoded = encodeURI(url);
+                return `[${text}](${encoded})`;
+              } catch {
+                // If encoding fails, use placeholder
+                return `[${text}](#invalid-url)`;
+              }
+            }
+          }
+
+          // For other URLs, try to encode
+          try {
+            const encoded = encodeURI(url);
+            return `[${text}](${encoded})`;
+          } catch {
+            // If encoding fails, remove special chars
+            const sanitized = url.replace(/[^\w\s\-._~:/?#[\]@!$&'()*+,;=%]/g, '');
+            return `[${text}](${sanitized || '#'})`;
+          }
+        } catch {
+          // If all fails, return text only
+          return text;
+        }
+      });
+    } catch (error) {
+      console.error('[MarkdownRenderer] Content sanitization failed:', error);
+      return rawContent; // Return original if sanitization fails
+    }
+  };
+
   // Render markdown content
   const renderMarkdownContent = () => {
     try {
+      // Sanitize content before rendering
+      const sanitizedContent = sanitizeMarkdownContent(content);
+
       return (
         <Markdown
           options={{
@@ -270,7 +320,7 @@ export function MarkdownRenderer({
             },
           }}
         >
-          {content}
+          {sanitizedContent}
         </Markdown>
       );
     } catch (error) {
