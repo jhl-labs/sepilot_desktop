@@ -189,17 +189,47 @@ export class ChatAgentGraph {
       // 4. tools 노드 실행
       console.log('[AgentGraph] Executing tools node');
 
-      // Log tool execution start
+      // Log tool execution start (Detailed)
       if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
-        const toolNames = lastMessage.tool_calls.map((tc) => tc.name).join(', ');
-        emitStreamingChunk(`\n\n🛠️ **도구 실행 중:** ${toolNames}...\n`, state.conversationId);
+        let logMessage = `\n\n---\n🔄 **Iteration ${iterations + 1}/${actualMaxIterations}**\n`;
+
+        for (const toolCall of lastMessage.tool_calls) {
+          logMessage += `\n🛠️ **Call:** \`${toolCall.name}\`\n`;
+          try {
+            const args =
+              typeof toolCall.arguments === 'string'
+                ? toolCall.arguments
+                : JSON.stringify(toolCall.arguments, null, 2);
+            logMessage += `📂 **Args:**\n\`\`\`json\n${args}\n\`\`\`\n`;
+          } catch {
+            logMessage += `📂 **Args:** (parsing failed)\n`;
+          }
+        }
+        emitStreamingChunk(logMessage, state.conversationId);
       }
 
       const toolsResult = await toolsNode(state);
 
-      // Log tool execution end
+      // Log tool execution end (Detailed)
       if (toolsResult.toolResults && toolsResult.toolResults.length > 0) {
-        emitStreamingChunk(`✅ **실행 완료**\n\n`, state.conversationId);
+        let logMessage = `\n`;
+
+        for (const result of toolsResult.toolResults) {
+          const status = result.error ? '❌ **Error**' : '✅ **Result**';
+          logMessage += `${status}: \`${result.toolName}\`\n`;
+
+          let output = result.error || result.result || '(no output)';
+          if (typeof output !== 'string') {
+            output = JSON.stringify(output, null, 2);
+          }
+
+          if (output.length > 1000) {
+            output = `${output.substring(0, 1000)}\n... (truncated)`;
+          }
+
+          logMessage += `📄 **Output:**\n\`\`\`\n${output}\n\`\`\`\n`;
+        }
+        emitStreamingChunk(`${logMessage}---\n\n`, state.conversationId);
       }
 
       // tool_calls를 유지하여 히스토리 무결성 보장 (이전에는 삭제했었음)

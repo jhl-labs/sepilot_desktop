@@ -853,10 +853,25 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
     error?: string;
   };
 
-  // Log tool execution start
+  // Log tool execution start (Detailed)
   if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
-    const toolNames = lastMessage.tool_calls.map((tc) => tc.name).join(', ');
-    emitStreamingChunk(`\n\n🛠️ **도구 실행 중:** ${toolNames}...\n`, state.conversationId);
+    const currentIter = (state.iterationCount || 0) + 1;
+    const maxIter = state.maxIterations || 50;
+    let logMessage = `\n\n---\n🔄 **Iteration ${currentIter}/${maxIter}**\n`;
+
+    for (const toolCall of lastMessage.tool_calls) {
+      logMessage += `\n🛠️ **Call:** \`${toolCall.name}\`\n`;
+      try {
+        const args =
+          typeof toolCall.arguments === 'string'
+            ? toolCall.arguments
+            : JSON.stringify(toolCall.arguments, null, 2);
+        logMessage += `📂 **Args:**\n\`\`\`json\n${args}\n\`\`\`\n`;
+      } catch {
+        logMessage += `📂 **Args:** (parsing failed)\n`;
+      }
+    }
+    emitStreamingChunk(logMessage, state.conversationId);
   }
 
   const results: ToolExecutionResult[] = await Promise.all(
@@ -1028,6 +1043,28 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
       }
     })
   );
+
+  // Log tool execution end (Detailed)
+  if (results.length > 0) {
+    let logMessage = `\n`;
+
+    for (const result of results) {
+      const status = result.error ? '❌ **Error**' : '✅ **Result**';
+      logMessage += `${status}: \`${result.toolName}\`\n`;
+
+      let output = result.error || result.result || '(no output)';
+      if (typeof output !== 'string') {
+        output = JSON.stringify(output, null, 2);
+      }
+
+      if (output.length > 1000) {
+        output = `${output.substring(0, 1000)}\n... (truncated)`;
+      }
+
+      logMessage += `📄 **Output:**\n\`\`\`\n${output}\n\`\`\`\n`;
+    }
+    emitStreamingChunk(`${logMessage}---\n\n`, state.conversationId);
+  }
 
   // Get file snapshot after tool execution
   const filesAfter = await getWorkspaceFiles(workspacePath);

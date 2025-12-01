@@ -854,8 +854,9 @@ export function InputBox() {
                   timestamp: Date.now(),
                 });
                 // Append approval waiting message to existing content
+                accumulatedContent = `${accumulatedContent || ''}\n\n🔔 도구 실행 승인을 기다리는 중...`;
                 scheduleUpdate({
-                  content: `${accumulatedMessage.content || ''}\n\n🔔 도구 실행 승인을 기다리는 중...`,
+                  content: accumulatedContent,
                 });
                 return;
               }
@@ -865,7 +866,8 @@ export function InputBox() {
                 console.log('[InputBox] Tool approval result:', event.approved);
                 clearPendingToolApproval();
                 if (!event.approved) {
-                  scheduleUpdate({ content: '❌ 도구 실행이 거부되었습니다.' });
+                  accumulatedContent = `${accumulatedContent || ''}\n\n❌ 도구 실행이 거부되었습니다.`;
+                  scheduleUpdate({ content: accumulatedContent });
                 }
                 return;
               }
@@ -934,16 +936,17 @@ export function InputBox() {
 
                 if (nodeStatusMessage) {
                   console.log(`[InputBox] Node execution: ${event.node} - ${nodeStatusMessage}`);
-                  // Append to existing content instead of replacing it
+                  // Append to existing content and update accumulatedContent
+                  accumulatedContent = `${accumulatedContent || ''}\n\n${nodeStatusMessage}`;
                   scheduleUpdate({
-                    content: `${accumulatedMessage.content || ''}\n\n${nodeStatusMessage}`,
+                    content: accumulatedContent,
                   });
                 }
               }
 
               // 각 노드의 실행 결과에서 메시지 업데이트
               // Coding Agent의 모든 과정을 Claude Code 스타일로 표시
-              if (event.type === 'node' && event.data?.messages) {
+              if (thinkingMode === 'coding' && event.type === 'node' && event.data?.messages) {
                 const allMessages = event.data.messages;
                 if (allMessages && allMessages.length > 0) {
                   // Convert all messages to a single display content (Claude Code style)
@@ -1117,8 +1120,9 @@ export function InputBox() {
 
                 const statusMessage = `✅ 도구 실행 완료: ${toolNames}\n\n답변을 생성하고 있습니다...`;
                 // Append to existing content instead of replacing it
+                accumulatedContent = `${accumulatedContent || ''}\n\n${statusMessage}`;
                 scheduleUpdate({
-                  content: `${accumulatedMessage.content || ''}\n\n${statusMessage}`,
+                  content: accumulatedContent,
                 });
 
                 for (const toolResult of toolResults) {
