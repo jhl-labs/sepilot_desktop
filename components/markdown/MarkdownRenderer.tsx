@@ -184,8 +184,13 @@ export function MarkdownRenderer({
   // Sanitize markdown content to prevent URI malformed errors
   const sanitizeMarkdownContent = (rawContent: string): string => {
     try {
-      // Replace problematic URLs in markdown links [text](url) format
-      return rawContent.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+      // CRITICAL FIX: Replace ALL malformed percent encoding globally
+      // This prevents decodeURIComponent errors in markdown-to-jsx's HTML attribute parser
+      // The library has a bug where it calls decodeURIComponent without try-catch
+      let result = rawContent.replace(/%(?![0-9A-Fa-f]{2})/g, '%25');
+
+      // Additional processing for markdown links [text](url) format
+      result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
         try {
           // Trim whitespace
           url = url.trim();
@@ -247,6 +252,8 @@ export function MarkdownRenderer({
           return text;
         }
       });
+
+      return result;
     } catch (error) {
       console.error('[MarkdownRenderer] Content sanitization failed:', error);
       return rawContent; // Return original if sanitization fails
@@ -262,6 +269,10 @@ export function MarkdownRenderer({
       return (
         <Markdown
           options={{
+            // CRITICAL: Disable raw HTML parsing to prevent markdown-to-jsx's
+            // HTML attribute parser from calling decodeURIComponent without try-catch
+            // This is a known bug in markdown-to-jsx that causes URI malformed errors
+            disableParsingRawHTML: true,
             overrides: {
               pre: {
                 component: CustomPre,
