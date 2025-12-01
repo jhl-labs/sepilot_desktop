@@ -616,7 +616,7 @@ export class BrowserAgentGraph {
 
     // Browser Agent LLM 설정 가져오기
     const { browserAgentLLMConfig } = useChatStore.getState();
-    const actualMaxIterations = maxIterations ?? browserAgentLLMConfig.maxIterations;
+    const actualMaxIterations = maxIterations ?? Math.max(browserAgentLLMConfig.maxIterations, 50);
 
     while (iterations < actualMaxIterations) {
       // 1. generate 노드 실행 (Browser Tools 포함)
@@ -657,7 +657,7 @@ export class BrowserAgentGraph {
       setBrowserAgentIsRunning,
       clearBrowserAgentLogs,
     } = useChatStore.getState();
-    const actualMaxIterations = maxIterations ?? browserAgentLLMConfig.maxIterations;
+    const actualMaxIterations = maxIterations ?? Math.max(browserAgentLLMConfig.maxIterations, 50);
 
     console.debug('[BrowserAgent] Starting stream with initial state');
     console.debug(
@@ -930,6 +930,11 @@ export class BrowserAgentGraph {
                 maxIterations: actualMaxIterations,
               },
             });
+
+            emitStreamingChunk(
+              `❌ **도구 실행 실패:** ${result.toolName}\n> ${result.error}\n`,
+              state.conversationId
+            );
           } else {
             // Reset failure counter on success
             failureCounts.delete(result.toolName);
@@ -1026,6 +1031,8 @@ export class BrowserAgentGraph {
                 maxIterations: actualMaxIterations,
               },
             });
+
+            emitStreamingChunk(`✅ **도구 실행 성공:** ${result.toolName}\n`, state.conversationId);
           }
         }
 

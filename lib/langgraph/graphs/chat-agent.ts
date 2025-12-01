@@ -4,6 +4,7 @@ import { generateWithToolsNode } from '../nodes/generate';
 import { toolsNode, shouldUseTool } from '../nodes/tools';
 import type { Message } from '@/types';
 import type { ToolApprovalCallback } from '../types';
+import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
 
 /**
  * Chat Agent 그래프 - MCP Tools와 이미지 생성 도구 지원
@@ -13,7 +14,7 @@ import type { ToolApprovalCallback } from '../types';
  * - ComfyUI 이미지 생성 도구 (enableImageGeneration 플래그로 제어)
  */
 export class ChatAgentGraph {
-  async invoke(initialState: AgentState, maxIterations = 10): Promise<AgentState> {
+  async invoke(initialState: AgentState, maxIterations = 50): Promise<AgentState> {
     let state = { ...initialState };
     let iterations = 0;
 
@@ -55,7 +56,7 @@ export class ChatAgentGraph {
 
   async *stream(
     initialState: AgentState,
-    maxIterations = 10,
+    maxIterations = 50,
     toolApprovalCallback?: ToolApprovalCallback
   ): AsyncGenerator<any> {
     let state = { ...initialState };
@@ -182,7 +183,19 @@ export class ChatAgentGraph {
 
       // 4. tools 노드 실행
       console.log('[AgentGraph] Executing tools node');
+
+      // Log tool execution start
+      if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+        const toolNames = lastMessage.tool_calls.map((tc) => tc.name).join(', ');
+        emitStreamingChunk(`\n\n🛠️ **도구 실행 중:** ${toolNames}...\n`, state.conversationId);
+      }
+
       const toolsResult = await toolsNode(state);
+
+      // Log tool execution end
+      if (toolsResult.toolResults && toolsResult.toolResults.length > 0) {
+        emitStreamingChunk(`✅ **실행 완료**\n\n`, state.conversationId);
+      }
 
       // tool_calls를 유지하여 히스토리 무결성 보장 (이전에는 삭제했었음)
       // LLM은 tool_calls가 있는 메시지 뒤에 tool 메시지가 오기를 기대함

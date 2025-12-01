@@ -853,6 +853,12 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
     error?: string;
   };
 
+  // Log tool execution start
+  if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+    const toolNames = lastMessage.tool_calls.map((tc) => tc.name).join(', ');
+    emitStreamingChunk(`\n\n🛠️ **도구 실행 중:** ${toolNames}...\n`, state.conversationId);
+  }
+
   const results: ToolExecutionResult[] = await Promise.all(
     lastMessage.tool_calls.map(async (call): Promise<ToolExecutionResult> => {
       const startTime = Date.now();
@@ -1302,7 +1308,7 @@ export class CodingAgentGraph {
     console.log('[CodingAgentGraph] Starting stream (simplified Claude Code style)');
 
     try {
-      const maxIterations = state.maxIterations || 10;
+      const maxIterations = state.maxIterations || 50;
       let iterations = 0;
       let hasError = false;
 

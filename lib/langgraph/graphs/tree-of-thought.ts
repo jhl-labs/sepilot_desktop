@@ -97,6 +97,10 @@ async function decomposeNode(state: TreeOfThoughtState) {
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n## 🌳 1단계: 문제 분해\n\n', state.conversationId);
+  emitStreamingChunk(
+    '**단계 진행 중:** 문제를 핵심 측면으로 분해 중입니다...\n\n',
+    state.conversationId
+  );
 
   // RAG 컨텍스트 가져오기
   const query = state.messages[state.messages.length - 1].content;
@@ -156,6 +160,10 @@ async function generateBranchesNode(state: TreeOfThoughtState) {
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## 🌿 2단계: 다중 사고 경로 생성\n\n', state.conversationId);
+  emitStreamingChunk(
+    '**단계 진행 중:** 다양한 사고 경로를 생성 중입니다...\n\n',
+    state.conversationId
+  );
 
   const branches: Array<{ id: string; content: string; score: number }> = [];
 
@@ -217,6 +225,10 @@ async function evaluateBranchesNode(state: TreeOfThoughtState) {
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## ⚖️ 3단계: 경로 평가\n\n', state.conversationId);
+  emitStreamingChunk(
+    '**단계 진행 중:** 생성된 사고 경로들을 평가 중입니다...\n\n',
+    state.conversationId
+  );
 
   const systemMessage: Message = {
     id: 'system-eval',
@@ -291,6 +303,10 @@ async function synthesizeNode(state: TreeOfThoughtState) {
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## ✨ 4단계: 최종 답변 통합\n\n', state.conversationId);
+  emitStreamingChunk(
+    '**단계 진행 중:** 최적 경로를 기반으로 최종 답변을 통합 중입니다...\n\n',
+    state.conversationId
+  );
 
   const systemMessage: Message = {
     id: 'system-synth',

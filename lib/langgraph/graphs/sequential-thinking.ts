@@ -68,7 +68,7 @@ async function analyzeNode(state: ChatState) {
 
   // 단계 시작 알림 + 로딩 표시
   emitStreamingChunk('\n\n## 🔍 1단계: 문제 분석\n\n', state.conversationId);
-  emitStreamingChunk('*분석 중...*\n\n', state.conversationId);
+  emitStreamingChunk('**단계 진행 중:** 문제 분석을 시작합니다...\n\n', state.conversationId);
 
   // RAG 컨텍스트 가져오기
   const query = state.messages[state.messages.length - 1].content;
@@ -128,7 +128,7 @@ async function planNode(state: ChatState) {
 
   // 단계 시작 알림 + 로딩 표시
   emitStreamingChunk('\n\n---\n\n## 📋 2단계: 계획 수립\n\n', state.conversationId);
-  emitStreamingChunk('*계획 수립 중...*\n\n', state.conversationId);
+  emitStreamingChunk('**단계 진행 중:** 실행 계획을 수립 중입니다...\n\n', state.conversationId);
 
   const systemMessage: Message = {
     id: 'system',
@@ -169,7 +169,7 @@ async function executeNode(state: ChatState) {
 
   // 단계 시작 알림 + 로딩 표시
   emitStreamingChunk('\n\n---\n\n## ⚙️ 3단계: 계획 실행\n\n', state.conversationId);
-  emitStreamingChunk('*실행 중...*\n\n', state.conversationId);
+  emitStreamingChunk('**단계 진행 중:** 수립된 계획을 실행 중입니다...\n\n', state.conversationId);
 
   const systemMessage: Message = {
     id: 'system',
@@ -210,7 +210,7 @@ async function synthesizeNode(state: ChatState) {
 
   // 단계 시작 알림 + 로딩 표시
   emitStreamingChunk('\n\n---\n\n## ✨ 4단계: 최종 답변\n\n', state.conversationId);
-  emitStreamingChunk('*답변 생성 중...*\n\n', state.conversationId);
+  emitStreamingChunk('**단계 진행 중:** 최종 답변을 생성 중입니다...\n\n', state.conversationId);
 
   const systemMessage: Message = {
     id: 'system',

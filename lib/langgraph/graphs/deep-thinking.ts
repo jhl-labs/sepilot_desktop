@@ -103,6 +103,10 @@ async function initialAnalysisNode(state: DeepThinkingState) {
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n## 🧠 1단계: 초기 심층 분석 (1/5)\n\n', state.conversationId);
+  emitStreamingChunk(
+    '**단계 진행 중:** 문제에 대한 포괄적인 초기 분석을 수행 중입니다...\n\n',
+    state.conversationId
+  );
 
   // RAG 컨텍스트 가져오기
   const query = state.messages[state.messages.length - 1].content;
@@ -163,6 +167,10 @@ async function explorePerspectivesNode(state: DeepThinkingState) {
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## 🔭 2단계: 다중 관점 탐색 (2/5)\n\n', state.conversationId);
+  emitStreamingChunk(
+    '**단계 진행 중:** 다양한 관점에서 문제 해결 방법을 탐색 중입니다...\n\n',
+    state.conversationId
+  );
 
   const perspectiveTypes = [
     { name: '분석적 관점', focus: '논리적 추론, 사실, 데이터, 체계적 분석' },
@@ -226,6 +234,10 @@ async function deepAnalysisNode(state: DeepThinkingState) {
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## 🔬 3단계: 관점별 심화 분석 (3/5)\n\n', state.conversationId);
+  emitStreamingChunk(
+    '**단계 진행 중:** 각 관점에 대한 심화 분석을 수행 중입니다...\n\n',
+    state.conversationId
+  );
 
   const deepAnalyzedPerspectives: Array<{
     id: string;
@@ -288,6 +300,10 @@ async function integrateAndVerifyNode(state: DeepThinkingState) {
 
   // 통합 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## 🔗 4단계: 통합 및 검증 (4/5)\n\n', state.conversationId);
+  emitStreamingChunk(
+    '**단계 진행 중:** 관점들을 통합하고 결과의 유효성을 검증 중입니다...\n\n',
+    state.conversationId
+  );
   emitStreamingChunk('### 📦 관점 통합\n\n', state.conversationId);
 
   const systemMessage1: Message = {
@@ -373,6 +389,10 @@ async function finalSynthesisNode(state: DeepThinkingState) {
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## ✨ 5단계: 최종 답변 (5/5)\n\n', state.conversationId);
+  emitStreamingChunk(
+    '**단계 진행 중:** 모든 사고 과정을 종합하여 최종 답변을 생성 중입니다...\n\n',
+    state.conversationId
+  );
 
   const systemMessage: Message = {
     id: 'system-final',

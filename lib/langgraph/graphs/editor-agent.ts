@@ -2,6 +2,7 @@ import { AgentState } from '../state';
 import type { Message, ToolCall } from '@/types';
 import type { ToolApprovalCallback } from '../types';
 import { getLLMClient } from '@/lib/llm/client';
+import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
 
 /**
  * Editor Agent Graph
@@ -43,7 +44,7 @@ export interface EditorAgentState extends AgentState {
 export class EditorAgentGraph {
   private maxIterations: number;
 
-  constructor(maxIterations = 10) {
+  constructor(maxIterations = 50) {
     this.maxIterations = maxIterations;
   }
 
@@ -187,7 +188,20 @@ export class EditorAgentGraph {
 
       // 4. Execute tools
       console.log('[EditorAgent] Executing tools');
+
+      // Log tool execution start
+      const toolCalls = state.messages[state.messages.length - 1].tool_calls;
+      if (toolCalls && toolCalls.length > 0) {
+        const toolNames = toolCalls.map((t) => t.name).join(', ');
+        emitStreamingChunk(`\n\n🛠️ **도구 실행 중:** ${toolNames}...\n`, state.conversationId);
+      }
+
       const toolsResult = await this.toolsNode(state);
+
+      // Log tool execution end
+      if (toolsResult.toolResults && toolsResult.toolResults.length > 0) {
+        emitStreamingChunk(`✅ **실행 완료**\n\n`, state.conversationId);
+      }
 
       // Remove tool_calls to prevent re-execution
       const updatedMessages = [...state.messages];
