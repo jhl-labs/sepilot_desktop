@@ -221,6 +221,38 @@ Corrected Mermaid code:`;
   }
 
   if (error) {
+    // 최대 재시도 실패 시 텍스트 fallback으로 전환
+    if (retryCount >= MAX_RETRY_COUNT) {
+      return (
+        <div className="my-4 overflow-hidden rounded-lg border border-muted bg-muted/30">
+          <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              Mermaid Code (렌더링 실패 - {MAX_RETRY_COUNT}회 자동 수정 시도됨)
+            </span>
+            <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 gap-1 px-2">
+              {copied ? (
+                <>
+                  <Check className="h-3 w-3" />
+                  <span className="text-xs">복사됨</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3" />
+                  <span className="text-xs">복사</span>
+                </>
+              )}
+            </Button>
+          </div>
+          <div className="p-4 bg-background">
+            <pre className="overflow-x-auto text-xs">
+              <code>{currentChart}</code>
+            </pre>
+          </div>
+        </div>
+      );
+    }
+
+    // 재시도 가능한 경우 에러 UI 표시
     return (
       <div className="my-4 overflow-hidden rounded-lg border border-destructive/50 bg-destructive/10">
         <div className="flex items-center justify-between border-b border-destructive/50 bg-destructive/20 px-4 py-2">
@@ -264,7 +296,7 @@ Corrected Mermaid code:`;
         <div className="p-4">
           <p className="text-sm text-destructive font-medium">다이어그램을 렌더링할 수 없습니다</p>
           <p className="text-xs text-destructive/80 mt-1">
-            문법 오류가 있습니다. 복사 버튼을 클릭하여 코드를 확인하세요.
+            문법 오류가 있습니다. AI가 자동으로 수정을 시도합니다...
           </p>
           {/* 에러 상세 정보는 콘솔에만 출력 - UI에서는 간결하게 */}
         </div>
