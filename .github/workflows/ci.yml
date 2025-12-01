@@ -84,27 +84,48 @@ jobs:
 
       - name: Run frontend tests with coverage
         run: pnpm run test:coverage:frontend
+        continue-on-error: true
+
+      - name: Save frontend coverage
+        if: always()
+        run: |
+          mkdir -p coverage-frontend
+          if [ -f coverage/lcov.info ]; then
+            cp coverage/lcov.info coverage-frontend/lcov.info
+          fi
 
       - name: Run backend tests with coverage
         run: pnpm run test:coverage:backend
 
+      - name: Save backend coverage
+        if: always()
+        run: |
+          mkdir -p coverage-backend
+          if [ -f coverage/lcov.info ]; then
+            cp coverage/lcov.info coverage-backend/lcov.info
+          fi
+
       - name: Upload frontend coverage to Codecov
         uses: codecov/codecov-action@v5
+        if: always()
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
+          files: ./coverage-frontend/lcov.info
           flags: frontend
           name: frontend-coverage
           fail_ci_if_error: false
+          verbose: true
 
       - name: Upload backend coverage to Codecov
         uses: codecov/codecov-action@v5
+        if: always()
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
+          files: ./coverage-backend/lcov.info
           flags: backend
           name: backend-coverage
           fail_ci_if_error: false
+          verbose: true
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}

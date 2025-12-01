@@ -1,7 +1,18 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Settings, Network, Database, Image, Plug, Github, HardDrive, Zap } from 'lucide-react';
+import {
+  Settings,
+  Network,
+  Database,
+  Image,
+  Plug,
+  Github,
+  HardDrive,
+  Zap,
+  FileCode,
+  Globe,
+} from 'lucide-react';
 
 export type SettingSection =
   | 'llm'
@@ -11,7 +22,9 @@ export type SettingSection =
   | 'mcp'
   | 'github'
   | 'backup'
-  | 'quickinput';
+  | 'quickinput'
+  | 'editor'
+  | 'browser';
 
 interface SettingsCategory {
   id: string;
@@ -82,6 +95,18 @@ const settingsCategories: SettingsCategory[] = [
         label: 'Quick Input',
         icon: Zap,
         description: '빠른 입력 및 단축키',
+      },
+      {
+        id: 'editor',
+        label: 'Editor',
+        icon: FileCode,
+        description: '코드 에디터 설정',
+      },
+      {
+        id: 'browser',
+        label: 'Browser',
+        icon: Globe,
+        description: '브라우저 에이전트 설정',
       },
     ],
   },

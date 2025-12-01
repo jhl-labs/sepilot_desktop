@@ -43,6 +43,8 @@ import {
 import { migrateLLMConfig, convertV2ToV1, isLLMConfigV2 } from '@/lib/config/llm-config-migration';
 import { SettingsJsonEditor } from './SettingsJsonEditor';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EditorSettingsTab } from './EditorSettingsTab';
+import { BrowserSettingsTab } from './BrowserSettingsTab';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -853,6 +855,26 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     config={quickInputConfig}
                     setConfig={setQuickInputConfig}
                     onSave={handleQuickInputSave}
+                    isSaving={isSaving}
+                    message={message}
+                  />
+                )}
+
+                {activeTab === 'editor' && (
+                  <EditorSettingsTab
+                    onSave={() =>
+                      setMessage({ type: 'success', text: 'Editor 설정이 저장되었습니다!' })
+                    }
+                    isSaving={isSaving}
+                    message={message}
+                  />
+                )}
+
+                {activeTab === 'browser' && (
+                  <BrowserSettingsTab
+                    onSave={() =>
+                      setMessage({ type: 'success', text: 'Browser 설정이 저장되었습니다!' })
+                    }
                     isSaving={isSaving}
                     message={message}
                   />
