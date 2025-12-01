@@ -7,14 +7,18 @@ import { getLLMClient } from '@/lib/llm/client';
  * Editor Agent Graph
  *
  * Editor 전용 Agent로 다음 기능 제공:
- * - Autocomplete: 코드/텍스트 자동완성
- * - Code Actions: Fix, Improve, Explain, Complete
+ * - Autocomplete: 코드/텍스트 자동완성 (RAG 항상 사용)
+ * - Code Actions: Fix, Improve, Explain, Complete (RAG 항상 사용)
  * - Writing Tools: Continue, Make shorter/longer, Simplify, Fix grammar, Change tone
  *
  * Built-in Tools:
  * - get_file_context: 현재 파일의 imports, types, 주변 코드 분석
  * - search_similar_code: 프로젝트에서 유사한 코드 패턴 검색
  * - get_documentation: 함수/라이브러리 문서 검색
+ *
+ * RAG Integration:
+ * - Autocomplete와 Code Action 시 벡터 DB에서 관련 문서 자동 검색
+ * - 검색된 문서를 컨텍스트로 포함하여 더 정확한 코드 제안 제공
  */
 
 export interface EditorAgentState extends AgentState {
@@ -27,6 +31,13 @@ export interface EditorAgentState extends AgentState {
     action?: 'autocomplete' | 'code-action' | 'writing-tool';
     actionType?: string; // 'fix', 'improve', 'continue', etc.
   };
+  // RAG 관련 상태
+  ragDocuments?: Array<{
+    id: string;
+    content: string;
+    metadata: Record<string, any>;
+    score?: number;
+  }>;
 }
 
 export class EditorAgentGraph {
@@ -48,6 +59,35 @@ export class EditorAgentGraph {
 
     console.log('[EditorAgent] Starting with action:', state.editorContext?.action);
     console.log('[EditorAgent] Action type:', state.editorContext?.actionType);
+
+    // RAG: Autocomplete와 Code Action에서 항상 문서 검색 수행
+    if (
+      state.editorContext?.action === 'autocomplete' ||
+      state.editorContext?.action === 'code-action'
+    ) {
+      console.log('[EditorAgent] RAG enabled - retrieving relevant documents');
+      try {
+        const ragDocuments = await this.retrieveDocuments(state);
+        state = {
+          ...state,
+          ragDocuments,
+        };
+        console.log(`[EditorAgent] Retrieved ${ragDocuments.length} RAG documents`);
+
+        // RAG 문서 검색 결과를 yield
+        yield {
+          type: 'rag_documents',
+          documents: ragDocuments,
+        };
+      } catch (error: any) {
+        console.error('[EditorAgent] RAG retrieval error:', error);
+        // RAG 실패 시에도 계속 진행 (문서 없이)
+        state = {
+          ...state,
+          ragDocuments: [],
+        };
+      }
+    }
 
     let hasError = false;
     let errorMessage = '';
@@ -223,7 +263,33 @@ export class EditorAgentGraph {
       tools.map((t) => t.function.name)
     );
 
-    const response = await provider.chat(state.messages, {
+    // RAG 문서가 있으면 시스템 메시지에 컨텍스트 추가
+    let messages = [...state.messages];
+    if (state.ragDocuments && state.ragDocuments.length > 0) {
+      const ragContext = state.ragDocuments
+        .map((doc, i) => `[문서 ${i + 1}] (관련도: ${(doc.score || 0).toFixed(2)})\n${doc.content}`)
+        .join('\n\n');
+
+      const ragSystemMessage: Message = {
+        id: 'rag-system',
+        role: 'system',
+        content: `다음은 코드베이스에서 검색된 관련 문서입니다. 이 정보를 활용하여 더 정확하고 일관된 코드를 제안하세요.
+
+${ragContext}
+
+위 문서의 패턴과 스타일을 참고하여 응답하되, 사용자의 요청에 집중하세요.`,
+        created_at: Date.now(),
+      };
+
+      // 시스템 메시지를 맨 앞에 삽입
+      messages = [ragSystemMessage, ...messages];
+
+      console.log(
+        `[EditorAgent] Added RAG context with ${state.ragDocuments.length} documents to system message`
+      );
+    }
+
+    const response = await provider.chat(messages, {
       tools: tools.length > 0 ? tools : undefined,
     });
 
@@ -465,6 +531,90 @@ This would fetch documentation from:
 - DevDocs (for frameworks)
 - Local type definitions
 - Online API references`;
+  }
+
+  /**
+   * RAG: 벡터 DB에서 관련 문서 검색
+   */
+  private async retrieveDocuments(
+    state: EditorAgentState
+  ): Promise<
+    Array<{ id: string; content: string; metadata: Record<string, any>; score?: number }>
+  > {
+    try {
+      // Main Process 환경 확인
+      if (typeof window !== 'undefined') {
+        console.error('[EditorAgent] retrieveDocuments should only run in Main Process');
+        return [];
+      }
+
+      // 검색 쿼리 생성: 마지막 사용자 메시지 + 에디터 컨텍스트
+      const lastMessage = state.messages[state.messages.length - 1];
+      let query = lastMessage?.content || '';
+
+      // 에디터 컨텍스트를 쿼리에 추가
+      if (state.editorContext) {
+        const { language, actionType, selectedText } = state.editorContext;
+        const contextParts = [];
+
+        if (language) {
+          contextParts.push(`Language: ${language}`);
+        }
+        if (actionType) {
+          contextParts.push(`Action: ${actionType}`);
+        }
+        if (selectedText && selectedText.length < 200) {
+          contextParts.push(`Code: ${selectedText}`);
+        }
+
+        if (contextParts.length > 0) {
+          query = `${contextParts.join(' | ')} | ${query}`;
+        }
+      }
+
+      console.log('[EditorAgent] RAG query:', query);
+
+      // Dynamic import
+      const { vectorDBService } = await import('../../../electron/services/vectordb');
+      const { databaseService } = await import('../../../electron/services/database');
+      const { initializeEmbedding, getEmbeddingProvider } =
+        await import('@/lib/vectordb/embeddings/client');
+
+      // Embedding config 로드
+      const configStr = databaseService.getSetting('app_config');
+      if (!configStr) {
+        console.warn('[EditorAgent] App config not found, RAG disabled');
+        return [];
+      }
+
+      const appConfig = JSON.parse(configStr);
+      if (!appConfig.embedding) {
+        console.warn('[EditorAgent] Embedding config not found, RAG disabled');
+        return [];
+      }
+
+      // Embedding 초기화
+      initializeEmbedding(appConfig.embedding);
+
+      // 쿼리 임베딩
+      const embedder = getEmbeddingProvider();
+      const queryEmbedding = await embedder.embed(query);
+
+      // 벡터 검색 (상위 3개)
+      const results = await vectorDBService.searchByVector(queryEmbedding, 3);
+
+      console.log(`[EditorAgent] RAG retrieved ${results.length} documents`);
+
+      return results.map((result) => ({
+        id: result.id,
+        content: result.content,
+        metadata: result.metadata,
+        score: result.score,
+      }));
+    } catch (error: any) {
+      console.error('[EditorAgent] RAG retrieval error:', error);
+      return [];
+    }
   }
 }
 

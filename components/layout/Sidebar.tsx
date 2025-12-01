@@ -151,7 +151,7 @@ export function Sidebar({
             onDocumentsClick={onDocumentsClick}
           />
         )}
-        {appMode === 'editor' && <SidebarEditor />}
+        {appMode === 'editor' && <SidebarEditor onDocumentsClick={onDocumentsClick} />}
         {appMode === 'browser' && <SidebarBrowser />}
       </div>
 
