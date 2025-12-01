@@ -81,9 +81,9 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
     },
   });
 
-  // Set User-Agent to standard Chrome
+  // Set User-Agent to latest Chrome (January 2025)
   view.webContents.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
   );
 
   // Inject stealth script on every page load to bypass bot detection

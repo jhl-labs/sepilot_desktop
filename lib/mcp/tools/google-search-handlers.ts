@@ -163,22 +163,88 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
     // Google 검색 URL 생성
     const searchURL = buildGoogleSearchURL(searchOptions);
 
+    // 현재 URL 확인
+    const currentURL = browserView.webContents.getURL();
+
+    // Google 홈페이지가 아니면 먼저 방문 (쿠키 및 세션 설정)
+    if (!currentURL.includes('google.com')) {
+      console.warn('[GoogleSearch] Visiting Google homepage first to establish session...');
+      await browserView.webContents.loadURL('https://www.google.com');
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Homepage load timeout')), 10000);
+
+        const cleanup = () => {
+          clearTimeout(timeout);
+          browserView.webContents.off('did-finish-load', onFinish);
+          browserView.webContents.off('did-fail-load', onFail);
+        };
+
+        const onFinish = () => {
+          cleanup();
+          resolve();
+        };
+
+        const onFail = () => {
+          cleanup();
+          // Homepage 실패는 무시하고 계속 진행
+          resolve();
+        };
+
+        browserView.webContents.once('did-finish-load', onFinish);
+        browserView.webContents.once('did-fail-load', onFail);
+      });
+
+      // 홈페이지 로딩 후 추가 대기
+      await naturalDelay(1000, 2000);
+    }
+
     // 자연스러운 지연 추가 (bot 감지 방지)
-    await naturalDelay(300, 800);
+    await naturalDelay(800, 2000);
 
-    // 검색 페이지로 이동
-    await browserView.webContents.loadURL(searchURL);
+    console.warn('[GoogleSearch] Navigating to search URL:', searchURL);
 
-    // 페이지 로딩 완료 대기
+    // 검색 페이지로 이동 (추가 헤더 포함)
+    await browserView.webContents.loadURL(searchURL, {
+      extraHeaders: [
+        'Accept-Language: en-US,en;q=0.9,ko;q=0.8',
+        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Referer: https://www.google.com/',
+        'Sec-Fetch-Dest: document',
+        'Sec-Fetch-Mode: navigate',
+        'Sec-Fetch-Site: same-origin',
+        'Upgrade-Insecure-Requests: 1',
+      ].join('\n'),
+    });
+
+    // 페이지 로딩 완료 대기 (에러 핸들링 포함)
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Page load timeout'));
+        reject(new Error('Page load timeout (30s)'));
       }, 30000);
 
-      browserView.webContents.once('did-finish-load', () => {
+      const cleanup = () => {
         clearTimeout(timeout);
+        browserView.webContents.off('did-finish-load', onFinish);
+        browserView.webContents.off('did-fail-load', onFail);
+      };
+
+      const onFinish = () => {
+        cleanup();
         resolve();
-      });
+      };
+
+      const onFail = (_event: any, errorCode: number, errorDescription: string, validatedURL: string) => {
+        cleanup();
+        reject(
+          new Error(
+            `ERR_ABORTED (${errorCode}) loading '${validatedURL}': ${errorDescription}. Google이 요청을 차단했을 수 있습니다. 잠시 후 다시 시도하거나, 브라우저를 직접 사용해주세요.`
+          )
+        );
+      };
+
+      browserView.webContents.once('did-finish-load', onFinish);
+      browserView.webContents.once('did-fail-load', onFail);
     });
 
     // 자연스러운 추가 대기 (JavaScript 실행 + 사람처럼 보이기)
