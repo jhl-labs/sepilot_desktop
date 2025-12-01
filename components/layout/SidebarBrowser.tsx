@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Settings, Camera, Album, Bookmark, Wrench } from 'lucide-react';
+import { Plus, Settings, Camera, Album, Bookmark, Wrench, ScrollText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { SimpleChatArea } from '@/components/browser/SimpleChatArea';
@@ -9,17 +9,31 @@ import { SnapshotsList } from '@/components/browser/SnapshotsList';
 import { BookmarksList } from '@/components/browser/BookmarksList';
 import { BrowserSettings } from '@/components/browser/BrowserSettings';
 import { BrowserToolsList } from '@/components/browser/BrowserToolsList';
+import { BrowserAgentLogsView } from '@/components/browser/BrowserAgentLogsView';
 import { isElectron } from '@/lib/platform';
 
 export function SidebarBrowser() {
-  const { clearBrowserChat, browserViewMode, setBrowserViewMode } = useChatStore();
+  const { clearBrowserChat, browserViewMode, setBrowserViewMode, browserAgentIsRunning } =
+    useChatStore();
 
   return (
     <div className="flex h-full w-full flex-col">
       {/* Header - chat 모드에서만 표시 */}
-      {browserViewMode === 'chat' && (
+      {(browserViewMode === 'chat' || browserViewMode === 'logs') && (
         <div className="border-b p-2 bg-muted/20">
           <div className="flex gap-1 justify-end">
+            <Button
+              variant={browserViewMode === 'logs' ? 'secondary' : 'ghost'}
+              size="icon"
+              onClick={() => setBrowserViewMode('logs')}
+              title="Agent 실행 로그"
+              className="h-8 w-8 relative"
+            >
+              <ScrollText className="h-4 w-4" />
+              {browserAgentIsRunning && (
+                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              )}
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -48,6 +62,8 @@ export function SidebarBrowser() {
           <BrowserSettings />
         ) : browserViewMode === 'tools' ? (
           <BrowserToolsList />
+        ) : browserViewMode === 'logs' ? (
+          <BrowserAgentLogsView />
         ) : null}
       </div>
 
