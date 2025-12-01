@@ -118,11 +118,34 @@ export function MarkdownRenderer({
   // Create a wrapped component that includes isStreaming
   const CustomPre = (props: any) => <CustomPreComponent {...props} isStreaming={isStreaming} />;
 
-  // Custom link component
+  // Custom link component with URI error handling
   const CustomLink = ({ href, children, ...props }: any) => {
+    // Validate and sanitize href to prevent URI malformed errors
+    let safeHref = href;
+    try {
+      // Try to construct URL to validate
+      if (href && typeof href === 'string') {
+        // If it's a relative URL or anchor, keep as is
+        if (href.startsWith('#') || href.startsWith('/')) {
+          safeHref = href;
+        } else if (href.startsWith('http://') || href.startsWith('https://')) {
+          // Validate absolute URLs
+          new URL(href);
+          safeHref = href;
+        } else {
+          // For other cases, encode special characters
+          safeHref = encodeURI(href);
+        }
+      }
+    } catch (error) {
+      // If URL validation fails, encode the href
+      console.warn('[MarkdownRenderer] Invalid URL:', href, error);
+      safeHref = encodeURI(href || '');
+    }
+
     return (
       <a
-        href={href}
+        href={safeHref}
         target="_blank"
         rel="noopener noreferrer"
         className="text-primary underline underline-offset-4 hover:text-primary/80"
@@ -133,95 +156,121 @@ export function MarkdownRenderer({
     );
   };
 
+  // Render markdown content
+  const renderMarkdownContent = () => {
+    try {
+      return (
+        <Markdown
+          options={{
+            overrides: {
+              pre: {
+                component: CustomPre,
+              },
+              code: {
+                component: CustomCode,
+              },
+              a: {
+                component: CustomLink,
+              },
+              blockquote: {
+                props: {
+                  className: 'border-l-4 border-primary/30 pl-4 italic text-muted-foreground my-4',
+                },
+              },
+              h1: {
+                props: {
+                  className: 'text-2xl font-semibold mt-6 mb-4 scroll-m-20',
+                },
+              },
+              h2: {
+                props: {
+                  className: 'text-xl font-semibold mt-5 mb-3 scroll-m-20',
+                },
+              },
+              h3: {
+                props: {
+                  className: 'text-lg font-semibold mt-4 mb-2 scroll-m-20',
+                },
+              },
+              h4: {
+                props: {
+                  className: 'text-base font-semibold mt-3 mb-2 scroll-m-20',
+                },
+              },
+              h5: {
+                props: {
+                  className: 'text-sm font-semibold mt-2 mb-1 scroll-m-20',
+                },
+              },
+              h6: {
+                props: {
+                  className: 'text-xs font-semibold mt-2 mb-1 scroll-m-20',
+                },
+              },
+              p: {
+                props: {
+                  className: 'leading-7 [&:not(:first-child)]:mt-3',
+                },
+              },
+              ul: {
+                props: {
+                  className: 'my-3 ml-6 list-disc [&>li]:mt-1',
+                },
+              },
+              ol: {
+                props: {
+                  className: 'my-3 ml-6 list-decimal [&>li]:mt-1',
+                },
+              },
+              table: {
+                props: {
+                  className: 'w-full border-collapse border border-border my-4',
+                },
+              },
+              th: {
+                props: {
+                  className: 'border border-border bg-muted px-4 py-2 text-left font-semibold',
+                },
+              },
+              td: {
+                props: {
+                  className: 'border border-border px-4 py-2',
+                },
+              },
+              hr: {
+                props: {
+                  className: 'my-8 border-border',
+                },
+              },
+            },
+          }}
+        >
+          {content}
+        </Markdown>
+      );
+    } catch (error) {
+      // Catch any rendering errors (including URI malformed)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown rendering error';
+      console.error('[MarkdownRenderer] Rendering error:', error);
+
+      return (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+          <p className="text-sm font-medium text-destructive">마크다운 렌더링 오류</p>
+          <p className="mt-1 text-xs text-muted-foreground">{errorMessage}</p>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs font-medium">원본 내용 보기</summary>
+            <pre className="mt-2 overflow-auto rounded bg-muted p-2 text-xs max-h-60">
+              {content}
+            </pre>
+          </details>
+        </div>
+      );
+    }
+  };
+
   return (
     <div className={cn('prose prose-sm dark:prose-invert max-w-none', className)}>
-      <Markdown
-        options={{
-          overrides: {
-            pre: {
-              component: CustomPre,
-            },
-            code: {
-              component: CustomCode,
-            },
-            a: {
-              component: CustomLink,
-            },
-            blockquote: {
-              props: {
-                className: 'border-l-4 border-primary/30 pl-4 italic text-muted-foreground my-4',
-              },
-            },
-            h1: {
-              props: {
-                className: 'text-2xl font-semibold mt-6 mb-4 scroll-m-20',
-              },
-            },
-            h2: {
-              props: {
-                className: 'text-xl font-semibold mt-5 mb-3 scroll-m-20',
-              },
-            },
-            h3: {
-              props: {
-                className: 'text-lg font-semibold mt-4 mb-2 scroll-m-20',
-              },
-            },
-            h4: {
-              props: {
-                className: 'text-base font-semibold mt-3 mb-2 scroll-m-20',
-              },
-            },
-            h5: {
-              props: {
-                className: 'text-sm font-semibold mt-2 mb-1 scroll-m-20',
-              },
-            },
-            h6: {
-              props: {
-                className: 'text-xs font-semibold mt-2 mb-1 scroll-m-20',
-              },
-            },
-            p: {
-              props: {
-                className: 'leading-7 [&:not(:first-child)]:mt-3',
-              },
-            },
-            ul: {
-              props: {
-                className: 'my-3 ml-6 list-disc [&>li]:mt-1',
-              },
-            },
-            ol: {
-              props: {
-                className: 'my-3 ml-6 list-decimal [&>li]:mt-1',
-              },
-            },
-            table: {
-              props: {
-                className: 'w-full border-collapse border border-border my-4',
-              },
-            },
-            th: {
-              props: {
-                className: 'border border-border bg-muted px-4 py-2 text-left font-semibold',
-              },
-            },
-            td: {
-              props: {
-                className: 'border border-border px-4 py-2',
-              },
-            },
-            hr: {
-              props: {
-                className: 'my-8 border-border',
-              },
-            },
-          },
-        }}
-      >
-        {content}
-      </Markdown>
+      {renderMarkdownContent()}
     </div>
   );
 }
