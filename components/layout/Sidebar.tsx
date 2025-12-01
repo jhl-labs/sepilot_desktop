@@ -9,6 +9,7 @@ import {
   Trash,
   FileText,
   Search,
+  FolderOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -44,6 +45,7 @@ export function Sidebar({
     editorViewMode,
     setEditorViewMode,
     setChatViewMode,
+    clearEditorChat,
   } = useChatStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -122,11 +124,33 @@ export function Sidebar({
             <Button
               variant="ghost"
               size="icon"
+              onClick={() => {
+                if (editorViewMode === 'chat') {
+                  if (window.confirm('현재 대화 내역을 모두 삭제하시겠습니까?')) {
+                    clearEditorChat();
+                    setEditorViewMode('chat');
+                  }
+                } else {
+                  setEditorViewMode('chat');
+                }
+              }}
+              title={editorViewMode === 'chat' ? '새 대화' : 'AI 코딩 어시스턴트'}
+              className={editorViewMode === 'chat' ? 'bg-accent' : ''}
+            >
+              {editorViewMode === 'chat' ? (
+                <Plus className="h-5 w-5" />
+              ) : (
+                <MessageSquare className="h-5 w-5" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setEditorViewMode('files')}
               title="파일 탐색기"
               className={editorViewMode === 'files' ? 'bg-accent' : ''}
             >
-              <FileText className="h-5 w-5" />
+              <FolderOpen className="h-5 w-5" />
             </Button>
             <Button
               variant="ghost"
@@ -136,6 +160,9 @@ export function Sidebar({
               className={editorViewMode === 'search' ? 'bg-accent' : ''}
             >
               <Search className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onDocumentsClick} title="문서 관리 (RAG)">
+              <FileText className="h-5 w-5" />
             </Button>
           </div>
         )}
@@ -151,7 +178,7 @@ export function Sidebar({
             onDocumentsClick={onDocumentsClick}
           />
         )}
-        {appMode === 'editor' && <SidebarEditor onDocumentsClick={onDocumentsClick} />}
+        {appMode === 'editor' && <SidebarEditor />}
         {appMode === 'browser' && <SidebarBrowser />}
       </div>
 
