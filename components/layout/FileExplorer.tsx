@@ -23,16 +23,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useFileSystem } from '@/hooks/use-file-system';
+import { useFileClipboard } from '@/hooks/use-file-clipboard';
 import { getLanguageFromFilename } from '@/lib/utils/file-language';
 import { FileTreeItem, type FileNode } from './FileTreeItem';
+import { FileTreeContextMenu } from './FileTreeContextMenu';
 import { isElectron } from '@/lib/platform';
 import path from 'path-browserify';
 
@@ -46,6 +42,7 @@ export function FileExplorer() {
   const [newItemParentPath, setNewItemParentPath] = useState<string>('');
   const [newItemName, setNewItemName] = useState('');
   const { readDirectory, readFile, createFile, createDirectory } = useFileSystem();
+  const { pasteFiles } = useFileClipboard();
 
   // Ref for dialog input
   const newItemInputRef = useRef<HTMLInputElement>(null);
@@ -157,6 +154,16 @@ export function FileExplorer() {
     setShowNewItemDialog(true);
   };
 
+  const handlePasteInRoot = async () => {
+    if (!workingDirectory) {
+      console.warn('[FileExplorer] No working directory set');
+      return;
+    }
+
+    console.log('[FileExplorer] Pasting into root:', workingDirectory);
+    await pasteFiles(workingDirectory, () => loadFileTree(workingDirectory));
+  };
+
   return (
     <div className="flex h-full flex-col">
       {/* Working Directory Selection */}
@@ -187,53 +194,48 @@ export function FileExplorer() {
       </div>
 
       {/* File Tree */}
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div className="flex-1 overflow-y-auto px-2 py-2">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-                로딩 중...
-              </div>
-            ) : !workingDirectory ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                <Folder className="mb-2 h-8 w-8 opacity-50" />
-                <p className="text-sm">디렉토리를 선택하세요</p>
-                <p className="mt-1 text-xs">파일 탐색을 시작합니다</p>
-              </div>
-            ) : fileTree && fileTree.length > 0 ? (
-              <div className="space-y-0.5">
-                {fileTree.map((node) => (
-                  <FileTreeItem
-                    key={node.path}
-                    node={node}
-                    level={0}
-                    isActive={activeFilePath === node.path}
-                    onFileClick={handleFileClick}
-                    onRefresh={() => loadFileTree(workingDirectory!)}
-                    parentPath={workingDirectory!}
-                    onNewFile={(parentPath) => openNewItemDialog('file', parentPath)}
-                    onNewFolder={(parentPath) => openNewItemDialog('folder', parentPath)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-                빈 디렉토리
-              </div>
-            )}
-          </div>
-        </ContextMenuTrigger>
-        {workingDirectory && (
-          <ContextMenuContent>
-            <ContextMenuItem onClick={() => openNewItemDialog('file', workingDirectory)}>
-              새 파일
-            </ContextMenuItem>
-            <ContextMenuItem onClick={() => openNewItemDialog('folder', workingDirectory)}>
-              새 폴더
-            </ContextMenuItem>
-          </ContextMenuContent>
-        )}
-      </ContextMenu>
+      <FileTreeContextMenu
+        isRootContext
+        onNewFile={workingDirectory ? () => openNewItemDialog('file', workingDirectory) : undefined}
+        onNewFolder={
+          workingDirectory ? () => openNewItemDialog('folder', workingDirectory) : undefined
+        }
+        onPaste={workingDirectory ? handlePasteInRoot : undefined}
+      >
+        <div className="flex-1 overflow-y-auto px-2 py-2">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+              로딩 중...
+            </div>
+          ) : !workingDirectory ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+              <Folder className="mb-2 h-8 w-8 opacity-50" />
+              <p className="text-sm">디렉토리를 선택하세요</p>
+              <p className="mt-1 text-xs">파일 탐색을 시작합니다</p>
+            </div>
+          ) : fileTree && fileTree.length > 0 ? (
+            <div className="space-y-0.5">
+              {fileTree.map((node) => (
+                <FileTreeItem
+                  key={node.path}
+                  node={node}
+                  level={0}
+                  isActive={activeFilePath === node.path}
+                  onFileClick={handleFileClick}
+                  onRefresh={() => loadFileTree(workingDirectory!)}
+                  parentPath={workingDirectory!}
+                  onNewFile={(parentPath) => openNewItemDialog('file', parentPath)}
+                  onNewFolder={(parentPath) => openNewItemDialog('folder', parentPath)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+              빈 디렉토리
+            </div>
+          )}
+        </div>
+      </FileTreeContextMenu>
 
       {/* New Item Dialog */}
       <Dialog open={showNewItemDialog} onOpenChange={setShowNewItemDialog}>

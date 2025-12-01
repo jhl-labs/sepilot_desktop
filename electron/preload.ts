@@ -223,6 +223,9 @@ const electronAPI = {
       documents: Array<{ id: string; content: string; metadata: Record<string, any> }>,
       options: { chunkSize: number; chunkOverlap: number; batchSize: number }
     ) => ipcRenderer.invoke('vectordb-index-documents', documents, options),
+    export: () => ipcRenderer.invoke('vectordb-export'),
+    import: (exportData: any, options?: { overwrite?: boolean }) =>
+      ipcRenderer.invoke('vectordb-import', exportData, options),
   },
 
   // File operations
@@ -246,6 +249,13 @@ const electronAPI = {
     createDirectory: (dirPath: string) => ipcRenderer.invoke('fs:create-directory', dirPath),
     delete: (targetPath: string) => ipcRenderer.invoke('fs:delete', targetPath),
     rename: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:rename', oldPath, newPath),
+    copy: (sourcePath: string, destPath: string) =>
+      ipcRenderer.invoke('fs:copy', sourcePath, destPath),
+    move: (sourcePath: string, destPath: string) =>
+      ipcRenderer.invoke('fs:move', sourcePath, destPath),
+    getAbsolutePath: (filePath: string) => ipcRenderer.invoke('fs:get-absolute-path', filePath),
+    getRelativePath: (from: string, to: string) =>
+      ipcRenderer.invoke('fs:get-relative-path', from, to),
     searchFiles: (query: string, dirPath: string, options?: any) =>
       ipcRenderer.invoke('fs:search-files', query, dirPath, options),
   },

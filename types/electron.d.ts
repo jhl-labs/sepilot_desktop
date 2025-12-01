@@ -324,6 +324,21 @@ interface VectorSearchResult {
   metadata?: Record<string, unknown>;
 }
 
+// Export 데이터 타입
+interface ExportData {
+  version: string;
+  exportedAt: string;
+  documents: VectorDocument[];
+  totalCount: number;
+}
+
+// Import 결과 타입
+interface ImportResult {
+  imported: number;
+  overwritten: number;
+  skipped: number;
+}
+
 interface VectorDBAPI {
   initialize: (config: { indexName: string; dimension: number }) => Promise<IPCResponse>;
   createIndex: (name: string, dimension: number) => Promise<IPCResponse>;
@@ -338,6 +353,11 @@ interface VectorDBAPI {
     documents: Array<{ id: string; content: string; metadata: Record<string, any> }>,
     options: { chunkSize: number; chunkOverlap: number; batchSize: number }
   ) => Promise<IPCResponse>;
+  export: () => Promise<IPCResponse<ExportData>>;
+  import: (
+    exportData: ExportData,
+    options?: { overwrite?: boolean }
+  ) => Promise<IPCResponse<ImportResult>>;
 }
 
 // GitHub 저장소 타입
@@ -418,6 +438,10 @@ interface FileSystemAPI {
   createDirectory: (dirPath: string) => Promise<IPCResponse>;
   delete: (targetPath: string) => Promise<IPCResponse>;
   rename: (oldPath: string, newPath: string) => Promise<IPCResponse>;
+  copy: (sourcePath: string, destPath: string) => Promise<IPCResponse>;
+  move: (sourcePath: string, destPath: string) => Promise<IPCResponse>;
+  getAbsolutePath: (filePath: string) => Promise<IPCResponse<string>>;
+  getRelativePath: (from: string, to: string) => Promise<IPCResponse<string>>;
   searchFiles: (
     query: string,
     dirPath: string,

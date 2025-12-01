@@ -537,6 +537,85 @@ export function registerFileHandlers() {
     }
   });
 
+  // 파일/폴더 복사 (Editor용 - 클립보드 기능)
+  ipcMain.handle('fs:copy', async (_event, sourcePath: string, destPath: string) => {
+    try {
+      const stats = await fs.stat(sourcePath);
+
+      if (stats.isDirectory()) {
+        // 디렉토리 복사 (재귀적으로)
+        await fs.cp(sourcePath, destPath, { recursive: true });
+        console.log('[File] Directory copied successfully:', sourcePath, '->', destPath);
+      } else {
+        // 파일 복사
+        await fs.copyFile(sourcePath, destPath);
+        console.log('[File] File copied successfully:', sourcePath, '->', destPath);
+      }
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error copying:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to copy',
+      };
+    }
+  });
+
+  // 파일/폴더 이동 (Editor용 - 클립보드 잘라내기)
+  ipcMain.handle('fs:move', async (_event, sourcePath: string, destPath: string) => {
+    try {
+      await fs.rename(sourcePath, destPath);
+      console.log('[File] Moved successfully:', sourcePath, '->', destPath);
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error moving:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to move',
+      };
+    }
+  });
+
+  // 파일/폴더 경로 복사를 위한 절대 경로 가져오기
+  ipcMain.handle('fs:get-absolute-path', async (_event, filePath: string) => {
+    try {
+      const absolutePath = path.resolve(filePath);
+      return {
+        success: true,
+        data: absolutePath,
+      };
+    } catch (error: any) {
+      console.error('[File] Error getting absolute path:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get absolute path',
+      };
+    }
+  });
+
+  // 상대 경로 계산 (working directory 기준)
+  ipcMain.handle('fs:get-relative-path', async (_event, from: string, to: string) => {
+    try {
+      const relativePath = path.relative(from, to);
+      return {
+        success: true,
+        data: relativePath,
+      };
+    } catch (error: any) {
+      console.error('[File] Error getting relative path:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get relative path',
+      };
+    }
+  });
+
   // 파일 전체 검색 (ripgrep 사용)
   ipcMain.handle(
     'fs:search-files',

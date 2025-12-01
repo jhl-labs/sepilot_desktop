@@ -12,27 +12,13 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Folder,
-  FolderOpen,
-  File,
-  ChevronRight,
-  ChevronDown,
-  Edit3,
-  Trash2,
-  FilePlus,
-  FolderPlus,
-} from 'lucide-react';
+import { Folder, FolderOpen, File, ChevronRight, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 import { useFileSystem } from '@/hooks/use-file-system';
+import { useFileClipboard } from '@/hooks/use-file-clipboard';
+import { useChatStore } from '@/lib/store/chat-store';
+import { FileTreeContextMenu } from './FileTreeContextMenu';
 import path from 'path-browserify';
 
 export interface FileNode {
@@ -67,6 +53,8 @@ export function FileTreeItem({
   const [newName, setNewName] = useState(node.name);
   const [children, setChildren] = useState(node.children);
   const { deleteItem, renameItem, readDirectory, isAvailable } = useFileSystem();
+  const { copyFiles, cutFiles, pasteFiles } = useFileClipboard();
+  const { workingDirectory } = useChatStore();
 
   const handleClick = async () => {
     if (node.isDirectory) {
@@ -137,77 +125,117 @@ export function FileTreeItem({
     }
   };
 
+  const handleCopy = () => {
+    copyFiles([node.path]);
+    console.log('[FileTreeItem] Copied to clipboard:', node.path);
+  };
+
+  const handleCut = () => {
+    cutFiles([node.path]);
+    console.log('[FileTreeItem] Cut to clipboard:', node.path);
+  };
+
+  const handlePaste = async () => {
+    if (!node.isDirectory) {
+      console.warn('[FileTreeItem] Cannot paste into a file');
+      return;
+    }
+
+    console.log('[FileTreeItem] Pasting into:', node.path);
+    await pasteFiles(node.path, onRefresh);
+  };
+
+  const handleCopyPath = async () => {
+    if (!isAvailable || !window.electronAPI) {
+      console.warn('[FileTreeItem] API unavailable');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.fs.getAbsolutePath(node.path);
+      if (result.success && result.data) {
+        await navigator.clipboard.writeText(result.data);
+        console.log('[FileTreeItem] Absolute path copied:', result.data);
+      }
+    } catch (error) {
+      console.error('[FileTreeItem] Error copying path:', error);
+    }
+  };
+
+  const handleCopyRelativePath = async () => {
+    if (!isAvailable || !window.electronAPI || !workingDirectory) {
+      console.warn('[FileTreeItem] API unavailable or no working directory');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.fs.getRelativePath(workingDirectory, node.path);
+      if (result.success && result.data) {
+        await navigator.clipboard.writeText(result.data);
+        console.log('[FileTreeItem] Relative path copied:', result.data);
+      }
+    } catch (error) {
+      console.error('[FileTreeItem] Error copying relative path:', error);
+    }
+  };
+
   return (
     <div>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          {isRenaming ? (
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onBlur={handleRename}
-              onKeyDown={handleKeyDown}
-              className="h-auto px-2 py-1 text-sm"
-              style={{ marginLeft: `${level * 12 + 8}px` }}
-              autoFocus
-            />
-          ) : (
-            <button
-              onClick={handleClick}
-              className={cn(
-                'flex w-full items-center gap-1 px-2 py-1 text-sm hover:bg-accent rounded transition-colors text-left',
-                isActive && 'bg-accent text-accent-foreground font-medium'
-              )}
-              style={{ paddingLeft: `${level * 12 + 8}px` }}
-            >
-              {node.isDirectory ? (
-                <>
-                  {isExpanded ? (
-                    <ChevronDown className="h-3 w-3 shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3 shrink-0" />
-                  )}
-                  {isExpanded ? (
-                    <FolderOpen className="h-4 w-4 shrink-0 text-blue-500" />
-                  ) : (
-                    <Folder className="h-4 w-4 shrink-0 text-blue-500" />
-                  )}
-                </>
-              ) : (
-                <>
-                  <span className="w-3 shrink-0" />
-                  <File className="h-4 w-4 shrink-0 text-muted-foreground" />
-                </>
-              )}
-              <span className="truncate">{node.name}</span>
-            </button>
-          )}
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          {node.isDirectory && (
-            <>
-              <ContextMenuItem onClick={() => onNewFile(node.path)}>
-                <FilePlus className="mr-2 h-4 w-4" />새 파일
-              </ContextMenuItem>
-              <ContextMenuItem onClick={() => onNewFolder(node.path)}>
-                <FolderPlus className="mr-2 h-4 w-4" />새 폴더
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-            </>
-          )}
-          <ContextMenuItem onClick={() => setIsRenaming(true)}>
-            <Edit3 className="mr-2 h-4 w-4" />
-            이름 변경
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={handleDelete}
-            className="text-destructive focus:text-destructive"
+      <FileTreeContextMenu
+        filePath={node.path}
+        isDirectory={node.isDirectory}
+        onCopy={handleCopy}
+        onCut={handleCut}
+        onPaste={node.isDirectory ? handlePaste : undefined}
+        onRename={() => setIsRenaming(true)}
+        onDelete={handleDelete}
+        onNewFile={node.isDirectory ? () => onNewFile(node.path) : undefined}
+        onNewFolder={node.isDirectory ? () => onNewFolder(node.path) : undefined}
+        onCopyPath={handleCopyPath}
+        onCopyRelativePath={handleCopyRelativePath}
+      >
+        {isRenaming ? (
+          <Input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onBlur={handleRename}
+            onKeyDown={handleKeyDown}
+            className="h-auto px-2 py-1 text-sm"
+            style={{ marginLeft: `${level * 12 + 8}px` }}
+            autoFocus
+          />
+        ) : (
+          <button
+            onClick={handleClick}
+            className={cn(
+              'flex w-full items-center gap-1 px-2 py-1 text-sm hover:bg-accent rounded transition-colors text-left',
+              isActive && 'bg-accent text-accent-foreground font-medium'
+            )}
+            style={{ paddingLeft: `${level * 12 + 8}px` }}
           >
-            <Trash2 className="mr-2 h-4 w-4" />
-            삭제
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+            {node.isDirectory ? (
+              <>
+                {isExpanded ? (
+                  <ChevronDown className="h-3 w-3 shrink-0" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 shrink-0" />
+                )}
+                {isExpanded ? (
+                  <FolderOpen className="h-4 w-4 shrink-0 text-blue-500" />
+                ) : (
+                  <Folder className="h-4 w-4 shrink-0 text-blue-500" />
+                )}
+              </>
+            ) : (
+              <>
+                <span className="w-3 shrink-0" />
+                <File className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </>
+            )}
+            <span className="truncate">{node.name}</span>
+          </button>
+        )}
+      </FileTreeContextMenu>
 
       {node.isDirectory && isExpanded && children && (
         <div>

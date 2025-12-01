@@ -113,6 +113,7 @@ interface ChatStore {
   activeFilePath: string | null;
   activeEditorTab: 'files' | 'search' | 'browser'; // Files, Search, or Browser tab in Editor mode
   showTerminalPanel: boolean; // Show/hide terminal panel in Editor mode
+  fileClipboard: { operation: 'copy' | 'cut'; paths: string[] } | null; // File clipboard for copy/cut/paste
 
   // New: Thinking Mode and Feature Toggles
   thinkingMode: ThinkingMode;
@@ -263,6 +264,12 @@ interface ChatStore {
   setActiveEditorTab: (tab: 'files' | 'search') => void;
   setShowTerminalPanel: (show: boolean) => void;
 
+  // Actions - File Clipboard
+  setFileClipboard: (clipboard: { operation: 'copy' | 'cut'; paths: string[] } | null) => void;
+  copyFiles: (paths: string[]) => void;
+  cutFiles: (paths: string[]) => void;
+  clearFileClipboard: () => void;
+
   // Actions - Editor
   openFile: (
     file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }
@@ -295,6 +302,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   activeFilePath: null,
   activeEditorTab: 'files',
   showTerminalPanel: false,
+  fileClipboard: null,
 
   // New: Graph Configuration
   thinkingMode: 'instant',
@@ -1040,6 +1048,23 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setShowTerminalPanel: (show: boolean) => {
     set({ showTerminalPanel: show });
+  },
+
+  // File Clipboard Actions
+  setFileClipboard: (clipboard) => {
+    set({ fileClipboard: clipboard });
+  },
+
+  copyFiles: (paths) => {
+    set({ fileClipboard: { operation: 'copy', paths } });
+  },
+
+  cutFiles: (paths) => {
+    set({ fileClipboard: { operation: 'cut', paths } });
+  },
+
+  clearFileClipboard: () => {
+    set({ fileClipboard: null });
   },
 
   // Browser Chat Actions
