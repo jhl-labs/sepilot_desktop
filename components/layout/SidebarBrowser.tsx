@@ -3,8 +3,7 @@
 import { Plus, Settings, Camera, Album, Bookmark, Wrench, ScrollText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
-import { SimpleChatArea } from '@/components/browser/SimpleChatArea';
-import { SimpleChatInput } from '@/components/browser/SimpleChatInput';
+import { BrowserChat } from '@/components/browser/BrowserChat';
 import { SnapshotsList } from '@/components/browser/SnapshotsList';
 import { BookmarksList } from '@/components/browser/BookmarksList';
 import { BrowserSettings } from '@/components/browser/BrowserSettings';
@@ -50,10 +49,7 @@ export function SidebarBrowser() {
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto flex flex-col">
         {browserViewMode === 'chat' ? (
-          <>
-            <SimpleChatArea />
-            <SimpleChatInput />
-          </>
+          <BrowserChat />
         ) : browserViewMode === 'snapshots' ? (
           <SnapshotsList />
         ) : browserViewMode === 'bookmarks' ? (

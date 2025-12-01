@@ -161,9 +161,6 @@ export function Sidebar({
             >
               <Search className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={onDocumentsClick} title="문서 관리 (RAG)">
-              <FileText className="h-5 w-5" />
-            </Button>
           </div>
         )}
       </div>
@@ -178,7 +175,7 @@ export function Sidebar({
             onDocumentsClick={onDocumentsClick}
           />
         )}
-        {appMode === 'editor' && <SidebarEditor />}
+        {appMode === 'editor' && <SidebarEditor onDocumentsClick={onDocumentsClick} />}
         {appMode === 'browser' && <SidebarBrowser />}
       </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, Terminal } from 'lucide-react';
+import { Settings, Terminal, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
@@ -10,7 +10,11 @@ import { EditorChatArea } from '@/components/editor/EditorChatArea';
 import { EditorChatInput } from '@/components/editor/EditorChatInput';
 import { EditorSettings } from '@/components/editor/EditorSettings';
 
-export function SidebarEditor() {
+interface SidebarEditorProps {
+  onDocumentsClick?: () => void;
+}
+
+export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
   const {
     editorViewMode,
     setEditorViewMode,
@@ -41,6 +45,15 @@ export function SidebarEditor() {
       <div className="shrink-0 border-t p-2">
         <div className="flex gap-1">
           <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onDocumentsClick}
+            title="문서 관리 (RAG)"
+            className="flex-1"
+          >
+            <FileText className="h-5 w-5" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
