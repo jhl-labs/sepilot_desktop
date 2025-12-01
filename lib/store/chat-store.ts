@@ -166,6 +166,7 @@ interface ChatStore {
   // Actions - Conversations
   createConversation: () => Promise<string>;
   deleteConversation: (id: string) => Promise<void>;
+  duplicateConversation: (id: string) => Promise<string>;
   setActiveConversation: (id: string) => Promise<void>;
   updateConversationTitle: (id: string, title: string) => Promise<void>;
   updateConversationPersona: (id: string, personaId: string | null) => Promise<void>;
@@ -573,6 +574,95 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       delete allMessages[id];
       saveToLocalStorage(STORAGE_KEYS.MESSAGES, allMessages);
     }
+  },
+
+  duplicateConversation: async (id: string) => {
+    const state = get();
+    const sourceConversation = state.conversations.find((c) => c.id === id);
+    if (!sourceConversation) {
+      throw new Error('Source conversation not found');
+    }
+
+    // Load messages from source conversation
+    let sourceMessages: Message[] = [];
+    if (isElectron() && window.electronAPI) {
+      try {
+        const result = await window.electronAPI.chat.loadMessages(id);
+        if (result.success && result.data) {
+          sourceMessages = result.data;
+        }
+      } catch (error) {
+        console.error('Error loading source messages:', error);
+      }
+    } else {
+      const allMessages = loadFromLocalStorage<Record<string, Message[]>>(
+        STORAGE_KEYS.MESSAGES,
+        {}
+      );
+      sourceMessages = allMessages[id] || [];
+    }
+
+    // Create new conversation with duplicated data
+    const newConversation: Conversation = {
+      ...sourceConversation,
+      id: generateId(),
+      title: `${sourceConversation.title} (복사본)`,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    };
+
+    // Duplicate messages with new IDs
+    const duplicatedMessages: Message[] = sourceMessages.map((msg) => ({
+      ...msg,
+      id: generateId(),
+      conversation_id: newConversation.id,
+      created_at: Date.now(),
+    }));
+
+    // Save new conversation
+    let saved = false;
+    if (isElectron() && window.electronAPI) {
+      try {
+        const result = await window.electronAPI.chat.saveConversation(newConversation);
+        if (result.success) {
+          saved = true;
+          // Save duplicated messages
+          for (const message of duplicatedMessages) {
+            await window.electronAPI.chat.saveMessage(message);
+          }
+        } else {
+          console.error('Failed to save duplicated conversation to DB:', result.error);
+        }
+      } catch (error) {
+        console.error('Error saving duplicated conversation to DB:', error);
+      }
+    }
+
+    // Update state and fallback to localStorage if DB save failed
+    set((currentState) => {
+      const newConversations = [newConversation, ...currentState.conversations];
+      if (!saved) {
+        saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, newConversations);
+        // Save messages to localStorage
+        const allMessages = loadFromLocalStorage<Record<string, Message[]>>(
+          STORAGE_KEYS.MESSAGES,
+          {}
+        );
+        allMessages[newConversation.id] = duplicatedMessages;
+        saveToLocalStorage(STORAGE_KEYS.MESSAGES, allMessages);
+      }
+
+      // Initialize cache for new conversation
+      const newCache = new Map(currentState.messagesCache);
+      newCache.set(newConversation.id, duplicatedMessages);
+
+      return {
+        conversations: newConversations,
+        messagesCache: newCache,
+      };
+    });
+
+    return newConversation.id;
   },
 
   setActiveConversation: async (id: string) => {

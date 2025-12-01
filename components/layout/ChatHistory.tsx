@@ -1,6 +1,16 @@
 'use client';
 
-import { MessageSquare, Pencil, Trash2, Search, X, User, Check, BookOpen } from 'lucide-react';
+import {
+  MessageSquare,
+  Pencil,
+  Trash2,
+  Search,
+  X,
+  User,
+  Check,
+  BookOpen,
+  Copy,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -40,6 +50,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     activeConversationId,
     setActiveConversation,
     deleteConversation,
+    duplicateConversation,
     updateConversationTitle,
     updateConversationPersona,
     searchConversations,
@@ -89,6 +100,18 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   const handleDelete = async (id: string) => {
     if (window.confirm('이 대화를 삭제하시겠습니까?')) {
       await deleteConversation(id);
+    }
+  };
+
+  const handleDuplicate = async (id: string) => {
+    try {
+      const newConversationId = await duplicateConversation(id);
+      // Switch to the duplicated conversation
+      await setActiveConversation(newConversationId);
+      onConversationClick?.();
+    } catch (error) {
+      console.error('Failed to duplicate conversation:', error);
+      // TODO: Show error toast to user
     }
   };
 
@@ -392,6 +415,10 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                         >
                           <BookOpen className="mr-2 h-4 w-4" />
                           지식 저장
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicate(conversation.id)}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          대화 복제
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDelete(conversation.id)}
