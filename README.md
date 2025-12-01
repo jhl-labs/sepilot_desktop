@@ -10,9 +10,10 @@ _Claude Desktop과 같은 수준의 LLM 데스크톱 애플리케이션_
 [![Next.js](https://img.shields.io/badge/Next.js-16.0-black)](https://nextjs.org/)
 [![Electron](https://img.shields.io/badge/Electron-31.0-47848F)](https://www.electronjs.org/)
 [![CI](https://github.com/jhl-labs/sepilot_desktop/workflows/CI/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions)
-[![codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
-[![Coverage](https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graphs/sunburst.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
+[![codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graph/badge.svg?token=RTDC27F34B)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
 [![License](https://img.shields.io/badge/license-Custom-green)](./LICENSE)
+
+![Codecov Tree Graph](https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/tree.svg?token=RTDC27F34B)
 
 [English](#english) | [한국어](#korean)
 
