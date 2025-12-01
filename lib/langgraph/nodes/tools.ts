@@ -361,9 +361,23 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
               toolName: call.name,
               result: builtinResult,
             };
-          } catch {
-            // Built-in tool이 아니면 에러 발생 - MCP tool 확인으로 넘어감
-            console.log(`[Tools] Not a built-in tool (${call.name}), checking MCP tools...`);
+          } catch (error) {
+            // "Unknown builtin tool" 에러면 MCP tool로 넘어감
+            // 그 외 에러는 builtin tool 실행 중 발생한 에러이므로 바로 반환
+            const errorMessage = error instanceof Error ? error.message : String(error);
+
+            if (errorMessage.includes('Unknown builtin tool')) {
+              console.log(`[Tools] Not a built-in tool (${call.name}), checking MCP tools...`);
+            } else {
+              // Builtin tool 실행 중 에러 발생
+              console.error(`[Tools] Built-in tool error (${call.name}):`, error);
+              return {
+                toolCallId: call.id,
+                toolName: call.name,
+                result: null,
+                error: errorMessage,
+              };
+            }
           }
 
           // Main Process에서 직접 MCP 도구 실행
