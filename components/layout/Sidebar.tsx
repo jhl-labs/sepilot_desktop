@@ -7,7 +7,6 @@ import {
   Globe,
   Plus,
   Trash,
-  FileText,
   Search,
   FolderOpen,
 } from 'lucide-react';
