@@ -139,7 +139,17 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
 
   // Handle console messages for debugging
   view.webContents.on('console-message', (_, level, message) => {
-    logger.info(`[BrowserView Console] ${message}`);
+    // level: 0=verbose, 1=info, 2=warning, 3=error
+    // Google 페이지의 에러는 무시 (외부 페이지의 JavaScript 에러)
+    if (level === 3 && message.includes('TypeError')) {
+      // External page errors - log as debug only
+      logger.debug(`[BrowserView Console] ${message}`);
+    } else if (level >= 2) {
+      logger.warn(`[BrowserView Console] ${message}`);
+    } else if (level === 1) {
+      logger.info(`[BrowserView Console] ${message}`);
+    }
+    // verbose(0)는 로깅하지 않음
   });
 
   // Handle navigation errors
