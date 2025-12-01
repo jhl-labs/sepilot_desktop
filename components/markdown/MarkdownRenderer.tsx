@@ -187,22 +187,45 @@ export function MarkdownRenderer({
       // Replace problematic URLs in markdown links [text](url) format
       return rawContent.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
         try {
+          // Trim whitespace
+          url = url.trim();
+
           // Validate the URL
           if (url.startsWith('#') || url.startsWith('/')) {
             return match; // Keep relative URLs as-is
           }
 
+          // Fix malformed percent encoding (e.g., lonely % or invalid sequences)
+          const fixPercentEncoding = (str: string): string => {
+            try {
+              // First, try to decode to see if it's already encoded
+              decodeURIComponent(str);
+              return str; // Already properly encoded
+            } catch {
+              // Has encoding issues, need to fix
+              // Replace invalid % sequences
+              // %XX where XX is not valid hex -> %25XX (encode the %)
+              return str.replace(/%(?![0-9A-Fa-f]{2})/g, '%25');
+            }
+          };
+
           if (url.startsWith('http://') || url.startsWith('https://')) {
             try {
-              new URL(url);
-              return match; // Valid URL, keep as-is
+              // Fix percent encoding first
+              const fixedUrl = fixPercentEncoding(url);
+              new URL(fixedUrl);
+              return `[${text}](${fixedUrl})`; // Valid URL with fixed encoding
             } catch {
-              // Invalid URL, try to encode it
+              // Invalid URL, try to safely encode it
               try {
-                const encoded = encodeURI(url);
+                // Remove existing broken encoding
+                const cleanUrl = url.replace(/%[0-9A-Fa-f]{0,2}/g, '');
+                // Then encode properly
+                const encoded = encodeURI(cleanUrl);
                 return `[${text}](${encoded})`;
               } catch {
                 // If encoding fails, use placeholder
+                console.warn('[MarkdownRenderer] Cannot fix URL:', url);
                 return `[${text}](#invalid-url)`;
               }
             }
@@ -210,15 +233,17 @@ export function MarkdownRenderer({
 
           // For other URLs, try to encode
           try {
-            const encoded = encodeURI(url);
+            const fixedUrl = fixPercentEncoding(url);
+            const encoded = encodeURI(fixedUrl);
             return `[${text}](${encoded})`;
           } catch {
             // If encoding fails, remove special chars
-            const sanitized = url.replace(/[^\w\s\-._~:/?#[\]@!$&'()*+,;=%]/g, '');
+            const sanitized = url.replace(/[^\w\s\-._~:/?#[\]@!$&'()*+,;=]/g, '');
             return `[${text}](${sanitized || '#'})`;
           }
-        } catch {
+        } catch (error) {
           // If all fails, return text only
+          console.warn('[MarkdownRenderer] URL processing failed:', url, error);
           return text;
         }
       });
