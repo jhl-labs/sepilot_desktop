@@ -3,8 +3,9 @@ import { CodingAgentStateAnnotation, CodingAgentState } from '../state';
 import { shouldUseTool } from '../nodes/tools';
 import { LLMService } from '@/lib/llm/service';
 import { Message, Activity } from '@/types';
-import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-callback';
 import { executeBuiltinTool, getBuiltinTools } from '@/lib/mcp/tools/builtin-tools';
+import { MCPServerManager } from '@/lib/mcp/server-manager';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -219,6 +220,51 @@ function pathMatchesRequirement(changedPath: string, requirement: string): boole
   return (
     changedPath.endsWith(requirement) || changedName === reqName || changedName.includes(reqName)
   );
+}
+
+/**
+ * RAG 검색 헬퍼 함수
+ */
+async function retrieveContextIfEnabled(query: string): Promise<string> {
+  const config = getCurrentGraphConfig();
+  if (!config?.enableRAG) {
+    return '';
+  }
+
+  try {
+    // Main Process 전용 로직
+    if (typeof window !== 'undefined') {
+      return '';
+    }
+
+    console.log('[CodingAgent] RAG enabled, retrieving documents...');
+    const { vectorDBService } = await import('../../../electron/services/vectordb');
+    const { databaseService } = await import('../../../electron/services/database');
+    const { initializeEmbedding, getEmbeddingProvider } =
+      await import('@/lib/vectordb/embeddings/client');
+
+    const configStr = databaseService.getSetting('app_config');
+    if (!configStr) {
+      return '';
+    }
+    const appConfig = JSON.parse(configStr);
+    if (!appConfig.embedding) {
+      return '';
+    }
+
+    initializeEmbedding(appConfig.embedding);
+    const embedder = getEmbeddingProvider();
+    const queryEmbedding = await embedder.embed(query);
+    const results = await vectorDBService.searchByVector(queryEmbedding, 5);
+
+    if (results.length > 0) {
+      console.log(`[CodingAgent] Found ${results.length} documents`);
+      return results.map((doc, i) => `[참고 문서 ${i + 1}]\n${doc.content}`).join('\n\n');
+    }
+  } catch (error) {
+    console.error('[CodingAgent] RAG retrieval failed:', error);
+  }
+  return '';
 }
 
 // ===========================
@@ -445,9 +491,30 @@ async function iterationGuardNode(state: CodingAgentState): Promise<Partial<Codi
  * Agent Node: Call LLM with Built-in tools (file operations)
  */
 async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
-  console.log('[CodingAgent.Agent] Calling LLM with Built-in tools');
+  console.log('[CodingAgent.Agent] Calling LLM with Tools');
 
   const messages = state.messages || [];
+
+  // RAG 검색
+  let ragContext = '';
+  try {
+    // 마지막 사용자 메시지를 쿼리로 사용
+    const lastUserMessage = messages
+      .slice()
+      .reverse()
+      .find((m) => m.role === 'user');
+    if (lastUserMessage && lastUserMessage.content) {
+      ragContext = await retrieveContextIfEnabled(lastUserMessage.content);
+      if (ragContext) {
+        emitStreamingChunk(
+          `\n📚 **관련 문서 ${ragContext.split('[참고 문서').length - 1}개를 참조합니다.**\n\n`,
+          state.conversationId
+        );
+      }
+    }
+  } catch (e) {
+    console.error('[CodingAgent.Agent] RAG error:', e);
+  }
 
   // Debug: Log message count and sizes
   console.log('[CodingAgent.Agent] Message summary:', {
@@ -494,9 +561,14 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     });
   }
 
-  // Get Built-in tools and convert to OpenAI format
+  // Get Built-in tools
   const builtinTools = getBuiltinTools();
-  const toolsForLLM = builtinTools.map((tool) => ({
+  // Get MCP tools
+  const mcpTools = MCPServerManager.getAllToolsInMainProcess();
+
+  const allTools = [...builtinTools, ...mcpTools];
+
+  const toolsForLLM = allTools.map((tool) => ({
     type: 'function' as const,
     function: {
       name: tool.name,
@@ -508,10 +580,12 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     },
   }));
 
-  console.log(`[CodingAgent.Agent] Available Built-in tools: ${builtinTools.length}`);
+  console.log(
+    `[CodingAgent.Agent] Available tools: ${builtinTools.length} builtin + ${mcpTools.length} MCP`
+  );
   console.log(
     '[CodingAgent.Agent] Tool details:',
-    builtinTools.map((t) => t.name)
+    allTools.map((t) => t.name)
   );
 
   // Add system prompts
@@ -630,7 +704,18 @@ ITERATION BUDGET:
     created_at: Date.now(),
   };
 
-  const messagesWithContext = [codingSystemMsg, executionSpecialistMsg, ...limitedMessages];
+  const messagesWithContext = [codingSystemMsg, executionSpecialistMsg];
+
+  if (ragContext) {
+    messagesWithContext.push({
+      id: 'system-rag',
+      role: 'system',
+      content: `참고 문서:\n${ragContext}\n\n위 참고 문서를 작업에 활용하세요.`,
+      created_at: Date.now(),
+    });
+  }
+
+  messagesWithContext.push(...limitedMessages);
 
   try {
     // Call LLM with tools (streaming)
@@ -807,11 +892,73 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
             result: result,
           };
         } else {
-          // Not a built-in tool, should not happen in Coding Agent
-          // But if it does, log a warning
-          console.warn(`[CodingAgent.Tools] Non-builtin tool called: ${call.name}`);
+          // Try to execute as MCP tool
+          console.log(`[CodingAgent.Tools] Checking MCP tools for: ${call.name}`);
 
-          const errorMsg = `Tool '${call.name}' is not a built-in tool for Coding Agent`;
+          const mcpTools = MCPServerManager.getAllToolsInMainProcess();
+          const targetTool = mcpTools.find((t) => t.name === call.name);
+
+          if (targetTool) {
+            console.log(
+              `[CodingAgent.Tools] Executing MCP tool: ${call.name} on server ${targetTool.serverName}`
+            );
+
+            const mcpResult = await MCPServerManager.callToolInMainProcess(
+              targetTool.serverName,
+              call.name,
+              call.arguments
+            );
+
+            // Extract text result
+            let resultText = '';
+            if (!mcpResult) {
+              resultText = 'Tool returned no result';
+            } else if (mcpResult.content && Array.isArray(mcpResult.content)) {
+              resultText = mcpResult.content
+                .map((item: any) => item.text || '')
+                .filter((t: string) => t)
+                .join('\n');
+            } else if (typeof mcpResult === 'string') {
+              resultText = mcpResult;
+            } else {
+              resultText = JSON.stringify(mcpResult);
+            }
+
+            const duration = Date.now() - startTime;
+
+            // Save activity
+            if (
+              state.conversationId &&
+              typeof window !== 'undefined' &&
+              window.electronAPI?.activity
+            ) {
+              const activity: Activity = {
+                id: uuidv4(),
+                conversation_id: state.conversationId,
+                tool_name: call.name,
+                tool_args: call.arguments as Record<string, unknown>,
+                result: resultText,
+                status: 'success',
+                created_at: Date.now(),
+                duration_ms: duration,
+              };
+
+              window.electronAPI.activity.saveActivity(activity).catch((error) => {
+                console.error('[CodingAgent.Tools] Failed to save activity:', error);
+              });
+            }
+
+            return {
+              toolCallId: call.id,
+              toolName: call.name,
+              result: resultText,
+            };
+          }
+
+          // Not a built-in tool AND not an MCP tool
+          console.warn(`[CodingAgent.Tools] Unknown tool called: ${call.name}`);
+
+          const errorMsg = `Tool '${call.name}' not found (neither built-in nor MCP)`;
           const duration = Date.now() - startTime;
 
           // Save error activity

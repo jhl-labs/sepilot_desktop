@@ -261,6 +261,15 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
         content = 'No result';
       }
 
+      // 긴 결과 제한 (Truncation)
+      const MAX_TOOL_RESULT_LENGTH = 20000;
+      if (content.length > MAX_TOOL_RESULT_LENGTH) {
+        content = `${content.substring(
+          0,
+          MAX_TOOL_RESULT_LENGTH
+        )}\n\n... (Result truncated. Total length: ${content.length} chars. Please use pagination or specific queries to see more.)`;
+      }
+
       console.log('[Agent] Creating tool result message:', {
         toolCallId: result.toolCallId,
         toolName: result.toolName,
