@@ -69,7 +69,7 @@
     "https-proxy-agent": "^7.0.6",
     "lucide-react": "^0.555.0",
     "mammoth": "^1.11.0",
-    "markdown-to-jsx": "9.2.0",
+    "markdown-to-jsx": "9.3.0",
     "mermaid": "^11.12.1",
     "module-alias": "^2.2.3",
     "monaco-editor": "^0.55.1",
