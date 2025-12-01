@@ -77,6 +77,7 @@ async function getWorkspaceFiles(workspacePath: string = '.'): Promise<Record<st
  */
 async function getAllFiles(dir: string): Promise<string[]> {
   const results: string[] = [];
+  const MAX_FILES = 8000;
 
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -86,13 +87,24 @@ async function getAllFiles(dir: string): Promise<string[]> {
 
       // Skip common directories to ignore
       if (entry.isDirectory()) {
-        if (['.git', 'node_modules', '.next', 'dist', 'build'].includes(entry.name)) {
+        if (
+          ['.git', 'node_modules', '.next', 'dist', 'build', 'coverage', 'out', 'release'].includes(
+            entry.name
+          )
+        ) {
+          continue;
+        }
+        if (results.length >= MAX_FILES) {
           continue;
         }
         const subFiles = await getAllFiles(fullPath);
         results.push(...subFiles);
       } else {
         results.push(fullPath);
+      }
+
+      if (results.length >= MAX_FILES) {
+        break;
       }
     }
   } catch {
@@ -263,6 +275,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
     }
   } catch (error) {
     console.error('[CodingAgent] RAG retrieval failed:', error);
+    return '[RAG retrieval failed: context unavailable]';
   }
   return '';
 }
@@ -286,10 +299,15 @@ async function triageNode(state: CodingAgentState): Promise<Partial<CodingAgentS
     }
   }
 
-  // Simple heuristic: if prompt is short and looks like a question, respond directly
+  const lowerPrompt = userPrompt.toLowerCase();
+  const modificationKeywords = ['make', 'create', 'build', 'fix', 'implement', 'generate', 'run '];
+  const isLikelyModification = modificationKeywords.some((k) => lowerPrompt.includes(k));
+
+  // Simple heuristic: keep direct responses to short, clear questions without action verbs
   const isSimpleQuestion =
     userPrompt.length < 200 &&
-    (userPrompt.includes('?') || userPrompt.includes('what') || userPrompt.includes('how'));
+    (userPrompt.includes('?') || userPrompt.includes('what') || userPrompt.includes('how')) &&
+    !isLikelyModification;
 
   const decision = isSimpleQuestion ? 'direct_response' : 'graph';
   const reason = isSimpleQuestion ? 'Simple question detected' : 'Complex task requiring tools';
@@ -748,17 +766,26 @@ ITERATION BUDGET:
     // Parse tool calls
     const toolCalls = finalToolCalls?.map((tc: any, index: number) => {
       const toolCallId = tc.id || `call_${Date.now()}_${index}`;
-
+      let parsedArgs: any;
+      try {
+        parsedArgs =
+          typeof tc.function.arguments === 'string'
+            ? JSON.parse(tc.function.arguments)
+            : tc.function.arguments || {};
+      } catch (err) {
+        console.warn('[CodingAgent.Agent] Failed to parse tool args, using raw value', err);
+        parsedArgs = tc.function.arguments || {};
+      }
       console.log('[CodingAgent.Agent] Tool call:', {
         id: toolCallId,
         name: tc.function.name,
-        arguments: tc.function.arguments,
+        arguments: parsedArgs,
       });
 
       return {
         id: toolCallId,
         name: tc.function.name,
-        arguments: JSON.parse(tc.function.arguments),
+        arguments: parsedArgs,
       };
     });
 
@@ -810,12 +837,102 @@ async function approvalNode(state: CodingAgentState): Promise<Partial<CodingAgen
     };
   }
 
-  // For now, auto-approve all tools
-  // TODO: Implement interrupt() for manual approval of sensitive tools
+  // Detect user intent for approvals
+  const lastUserMessage = [...(state.messages || [])].reverse().find((m) => m.role === 'user');
+  const userText = lastUserMessage?.content || '';
+  const wantsAlwaysApprove = /항상\s*승인/.test(userText);
+  const oneTimeApprove = /(^|\s)(승인|허용)(\s|$)/.test(userText);
+
+  const alwaysApprove = state.alwaysApproveTools || wantsAlwaysApprove;
+
+  // Safety checks for shell execution
+  const dangerousPatterns = [
+    /rm\s+-rf/i,
+    /del\s+\/s/i,
+    /rd\s+\/s/i,
+    /format\s+/i,
+    /mkfs/i,
+    /shutdown/i,
+    /poweroff/i,
+    /dd\s+if=/i,
+  ];
+
+  const networkInstallPatterns = [
+    /\bnpm\s+(install|i)\b/i,
+    /\byarn\s+add\b/i,
+    /\bpnpm\s+(add|install)\b/i,
+    /\bpip\s+install\b/i,
+    /\bapt(-get)?\s+install\b/i,
+    /\bbrew\s+install\b/i,
+    /\bcurl\b.*https?:\/\//i,
+    /\bwget\b.*https?:\/\//i,
+  ];
+
+  const blocked = toolCalls.find((call: any) => {
+    if (call.name !== 'command_execute' || typeof call.arguments?.command !== 'string') {
+      return false;
+    }
+    const cmd = call.arguments.command;
+    return dangerousPatterns.some((p) => p.test(cmd));
+  });
+
+  const needsApproval = toolCalls.find((call: any) => {
+    if (call.name !== 'command_execute' || typeof call.arguments?.command !== 'string') {
+      return false;
+    }
+    const cmd = call.arguments.command;
+    return networkInstallPatterns.some((p) => p.test(cmd));
+  });
+
+  if (blocked) {
+    const warning = `⚠️ 위험 명령이 감지되어 실행을 차단했습니다: ${blocked.arguments.command}`;
+    emitStreamingChunk(warning, state.conversationId);
+    console.warn('[Approval] Blocking dangerous command:', blocked.arguments.command);
+    return {
+      lastApprovalStatus: 'denied',
+      alwaysApproveTools: alwaysApprove,
+      messages: [
+        {
+          id: `approval-${Date.now()}`,
+          role: 'assistant',
+          content: warning,
+          created_at: Date.now(),
+        },
+      ],
+    };
+  }
+
+  if (needsApproval && !alwaysApprove && !oneTimeApprove) {
+    const note =
+      '⚠️ 네트워크/패키지 설치 명령은 승인 후 실행됩니다. 승인하려면 "승인", 항상 승인하려면 "항상 승인"이라고 답변해주세요. 명령: ' +
+      needsApproval.arguments.command;
+    emitStreamingChunk(note, state.conversationId);
+    console.log('[Approval] Network/install command requires explicit approval');
+    return {
+      lastApprovalStatus: 'feedback',
+      alwaysApproveTools: alwaysApprove,
+      messages: [
+        {
+          id: `approval-${Date.now()}`,
+          role: 'assistant',
+          content: note,
+          created_at: Date.now(),
+        },
+      ],
+    };
+  }
+
+  if (oneTimeApprove && needsApproval) {
+    console.log('[Approval] One-time approval granted by user message');
+  }
+
+  // For now, auto-approve remaining tools (non-sensitive or user-approved).
+  // interrupt() 연동 시 여기서 UI 승인 흐름을 붙일 수 있습니다.
   console.log(`[Approval] Auto-approving ${toolCalls.length} tool(s)`);
 
   return {
     lastApprovalStatus: 'approved',
+    alwaysApproveTools: alwaysApprove,
   };
 }
 
@@ -1101,14 +1218,17 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 
   const updates: Partial<CodingAgentState> = {
     toolResults: results,
-    messages: toolMessages, // Add tool result messages
+    messages: [...(state.messages || []), ...toolMessages], // Append tool result messages
   };
 
   // Track file changes if any
   if (fileChanges.added.length > 0 || fileChanges.modified.length > 0) {
     const totalChanges = fileChanges.added.length + fileChanges.modified.length;
-    updates.fileChangesCount = totalChanges;
+    updates.fileChangesCount = totalChanges + fileChanges.deleted.length;
     updates.modifiedFiles = [...fileChanges.added, ...fileChanges.modified];
+    if (fileChanges.deleted.length > 0) {
+      updates.deletedFiles = fileChanges.deleted;
+    }
 
     console.log(`[CodingAgent.Tools] File changes detected: ${totalChanges} files`);
   }
@@ -1345,7 +1465,7 @@ export class CodingAgentGraph {
     console.log('[CodingAgentGraph] Starting stream (simplified Claude Code style)');
 
     try {
-      const maxIterations = state.maxIterations || 50;
+      const maxIterations = state.maxIterations || 10;
       let iterations = 0;
       let hasError = false;
 
@@ -1374,6 +1494,51 @@ export class CodingAgentGraph {
         if (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) {
           // No tools - normal completion
           console.log('[CodingAgentGraph] No tool calls, ending loop');
+          break;
+        }
+
+        const sensitiveToolCalls = (lastMessage.tool_calls || []).filter((call: any) => {
+          if (call.name !== 'command_execute' || typeof call.arguments?.command !== 'string') {
+            return false;
+          }
+          const cmd = call.arguments.command;
+          const danger = [/rm\s+-rf/i, /del\s+\/s/i, /rd\s+\/s/i, /format\s+/i, /mkfs/i, /dd\s+if=/i];
+          const installs = [
+            /\bnpm\s+(install|i)\b/i,
+            /\byarn\s+add\b/i,
+            /\bpnpm\s+(add|install)\b/i,
+            /\bpip\s+install\b/i,
+            /\bapt(-get)?\s+install\b/i,
+            /\bbrew\s+install\b/i,
+            /\bcurl\b.*https?:\/\//i,
+            /\bwget\b.*https?:\/\//i,
+          ];
+          return danger.some((p) => p.test(cmd)) || installs.some((p) => p.test(cmd));
+        });
+
+        if (!state.alwaysApproveTools && sensitiveToolCalls.length > 0 && !this.toolApprovalCallback) {
+          const approvalNote =
+            '⚠️ 민감한 명령이 포함되어 실행 전 승인이 필요합니다. "승인" 또는 "항상 승인" 여부를 알려주세요.';
+          yield {
+            type: 'tool_approval_request',
+            messageId: lastMessage.id,
+            toolCalls: sensitiveToolCalls,
+            note: approvalNote,
+          };
+          state = {
+            ...state,
+            messages: [
+              ...state.messages,
+              {
+                id: `approval-${Date.now()}`,
+                role: 'assistant',
+                content: approvalNote,
+                created_at: Date.now(),
+              },
+            ],
+            lastApprovalStatus: 'feedback',
+          };
+          console.log('[CodingAgentGraph] Sensitive commands detected; awaiting user approval');
           break;
         }
 

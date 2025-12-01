@@ -36,6 +36,7 @@ export class GraphFactory {
   private static _codingAgentGraph: any = null;
   private static _browserAgentGraph: any = null;
   private static _editorAgentGraph: any = null;
+  private static _deepWebResearchGraph: any = null; // New static member
 
   // Lazy getters with dynamic imports
   private static async getChatGraph() {
@@ -110,6 +111,14 @@ export class GraphFactory {
     return this._editorAgentGraph;
   }
 
+  private static async getDeepWebResearchGraph() {
+    if (!this._deepWebResearchGraph) {
+      const { createDeepWebResearchGraph } = await import('./graphs/deep-web-research');
+      this._deepWebResearchGraph = createDeepWebResearchGraph();
+    }
+    return this._deepWebResearchGraph;
+  }
+
   /**
    * GraphConfig에 따라 적절한 그래프 선택
    */
@@ -153,6 +162,11 @@ export class GraphFactory {
       case 'deep':
         baseGraph = await this.getDeepThinkingGraph();
         baseState = 'deep';
+        break;
+
+      case 'deep-web-research':
+        baseGraph = await this.getDeepWebResearchGraph();
+        baseState = 'agent'; // Deep Web Research uses AgentState
         break;
 
       case 'coding':
@@ -225,7 +239,9 @@ export class GraphFactory {
       case 'tree-of-thought':
         return createInitialChatState(messages, conversationId); // Tree of Thought는 자체 상태 사용
       case 'deep':
-        return createInitialChatState(messages, conversationId); // Deep Thinking은 자체 상태 사용
+        return createInitialChatState(messages, conversationId);
+      case 'deep-web-research': // New case
+        return createInitialAgentState(messages, conversationId);
       case 'coding':
       case 'coding-agent':
         return createInitialCodingAgentState(messages, conversationId);
@@ -496,7 +512,7 @@ export class GraphFactory {
       // Use the AgentGraph's stream method with tool approval callback
       for await (const event of agentGraph.stream(
         initialState,
-        options?.maxIterations || 10,
+        options?.maxIterations || 50, // Default to 50 iterations
         options?.toolApprovalCallback
       )) {
         // Handle tool_approval_request and tool_approval_result events

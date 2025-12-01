@@ -14,6 +14,14 @@ import type {
 } from '@/types/browser-agent';
 
 /**
+ * 자연스러운 지연 (bot 감지 방지)
+ */
+async function naturalDelay(minMs = 500, maxMs = 1500) {
+  const delay = Math.random() * (maxMs - minMs) + minMs;
+  await new Promise((resolve) => setTimeout(resolve, delay));
+}
+
+/**
  * Google 검색 URL 생성
  */
 function buildGoogleSearchURL(options: GoogleSearchOptions): string {
@@ -155,6 +163,9 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
     // Google 검색 URL 생성
     const searchURL = buildGoogleSearchURL(searchOptions);
 
+    // 자연스러운 지연 추가 (bot 감지 방지)
+    await naturalDelay(300, 800);
+
     // 검색 페이지로 이동
     await browserView.webContents.loadURL(searchURL);
 
@@ -170,8 +181,8 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
       });
     });
 
-    // 약간의 추가 대기 (JavaScript 실행)
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // 자연스러운 추가 대기 (JavaScript 실행 + 사람처럼 보이기)
+    await naturalDelay(800, 1500);
 
     const result = `Google 검색이 완료되었습니다.
 검색어: ${searchOptions.query}
@@ -204,6 +215,9 @@ export async function handleGoogleExtractResults(
     }
 
     const maxResults = options.maxResults || 10;
+
+    // 자연스러운 지연 (bot 감지 방지)
+    await naturalDelay(400, 900);
 
     // 검색 결과 파싱을 위한 스크립트 실행
     const results: GoogleSearchResultItem[] = await browserView.webContents.executeJavaScript(`
@@ -355,6 +369,9 @@ export async function handleGoogleVisitResult(options: GoogleVisitResultOptions)
     }
 
     const { rank, extractType = 'text', maxWaitTime = 10, waitForJs = true } = options;
+
+    // 자연스러운 지연 (bot 감지 방지)
+    await naturalDelay(500, 1000);
 
     // 해당 순위의 링크 찾기 및 클릭
     const clickResult = await browserView.webContents.executeJavaScript(`

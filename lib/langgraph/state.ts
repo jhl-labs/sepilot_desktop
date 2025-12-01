@@ -146,6 +146,10 @@ export const CodingAgentStateAnnotation = Annotation.Root({
     reducer: (_existing: boolean, update: boolean) => update,
     default: () => false,
   }),
+  alwaysApproveTools: Annotation<boolean>({
+    reducer: (_existing: boolean, update: boolean) => update,
+    default: () => false,
+  }),
   // Decision Flow
   triageDecision: Annotation<string>({
     reducer: (_existing: string, update: string) => update,
@@ -237,7 +241,7 @@ export function createInitialAgentState(
 export function createInitialCodingAgentState(
   messages: Message[] = [],
   conversationId: string = '',
-  maxIterations: number = 50
+  maxIterations: number = 10
 ): CodingAgentState {
   return {
     messages,

@@ -6,6 +6,7 @@ export type ThinkingMode =
   | 'sequential'
   | 'tree-of-thought'
   | 'deep'
+  | 'deep-web-research' // Add Deep Web Research mode
   | 'coding'
   | 'browser-agent'
   | 'editor-agent';
