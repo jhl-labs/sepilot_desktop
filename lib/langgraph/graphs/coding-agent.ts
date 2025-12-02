@@ -15,6 +15,11 @@ import { ErrorRecovery } from '../utils/error-recovery';
 import { ToolSelector } from '../utils/tool-selector';
 import { FileTracker } from '../utils/file-tracker';
 import { CodebaseAnalyzer } from '../utils/codebase-analyzer';
+import {
+  getCodingAgentSystemPrompt,
+  getExecutionSpecialistPrompt,
+  getPlanStepPrompt,
+} from '../prompts/coding-agent-system';
 
 /**
  * Coding Agent Graph

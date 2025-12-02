@@ -114,7 +114,7 @@ export class DatabaseTestSuite {
 
     try {
       const db = databaseService.getDatabase();
-      const config = db.prepare('SELECT value FROM config WHERE key = ?').get('app_config') as
+      const config = db.prepare('SELECT value FROM config WHERE key = ?').get('app_config') as unknown as
         | { value: string }
         | undefined;
 
@@ -159,14 +159,14 @@ export class DatabaseTestSuite {
       );
 
       // Verify
-      const result = db.prepare('SELECT value FROM config WHERE key = ?').get(testKey) as
+      const result = db.prepare('SELECT value FROM config WHERE key = ?').get(testKey) as unknown as
         | { value: string }
         | undefined;
 
       // Cleanup
       db.prepare('DELETE FROM config WHERE key = ?').run(testKey);
 
-      if (!result || result.length === 0 || (result[0] as any).value !== testValue) {
+      if (!result || result.value !== testValue) {
         return {
           id: testId,
           name: 'Database Write Operation',
