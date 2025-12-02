@@ -226,18 +226,55 @@ export class EditorAgentGraph {
         break;
       }
 
-      // Log tool execution start
+      // Log tool execution start (Detailed)
       const toolCalls = state.messages[state.messages.length - 1].tool_calls;
       if (toolCalls && toolCalls.length > 0) {
-        const toolNames = toolCalls.map((t) => t.name).join(', ');
-        emitStreamingChunk(`\n\n🛠️ **도구 실행 중:** ${toolNames}...\n`, state.conversationId);
+        let logMessage = `\n\n---\n🔄 **Iteration ${iterations + 1}/${this.maxIterations}**\n`;
+
+        for (const toolCall of toolCalls) {
+          logMessage += `\n🛠️ **Call:** \`${toolCall.name}\`\n`;
+          try {
+            const args =
+              typeof toolCall.arguments === 'string'
+                ? toolCall.arguments
+                : JSON.stringify(toolCall.arguments, null, 2);
+            logMessage += `📂 **Args:**\n\`\`\`json\n${args}\n\`\`\`\n`;
+          } catch {
+            logMessage += `📂 **Args:** (parsing failed)\n`;
+          }
+        }
+        emitStreamingChunk(logMessage, state.conversationId);
       }
 
       const toolsResult = await this.toolsNode(state);
 
-      // Log tool execution end
+      // Log tool execution end (Detailed)
       if (toolsResult.toolResults && toolsResult.toolResults.length > 0) {
-        emitStreamingChunk(`✅ **실행 완료**\n\n`, state.conversationId);
+        let logMessage = `\n<small>\n`;
+
+        for (const result of toolsResult.toolResults) {
+          const status = result.error ? '❌ Error' : '✅ Result';
+          logMessage += `${status}: \`${result.toolName}\`\n\n`;
+
+          let output = result.error || result.result || '(no output)';
+          if (typeof output !== 'string') {
+            output = JSON.stringify(output, null, 2);
+          }
+
+          // Shorten output for better UX (300 chars instead of 1000)
+          if (output.length > 300) {
+            output = `${output.substring(0, 300)}\n... (output truncated for readability)`;
+          }
+
+          // Use inline code instead of code block for shorter output
+          if (output.length < 100 && !output.includes('\n')) {
+            logMessage += `📄 Output: \`${output}\`\n\n`;
+          } else {
+            logMessage += `📄 Output:\n\`\`\`\n${output}\n\`\`\`\n\n`;
+          }
+        }
+        logMessage += `</small>`;
+        emitStreamingChunk(`${logMessage}---\n\n`, state.conversationId);
       }
 
       // Remove tool_calls to prevent re-execution

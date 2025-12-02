@@ -713,11 +713,22 @@ When a tool fails, DON'T GIVE UP! Try these recovery strategies:
    - Wait briefly and call browser_get_page_content again
    - Check browser_list_tabs to verify correct tab is active
 
+**Google Search Result Failures:**
+1. If google_visit_result times out or fails:
+   - Use browser_navigate to visit the URL directly (extract URL from google_extract_results)
+   - Then use browser_get_page_content to extract the content
+   - Example: google_extract_results → get URL → browser_navigate → browser_get_page_content
+2. If you want to visit a specific URL you found:
+   - ALWAYS use browser_navigate (NOT "assistant" or any other tool)
+   - There is NO "assistant" tool - only browser_navigate for navigation
+   - After navigation, use browser_get_page_content, browser_get_interactive_elements, etc.
+
 **General Strategy:**
 - Tool failures are TEMPORARY - always try an alternative approach
 - Combine tools creatively (screenshot + coordinate click, search + scroll, etc.)
 - Verify assumptions with additional tool calls
 - Report progress even when encountering obstacles
+- If a tool name doesn't exist, check the available tool list and use the correct one
 
 # SUCCESS CRITERIA
 
