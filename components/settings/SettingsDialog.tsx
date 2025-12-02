@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/dialog';
 import {
   AppConfig,
-  ComfyUIConfig,
   ImageGenConfig,
   LLMConfig,
   LLMConfigV2,
@@ -191,9 +190,17 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             setNetworkConfig(createDefaultNetworkConfig());
           }
 
+          const savedImageGenConfig = localStorage.getItem('sepilot_imagegen_config');
           const savedComfyConfig = localStorage.getItem('sepilot_comfyui_config');
-          if (savedComfyConfig) {
+          if (savedImageGenConfig) {
             setImageGenConfig(mergeImageGenConfig(JSON.parse(savedImageGenConfig)));
+          } else if (savedComfyConfig) {
+            // Backward compatibility: migrate from old comfyUI config
+            const comfyConfig = JSON.parse(savedComfyConfig);
+            setImageGenConfig({
+              provider: 'comfyui',
+              comfyui: comfyConfig,
+            });
           } else {
             setImageGenConfig(createDefaultImageGenConfig());
           }
@@ -687,9 +694,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         }
         if (newConfig.embedding) {
           localStorage.setItem('sepilot_embedding_config', JSON.stringify(newConfig.embedding));
+        }
         if (newConfig.imageGen) {
           localStorage.setItem('sepilot_imagegen_config', JSON.stringify(newConfig.imageGen));
-        }
         }
       }
 
@@ -697,7 +704,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       setConfig(llmConfig);
       setConfigV2(llmConfigV2);
       setNetworkConfig(newConfig.network ?? createDefaultNetworkConfig());
-      setComfyConfig(newConfig.comfyUI ?? createDefaultComfyUIConfig());
+      setImageGenConfig(newConfig.imageGen ?? createDefaultImageGenConfig());
       setGithubConfig(newConfig.github ?? null);
       setGithubSyncConfig(newConfig.githubSync ?? null);
       setQuickInputConfig(newConfig.quickInput ?? createDefaultQuickInputConfig());
@@ -748,7 +755,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       vectorDB: vectorDBConfig ?? undefined,
       embedding: embeddingConfig ?? undefined,
       imageGen: imageGenConfig,
-      comfyUI: comfyConfig,
+      comfyUI: imageGenConfig?.comfyui ?? undefined, // Backward compatibility
       github: githubConfig ?? undefined,
       githubSync: githubSyncConfig ?? undefined,
       quickInput: quickInputConfig,

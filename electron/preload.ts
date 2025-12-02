@@ -154,7 +154,7 @@ const electronAPI = {
       graphConfig: any,
       messages: any[],
       conversationId?: string,
-      comfyUIConfig?: any,
+      imageGenConfig?: any,
       networkConfig?: any,
       workingDirectory?: string
     ) =>
@@ -163,7 +163,7 @@ const electronAPI = {
         graphConfig,
         messages,
         conversationId,
-        comfyUIConfig,
+        imageGenConfig,
         networkConfig,
         workingDirectory
       ),

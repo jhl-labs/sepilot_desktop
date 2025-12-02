@@ -4,10 +4,11 @@ import { MCPServerManager } from '@/lib/mcp/server-manager';
 import { executeBuiltinTool } from '@/lib/mcp/tools/builtin-tools';
 import {
   emitImageProgress,
-  getCurrentComfyUIConfig,
   getCurrentNetworkConfig,
+  getCurrentImageGenConfig,
 } from '@/lib/llm/streaming-callback';
 import type { ComfyUIConfig, NetworkConfig } from '@/types';
+import { generateWithNanoBanana } from '@/lib/imagegen/nanobanana-client';
 import WebSocket from 'ws';
 
 /**
@@ -291,22 +292,21 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
           console.log(`[Tools] Calling tool: ${call.name} with args:`, call.arguments);
 
           // 이미지 생성 tool 처리 (내장 도구) - MCP로 전달하지 않음
-          // Main Process에서 직접 ComfyUI 호출 (Renderer Process의 singleton 사용 불가)
+          // Main Process에서 직접 ImageGen provider 호출 (Renderer Process의 singleton 사용 불가)
           if (call.name === 'generate_image') {
-            const comfyConfig = getCurrentComfyUIConfig();
+            const imageGenConfig = getCurrentImageGenConfig();
             const networkConfig = getCurrentNetworkConfig();
 
-            if (!comfyConfig || !comfyConfig.enabled) {
-              console.error('[Tools] ComfyUI config not available or not enabled');
+            if (!imageGenConfig) {
+              console.error('[Tools] ImageGen config not available');
               return {
                 toolCallId: call.id,
                 toolName: call.name,
                 result: null,
-                error: 'ComfyUI is not configured or enabled',
+                error: 'ImageGen is not configured',
               };
             }
 
-            console.log('[Tools] Generating image with ComfyUI (Main Process):', call.arguments);
             const args = call.arguments as {
               prompt: string;
               negativePrompt?: string;
@@ -324,29 +324,131 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
               state.conversationId
             );
 
-            const imageResult = await generateImageInMainProcess(
-              comfyConfig,
-              networkConfig,
-              args,
-              state.conversationId
-            );
+            // Provider에 따라 분기
+            if (imageGenConfig.provider === 'comfyui') {
+              const comfyConfig = imageGenConfig.comfyui;
 
-            if (imageResult.success && imageResult.imageBase64) {
-              return {
-                toolCallId: call.id,
-                toolName: call.name,
-                result: JSON.stringify({
-                  success: true,
-                  imageBase64: imageResult.imageBase64,
+              if (!comfyConfig || !comfyConfig.enabled) {
+                console.error('[Tools] ComfyUI is not enabled');
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: null,
+                  error: 'ComfyUI is not enabled',
+                };
+              }
+
+              console.log('[Tools] Generating image with ComfyUI (Main Process):', call.arguments);
+
+              const imageResult = await generateImageInMainProcess(
+                comfyConfig,
+                networkConfig,
+                args,
+                state.conversationId
+              );
+
+              if (imageResult.success && imageResult.imageBase64) {
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: JSON.stringify({
+                    success: true,
+                    imageBase64: imageResult.imageBase64,
+                    prompt: args.prompt,
+                  }),
+                };
+              } else {
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: null,
+                  error: imageResult.error || 'Image generation failed',
+                };
+              }
+            } else if (imageGenConfig.provider === 'nanobanana') {
+              const nanobananaConfig = imageGenConfig.nanobanana;
+
+              if (!nanobananaConfig || !nanobananaConfig.enabled) {
+                console.error('[Tools] NanoBanana is not enabled');
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: null,
+                  error: 'NanoBanana is not enabled',
+                };
+              }
+
+              console.log('[Tools] Generating image with NanoBanana (Main Process):', call.arguments);
+
+              // Emit progress
+              emitImageProgress(
+                {
+                  status: 'executing',
+                  message: '🌟 Google Imagen으로 이미지 생성 중...',
+                  progress: 50,
+                },
+                state.conversationId
+              );
+
+              const nanobananaResult = await generateWithNanoBanana(
+                nanobananaConfig,
+                networkConfig,
+                {
                   prompt: args.prompt,
-                }),
-              };
+                  negativePrompt: args.negativePrompt,
+                }
+              );
+
+              if (nanobananaResult.success && nanobananaResult.images) {
+                // Emit completion progress
+                emitImageProgress(
+                  {
+                    status: 'completed',
+                    message: '✅ 이미지 생성 완료!',
+                    progress: 100,
+                  },
+                  state.conversationId
+                );
+
+                // NanoBanana can return multiple images
+                const imagesJson = nanobananaResult.images.map((img, idx) => ({
+                  imageBase64: img,
+                  index: idx,
+                }));
+
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: JSON.stringify({
+                    success: true,
+                    images: imagesJson,
+                    prompt: args.prompt,
+                  }),
+                };
+              } else {
+                // Emit error progress
+                emitImageProgress(
+                  {
+                    status: 'error',
+                    message: `❌ 이미지 생성 실패: ${nanobananaResult.error}`,
+                  },
+                  state.conversationId
+                );
+
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: null,
+                  error: nanobananaResult.error || 'NanoBanana image generation failed',
+                };
+              }
             } else {
+              console.error('[Tools] Unknown ImageGen provider:', imageGenConfig.provider);
               return {
                 toolCallId: call.id,
                 toolName: call.name,
                 result: null,
-                error: imageResult.error || 'Image generation failed',
+                error: `Unknown ImageGen provider: ${imageGenConfig.provider}`,
               };
             }
           }

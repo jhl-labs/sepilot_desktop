@@ -4,7 +4,7 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
-import { Message, ToolCall, ComfyUIConfig, NetworkConfig } from '../../../types';
+import { Message, ToolCall, ImageGenConfig, NetworkConfig } from '../../../types';
 import { GraphFactory } from '../../../lib/langgraph';
 import type { GraphConfig } from '../../../lib/langgraph/types';
 import { logger } from '../../services/logger';
@@ -14,6 +14,7 @@ import {
   setCurrentConversationId,
   setCurrentGraphConfig,
   setCurrentComfyUIConfig,
+  setCurrentImageGenConfig,
   setCurrentNetworkConfig,
   setCurrentWorkingDirectory,
   clearConversationCallbacks,
@@ -128,7 +129,7 @@ export function setupLangGraphHandlers() {
       graphConfig: GraphConfig,
       messages: Message[],
       conversationId?: string,
-      comfyUIConfig?: ComfyUIConfig,
+      imageGenConfig?: ImageGenConfig,
       networkConfig?: NetworkConfig,
       workingDirectory?: string
     ) => {
@@ -159,11 +160,15 @@ export function setupLangGraphHandlers() {
         // This allows generateWithToolsNode to check enableImageGeneration
         setCurrentGraphConfig(graphConfig);
 
-        // Set ComfyUI config for image generation in Main Process
-        if (comfyUIConfig) {
-          setCurrentComfyUIConfig(comfyUIConfig);
+        // Set ImageGen config for image generation in Main Process
+        if (imageGenConfig) {
+          setCurrentImageGenConfig(imageGenConfig);
+          // Also set legacy ComfyUI config for backward compatibility
+          if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui) {
+            setCurrentComfyUIConfig(imageGenConfig.comfyui);
+          }
           logger.info(
-            `[LangGraph IPC] ComfyUI config set: enabled=${comfyUIConfig.enabled}, url=${comfyUIConfig.httpUrl}`
+            `[LangGraph IPC] ImageGen config set: provider=${imageGenConfig.provider}`
           );
         }
         if (networkConfig) {

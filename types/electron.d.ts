@@ -7,7 +7,7 @@ import type {
   MCPServerConfig,
   NetworkConfig,
   ImageAttachment,
-  ComfyUIConfig,
+  ImageGenConfig,
 } from './index';
 import type { Persona } from './persona';
 
@@ -298,7 +298,7 @@ interface LangGraphAPI {
     graphConfig: GraphConfig,
     messages: Message[],
     conversationId?: string,
-    comfyUIConfig?: ComfyUIConfig,
+    imageGenConfig?: ImageGenConfig,
     networkConfig?: NetworkConfig,
     workingDirectory?: string
   ) => Promise<IPCResponse<{ conversationId?: string }>>;

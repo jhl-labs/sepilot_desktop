@@ -31,7 +31,7 @@ import {
   ImageAttachment,
   Message,
   ToolCall,
-  ComfyUIConfig,
+  ImageGenConfig,
   NetworkConfig,
   LLMConfig,
   QuickInputMessageData,
@@ -51,8 +51,8 @@ export function InputBox() {
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [selectedImages, setSelectedImages] = useState<ImageAttachment[]>([]);
-  const [comfyUIAvailable, setComfyUIAvailable] = useState(false);
-  const [comfyUIConfig, setComfyUIConfig] = useState<ComfyUIConfig | null>(null);
+  const [imageGenAvailable, setImageGenAvailable] = useState(false);
+  const [imageGenConfig, setImageGenConfig] = useState<ImageGenConfig | null>(null);
   const [llmConfig, setLlmConfig] = useState<LLMConfig | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
@@ -304,17 +304,38 @@ export function InputBox() {
               setLlmConfig(llmConfig);
             }
 
-            // Initialize ComfyUI client
-            if (result.data.comfyUI) {
-              initializeComfyUIClient(result.data.comfyUI);
-              // Store ComfyUI config for IPC
-              setComfyUIConfig(result.data.comfyUI);
-              // Check if ComfyUI is enabled and has httpUrl configured
-              const isAvailable = result.data.comfyUI.enabled && !!result.data.comfyUI.httpUrl;
-              setComfyUIAvailable(isAvailable);
+            // Initialize ImageGen (ComfyUI, NanoBanana, etc.)
+            let imageGenConfig: ImageGenConfig | null = null;
+            if (result.data.imageGen) {
+              imageGenConfig = result.data.imageGen;
+            } else if (result.data.comfyUI) {
+              // Backward compatibility: migrate from old comfyUI config
+              imageGenConfig = {
+                provider: 'comfyui',
+                comfyui: result.data.comfyUI,
+              };
+            }
+
+            if (imageGenConfig) {
+              // Initialize ComfyUI client if provider is comfyui
+              if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui) {
+                initializeComfyUIClient(imageGenConfig.comfyui);
+              }
+              // Store ImageGen config for IPC
+              setImageGenConfig(imageGenConfig);
+              // Check availability based on provider
+              let isAvailable = false;
+              if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui) {
+                isAvailable =
+                  imageGenConfig.comfyui.enabled && !!imageGenConfig.comfyui.httpUrl;
+              } else if (imageGenConfig.provider === 'nanobanana' && imageGenConfig.nanobanana) {
+                isAvailable =
+                  imageGenConfig.nanobanana.enabled && !!imageGenConfig.nanobanana.apiKey;
+              }
+              setImageGenAvailable(isAvailable);
             } else {
-              setComfyUIAvailable(false);
-              setComfyUIConfig(null);
+              setImageGenAvailable(false);
+              setImageGenConfig(null);
             }
           }
         } else {
@@ -326,17 +347,41 @@ export function InputBox() {
             setLlmConfig(config);
           }
 
-          // Also try to load ComfyUI config from localStorage
+          // Also try to load ImageGen config from localStorage
+          const savedImageGenConfig = localStorage.getItem('sepilot_imagegen_config');
           const savedComfyConfig = localStorage.getItem('sepilot_comfyui_config');
-          if (savedComfyConfig) {
-            const config = JSON.parse(savedComfyConfig);
-            initializeComfyUIClient(config);
-            setComfyUIConfig(config);
-            const isAvailable = config.enabled && !!config.httpUrl;
-            setComfyUIAvailable(isAvailable);
+
+          let imageGenConfig: ImageGenConfig | null = null;
+          if (savedImageGenConfig) {
+            imageGenConfig = JSON.parse(savedImageGenConfig);
+          } else if (savedComfyConfig) {
+            // Backward compatibility: migrate from old comfyUI config
+            const comfyConfig = JSON.parse(savedComfyConfig);
+            imageGenConfig = {
+              provider: 'comfyui',
+              comfyui: comfyConfig,
+            };
+          }
+
+          if (imageGenConfig) {
+            // Initialize ComfyUI client if provider is comfyui
+            if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui) {
+              initializeComfyUIClient(imageGenConfig.comfyui);
+            }
+            setImageGenConfig(imageGenConfig);
+            // Check availability based on provider
+            let isAvailable = false;
+            if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui) {
+              isAvailable =
+                imageGenConfig.comfyui.enabled && !!imageGenConfig.comfyui.httpUrl;
+            } else if (imageGenConfig.provider === 'nanobanana' && imageGenConfig.nanobanana) {
+              isAvailable =
+                imageGenConfig.nanobanana.enabled && !!imageGenConfig.nanobanana.apiKey;
+            }
+            setImageGenAvailable(isAvailable);
           } else {
-            setComfyUIAvailable(false);
-            setComfyUIConfig(null);
+            setImageGenAvailable(false);
+            setImageGenConfig(null);
           }
         }
       } catch (error) {
@@ -348,22 +393,47 @@ export function InputBox() {
 
     // Listen for storage changes (when settings are updated)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'sepilot_comfyui_config' && e.newValue) {
+      if (
+        (e.key === 'sepilot_imagegen_config' || e.key === 'sepilot_comfyui_config') &&
+        e.newValue
+      ) {
         try {
-          const config = JSON.parse(e.newValue);
-          initializeComfyUIClient(config);
-          setComfyUIConfig(config);
-          const isAvailable = config.enabled && !!config.httpUrl;
-          setComfyUIAvailable(isAvailable);
+          let imageGenConfig: ImageGenConfig | null = null;
+          if (e.key === 'sepilot_imagegen_config') {
+            imageGenConfig = JSON.parse(e.newValue);
+          } else if (e.key === 'sepilot_comfyui_config') {
+            // Backward compatibility
+            const comfyConfig = JSON.parse(e.newValue);
+            imageGenConfig = {
+              provider: 'comfyui',
+              comfyui: comfyConfig,
+            };
+          }
+
+          if (imageGenConfig) {
+            if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui) {
+              initializeComfyUIClient(imageGenConfig.comfyui);
+            }
+            setImageGenConfig(imageGenConfig);
+            let isAvailable = false;
+            if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui) {
+              isAvailable =
+                imageGenConfig.comfyui.enabled && !!imageGenConfig.comfyui.httpUrl;
+            } else if (imageGenConfig.provider === 'nanobanana' && imageGenConfig.nanobanana) {
+              isAvailable =
+                imageGenConfig.nanobanana.enabled && !!imageGenConfig.nanobanana.apiKey;
+            }
+            setImageGenAvailable(isAvailable);
+          }
         } catch (error) {
-          console.error('Failed to parse ComfyUI config from storage:', error);
+          console.error('Failed to parse ImageGen config from storage:', error);
         }
       }
     };
 
     // Custom event listener for config updates (Electron environment)
     const handleConfigUpdate = ((e: CustomEvent) => {
-      const { comfyUI, llm } = e.detail || {};
+      const { imageGen, comfyUI, llm } = e.detail || {};
 
       // LLM 설정 업데이트
       if (llm) {
@@ -377,12 +447,42 @@ export function InputBox() {
         }
       }
 
-      // ComfyUI 설정 업데이트
-      if (comfyUI) {
-        initializeComfyUIClient(comfyUI);
-        setComfyUIConfig(comfyUI);
-        const isAvailable = comfyUI.enabled && !!comfyUI.httpUrl;
-        setComfyUIAvailable(isAvailable);
+      // ImageGen 설정 업데이트
+      let imageGenConfigToSet: ImageGenConfig | null = null;
+      if (imageGen) {
+        imageGenConfigToSet = imageGen;
+      } else if (comfyUI) {
+        // Backward compatibility
+        imageGenConfigToSet = {
+          provider: 'comfyui',
+          comfyui: comfyUI,
+        };
+      }
+
+      if (imageGenConfigToSet) {
+        if (
+          imageGenConfigToSet.provider === 'comfyui' &&
+          imageGenConfigToSet.comfyui
+        ) {
+          initializeComfyUIClient(imageGenConfigToSet.comfyui);
+        }
+        setImageGenConfig(imageGenConfigToSet);
+        let isAvailable = false;
+        if (
+          imageGenConfigToSet.provider === 'comfyui' &&
+          imageGenConfigToSet.comfyui
+        ) {
+          isAvailable =
+            imageGenConfigToSet.comfyui.enabled && !!imageGenConfigToSet.comfyui.httpUrl;
+        } else if (
+          imageGenConfigToSet.provider === 'nanobanana' &&
+          imageGenConfigToSet.nanobanana
+        ) {
+          isAvailable =
+            imageGenConfigToSet.nanobanana.enabled &&
+            !!imageGenConfigToSet.nanobanana.apiKey;
+        }
+        setImageGenAvailable(isAvailable);
       }
     }) as EventListener;
 
@@ -1143,15 +1243,33 @@ export function InputBox() {
 
                       console.log('[InputBox] Parsed image generation result:', resultData);
 
-                      if (resultData.success && resultData.imageBase64) {
-                        generatedImages.push({
-                          id: `generated-${Date.now()}-${Math.random()}`,
-                          path: '',
-                          filename: `Generated: ${resultData.prompt?.substring(0, 30) || 'image'}...`,
-                          mimeType: 'image/png',
-                          base64: resultData.imageBase64,
-                        });
-                        console.log('[InputBox] Added generated image to message');
+                      if (resultData.success) {
+                        // ComfyUI format: single image with imageBase64 field
+                        if (resultData.imageBase64) {
+                          generatedImages.push({
+                            id: `generated-${Date.now()}-${Math.random()}`,
+                            path: '',
+                            filename: `Generated: ${resultData.prompt?.substring(0, 30) || 'image'}...`,
+                            mimeType: 'image/png',
+                            base64: resultData.imageBase64,
+                          });
+                          console.log('[InputBox] Added generated image (ComfyUI) to message');
+                        }
+                        // NanoBanana format: multiple images in array
+                        else if (resultData.images && Array.isArray(resultData.images)) {
+                          for (const imgData of resultData.images) {
+                            if (imgData.imageBase64) {
+                              generatedImages.push({
+                                id: `generated-${Date.now()}-${Math.random()}`,
+                                path: '',
+                                filename: `Generated #${imgData.index + 1}: ${resultData.prompt?.substring(0, 30) || 'image'}...`,
+                                mimeType: 'image/png',
+                                base64: imgData.imageBase64,
+                              });
+                            }
+                          }
+                          console.log(`[InputBox] Added ${resultData.images.length} generated images (NanoBanana) to message`);
+                        }
                       }
                     } catch (error) {
                       console.error('[InputBox] Failed to process image generation result:', error);
@@ -1225,9 +1343,9 @@ export function InputBox() {
           );
 
           // Start streaming via IPC with conversationId for isolation
-          // Pass ComfyUI config and network config for image generation in Main Process
+          // Pass ImageGen config and network config for image generation in Main Process
           let networkConfig: NetworkConfig | null = null;
-          if (enableImageGeneration && comfyUIConfig) {
+          if (enableImageGeneration && imageGenConfig) {
             try {
               const networkConfigStr = localStorage.getItem('sepilot_network_config');
               networkConfig = networkConfigStr ? JSON.parse(networkConfigStr) : null;
@@ -1242,7 +1360,7 @@ export function InputBox() {
             graphConfig,
             allMessages,
             conversationId,
-            enableImageGeneration && comfyUIConfig ? comfyUIConfig : undefined,
+            enableImageGeneration && imageGenConfig ? imageGenConfig : undefined,
             enableImageGeneration && networkConfig ? networkConfig : undefined,
             workingDirectory || undefined
           );
@@ -1884,7 +2002,7 @@ export function InputBox() {
                 </Button>
               )}
               {/* Image Generation Toggle - Only show if ComfyUI is available */}
-              {mounted && isElectron() && comfyUIAvailable && (
+              {mounted && isElectron() && imageGenAvailable && (
                 <Button
                   onClick={() => {
                     const newValue = !enableImageGeneration;
