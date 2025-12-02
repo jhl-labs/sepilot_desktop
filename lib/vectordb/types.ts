@@ -96,12 +96,18 @@ export interface EmbeddingConfig {
 }
 
 /**
+ * 청킹 전략
+ */
+export type ChunkStrategy = 'character' | 'sentence' | 'structure' | 'token';
+
+/**
  * 인덱싱 옵션
  */
 export interface IndexingOptions {
   chunkSize: number;
   chunkOverlap: number;
   batchSize: number;
+  chunkStrategy?: ChunkStrategy; // 청킹 전략 (기본값: 'sentence')
 }
 
 /**

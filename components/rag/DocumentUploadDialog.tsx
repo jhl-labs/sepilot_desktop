@@ -15,13 +15,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { DocumentSourceType } from '@/lib/documents/types';
+import { ChunkStrategy } from '@/lib/vectordb/types';
 import { fetchDocument } from '@/lib/documents/fetchers';
 import { cleanDocumentsWithLLM } from '@/lib/documents/cleaner';
 
 interface DocumentUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (documents: { content: string; metadata: Record<string, any> }[]) => Promise<void>;
+  onUpload: (
+    documents: { content: string; metadata: Record<string, any> }[],
+    chunkStrategy?: ChunkStrategy
+  ) => Promise<void>;
 }
 
 export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentUploadDialogProps) {
@@ -41,6 +45,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
   const [githubToken, setGithubToken] = useState('');
 
   const [cleanWithLLM, setCleanWithLLM] = useState(false);
+  const [chunkStrategy, setChunkStrategy] = useState<ChunkStrategy>('sentence');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(
     null
@@ -146,7 +151,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
         documentsToUpload = processedDocs;
       }
 
-      await onUpload(documentsToUpload);
+      await onUpload(documentsToUpload, chunkStrategy);
 
       const docCount = documentsToUpload.length;
       setMessage({
@@ -165,6 +170,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
       setGithubBranch('main');
       setGithubToken('');
       setCleanWithLLM(false);
+      setChunkStrategy('sentence');
 
       setTimeout(() => {
         onOpenChange(false);
@@ -434,6 +440,33 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               </div>
             </>
           )}
+
+          {/* Chunking Strategy */}
+          <div className="space-y-2">
+            <Label htmlFor="chunk-strategy">청킹 전략</Label>
+            <select
+              id="chunk-strategy"
+              value={chunkStrategy}
+              onChange={(e) => setChunkStrategy(e.target.value as ChunkStrategy)}
+              disabled={isUploading}
+              className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
+            >
+              <option value="sentence">문장 기반 (권장) - 문장 경계 보존</option>
+              <option value="structure">구조 기반 - Markdown/코드 블록 보존</option>
+              <option value="character">문자 기반 - 단순 분할 (빠름)</option>
+              <option value="token">토큰 기반 - LLM 토큰 단위 (향후 지원)</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {chunkStrategy === 'sentence' &&
+                '문장 단위로 청킹하여 컨텍스트를 보존합니다. 대부분의 경우 권장됩니다.'}
+              {chunkStrategy === 'structure' &&
+                'Markdown 헤딩, 코드 블록 등 구조를 유지합니다. 기술 문서에 적합합니다.'}
+              {chunkStrategy === 'character' &&
+                '단순히 문자 수로 분할합니다. 빠르지만 문맥이 손실될 수 있습니다.'}
+              {chunkStrategy === 'token' &&
+                'LLM 토큰 단위로 청킹합니다. (현재 sentence 방식으로 폴백됩니다)'}
+            </p>
+          </div>
 
           {/* Info */}
           <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">

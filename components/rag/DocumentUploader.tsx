@@ -18,9 +18,13 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { RefinementPromptDialog } from './RefinementPromptDialog';
+import { ChunkStrategy } from '@/lib/vectordb/types';
 
 interface DocumentUploaderProps {
-  onUpload: (documents: { content: string; metadata: Record<string, any> }[]) => Promise<void>;
+  onUpload: (
+    documents: { content: string; metadata: Record<string, any> }[],
+    chunkStrategy?: ChunkStrategy
+  ) => Promise<void>;
   disabled?: boolean;
 }
 
@@ -39,6 +43,7 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
   const [url, setUrl] = useState('');
   const [filePath, setFilePath] = useState('');
   const [useLLMRefinement, setUseLLMRefinement] = useState(false);
+  const [chunkStrategy, setChunkStrategy] = useState<ChunkStrategy>('sentence');
   const [isUploading, setIsUploading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -179,19 +184,22 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
         }
       }
 
-      await onUpload([
-        {
-          content: finalContent,
-          metadata: {
-            title: title.trim() || '제목 없음',
-            source: source.trim() || (mode === 'text' ? 'manual' : mode),
-            mode,
-            uploadedAt: Date.now(),
-            refined: useLLMRefinement,
-            folderPath: folderPath.trim() || undefined,
+      await onUpload(
+        [
+          {
+            content: finalContent,
+            metadata: {
+              title: title.trim() || '제목 없음',
+              source: source.trim() || (mode === 'text' ? 'manual' : mode),
+              mode,
+              uploadedAt: Date.now(),
+              refined: useLLMRefinement,
+              folderPath: folderPath.trim() || undefined,
+            },
           },
-        },
-      ]);
+        ],
+        chunkStrategy
+      );
 
       setMessage({ type: 'success', text: '문서가 성공적으로 업로드되었습니다!' });
 
@@ -202,6 +210,7 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
       setFolderPath('');
       setUrl('');
       setFilePath('');
+      setChunkStrategy('sentence');
     } catch (error: any) {
       console.error('Upload error:', error);
       setMessage({ type: 'error', text: error.message || '문서 업로드에 실패했습니다.' });

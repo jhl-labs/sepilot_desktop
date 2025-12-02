@@ -4,7 +4,12 @@ import { useState, useEffect } from 'react';
 import { DocumentList } from '@/components/rag/DocumentList';
 import { DocumentUploadDialog } from '@/components/rag/DocumentUploadDialog';
 import { DocumentEditDialog } from '@/components/rag/DocumentEditDialog';
-import { VectorDBConfig, EmbeddingConfig, VectorDocument } from '@/lib/vectordb/types';
+import {
+  VectorDBConfig,
+  EmbeddingConfig,
+  VectorDocument,
+  ChunkStrategy,
+} from '@/lib/vectordb/types';
 import {
   getVectorDB,
   getEmbeddingProvider,
@@ -121,13 +126,15 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
   }, [vectorDBConfig, embeddingConfig, isConfigured, isDisabled]);
 
   const handleDocumentUpload = async (
-    documents: { content: string; metadata: Record<string, any> }[]
+    documents: { content: string; metadata: Record<string, any> }[],
+    chunkStrategy?: ChunkStrategy
   ) => {
     try {
       console.log('[DocumentsPage] Starting document upload...', {
         count: documents.length,
         isElectronEnv: isElectron(),
         vectorDBType: vectorDBConfig?.type,
+        chunkStrategy: chunkStrategy || 'sentence',
       });
 
       // 브라우저 환경에서 SQLite-vec 사용 시 경고
@@ -148,6 +155,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         chunkSize: 2500, // 2500자 (약 600-750 토큰): 적절한 맥락 유지
         chunkOverlap: 250, // 10% 오버랩: 경계 부분 맥락 보존
         batchSize: 10,
+        chunkStrategy: chunkStrategy || 'sentence', // 기본값: sentence
       };
 
       // Electron 환경에서는 IPC를 통해 Main Process에서 인덱싱
