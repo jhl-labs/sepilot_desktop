@@ -104,7 +104,7 @@
         <div class="max-w-7xl mx-auto">
             <div class="text-center">
                 <div class="inline-flex items-center px-4 py-2 bg-blue-50 rounded-full mb-6">
-                    <span class="text-blue-600 text-sm font-medium">🚀 v0.6.0 출시 - Persona 시스템, Editor 모드, Browser 자동화, Quick Question</span>
+                    <span class="text-blue-600 text-sm font-medium">🚀 v0.6.0 출시 - GitHub Sync, Persona, Editor Agent, Browser Vision Tools, RAG 대폭 개선</span>
                 </div>
 
                 <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
@@ -114,7 +114,7 @@
 
                 <p class="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto">
                     Chat, Editor, Browser 3가지 모드를 지원하는 강력하고 유연한 LLM 데스크톱 애플리케이션<br/>
-                    LangGraph 워크플로우, RAG, MCP 도구 통합, Monaco Editor, 브라우저 자동화
+                    LangGraph 워크플로우, RAG (문서 편집/폴더 관리), MCP 도구, Monaco Editor + Terminal, Vision 기반 브라우저 자동화
                 </p>
 
                 <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-16">
@@ -167,12 +167,13 @@
                     <h3 class="text-2xl font-bold mb-4">Chat 모드</h3>
                     <p class="text-gray-600 mb-6">AI와 대화하고 질문하세요</p>
                     <ul class="space-y-2 text-sm text-gray-700">
-                        <li>• LangGraph 워크플로우 (4가지 그래프)</li>
-                        <li>• RAG 문서 검색</li>
-                        <li>• MCP 도구 통합</li>
-                        <li>• 이미지 생성 및 해석 (ComfyUI, Vision)</li>
-                        <li>• Persona 시스템 (AI 역할 정의)</li>
-                        <li>• Quick Question (빠른 질문)</li>
+                        <li>• LangGraph 워크플로우 (6가지: Instant, Sequential, Deep, Coding, RAG, Browser)</li>
+                        <li>• RAG 문서 검색 (편집, 폴더 관리, Export/Import)</li>
+                        <li>• MCP 도구 통합 (GitHub, Brave Search, Filesystem 등)</li>
+                        <li>• 이미지 생성 및 해석 (ComfyUI, Vision API)</li>
+                        <li>• Persona 시스템 (AI 역할 정의, SQLite 영구 저장)</li>
+                        <li>• Quick Question (빠른 질문, 최대 5개 단축키)</li>
+                        <li>• GitHub Sync (Token 기반, AES-256-GCM 암호화)</li>
                     </ul>
                     <div class="mt-6 aspect-video bg-white rounded-lg flex items-center justify-center border border-gray-200">
                         <p class="text-gray-400 text-xs">📁 chat-mode-demo.mp4</p>
@@ -189,12 +190,13 @@
                     <h3 class="text-2xl font-bold mb-4">Editor 모드</h3>
                     <p class="text-gray-600 mb-6">코드를 작성하고 편집하세요</p>
                     <ul class="space-y-2 text-sm text-gray-700">
-                        <li>• Monaco Editor (VS Code 엔진)</li>
-                        <li>• 파일 탐색기 (Working Directory)</li>
-                        <li>• 다중 파일 탭 관리</li>
-                        <li>• 구문 강조 및 자동 완성</li>
-                        <li>• Terminal 통합 (개발 예정)</li>
-                        <li>• Git 통합 (개발 예정)</li>
+                        <li>• Monaco Editor (VS Code 엔진, 구문 강조, AI 자동완성)</li>
+                        <li>• 파일 탐색기 (Working Directory, 생성/삭제/이름변경)</li>
+                        <li>• 다중 파일 탭 관리, Markdown 미리보기</li>
+                        <li>• 통합 터미널 (xterm.js, PowerShell/bash/zsh, 탭 관리)</li>
+                        <li>• 전체 파일 검색 (ripgrep 기반, Ctrl+Shift+F)</li>
+                        <li>• Advanced Editor Agent (50회 반복, 9개 Built-in Tools)</li>
+                        <li>• 10가지 Notion 스타일 Writing Tools</li>
                     </ul>
                     <div class="mt-6 aspect-video bg-white rounded-lg flex items-center justify-center border border-gray-200">
                         <p class="text-gray-400 text-xs">📁 editor-mode-demo.mp4</p>
@@ -211,11 +213,13 @@
                     <h3 class="text-2xl font-bold mb-4">Browser 모드</h3>
                     <p class="text-gray-600 mb-6">AI와 함께 웹을 탐색하세요</p>
                     <ul class="space-y-2 text-sm text-gray-700">
-                        <li>• Chromium 기반 브라우저 (BrowserView)</li>
-                        <li>• 18개 자동화 도구 (Navigate, Click, Fill 등)</li>
-                        <li>• AI Agent와 협업 (웹 탐색, 데이터 추출)</li>
-                        <li>• 스크린샷 캡처 및 HTML 추출</li>
-                        <li>• 북마크 관리</li>
+                        <li>• Chromium 기반 브라우저 (BrowserView, 크롬 스타일 탭)</li>
+                        <li>• 18개 자동화 도구 (Navigate, DOM Inspection, Vision Tools)</li>
+                        <li>• Google Search Tools (9개: 검색, 뉴스, Scholar, 이미지, 고급 필터)</li>
+                        <li>• Vision 기반 UI 제어 (Set-of-Mark, 좌표 클릭)</li>
+                        <li>• Bot 감지 우회 (Stealth 핑거프린트, 자연스러운 타이밍)</li>
+                        <li>• 페이지 캡처 (MHTML + 스크린샷, 오프라인 뷰어)</li>
+                        <li>• 북마크 관리 (폴더별 정리)</li>
                     </ul>
                     <div class="mt-6 aspect-video bg-white rounded-lg flex items-center justify-center border border-gray-200">
                         <p class="text-gray-400 text-xs">📁 browser-mode-demo.mp4</p>
@@ -334,7 +338,7 @@
                         <h3 class="text-3xl font-bold mb-4">RAG (검색 증강 생성)</h3>
                         <p class="text-lg text-gray-600 mb-6">
                             강력한 문서 검색과 임베딩 기반 RAG 시스템.<br/>
-                            텍스트, URL, 파일(PDF, DOCX, TXT, MD) 업로드 지원 및 LLM 기반 문서 정제 기능.
+                            텍스트, URL, 파일(PDF, DOCX, TXT, MD) 업로드 지원 및 LLM 기반 문서 편집 기능.
                         </p>
                         <ul class="space-y-3">
                             <li class="flex items-start">
@@ -347,13 +351,19 @@
                                 <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                 </svg>
-                                <span class="text-gray-700">다양한 문서 형식 지원 (TXT, MD, PDF, DOCX)</span>
+                                <span class="text-gray-700">문서 편집 AI 기능 (정제, 확장, 축약, 검증, 커스텀 프롬프트)</span>
                             </li>
                             <li class="flex items-start">
                                 <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                 </svg>
-                                <span class="text-gray-700">URL에서 자동 마크다운 변환 및 LLM 정제</span>
+                                <span class="text-gray-700">폴더 구조 관리 (드래그 앤 드롭, Tree/List/Grid 뷰)</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">Export/Import (JSON 형식, 중복 처리, 백업/복원)</span>
                             </li>
                         </ul>
                     </div>
@@ -381,29 +391,35 @@
                         <div class="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium mb-4">
                             🌐 NEW in v0.6.0
                         </div>
-                        <h3 class="text-3xl font-bold mb-4">브라우저 자동화 (18개 도구)</h3>
+                        <h3 class="text-3xl font-bold mb-4">브라우저 자동화 (27개 도구)</h3>
                         <p class="text-lg text-gray-600 mb-6">
                             Electron BrowserView 기반 Chromium 브라우저 통합.<br/>
-                            AI Agent와 협업하여 웹 탐색 및 데이터 추출.
+                            Vision 기반 UI 제어 및 Google Search Tools로 Perplexity 수준의 검색 지원.
                         </p>
                         <ul class="space-y-3">
                             <li class="flex items-start">
                                 <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                 </svg>
-                                <span class="text-gray-700">페이지 조작: Navigate, Click, Fill, Submit, Scroll</span>
+                                <span class="text-gray-700">DOM Inspection: 의미론적 구조 분석, 자연어 요소 검색</span>
                             </li>
                             <li class="flex items-start">
                                 <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                 </svg>
-                                <span class="text-gray-700">데이터 추출: Extract Text/Links/Images/Table, Get HTML</span>
+                                <span class="text-gray-700">Vision Tools: Set-of-Mark 주석, 좌표 클릭, 마커 클릭</span>
                             </li>
                             <li class="flex items-start">
                                 <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                 </svg>
-                                <span class="text-gray-700">스크린샷 캡처, 북마크 관리</span>
+                                <span class="text-gray-700">Google Search: 웹/뉴스/Scholar/이미지, 고급 필터 (날짜, 언어, 사이트)</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">Bot 감지 우회: Stealth 핑거프린트, 자연스러운 타이밍, 헤더 강화</span>
                             </li>
                         </ul>
                     </div>
@@ -452,7 +468,49 @@
                     </div>
                 </div>
 
-                <!-- Feature 6: Image Generation -->
+                <!-- Feature 6: GitHub Sync -->
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <div class="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium mb-4">
+                            🔄 NEW in v0.6.0
+                        </div>
+                        <h3 class="text-3xl font-bold mb-4">GitHub Sync (클라우드 동기화)</h3>
+                        <p class="text-lg text-gray-600 mb-6">
+                            GitHub Personal Access Token을 사용한 안전한 데이터 동기화.<br/>
+                            설정, 문서, 페르소나, 이미지, 대화 내역을 여러 기기에서 공유.
+                        </p>
+                        <ul class="space-y-3">
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">AES-256-GCM 암호화로 API 키, 토큰 등 민감 정보 보호</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">데이터 타입별 선택적 동기화 (설정/문서/페르소나/이미지/대화)</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="text-gray-700">개별/전체 동기화, 상태 추적, 연결 테스트</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
+                        <div class="text-center">
+                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8.5l-4-4.5m0 0L7 7.5M12 3v13.5"/>
+                            </svg>
+                            <p class="text-gray-500 text-sm">📁 assets/videos/github-sync.gif</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 7: Image Generation -->
                 <div class="grid md:grid-cols-2 gap-12 items-center">
                     <div class="order-2 md:order-1 bg-gradient-to-br from-pink-50 to-red-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
                         <div class="text-center">
@@ -515,7 +573,7 @@
                                 <span class="text-white font-bold text-sm">▲</span>
                             </div>
                             <div>
-                                <div class="font-semibold">Next.js 16</div>
+                                <div class="font-semibold">Next.js 15.3</div>
                                 <div class="text-sm text-gray-500">App Router, React 19</div>
                             </div>
                         </li>
@@ -567,7 +625,7 @@
                                 <span class="text-white font-bold text-sm">e</span>
                             </div>
                             <div>
-                                <div class="font-semibold">Electron 31</div>
+                                <div class="font-semibold">Electron 35</div>
                                 <div class="text-sm text-gray-500">크로스 플랫폼</div>
                             </div>
                         </li>

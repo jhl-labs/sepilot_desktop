@@ -21,22 +21,32 @@ docs/
 
 ## 🎯 최근 업데이트 (v0.6.0)
 
-index.html이 FEATURES.md를 기반으로 대폭 업데이트되었습니다:
+index.html이 v0.6.0 릴리스 노트를 기반으로 대폭 업데이트되었습니다:
 
-### 새로운 섹션
+### 새로운 기능
 
-- **3가지 애플리케이션 모드** (#modes): Chat, Editor, Browser 모드 상세 설명
-- **Persona 시스템** 기능 추가
-- **브라우저 자동화** (18개 도구) 기능 추가
-- **Monaco Editor** 기술 스택 추가
+- **GitHub Sync** (#github-sync): Token 기반 클라우드 동기화, AES-256-GCM 암호화
+- **Editor 모드 대폭 강화**: Advanced Editor Agent (50회 반복, 9개 Built-in Tools)
+  - 통합 터미널 (xterm.js, 탭 관리)
+  - 전체 파일 검색 (ripgrep 기반)
+  - 10가지 Notion 스타일 Writing Tools
+  - Markdown 미리보기
+- **Browser Agent Vision Tools**: Set-of-Mark 주석, 좌표 클릭, 마커 클릭
+- **Google Search Tools** (9개): 웹/뉴스/Scholar/이미지, 고급 필터
+- **RAG 대폭 개선**:
+  - 문서 편집 AI 기능 (정제, 확장, 축약, 검증, 커스텀 프롬프트)
+  - 폴더 구조 관리 (드래그 앤 드롭, Tree/List/Grid 뷰)
+  - Export/Import (JSON 형식, 중복 처리)
+- **Quick Question**: 최대 5개 단축키 설정, 클립보드 자동 포함
+- **Persona 시스템**: SQLite 영구 저장, 슬래시 커맨드 자동완성
 
 ### 업데이트된 내용
 
 - 버전: v0.5.0 → v0.6.0
-- Next.js 14 → 16, React 18 → 19
-- TypeScript 5.4 → 5.7
-- Node.js 18+ → 20+
-- 새로운 LLM 제공자 추가 (Google, Groq)
+- Next.js 14 → 15.3, React 18 → 19
+- Electron 31 → 35
+- 브라우저 도구: 18개 → 27개
+- 테스트 커버리지: ~40% → 68%
 
 ## 🎨 콘텐츠 추가하기
 
@@ -56,13 +66,14 @@ index.html이 FEATURES.md를 기반으로 대폭 업데이트되었습니다:
 - **Editor 모드**: `assets/videos/editor-mode-demo.mp4`
 - **Browser 모드**: `assets/videos/browser-mode-demo.mp4`
 
-#### 3. 주요 기능 (6개)
+#### 3. 주요 기능 (7개)
 
 - **LangGraph 워크플로우**: `assets/videos/langgraph-workflow.gif`
 - **Persona 시스템**: `assets/videos/persona-system.gif`
 - **RAG 검색**: `assets/videos/rag-demo.gif`
 - **브라우저 자동화**: `assets/videos/browser-automation.gif`
 - **MCP 도구**: `assets/videos/mcp-tools.gif`
+- **GitHub Sync**: `assets/videos/github-sync.gif`
 - **이미지 생성**: `assets/videos/image-generation.gif`
 
 ### 이미지 추가 방법
@@ -135,15 +146,16 @@ index.html이 FEATURES.md를 기반으로 대폭 업데이트되었습니다:
 3. **주요 기능** (#features)
    - LangGraph 워크플로우
    - AI Persona 시스템 ⭐ NEW
-   - RAG (검색 증강 생성)
-   - 브라우저 자동화 ⭐ NEW
+   - RAG (검색 증강 생성) - 대폭 강화
+   - 브라우저 자동화 (27개 도구) ⭐ NEW
    - MCP 프로토콜
+   - GitHub Sync (클라우드 동기화) ⭐ NEW
    - 이미지 생성 및 해석
 
 4. **기술 스택** (#tech-stack)
-   - 프론트엔드: Next.js 16, TypeScript 5.7, Monaco Editor
-   - 데스크톱: Electron 31, Node.js 20+, SQLite-vec
-   - LLM & AI: LangGraph, LangChain, MCP, ComfyUI
+   - 프론트엔드: Next.js 15.3, TypeScript 5.7, Monaco Editor, xterm.js
+   - 데스크톱: Electron 35, Node.js 20+, SQLite-vec, BrowserView
+   - LLM & AI: LangGraph, LangChain, MCP, ComfyUI, Vision API
 
 5. **빠른 시작** (#get-started)
    - 4단계 설치 가이드
