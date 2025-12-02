@@ -45,7 +45,30 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [draggedDoc, setDraggedDoc] = useState<VectorDocument | null>(null);
+  const [emptyFolders, setEmptyFolders] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 빈 폴더 로드
+  const loadEmptyFolders = () => {
+    try {
+      const stored = localStorage.getItem('sepilot_rag_empty_folders');
+      if (stored) {
+        setEmptyFolders(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Failed to load empty folders:', error);
+    }
+  };
+
+  // 빈 폴더 저장
+  const saveEmptyFolders = (folders: string[]) => {
+    try {
+      localStorage.setItem('sepilot_rag_empty_folders', JSON.stringify(folders));
+      setEmptyFolders(folders);
+    } catch (error) {
+      console.error('Failed to save empty folders:', error);
+    }
+  };
 
   const loadDocuments = async () => {
     setIsLoading(true);
@@ -114,6 +137,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
   useEffect(() => {
     loadDocuments();
+    loadEmptyFolders();
     if (onRefresh) {
       onRefresh(loadDocuments);
     }
@@ -233,6 +257,36 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     const folderMap = new Map<string, DocumentTreeNode>();
     const rootNodes: DocumentTreeNode[] = [];
 
+    // 0. 빈 폴더부터 생성
+    emptyFolders.forEach((folderPath) => {
+      const pathParts = folderPath.split('/').filter((p) => p.trim());
+      let currentPath = '';
+
+      pathParts.forEach((part, index) => {
+        const parentPath = currentPath;
+        currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+        if (!folderMap.has(currentPath)) {
+          const folderNode: DocumentTreeNode = {
+            id: `folder:${currentPath}`,
+            type: 'folder',
+            name: part,
+            children: [],
+            isExpanded: expandedFolders.has(`folder:${currentPath}`),
+            parentId: parentPath ? `folder:${parentPath}` : null,
+          };
+          folderMap.set(currentPath, folderNode);
+
+          // 부모에 추가
+          if (parentPath && folderMap.has(parentPath)) {
+            folderMap.get(parentPath)!.children!.push(folderNode);
+          } else if (index === 0) {
+            rootNodes.push(folderNode);
+          }
+        }
+      });
+    });
+
     // 1. 폴더 경로를 기반으로 폴더 노드 생성
     docs.forEach((doc) => {
       const folderPath = doc.metadata?.folderPath as string | undefined;
@@ -320,13 +374,73 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     setExpandedFolders(newExpanded);
   };
 
+  // 폴더 삭제 핸들러
+  const handleDeleteFolder = async (folderPath: string) => {
+    try {
+      // 빈 폴더인지 확인
+      if (!emptyFolders.includes(folderPath)) {
+        // 문서가 있는 폴더인지 확인
+        const hasDocuments = documents.some((doc) => {
+          const docFolderPath = doc.metadata?.folderPath as string | undefined;
+          return docFolderPath === folderPath || docFolderPath?.startsWith(`${folderPath}/`);
+        });
+
+        if (hasDocuments) {
+          setMessage({
+            type: 'error',
+            text: '문서가 있는 폴더는 삭제할 수 없습니다. 먼저 문서를 이동하거나 삭제해주세요.',
+          });
+          return;
+        }
+      }
+
+      // 빈 폴더 목록에서 제거
+      const newEmptyFolders = emptyFolders.filter((f) => f !== folderPath);
+      saveEmptyFolders(newEmptyFolders);
+
+      setMessage({
+        type: 'success',
+        text: `폴더 "${folderPath}"가 삭제되었습니다.`,
+      });
+    } catch (error: any) {
+      console.error('Failed to delete folder:', error);
+      setMessage({ type: 'error', text: error.message || '폴더 삭제 실패' });
+    }
+  };
+
   // 폴더 생성 핸들러
   const handleCreateFolder = (folderPath: string) => {
-    // 폴더는 실제로 문서가 추가될 때만 생성됨
-    // 여기서는 UI에서 사용자가 폴더를 인식할 수 있도록 메시지만 표시
+    // 빈 폴더 목록에 추가
+    const trimmedPath = folderPath.trim();
+    if (!trimmedPath) {
+      setMessage({ type: 'error', text: '폴더 경로를 입력해주세요.' });
+      return;
+    }
+
+    // 이미 존재하는 폴더인지 확인
+    if (emptyFolders.includes(trimmedPath)) {
+      setMessage({ type: 'error', text: '이미 존재하는 폴더입니다.' });
+      return;
+    }
+
+    // 문서에서 사용 중인 폴더인지 확인
+    const existingFolder = documents.some((doc) => {
+      const docFolderPath = doc.metadata?.folderPath as string | undefined;
+      return docFolderPath === trimmedPath || docFolderPath?.startsWith(`${trimmedPath}/`);
+    });
+
+    if (existingFolder) {
+      setMessage({ type: 'error', text: '이미 문서가 있는 폴더입니다.' });
+      return;
+    }
+
+    // 빈 폴더 추가
+    const newEmptyFolders = [...emptyFolders, trimmedPath];
+    saveEmptyFolders(newEmptyFolders);
+
     setMessage({
       type: 'success',
-      text: `폴더 "${folderPath}"가 준비되었습니다. 문서를 드래그하여 이동하세요.`,
+      text: `폴더 "${trimmedPath}"가 생성되었습니다.`,
     });
   };
 
@@ -358,6 +472,12 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           };
           await updateDocumentMetadata(id, updatedMetadata);
         }
+      }
+
+      // 빈 폴더 목록에서 제거 (문서가 있으면 더 이상 빈 폴더가 아님)
+      if (emptyFolders.includes(targetFolderPath)) {
+        const newEmptyFolders = emptyFolders.filter((f) => f !== targetFolderPath);
+        saveEmptyFolders(newEmptyFolders);
       }
 
       setMessage({
@@ -504,30 +624,49 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       if (node.type === 'folder') {
         // 폴더 경로 추출 (folder: 접두사 제거)
         const folderPath = node.id.replace(/^folder:/, '');
+        const isEmpty = !node.children || node.children.length === 0;
 
         return (
           <div key={node.id}>
             <div
-              className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer"
+              className="flex items-center gap-2 p-2 hover:bg-accent rounded-md group"
               style={{ paddingLeft: `${paddingLeft}px` }}
-              onClick={() => toggleFolder(node.id)}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, folderPath)}
             >
-              {isExpanded ? (
-                <>
-                  <ChevronDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                  <FolderOpen className="h-4 w-4 flex-shrink-0 text-amber-500" />
-                </>
-              ) : (
-                <>
-                  <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                  <Folder className="h-4 w-4 flex-shrink-0 text-amber-500" />
-                </>
-              )}
-              <span className="text-sm font-medium">{node.name}</span>
-              {node.children && (
-                <span className="text-xs text-muted-foreground">({node.children.length})</span>
+              <div
+                className="flex items-center gap-2 flex-1 cursor-pointer"
+                onClick={() => toggleFolder(node.id)}
+              >
+                {isExpanded ? (
+                  <>
+                    <ChevronDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                    <FolderOpen className="h-4 w-4 flex-shrink-0 text-amber-500" />
+                  </>
+                ) : (
+                  <>
+                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                    <Folder className="h-4 w-4 flex-shrink-0 text-amber-500" />
+                  </>
+                )}
+                <span className="text-sm font-medium">{node.name}</span>
+                {node.children && node.children.length > 0 && (
+                  <span className="text-xs text-muted-foreground">({node.children.length})</span>
+                )}
+              </div>
+              {isEmpty && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteFolder(folderPath);
+                  }}
+                  title="빈 폴더 삭제"
+                >
+                  <Trash2 className="h-3 w-3 text-destructive" />
+                </Button>
               )}
             </div>
             {isExpanded && node.children && (
