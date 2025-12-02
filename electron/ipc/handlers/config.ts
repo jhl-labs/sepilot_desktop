@@ -17,8 +17,8 @@ const DEFAULT_CONFIG: Partial<AppConfig> = {
     baseURL: 'https://api.openai.com/v1',
     apiKey: '',
     model: 'gpt-4',
-    temperature: 0.7,
-    maxTokens: 2000,
+    temperature: 0,
+    maxTokens: 4096,
     vision: {
       enabled: false,
       provider: 'openai',
