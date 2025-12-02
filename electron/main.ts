@@ -93,6 +93,61 @@ function toggleMenuVisibility() {
           ],
         },
         {
+          label: 'Test',
+          submenu: [
+            {
+              label: 'Run All Tests',
+              click: async () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('test:run-all-from-menu');
+                }
+              },
+            },
+            {
+              label: 'Health Check',
+              click: async () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('test:health-check-from-menu');
+                }
+              },
+            },
+            { type: 'separator' },
+            {
+              label: 'LLM Interaction Tests',
+              click: async () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('test:run-llm-from-menu');
+                }
+              },
+            },
+            {
+              label: 'Database Tests',
+              click: async () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('test:run-database-from-menu');
+                }
+              },
+            },
+            {
+              label: 'MCP Tool Tests',
+              click: async () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('test:run-mcp-from-menu');
+                }
+              },
+            },
+            { type: 'separator' },
+            {
+              label: 'Open Test Dashboard',
+              click: async () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('test:open-dashboard');
+                }
+              },
+            },
+          ],
+        },
+        {
           label: 'Help',
           submenu: [
             {

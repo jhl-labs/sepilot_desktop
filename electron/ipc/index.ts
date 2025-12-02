@@ -24,6 +24,7 @@ import { setupBrowserControlHandlers } from './handlers/browser-control';
 import { setupTerminalHandlers } from './handlers/terminal';
 import { setupPersonaHandlers } from './handlers/persona';
 import { setupErrorReportingHandlers } from './handlers/error-reporting';
+import { setupTestRunnerHandlers } from './handlers/test-runner';
 import { logger } from '../services/logger';
 
 /**
@@ -52,6 +53,7 @@ export function setupIpcHandlers(mainWindow?: BrowserWindow) {
   setupTerminalHandlers(mainWindow);
   setupPersonaHandlers();
   setupErrorReportingHandlers();
+  setupTestRunnerHandlers();
 
   logger.info('IPC handlers setup complete');
 }

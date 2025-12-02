@@ -560,6 +560,21 @@ const electronAPI = {
       ipcRenderer.removeListener(event, handler);
     },
   },
+
+  // Test Runner operations
+  testRunner: {
+    // Health Check
+    healthCheck: () => ipcRenderer.invoke('test:health-check'),
+    getLastHealthCheck: () => ipcRenderer.invoke('test:get-last-health-check'),
+    startPeriodicHealthCheck: (intervalMs?: number) =>
+      ipcRenderer.invoke('test:start-periodic-health-check', intervalMs),
+    stopPeriodicHealthCheck: () => ipcRenderer.invoke('test:stop-periodic-health-check'),
+    // Test Suites
+    runAll: () => ipcRenderer.invoke('test:run-all'),
+    runLLM: () => ipcRenderer.invoke('test:run-llm'),
+    runDatabase: () => ipcRenderer.invoke('test:run-database'),
+    runMCP: () => ipcRenderer.invoke('test:run-mcp'),
+  },
 };
 
 // Context Bridge를 통해 안전하게 노출
