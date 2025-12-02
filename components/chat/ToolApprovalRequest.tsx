@@ -28,7 +28,9 @@ export function ToolApprovalRequest({
   const [approved, setApproved] = useState<boolean | null>(null);
 
   const handleApprove = () => {
-    if (disabled || responded) return;
+    if (disabled || responded) {
+      return;
+    }
 
     setResponded(true);
     setApproved(true);
@@ -50,7 +52,9 @@ export function ToolApprovalRequest({
   };
 
   const handleReject = () => {
-    if (disabled || responded) return;
+    if (disabled || responded) {
+      return;
+    }
 
     setResponded(true);
     setApproved(false);

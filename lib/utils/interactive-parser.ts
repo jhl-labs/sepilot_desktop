@@ -266,7 +266,7 @@ function parseToolApproval(content: string): ToolApprovalData {
       inArguments = true;
       argumentsJson = '';
     } else if (inArguments && trimmedLine) {
-      argumentsJson += trimmedLine + '\n';
+      argumentsJson += `${trimmedLine  }\n`;
     }
   }
 

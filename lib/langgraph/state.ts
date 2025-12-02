@@ -258,7 +258,7 @@ export function createInitialAgentState(
 export function createInitialCodingAgentState(
   messages: Message[] = [],
   conversationId: string = '',
-  maxIterations: number = 10
+  maxIterations: number = 50
 ): CodingAgentState {
   return {
     messages,

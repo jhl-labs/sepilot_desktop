@@ -6,8 +6,7 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { FileExplorer } from './FileExplorer';
 import { SearchPanel } from '@/components/editor/SearchPanel';
-import { EditorChatArea } from '@/components/editor/EditorChatArea';
-import { EditorChatInput } from '@/components/editor/EditorChatInput';
+import { EditorChatContainer } from '@/components/editor/EditorChatContainer';
 import { EditorSettings } from '@/components/editor/EditorSettings';
 import { ToolApprovalDialog } from '@/components/chat/ToolApprovalDialog';
 import { isElectron } from '@/lib/platform';
@@ -79,9 +78,8 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
           ) : editorViewMode === 'settings' ? (
             <EditorSettings />
           ) : (
-            <div className="flex h-full flex-col overflow-y-auto">
-              <EditorChatArea />
-              <EditorChatInput />
+            <div className="flex h-full flex-col">
+              <EditorChatContainer />
             </div>
           )}
         </div>

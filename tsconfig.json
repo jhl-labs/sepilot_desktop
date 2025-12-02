@@ -42,5 +42,5 @@
     "out/types/**/*.ts",
     "out/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "electron", "dist", "out", ".next"]
+  "exclude": ["node_modules", "electron", "dist", "out", ".next", "components/_deprecated"]
 }

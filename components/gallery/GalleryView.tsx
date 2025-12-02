@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Download, Image as ImageIcon, Sparkles, Clipboard, Copy, Link } from 'lucide-react';
+import { X, Download, Image as ImageIcon, Sparkles, Clipboard, Copy, Link, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { isElectron } from '@/lib/platform';
@@ -206,6 +206,36 @@ export function GalleryView({ onClose }: GalleryViewProps) {
     }
   };
 
+  const handleSaveAsFile = async (image: GalleryImage) => {
+    try {
+      if (isElectron() && window.electronAPI) {
+        // Electron: 파일 저장 대화상자 사용
+        const defaultFilename = image.filename || `image-${image.id}.png`;
+        const result = await window.electronAPI.dialog.showSaveDialog({
+          defaultPath: defaultFilename,
+          filters: [
+            { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+        });
+
+        if (!result.canceled && result.filePath) {
+          // base64 데이터를 버퍼로 변환
+          const base64Data = image.base64.split(',')[1];
+          const buffer = Buffer.from(base64Data, 'base64');
+
+          // 파일 저장
+          await window.electronAPI.fs.writeFile(result.filePath, buffer);
+        }
+      } else {
+        // Web: 다운로드 링크 사용 (handleDownload와 동일)
+        handleDownload(image);
+      }
+    } catch (error) {
+      console.error('파일 저장 실패:', error);
+    }
+  };
+
   const filteredImages = images.filter((img) => {
     if (filter === 'all') {
       return true;
@@ -368,6 +398,10 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                   >
                     <Copy className="mr-2 h-4 w-4" />
                     이미지 복사
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => handleSaveAsFile(image)} className="cursor-pointer">
+                    <Save className="mr-2 h-4 w-4" />
+                    파일로 저장
                   </ContextMenuItem>
                   <ContextMenuItem onClick={() => handleDownload(image)} className="cursor-pointer">
                     <Download className="mr-2 h-4 w-4" />

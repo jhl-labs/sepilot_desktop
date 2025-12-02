@@ -68,7 +68,7 @@ export function useToolApproval() {
 
   // Handle always approve (session-wide)
   const handleToolAlwaysApprove = useCallback(
-    async (toolCalls: ToolCall[]) => {
+    async (_toolCalls: ToolCall[]) => {
       if (!pendingToolApproval) {
         return;
       }

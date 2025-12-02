@@ -1,6 +1,9 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import { healthCheckService, HealthCheckResult } from '../../services/health-check';
 import { logger } from '../../services/logger';
+import { llmInteractionTestSuite } from '../../tests/suites/llm-interaction';
+import { databaseTestSuite } from '../../tests/suites/database';
+import { mcpToolsTestSuite } from '../../tests/suites/mcp-tools';
 
 /**
  * 테스트 실행 결과 인터페이스
@@ -86,102 +89,82 @@ export function setupTestRunnerHandlers() {
   );
 
   /**
-   * 전체 테스트 스위트 실행 (향후 구현)
+   * 전체 테스트 스위트 실행
    */
   ipcMain.handle('test:run-all', async (_event: IpcMainInvokeEvent): Promise<TestSuiteResult> => {
     logger.info('IPC: Running all tests');
+    const startTime = Date.now();
 
-    // TODO: Phase 2에서 구현
-    const result: TestSuiteResult = {
-      id: 'all-tests',
-      name: 'All Tests',
-      tests: [],
-      summary: {
-        total: 0,
-        passed: 0,
-        failed: 0,
-        skipped: 0,
-        duration: 0,
-      },
-      timestamp: Date.now(),
-    };
+    try {
+      // 모든 테스트 스위트 실행
+      const llmResult = await llmInteractionTestSuite.run();
+      const dbResult = await databaseTestSuite.run();
+      const mcpResult = await mcpToolsTestSuite.run();
 
-    return result;
-  });
+      // 모든 테스트 결과 합치기
+      const allTests = [...llmResult.tests, ...dbResult.tests, ...mcpResult.tests];
 
-  /**
-   * LLM 상호작용 테스트 실행 (향후 구현)
-   */
-  ipcMain.handle('test:run-llm', async (_event: IpcMainInvokeEvent): Promise<TestSuiteResult> => {
-    logger.info('IPC: Running LLM tests');
-
-    // TODO: Phase 2에서 구현
-    const result: TestSuiteResult = {
-      id: 'llm-tests',
-      name: 'LLM Interaction Tests',
-      tests: [],
-      summary: {
-        total: 0,
-        passed: 0,
-        failed: 0,
-        skipped: 0,
-        duration: 0,
-      },
-      timestamp: Date.now(),
-    };
-
-    return result;
-  });
-
-  /**
-   * Database 테스트 실행 (향후 구현)
-   */
-  ipcMain.handle(
-    'test:run-database',
-    async (_event: IpcMainInvokeEvent): Promise<TestSuiteResult> => {
-      logger.info('IPC: Running database tests');
-
-      // TODO: Phase 2에서 구현
       const result: TestSuiteResult = {
-        id: 'database-tests',
-        name: 'Database Tests',
-        tests: [],
+        id: 'all-tests',
+        name: 'All Tests',
+        tests: allTests,
         summary: {
-          total: 0,
-          passed: 0,
-          failed: 0,
-          skipped: 0,
-          duration: 0,
+          total: allTests.length,
+          passed: allTests.filter((t) => t.status === 'pass').length,
+          failed: allTests.filter((t) => t.status === 'fail').length,
+          skipped: allTests.filter((t) => t.status === 'skip').length,
+          duration: Date.now() - startTime,
         },
         timestamp: Date.now(),
       };
 
       return result;
+    } catch (error) {
+      logger.error('IPC: All tests failed:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * LLM 상호작용 테스트 실행
+   */
+  ipcMain.handle('test:run-llm', async (_event: IpcMainInvokeEvent): Promise<TestSuiteResult> => {
+    logger.info('IPC: Running LLM tests');
+    try {
+      return await llmInteractionTestSuite.run();
+    } catch (error) {
+      logger.error('IPC: LLM tests failed:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Database 테스트 실행
+   */
+  ipcMain.handle(
+    'test:run-database',
+    async (_event: IpcMainInvokeEvent): Promise<TestSuiteResult> => {
+      logger.info('IPC: Running database tests');
+      try {
+        return await databaseTestSuite.run();
+      } catch (error) {
+        logger.error('IPC: Database tests failed:', error);
+        throw error;
+      }
     }
   );
 
   /**
-   * MCP Tool 테스트 실행 (향후 구현)
+   * MCP Tool 테스트 실행
    */
   ipcMain.handle('test:run-mcp', async (_event: IpcMainInvokeEvent): Promise<TestSuiteResult> => {
     logger.info('IPC: Running MCP tools tests');
-
-    // TODO: Phase 2에서 구현
-    const result: TestSuiteResult = {
-      id: 'mcp-tests',
-      name: 'MCP Tools Tests',
-      tests: [],
-      summary: {
-        total: 0,
-        passed: 0,
-        failed: 0,
-        skipped: 0,
-        duration: 0,
-      },
-      timestamp: Date.now(),
-    };
-
-    return result;
+    try {
+      return await mcpToolsTestSuite.run();
+    } catch (error) {
+      logger.error('IPC: MCP tests failed:', error);
+      throw error;
+    }
   });
 
   logger.info('Test runner IPC handlers registered');

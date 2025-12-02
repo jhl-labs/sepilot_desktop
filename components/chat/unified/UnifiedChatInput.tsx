@@ -29,7 +29,6 @@ export function UnifiedChatInput({
   const {
     input,
     setInput,
-    isComposing,
     setIsComposing,
     textareaRef,
     handleKeyDown,
@@ -89,7 +88,7 @@ export function UnifiedChatInput({
       if (window.electronAPI?.langgraph) {
         try {
           await window.electronAPI.langgraph.respondToolApproval(
-            dataSource.conversationId || '',
+            config.conversationId || '',
             approved
           );
         } catch (error) {
@@ -98,22 +97,22 @@ export function UnifiedChatInput({
       }
     };
 
-    window.addEventListener('sepilot:interactive-select', handleInteractiveSelect as EventListener);
-    window.addEventListener('sepilot:interactive-input', handleInteractiveInput as EventListener);
-    window.addEventListener('sepilot:tool-approval', handleToolApproval as EventListener);
+    window.addEventListener('sepilot:interactive-select', handleInteractiveSelect as unknown as EventListener);
+    window.addEventListener('sepilot:interactive-input', handleInteractiveInput as unknown as EventListener);
+    window.addEventListener('sepilot:tool-approval', handleToolApproval as unknown as EventListener);
 
     return () => {
       window.removeEventListener(
         'sepilot:interactive-select',
-        handleInteractiveSelect as EventListener
+        handleInteractiveSelect as unknown as EventListener
       );
       window.removeEventListener(
         'sepilot:interactive-input',
-        handleInteractiveInput as EventListener
+        handleInteractiveInput as unknown as EventListener
       );
-      window.removeEventListener('sepilot:tool-approval', handleToolApproval as EventListener);
+      window.removeEventListener('sepilot:tool-approval', handleToolApproval as unknown as EventListener);
     };
-  }, [onSendMessage, clearInput, focusInput, setInput, dataSource.conversationId]);
+  }, [onSendMessage, clearInput, focusInput, setInput, config, config.conversationId]);
 
   const handleSend = async () => {
     if (!input.trim() || isStreaming) {

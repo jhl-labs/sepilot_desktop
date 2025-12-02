@@ -9,6 +9,8 @@ import { MCPServerManager } from '@/lib/mcp/server-manager';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { ContextManager } from '../utils/context-manager';
+import { VerificationPipeline } from '../utils/verification-pipeline';
 
 /**
  * Coding Agent Graph
@@ -594,22 +596,6 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     removed: messages.length - filteredMessages.length,
   });
 
-  // Limit context length to prevent 500 errors from server
-  // Keep only the most recent messages to avoid context overflow
-  const MAX_CONTEXT_MESSAGES = 20;
-  const limitedMessages =
-    filteredMessages.length > MAX_CONTEXT_MESSAGES
-      ? filteredMessages.slice(-MAX_CONTEXT_MESSAGES)
-      : filteredMessages;
-
-  if (filteredMessages.length > MAX_CONTEXT_MESSAGES) {
-    console.log('[CodingAgent.Agent] Context limited:', {
-      original: filteredMessages.length,
-      limited: limitedMessages.length,
-      dropped: filteredMessages.length - limitedMessages.length,
-    });
-  }
-
   // Get Built-in tools
   const builtinTools = getBuiltinTools();
   // Get MCP tools
@@ -766,7 +752,30 @@ ITERATION BUDGET:
     });
   }
 
-  messagesWithContext.push(...limitedMessages);
+  // Add plan step awareness if plan exists
+  if (state.planSteps && state.planSteps.length > 0) {
+    const currentStep = state.currentPlanStep || 0;
+    if (currentStep < state.planSteps.length) {
+      const stepMessage: Message = {
+        id: `step-${Date.now()}`,
+        role: 'system',
+        content: `📋 **현재 단계 (${currentStep + 1}/${state.planSteps.length})**:
+${state.planSteps[currentStep]}
+
+위 단계에 집중하세요. 이 단계를 완료한 후 다음 단계로 진행합니다.`,
+        created_at: Date.now(),
+      };
+      messagesWithContext.push(stepMessage);
+    }
+  }
+
+  // Use ContextManager for intelligent context management
+  const contextManager = new ContextManager(100000); // 100k tokens
+  const optimizedMessages = contextManager.getOptimizedContext(filteredMessages, messagesWithContext);
+
+  // Replace messages with optimized set (system messages already included)
+  messagesWithContext.length = 0;
+  messagesWithContext.push(...optimizedMessages);
 
   try {
     // Call LLM with tools (streaming)
@@ -1331,7 +1340,7 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 }
 
 /**
- * Verification Node: Validate execution results
+ * Verification Node: Validate execution results with automated checks
  */
 async function verificationNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
   console.log('[Verification] Validating execution results');
@@ -1356,6 +1365,45 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
       verificationNotes: ['⚠️ Plan ready, awaiting execution'],
       needsAdditionalIteration: true,
     };
+  }
+
+  // Run automated verification pipeline if files were modified
+  if (state.modifiedFiles && state.modifiedFiles.length > 0) {
+    console.log('[Verification] Running automated verification pipeline...');
+    const pipeline = new VerificationPipeline();
+
+    try {
+      const verificationResult = await pipeline.verify(state);
+
+      if (!verificationResult.allPassed) {
+        console.log('[Verification] Verification failed:', verificationResult);
+
+        const failedChecks = verificationResult.checks.filter(c => !c.passed);
+        const failureMessage: Message = {
+          id: `verification-${Date.now()}`,
+          role: 'user',
+          content: `⚠️ 코드 검증 실패:
+${failedChecks.map(c => `- ${c.message}: ${c.details?.substring(0, 200)}`).join('\n')}
+
+${verificationResult.suggestions.join('\n')}
+
+위 문제를 수정한 후 계속 진행하세요.`,
+          created_at: Date.now(),
+        };
+
+        return {
+          messages: [failureMessage],
+          verificationNotes: failedChecks.map(c => `❌ ${c.name}: ${c.message}`),
+          needsAdditionalIteration: true,
+        };
+      } else {
+        console.log('[Verification] All automated checks passed');
+        emitStreamingChunk('\n✅ **자동 검증 통과** (타입 체크, 린트)\n\n', state.conversationId);
+      }
+    } catch (error: any) {
+      console.error('[Verification] Verification pipeline error:', error);
+      // Continue anyway - don't block on verification errors
+    }
   }
 
   // Check required files (for MODIFICATION tasks)
@@ -1390,6 +1438,13 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
     console.log(
       `[Verification] Advancing to next plan step (${currentStep + 1}/${planSteps.length})`
     );
+
+    emitStreamingChunk(
+      `\n📋 **Step ${currentStep + 1}/${planSteps.length} 완료** ✅\n` +
+      `➡️ 다음 단계: ${planSteps[currentStep + 1]}\n\n`,
+      state.conversationId
+    );
+
     return {
       currentPlanStep: currentStep + 1,
       verificationNotes: ['✅ Step completed, moving to next'],
@@ -1406,19 +1461,20 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
 }
 
 /**
- * Reporter Node: Generate final summary (only for errors or max iterations)
+ * Reporter Node: Generate final summary for all completions
  */
 async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
-  console.log('[Reporter] Checking if final report is needed');
+  console.log('[Reporter] Generating final summary');
 
   const hasToolError = state.toolResults?.some((r) => r.error);
   const hasAgentError = state.agentError && state.agentError.length > 0;
-  const maxIterations = state.maxIterations || 10;
+  const maxIterations = state.maxIterations || 50;
   const iterationCount = state.iterationCount || 0;
+  const modifiedFilesCount = state.modifiedFiles?.length || 0;
+  const deletedFilesCount = state.deletedFiles?.length || 0;
 
-  // Only generate a report message for errors or max iterations reached
+  // Error cases
   if (hasAgentError) {
-    // Agent error already has user-friendly message, no need for additional report
     console.log('[Reporter] Agent error already reported in messages');
     return {};
   } else if (hasToolError) {
@@ -1447,9 +1503,42 @@ async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgen
     };
   }
 
-  // Normal completion - no additional message needed
-  console.log('[Reporter] Normal completion, no report message generated');
-  return {};
+  // Success case - generate summary
+  console.log('[Reporter] Normal completion, generating summary');
+
+  const summaryParts: string[] = [];
+  summaryParts.push('✅ **작업 완료**\n');
+
+  // File changes
+  if (modifiedFilesCount > 0 || deletedFilesCount > 0) {
+    summaryParts.push(`📁 **변경된 파일**: ${modifiedFilesCount}개 수정${deletedFilesCount > 0 ? `, ${deletedFilesCount}개 삭제` : ''}`);
+    if (state.modifiedFiles && state.modifiedFiles.length > 0) {
+      const fileList = state.modifiedFiles.slice(0, 10).map(f => `  - ${f}`).join('\n');
+      summaryParts.push(fileList);
+      if (state.modifiedFiles.length > 10) {
+        summaryParts.push(`  ... 및 ${state.modifiedFiles.length - 10}개 파일 더`);
+      }
+    }
+  }
+
+  // Iteration count
+  summaryParts.push(`\n🔁 **Iterations**: ${iterationCount}회`);
+
+  // Plan completion
+  if (state.planSteps && state.planSteps.length > 0) {
+    summaryParts.push(`📋 **Plan Steps**: ${state.currentPlanStep + 1}/${state.planSteps.length} 완료`);
+  }
+
+  const summaryMessage: Message = {
+    id: `report-${Date.now()}`,
+    role: 'assistant',
+    content: summaryParts.join('\n'),
+    created_at: Date.now(),
+  };
+
+  return {
+    messages: [summaryMessage],
+  };
 }
 
 // ===========================
@@ -1556,14 +1645,43 @@ export class CodingAgentGraph {
     this.toolApprovalCallback = toolApprovalCallback;
     let state = { ...initialState };
 
-    console.log('[CodingAgentGraph] Starting stream (simplified Claude Code style)');
+    console.log('[CodingAgentGraph] Starting stream with full planning pipeline');
 
     try {
-      const maxIterations = state.maxIterations || 10;
+      // === PHASE 1: Triage ===
+      console.log('[CodingAgentGraph] Phase 1: Triage');
+      yield { type: 'node', node: 'triage', data: { status: 'starting' } };
+      const triageResult = await triageNode(state);
+      state = { ...state, ...triageResult };
+      yield { type: 'node', node: 'triage', data: triageResult };
+
+      // If simple question, use direct response
+      if (state.triageDecision === 'direct_response') {
+        console.log('[CodingAgentGraph] Simple question detected, using direct response');
+        yield { type: 'node', node: 'direct_response', data: { status: 'starting' } };
+        const directResult = await directResponseNode(state);
+        state = { ...state, messages: [...state.messages, ...(directResult.messages || [])] };
+        yield { type: 'node', node: 'direct_response', data: { ...directResult, messages: state.messages } };
+        return;
+      }
+
+      // === PHASE 2: Planning ===
+      console.log('[CodingAgentGraph] Phase 2: Planning');
+      yield { type: 'node', node: 'planner', data: { status: 'starting' } };
+      const planResult = await planningNode(state);
+      state = {
+        ...state,
+        ...planResult,
+        messages: [...state.messages, ...(planResult.messages || [])]
+      };
+      yield { type: 'node', node: 'planner', data: { ...planResult, messages: state.messages } };
+
+      const maxIterations = state.maxIterations || 50;
       let iterations = 0;
       let hasError = false;
 
-      // Main ReAct loop (simplified - no triage, no planner)
+      // === PHASE 3: Main ReAct loop with plan awareness ===
+      console.log('[CodingAgentGraph] Phase 3: Execution (max iterations:', maxIterations, ')');
       while (iterations < maxIterations) {
         // Agent (LLM with tools)
         yield { type: 'node', node: 'agent', data: { status: 'starting' } };
@@ -1710,9 +1828,27 @@ export class CodingAgentGraph {
           messages: [...state.messages, ...(toolsResult.messages || [])],
           toolResults: toolsResult.toolResults || state.toolResults,
           modifiedFiles: toolsResult.modifiedFiles || state.modifiedFiles,
+          deletedFiles: toolsResult.deletedFiles || state.deletedFiles,
           fileChangesCount: (state.fileChangesCount || 0) + (toolsResult.fileChangesCount || 0),
         };
         yield { type: 'node', node: 'tools', data: { ...toolsResult, messages: state.messages } };
+
+        // Run verification after tools
+        yield { type: 'node', node: 'verifier', data: { status: 'starting' } };
+        const verificationResult = await verificationNode(state);
+        state = {
+          ...state,
+          ...verificationResult,
+          messages: [...state.messages, ...(verificationResult.messages || [])],
+          iterationCount: iterations + 1, // Update iteration count
+        };
+        yield { type: 'node', node: 'verifier', data: { ...verificationResult, messages: state.messages } };
+
+        // Check if we need to continue (based on verification)
+        if (!verificationResult.needsAdditionalIteration) {
+          console.log('[CodingAgentGraph] Verification indicates completion, ending loop');
+          break;
+        }
 
         iterations++;
       }

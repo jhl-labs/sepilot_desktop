@@ -30,6 +30,7 @@ module.exports = [
       '.dependency-cruiser.js',
       'backstop.json',
       'lighthouserc.json',
+      'components/_deprecated/**',
     ],
   },
 
