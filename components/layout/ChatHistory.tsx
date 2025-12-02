@@ -59,6 +59,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     updateConversationPersona,
     searchConversations,
     personas,
+    clearMessagesCache,
   } = useChatStore();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -291,6 +292,9 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
         parsed[compressConversation.id] = compressedMessages;
         localStorage.setItem('sepilot_messages', JSON.stringify(parsed));
       }
+
+      // Clear cache to force reload from database
+      clearMessagesCache(compressConversation.id);
 
       // Reload the active conversation if it's the compressed one
       if (activeConversationId === compressConversation.id) {

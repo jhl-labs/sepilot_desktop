@@ -187,6 +187,7 @@ interface ChatStore {
   updateMessage: (id: string, updates: Partial<Message>, conversationId?: string) => void;
   deleteMessage: (id: string) => Promise<void>;
   clearMessages: () => void;
+  clearMessagesCache: (conversationId: string) => void;
 
   // Actions - Streaming
   startStreaming: (conversationId: string, messageId: string) => void;
@@ -1040,6 +1041,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   clearMessages: () => {
     set({ messages: [] });
+  },
+
+  clearMessagesCache: (conversationId: string) => {
+    set((state) => {
+      const newCache = new Map(state.messagesCache);
+      newCache.delete(conversationId);
+      return { messagesCache: newCache };
+    });
   },
 
   // Streaming actions (conversation-specific)
