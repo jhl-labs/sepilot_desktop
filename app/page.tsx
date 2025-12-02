@@ -90,6 +90,24 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setAppMode, setActiveEditorTab]);
 
+  // Test Dashboard 열기 IPC 이벤트 리스너
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.electronAPI) {
+      return;
+    }
+
+    const handleOpenTestDashboard = () => {
+      window.location.href = '/test-dashboard';
+    };
+
+    // IPC 이벤트 리스너 등록
+    window.electronAPI.on('test:open-dashboard', handleOpenTestDashboard);
+
+    return () => {
+      window.electronAPI.removeListener('test:open-dashboard', handleOpenTestDashboard);
+    };
+  }, []);
+
   return (
     <MainLayout>
       <div className="flex h-full flex-col">
