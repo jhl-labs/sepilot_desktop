@@ -93,7 +93,17 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       });
 
       setDocuments(mergedDocs);
-      console.log(`Loaded ${docs.length} chunks, grouped into ${mergedDocs.length} documents`);
+      console.log(
+        `[DocumentList] Loaded ${docs.length} chunks, grouped into ${mergedDocs.length} documents`
+      );
+      console.log(
+        '[DocumentList] Documents with folderPath:',
+        mergedDocs.map((d) => ({
+          id: d.id,
+          title: d.metadata?.title,
+          folderPath: d.metadata?.folderPath,
+        }))
+      );
     } catch (error: any) {
       console.error('Failed to load documents:', error);
       setMessage({ type: 'error', text: error.message || '문서 목록 로드 실패' });
@@ -326,13 +336,29 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       setIsLoading(true);
       setMessage(null);
 
-      // 문서의 메타데이터 업데이트
-      const updatedMetadata = {
-        ...doc.metadata,
-        folderPath: targetFolderPath,
-      };
+      // 원본 문서 ID와 매칭되는 모든 청크 ID 찾기
+      const allDocs = await getAllDocuments();
+      const chunkIdsToUpdate = allDocs
+        .filter((d) => {
+          const originalId = d.metadata?.originalId || d.id;
+          return originalId === doc.id;
+        })
+        .map((d) => d.id);
 
-      await updateDocumentMetadata(doc.id, updatedMetadata);
+      // 업데이트할 ID 목록 (청크가 있으면 청크들, 없으면 원본 문서)
+      const idsToUpdate = chunkIdsToUpdate.length > 0 ? chunkIdsToUpdate : [doc.id];
+
+      // 모든 청크의 메타데이터 업데이트
+      for (const id of idsToUpdate) {
+        const docToUpdate = allDocs.find((d) => d.id === id);
+        if (docToUpdate) {
+          const updatedMetadata = {
+            ...docToUpdate.metadata,
+            folderPath: targetFolderPath,
+          };
+          await updateDocumentMetadata(id, updatedMetadata);
+        }
+      }
 
       setMessage({
         type: 'success',

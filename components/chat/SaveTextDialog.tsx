@@ -26,6 +26,7 @@ export function SaveTextDialog({ open, onOpenChange, selectedText, onSave }: Sav
   const [step, setStep] = useState<'edit' | 'saving' | 'done'>('edit');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [folderPath, setFolderPath] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -56,6 +57,7 @@ export function SaveTextDialog({ open, onOpenChange, selectedText, onSave }: Sav
         metadata: {
           source: 'selected_text',
           extractedAt: Date.now(),
+          folderPath: folderPath.trim() || undefined,
         },
       });
 
@@ -66,6 +68,7 @@ export function SaveTextDialog({ open, onOpenChange, selectedText, onSave }: Sav
         setStep('edit');
         setTitle('');
         setContent('');
+        setFolderPath('');
         setError(null);
       }, 1500);
     } catch (err: any) {
@@ -108,6 +111,20 @@ export function SaveTextDialog({ open, onOpenChange, selectedText, onSave }: Sav
                   placeholder="지식 제목"
                   className="h-10"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="text-folder">폴더 경로 (선택)</Label>
+                <Input
+                  id="text-folder"
+                  value={folderPath}
+                  onChange={(e) => setFolderPath(e.target.value)}
+                  placeholder="예: 프로젝트/백엔드/API"
+                  className="h-10"
+                />
+                <p className="text-xs text-muted-foreground">
+                  슬래시(/)로 하위 폴더를 구분할 수 있습니다
+                </p>
               </div>
 
               <div className="space-y-2 flex-1 flex flex-col">
