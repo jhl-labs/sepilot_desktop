@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './MessageBubble';
 import { useChatStore } from '@/lib/store/chat-store';
-import { MessageSquare, ZoomIn } from 'lucide-react';
+import { MessageSquare, ZoomIn, BookOpen } from 'lucide-react';
 import { Message } from '@/types';
 import { isTextFile } from '@/lib/utils';
 import {
@@ -14,6 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { SaveTextDialog } from './SaveTextDialog';
+import type { RawDocument } from '@/lib/vectordb/types';
+import { getVectorDB } from '@/lib/vectordb/client';
+import { getEmbeddingProvider } from '@/lib/vectordb/embeddings/client';
+import { indexDocuments } from '@/lib/vectordb/indexing';
 
 const FONT_SCALE_KEY = 'sepilot-chat-font-scale';
 const DEFAULT_FONT_SCALE = '100';
@@ -69,6 +75,11 @@ export function ChatArea() {
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const rafIdRef = useRef<number | null>(null); // RAF cleanup for handleRegenerate
   const [isDragging, setIsDragging] = useState(false);
+  const [saveTextDialogOpen, setSaveTextDialogOpen] = useState(false);
+  const [selectedTextForSave, setSelectedTextForSave] = useState('');
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(
+    null
+  );
 
   // Handle drag events for text files
   const handleDragOver = (e: React.DragEvent) => {
@@ -168,6 +179,62 @@ export function ChatArea() {
   const handleFontScaleChange = (value: string) => {
     setFontScale(value);
     localStorage.setItem(FONT_SCALE_KEY, value);
+  };
+
+  // Handle context menu (right-click)
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    // Get selected text
+    const selection = window.getSelection();
+    const text = selection?.toString().trim();
+
+    if (text && text.length > 0) {
+      setSelectedTextForSave(text);
+      setContextMenuPosition({ x: e.clientX, y: e.clientY });
+    }
+  };
+
+  // Close context menu on click outside
+  const handleCloseContextMenu = () => {
+    setContextMenuPosition(null);
+  };
+
+  // Handle save selected text as knowledge
+  const handleSaveText = async (doc: {
+    title: string;
+    content: string;
+    metadata: Record<string, any>;
+  }) => {
+    try {
+      // Create RawDocument
+      const rawDoc: RawDocument = {
+        id: `selected_text_${Date.now()}`,
+        content: doc.content,
+        metadata: {
+          ...doc.metadata,
+          title: doc.title,
+          source: 'selected_text',
+          uploadedAt: Date.now(),
+        },
+      };
+
+      // Get VectorDB and Embedder
+      const vectorDB = await getVectorDB();
+      const embedder = await getEmbeddingProvider();
+
+      // Index document with default options
+      await indexDocuments(vectorDB, embedder, [rawDoc], {
+        chunkSize: 500,
+        chunkOverlap: 50,
+        batchSize: 10,
+      });
+
+      console.log('Selected text saved as knowledge:', doc.title);
+    } catch (error: any) {
+      console.error('Failed to save selected text:', error);
+      throw new Error(error.message || '지식 저장에 실패했습니다.');
+    }
   };
 
   // Handle message edit
@@ -423,6 +490,8 @@ export function ChatArea() {
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onContextMenu={handleContextMenu}
+      onClick={handleCloseContextMenu}
     >
       {/* Floating Font Scale Selector */}
       <div className="absolute right-4 bottom-4 z-10">
@@ -486,6 +555,39 @@ export function ChatArea() {
           </div>
         )}
       </ScrollArea>
+
+      {/* Context Menu */}
+      {contextMenuPosition && (
+        <div
+          className="fixed z-50 rounded-md border bg-popover p-1 shadow-md"
+          style={{
+            left: `${contextMenuPosition.x}px`,
+            top: `${contextMenuPosition.y}px`,
+          }}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setContextMenuPosition(null);
+              setSaveTextDialogOpen(true);
+            }}
+          >
+            <BookOpen className="mr-2 h-4 w-4" />
+            지식 저장
+          </Button>
+        </div>
+      )}
+
+      {/* Save Text Dialog */}
+      <SaveTextDialog
+        open={saveTextDialogOpen}
+        onOpenChange={setSaveTextDialogOpen}
+        selectedText={selectedTextForSave}
+        onSave={handleSaveText}
+      />
     </div>
   );
 }
