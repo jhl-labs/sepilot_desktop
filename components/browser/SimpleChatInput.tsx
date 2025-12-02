@@ -49,7 +49,14 @@ export function SimpleChatInput() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const { addBrowserChatMessage, updateBrowserChatMessage, browserChatMessages } = useChatStore();
+  const {
+    addBrowserChatMessage,
+    updateBrowserChatMessage,
+    browserChatMessages,
+    setBrowserAgentIsRunning,
+    setBrowserAgentStreamCleanup,
+    browserAgentStreamCleanup,
+  } = useChatStore();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -75,8 +82,15 @@ export function SimpleChatInput() {
       abortControllerRef.current = null;
     }
 
+    // Cleanup stream handler from store
+    if (browserAgentStreamCleanup) {
+      browserAgentStreamCleanup();
+      setBrowserAgentStreamCleanup(null);
+    }
+
     setIsStreaming(false);
     setAgentProgress(null);
+    setBrowserAgentIsRunning(false);
   };
 
   const handleSend = async () => {
@@ -84,9 +98,16 @@ export function SimpleChatInput() {
       return;
     }
 
+    // Cleanup previous stream if exists
+    if (browserAgentStreamCleanup) {
+      browserAgentStreamCleanup();
+      setBrowserAgentStreamCleanup(null);
+    }
+
     const userMessage = input.trim();
     setInput('');
     setIsStreaming(true);
+    setBrowserAgentIsRunning(true);
 
     // Create abort controller for cancellation
     abortControllerRef.current = new AbortController();
@@ -127,7 +148,7 @@ export function SimpleChatInput() {
           },
         ];
 
-        // Setup stream event listener
+        // Setup stream event listener (persistent across component lifecycle)
         const eventHandler = window.electronAPI.langgraph.onStreamEvent((event: unknown) => {
           try {
             if (!event) {
@@ -182,6 +203,9 @@ export function SimpleChatInput() {
           }
         });
 
+        // Store cleanup function in Zustand (persists across component lifecycle)
+        setBrowserAgentStreamCleanup(eventHandler);
+
         try {
           // Start streaming via IPC (without conversationId for simple mode)
           await window.electronAPI.langgraph.stream(
@@ -194,16 +218,23 @@ export function SimpleChatInput() {
           );
         } catch (streamError) {
           console.error('[SimpleChatInput] Stream error:', streamError);
-          throw streamError;
-        } finally {
-          // Cleanup event listener
-          eventHandler?.();
-          // Ensure abort controller is cleaned up
-          if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
-            abortControllerRef.current.abort();
+          // Cleanup on error
+          if (eventHandler) {
+            eventHandler();
+            setBrowserAgentStreamCleanup(null);
           }
-          abortControllerRef.current = null;
+          throw streamError;
         }
+
+        // Stream completed successfully - cleanup
+        if (eventHandler) {
+          eventHandler();
+          setBrowserAgentStreamCleanup(null);
+        }
+        if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
+          abortControllerRef.current.abort();
+        }
+        abortControllerRef.current = null;
       } else {
         // Web: WebLLMClient directly
         const webClient = getWebLLMClient();
@@ -236,6 +267,13 @@ export function SimpleChatInput() {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to get response';
       console.error('Browser chat error:', error);
+
+      // Cleanup on error
+      if (browserAgentStreamCleanup) {
+        browserAgentStreamCleanup();
+        setBrowserAgentStreamCleanup(null);
+      }
+
       // Update last message with error
       const messages = useChatStore.getState().browserChatMessages;
       const lastMessage = messages[messages.length - 1];
@@ -247,6 +285,7 @@ export function SimpleChatInput() {
     } finally {
       setIsStreaming(false);
       setAgentProgress(null);
+      setBrowserAgentIsRunning(false);
       abortControllerRef.current = null;
       textareaRef.current?.focus();
     }
@@ -270,6 +309,19 @@ export function SimpleChatInput() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isStreaming]);
+
+  // Cleanup on unmount only if component is being destroyed (not just hidden)
+  // NOTE: We intentionally DO NOT cleanup stream handler on unmount to allow
+  // background processing when user switches to other tabs/modes
+  useEffect(() => {
+    return () => {
+      // Only cleanup local state, not the global stream handler
+      if (abortControllerRef.current) {
+        abortControllerRef.current = null;
+      }
+      // Stream handler cleanup is managed by handleStop() or stream completion
+    };
+  }, []);
 
   return (
     <div className="shrink-0 border-t bg-background p-1.5">

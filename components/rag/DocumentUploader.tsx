@@ -35,6 +35,7 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [source, setSource] = useState('');
+  const [folderPath, setFolderPath] = useState('');
   const [url, setUrl] = useState('');
   const [filePath, setFilePath] = useState('');
   const [useLLMRefinement, setUseLLMRefinement] = useState(false);
@@ -187,6 +188,7 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
             mode,
             uploadedAt: Date.now(),
             refined: useLLMRefinement,
+            folderPath: folderPath.trim() || undefined,
           },
         },
       ]);
@@ -197,6 +199,7 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
       setContent('');
       setTitle('');
       setSource('');
+      setFolderPath('');
       setUrl('');
       setFilePath('');
     } catch (error: any) {
@@ -282,6 +285,21 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="doc-folder">폴더 경로 (선택)</Label>
+              <Input
+                id="doc-folder"
+                value={folderPath}
+                onChange={(e) => setFolderPath(e.target.value)}
+                placeholder="예: 프로젝트/백엔드/API"
+                disabled={isUploading || isFetching || disabled}
+                className="h-10"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                슬래시(/)로 하위 폴더를 구분할 수 있습니다
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="doc-content">문서 내용</Label>
               <Textarea
                 id="doc-content"
@@ -344,6 +362,21 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="doc-folder-url">폴더 경로 (선택)</Label>
+                  <Input
+                    id="doc-folder-url"
+                    value={folderPath}
+                    onChange={(e) => setFolderPath(e.target.value)}
+                    placeholder="예: 프로젝트/백엔드/API"
+                    disabled={isUploading || isFetching || disabled}
+                    className="h-10"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    슬래시(/)로 하위 폴더를 구분할 수 있습니다
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="doc-content-url">가져온 내용</Label>
                   <Textarea
                     id="doc-content-url"
@@ -393,6 +426,21 @@ export function DocumentUploader({ onUpload, disabled = false }: DocumentUploade
                     disabled={isUploading || isFetching || disabled}
                     className="h-10"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="doc-folder-file">폴더 경로 (선택)</Label>
+                  <Input
+                    id="doc-folder-file"
+                    value={folderPath}
+                    onChange={(e) => setFolderPath(e.target.value)}
+                    placeholder="예: 프로젝트/백엔드/API"
+                    disabled={isUploading || isFetching || disabled}
+                    className="h-10"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    슬래시(/)로 하위 폴더를 구분할 수 있습니다
+                  </p>
                 </div>
 
                 <div className="space-y-2">
