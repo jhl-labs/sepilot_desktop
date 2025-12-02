@@ -93,7 +93,7 @@ export class MCPToolsTestSuite {
     const testId = 'mcp-server-connections';
 
     try {
-      const servers = MCPServerManager.getAllServers();
+      const servers = MCPServerManager.getAllServersInMainProcess();
       const serverCount = servers.length;
 
       if (serverCount === 0) {
@@ -151,7 +151,7 @@ export class MCPToolsTestSuite {
     const testId = 'mcp-tool-availability';
 
     try {
-      const servers = MCPServerManager.getAllServers();
+      const servers = MCPServerManager.getAllServersInMainProcess();
       const connectedServers = servers.filter((s) => s.connected);
 
       if (connectedServers.length === 0) {
@@ -170,7 +170,7 @@ export class MCPToolsTestSuite {
 
       for (const server of connectedServers) {
         try {
-          const tools = await MCPServerManager.getServerTools(server.name);
+          const tools = server.getTools();
           const toolCount = tools.length;
           totalTools += toolCount;
           toolsPerServer[server.name] = toolCount;

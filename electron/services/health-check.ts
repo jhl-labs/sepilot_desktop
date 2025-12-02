@@ -139,9 +139,9 @@ export class HealthCheckService {
 
       // 간단한 쿼리로 연결 확인
       const db = databaseService.getDatabase();
-      const testResult = db.prepare('SELECT 1 as test').all();
+      const testQuery = db.prepare('SELECT 1 as test').get();
 
-      if (!testResult || testResult.length === 0 || (testResult[0] as any).test !== 1) {
+      if (!testQuery || (testQuery as any).test !== 1) {
         return {
           status: 'fail',
           message: 'Database query failed',
@@ -212,7 +212,7 @@ export class HealthCheckService {
       }
 
       // MCP 서버 상태 확인
-      const servers = MCPServerManager.getAllServers();
+      const servers = MCPServerManager.getAllServersInMainProcess();
       const serverCount = servers.length;
       const connectedServers = servers.filter((s) => s.connected).length;
 
@@ -258,17 +258,17 @@ export class HealthCheckService {
     try {
       // 설정에서 LLM Provider 확인
       const db = databaseService.getDatabase();
-      const configResult = db.prepare('SELECT value FROM config WHERE key = ?').all(['app_config']);
+      const config = db.prepare('SELECT value FROM config WHERE key = ?').get('app_config') as
+        | { value: string }
+        | undefined;
 
-      if (!configResult || configResult.length === 0) {
+      if (!config) {
         return {
           status: 'warn',
           message: 'No LLM providers configured',
           latency: Date.now() - startTime,
         };
       }
-
-      const config = configResult[0] as { value: string };
       const appConfig = JSON.parse(config.value);
       const providers = appConfig.llm?.providers || appConfig.llm?.connections || {};
       const providerNames = Object.keys(providers);

@@ -72,7 +72,7 @@ export class DatabaseTestSuite {
       }
 
       const db = databaseService.getDatabase();
-      const result = db.prepare('SELECT 1 as test').all();
+      const result = db.prepare('SELECT 1 as test').get();
 
       if (!result || result.length === 0 || (result[0] as any).test !== 1) {
         return {
@@ -114,17 +114,18 @@ export class DatabaseTestSuite {
 
     try {
       const db = databaseService.getDatabase();
-      const configResult = db.prepare('SELECT value FROM config WHERE key = ?').all(['app_config']);
+      const config = db.prepare('SELECT value FROM config WHERE key = ?').get('app_config') as
+        | { value: string }
+        | undefined;
 
       return {
         id: testId,
         name: 'Database Read Operation',
         status: 'pass',
         duration: Date.now() - startTime,
-        message:
-          configResult.length > 0
-            ? 'Configuration read successfully'
-            : 'No configuration found (new install)',
+        message: config
+          ? 'Configuration read successfully'
+          : 'No configuration found (new install)',
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -152,16 +153,18 @@ export class DatabaseTestSuite {
       const testValue = JSON.stringify({ test: true, timestamp: Date.now() });
 
       // Write
-      db.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)').run([
+      db.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)').run(
         testKey,
-        testValue,
-      ]);
+        testValue
+      );
 
       // Verify
-      const result = db.prepare('SELECT value FROM config WHERE key = ?').all([testKey]);
+      const result = db.prepare('SELECT value FROM config WHERE key = ?').get(testKey) as
+        | { value: string }
+        | undefined;
 
       // Cleanup
-      db.prepare('DELETE FROM config WHERE key = ?').run([testKey]);
+      db.prepare('DELETE FROM config WHERE key = ?').run(testKey);
 
       if (!result || result.length === 0 || (result[0] as any).value !== testValue) {
         return {
@@ -207,7 +210,7 @@ export class DatabaseTestSuite {
         .prepare(
           "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='conversations'"
         )
-        .all();
+        .get();
 
       if (result.length === 0 || (result[0] as any).count === 0) {
         return {
@@ -221,7 +224,7 @@ export class DatabaseTestSuite {
       }
 
       // Count conversations
-      const countResult = db.prepare('SELECT COUNT(*) as count FROM conversations').all();
+      const countResult = db.prepare('SELECT COUNT(*) as count FROM conversations').get();
 
       return {
         id: testId,
@@ -256,7 +259,7 @@ export class DatabaseTestSuite {
         .prepare(
           "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='messages'"
         )
-        .all();
+        .get();
 
       if (result.length === 0 || (result[0] as any).count === 0) {
         return {
@@ -270,7 +273,7 @@ export class DatabaseTestSuite {
       }
 
       // Count messages
-      const countResult = db.prepare('SELECT COUNT(*) as count FROM messages').all();
+      const countResult = db.prepare('SELECT COUNT(*) as count FROM messages').get();
 
       return {
         id: testId,
