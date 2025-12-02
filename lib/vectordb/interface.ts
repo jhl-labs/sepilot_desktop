@@ -53,6 +53,11 @@ export abstract class VectorDB {
   abstract delete(ids: string[]): Promise<void>;
 
   /**
+   * 문서 메타데이터 업데이트
+   */
+  abstract updateMetadata(id: string, metadata: Record<string, any>): Promise<void>;
+
+  /**
    * 인덱스의 문서 개수
    */
   abstract count(): Promise<number>;

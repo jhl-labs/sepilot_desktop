@@ -224,6 +224,8 @@ const electronAPI = {
     search: (queryEmbedding: number[], k: number) =>
       ipcRenderer.invoke('vectordb-search', queryEmbedding, k),
     delete: (ids: string[]) => ipcRenderer.invoke('vectordb-delete', ids),
+    updateMetadata: (id: string, metadata: Record<string, any>) =>
+      ipcRenderer.invoke('vectordb-update-metadata', id, metadata),
     count: () => ipcRenderer.invoke('vectordb-count'),
     getAll: () => ipcRenderer.invoke('vectordb-get-all'),
     indexDocuments: (

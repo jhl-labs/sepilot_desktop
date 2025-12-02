@@ -174,6 +174,30 @@ export async function deleteDocuments(ids: string[]): Promise<void> {
 }
 
 /**
+ * 문서 메타데이터 업데이트
+ * Electron 환경에서는 IPC를 통해 Main 프로세스에서 업데이트합니다.
+ */
+export async function updateDocumentMetadata(
+  id: string,
+  metadata: Record<string, any>
+): Promise<void> {
+  // Electron 환경: IPC를 통해 Main 프로세스에서 업데이트
+  if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.vectorDB) {
+    const result = await window.electronAPI.vectorDB.updateMetadata(id, metadata);
+
+    if (!result.success) {
+      throw new Error(result.error || '문서 메타데이터 업데이트 실패');
+    }
+
+    return;
+  }
+
+  // 브라우저 환경: 직접 VectorDB 클라이언트 사용
+  const db = VectorDBClient.getDB();
+  await db.updateMetadata(id, metadata);
+}
+
+/**
  * 모든 문서를 JSON 형식으로 Export
  * Electron 환경에서는 IPC를 통해 Main 프로세스에서 처리합니다.
  */

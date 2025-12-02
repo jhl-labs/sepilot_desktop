@@ -218,6 +218,20 @@ class VectorDBService {
     console.log(`[VectorDB] Deleted ${ids.length} documents from ${indexName}`);
   }
 
+  async updateMetadata(id: string, metadata: Record<string, any>): Promise<void> {
+    if (!this.db || !this.config) throw new Error('Database not initialized');
+
+    const indexName = this.config.indexName;
+
+    this.db.run(`UPDATE ${indexName} SET metadata = ? WHERE id = ?`, [
+      JSON.stringify(metadata),
+      id,
+    ]);
+
+    this.saveDatabase();
+    console.log(`[VectorDB] Updated metadata for document ${id}`);
+  }
+
   async count(): Promise<number> {
     if (!this.db || !this.config) throw new Error('Database not initialized');
 

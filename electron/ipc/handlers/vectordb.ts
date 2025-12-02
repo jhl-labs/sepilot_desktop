@@ -92,6 +92,21 @@ export function setupVectorDBHandlers() {
     }
   });
 
+  // Update document metadata
+  ipcMain.handle(
+    'vectordb-update-metadata',
+    async (_, id: string, metadata: Record<string, any>) => {
+      try {
+        logger.debug('Updating document metadata in VectorDB', { id });
+        await vectorDBService.updateMetadata(id, metadata);
+        return { success: true };
+      } catch (error) {
+        logger.error('Failed to update document metadata in VectorDB', error);
+        return { success: false, error: (error as Error).message };
+      }
+    }
+  );
+
   // Get document count
   ipcMain.handle('vectordb-count', async () => {
     try {

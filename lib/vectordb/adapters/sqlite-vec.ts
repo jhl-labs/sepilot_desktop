@@ -130,6 +130,18 @@ export class SQLiteVecAdapter extends VectorDB {
     }
   }
 
+  async updateMetadata(id: string, metadata: Record<string, any>): Promise<void> {
+    if (!window.electronAPI?.vectorDB) {
+      throw new Error('Electron API not available');
+    }
+
+    const result = await window.electronAPI.vectorDB.updateMetadata(id, metadata);
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to update document metadata');
+    }
+  }
+
   async count(): Promise<number> {
     if (!window.electronAPI?.vectorDB) {
       throw new Error('Electron API not available');

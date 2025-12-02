@@ -16,9 +16,16 @@ import {
   ChevronDown,
   Folder,
   FolderOpen,
+  FolderPlus,
 } from 'lucide-react';
-import { getAllDocuments, exportDocuments, importDocuments } from '@/lib/vectordb/client';
+import {
+  getAllDocuments,
+  exportDocuments,
+  importDocuments,
+  updateDocumentMetadata,
+} from '@/lib/vectordb/client';
 import { VectorDocument, DocumentTreeNode } from '@/lib/vectordb/types';
+import { FolderManageDialog } from './FolderManageDialog';
 
 type ViewMode = 'grid' | 'list' | 'tree';
 
@@ -36,6 +43,8 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [draggedDoc, setDraggedDoc] = useState<VectorDocument | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadDocuments = async () => {
@@ -301,6 +310,70 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     setExpandedFolders(newExpanded);
   };
 
+  // 폴더 생성 핸들러
+  const handleCreateFolder = (folderPath: string) => {
+    // 폴더는 실제로 문서가 추가될 때만 생성됨
+    // 여기서는 UI에서 사용자가 폴더를 인식할 수 있도록 메시지만 표시
+    setMessage({
+      type: 'success',
+      text: `폴더 "${folderPath}"가 준비되었습니다. 문서를 드래그하여 이동하세요.`,
+    });
+  };
+
+  // 문서를 폴더로 이동
+  const handleMoveToFolder = async (doc: VectorDocument, targetFolderPath: string) => {
+    try {
+      setIsLoading(true);
+      setMessage(null);
+
+      // 문서의 메타데이터 업데이트
+      const updatedMetadata = {
+        ...doc.metadata,
+        folderPath: targetFolderPath,
+      };
+
+      await updateDocumentMetadata(doc.id, updatedMetadata);
+
+      setMessage({
+        type: 'success',
+        text: `"${doc.metadata?.title || doc.id}"를 "${targetFolderPath}"로 이동했습니다.`,
+      });
+
+      // 문서 목록 새로고침
+      await loadDocuments();
+    } catch (error: any) {
+      console.error('Failed to move document:', error);
+      setMessage({ type: 'error', text: error.message || '문서 이동 실패' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 드래그 시작
+  const handleDragStart = (e: React.DragEvent, doc: VectorDocument) => {
+    setDraggedDoc(doc);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  // 드래그 종료
+  const handleDragEnd = () => {
+    setDraggedDoc(null);
+  };
+
+  // 드롭 허용
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  // 드롭 처리
+  const handleDrop = (e: React.DragEvent, targetFolderPath: string) => {
+    e.preventDefault();
+    if (draggedDoc) {
+      handleMoveToFolder(draggedDoc, targetFolderPath);
+    }
+  };
+
   // 문서 카드 렌더링 (공통)
   const renderDocumentCard = (doc: VectorDocument, compact: boolean = false) => {
     const isExpanded = expandedDocs.has(doc.id);
@@ -311,9 +384,12 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     return (
       <div
         key={doc.id}
+        draggable={viewMode === 'tree'}
+        onDragStart={(e) => handleDragStart(e, doc)}
+        onDragEnd={handleDragEnd}
         className={`rounded-md border bg-card hover:bg-accent/50 transition-colors ${
           compact ? 'p-3' : 'p-4 min-h-[180px]'
-        }`}
+        } ${viewMode === 'tree' ? 'cursor-move' : ''}`}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -400,12 +476,17 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       const paddingLeft = level * 20;
 
       if (node.type === 'folder') {
+        // 폴더 경로 추출 (folder: 접두사 제거)
+        const folderPath = node.id.replace(/^folder:/, '');
+
         return (
           <div key={node.id}>
             <div
               className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer"
               style={{ paddingLeft: `${paddingLeft}px` }}
               onClick={() => toggleFolder(node.id)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, folderPath)}
             >
               {isExpanded ? (
                 <>
@@ -488,6 +569,22 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
           <div className="h-6 w-px bg-border" />
 
+          {/* 폴더 생성 버튼 (트리 뷰에서만 표시) */}
+          {viewMode === 'tree' && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setFolderDialogOpen(true)}
+                disabled={isLoading || disabled}
+                title="새 폴더 생성"
+              >
+                <FolderPlus className="h-4 w-4" />
+              </Button>
+              <div className="h-6 w-px bg-border" />
+            </>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -551,6 +648,14 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       ) : (
         renderGridView()
       )}
+
+      {/* 폴더 관리 다이얼로그 */}
+      <FolderManageDialog
+        open={folderDialogOpen}
+        onOpenChange={setFolderDialogOpen}
+        mode="create"
+        onConfirm={handleCreateFolder}
+      />
     </div>
   );
 }

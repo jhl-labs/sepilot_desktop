@@ -351,6 +351,7 @@ interface VectorDBAPI {
   insert: (documents: VectorDocument[]) => Promise<IPCResponse>;
   search: (queryEmbedding: number[], k: number) => Promise<IPCResponse<VectorSearchResult[]>>;
   delete: (ids: string[]) => Promise<IPCResponse>;
+  updateMetadata: (id: string, metadata: Record<string, any>) => Promise<IPCResponse>;
   count: () => Promise<IPCResponse<number>>;
   getAll: () => Promise<IPCResponse<VectorDocument[]>>;
   indexDocuments: (
