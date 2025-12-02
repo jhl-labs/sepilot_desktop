@@ -94,7 +94,8 @@ export interface StreamEvent {
     | 'error'
     | 'tool_approval_request'
     | 'tool_approval_result'
-    | 'progress';
+    | 'progress'
+    | 'completion';
   node?: string;
   data?: any;
   error?: string;
@@ -102,4 +103,6 @@ export interface StreamEvent {
   messageId?: string;
   toolCalls?: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
   approved?: boolean;
+  // Completion specific fields
+  iterations?: number;
 }

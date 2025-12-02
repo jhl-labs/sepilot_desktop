@@ -296,6 +296,12 @@ export class GraphFactory {
       return;
     }
 
+    // Deep Web Research의 경우 먼저 처리 (enableTools와 무관하게 자체 도구 관리)
+    if (config.thinkingMode === 'deep-web-research') {
+      yield* this.streamDeepWebResearchGraph(config, messages, options);
+      return;
+    }
+
     // Agent 그래프의 경우 AgentGraph 인스턴스를 직접 사용 (Human-in-the-loop 지원)
     if (config.enableTools) {
       yield* this.streamAgentGraph(config, messages, options);
@@ -555,6 +561,61 @@ export class GraphFactory {
       yield {
         type: 'error',
         error: error.message || 'Agent graph execution failed',
+      };
+    }
+  }
+
+  /**
+   * Deep Web Research 그래프 스트리밍
+   * Completion 이벤트를 emit하여 UI 로딩 상태 정리
+   */
+  private static async *streamDeepWebResearchGraph(
+    config: GraphConfig,
+    messages: Message[],
+    options?: GraphOptions
+  ): AsyncGenerator<StreamEvent> {
+    const conversationId = options?.conversationId || '';
+
+    try {
+      console.log('[GraphFactory] Starting Deep Web Research stream');
+
+      const graph = await this.getDeepWebResearchGraph();
+      const { createInitialAgentState } = await import('./state');
+
+      const initialState = createInitialAgentState(messages, conversationId);
+
+      const stream = await graph.stream(initialState, {
+        recursionLimit: 100,
+      });
+
+      for await (const event of stream) {
+        const entries = Object.entries(event);
+
+        if (entries.length > 0) {
+          const [nodeName, stateUpdate] = entries[0];
+
+          yield {
+            type: 'node',
+            node: nodeName,
+            data: stateUpdate,
+          };
+        }
+      }
+
+      // Emit completion event to clear UI loading state
+      yield {
+        type: 'completion',
+      };
+
+      yield {
+        type: 'end',
+      };
+    } catch (error: any) {
+      console.error('[GraphFactory] Deep Web Research stream error:', error);
+
+      yield {
+        type: 'error',
+        error: error.message || 'Deep Web Research execution failed',
       };
     }
   }
