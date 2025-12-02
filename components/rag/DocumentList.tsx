@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   FileText,
   Trash2,
@@ -17,6 +18,8 @@ import {
   Folder,
   FolderOpen,
   FolderPlus,
+  Search,
+  X,
 } from 'lucide-react';
 import {
   getAllDocuments,
@@ -46,6 +49,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [draggedDoc, setDraggedDoc] = useState<VectorDocument | null>(null);
   const [emptyFolders, setEmptyFolders] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 빈 폴더 로드
@@ -68,6 +72,44 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     } catch (error) {
       console.error('Failed to save empty folders:', error);
     }
+  };
+
+  // 검색 필터링
+  const filterDocuments = (docs: VectorDocument[]): VectorDocument[] => {
+    if (!searchQuery.trim()) {
+      return docs;
+    }
+
+    const query = searchQuery.toLowerCase();
+
+    return docs.filter((doc) => {
+      // 제목 검색
+      const title = doc.metadata?.title?.toLowerCase() || '';
+      if (title.includes(query)) {
+        return true;
+      }
+
+      // 폴더 경로 검색
+      const folderPath = doc.metadata?.folderPath?.toLowerCase() || '';
+      if (folderPath.includes(query)) {
+        return true;
+      }
+
+      // 내용 검색 (청크 포함)
+      if (doc.content.toLowerCase().includes(query)) {
+        return true;
+      }
+
+      // 청크 내용 검색
+      const chunks = doc.metadata?._chunks || [];
+      for (const chunk of chunks) {
+        if (chunk.content && chunk.content.toLowerCase().includes(query)) {
+          return true;
+        }
+      }
+
+      return false;
+    });
   };
 
   const loadDocuments = async () => {
@@ -604,18 +646,24 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   // Grid 뷰 렌더링 (기본)
   const renderGridView = () => {
     return (
-      <div className="space-y-2">{documents.map((doc) => renderDocumentCard(doc, false))}</div>
+      <div className="space-y-2">
+        {filteredDocuments.map((doc) => renderDocumentCard(doc, false))}
+      </div>
     );
   };
 
   // List 뷰 렌더링 (컴팩트)
   const renderListView = () => {
-    return <div className="space-y-1">{documents.map((doc) => renderDocumentCard(doc, true))}</div>;
+    return (
+      <div className="space-y-1">
+        {filteredDocuments.map((doc) => renderDocumentCard(doc, true))}
+      </div>
+    );
   };
 
   // Tree 뷰 렌더링
   const renderTreeView = () => {
-    const treeNodes = buildDocumentTree(documents);
+    const treeNodes = buildDocumentTree(filteredDocuments);
 
     const renderTreeNode = (node: DocumentTreeNode, level: number = 0): React.ReactNode => {
       const isExpanded = node.type === 'folder' && expandedFolders.has(node.id);
@@ -689,13 +737,41 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     return <div className="space-y-1">{treeNodes.map((node) => renderTreeNode(node, 0))}</div>;
   };
 
+  // 필터링된 문서 목록
+  const filteredDocuments = filterDocuments(documents);
+
   return (
     <div className="space-y-4">
+      {/* 검색 바 */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="제목, 폴더, 내용 검색..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 pr-10"
+          disabled={isLoading || disabled}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            title="검색 초기화"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-lg font-semibold">
           <FileText className="h-5 w-5" />
           <h3>업로드된 문서</h3>
-          <span className="text-sm font-normal text-muted-foreground">({documents.length}개)</span>
+          <span className="text-sm font-normal text-muted-foreground">
+            ({filteredDocuments.length}
+            {searchQuery && ` / ${documents.length}`}개)
+          </span>
         </div>
         <div className="flex items-center gap-2">
           {/* 뷰 모드 토글 */}
@@ -805,6 +881,10 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       {documents.length === 0 ? (
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
           업로드된 문서가 없습니다.
+        </div>
+      ) : filteredDocuments.length === 0 ? (
+        <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
+          검색 결과가 없습니다.
         </div>
       ) : viewMode === 'tree' ? (
         renderTreeView()
