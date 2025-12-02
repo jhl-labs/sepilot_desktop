@@ -1006,23 +1006,15 @@ export function InputBox() {
 
                 console.log('[InputBox] Processing tool results:', toolResults);
 
-                // Show tool completion status
-                const toolNames = toolResults.map((tr: any) => tr.toolName).join(', ');
+                // 이미지 생성 진행 상황 초기화
                 const hasImageGeneration = toolResults.some(
                   (tr: any) => tr.toolName === 'generate_image'
                 );
-
-                // 이미지 생성 진행 상황 초기화
                 if (hasImageGeneration) {
                   clearImageGenerationProgress(conversationId);
                 }
 
-                const statusMessage = `✅ 도구 실행 완료: ${toolNames}\n\n답변을 생성하고 있습니다...`;
-                // Append to existing content instead of replacing it
-                accumulatedContent = `${accumulatedContent || ''}\n\n${statusMessage}`;
-                scheduleUpdate({
-                  content: accumulatedContent,
-                });
+                // 도구 실행 완료 메시지는 위의 enableTools 블록(909줄)에서 이미 출력되므로 여기서는 제거
 
                 for (const toolResult of toolResults) {
                   if (toolResult.toolName === 'generate_image' && toolResult.result) {
