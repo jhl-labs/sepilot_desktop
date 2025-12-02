@@ -21,7 +21,26 @@ class VectorDBService {
   private dbPath: string = '';
   private config: VectorDBServiceConfig | null = null;
 
+  /**
+   * 인덱스/테이블 이름 검증 (SQL Injection 방지)
+   */
+  private validateIndexName(name: string): void {
+    // 영문자, 숫자, 언더스코어만 허용 (첫 글자는 영문자 또는 언더스코어)
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+      throw new Error(
+        `Invalid index name: "${name}". Only alphanumeric characters and underscores are allowed.`
+      );
+    }
+    // 예약어 체크
+    const reservedWords = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'TABLE'];
+    if (reservedWords.includes(name.toUpperCase())) {
+      throw new Error(`Index name cannot be a SQL reserved word: "${name}"`);
+    }
+  }
+
   async initialize(config: VectorDBServiceConfig) {
+    // 인덱스 이름 검증
+    this.validateIndexName(config.indexName);
     this.config = config;
 
     const userDataPath = app.getPath('userData');
@@ -105,6 +124,9 @@ class VectorDBService {
   async createIndex(name: string, dimension: number): Promise<void> {
     if (!this.db) throw new Error('Database not connected');
 
+    // 인덱스 이름 검증 (SQL Injection 방지)
+    this.validateIndexName(name);
+
     // 테이블 생성
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS ${name} (
@@ -127,6 +149,9 @@ class VectorDBService {
 
   async deleteIndex(name: string): Promise<void> {
     if (!this.db) throw new Error('Database not connected');
+
+    // 인덱스 이름 검증 (SQL Injection 방지)
+    this.validateIndexName(name);
 
     this.db.exec(`DROP TABLE IF EXISTS ${name}`);
     this.saveDatabase();
@@ -185,24 +210,74 @@ class VectorDBService {
 
     if (result.length === 0) return [];
 
-    // 코사인 유사도 계산
-    const results: SearchResult[] = [];
-    for (const row of result[0].values) {
+    const rows = result[0].values;
+    const totalDocs = rows.length;
+
+    // 최적화 전략: 문서 수에 따라 다른 알고리즘 사용
+    // 소량(k*2 이하): 전체 정렬이 더 빠름
+    // 대량: Min-Heap 기반 Top-K 추출로 메모리 효율성 향상
+    if (totalDocs <= k * 2) {
+      // 소량 문서: 전체 정렬
+      const results: SearchResult[] = [];
+      for (const row of rows) {
+        const embedding = JSON.parse(row[3] as string);
+        const similarity = this.cosineSimilarity(queryEmbedding, embedding);
+
+        results.push({
+          id: row[0] as string,
+          content: row[1] as string,
+          metadata: JSON.parse(row[2] as string),
+          score: similarity,
+        });
+      }
+
+      results.sort((a, b) => b.score - a.score);
+      return results.slice(0, k);
+    }
+
+    // 대량 문서: Min-Heap 기반 Top-K 추출
+    const topK: SearchResult[] = [];
+    let minScore = -Infinity;
+
+    for (const row of rows) {
       const embedding = JSON.parse(row[3] as string);
       const similarity = this.cosineSimilarity(queryEmbedding, embedding);
 
-      results.push({
-        id: row[0] as string,
-        content: row[1] as string,
-        metadata: JSON.parse(row[2] as string),
-        score: similarity,
-      });
+      if (topK.length < k) {
+        // k개 미만일 때는 무조건 추가
+        topK.push({
+          id: row[0] as string,
+          content: row[1] as string,
+          metadata: JSON.parse(row[2] as string),
+          score: similarity,
+        });
+
+        if (topK.length === k) {
+          // k개가 채워지면 정렬하고 최소값 캐시
+          topK.sort((a, b) => b.score - a.score);
+          minScore = topK[k - 1].score;
+        }
+      } else if (similarity > minScore) {
+        // 현재 최소값보다 높은 점수만 처리 (조기 종료 최적화)
+        topK[k - 1] = {
+          id: row[0] as string,
+          content: row[1] as string,
+          metadata: JSON.parse(row[2] as string),
+          score: similarity,
+        };
+
+        // 삽입 정렬 (부분 정렬에 효율적)
+        let i = k - 1;
+        while (i > 0 && topK[i].score > topK[i - 1].score) {
+          [topK[i], topK[i - 1]] = [topK[i - 1], topK[i]];
+          i--;
+        }
+        minScore = topK[k - 1].score;
+      }
+      // else: 점수가 minScore 이하면 스킵 (성능 향상)
     }
 
-    // 유사도 순으로 정렬하고 상위 k개 반환
-    results.sort((a, b) => b.score - a.score);
-
-    return results.slice(0, k);
+    return topK;
   }
 
   async delete(ids: string[]): Promise<void> {
