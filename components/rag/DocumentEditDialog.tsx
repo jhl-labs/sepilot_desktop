@@ -58,6 +58,7 @@ export function DocumentEditDialog({
 }: DocumentEditDialogProps) {
   const [title, setTitle] = useState('');
   const [source, setSource] = useState('');
+  const [folderPath, setFolderPath] = useState('');
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -69,6 +70,7 @@ export function DocumentEditDialog({
     if (document) {
       setTitle(document.metadata?.title || '');
       setSource(document.metadata?.source || '');
+      setFolderPath(document.metadata?.folderPath || '');
       setContent(document.content || '');
     }
   }, [document]);
@@ -188,6 +190,7 @@ export function DocumentEditDialog({
           ...document.metadata,
           title: title.trim() || '제목 없음',
           source: source.trim() || 'manual',
+          folderPath: folderPath.trim() || undefined,
           updatedAt: Date.now(),
         },
       });
@@ -236,6 +239,21 @@ export function DocumentEditDialog({
               placeholder="예: Wikipedia, 내부 문서"
               disabled={isSaving}
             />
+          </div>
+
+          {/* Folder Path */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-folder">폴더 경로 (선택)</Label>
+            <Input
+              id="edit-folder"
+              value={folderPath}
+              onChange={(e) => setFolderPath(e.target.value)}
+              placeholder="예: 프로젝트/백엔드/API"
+              disabled={isSaving}
+            />
+            <p className="text-xs text-muted-foreground">
+              슬래시(/)로 하위 폴더를 구분할 수 있습니다
+            </p>
           </div>
 
           {/* Content */}

@@ -29,6 +29,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
   const [title, setTitle] = useState('');
   const [source, setSource] = useState('');
   const [content, setContent] = useState('');
+  const [folderPath, setFolderPath] = useState('');
 
   // HTTP 문서용
   const [httpUrl, setHttpUrl] = useState('');
@@ -68,6 +69,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               title: title.trim() || '제목 없음',
               source: source.trim() || 'manual',
               uploadedAt: Date.now(),
+              folderPath: folderPath.trim() || undefined,
             },
           },
         ];
@@ -90,6 +92,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
             metadata: {
               ...doc.metadata,
               title: title.trim() || doc.metadata.title || 'Untitled',
+              folderPath: folderPath.trim() || undefined,
             },
           })
         );
@@ -126,6 +129,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
             metadata: {
               ...doc.metadata,
               title: doc.metadata.title || 'Untitled',
+              folderPath: folderPath.trim() || undefined,
             },
           })
         );
@@ -154,6 +158,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
       setContent('');
       setTitle('');
       setSource('');
+      setFolderPath('');
       setHttpUrl('');
       setGithubRepoUrl('');
       setGithubPath('');
@@ -223,6 +228,20 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="upload-folder">폴더 경로 (선택)</Label>
+                <Input
+                  id="upload-folder"
+                  value={folderPath}
+                  onChange={(e) => setFolderPath(e.target.value)}
+                  placeholder="예: 프로젝트/백엔드/API"
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  슬래시(/)로 하위 폴더를 구분할 수 있습니다
+                </p>
+              </div>
+
               <div className="space-y-2 flex-1 flex flex-col">
                 <Label htmlFor="upload-content">문서 내용</Label>
                 <Textarea
@@ -263,6 +282,20 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
                   placeholder="문서 제목 (비워두면 URL에서 추출)"
                   disabled={isUploading}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="http-folder">폴더 경로 (선택)</Label>
+                <Input
+                  id="http-folder"
+                  value={folderPath}
+                  onChange={(e) => setFolderPath(e.target.value)}
+                  placeholder="예: 프로젝트/백엔드/API"
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  슬래시(/)로 하위 폴더를 구분할 수 있습니다
+                </p>
               </div>
 
               {/* LLM 정제 옵션 */}
@@ -338,6 +371,20 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
                     disabled={isUploading}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="github-folder">폴더 경로 (선택)</Label>
+                <Input
+                  id="github-folder"
+                  value={folderPath}
+                  onChange={(e) => setFolderPath(e.target.value)}
+                  placeholder="예: 프로젝트/백엔드/API"
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  슬래시(/)로 하위 폴더를 구분할 수 있습니다
+                </p>
               </div>
 
               <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-3 text-xs text-blue-600 dark:text-blue-400">
