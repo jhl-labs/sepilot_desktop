@@ -119,6 +119,7 @@ interface ChatStore {
   thinkingMode: ThinkingMode;
   enableRAG: boolean;
   enableTools: boolean;
+  enabledTools: Set<string>; // Individual tool enable/disable
   enableImageGeneration: boolean;
   workingDirectory: string | null; // Coding Agent working directory
 
@@ -198,6 +199,9 @@ interface ChatStore {
   setThinkingMode: (mode: ThinkingMode) => void;
   setEnableRAG: (enable: boolean) => void;
   setEnableTools: (enable: boolean) => void;
+  toggleTool: (toolName: string) => void;
+  enableAllTools: (toolNames: string[]) => void;
+  disableAllTools: () => void;
   setEnableImageGeneration: (enable: boolean) => void;
   setWorkingDirectory: (directory: string | null) => void;
   getGraphConfig: () => GraphConfig;
@@ -320,6 +324,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   thinkingMode: 'instant',
   enableRAG: false,
   enableTools: false,
+  enabledTools: new Set<string>(),
   enableImageGeneration: false,
   workingDirectory: null,
 
@@ -1097,6 +1102,26 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setEnableTools: (enable: boolean) => {
     set({ enableTools: enable });
+  },
+
+  toggleTool: (toolName: string) => {
+    set((state) => {
+      const newEnabledTools = new Set(state.enabledTools);
+      if (newEnabledTools.has(toolName)) {
+        newEnabledTools.delete(toolName);
+      } else {
+        newEnabledTools.add(toolName);
+      }
+      return { enabledTools: newEnabledTools };
+    });
+  },
+
+  enableAllTools: (toolNames: string[]) => {
+    set({ enabledTools: new Set(toolNames) });
+  },
+
+  disableAllTools: () => {
+    set({ enabledTools: new Set<string>() });
   },
 
   setEnableImageGeneration: (enable: boolean) => {

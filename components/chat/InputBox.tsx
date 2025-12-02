@@ -78,9 +78,13 @@ export function InputBox() {
     thinkingMode,
     enableRAG,
     enableTools,
+    enabledTools,
     setThinkingMode,
     setEnableRAG,
     setEnableTools,
+    toggleTool,
+    enableAllTools,
+    disableAllTools,
     getGraphConfig,
     conversations,
     updateConversationTitle,
@@ -1713,35 +1717,110 @@ export function InputBox() {
                 </TooltipProvider>
               )}
 
-              {/* Tools Toggle */}
+              {/* Tools Dropdown */}
               {mounted && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={() => setEnableTools(!enableTools)}
-                        variant="ghost"
-                        size="icon"
-                        className={`h-9 w-9 rounded-xl shrink-0 transition-colors ${
-                          enableTools
-                            ? 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20'
-                            : ''
-                        }`}
-                        title={enableTools ? 'Tools 비활성화' : 'Tools 활성화'}
-                        aria-label={enableTools ? 'Tools 비활성화' : 'Tools 활성화'}
-                        disabled={isStreaming}
-                      >
-                        <Wrench className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p className="font-medium">MCP Tools</p>
-                      <p className="text-xs text-muted-foreground">
-                        AI가 외부 도구를 사용할 수 있습니다
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-9 w-9 rounded-xl shrink-0 transition-colors ${
+                        enableTools ? 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20' : ''
+                      }`}
+                      title={`Tools: ${enabledTools.size}/${tools.length} 활성화`}
+                      disabled={isStreaming}
+                    >
+                      <Wrench className="h-4 w-4" />
+                      <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" side="top" className="w-72 max-h-[400px] overflow-y-auto">
+                    {/* Header with Enable/Disable All */}
+                    <div className="px-2 py-2 space-y-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold">MCP Tools</span>
+                        <span className="text-xs text-muted-foreground">
+                          {enabledTools.size}/{tools.length} 활성화
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 h-7 text-xs"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            enableAllTools(tools.map((t) => t.name));
+                            setEnableTools(true);
+                          }}
+                        >
+                          전체 활성화
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 h-7 text-xs"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            disableAllTools();
+                            setEnableTools(false);
+                          }}
+                        >
+                          전체 비활성화
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px bg-border my-1" />
+
+                    {/* Tool List */}
+                    {tools.length === 0 ? (
+                      <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                        사용 가능한 도구가 없습니다
+                      </div>
+                    ) : (
+                      <div className="px-2 py-1 space-y-0.5">
+                        {tools.map((tool) => {
+                          const isEnabled = enabledTools.has(tool.name);
+                          return (
+                            <button
+                              key={tool.name}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                toggleTool(tool.name);
+                                // 하나라도 활성화되면 enableTools를 true로
+                                if (!isEnabled) {
+                                  setEnableTools(true);
+                                }
+                              }}
+                              className="w-full flex items-start gap-2 px-2 py-2 rounded-md hover:bg-accent transition-colors text-left"
+                            >
+                              <div className="flex items-center justify-center w-4 h-4 mt-0.5 shrink-0">
+                                {isEnabled ? (
+                                  <Check className="h-3.5 w-3.5 text-orange-500" />
+                                ) : (
+                                  <div className="h-3.5 w-3.5 border border-muted-foreground/30 rounded-sm" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium truncate">{tool.name}</div>
+                                <div className="text-xs text-muted-foreground line-clamp-2">
+                                  {tool.description}
+                                </div>
+                                {tool.serverName && tool.serverName !== 'builtin' && (
+                                  <div className="text-xs text-muted-foreground/70 mt-0.5">
+                                    📦 {tool.serverName}
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
 
               {/* Image Upload Button */}
