@@ -121,6 +121,7 @@ interface ChatStore {
   enableTools: boolean;
   enabledTools: Set<string>; // Individual tool enable/disable
   enableImageGeneration: boolean;
+  selectedImageGenProvider: 'comfyui' | 'nanobanana' | null; // User-selected provider for this session
   workingDirectory: string | null; // Coding Agent working directory
 
   // Tool Approval (Human-in-the-loop)
@@ -203,6 +204,7 @@ interface ChatStore {
   enableAllTools: (toolNames: string[]) => void;
   disableAllTools: () => void;
   setEnableImageGeneration: (enable: boolean) => void;
+  setSelectedImageGenProvider: (provider: 'comfyui' | 'nanobanana' | null) => void;
   setWorkingDirectory: (directory: string | null) => void;
   getGraphConfig: () => GraphConfig;
 
@@ -326,6 +328,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   enableTools: false,
   enabledTools: new Set<string>(),
   enableImageGeneration: false,
+  selectedImageGenProvider: null,
   workingDirectory: null,
 
   // Tool Approval (Human-in-the-loop)
@@ -1126,6 +1129,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setEnableImageGeneration: (enable: boolean) => {
     set({ enableImageGeneration: enable });
+  },
+
+  setSelectedImageGenProvider: (provider: 'comfyui' | 'nanobanana' | null) => {
+    set({ selectedImageGenProvider: provider });
   },
 
   setWorkingDirectory: (directory: string | null) => {

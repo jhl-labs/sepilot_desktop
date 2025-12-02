@@ -98,6 +98,8 @@ export function InputBox() {
     clearImageGenerationProgress,
     enableImageGeneration,
     setEnableImageGeneration,
+    selectedImageGenProvider,
+    setSelectedImageGenProvider,
     personas,
     activePersonaId,
     setActivePersona,
@@ -1356,11 +1358,27 @@ export function InputBox() {
           // Get working directory from store for Coding Agent
           const currentStore = useChatStore.getState();
           const workingDirectory = currentStore.workingDirectory;
+
+          // Apply user-selected provider override if both providers are enabled
+          let finalImageGenConfig = imageGenConfig;
+          if (
+            enableImageGeneration &&
+            imageGenConfig &&
+            selectedImageGenProvider &&
+            imageGenConfig.comfyui?.enabled &&
+            imageGenConfig.nanobanana?.enabled
+          ) {
+            finalImageGenConfig = {
+              ...imageGenConfig,
+              provider: selectedImageGenProvider,
+            };
+          }
+
           await window.electronAPI.langgraph.stream(
             graphConfig,
             allMessages,
             conversationId,
-            enableImageGeneration && imageGenConfig ? imageGenConfig : undefined,
+            enableImageGeneration && finalImageGenConfig ? finalImageGenConfig : undefined,
             enableImageGeneration && networkConfig ? networkConfig : undefined,
             workingDirectory || undefined
           );
@@ -2001,33 +2019,72 @@ export function InputBox() {
                   <ImagePlus className="h-4 w-4" />
                 </Button>
               )}
-              {/* Image Generation Toggle - Only show if ComfyUI is available */}
+              {/* Image Generation Toggle - Only show if ImageGen is available */}
               {mounted && isElectron() && imageGenAvailable && (
-                <Button
-                  onClick={() => {
-                    const newValue = !enableImageGeneration;
-                    setEnableImageGeneration(newValue);
-                    // 이미지 생성 활성화 시 자동으로 Tools도 활성화 (Agent 그래프 사용)
-                    if (newValue && !enableTools) {
-                      setEnableTools(true);
+                <>
+                  <Button
+                    onClick={() => {
+                      const newValue = !enableImageGeneration;
+                      setEnableImageGeneration(newValue);
+                      // 이미지 생성 활성화 시 자동으로 Tools도 활성화 (Agent 그래프 사용)
+                      if (newValue && !enableTools) {
+                        setEnableTools(true);
+                      }
+                    }}
+                    variant="ghost"
+                    size="icon"
+                    className={`h-9 w-9 rounded-xl shrink-0 transition-colors ${
+                      enableImageGeneration ? 'bg-primary/10 text-primary hover:bg-primary/20' : ''
+                    }`}
+                    title={
+                      enableImageGeneration
+                        ? '이미지 생성 비활성화'
+                        : '이미지 생성 활성화 (Tools 자동 활성화)'
                     }
-                  }}
-                  variant="ghost"
-                  size="icon"
-                  className={`h-9 w-9 rounded-xl shrink-0 transition-colors ${
-                    enableImageGeneration ? 'bg-primary/10 text-primary hover:bg-primary/20' : ''
-                  }`}
-                  title={
-                    enableImageGeneration
-                      ? '이미지 생성 비활성화'
-                      : '이미지 생성 활성화 (Tools 자동 활성화)'
-                  }
-                  aria-label={enableImageGeneration ? '이미지 생성 비활성화' : '이미지 생성 활성화'}
-                  aria-pressed={enableImageGeneration}
-                  disabled={isStreaming}
-                >
-                  <Sparkles className="h-4 w-4" />
-                </Button>
+                    aria-label={enableImageGeneration ? '이미지 생성 비활성화' : '이미지 생성 활성화'}
+                    aria-pressed={enableImageGeneration}
+                    disabled={isStreaming}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                  </Button>
+                  {/* Provider Selection - Show only if both providers are enabled and image generation is active */}
+                  {enableImageGeneration &&
+                    imageGenConfig &&
+                    imageGenConfig.comfyui?.enabled &&
+                    imageGenConfig.nanobanana?.enabled && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 px-3 rounded-xl shrink-0 text-xs"
+                            disabled={isStreaming}
+                          >
+                            {selectedImageGenProvider === 'comfyui'
+                              ? 'ComfyUI'
+                              : selectedImageGenProvider === 'nanobanana'
+                                ? 'NanoBanana'
+                                : imageGenConfig.provider === 'comfyui'
+                                  ? 'ComfyUI'
+                                  : 'NanoBanana'}
+                            <ChevronDown className="ml-1 h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => setSelectedImageGenProvider('comfyui')}
+                          >
+                            ComfyUI
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setSelectedImageGenProvider('nanobanana')}
+                          >
+                            NanoBanana (Google Imagen)
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                </>
               )}
 
               {/* Send/Stop Button */}
