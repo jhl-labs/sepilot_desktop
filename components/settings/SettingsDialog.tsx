@@ -193,9 +193,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
           const savedComfyConfig = localStorage.getItem('sepilot_comfyui_config');
           if (savedComfyConfig) {
-            setComfyConfig(mergeComfyConfig(JSON.parse(savedComfyConfig)));
+            setImageGenConfig(mergeImageGenConfig(JSON.parse(savedImageGenConfig)));
           } else {
-            setComfyConfig(createDefaultComfyUIConfig());
+            setImageGenConfig(createDefaultImageGenConfig());
           }
 
           const savedQuickInputConfig = localStorage.getItem('sepilot_quickinput_config');
@@ -687,6 +687,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         }
         if (newConfig.embedding) {
           localStorage.setItem('sepilot_embedding_config', JSON.stringify(newConfig.embedding));
+        if (newConfig.imageGen) {
+          localStorage.setItem('sepilot_imagegen_config', JSON.stringify(newConfig.imageGen));
+        }
         }
       }
 
@@ -744,6 +747,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       mcp: appConfigSnapshot?.mcp ?? [],
       vectorDB: vectorDBConfig ?? undefined,
       embedding: embeddingConfig ?? undefined,
+      imageGen: imageGenConfig,
       comfyUI: comfyConfig,
       github: githubConfig ?? undefined,
       githubSync: githubSyncConfig ?? undefined,

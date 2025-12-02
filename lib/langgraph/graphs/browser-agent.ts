@@ -511,8 +511,15 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
 **Typical Google Search Workflow:**
 1. google_search({ query: "검색어", dateFilter: "week" }) // 검색 수행
 2. google_extract_results({ maxResults: 10 }) // 결과 추출
-3. google_visit_result({ rank: 1, extractType: "summary" }) // 상위 결과 방문
+3. google_visit_result({ rank: 1, extractType: "summary", maxWaitTime: 10 }) // 상위 결과 방문
+   - Use default maxWaitTime (10s) - do NOT increase it
+   - If timeout occurs, use browser_navigate instead immediately
 4. google_get_related_searches() // 관련 검색어 확인 (선택)
+
+**IMPORTANT: google_visit_result Parameters:**
+- maxWaitTime: Keep at default (10 seconds). Longer timeouts waste time.
+- If it fails, the page is too slow - use browser_navigate with the URL instead
+- Never retry google_visit_result with same rank after timeout
 
 ## Browser Navigation (Direct URL navigation)
 - **browser_navigate**: Navigate to a URL directly
