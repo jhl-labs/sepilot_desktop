@@ -35,6 +35,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useChatInput } from './hooks/useChatInput';
 import { useImageUpload } from './hooks/useImageUpload';
 import { useFileUpload } from './hooks/useFileUpload';
+import { useToolApproval } from './hooks/useToolApproval';
 import { ImageAttachmentPlugin } from './plugins/ImageAttachmentPlugin';
 import { PersonaPlugin } from './plugins/PersonaPlugin';
 import { ToolApprovalPlugin } from './plugins/ToolApprovalPlugin';
@@ -133,6 +134,8 @@ export function UnifiedChatInput({
     useImageUpload();
 
   const { isDragging, setIsDragging, handleFileDrop } = useFileUpload();
+
+  const { handleToolApprove, handleToolReject, handleToolAlwaysApprove } = useToolApproval();
 
   // Local state
   const [personaAutocompleteIndex, setPersonaAutocompleteIndex] = useState(0);
@@ -1042,15 +1045,9 @@ export function UnifiedChatInput({
       {mode === 'main' && pendingToolApproval && (
         <ToolApprovalPlugin
           pendingApproval={pendingToolApproval}
-          onApprove={async (_toolCalls) => {
-            // Handled by useToolApproval hook in ChatContainer
-          }}
-          onReject={async () => {
-            // Handled by useToolApproval hook in ChatContainer
-          }}
-          onAlwaysApprove={async (_toolCalls) => {
-            // Handled by useToolApproval hook in ChatContainer
-          }}
+          onApprove={handleToolApprove}
+          onReject={handleToolReject}
+          onAlwaysApprove={handleToolAlwaysApprove}
         />
       )}
     </div>
