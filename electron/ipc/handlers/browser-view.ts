@@ -224,9 +224,19 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
   // Handle console messages for debugging
   view.webContents.on('console-message', (_, level, message) => {
     // level: 0=verbose, 1=info, 2=warning, 3=error
-    // Google 페이지의 에러는 무시 (외부 페이지의 JavaScript 에러)
-    if (level === 3 && message.includes('TypeError')) {
-      // External page errors - log as debug only
+
+    // 무시할 패턴들 (외부 페이지의 harmless errors)
+    const ignoredPatterns = [
+      'TypeError',
+      'postMessage',
+      'The target origin provided',
+      "does not match the recipient window's origin",
+    ];
+
+    const shouldIgnore = ignoredPatterns.some((pattern) => message.includes(pattern));
+
+    if (shouldIgnore) {
+      // External page errors/warnings - log as debug only
       logger.debug(`[BrowserView Console] ${message}`);
     } else if (level >= 2) {
       logger.warn(`[BrowserView Console] ${message}`);
