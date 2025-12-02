@@ -32,6 +32,8 @@ export interface EditorAgentState extends AgentState {
     selectedText?: string;
     action?: 'autocomplete' | 'code-action' | 'writing-tool';
     actionType?: string; // 'fix', 'improve', 'continue', etc.
+    useRag?: boolean; // RAG 문서 사용 여부
+    useTools?: boolean; // MCP Tools 사용 여부
   };
   // RAG 관련 상태
   ragDocuments?: Array<{
@@ -64,11 +66,14 @@ export class EditorAgentGraph {
 
     console.log('[EditorAgent] Starting with action:', state.editorContext?.action);
     console.log('[EditorAgent] Action type:', state.editorContext?.actionType);
+    console.log('[EditorAgent] Use RAG:', state.editorContext?.useRag);
+    console.log('[EditorAgent] Use Tools:', state.editorContext?.useTools);
 
-    // RAG: Autocomplete와 Code Action에서 항상 문서 검색 수행
+    // RAG: useRag가 활성화된 경우에만 문서 검색 수행
     if (
-      state.editorContext?.action === 'autocomplete' ||
-      state.editorContext?.action === 'code-action'
+      state.editorContext?.useRag &&
+      (state.editorContext?.action === 'autocomplete' ||
+        state.editorContext?.action === 'code-action')
     ) {
       console.log('[EditorAgent] RAG enabled - retrieving relevant documents');
       try {
@@ -92,6 +97,10 @@ export class EditorAgentGraph {
           ragDocuments: [],
         };
       }
+    } else if (state.editorContext?.useRag === false) {
+      console.log('[EditorAgent] RAG disabled by user');
+    } else {
+      console.log('[EditorAgent] RAG not applicable for this action');
     }
 
     let hasError = false;
