@@ -1,11 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Download, Image as ImageIcon, Sparkles, Clipboard } from 'lucide-react';
+import { X, Download, Image as ImageIcon, Sparkles, Clipboard, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { isElectron } from '@/lib/platform';
 import type { Message } from '@/types';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 
 interface GalleryImage {
   id: string;
@@ -134,6 +140,26 @@ export function GalleryView({ onClose }: GalleryViewProps) {
     document.body.removeChild(link);
   };
 
+  const handleCopyImage = async (image: GalleryImage) => {
+    try {
+      // base64 데이터를 Blob으로 변환
+      const base64Data = image.base64.split(',')[1];
+      const byteCharacters = window.atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: image.mimeType });
+
+      // ClipboardItem으로 클립보드에 복사
+      const clipboardItem = new ClipboardItem({ [image.mimeType]: blob });
+      await navigator.clipboard.write([clipboardItem]);
+    } catch (error) {
+      console.error('이미지 복사 실패:', error);
+    }
+  };
+
   const filteredImages = images.filter((img) => {
     if (filter === 'all') {
       return true;
@@ -217,43 +243,59 @@ export function GalleryView({ onClose }: GalleryViewProps) {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filteredImages.map((image) => (
-              <div
-                key={image.id}
-                className="group relative aspect-square overflow-hidden rounded-lg border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                onClick={() => setSelectedImage(image)}
-              >
-                <img
-                  src={image.base64}
-                  alt={image.filename}
-                  className="h-full w-full object-cover"
-                />
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <div className="flex items-center gap-1 text-white text-xs">
-                      {image.type === 'generated' ? (
-                        <Sparkles className="h-3 w-3" />
-                      ) : (
-                        <Clipboard className="h-3 w-3" />
-                      )}
-                      <span>{image.type === 'generated' ? '생성됨' : '붙여넣기'}</span>
+              <ContextMenu key={image.id}>
+                <ContextMenuTrigger>
+                  <div
+                    className="group relative aspect-square overflow-hidden rounded-lg border bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                    onClick={() => setSelectedImage(image)}
+                  >
+                    <img
+                      src={image.base64}
+                      alt={image.filename}
+                      className="h-full w-full object-cover"
+                    />
+                    {/* Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <div className="flex items-center gap-1 text-white text-xs">
+                          {image.type === 'generated' ? (
+                            <Sparkles className="h-3 w-3" />
+                          ) : (
+                            <Clipboard className="h-3 w-3" />
+                          )}
+                          <span>{image.type === 'generated' ? '생성됨' : '붙여넣기'}</span>
+                        </div>
+                        <p className="text-white text-xs mt-1 line-clamp-1">
+                          {image.conversationTitle || '대화'}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-white text-xs mt-1 line-clamp-1">
-                      {image.conversationTitle || '대화'}
-                    </p>
+                    {/* Type badge */}
+                    <div
+                      className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        image.type === 'generated'
+                          ? 'bg-purple-500/80 text-white'
+                          : 'bg-blue-500/80 text-white'
+                      }`}
+                    >
+                      {image.type === 'generated' ? 'AI' : 'User'}
+                    </div>
                   </div>
-                </div>
-                {/* Type badge */}
-                <div
-                  className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                    image.type === 'generated'
-                      ? 'bg-purple-500/80 text-white'
-                      : 'bg-blue-500/80 text-white'
-                  }`}
-                >
-                  {image.type === 'generated' ? 'AI' : 'User'}
-                </div>
-              </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem
+                    onClick={() => handleCopyImage(image)}
+                    className="cursor-pointer"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    이미지 복사
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => handleDownload(image)} className="cursor-pointer">
+                    <Download className="mr-2 h-4 w-4" />
+                    다운로드
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             ))}
           </div>
         )}
