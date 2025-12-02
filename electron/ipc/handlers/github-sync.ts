@@ -153,43 +153,17 @@ export function setupGitHubSyncHandlers() {
   ipcMain.handle('github-sync-images', async (_event, config: GitHubSyncConfig) => {
     try {
       // 데이터베이스에서 모든 대화와 메시지 가져오기
-      const conversationsResult = await new Promise<any>((resolve) => {
-        databaseService.db.all(
-          'SELECT * FROM conversations ORDER BY created_at DESC',
-          (err, rows) => {
-            if (err) {
-              console.error('[GitHubSync] Failed to load conversations:', err);
-              resolve([]);
-            } else {
-              resolve(rows || []);
-            }
-          }
-        );
-      });
+      const conversations = databaseService.getAllConversations();
 
       const allImages: any[] = [];
 
-      for (const conversation of conversationsResult) {
-        const messagesResult = await new Promise<any>((resolve) => {
-          databaseService.db.all(
-            'SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC',
-            [conversation.id],
-            (err, rows) => {
-              if (err) {
-                console.error('[GitHubSync] Failed to load messages:', err);
-                resolve([]);
-              } else {
-                resolve(rows || []);
-              }
-            }
-          );
-        });
+      for (const conversation of conversations) {
+        const messages = databaseService.getMessages(conversation.id);
 
-        for (const message of messagesResult) {
+        for (const message of messages) {
           if (message.images) {
             try {
-              const images = JSON.parse(message.images);
-              for (const img of images) {
+              for (const img of message.images) {
                 if (img.base64) {
                   allImages.push({
                     ...img,
@@ -248,46 +222,20 @@ export function setupGitHubSyncHandlers() {
   ipcMain.handle('github-sync-conversations', async (_event, config: GitHubSyncConfig) => {
     try {
       // 데이터베이스에서 모든 대화와 메시지 가져오기
-      const conversationsResult = await new Promise<any>((resolve) => {
-        databaseService.db.all(
-          'SELECT * FROM conversations ORDER BY created_at DESC',
-          (err, rows) => {
-            if (err) {
-              console.error('[GitHubSync] Failed to load conversations:', err);
-              resolve([]);
-            } else {
-              resolve(rows || []);
-            }
-          }
-        );
-      });
+      const conversations = databaseService.getAllConversations();
 
       const allMessages: any[] = [];
 
-      for (const conversation of conversationsResult) {
-        const messagesResult = await new Promise<any>((resolve) => {
-          databaseService.db.all(
-            'SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC',
-            [conversation.id],
-            (err, rows) => {
-              if (err) {
-                console.error('[GitHubSync] Failed to load messages:', err);
-                resolve([]);
-              } else {
-                resolve(rows || []);
-              }
-            }
-          );
-        });
-
-        allMessages.push(...messagesResult);
+      for (const conversation of conversations) {
+        const messages = databaseService.getMessages(conversation.id);
+        allMessages.push(...messages);
       }
 
       // 백업 데이터 생성
       const backupData = {
         version: '1.0',
         exportDate: new Date().toISOString(),
-        conversations: conversationsResult,
+        conversations,
         messages: allMessages,
       };
 
@@ -331,22 +279,13 @@ export function setupGitHubSyncHandlers() {
   ipcMain.handle('github-sync-personas', async (_event, config: GitHubSyncConfig) => {
     try {
       // 데이터베이스에서 모든 페르소나 가져오기
-      const personasResult = await new Promise<any>((resolve) => {
-        databaseService.db.all('SELECT * FROM personas ORDER BY created_at ASC', (err, rows) => {
-          if (err) {
-            console.error('[GitHubSync] Failed to load personas:', err);
-            resolve([]);
-          } else {
-            resolve(rows || []);
-          }
-        });
-      });
+      const personas = databaseService.getAllPersonas();
 
       // GitHub Sync 클라이언트 생성
       const client = new GitHubSyncClient(config);
 
       // 페르소나 동기화
-      const result = await client.syncPersonas(personasResult);
+      const result = await client.syncPersonas(personas);
 
       // 마지막 동기화 정보 업데이트
       if (result.success) {
@@ -409,17 +348,8 @@ export function setupGitHubSyncHandlers() {
 
       // AI 페르소나 동기화
       if (config.syncPersonas) {
-        const personasResult = await new Promise<any>((resolve) => {
-          databaseService.db.all('SELECT * FROM personas ORDER BY created_at ASC', (err, rows) => {
-            if (err) {
-              console.error('[GitHubSync] Failed to load personas:', err);
-              resolve([]);
-            } else {
-              resolve(rows || []);
-            }
-          });
-        });
-        results.personas = await client.syncPersonas(personasResult);
+        const personas = databaseService.getAllPersonas();
+        results.personas = await client.syncPersonas(personas);
       }
 
       // 이미지는 동기화하지 않음 (용량 문제)
