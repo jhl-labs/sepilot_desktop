@@ -16,6 +16,7 @@ import {
   NetworkConfig,
   QuickInputConfig,
   GitHubOAuthConfig,
+  GitHubSyncConfig,
 } from '@/types';
 import { initializeLLMClient } from '@/lib/llm/client';
 import { VectorDBSettings } from '@/components/rag/VectorDBSettings';
@@ -25,7 +26,6 @@ import { initializeEmbedding } from '@/lib/vectordb/embeddings/client';
 import { isElectron } from '@/lib/platform';
 import { configureWebLLMClient } from '@/lib/llm/web-client';
 import { GitHubSyncSettings } from '@/components/settings/GitHubSyncSettings';
-import { GitHubSyncConfig } from '@/types';
 import { BackupRestoreSettings } from '@/components/settings/BackupRestoreSettings';
 import { LLMSettingsTab } from './LLMSettingsTab';
 import { NetworkSettingsTab } from './NetworkSettingsTab';
