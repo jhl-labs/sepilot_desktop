@@ -328,8 +328,7 @@ export function InputBox() {
               // Check availability based on provider
               let isAvailable = false;
               if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui) {
-                isAvailable =
-                  imageGenConfig.comfyui.enabled && !!imageGenConfig.comfyui.httpUrl;
+                isAvailable = imageGenConfig.comfyui.enabled && !!imageGenConfig.comfyui.httpUrl;
               } else if (imageGenConfig.provider === 'nanobanana' && imageGenConfig.nanobanana) {
                 isAvailable =
                   imageGenConfig.nanobanana.enabled && !!imageGenConfig.nanobanana.apiKey;
@@ -374,11 +373,9 @@ export function InputBox() {
             // Check availability based on provider
             let isAvailable = false;
             if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui) {
-              isAvailable =
-                imageGenConfig.comfyui.enabled && !!imageGenConfig.comfyui.httpUrl;
+              isAvailable = imageGenConfig.comfyui.enabled && !!imageGenConfig.comfyui.httpUrl;
             } else if (imageGenConfig.provider === 'nanobanana' && imageGenConfig.nanobanana) {
-              isAvailable =
-                imageGenConfig.nanobanana.enabled && !!imageGenConfig.nanobanana.apiKey;
+              isAvailable = imageGenConfig.nanobanana.enabled && !!imageGenConfig.nanobanana.apiKey;
             }
             setImageGenAvailable(isAvailable);
           } else {
@@ -419,11 +416,9 @@ export function InputBox() {
             setImageGenConfig(imageGenConfig);
             let isAvailable = false;
             if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui) {
-              isAvailable =
-                imageGenConfig.comfyui.enabled && !!imageGenConfig.comfyui.httpUrl;
+              isAvailable = imageGenConfig.comfyui.enabled && !!imageGenConfig.comfyui.httpUrl;
             } else if (imageGenConfig.provider === 'nanobanana' && imageGenConfig.nanobanana) {
-              isAvailable =
-                imageGenConfig.nanobanana.enabled && !!imageGenConfig.nanobanana.apiKey;
+              isAvailable = imageGenConfig.nanobanana.enabled && !!imageGenConfig.nanobanana.apiKey;
             }
             setImageGenAvailable(isAvailable);
           }
@@ -462,18 +457,12 @@ export function InputBox() {
       }
 
       if (imageGenConfigToSet) {
-        if (
-          imageGenConfigToSet.provider === 'comfyui' &&
-          imageGenConfigToSet.comfyui
-        ) {
+        if (imageGenConfigToSet.provider === 'comfyui' && imageGenConfigToSet.comfyui) {
           initializeComfyUIClient(imageGenConfigToSet.comfyui);
         }
         setImageGenConfig(imageGenConfigToSet);
         let isAvailable = false;
-        if (
-          imageGenConfigToSet.provider === 'comfyui' &&
-          imageGenConfigToSet.comfyui
-        ) {
+        if (imageGenConfigToSet.provider === 'comfyui' && imageGenConfigToSet.comfyui) {
           isAvailable =
             imageGenConfigToSet.comfyui.enabled && !!imageGenConfigToSet.comfyui.httpUrl;
         } else if (
@@ -481,8 +470,7 @@ export function InputBox() {
           imageGenConfigToSet.nanobanana
         ) {
           isAvailable =
-            imageGenConfigToSet.nanobanana.enabled &&
-            !!imageGenConfigToSet.nanobanana.apiKey;
+            imageGenConfigToSet.nanobanana.enabled && !!imageGenConfigToSet.nanobanana.apiKey;
         }
         setImageGenAvailable(isAvailable);
       }
@@ -1270,7 +1258,9 @@ export function InputBox() {
                               });
                             }
                           }
-                          console.log(`[InputBox] Added ${resultData.images.length} generated images (NanoBanana) to message`);
+                          console.log(
+                            `[InputBox] Added ${resultData.images.length} generated images (NanoBanana) to message`
+                          );
                         }
                       }
                     } catch (error) {
@@ -1916,7 +1906,11 @@ export function InputBox() {
                       <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" side="top" className="w-72 max-h-[400px] overflow-y-auto">
+                  <DropdownMenuContent
+                    align="end"
+                    side="top"
+                    className="w-72 max-h-[400px] overflow-y-auto"
+                  >
                     {/* Header with Enable/Disable All */}
                     <div className="px-2 py-2 space-y-1">
                       <div className="flex items-center justify-between mb-2">
@@ -2041,7 +2035,9 @@ export function InputBox() {
                         ? '이미지 생성 비활성화'
                         : '이미지 생성 활성화 (Tools 자동 활성화)'
                     }
-                    aria-label={enableImageGeneration ? '이미지 생성 비활성화' : '이미지 생성 활성화'}
+                    aria-label={
+                      enableImageGeneration ? '이미지 생성 비활성화' : '이미지 생성 활성화'
+                    }
                     aria-pressed={enableImageGeneration}
                     disabled={isStreaming}
                   >
@@ -2071,9 +2067,7 @@ export function InputBox() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => setSelectedImageGenProvider('comfyui')}
-                          >
+                          <DropdownMenuItem onClick={() => setSelectedImageGenProvider('comfyui')}>
                             ComfyUI
                           </DropdownMenuItem>
                           <DropdownMenuItem
