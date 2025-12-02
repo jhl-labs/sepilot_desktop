@@ -150,10 +150,16 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       toolResultsCount: state.toolResults.length,
     });
 
+    // GraphConfig에서 enableTools 설정 확인
+    const graphConfig = getCurrentGraphConfig();
+    const toolsEnabled = graphConfig?.enableTools ?? true; // Default to true for backward compatibility
+
+    console.log(`[Agent] Tools enabled in config: ${toolsEnabled}`);
+
     // MCP 도구 가져오기 (Built-in tools는 Coding Agent에서만 사용)
     // Note: generateWithToolsNode는 Electron Main Process에서 실행되므로
     // IPC가 아닌 직접 메서드를 사용해야 함
-    const availableTools = MCPServerManager.getAllToolsInMainProcess();
+    const availableTools = toolsEnabled ? MCPServerManager.getAllToolsInMainProcess() : [];
     console.log(`[Agent] Available MCP tools: ${availableTools.length}`);
 
     if (availableTools.length > 0) {
@@ -180,11 +186,10 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       },
     }));
 
-    // GraphConfig를 통해 이미지 생성이 활성화되어 있으면 도구 추가
+    // 이미지 생성 도구 추가 (GraphConfig 설정 확인)
     // Note: isComfyUIEnabled()는 Renderer Process에서만 동작하므로,
     // Main Process에서는 GraphConfig를 통해 전달된 값을 사용
-    const graphConfig = getCurrentGraphConfig();
-    if (graphConfig?.enableImageGeneration) {
+    if (toolsEnabled && graphConfig?.enableImageGeneration) {
       toolsForLLM.push({
         type: 'function' as const,
         function: {
