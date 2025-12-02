@@ -412,7 +412,7 @@ export function UnifiedChatInput({
                 <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuContent align="start" side="top" className="w-56">
               <div className="px-2 py-1.5 text-xs font-semibold">Thinking Mode</div>
               <DropdownMenuItem onClick={() => setThinkingMode('instant')}>
                 <Zap className="h-3.5 w-3.5 mr-2" />
@@ -544,7 +544,7 @@ export function UnifiedChatInput({
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuContent align="end" side="top" className="w-64">
                 <DropdownMenuItem
                   onClick={() => setThinkingMode('instant')}
                   className="cursor-pointer"
@@ -650,7 +650,11 @@ export function UnifiedChatInput({
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <DropdownMenuContent align="end" className="w-72 max-h-[400px] overflow-y-auto">
+              <DropdownMenuContent
+                align="end"
+                side="top"
+                className="w-72 max-h-[400px] overflow-y-auto"
+              >
                 {/* Tools header with bulk actions */}
                 <div className="px-2 py-2 flex items-center justify-between border-b">
                   <span className="text-xs text-muted-foreground">
@@ -751,7 +755,7 @@ export function UnifiedChatInput({
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" side="top" className="w-48">
                   <DropdownMenuItem
                     onClick={() => setEnableImageGeneration(!enableImageGeneration)}
                     className="cursor-pointer"
