@@ -397,11 +397,44 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
 
           console.log(`[Tools] Found tool on server: ${tool.serverName}`);
 
+          // Parameter filtering for tavily_search
+          let toolArguments: any = call.arguments;
+          if (call.name === 'tavily_search') {
+            const params: any = call.arguments || {};
+
+            // Extract and validate query
+            let query: string = params.query || params.search_query || '';
+            if (typeof query !== 'string') {
+              query = String(query);
+            }
+            query = query.trim();
+
+            // Extract and validate max_results (support multiple field names)
+            let maxResults: number =
+              params.max_results || params.maxResults || params.top_n || params.topn || 5;
+            if (typeof maxResults === 'string') {
+              maxResults = parseInt(maxResults, 10) || 5;
+            }
+            maxResults = Math.max(1, Math.min(maxResults, 10)); // Clamp to 1-10
+
+            // Create cleaned parameters (only query and max_results)
+            toolArguments = {};
+            if (query) {
+              toolArguments.query = query;
+            }
+            if (maxResults) {
+              toolArguments.max_results = maxResults;
+            }
+
+            console.log('[Tools] Tavily search - Original params:', params);
+            console.log('[Tools] Tavily search - Cleaned params:', toolArguments);
+          }
+
           // Main Process에서 직접 MCP 클라이언트를 통해 도구 실행
           const mcpResult = await MCPServerManager.callToolInMainProcess(
             tool.serverName,
             call.name,
-            call.arguments
+            toolArguments
           );
 
           console.log(`[Tools] MCP Tool result:`, mcpResult);
