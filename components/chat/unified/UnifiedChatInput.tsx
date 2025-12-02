@@ -173,20 +173,22 @@ export function UnifiedChatInput({
 
   // Load tools from IPC (Main Chat only)
   useEffect(() => {
-    if (mode !== 'main' || !isElectron() || !window.electronAPI?.langgraph) {
+    if (mode !== 'main' || !isElectron() || !window.electronAPI?.mcp) {
       return;
     }
 
-    // TODO: Implement getAvailableTools in electronAPI.langgraph
-    // const loadTools = async () => {
-    //   try {
-    //     const loadedTools = await window.electronAPI.langgraph.getAvailableTools();
-    //     setTools(loadedTools);
-    //   } catch (error) {
-    //     console.error('[UnifiedChatInput] Failed to load tools:', error);
-    //   }
-    // };
-    // loadTools();
+    const loadTools = async () => {
+      try {
+        const response = await window.electronAPI.mcp.getAllTools();
+        if (response.success && response.data) {
+          _setTools(response.data);
+        }
+      } catch (error) {
+        console.error('[UnifiedChatInput] Failed to load tools:', error);
+      }
+    };
+
+    loadTools();
   }, [mode]);
 
   // Get current conversation's image generation progress
