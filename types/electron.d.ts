@@ -521,6 +521,15 @@ interface GitHubSyncAPI {
   >;
 }
 
+// Error Reporting API
+interface ErrorReportingAPI {
+  send: (
+    errorData: import('./index').ErrorReportData
+  ) => Promise<IPCResponse<{ issueUrl?: string; skipped?: boolean }>>;
+  isEnabled: () => Promise<{ enabled: boolean }>;
+  getContext: () => Promise<IPCResponse<{ version: string; platform: string; timestamp: number }>>;
+}
+
 // Embeddings 설정 타입
 interface EmbeddingsConfig {
   apiKey: string;
@@ -801,6 +810,7 @@ interface ElectronAPI {
   fs: FileSystemAPI;
   github: GitHubAPI;
   githubSync: GitHubSyncAPI; // 새로운 Token 기반 Sync API
+  errorReporting: ErrorReportingAPI; // 에러 자동 리포팅 API
   shell: ShellAPI;
   embeddings: EmbeddingsAPI;
   comfyui: ComfyUIAPI;
@@ -853,6 +863,7 @@ export type {
   GitHubRepository,
   GitHubSyncAPI,
   GitHubSyncResult,
+  ErrorReportingAPI,
   ShellAPI,
   EmbeddingsAPI,
   EmbeddingsConfig,

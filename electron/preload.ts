@@ -326,6 +326,13 @@ const electronAPI = {
     syncAll: (config: any) => ipcRenderer.invoke('github-sync-all', config),
   },
 
+  // Error Reporting operations
+  errorReporting: {
+    send: (errorData: any) => ipcRenderer.invoke('error-reporting-send', errorData),
+    isEnabled: () => ipcRenderer.invoke('error-reporting-is-enabled'),
+    getContext: () => ipcRenderer.invoke('error-reporting-get-context'),
+  },
+
   // Shell operations
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke('shell-open-external', url),
