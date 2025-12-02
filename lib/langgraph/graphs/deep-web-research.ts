@@ -132,29 +132,37 @@ async function planNode(state: AgentState): Promise<Partial<AgentState>> {
    'tavily_search' 도구는 **오직 2개의 파라미터만** 허용합니다:
 
    ✅ **허용된 파라미터 (이것만 사용):**
-   - "query": (string) 검색어
-   - "max_results": (number) 최대 결과 수 (기본값: 5)
+   - "query": (string, 필수) 검색어 - 반드시 의미 있는 문자열을 입력하세요
+   - "max_results": (number, 선택) 최대 결과 수 (기본값: 5, 범위: 1-10)
 
-   ❌ **금지된 파라미터 (시스템 에러 발생):**
-   다음 파라미터들은 절대 사용하지 마세요. 사용하면 검색이 실패합니다:
-   - "country", "topic", "topn", "search_depth", "days", "time_range"
+   ❌ **금지된 모든 파라미터 (시스템 에러 발생):**
+   아래 파라미터들은 절대 사용하지 마세요. 사용하면 검색이 실패합니다:
+   - "top_n", "topn", "country", "topic", "search_depth", "days", "time_range"
    - "include_domains", "exclude_domains", "include_answer"
    - "include_raw_content", "include_images", "select_paths", "exclude_paths"
    - 기타 query, max_results 이외의 모든 파라미터
 
-   **✅ 올바른 예시 (반드시 이 형식을 따르세요):**
+   **빈 값도 절대 금지:**
+   - 빈 문자열 (""), null, undefined 값을 파라미터로 보내지 마세요
+   - 사용하지 않을 파라미터는 아예 포함하지 마세요
+
+   **✅ 올바른 예시 (이 형식만 사용하세요):**
    {"query": "latest AI news 2025", "max_results": 5} ✅
-   {"query": "Python tutorial beginners", "max_results": 3} ✅
-   {"query": "climate change statistics", "max_results": 5} ✅
+   {"query": "Python tutorial beginners"} ✅ (max_results 생략 가능)
+   {"query": "climate change statistics", "max_results": 3} ✅
 
    **❌ 잘못된 예시 (절대 사용 금지):**
-   {"query": "news", "max_results": 5, "country": "ko"} ❌ (country 금지)
-   {"query": "AI", "days": "week"} ❌ (days 금지)
-   {"query": "research", "time_range": ""} ❌ (time_range 금지)
+   {"query": "news", "max_results": 5, "country": "ko"} ❌ (country 파라미터 사용)
+   {"query": "AI", "top_n": 10} ❌ (top_n은 금지, max_results 사용)
+   {"query": "research", "time_range": ""} ❌ (time_range 파라미터 + 빈 문자열)
    {"query": "search", "search_depth": "advanced"} ❌ (search_depth 금지)
-   {"query": "data", "select_paths": [], "exclude_paths": []} ❌ (paths 금지)
+   {"query": "data", "select_paths": [], "exclude_paths": []} ❌ (paths 파라미터 금지)
+   {"query": "", "max_results": 5} ❌ (빈 query 금지)
 
-   **⚠️ 중요: query와 max_results만 사용하세요. 다른 필드는 절대 추가하지 마세요!**
+   **⚠️ 중요:
+   - 파라미터는 query와 max_results만 사용하세요
+   - 다른 파라미터를 추가하면 에러가 발생합니다
+   - 빈 값을 보내지 마세요**
 
 5. 한 번에 최대 3개의 병렬 쿼리를 생성할 수 있습니다.
 6. 반드시 아래 JSON 형식으로만 응답하세요.
@@ -267,11 +275,33 @@ async function searchNode(state: AgentState): Promise<Partial<AgentState>> {
 
     // Tavily Search: Only allow query and max_results
     if (q.tool_name === 'tavily_search') {
-      cleanedParams = {
-        query: q.parameters.query || q.parameters.search_query || '',
-        max_results: q.parameters.max_results || 5,
-      };
-      console.log('[DeepWebResearch] Cleaned tavily_search params:', cleanedParams);
+      const params = q.parameters || {};
+
+      // Extract query (support multiple field names)
+      let query = params.query || params.search_query || '';
+      if (typeof query !== 'string') {
+        query = String(query);
+      }
+      query = query.trim();
+
+      // Extract max_results (support multiple field names and map old names)
+      let maxResults = params.max_results || params.maxResults || params.top_n || params.topn || 5;
+      if (typeof maxResults === 'string') {
+        maxResults = parseInt(maxResults, 10) || 5;
+      }
+      maxResults = Math.max(1, Math.min(maxResults, 10)); // Clamp to 1-10
+
+      // Only include non-empty values
+      cleanedParams = {};
+      if (query) {
+        cleanedParams.query = query;
+      }
+      if (maxResults) {
+        cleanedParams.max_results = maxResults;
+      }
+
+      console.log('[DeepWebResearch] Original params:', params);
+      console.log('[DeepWebResearch] Cleaned params:', cleanedParams);
     }
 
     return {
