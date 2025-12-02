@@ -1210,11 +1210,11 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 
   // Log tool execution end (Detailed)
   if (results.length > 0) {
-    let logMessage = `\n`;
+    let logMessage = `\n<small>\n`;
 
     for (const result of results) {
       const status = result.error ? '❌ Error' : '✅ Result';
-      logMessage += `${status}: \`${result.toolName}\`\n`;
+      logMessage += `${status}: \`${result.toolName}\`\n\n`;
 
       let output = result.error || result.result || '(no output)';
       if (typeof output !== 'string') {
@@ -1228,11 +1228,12 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 
       // Use inline code instead of code block for shorter output
       if (output.length < 100 && !output.includes('\n')) {
-        logMessage += `📄 Output: \`${output}\`\n`;
+        logMessage += `📄 Output: \`${output}\`\n\n`;
       } else {
-        logMessage += `📄 Output:\n\`\`\`\n${output}\n\`\`\`\n`;
+        logMessage += `📄 Output:\n\`\`\`\n${output}\n\`\`\`\n\n`;
       }
     }
+    logMessage += `</small>`;
     emitStreamingChunk(`${logMessage}---\n\n`, state.conversationId);
   }
 
