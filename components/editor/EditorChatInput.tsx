@@ -143,14 +143,11 @@ Execute tasks step by step and use tools proactively.`,
               return;
             }
 
-            if (abortControllerRef.current?.signal.aborted) {
-              return;
-            }
-
             // Cast to any for event property access
             const evt = event as {
               type?: string;
               chunk?: string;
+              conversationId?: string;
               data?: {
                 messages?: Array<{ role: string; content?: string }>;
                 iteration?: number;
@@ -159,6 +156,15 @@ Execute tasks step by step and use tools proactively.`,
                 message?: string;
               };
             };
+
+            // Filter events by conversationId - only handle events for editor-chat-temp
+            if (evt.conversationId && evt.conversationId !== 'editor-chat-temp') {
+              return;
+            }
+
+            if (abortControllerRef.current?.signal.aborted) {
+              return;
+            }
 
             // Handle progress events
             if (evt.type === 'progress' && evt.data) {

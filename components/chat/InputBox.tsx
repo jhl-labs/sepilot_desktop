@@ -770,8 +770,23 @@ export function InputBox() {
                 return;
               }
 
+              // Debug: Log event type and conversationId
+              if (event.type === 'tool_approval_request') {
+                console.log('[InputBox] DEBUG: Received tool_approval_request event', {
+                  eventConversationId: event.conversationId,
+                  expectedConversationId: conversationId,
+                  match: event.conversationId === conversationId,
+                  event,
+                });
+              }
+
               // Filter events by conversationId - ignore events from other conversations
               if (event.conversationId && event.conversationId !== conversationId) {
+                if (event.type === 'tool_approval_request') {
+                  console.log(
+                    '[InputBox] DEBUG: tool_approval_request filtered out due to conversationId mismatch'
+                  );
+                }
                 return;
               }
 
@@ -870,6 +885,13 @@ export function InputBox() {
                   accumulatedContent = `${accumulatedContent || ''}\n\n❌ 도구 실행이 거부되었습니다.`;
                   scheduleUpdate({ content: accumulatedContent });
                 }
+                return;
+              }
+
+              // Handle completion event to clear UI loading state
+              if (event.type === 'completion') {
+                console.log('[InputBox] Agent completed, clearing node status');
+                // No action needed - nodeStatusMessage will remain empty and UI will clear
                 return;
               }
 

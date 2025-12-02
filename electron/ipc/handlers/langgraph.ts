@@ -48,13 +48,24 @@ export function requestToolApproval(
     // Store the promise callbacks
     pendingToolApprovals.set(conversationId, { resolve, reject });
 
-    // Send approval request to renderer via stream event (consistent with other events)
-    sender.send('langgraph-stream-event', {
+    const event = {
       type: 'tool_approval_request',
       conversationId,
       messageId,
       toolCalls,
+    };
+
+    // DEBUG: Log the event being sent
+    logger.info(`[LangGraph IPC] DEBUG: Sending tool_approval_request event`, {
+      conversationId,
+      messageId,
+      toolCallsCount: toolCalls.length,
+      toolNames: toolCalls.map((tc) => tc.name),
+      event,
     });
+
+    // Send approval request to renderer via stream event (consistent with other events)
+    sender.send('langgraph-stream-event', event);
 
     logger.info(`[LangGraph IPC] Tool approval request sent for ${conversationId}`);
 

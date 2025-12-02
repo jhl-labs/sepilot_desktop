@@ -384,7 +384,11 @@ export class ChatAgentGraph {
         };
       }
     } else {
-      // Normal completion - no additional message needed
+      // Normal completion - yield completion event to clear UI loading state
+      yield {
+        type: 'completion',
+        iterations,
+      };
     }
   }
 }

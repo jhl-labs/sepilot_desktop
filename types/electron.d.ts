@@ -263,13 +263,19 @@ interface LangGraphErrorEvent extends LangGraphStreamEventBase {
   error: string;
 }
 
+interface LangGraphCompletionEvent extends LangGraphStreamEventBase {
+  type: 'completion';
+  iterations?: number;
+}
+
 type LangGraphStreamEvent =
   | LangGraphStreamingEvent
   | LangGraphImageProgressEvent
   | LangGraphToolApprovalRequestEvent
   | LangGraphToolApprovalResultEvent
   | LangGraphNodeEvent
-  | LangGraphErrorEvent;
+  | LangGraphErrorEvent
+  | LangGraphCompletionEvent;
 
 // Tool approval request data type
 interface LangGraphToolApprovalRequest {

@@ -11,6 +11,7 @@ import { getWebLLMClient } from '@/lib/llm/web-client';
 // Stream event types
 interface StreamEventProgress {
   type: 'progress';
+  conversationId?: string;
   data: {
     iteration: number;
     maxIterations: number;
@@ -21,11 +22,13 @@ interface StreamEventProgress {
 
 interface StreamEventStreaming {
   type: 'streaming';
+  conversationId?: string;
   chunk: string;
 }
 
 interface StreamEventNode {
   type: 'node';
+  conversationId?: string;
   data: {
     messages: Array<{
       role: 'system' | 'user' | 'assistant';
@@ -155,11 +158,16 @@ export function SimpleChatInput() {
               return;
             }
 
-            if (abortControllerRef.current?.signal.aborted) {
+            const evt = event as StreamEvent;
+
+            // Filter events by conversationId - only handle events for browser-chat-temp
+            if (evt.conversationId && evt.conversationId !== 'browser-chat-temp') {
               return;
             }
 
-            const evt = event as StreamEvent;
+            if (abortControllerRef.current?.signal.aborted) {
+              return;
+            }
 
             // Handle progress events
             if (evt.type === 'progress') {
