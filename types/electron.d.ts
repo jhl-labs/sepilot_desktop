@@ -171,6 +171,14 @@ interface LLMAPI {
     language?: string;
     useRag?: boolean;
     useTools?: boolean;
+    metadata?: {
+      currentLine: string;
+      previousLine: string;
+      nextLine: string;
+      lineNumber: number;
+      hasContextBefore: boolean;
+      hasContextAfter: boolean;
+    };
   }) => Promise<IPCResponse<{ completion: string }>>;
   editorAction: (params: {
     action:
@@ -193,6 +201,14 @@ interface LLMAPI {
     text: string;
     language?: string;
     targetLanguage?: string;
+    context?: {
+      before: string;
+      after: string;
+      fullCode?: string;
+      filePath?: string;
+      lineStart: number;
+      lineEnd: number;
+    };
   }) => Promise<IPCResponse<{ result: string }>>;
 }
 

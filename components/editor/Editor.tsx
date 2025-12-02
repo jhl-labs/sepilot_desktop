@@ -103,32 +103,72 @@ export function CodeEditor() {
         return;
       }
 
+      if (!editor) {
+        console.error('Editor instance is not available.');
+        return;
+      }
+
       setIsProcessing(true);
       try {
+        const model = editor.getModel();
+        const selection = editor.getSelection();
+
+        if (!model || !selection) {
+          console.error('No model or selection available');
+          return;
+        }
+
+        // 전체 코드와 선택 영역의 위치 정보 수집
+        const fullCode = model.getValue();
+        const selectionStartOffset = model.getOffsetAt(selection.getStartPosition());
+        const selectionEndOffset = model.getOffsetAt(selection.getEndPosition());
+
+        // 선택 영역 앞뒤 컨텍스트 수집 (각각 최대 2000자)
+        const textBefore = fullCode.substring(
+          Math.max(0, selectionStartOffset - 2000),
+          selectionStartOffset
+        );
+        const textAfter = fullCode.substring(
+          selectionEndOffset,
+          Math.min(fullCode.length, selectionEndOffset + 2000)
+        );
+
+        console.log('[EditorAction] Context collected:', {
+          action,
+          selectedTextLength: selectedText.length,
+          contextBeforeLength: textBefore.length,
+          contextAfterLength: textAfter.length,
+          selectionStart: selection.getStartPosition(),
+          selectionEnd: selection.getEndPosition(),
+        });
+
+        // 향상된 컨텍스트와 함께 액션 실행
         const result = await window.electronAPI.llm.editorAction({
           action,
           text: selectedText,
           language: activeFile?.language,
           targetLanguage,
+          // 추가 컨텍스트 정보
+          context: {
+            before: textBefore,
+            after: textAfter,
+            fullCode: fullCode.length < 10000 ? fullCode : undefined, // 전체 코드가 작으면 포함
+            filePath: activeFile?.path,
+            lineStart: selection.startLineNumber,
+            lineEnd: selection.endLineNumber,
+          },
         });
 
         if (result.success && result.data) {
           // Insert or replace result in editor
-          if (editor) {
-            const selection = editor.getSelection();
-            if (selection) {
-              editor.executeEdits('', [
-                {
-                  range: selection,
-                  text: result.data.result,
-                  forceMoveMarkers: true,
-                },
-              ]);
-              console.log(
-                `${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully`
-              );
-            }
-          }
+          editor.executeEdits('', [
+            {
+              range: selection,
+              text: result.data.result,
+              forceMoveMarkers: true,
+            },
+          ]);
+          console.log(`${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully`);
         } else {
           console.error('Editor action failed:', result.error);
           window.alert(`Failed: ${result.error || 'Unknown error'}`);
@@ -142,7 +182,7 @@ export function CodeEditor() {
         setIsProcessing(false);
       }
     },
-    [editor, activeFile?.language]
+    [editor, activeFile?.language, activeFile?.path]
   );
 
   const handleCloseFile = (path: string, e: React.MouseEvent) => {
@@ -173,7 +213,7 @@ export function CodeEditor() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeFile]);
 
-  // Register inline completion provider for autocomplete
+  // Register inline completion provider for autocomplete (triggered by Ctrl+.)
   useEffect(() => {
     if (!editor) {
       console.log('[Autocomplete] Editor not ready');
@@ -187,24 +227,47 @@ export function CodeEditor() {
       return;
     }
 
-    let debounceTimer: NodeJS.Timeout | null = null;
     let currentAbortController: AbortController | null = null;
     let lastRequestId = 0;
     let isRequestInProgress = false;
+    let manualTriggerRequested = false;
 
-    const DEBOUNCE_MS = 300;
-    const REQUEST_TIMEOUT_MS = 5000; // 5초 타임아웃
+    const REQUEST_TIMEOUT_MS = 10000; // 10초 타임아웃 (더 긴 컨텍스트 처리)
+
+    // Ctrl+. 키보드 단축키로 수동 트리거
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === '.') {
+        e.preventDefault();
+        console.log('[Autocomplete] Manual trigger requested (Ctrl+.)');
+        manualTriggerRequested = true;
+        // Monaco의 inline suggestions를 수동으로 트리거
+        editor.trigger('keyboard', 'editor.action.inlineSuggest.trigger', {});
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
 
     // Create the provider object with all required methods
     const providerObject = {
-      provideInlineCompletions: async (model: any, position: any, _context: any, token: any) => {
-        console.log('[Autocomplete] provideInlineCompletions called');
+      provideInlineCompletions: async (model: any, position: any, context: any, token: any) => {
+        console.log('[Autocomplete] provideInlineCompletions called', {
+          triggerKind: context?.triggerKind,
+          manualTrigger: manualTriggerRequested,
+        });
 
         // Return empty if autocomplete is not available
         if (!window.electronAPI?.llm?.editorAutocomplete) {
           console.warn('[Autocomplete] electronAPI.llm.editorAutocomplete not available');
           return { items: [] };
         }
+
+        // Ctrl+.로 수동 트리거한 경우가 아니면 자동 완성 제공 안함
+        if (!manualTriggerRequested) {
+          return { items: [] };
+        }
+
+        // 수동 트리거 플래그 리셋
+        manualTriggerRequested = false;
 
         // Monaco의 CancellationToken 체크
         if (token?.isCancellationRequested) {
@@ -223,145 +286,142 @@ export function CodeEditor() {
         currentAbortController = abortController;
         const requestId = ++lastRequestId;
 
-        // Debounce to avoid too many requests
-        return new Promise((resolve) => {
-          if (debounceTimer) {
-            clearTimeout(debounceTimer);
+        // 이미 요청이 진행 중이면 스킵
+        if (isRequestInProgress) {
+          console.log('[Autocomplete] Request already in progress, skipping');
+          return { items: [] };
+        }
+
+        try {
+          const code = model.getValue();
+          const offset = model.getOffsetAt(position);
+          const language = model.getLanguageId();
+
+          // Get enhanced context (Notion-style: before + after cursor)
+          const textBeforeCursor = code.substring(0, offset);
+          const textAfterCursor = code.substring(offset);
+
+          // 앞쪽 컨텍스트: 최대 3000자 또는 50줄
+          const linesBefore = textBeforeCursor.split('\n');
+          const contextLinesBefore = linesBefore.slice(-50);
+          const contextBefore = contextLinesBefore.join('\n').slice(-3000);
+
+          // 뒤쪽 컨텍스트: 최대 1000자 또는 20줄
+          const linesAfter = textAfterCursor.split('\n');
+          const contextLinesAfter = linesAfter.slice(0, 20);
+          const contextAfter = contextLinesAfter.join('\n').slice(0, 1000);
+
+          // 현재 줄과 주변 줄 분석
+          const currentLineNumber = position.lineNumber;
+          const currentLine = linesBefore[linesBefore.length - 1];
+          const previousLine = linesBefore.length > 1 ? linesBefore[linesBefore.length - 2] : '';
+          const nextLine = linesAfter.length > 0 ? linesAfter[0] : '';
+
+          console.log('[Autocomplete] Enhanced context:', {
+            language,
+            currentLine: currentLine.substring(0, 50),
+            previousLine: previousLine.substring(0, 50),
+            nextLine: nextLine.substring(0, 50),
+            contextBeforeLength: contextBefore.length,
+            contextAfterLength: contextAfter.length,
+          });
+
+          // 다시 한번 취소 체크
+          if (token?.isCancellationRequested || abortController.signal.aborted) {
+            console.log('[Autocomplete] Cancelled before API call');
+            return { items: [] };
           }
 
-          debounceTimer = setTimeout(async () => {
-            console.log('[Autocomplete] Debounce timer fired');
+          isRequestInProgress = true;
+          console.log('[Autocomplete] Starting API request with enhanced context...');
 
-            // 토큰 취소 체크
-            if (token?.isCancellationRequested || abortController.signal.aborted) {
-              console.log('[Autocomplete] Cancelled before processing');
-              resolve({ items: [] });
-              return;
+          // 타임아웃과 함께 요청
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout')), REQUEST_TIMEOUT_MS);
+          });
+
+          // 향상된 컨텍스트와 함께 autocomplete 요청
+          const requestPromise = window.electronAPI.llm.editorAutocomplete({
+            code: `${contextBefore}<!CURSOR!>${contextAfter}`, // 커서 위치 표시
+            cursorPosition: contextBefore.length,
+            language,
+            useRag: editorUseRagInAutocomplete,
+            useTools: editorUseToolsInAutocomplete,
+            // 추가 메타데이터
+            metadata: {
+              currentLine,
+              previousLine,
+              nextLine,
+              lineNumber: currentLineNumber,
+              hasContextBefore: contextBefore.length > 0,
+              hasContextAfter: contextAfter.length > 0,
+            },
+          });
+
+          const result = await Promise.race([requestPromise, timeoutPromise]);
+
+          console.log('[Autocomplete] API response received:', {
+            success: result.success,
+            hasCompletion: !!result.data?.completion,
+            error: result.error,
+          });
+
+          // 요청 완료 후 취소 체크
+          if (
+            token?.isCancellationRequested ||
+            abortController.signal.aborted ||
+            requestId !== lastRequestId
+          ) {
+            console.log('[Autocomplete] Cancelled after API call');
+            return { items: [] };
+          }
+
+          if (result.success && result.data?.completion) {
+            const completion = result.data.completion.trim();
+
+            console.log('[Autocomplete] Completion text:', {
+              length: completion.length,
+              preview: completion.substring(0, 100),
+            });
+
+            if (completion) {
+              console.log('[Autocomplete] Showing suggestion to user');
+              return {
+                items: [
+                  {
+                    insertText: completion,
+                    range: new monacoInstance.Range(
+                      position.lineNumber,
+                      position.column,
+                      position.lineNumber,
+                      position.column
+                    ),
+                    command: undefined,
+                  },
+                ],
+              };
+            } else {
+              console.log('[Autocomplete] Completion is empty after trim');
             }
+          } else {
+            console.warn('[Autocomplete] API call failed or no completion:', result.error);
+          }
+        } catch (error) {
+          // 에러는 조용히 처리 (사용자 경험 방해 X)
+          if (error instanceof Error && error.message !== 'Timeout') {
+            console.error('[Autocomplete] Error:', error.message);
+          } else if (error instanceof Error) {
+            console.warn('[Autocomplete] Request timed out');
+          }
+        } finally {
+          isRequestInProgress = false;
+          if (currentAbortController === abortController) {
+            currentAbortController = null;
+          }
+        }
 
-            // 이미 요청이 진행 중이면 스킵
-            if (isRequestInProgress) {
-              console.log('[Autocomplete] Request already in progress, skipping');
-              resolve({ items: [] });
-              return;
-            }
-
-            try {
-              const code = model.getValue();
-              const offset = model.getOffsetAt(position);
-              const language = model.getLanguageId();
-
-              // Get text before cursor for context
-              const textBeforeCursor = code.substring(0, offset);
-              const lines = textBeforeCursor.split('\n');
-              const currentLine = lines[lines.length - 1];
-              const previousLine = lines.length > 1 ? lines[lines.length - 2] : '';
-
-              console.log('[Autocomplete] Context:', {
-                language,
-                currentLine: currentLine.substring(0, 50),
-                previousLine: previousLine.substring(0, 50),
-              });
-
-              // Don't autocomplete only if there are 2+ consecutive empty lines
-              // (current line is empty AND previous line is also empty)
-              if (!currentLine.trim() && !previousLine.trim()) {
-                console.log('[Autocomplete] Skipping - 2+ consecutive empty lines');
-                resolve({ items: [] });
-                return;
-              }
-
-              // 다시 한번 취소 체크
-              if (token?.isCancellationRequested || abortController.signal.aborted) {
-                console.log('[Autocomplete] Cancelled before API call');
-                resolve({ items: [] });
-                return;
-              }
-
-              isRequestInProgress = true;
-              console.log('[Autocomplete] Starting API request...');
-
-              // 타임아웃과 함께 요청
-              const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => reject(new Error('Timeout')), REQUEST_TIMEOUT_MS);
-              });
-
-              const requestPromise = window.electronAPI.llm.editorAutocomplete({
-                code,
-                cursorPosition: offset,
-                language,
-                useRag: editorUseRagInAutocomplete,
-                useTools: editorUseToolsInAutocomplete,
-              });
-
-              const result = await Promise.race([requestPromise, timeoutPromise]);
-
-              console.log('[Autocomplete] API response received:', {
-                success: result.success,
-                hasCompletion: !!result.data?.completion,
-                error: result.error,
-              });
-
-              // 요청 완료 후 취소 체크
-              if (
-                token?.isCancellationRequested ||
-                abortController.signal.aborted ||
-                requestId !== lastRequestId
-              ) {
-                console.log('[Autocomplete] Cancelled after API call');
-                resolve({ items: [] });
-                return;
-              }
-
-              if (result.success && result.data?.completion) {
-                const completion = result.data.completion.trim();
-
-                console.log('[Autocomplete] Completion text:', {
-                  length: completion.length,
-                  preview: completion.substring(0, 50),
-                });
-
-                if (completion) {
-                  console.log('[Autocomplete] Showing suggestion to user');
-                  resolve({
-                    items: [
-                      {
-                        insertText: completion,
-                        range: new monacoInstance.Range(
-                          position.lineNumber,
-                          position.column,
-                          position.lineNumber,
-                          position.column
-                        ),
-                        command: undefined,
-                      },
-                    ],
-                  });
-                  return;
-                } else {
-                  console.log('[Autocomplete] Completion is empty after trim');
-                }
-              } else {
-                console.warn('[Autocomplete] API call failed or no completion:', result.error);
-              }
-            } catch (error) {
-              // 에러는 조용히 처리 (사용자 경험 방해 X)
-              if (error instanceof Error && error.message !== 'Timeout') {
-                console.error('[Autocomplete] Error:', error.message);
-              } else if (error instanceof Error) {
-                console.warn('[Autocomplete] Request timed out');
-              }
-            } finally {
-              isRequestInProgress = false;
-              if (currentAbortController === abortController) {
-                currentAbortController = null;
-              }
-            }
-
-            console.log('[Autocomplete] Returning empty result');
-            resolve({ items: [] });
-          }, DEBOUNCE_MS);
-        });
+        console.log('[Autocomplete] Returning empty result');
+        return { items: [] };
       },
       freeInlineCompletions: (_completions: any) => {
         // Clean up resources if needed
@@ -380,16 +440,14 @@ export function CodeEditor() {
       providerObject
     );
 
-    console.log('[Autocomplete] Provider registered for all languages');
+    console.log('[Autocomplete] Provider registered for all languages (Ctrl+. to trigger)');
     console.log('[Autocomplete] Settings:', {
       useRag: editorUseRagInAutocomplete,
       useTools: editorUseToolsInAutocomplete,
     });
 
     return () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
+      window.removeEventListener('keydown', handleKeyDown);
       if (currentAbortController) {
         currentAbortController.abort();
       }

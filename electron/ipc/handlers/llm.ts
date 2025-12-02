@@ -497,6 +497,14 @@ Return ONLY the title, without quotes or additional text.`,
         filePath?: string;
         useRag?: boolean;
         useTools?: boolean;
+        metadata?: {
+          currentLine: string;
+          previousLine: string;
+          nextLine: string;
+          lineNumber: number;
+          hasContextBefore: boolean;
+          hasContextAfter: boolean;
+        };
       }
     ) => {
       try {
@@ -507,6 +515,7 @@ Return ONLY the title, without quotes or additional text.`,
           filePath: context.filePath,
           useRag: context.useRag,
           useTools: context.useTools,
+          hasMetadata: !!context.metadata,
         });
 
         // Get autocomplete config from database
@@ -717,9 +726,24 @@ CRITICAL RULES:
         text: string;
         language?: string;
         targetLanguage?: string; // for translate
+        context?: {
+          before: string;
+          after: string;
+          fullCode?: string;
+          filePath?: string;
+          lineStart: number;
+          lineEnd: number;
+        };
       }
     ) => {
       try {
+        logger.info('[EditorAgent/Action] Handler called:', {
+          action: params.action,
+          textLength: params.text.length,
+          language: params.language,
+          hasContext: !!params.context,
+        });
+
         // Get config from database
         const configStr = databaseService.getSetting('app_config');
         if (!configStr) {
@@ -749,6 +773,27 @@ CRITICAL RULES:
         let userPrompt = '';
         let returnCodeOnly = false;
 
+        // Prepare context information if available
+        const contextInfo = params.context
+          ? `
+
+CONTEXT INFORMATION:
+- File: ${params.context.filePath || 'unknown'}
+- Lines: ${params.context.lineStart}-${params.context.lineEnd}
+
+Text before selection:
+\`\`\`
+${params.context.before.slice(-500)}
+\`\`\`
+
+Text after selection:
+\`\`\`
+${params.context.after.slice(0, 500)}
+\`\`\`
+${params.context.fullCode ? '\n(Full code context available)' : ''}
+`
+          : '';
+
         switch (params.action) {
           case 'summarize':
             systemPrompt = `You are a text summarization expert.
@@ -757,9 +802,9 @@ Rules:
 - Summarize in 2-4 concise sentences
 - Focus on the main points and key takeaways
 - Use plain text, NO markdown formatting
-- Be clear and direct`;
+- Be clear and direct${params.context ? '\n- Consider the surrounding context when summarizing' : ''}`;
 
-            userPrompt = `Summarize this text:\n\n${params.text}`;
+            userPrompt = `Summarize this text:${contextInfo}\n\nSelected text:\n${params.text}`;
             break;
 
           case 'translate':
@@ -781,9 +826,9 @@ Rules:
 - Complete the code naturally and logically
 - Match the existing code style and patterns
 - Return ONLY the completed code, NO explanations or markdown
-- Keep it concise and relevant`;
+- Keep it concise and relevant${params.context ? '\n- Use surrounding context to understand the code structure and purpose' : ''}`;
 
-            userPrompt = `Complete this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
+            userPrompt = `Complete this ${params.language || 'code'}:${contextInfo}\n\nSelected code:\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
             returnCodeOnly = true;
             break;
 
@@ -795,9 +840,9 @@ Rules:
 - Focus on WHAT it does, not line-by-line details
 - Mention key patterns, algorithms, or potential issues
 - Use plain text, NO code blocks or markdown
-- Be technical but understandable`;
+- Be technical but understandable${params.context ? '\n- Consider the surrounding code context to provide a comprehensive explanation' : ''}`;
 
-            userPrompt = `Explain this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
+            userPrompt = `Explain this ${params.language || 'code'}:${contextInfo}\n\nSelected code:\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
             break;
 
           case 'fix':
@@ -807,9 +852,9 @@ Rules:
 - Fix syntax errors, type errors, logical bugs, and potential issues
 - Return ONLY the corrected code, NO explanations
 - Preserve variable names, structure, and style
-- Add brief inline comments ONLY for significant fixes`;
+- Add brief inline comments ONLY for significant fixes${params.context ? '\n- Use surrounding context to understand dependencies and requirements' : ''}`;
 
-            userPrompt = `Fix this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
+            userPrompt = `Fix this ${params.language || 'code'}:${contextInfo}\n\nSelected code:\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
             returnCodeOnly = true;
             break;
 
@@ -821,9 +866,9 @@ Rules:
 - Return ONLY the improved code, NO explanations
 - Preserve functionality and behavior
 - Add brief comments for significant changes
-- Follow modern ${params.language || 'code'} conventions`;
+- Follow modern ${params.language || 'code'} conventions${params.context ? '\n- Consider the surrounding code to maintain consistency' : ''}`;
 
-            userPrompt = `Improve this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
+            userPrompt = `Improve this ${params.language || 'code'}:${contextInfo}\n\nSelected code:\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
             returnCodeOnly = true;
             break;
 

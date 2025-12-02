@@ -2,6 +2,84 @@
 import { DocumentSource, FetchedDocument } from './types';
 
 /**
+ * 지수 백오프로 대기
+ */
+async function exponentialBackoff(attempt: number, baseDelay: number = 1000): Promise<void> {
+  const delay = baseDelay * Math.pow(2, attempt);
+  const jitter = Math.random() * 1000; // 0-1초 랜덤 지터
+  await new Promise((resolve) => setTimeout(resolve, delay + jitter));
+}
+
+/**
+ * GitHub API Rate Limit 확인 및 대기
+ */
+async function checkGitHubRateLimit(headers: Headers): Promise<void> {
+  const remaining = headers.get('x-ratelimit-remaining');
+  const reset = headers.get('x-ratelimit-reset');
+
+  if (remaining && parseInt(remaining) === 0 && reset) {
+    const resetTime = parseInt(reset) * 1000; // milliseconds
+    const now = Date.now();
+    const waitTime = resetTime - now;
+
+    if (waitTime > 0) {
+      console.warn(
+        `[GitHub] Rate limit exceeded. Waiting ${Math.ceil(waitTime / 1000)}s until reset...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitTime + 1000)); // +1초 버퍼
+    }
+  }
+}
+
+/**
+ * GitHub API 요청 (재시도 로직 포함)
+ */
+async function fetchWithRetry(
+  url: string,
+  headers: Record<string, string>,
+  maxRetries: number = 3
+): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, { headers });
+
+      // Rate Limit 체크
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('retry-after');
+        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 60000; // 기본 1분
+
+        console.warn(
+          `[GitHub] Rate limit hit (429). Retrying after ${waitTime / 1000}s... (attempt ${attempt + 1}/${maxRetries})`
+        );
+
+        if (attempt < maxRetries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+          continue;
+        }
+      }
+
+      // Rate Limit 정보 확인 (다음 요청 대비)
+      await checkGitHubRateLimit(response.headers);
+
+      return response;
+    } catch (error: any) {
+      lastError = error;
+      console.error(`[GitHub] Fetch attempt ${attempt + 1} failed:`, error.message);
+
+      if (attempt < maxRetries - 1) {
+        await exponentialBackoff(attempt);
+      }
+    }
+  }
+
+  throw new Error(
+    `GitHub API request failed after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`
+  );
+}
+
+/**
  * HTTP를 통해 문서를 가져옵니다
  */
 export async function fetchHttpDocument(url: string): Promise<FetchedDocument> {
@@ -73,13 +151,17 @@ export async function fetchGitHubDocument(
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(apiUrl, { headers });
+    const response = await fetchWithRetry(apiUrl, headers);
 
     if (!response.ok) {
       if (response.status === 404) {
         throw new Error('File not found in repository');
       } else if (response.status === 403) {
         throw new Error('Access denied. Please check your GitHub token.');
+      } else if (response.status === 429) {
+        throw new Error(
+          'GitHub rate limit exceeded. Please try again later or provide a GitHub token.'
+        );
       }
       throw new Error(`GitHub API error! status: ${response.status}`);
     }
@@ -141,9 +223,14 @@ export async function fetchGitHubDirectory(
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(apiUrl, { headers });
+    const response = await fetchWithRetry(apiUrl, headers);
 
     if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error(
+          'GitHub rate limit exceeded. Please try again later or provide a GitHub token.'
+        );
+      }
       throw new Error(`GitHub API error! status: ${response.status}`);
     }
 
