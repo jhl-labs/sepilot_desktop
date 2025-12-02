@@ -388,11 +388,29 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               </div>
 
               <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-3 text-xs text-blue-600 dark:text-blue-400">
-                <p className="font-medium">Private Repository 접근 시:</p>
-                <p className="mt-1">
-                  GitHub Personal Access Token이 필요합니다. Settings → Developer settings →
-                  Personal access tokens에서 생성할 수 있습니다.
-                </p>
+                <p className="font-medium mb-2">GitHub 기능 안내:</p>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>
+                    <strong>디렉토리 경로</strong>: 모든 하위 폴더를 재귀적으로 탐색하여 .md, .txt,
+                    .json, .yaml 파일 수집
+                  </li>
+                  <li>
+                    <strong>단일 파일</strong>: 확장자가 있는 경로는 해당 파일만 가져옴
+                  </li>
+                  <li>
+                    <strong>Private Repository</strong>: Personal Access Token 필요
+                    <br />
+                    <span className="ml-4 text-muted-foreground">
+                      Settings → Developer settings → Personal access tokens → Tokens (classic) →
+                      Generate new token
+                    </span>
+                    <br />
+                    <span className="ml-4 text-muted-foreground">
+                      권한: <code className="text-xs bg-black/10 px-1 rounded">repo</code> 또는{' '}
+                      <code className="text-xs bg-black/10 px-1 rounded">public_repo</code> 체크
+                    </span>
+                  </li>
+                </ul>
               </div>
 
               {/* LLM 정제 옵션 */}
