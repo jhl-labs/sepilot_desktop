@@ -1187,7 +1187,7 @@ export class BrowserAgentGraph {
         const verificationHints: string[] = [];
         const accumulatedFailures: string[] = [];
         let annotatedGuidance: Message | null = null;
-        let resultsLogMessage = '\n';
+        let resultsLogMessage = '\n<small>\n';
 
         // Tool 호출 기록 (실행 컨텍스트에 추가)
         for (const result of toolsResult.toolResults) {
@@ -1375,8 +1375,9 @@ export class BrowserAgentGraph {
         }
 
         // Emit all tool results at once
-        if (resultsLogMessage.length > 1) {
-          emitStreamingChunk(`${resultsLogMessage}---\n`, state.conversationId);
+        if (resultsLogMessage.length > 9) {
+          // Changed from 1 to 9 to account for "<small>\n"
+          emitStreamingChunk(`${resultsLogMessage}</small>\n---\n`, state.conversationId);
         }
 
         // Reflection: repeated failures -> guide to alternative strategy

@@ -44,10 +44,10 @@ export function BrowserSettings() {
   } = useChatStore();
 
   // LLM 설정 로컬 상태
-  const [maxTokens, setMaxTokens] = useState(browserAgentLLMConfig?.maxTokens ?? 4000);
+  const [maxTokens, setMaxTokens] = useState(browserAgentLLMConfig?.maxTokens ?? 4096);
   const [temperature, setTemperature] = useState(browserAgentLLMConfig?.temperature ?? 0.7);
   const [topP, setTopP] = useState(browserAgentLLMConfig?.topP ?? 1.0);
-  const [maxIterations, setMaxIterations] = useState(browserAgentLLMConfig?.maxIterations ?? 10);
+  const [maxIterations, setMaxIterations] = useState(browserAgentLLMConfig?.maxIterations ?? 30);
 
   // 폰트 설정 로컬 상태
   const [fontFamily, setFontFamily] = useState(
@@ -294,7 +294,7 @@ export function BrowserSettings() {
                   step={1}
                   className="h-8 text-xs"
                 />
-                <p className="text-xs text-muted-foreground">최대 반복 횟수 (1-50, 기본값: 20)</p>
+                <p className="text-xs text-muted-foreground">최대 반복 횟수 (1-50, 기본값: 30)</p>
               </div>
 
               {/* 저장 버튼 */}
