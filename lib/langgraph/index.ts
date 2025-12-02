@@ -603,13 +603,15 @@ export class GraphFactory {
       }
 
       // Emit completion event to clear UI loading state
-      yield {
+      const completionEvent: StreamEvent = {
         type: 'completion',
       };
+      yield completionEvent;
 
-      yield {
+      const endEvent: StreamEvent = {
         type: 'end',
       };
+      yield endEvent;
     } catch (error: any) {
       console.error('[GraphFactory] Deep Web Research stream error:', error);
 

@@ -249,6 +249,7 @@ export interface GitHubSyncConfig {
   syncDocuments: boolean; // RAG 문서 동기화 여부
   syncImages: boolean; // 생성 이미지 동기화 여부
   syncConversations: boolean; // 대화 내역 동기화 여부
+  syncPersonas: boolean; // AI 페르소나 동기화 여부
 
   // 암호화 설정
   encryptionKey?: string; // 민감 정보 암호화 키 (자동 생성)

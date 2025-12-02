@@ -271,6 +271,32 @@ export class GitHubSyncClient {
   }
 
   /**
+   * AI 페르소나 동기화
+   */
+  async syncPersonas(personas: any): Promise<GitHubSyncResult> {
+    try {
+      const content = JSON.stringify(
+        {
+          version: '1.0',
+          exportDate: new Date().toISOString(),
+          personas,
+        },
+        null,
+        2
+      );
+
+      return await this.upsertFile('sepilot/personas.json', content, 'chore: sync AI personas');
+    } catch (error: any) {
+      console.error('[GitHubSync] Failed to sync personas:', error);
+      return {
+        success: false,
+        message: 'Failed to sync personas',
+        error: error.message,
+      };
+    }
+  }
+
+  /**
    * 레포지토리 연결 테스트
    */
   async testConnection(): Promise<GitHubSyncResult> {

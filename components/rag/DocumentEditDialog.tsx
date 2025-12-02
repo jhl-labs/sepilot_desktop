@@ -32,6 +32,8 @@ import {
   Minimize2,
   Wand2,
   CheckCircle2,
+  ShieldCheck,
+  MessageSquare,
 } from 'lucide-react';
 
 interface DocumentEditDialogProps {
@@ -48,7 +50,9 @@ type AIAction =
   | 'translate-ja'
   | 'expand'
   | 'shorten'
-  | 'improve';
+  | 'improve'
+  | 'verify'
+  | 'custom';
 
 export function DocumentEditDialog({
   open,
@@ -64,6 +68,8 @@ export function DocumentEditDialog({
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedText, setSelectedText] = useState('');
+  const [customPromptOpen, setCustomPromptOpen] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -87,7 +93,7 @@ export function DocumentEditDialog({
     setSelectedText(selected);
   };
 
-  const getAIPrompt = (action: AIAction, text: string): string => {
+  const getAIPrompt = (action: AIAction, text: string, customPromptText?: string): string => {
     const prompts: Record<AIAction, string> = {
       refine: `다음 텍스트를 정제하여 핵심 내용만 추출하고, 불필요한 내용은 제거하세요. 마크다운 형식으로 깔끔하게 작성하세요:\n\n${text}`,
       'translate-ko': `다음 텍스트를 한국어로 자연스럽게 번역하세요:\n\n${text}`,
@@ -96,6 +102,8 @@ export function DocumentEditDialog({
       expand: `다음 텍스트의 내용을 더 자세하고 풍부하게 확장하세요. 추가 설명과 예시를 포함하세요:\n\n${text}`,
       shorten: `다음 텍스트를 핵심 내용만 남기고 간결하게 요약하세요:\n\n${text}`,
       improve: `다음 텍스트의 가독성과 품질을 개선하세요. 문법, 표현, 구조를 개선하고 더 명확하게 작성하세요:\n\n${text}`,
+      verify: `다음 텍스트의 내용을 검증하고, 사실 관계가 틀리거나 논리적으로 모순되는 부분이 있는지 분석하세요. 문제가 있다면 지적하고, 없다면 "검증 완료: 문제 없음"이라고 답변하세요:\n\n${text}`,
+      custom: customPromptText ? `${customPromptText}\n\n텍스트:\n${text}` : text,
     };
     return prompts[action];
   };
@@ -109,11 +117,13 @@ export function DocumentEditDialog({
       expand: '내용 확장',
       shorten: '내용 축소',
       improve: '품질 개선',
+      verify: '내용 검증',
+      custom: '커스텀 프롬프트',
     };
     return labels[action];
   };
 
-  const executeAIAction = async (action: AIAction) => {
+  const executeAIAction = async (action: AIAction, customPromptText?: string) => {
     const targetText = selectedText || content;
     if (!targetText.trim()) {
       setMessage({ type: 'error', text: '처리할 텍스트가 없습니다.' });
@@ -134,7 +144,7 @@ export function DocumentEditDialog({
         {
           id: 'user',
           role: 'user',
-          content: getAIPrompt(action, targetText),
+          content: getAIPrompt(action, targetText, customPromptText),
           created_at: Date.now(),
         },
       ]);
@@ -281,18 +291,47 @@ export function DocumentEditDialog({
                 />
               </ContextMenuTrigger>
               <ContextMenuContent className="w-64">
+                <ContextMenuItem onClick={() => executeAIAction('refine')} disabled={isProcessing}>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  <div className="flex-1">
+                    <div className="font-medium">내용 정제</div>
+                    <div className="text-xs text-muted-foreground">핵심 내용만 추출</div>
+                  </div>
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => executeAIAction('expand')} disabled={isProcessing}>
+                  <Maximize2 className="mr-2 h-4 w-4" />
+                  <div className="flex-1">
+                    <div className="font-medium">내용 확장</div>
+                    <div className="text-xs text-muted-foreground">더 자세하게 작성</div>
+                  </div>
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => executeAIAction('shorten')} disabled={isProcessing}>
+                  <Minimize2 className="mr-2 h-4 w-4" />
+                  <div className="flex-1">
+                    <div className="font-medium">내용 축약</div>
+                    <div className="text-xs text-muted-foreground">간결하게 요약</div>
+                  </div>
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => executeAIAction('verify')} disabled={isProcessing}>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  <div className="flex-1">
+                    <div className="font-medium">내용 검증</div>
+                    <div className="text-xs text-muted-foreground">사실 관계 확인</div>
+                  </div>
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => setCustomPromptOpen(true)} disabled={isProcessing}>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  <div className="flex-1">
+                    <div className="font-medium">프롬프트를 통한 요청</div>
+                    <div className="text-xs text-muted-foreground">커스텀 명령 입력</div>
+                  </div>
+                </ContextMenuItem>
+                <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => executeAIAction('improve')} disabled={isProcessing}>
                   <Wand2 className="mr-2 h-4 w-4" />
                   <div className="flex-1">
                     <div className="font-medium">품질 개선</div>
                     <div className="text-xs text-muted-foreground">가독성과 문법 개선</div>
-                  </div>
-                </ContextMenuItem>
-                <ContextMenuItem onClick={() => executeAIAction('refine')} disabled={isProcessing}>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  <div className="flex-1">
-                    <div className="font-medium">정제</div>
-                    <div className="text-xs text-muted-foreground">핵심 내용만 추출</div>
                   </div>
                 </ContextMenuItem>
                 <ContextMenuSeparator />
@@ -322,21 +361,6 @@ export function DocumentEditDialog({
                     </ContextMenuItem>
                   </ContextMenuSubContent>
                 </ContextMenuSub>
-                <ContextMenuSeparator />
-                <ContextMenuItem onClick={() => executeAIAction('expand')} disabled={isProcessing}>
-                  <Maximize2 className="mr-2 h-4 w-4" />
-                  <div className="flex-1">
-                    <div className="font-medium">내용 확장</div>
-                    <div className="text-xs text-muted-foreground">더 자세하게 작성</div>
-                  </div>
-                </ContextMenuItem>
-                <ContextMenuItem onClick={() => executeAIAction('shorten')} disabled={isProcessing}>
-                  <Minimize2 className="mr-2 h-4 w-4" />
-                  <div className="flex-1">
-                    <div className="font-medium">내용 축소</div>
-                    <div className="text-xs text-muted-foreground">간결하게 요약</div>
-                  </div>
-                </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
             <p className="text-xs text-muted-foreground">
@@ -384,6 +408,63 @@ export function DocumentEditDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Custom Prompt Dialog */}
+      <Dialog open={customPromptOpen} onOpenChange={setCustomPromptOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>커스텀 프롬프트 입력</DialogTitle>
+            <DialogDescription>
+              텍스트에 적용할 작업을 자유롭게 입력하세요. 선택된 텍스트 또는 전체 문서에 적용됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="custom-prompt">프롬프트</Label>
+              <Textarea
+                id="custom-prompt"
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                placeholder="예: 이 텍스트를 bullet point 형식으로 재구성해주세요"
+                className="min-h-[150px] resize-none"
+              />
+            </div>
+            {selectedText && (
+              <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-3 text-sm text-blue-600 dark:text-blue-400">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{selectedText.length}자의 선택된 텍스트에 적용됩니다</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCustomPromptOpen(false);
+                setCustomPrompt('');
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!customPrompt.trim()) {
+                  setMessage({ type: 'error', text: '프롬프트를 입력해주세요.' });
+                  return;
+                }
+                setCustomPromptOpen(false);
+                await executeAIAction('custom', customPrompt.trim());
+                setCustomPrompt('');
+              }}
+              disabled={!customPrompt.trim()}
+            >
+              실행
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
