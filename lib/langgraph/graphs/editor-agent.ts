@@ -389,7 +389,7 @@ ${ragContext}
   /**
    * Get Editor-specific tools based on context
    */
-  private getEditorTools(context?: EditorAgentState['editorContext']): any[] {
+  private getEditorTools(_context?: EditorAgentState['editorContext']): any[] {
     const tools: any[] = [];
 
     // Always include file management tools from registry
