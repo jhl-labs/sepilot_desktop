@@ -48,12 +48,15 @@ export function requestToolApproval(
     // Store the promise callbacks
     pendingToolApprovals.set(conversationId, { resolve, reject });
 
-    // Send approval request to renderer
-    sender.send('langgraph-tool-approval-request', {
+    // Send approval request to renderer via stream event (consistent with other events)
+    sender.send('langgraph-stream-event', {
+      type: 'tool_approval_request',
       conversationId,
       messageId,
       toolCalls,
     });
+
+    logger.info(`[LangGraph IPC] Tool approval request sent for ${conversationId}`);
 
     // Set a timeout (5 minutes) to prevent hanging indefinitely
     setTimeout(
@@ -79,7 +82,7 @@ export function setupLangGraphHandlers() {
    */
   ipcMain.handle(
     'langgraph-tool-approval-response',
-    async (_event, conversationId: string, approved: boolean) => {
+    async (event, conversationId: string, approved: boolean) => {
       const pending = pendingToolApprovals.get(conversationId);
       if (pending) {
         pendingToolApprovals.delete(conversationId);
@@ -87,6 +90,14 @@ export function setupLangGraphHandlers() {
         logger.info(
           `[LangGraph IPC] Tool approval response: ${approved ? 'approved' : 'rejected'} for ${conversationId}`
         );
+
+        // Send approval result via stream event for consistent event handling
+        event.sender.send('langgraph-stream-event', {
+          type: 'tool_approval_result',
+          conversationId,
+          approved,
+        });
+
         return { success: true };
       } else {
         logger.warn(`[LangGraph IPC] No pending approval for ${conversationId}`);
