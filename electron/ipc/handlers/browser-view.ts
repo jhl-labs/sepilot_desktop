@@ -91,66 +91,78 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
     view.webContents
       .executeJavaScript(
         `
-      // Remove webdriver flag
-      Object.defineProperty(navigator, 'webdriver', {
-        get: () => false,
-        configurable: true,
-      });
+      // Wrap in IIFE to avoid variable redeclaration errors
+      (function() {
+        // Skip if already injected
+        if (window.__stealthInjected) return;
+        window.__stealthInjected = true;
 
-      // Add chrome object
-      if (!window.chrome) {
-        window.chrome = {
-          runtime: {},
-          loadTimes: function () {},
-          csi: function () {},
-          app: {},
-        };
-      }
+        // Remove webdriver flag
+        Object.defineProperty(navigator, 'webdriver', {
+          get: () => false,
+          configurable: true,
+        });
 
-      // Improve permissions API
-      const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters) => {
-        return parameters.name === 'notifications'
-          ? Promise.resolve({ state: 'denied' })
-          : originalQuery(parameters);
-      };
+        // Add chrome object
+        if (!window.chrome) {
+          window.chrome = {
+            runtime: {},
+            loadTimes: function () {},
+            csi: function () {},
+            app: {},
+          };
+        }
 
-      // Add plugins
-      Object.defineProperty(navigator, 'plugins', {
-        get: () => [
-          {
-            0: { type: 'application/x-google-chrome-pdf', suffixes: 'pdf', description: 'Portable Document Format' },
-            description: 'Portable Document Format',
-            filename: 'internal-pdf-viewer',
-            length: 1,
-            name: 'Chrome PDF Plugin',
-          },
-          {
-            0: { type: 'application/pdf', suffixes: 'pdf', description: '' },
-            description: '',
-            filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
-            length: 1,
-            name: 'Chrome PDF Viewer',
-          },
-        ],
-        configurable: true,
-      });
+        // Improve permissions API (save original before overriding)
+        if (!window.__originalPermissionsQuery) {
+          window.__originalPermissionsQuery = window.navigator.permissions.query;
+          window.navigator.permissions.query = (parameters) => {
+            return parameters.name === 'notifications'
+              ? Promise.resolve({ state: 'denied' })
+              : window.__originalPermissionsQuery(parameters);
+          };
+        }
 
-      // Set natural languages
-      Object.defineProperty(navigator, 'languages', {
-        get: () => ['ko-KR', 'ko', 'en-US', 'en'],
-        configurable: true,
-      });
+        // Add plugins
+        Object.defineProperty(navigator, 'plugins', {
+          get: () => [
+            {
+              0: { type: 'application/x-google-chrome-pdf', suffixes: 'pdf', description: 'Portable Document Format' },
+              description: 'Portable Document Format',
+              filename: 'internal-pdf-viewer',
+              length: 1,
+              name: 'Chrome PDF Plugin',
+            },
+            {
+              0: { type: 'application/pdf', suffixes: 'pdf', description: '' },
+              description: '',
+              filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
+              length: 1,
+              name: 'Chrome PDF Viewer',
+            },
+          ],
+          configurable: true,
+        });
 
-      // Override WebGL parameters
-      try {
-        const getParameter = WebGLRenderingContext.prototype.getParameter;
-        WebGLRenderingContext.prototype.getParameter = function (parameter) {
-          if (parameter === 37445) return 'Intel Inc.';
-          if (parameter === 37446) return 'Intel Iris OpenGL Engine';
-          return getParameter.apply(this, [parameter]);
-        };
-      } catch (err) {}
+        // Set natural languages
+        Object.defineProperty(navigator, 'languages', {
+          get: () => ['ko-KR', 'ko', 'en-US', 'en'],
+          configurable: true,
+        });
+
+        // Override WebGL parameters
+        try {
+          if (!window.__webglPatched) {
+            window.__webglPatched = true;
+            const getParameter = WebGLRenderingContext.prototype.getParameter;
+            WebGLRenderingContext.prototype.getParameter = function (parameter) {
+              if (parameter === 37445) return 'Intel Inc.';
+              if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+              return getParameter.apply(this, [parameter]);
+            };
+          }
+        } catch (err) {}
+      })();
     `
       )
       .catch(() => {

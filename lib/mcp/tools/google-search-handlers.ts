@@ -167,6 +167,7 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
     const currentURL = browserView.webContents.getURL();
 
     // Google 홈페이지가 아니면 먼저 방문 (쿠키 및 세션 설정)
+    // 단, 타임아웃을 짧게 설정하여 빠르게 실패하도록 함
     if (!currentURL.includes('google.com')) {
       console.warn('[GoogleSearch] Visiting Google homepage first to establish session...');
 
@@ -175,13 +176,11 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
 
         await new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
-            console.warn('[GoogleSearch] Homepage load timeout - proceeding anyway');
-            reject(
-              new Error(
-                'Homepage load timeout (15s) - 홈페이지 로드가 지연되고 있습니다. 네트워크 상태를 확인해주세요.'
-              )
+            console.warn(
+              '[GoogleSearch] Homepage load timeout (5s) - skipping and going directly to search'
             );
-          }, 15000); // 15초로 증가
+            reject(new Error('Homepage load timeout (5s)'));
+          }, 5000); // 5초로 단축 - 빠르게 실패하고 검색으로 진행
 
           const cleanup = () => {
             clearTimeout(timeout);
@@ -190,13 +189,14 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
           };
 
           const onFinish = () => {
+            console.log('[GoogleSearch] Homepage loaded successfully');
             cleanup();
             resolve();
           };
 
           const onFail = (_event: any, errorCode: number, errorDescription: string) => {
             console.warn(
-              `[GoogleSearch] Homepage load failed (${errorCode}): ${errorDescription} - proceeding anyway`
+              `[GoogleSearch] Homepage load failed (${errorCode}): ${errorDescription} - proceeding to search`
             );
             cleanup();
             // Homepage 실패는 무시하고 계속 진행
@@ -207,17 +207,19 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
           browserView.webContents.once('did-fail-load', onFail);
         });
 
-        // 홈페이지 로딩 후 추가 대기
-        await naturalDelay(1000, 2000);
-      } catch (homeError) {
-        // 홈페이지 로드 실패 시에도 검색은 시도
-        console.warn('[GoogleSearch] Homepage load error, but continuing with search:', homeError);
+        // 홈페이지 로딩 후 짧은 대기
         await naturalDelay(500, 1000);
+      } catch {
+        // 홈페이지 로드 실패 시에도 검색은 시도 (에러 로그만 출력)
+        console.warn('[GoogleSearch] Homepage load timed out, continuing with direct search');
+        // 타임아웃 시 대기 없이 바로 진행
       }
+    } else {
+      console.log('[GoogleSearch] Already on Google, skipping homepage visit');
     }
 
     // 자연스러운 지연 추가 (bot 감지 방지)
-    await naturalDelay(800, 2000);
+    await naturalDelay(500, 1000);
 
     console.warn('[GoogleSearch] Navigating to search URL:', searchURL);
 
