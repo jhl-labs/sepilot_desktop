@@ -18,6 +18,39 @@ export interface VectorDocument {
 }
 
 /**
+ * 문서 메타데이터 확장 (Tree 구조용)
+ */
+export interface DocumentMetadata {
+  title?: string;
+  source?: string;
+  uploadedAt?: string;
+  cleaned?: boolean;
+  originalId?: string;
+  chunkIndex?: number;
+  _chunks?: Array<{ index: number; content: string }>;
+
+  // Tree 구조용 필드
+  parentId?: string | null; // 부모 문서 ID (null이면 루트)
+  folderPath?: string; // 폴더 경로 (예: "프로젝트/API문서")
+  tags?: string[]; // 태그 배열
+  category?: string; // 카테고리
+  order?: number; // 정렬 순서
+}
+
+/**
+ * Tree 노드 (UI 표시용)
+ */
+export interface DocumentTreeNode {
+  id: string;
+  type: 'folder' | 'document';
+  name: string;
+  document?: VectorDocument; // type이 'document'인 경우에만 존재
+  children?: DocumentTreeNode[];
+  isExpanded?: boolean;
+  parentId?: string | null;
+}
+
+/**
  * 검색 결과
  */
 export interface SearchResult {
