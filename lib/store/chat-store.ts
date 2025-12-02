@@ -136,6 +136,7 @@ interface ChatStore {
   // Browser Agent Logs (실행 과정 가시성)
   browserAgentLogs: BrowserAgentLogEntry[];
   browserAgentIsRunning: boolean;
+  browserAgentStreamCleanup: (() => void) | null; // Stream cleanup function
 
   // Browser Agent LLM 설정
   browserAgentLLMConfig: BrowserAgentLLMConfig;
@@ -146,6 +147,7 @@ interface ChatStore {
   // Editor Mode Chat (simple side chat for AI coding assistant)
   editorChatMessages: Message[];
   editorViewMode: 'files' | 'search' | 'chat' | 'settings'; // files, search, chat, or settings view in Editor sidebar
+  editorChatStreaming: boolean; // Editor chat streaming 상태 (백그라운드 스트리밍 지원)
 
   // Editor Settings
   editorAppearanceConfig: EditorAppearanceConfig;
@@ -224,6 +226,7 @@ interface ChatStore {
   // Actions - Browser Agent Logs
   addBrowserAgentLog: (log: Omit<BrowserAgentLogEntry, 'id' | 'timestamp'>) => void;
   clearBrowserAgentLogs: () => void;
+  setBrowserAgentStreamCleanup: (cleanup: (() => void) | null) => void;
   setBrowserAgentIsRunning: (isRunning: boolean) => void;
 
   // Actions - Browser Agent LLM Config
@@ -239,6 +242,7 @@ interface ChatStore {
   updateEditorChatMessage: (id: string, updates: Partial<Message>) => void;
   clearEditorChat: () => void;
   setEditorViewMode: (mode: 'files' | 'search' | 'chat' | 'settings') => void;
+  setEditorChatStreaming: (isStreaming: boolean) => void;
 
   // Actions - Editor Settings
   setEditorAppearanceConfig: (config: Partial<EditorAppearanceConfig>) => void;
@@ -332,6 +336,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Browser Agent Logs
   browserAgentLogs: [],
   browserAgentIsRunning: false,
+  browserAgentStreamCleanup: null,
 
   // Browser Agent LLM Config (localStorage에서 로드 또는 기본값)
   browserAgentLLMConfig: (() => {
@@ -386,6 +391,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Editor Chat
   editorChatMessages: [],
   editorViewMode: 'files',
+  editorChatStreaming: false,
 
   // Editor Appearance Config
   editorAppearanceConfig: (() => {
@@ -1254,6 +1260,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ browserAgentIsRunning: isRunning });
   },
 
+  setBrowserAgentStreamCleanup: (cleanup: (() => void) | null) => {
+    set({ browserAgentStreamCleanup: cleanup });
+  },
+
   // Browser Agent LLM Config Actions
   setBrowserAgentLLMConfig: (config: Partial<BrowserAgentLLMConfig>) => {
     set((state) => {
@@ -1327,11 +1337,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   clearEditorChat: () => {
-    set({ editorChatMessages: [] });
+    set({ editorChatMessages: [], editorChatStreaming: false });
   },
 
   setEditorViewMode: (mode: 'files' | 'search' | 'chat' | 'settings') => {
     set({ editorViewMode: mode });
+  },
+
+  setEditorChatStreaming: (isStreaming: boolean) => {
+    set({ editorChatStreaming: isStreaming });
   },
 
   // Editor Settings

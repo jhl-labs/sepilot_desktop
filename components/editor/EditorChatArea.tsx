@@ -8,7 +8,7 @@ import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 import { EditorToolsList } from './EditorToolsList';
 
 export function EditorChatArea() {
-  const { editorChatMessages } = useChatStore();
+  const { editorChatMessages, editorChatStreaming } = useChatStore();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -52,6 +52,17 @@ export function EditorChatArea() {
             </div>
           </div>
         ))}
+        {/* 백그라운드 스트리밍 중 표시 */}
+        {editorChatStreaming && (
+          <div className="flex justify-start">
+            <div className="rounded-lg px-2.5 py-1.5 text-xs bg-muted/50 border border-primary/20">
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="text-muted-foreground">AI 응답 생성 중...</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ScrollArea>
   );

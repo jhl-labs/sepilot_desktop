@@ -21,8 +21,13 @@ export function EditorChatInput() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const { addEditorChatMessage, updateEditorChatMessage, editorChatMessages, workingDirectory } =
-    useChatStore();
+  const {
+    addEditorChatMessage,
+    updateEditorChatMessage,
+    editorChatMessages,
+    workingDirectory,
+    setEditorChatStreaming,
+  } = useChatStore();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -49,6 +54,7 @@ export function EditorChatInput() {
     }
 
     setIsStreaming(false);
+    setEditorChatStreaming(false); // 전역 상태 업데이트
     setAgentProgress(null);
   };
 
@@ -60,6 +66,7 @@ export function EditorChatInput() {
     const userMessage = input.trim();
     setInput('');
     setIsStreaming(true);
+    setEditorChatStreaming(true); // 전역 상태 업데이트 (백그라운드 스트리밍 지원)
 
     // Create abort controller for cancellation
     abortControllerRef.current = new AbortController();
@@ -195,21 +202,19 @@ Execute tasks step by step and use tools proactively.`,
           }
         });
 
-        try {
-          // Start streaming via IPC (using standard stream method)
-          await window.electronAPI.langgraph.stream(
-            graphConfig,
-            allMessages,
-            'editor-chat-temp', // Temporary conversation ID for editor chat
-            undefined, // comfyUIConfig
-            undefined, // networkConfig
-            workingDirectory || undefined // workingDirectory for editor agent
-          );
-        } finally {
-          // Cleanup event listener
-          if (eventHandler) {
-            eventHandler();
-          }
+        // Start streaming via IPC (using standard stream method)
+        await window.electronAPI.langgraph.stream(
+          graphConfig,
+          allMessages,
+          'editor-chat-temp', // Temporary conversation ID for editor chat
+          undefined, // comfyUIConfig
+          undefined, // networkConfig
+          workingDirectory || undefined // workingDirectory for editor agent
+        );
+
+        // Cleanup event listener (스트림 완료 후에만)
+        if (eventHandler) {
+          eventHandler();
         }
       } else {
         // Web: WebLLMClient directly (fallback without tools)
@@ -253,9 +258,14 @@ Execute tasks step by step and use tools proactively.`,
       }
     } finally {
       setIsStreaming(false);
+      setEditorChatStreaming(false); // 전역 상태 업데이트
       setAgentProgress(null);
       abortControllerRef.current = null;
-      textareaRef.current?.focus();
+
+      // 컴포넌트가 여전히 마운트되어 있을 때만 포커스
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     }
   };
 
