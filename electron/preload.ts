@@ -331,6 +331,12 @@ const electronAPI = {
     send: (errorData: any) => ipcRenderer.invoke('error-reporting-send', errorData),
     isEnabled: () => ipcRenderer.invoke('error-reporting-is-enabled'),
     getContext: () => ipcRenderer.invoke('error-reporting-get-context'),
+    sendConversation: (data: {
+      issue: string;
+      messages: any[];
+      conversationId?: string;
+      additionalInfo?: string;
+    }) => ipcRenderer.invoke('error-reporting-send-conversation', data),
   },
 
   // Shell operations

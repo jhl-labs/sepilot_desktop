@@ -26,14 +26,6 @@ export function ChatContainer() {
     personas,
     activePersonaId,
     conversations,
-    thinkingMode,
-    enableRAG,
-    enableTools,
-    enableImageGeneration,
-    setThinkingMode,
-    setEnableRAG,
-    setEnableTools,
-    setEnableImageGeneration,
     updateMessage,
     deleteMessage,
     addMessage,
@@ -45,8 +37,8 @@ export function ChatContainer() {
   // Message streaming hook
   const { executeStreaming, stopCurrentStreaming } = useMessageStreaming();
 
-  // Tool approval hook
-  const { handleToolApprove, handleToolReject, handleToolAlwaysApprove } = useToolApproval();
+  // Tool approval hook (unused in container, handled by ToolApprovalDialog)
+  const _toolApprovalHooks = useToolApproval();
 
   // Get current conversation's persona
   const currentConversation = activeConversationId

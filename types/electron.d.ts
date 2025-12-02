@@ -528,6 +528,12 @@ interface ErrorReportingAPI {
   ) => Promise<IPCResponse<{ issueUrl?: string; skipped?: boolean }>>;
   isEnabled: () => Promise<{ enabled: boolean }>;
   getContext: () => Promise<IPCResponse<{ version: string; platform: string; timestamp: number }>>;
+  sendConversation: (data: {
+    issue: string;
+    messages: import('./index').Message[];
+    conversationId?: string;
+    additionalInfo?: string;
+  }) => Promise<IPCResponse<{ issueUrl?: string }>>;
 }
 
 // Embeddings 설정 타입

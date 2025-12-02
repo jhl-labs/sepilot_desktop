@@ -19,16 +19,10 @@ function sanitizeErrorData(data: ErrorReportData): ErrorReportData {
   if (sanitized.error.stack) {
     // 사용자 홈 디렉토리를 <USER_HOME>으로 대체
     const homeDir = os.homedir();
-    sanitized.error.stack = sanitized.error.stack.replace(
-      new RegExp(homeDir, 'g'),
-      '<USER_HOME>'
-    );
+    sanitized.error.stack = sanitized.error.stack.replace(new RegExp(homeDir, 'g'), '<USER_HOME>');
 
     // 절대 경로에서 사용자명 제거
-    sanitized.error.stack = sanitized.error.stack.replace(
-      /\/home\/[^/]+\//g,
-      '/home/<USER>/'
-    );
+    sanitized.error.stack = sanitized.error.stack.replace(/\/home\/[^/]+\//g, '/home/<USER>/');
     sanitized.error.stack = sanitized.error.stack.replace(
       /C:\\Users\\[^\\]+\\/g,
       'C:\\Users\\<USER>\\'
@@ -44,10 +38,7 @@ function sanitizeErrorData(data: ErrorReportData): ErrorReportData {
     );
 
     // API 키 패턴 제거
-    sanitized.error.message = sanitized.error.message.replace(
-      /[a-zA-Z0-9_-]{20,}/g,
-      '<REDACTED>'
-    );
+    sanitized.error.message = sanitized.error.message.replace(/[a-zA-Z0-9_-]{20,}/g, '<REDACTED>');
   }
 
   // additionalInfo에서 민감한 정보 제거
@@ -138,9 +129,7 @@ async function checkDuplicateIssue(
     });
 
     // 동일한 에러 메시지를 가진 이슈가 있는지 확인
-    const duplicate = issues.some((issue) =>
-      issue.body?.includes(errorMessage.substring(0, 100))
-    );
+    const duplicate = issues.some((issue) => issue.body?.includes(errorMessage.substring(0, 100)));
 
     return duplicate;
   } catch (error) {
@@ -280,4 +269,134 @@ export function setupErrorReportingHandlers() {
       };
     }
   });
+
+  /**
+   * 대화 내용 리포트 전송 (GitHub Issue 생성)
+   */
+  ipcMain.handle(
+    'error-reporting-send-conversation',
+    async (
+      _event,
+      data: {
+        issue: string;
+        messages: any[];
+        conversationId?: string;
+        additionalInfo?: string;
+      }
+    ) => {
+      try {
+        // GitHub Sync 설정 확인
+        const appConfigStr = databaseService.getSetting('app_config');
+        if (!appConfigStr) {
+          return {
+            success: false,
+            error: 'GitHub Sync 설정이 없습니다.',
+          };
+        }
+
+        const appConfig = JSON.parse(appConfigStr);
+        const githubSync: GitHubSyncConfig | undefined = appConfig.githubSync;
+
+        if (!githubSync || !githubSync.token || !githubSync.owner || !githubSync.repo) {
+          return {
+            success: false,
+            error: 'GitHub Sync가 설정되지 않았습니다.',
+          };
+        }
+
+        // 에러 리포팅이 활성화되어 있는지 확인
+        if (!githubSync.errorReporting) {
+          return {
+            success: false,
+            error: '에러 리포팅이 비활성화되어 있습니다.',
+          };
+        }
+
+        // Octokit 인스턴스 생성
+        const octokit = new Octokit({
+          auth: githubSync.token,
+        });
+
+        // Issue 본문 생성
+        let issueBody = '## 문제점\n\n';
+        issueBody += data.issue + '\n\n';
+
+        if (data.additionalInfo) {
+          issueBody += '## 추가 정보\n\n';
+          issueBody += data.additionalInfo + '\n\n';
+        }
+
+        issueBody += '## 대화 정보\n\n';
+        issueBody += `- 총 메시지: ${data.messages.length}개\n`;
+        issueBody += `- 사용자 메시지: ${data.messages.filter((m) => m.role === 'user').length}개\n`;
+        issueBody += `- AI 응답: ${data.messages.filter((m) => m.role === 'assistant').length}개\n`;
+        const hasTools = data.messages.some((m) => m.tool_calls && m.tool_calls.length > 0);
+        if (hasTools) {
+          issueBody += '- Tool 사용: 있음\n';
+        }
+        if (data.conversationId) {
+          issueBody += `- 대화 ID: \`${data.conversationId}\`\n`;
+        }
+        issueBody += '\n';
+
+        issueBody += '## 시스템 정보\n\n';
+        issueBody += `- **앱 버전**: ${app.getVersion()}\n`;
+        issueBody += `- **플랫폼**: ${os.platform()} ${os.release()}\n`;
+        issueBody += `- **리포트 시간**: ${new Date().toISOString()}\n\n`;
+
+        // 대화 내용 추가 (민감한 정보 제거)
+        issueBody += '## 대화 내용\n\n';
+        issueBody += '<details>\n<summary>전체 대화 보기</summary>\n\n';
+        issueBody += '```json\n';
+
+        // 메시지에서 민감한 정보 제거
+        const sanitizedMessages = data.messages.map((msg) => ({
+          role: msg.role,
+          content:
+            typeof msg.content === 'string' && msg.content.length > 500
+              ? msg.content.substring(0, 500) + '...'
+              : msg.content,
+          tool_calls: msg.tool_calls
+            ? msg.tool_calls.map((tc: any) => ({
+                name: tc.name,
+                // arguments는 민감할 수 있으므로 제외
+              }))
+            : undefined,
+          created_at: msg.created_at,
+        }));
+
+        issueBody += JSON.stringify(sanitizedMessages, null, 2);
+        issueBody += '\n```\n</details>\n\n';
+
+        issueBody += '---\n';
+        issueBody += '*이 리포트는 사용자가 수동으로 전송했습니다.*\n';
+
+        // GitHub Issue 생성
+        const issueTitle = `[Conversation] ${data.issue.substring(0, 80)}`;
+
+        const { data: issue } = await octokit.issues.create({
+          owner: githubSync.owner,
+          repo: githubSync.repo,
+          title: issueTitle,
+          body: issueBody,
+          labels: ['conversation-report', 'user-feedback'],
+        });
+
+        console.log('[ErrorReporting] Conversation report created:', issue.html_url);
+
+        return {
+          success: true,
+          message: '대화 리포트가 전송되었습니다.',
+          issueUrl: issue.html_url,
+        };
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.error('[ErrorReporting] Failed to send conversation report:', err);
+        return {
+          success: false,
+          error: err.message || '대화 리포트 전송 실패',
+        };
+      }
+    }
+  );
 }
