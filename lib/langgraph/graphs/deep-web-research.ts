@@ -58,9 +58,27 @@ ${doc.content}`
  * 1단계: 검색 계획 수립 (Plan Node)
  */
 async function planNode(state: AgentState): Promise<Partial<AgentState>> {
-  const iteration = state.planningNotes?.iteration || 0;
+  let iteration = state.planningNotes?.iteration || 0;
   const isFirstStep = iteration === 0;
   const query = state.messages[state.messages.length - 1].content;
+
+  // 이전 검색 결과 확인 - 모두 실패했다면 iteration을 증가시키지 않음 (재시도)
+  const toolResults = state.toolResults || [];
+  const lastBatchStart = state.planningNotes?.lastSearchCount || 0;
+  const lastBatchResults = toolResults.slice(lastBatchStart);
+  const allFailed = lastBatchResults.length > 0 && lastBatchResults.every((r) => !!r.error);
+
+  if (allFailed && !isFirstStep) {
+    console.log('[DeepWebResearch] Previous searches all failed. Retrying without incrementing iteration.');
+    emitStreamingChunk(
+      `⚠️ **이전 검색 실패. 다른 방법으로 재시도합니다...**\n\n`,
+      state.conversationId
+    );
+    // iteration을 증가시키지 않고 재시도
+  } else if (!isFirstStep) {
+    // 성공적인 검색이 있었으면 iteration 증가
+    iteration += 1;
+  }
 
   // RAG Context (첫 턴에만 수행)
   let ragContext = '';
@@ -68,7 +86,7 @@ async function planNode(state: AgentState): Promise<Partial<AgentState>> {
     ragContext = await retrieveContextIfEnabled(query);
   }
 
-  console.log(`[DeepWebResearch] Planning Step (Iter ${iteration + 1})`);
+  console.log(`[DeepWebResearch] Planning Step (Iter ${iteration + 1}, Actual: ${iteration})`);
 
   if (isFirstStep) {
     emitStreamingChunk('\n\n## 🧠 심층 웹 연구 시작\n\n', state.conversationId);
@@ -79,9 +97,7 @@ async function planNode(state: AgentState): Promise<Partial<AgentState>> {
     );
   }
 
-  // 이전 검색 결과 요약 문자열 생성
-  const toolResults = state.toolResults || [];
-  // 너무 길면 최근 것만? 일단 전체 포함 (LLM Context Window가 크다고 가정)
+  // 이전 검색 결과 요약 문자열 생성 (위에서 이미 선언한 toolResults 재사용)
   const previousResults = toolResults
     .map(
       (r, i) =>
@@ -97,38 +113,56 @@ async function planNode(state: AgentState): Promise<Partial<AgentState>> {
 
 현재 단계: ${iteration + 1} / ${MAX_ITERATIONS}
 
+[핵심 원칙: 깊이 있는 다각도 탐색]
+- 첫 검색에서 만족하지 말고, 다양한 관점에서 정보를 수집하세요.
+- 최소 2-3번의 검색을 통해 정보의 깊이와 폭을 확보하세요.
+- 각 iteration마다 새로운 키워드나 관점으로 접근하세요.
+- 진짜 충분한 정보가 모였을 때만 검색을 종료하세요.
+
 [지시사항]
 1. 현재까지 수집된 정보를 분석하여, 더 필요한 정보가 무엇인지 판단하세요.
-2. 정보가 충분하다면 'queries'를 빈 배열 []로 반환하여 검색을 종료하세요.
+2. **정보가 진짜 충분할 때만** 'queries'를 빈 배열 []로 반환하세요.
+   - 단순히 "뭔가 나왔다"가 아니라 "질문에 완전히 답할 수 있다"를 기준으로 판단하세요.
+   - 첫 검색 결과가 불충분하거나 일부 관점만 다룬다면 계속 검색하세요.
 3. 더 정보가 필요하다면, Tavily 검색 도구를 위한 최적의 쿼리를 생성하세요.
-4. **매우 중요**: 'tavily_search' 도구는 **정확히 2개의 파라미터만** 허용합니다:
 
-   ✅ **허용되는 파라미터:**
+4. **🚨 절대 준수 사항 (파라미터 제한) 🚨**
+   'tavily_search' 도구는 **오직 2개의 파라미터만** 허용합니다:
+
+   ✅ **허용된 파라미터 (이것만 사용):**
    - "query": (string) 검색어
    - "max_results": (number) 최대 결과 수 (기본값: 5)
 
-   ❌ **절대 사용 금지 파라미터 (에러 발생):**
-   - "country", "topic", "topn", "search_depth", "days", "include_domains",
-     "exclude_domains", "include_answer", "include_raw_content", "include_images"
+   ❌ **금지된 파라미터 (시스템 에러 발생):**
+   다음 파라미터들은 절대 사용하지 마세요. 사용하면 검색이 실패합니다:
+   - "country", "topic", "topn", "search_depth", "days", "time_range"
+   - "include_domains", "exclude_domains", "include_answer"
+   - "include_raw_content", "include_images", "select_paths", "exclude_paths"
+   - 기타 query, max_results 이외의 모든 파라미터
 
-   **올바른 예시:**
+   **✅ 올바른 예시 (반드시 이 형식을 따르세요):**
    {"query": "latest AI news 2025", "max_results": 5} ✅
-   {"query": "Python tutorial", "max_results": 3} ✅
+   {"query": "Python tutorial beginners", "max_results": 3} ✅
+   {"query": "climate change statistics", "max_results": 5} ✅
 
-   **잘못된 예시 (절대 사용 금지):**
-   {"query": "news", "max_results": 5, "country": "ko"} ❌
-   {"query": "AI", "days": "week"} ❌
-   {"query": "research", "search_depth": "advanced"} ❌
+   **❌ 잘못된 예시 (절대 사용 금지):**
+   {"query": "news", "max_results": 5, "country": "ko"} ❌ (country 금지)
+   {"query": "AI", "days": "week"} ❌ (days 금지)
+   {"query": "research", "time_range": ""} ❌ (time_range 금지)
+   {"query": "search", "search_depth": "advanced"} ❌ (search_depth 금지)
+   {"query": "data", "select_paths": [], "exclude_paths": []} ❌ (paths 금지)
+
+   **⚠️ 중요: query와 max_results만 사용하세요. 다른 필드는 절대 추가하지 마세요!**
 
 5. 한 번에 최대 3개의 병렬 쿼리를 생성할 수 있습니다.
 6. 반드시 아래 JSON 형식으로만 응답하세요.
 
 [JSON 형식 예시]
 {
-  "thought": "사용자가 ...에 대해 물었으므로, ...에 대한 최신 통계를 검색해야 합니다.",
+  "thought": "사용자가 ...에 대해 물었으므로, 먼저 최신 동향을 검색하고, 이어서 기술적 세부사항과 실제 사례를 추가로 조사해야 합니다.",
   "queries": [
-    {"tool_name": "tavily_search", "parameters": {"query": "Gemini 3.0 benchmark results", "max_results": 5}},
-    {"tool_name": "tavily_search", "parameters": {"query": "Gemini 3.0 technical report", "max_results": 5}}
+    {"tool_name": "tavily_search", "parameters": {"query": "Gemini 3.0 latest news 2025", "max_results": 5}},
+    {"tool_name": "tavily_search", "parameters": {"query": "Gemini 3.0 technical specifications", "max_results": 5}}
   ]
 }`,
     created_at: Date.now(),
@@ -193,8 +227,9 @@ ${previousResults || '(없음)'}
     messages: state.messages, // 메시지 히스토리는 유지
     planningNotes: {
       queries: plannedQueries,
-      iteration: iteration + 1,
+      iteration,
       thought,
+      lastSearchCount: toolResults.length, // 현재까지의 검색 결과 수 저장
     },
   };
 }
@@ -224,11 +259,25 @@ async function searchNode(state: AgentState): Promise<Partial<AgentState>> {
   // 하지만 toolsNode는 state.messages의 마지막 메시지의 tool_calls를 봅니다.
   // 여기서는 임시 메시지를 만들어 toolsNode에 넘깁니다.
 
-  const tempToolCalls = queries.map((q: any, idx: number) => ({
-    id: `call-${Date.now()}-${idx}`,
-    name: q.tool_name,
-    arguments: q.parameters,
-  }));
+  // Filter tool parameters to only include allowed fields
+  const tempToolCalls = queries.map((q: any, idx: number) => {
+    let cleanedParams = q.parameters;
+
+    // Tavily Search: Only allow query and max_results
+    if (q.tool_name === 'tavily_search') {
+      cleanedParams = {
+        query: q.parameters.query || q.parameters.search_query || '',
+        max_results: q.parameters.max_results || 5,
+      };
+      console.log('[DeepWebResearch] Cleaned tavily_search params:', cleanedParams);
+    }
+
+    return {
+      id: `call-${Date.now()}-${idx}`,
+      name: q.tool_name,
+      arguments: cleanedParams,
+    };
+  });
 
   const tempMessage: Message = {
     id: `temp-tool-msg-${Date.now()}`,
@@ -292,19 +341,29 @@ function checkPlan(state: AgentState) {
 
   // 강제 종료 플래그 확인
   if (notes?.forceSynthesize) {
+    console.log('[DeepWebResearch] Force synthesize flag detected');
     return 'synthesize';
   }
 
-  // 쿼리가 없으면 종료 (Synthesize)
+  // 쿼리가 없으면 종료 (Synthesize) - LLM이 충분하다고 판단
   if (!notes || !notes.queries || notes.queries.length === 0) {
+    console.log('[DeepWebResearch] No more queries planned. Moving to synthesize.');
     return 'synthesize';
   }
 
-  // 최대 반복 횟수 초과 시 종료
-  if (notes.iteration > MAX_ITERATIONS) {
+  // 최대 반복 횟수 도달 시 종료 (>= 사용하여 정확히 MAX_ITERATIONS만큼만 실행)
+  if (notes.iteration >= MAX_ITERATIONS) {
+    console.log(
+      `[DeepWebResearch] Max iterations reached (${notes.iteration}/${MAX_ITERATIONS}). Moving to synthesize.`
+    );
+    emitStreamingChunk(
+      `\n⏸️ **최대 검색 횟수 도달 (${notes.iteration}/${MAX_ITERATIONS}). 수집된 정보로 답변을 생성합니다.**\n\n`,
+      state.conversationId
+    );
     return 'synthesize';
   }
 
+  console.log(`[DeepWebResearch] Proceeding to search (iteration ${notes.iteration + 1}/${MAX_ITERATIONS})`);
   return 'search';
 }
 

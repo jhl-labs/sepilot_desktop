@@ -2,7 +2,7 @@ import { AgentState } from '../state';
 import type { Message, ToolCall } from '@/types';
 import type { ToolApprovalCallback } from '../types';
 import { getLLMClient } from '@/lib/llm/client';
-import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import { emitStreamingChunk, isAborted } from '@/lib/llm/streaming-callback';
 import { editorToolsRegistry, registerAllEditorTools } from '@/lib/langgraph/tools/index';
 
 /**
@@ -111,6 +111,22 @@ export class EditorAgentGraph {
     while (iterations < this.maxIterations) {
       console.log(`[EditorAgent] ===== Iteration ${iterations + 1}/${this.maxIterations} =====`);
 
+      // Check if streaming was aborted
+      if (isAborted(state.conversationId)) {
+        console.log('[EditorAgent] Streaming aborted by user');
+        const abortMessage: Message = {
+          id: `msg-${Date.now()}`,
+          role: 'assistant',
+          content: '⏹️ 작업이 사용자에 의해 중단되었습니다.',
+          created_at: Date.now(),
+        };
+        yield {
+          type: 'message',
+          message: abortMessage,
+        };
+        break;
+      }
+
       // 1. Generate response with tools
       let generateResult;
       try {
@@ -203,6 +219,12 @@ export class EditorAgentGraph {
 
       // 4. Execute tools
       console.log('[EditorAgent] Executing tools');
+
+      // Check abort before tool execution
+      if (isAborted(state.conversationId)) {
+        console.log('[EditorAgent] Streaming aborted before tool execution');
+        break;
+      }
 
       // Log tool execution start
       const toolCalls = state.messages[state.messages.length - 1].tool_calls;
