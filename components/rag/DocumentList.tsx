@@ -2,9 +2,25 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { FileText, Trash2, RefreshCw, Edit, Download, Upload } from 'lucide-react';
+import {
+  FileText,
+  Trash2,
+  RefreshCw,
+  Edit,
+  Download,
+  Upload,
+  LayoutGrid,
+  List as ListIcon,
+  FolderTree,
+  ChevronRight,
+  ChevronDown,
+  Folder,
+  FolderOpen,
+} from 'lucide-react';
 import { getAllDocuments, exportDocuments, importDocuments } from '@/lib/vectordb/client';
-import { VectorDocument } from '@/lib/vectordb/types';
+import { VectorDocument, DocumentTreeNode } from '@/lib/vectordb/types';
+
+type ViewMode = 'grid' | 'list' | 'tree';
 
 interface DocumentListProps {
   onDelete?: (ids: string[]) => Promise<void>;
@@ -18,6 +34,8 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadDocuments = async () => {
@@ -191,6 +209,240 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     }
   };
 
+  // 문서를 Tree 구조로 변환
+  const buildDocumentTree = (docs: VectorDocument[]): DocumentTreeNode[] => {
+    const folderMap = new Map<string, DocumentTreeNode>();
+    const rootNodes: DocumentTreeNode[] = [];
+
+    // 1. 폴더 경로를 기반으로 폴더 노드 생성
+    docs.forEach((doc) => {
+      const folderPath = doc.metadata?.folderPath as string | undefined;
+      if (folderPath) {
+        const pathParts = folderPath.split('/').filter((p) => p.trim());
+        let currentPath = '';
+
+        pathParts.forEach((part, index) => {
+          const parentPath = currentPath;
+          currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+          if (!folderMap.has(currentPath)) {
+            const folderNode: DocumentTreeNode = {
+              id: `folder:${currentPath}`,
+              type: 'folder',
+              name: part,
+              children: [],
+              isExpanded: expandedFolders.has(`folder:${currentPath}`),
+              parentId: parentPath ? `folder:${parentPath}` : null,
+            };
+            folderMap.set(currentPath, folderNode);
+
+            // 부모에 추가
+            if (parentPath && folderMap.has(parentPath)) {
+              folderMap.get(parentPath)!.children!.push(folderNode);
+            } else if (index === 0) {
+              rootNodes.push(folderNode);
+            }
+          }
+        });
+      }
+    });
+
+    // 2. 문서를 해당 폴더 또는 루트에 추가
+    docs.forEach((doc) => {
+      const folderPath = doc.metadata?.folderPath as string | undefined;
+      const docNode: DocumentTreeNode = {
+        id: doc.id,
+        type: 'document',
+        name: (doc.metadata?.title as string) || '제목 없음',
+        document: doc,
+        parentId: folderPath ? `folder:${folderPath}` : null,
+      };
+
+      if (folderPath && folderMap.has(folderPath)) {
+        folderMap.get(folderPath)!.children!.push(docNode);
+      } else {
+        rootNodes.push(docNode);
+      }
+    });
+
+    // 3. 정렬 (폴더 먼저, 그 다음 문서)
+    const sortNodes = (nodes: DocumentTreeNode[]): DocumentTreeNode[] => {
+      return nodes.sort((a, b) => {
+        if (a.type === 'folder' && b.type === 'document') {
+          return -1;
+        }
+        if (a.type === 'document' && b.type === 'folder') {
+          return 1;
+        }
+        return a.name.localeCompare(b.name);
+      });
+    };
+
+    const sortTree = (node: DocumentTreeNode) => {
+      if (node.children && node.children.length > 0) {
+        node.children = sortNodes(node.children);
+        node.children.forEach(sortTree);
+      }
+    };
+
+    const sortedRoot = sortNodes(rootNodes);
+    sortedRoot.forEach(sortTree);
+
+    return sortedRoot;
+  };
+
+  const toggleFolder = (folderId: string) => {
+    const newExpanded = new Set(expandedFolders);
+    if (newExpanded.has(folderId)) {
+      newExpanded.delete(folderId);
+    } else {
+      newExpanded.add(folderId);
+    }
+    setExpandedFolders(newExpanded);
+  };
+
+  // 문서 카드 렌더링 (공통)
+  const renderDocumentCard = (doc: VectorDocument, compact: boolean = false) => {
+    const isExpanded = expandedDocs.has(doc.id);
+    const content = doc.content || '';
+    const contentPreview = content.slice(0, 150);
+    const hasMore = content.length > 150;
+
+    return (
+      <div
+        key={doc.id}
+        className={`rounded-md border bg-card hover:bg-accent/50 transition-colors ${
+          compact ? 'p-3' : 'p-4 min-h-[180px]'
+        }`}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+              <h4 className={`font-medium truncate ${compact ? 'text-xs' : 'text-sm'}`}>
+                {doc.metadata?.title || '제목 없음'}
+              </h4>
+            </div>
+            <p className="text-xs text-muted-foreground mb-2">
+              출처: {doc.metadata?.source || 'manual'}
+              {doc.metadata?.cleaned && (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  LLM 정제됨
+                </span>
+              )}
+              {' • '}
+              {doc.metadata?.uploadedAt
+                ? new Date(doc.metadata.uploadedAt).toLocaleString('ko-KR')
+                : '알 수 없음'}
+            </p>
+            {!compact && (
+              <>
+                <div
+                  className={`text-sm text-muted-foreground ${isExpanded ? '' : 'line-clamp-3 min-h-[60px]'}`}
+                >
+                  {isExpanded ? content : contentPreview}
+                  {!isExpanded && hasMore && '...'}
+                </div>
+                {hasMore && (
+                  <button
+                    onClick={() => toggleExpand(doc.id)}
+                    className="text-xs text-primary hover:underline mt-1"
+                  >
+                    {isExpanded ? '접기' : '더 보기'}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+          <div className="flex gap-1 flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit?.(doc)}
+              disabled={!onEdit || disabled}
+              title="편집"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDelete(doc.id)}
+              disabled={!onDelete || disabled}
+              title="삭제"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Grid 뷰 렌더링 (기본)
+  const renderGridView = () => {
+    return (
+      <div className="space-y-2">{documents.map((doc) => renderDocumentCard(doc, false))}</div>
+    );
+  };
+
+  // List 뷰 렌더링 (컴팩트)
+  const renderListView = () => {
+    return <div className="space-y-1">{documents.map((doc) => renderDocumentCard(doc, true))}</div>;
+  };
+
+  // Tree 뷰 렌더링
+  const renderTreeView = () => {
+    const treeNodes = buildDocumentTree(documents);
+
+    const renderTreeNode = (node: DocumentTreeNode, level: number = 0): React.ReactNode => {
+      const isExpanded = node.type === 'folder' && expandedFolders.has(node.id);
+      const paddingLeft = level * 20;
+
+      if (node.type === 'folder') {
+        return (
+          <div key={node.id}>
+            <div
+              className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer"
+              style={{ paddingLeft: `${paddingLeft}px` }}
+              onClick={() => toggleFolder(node.id)}
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  <FolderOpen className="h-4 w-4 flex-shrink-0 text-amber-500" />
+                </>
+              ) : (
+                <>
+                  <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  <Folder className="h-4 w-4 flex-shrink-0 text-amber-500" />
+                </>
+              )}
+              <span className="text-sm font-medium">{node.name}</span>
+              {node.children && (
+                <span className="text-xs text-muted-foreground">({node.children.length})</span>
+              )}
+            </div>
+            {isExpanded && node.children && (
+              <div className="mt-1 space-y-1">
+                {node.children.map((child) => renderTreeNode(child, level + 1))}
+              </div>
+            )}
+          </div>
+        );
+      } else {
+        // Document node
+        return (
+          <div key={node.id} style={{ paddingLeft: `${paddingLeft}px` }} className="mt-1">
+            {node.document && renderDocumentCard(node.document, true)}
+          </div>
+        );
+      }
+    };
+
+    return <div className="space-y-1">{treeNodes.map((node) => renderTreeNode(node, 0))}</div>;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -200,6 +452,42 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           <span className="text-sm font-normal text-muted-foreground">({documents.length}개)</span>
         </div>
         <div className="flex items-center gap-2">
+          {/* 뷰 모드 토글 */}
+          <div className="flex items-center gap-1 border rounded-md p-0.5">
+            <Button
+              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              disabled={isLoading || disabled}
+              title="그리드 뷰"
+              className="h-7 px-2"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              disabled={isLoading || disabled}
+              title="리스트 뷰"
+              className="h-7 px-2"
+            >
+              <ListIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'tree' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('tree')}
+              disabled={isLoading || disabled}
+              title="트리 뷰"
+              className="h-7 px-2"
+            >
+              <FolderTree className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="h-6 w-px bg-border" />
+
           <Button
             variant="outline"
             size="sm"
@@ -256,79 +544,12 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
           업로드된 문서가 없습니다.
         </div>
+      ) : viewMode === 'tree' ? (
+        renderTreeView()
+      ) : viewMode === 'list' ? (
+        renderListView()
       ) : (
-        <div className="space-y-2">
-          {documents.map((doc) => {
-            const isExpanded = expandedDocs.has(doc.id);
-            const content = doc.content || '';
-            const contentPreview = content.slice(0, 150);
-            const hasMore = content.length > 150;
-
-            return (
-              <div
-                key={doc.id}
-                className="rounded-md border bg-card p-4 hover:bg-accent/50 transition-colors min-h-[180px]"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                      <h4 className="font-medium text-sm truncate">
-                        {doc.metadata?.title || '제목 없음'}
-                      </h4>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      출처: {doc.metadata?.source || 'manual'}
-                      {doc.metadata?.cleaned && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          LLM 정제됨
-                        </span>
-                      )}
-                      {' • '}
-                      {doc.metadata?.uploadedAt
-                        ? new Date(doc.metadata.uploadedAt).toLocaleString('ko-KR')
-                        : '알 수 없음'}
-                    </p>
-                    <div
-                      className={`text-sm text-muted-foreground ${isExpanded ? '' : 'line-clamp-3 min-h-[60px]'}`}
-                    >
-                      {isExpanded ? content : contentPreview}
-                      {!isExpanded && hasMore && '...'}
-                    </div>
-                    {hasMore && (
-                      <button
-                        onClick={() => toggleExpand(doc.id)}
-                        className="text-xs text-primary hover:underline mt-1"
-                      >
-                        {isExpanded ? '접기' : '더 보기'}
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex gap-1 flex-shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEdit?.(doc)}
-                      disabled={!onEdit || disabled}
-                      title="편집"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(doc.id)}
-                      disabled={!onDelete || disabled}
-                      title="삭제"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        renderGridView()
       )}
     </div>
   );

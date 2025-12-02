@@ -879,15 +879,25 @@ export function InputBox() {
 
                 // Generate node: Show AI thinking
                 if (event.node === 'generate') {
-                  nodeStatusMessage = '🤖 AI가 응답을 생성하고 있습니다...';
+                  // Check if this is a generate node after tool execution
+                  const hasToolResults = event.data?.messages?.some(
+                    (msg: any) => msg.role === 'tool'
+                  );
 
-                  // If there are tool calls, show them
+                  // If there are tool calls, show planning message
                   if (event.data?.messages?.[0]?.tool_calls) {
                     const toolNames = event.data.messages[0].tool_calls
                       .map((tc: any) => tc.name)
                       .join(', ');
                     nodeStatusMessage = `🤖 AI가 도구 사용을 계획하고 있습니다: ${toolNames}`;
                   }
+                  // If tool results exist but no tool_calls, this is post-tool response generation
+                  // Don't show redundant message as tool execution already completed
+                  else if (!hasToolResults) {
+                    // Initial generate node without tools
+                    nodeStatusMessage = '🤖 AI가 응답을 생성하고 있습니다...';
+                  }
+                  // If hasToolResults but no tool_calls: skip message (tool already executed)
                 }
 
                 // Tools node: Show tool execution
