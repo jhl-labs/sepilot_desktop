@@ -176,13 +176,14 @@ export function CodeEditor() {
   // Register inline completion provider for autocomplete
   useEffect(() => {
     if (!editor) {
+      console.log('[Autocomplete] Editor not ready');
       return;
     }
 
     // Get monaco instance from the editor
     const monacoInstance = (window as any).monaco;
     if (!monacoInstance) {
-      console.warn('Monaco instance not available');
+      console.warn('[Autocomplete] Monaco instance not available');
       return;
     }
 
@@ -197,13 +198,17 @@ export function CodeEditor() {
     // Create the provider object with all required methods
     const providerObject = {
       provideInlineCompletions: async (model: any, position: any, _context: any, token: any) => {
+        console.log('[Autocomplete] provideInlineCompletions called');
+
         // Return empty if autocomplete is not available
         if (!window.electronAPI?.llm?.editorAutocomplete) {
+          console.warn('[Autocomplete] electronAPI.llm.editorAutocomplete not available');
           return { items: [] };
         }
 
         // Monaco의 CancellationToken 체크
         if (token?.isCancellationRequested) {
+          console.log('[Autocomplete] Token already cancelled');
           return { items: [] };
         }
 
@@ -225,14 +230,18 @@ export function CodeEditor() {
           }
 
           debounceTimer = setTimeout(async () => {
+            console.log('[Autocomplete] Debounce timer fired');
+
             // 토큰 취소 체크
             if (token?.isCancellationRequested || abortController.signal.aborted) {
+              console.log('[Autocomplete] Cancelled before processing');
               resolve({ items: [] });
               return;
             }
 
             // 이미 요청이 진행 중이면 스킵
             if (isRequestInProgress) {
+              console.log('[Autocomplete] Request already in progress, skipping');
               resolve({ items: [] });
               return;
             }
@@ -248,20 +257,29 @@ export function CodeEditor() {
               const currentLine = lines[lines.length - 1];
               const previousLine = lines.length > 1 ? lines[lines.length - 2] : '';
 
+              console.log('[Autocomplete] Context:', {
+                language,
+                currentLine: currentLine.substring(0, 50),
+                previousLine: previousLine.substring(0, 50),
+              });
+
               // Don't autocomplete only if there are 2+ consecutive empty lines
               // (current line is empty AND previous line is also empty)
               if (!currentLine.trim() && !previousLine.trim()) {
+                console.log('[Autocomplete] Skipping - 2+ consecutive empty lines');
                 resolve({ items: [] });
                 return;
               }
 
               // 다시 한번 취소 체크
               if (token?.isCancellationRequested || abortController.signal.aborted) {
+                console.log('[Autocomplete] Cancelled before API call');
                 resolve({ items: [] });
                 return;
               }
 
               isRequestInProgress = true;
+              console.log('[Autocomplete] Starting API request...');
 
               // 타임아웃과 함께 요청
               const timeoutPromise = new Promise<never>((_, reject) => {
@@ -278,12 +296,19 @@ export function CodeEditor() {
 
               const result = await Promise.race([requestPromise, timeoutPromise]);
 
+              console.log('[Autocomplete] API response received:', {
+                success: result.success,
+                hasCompletion: !!result.data?.completion,
+                error: result.error,
+              });
+
               // 요청 완료 후 취소 체크
               if (
                 token?.isCancellationRequested ||
                 abortController.signal.aborted ||
                 requestId !== lastRequestId
               ) {
+                console.log('[Autocomplete] Cancelled after API call');
                 resolve({ items: [] });
                 return;
               }
@@ -291,7 +316,13 @@ export function CodeEditor() {
               if (result.success && result.data?.completion) {
                 const completion = result.data.completion.trim();
 
+                console.log('[Autocomplete] Completion text:', {
+                  length: completion.length,
+                  preview: completion.substring(0, 50),
+                });
+
                 if (completion) {
+                  console.log('[Autocomplete] Showing suggestion to user');
                   resolve({
                     items: [
                       {
@@ -307,12 +338,18 @@ export function CodeEditor() {
                     ],
                   });
                   return;
+                } else {
+                  console.log('[Autocomplete] Completion is empty after trim');
                 }
+              } else {
+                console.warn('[Autocomplete] API call failed or no completion:', result.error);
               }
             } catch (error) {
               // 에러는 조용히 처리 (사용자 경험 방해 X)
               if (error instanceof Error && error.message !== 'Timeout') {
                 console.error('[Autocomplete] Error:', error.message);
+              } else if (error instanceof Error) {
+                console.warn('[Autocomplete] Request timed out');
               }
             } finally {
               isRequestInProgress = false;
@@ -321,6 +358,7 @@ export function CodeEditor() {
               }
             }
 
+            console.log('[Autocomplete] Returning empty result');
             resolve({ items: [] });
           }, DEBOUNCE_MS);
         });
@@ -342,7 +380,11 @@ export function CodeEditor() {
       providerObject
     );
 
-    console.log('Inline completion provider registered for all languages');
+    console.log('[Autocomplete] Provider registered for all languages');
+    console.log('[Autocomplete] Settings:', {
+      useRag: editorUseRagInAutocomplete,
+      useTools: editorUseToolsInAutocomplete,
+    });
 
     return () => {
       if (debounceTimer) {
@@ -352,7 +394,7 @@ export function CodeEditor() {
         currentAbortController.abort();
       }
       provider.dispose();
-      console.log('Inline completion provider disposed');
+      console.log('[Autocomplete] Provider disposed');
     };
   }, [editor, editorUseRagInAutocomplete, editorUseToolsInAutocomplete]);
 
