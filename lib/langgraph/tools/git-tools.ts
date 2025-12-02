@@ -70,11 +70,12 @@ const gitStatusTool: EditorTool = {
     try {
       const path = await import('path');
 
-      const workingDir = cwd
-        ? cwd
-        : state.editorContext?.filePath
+      const workingDir =
+        cwd ||
+        state.workingDirectory ||
+        (state.editorContext?.filePath
           ? path.dirname(state.editorContext.filePath)
-          : process.cwd();
+          : process.cwd());
 
       const command = short ? 'status --short --branch' : 'status';
       const result = await executeGitCommand(command, workingDir);
@@ -144,11 +145,12 @@ const gitDiffTool: EditorTool = {
     try {
       const path = await import('path');
 
-      const workingDir = cwd
-        ? cwd
-        : state.editorContext?.filePath
+      const workingDir =
+        cwd ||
+        state.workingDirectory ||
+        (state.editorContext?.filePath
           ? path.dirname(state.editorContext.filePath)
-          : process.cwd();
+          : process.cwd());
 
       let command = staged ? 'diff --cached' : 'diff';
       if (filePath) {
@@ -229,11 +231,12 @@ const gitLogTool: EditorTool = {
     try {
       const path = await import('path');
 
-      const workingDir = cwd
-        ? cwd
-        : state.editorContext?.filePath
+      const workingDir =
+        cwd ||
+        state.workingDirectory ||
+        (state.editorContext?.filePath
           ? path.dirname(state.editorContext.filePath)
-          : process.cwd();
+          : process.cwd());
 
       let command = oneline
         ? `log --oneline -n ${limit}`
@@ -301,11 +304,12 @@ const gitBranchTool: EditorTool = {
     try {
       const path = await import('path');
 
-      const workingDir = cwd
-        ? cwd
-        : state.editorContext?.filePath
+      const workingDir =
+        cwd ||
+        state.workingDirectory ||
+        (state.editorContext?.filePath
           ? path.dirname(state.editorContext.filePath)
-          : process.cwd();
+          : process.cwd());
 
       const command = all ? 'branch -a' : 'branch';
       const result = await executeGitCommand(command, workingDir);

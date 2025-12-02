@@ -56,12 +56,13 @@ const runCommandTool: EditorTool = {
       const path = await import('path');
       const execAsync = promisify(exec);
 
-      // Working directory 결정
-      const workingDir = cwd
-        ? cwd
-        : state.editorContext?.filePath
+      // Working directory 결정 (우선순위: 명시적 cwd > state.workingDirectory > editorContext.filePath의 dirname > process.cwd())
+      const workingDir =
+        cwd ||
+        state.workingDirectory ||
+        (state.editorContext?.filePath
           ? path.dirname(state.editorContext.filePath)
-          : process.cwd();
+          : process.cwd());
 
       console.log('[run_command] Executing:', command, 'in', workingDir);
 

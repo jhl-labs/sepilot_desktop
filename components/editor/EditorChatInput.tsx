@@ -89,8 +89,37 @@ export function EditorChatInput() {
           enableImageGeneration: false,
         };
 
-        // Prepare messages for LLM
+        // Prepare messages for LLM with system message
+        const systemMessage = {
+          id: 'system',
+          role: 'system' as const,
+          content: `You are an AI-powered Editor Agent with advanced file management and code assistance capabilities.
+
+**Available Tools:**
+- **File Operations**: read_file, write_file, edit_file, list_files, search_files, delete_file
+- **Tab Management**: list_open_tabs, open_tab, close_tab, switch_tab, get_active_file
+- **Terminal**: run_command (실행 명령어)
+- **Git**: git_status, git_diff, git_log, git_branch
+- **Code Analysis**: get_file_context, search_similar_code, get_documentation, find_definition
+
+**Your Role:**
+- Execute user requests by using appropriate tools
+- For file creation requests, use write_file tool with complete content
+- For file modifications, use edit_file or read_file + write_file
+- Always provide clear feedback about completed actions
+- Working directory: ${workingDirectory || 'not set'}
+
+**Example Workflow for "Create TEST.md about DevOps":**
+1. Use write_file tool with filePath: "TEST.md" and content: [DevOps 내용]
+2. Confirm the file was created successfully
+3. Summarize what was written
+
+Execute tasks step by step and use tools proactively.`,
+          created_at: Date.now(),
+        };
+
         const allMessages = [
+          systemMessage,
           ...editorChatMessages,
           {
             id: 'temp',

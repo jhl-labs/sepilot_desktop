@@ -38,12 +38,13 @@ const readFileTool: EditorTool = {
       const path = await import('path');
 
       // Working directory 기준으로 절대 경로 계산
-      const workingDir = state.editorContext?.filePath
-        ? path.dirname(state.editorContext.filePath)
-        : process.cwd();
-      const absolutePath = path.isAbsolute(filePath)
-        ? filePath
-        : path.join(workingDir, filePath);
+      // Working directory 우선순위: state.workingDirectory > editorContext.filePath의 dirname > process.cwd()
+      const workingDir =
+        state.workingDirectory ||
+        (state.editorContext?.filePath
+          ? path.dirname(state.editorContext.filePath)
+          : process.cwd());
+      const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
 
       const content = await fs.readFile(absolutePath, 'utf-8');
       const lines = content.split('\n').length;
@@ -70,7 +71,8 @@ const readFileTool: EditorTool = {
 const writeFileTool: EditorTool = {
   name: 'write_file',
   category: 'file',
-  description: '새 파일을 생성하거나 기존 파일을 덮어씁니다',
+  description:
+    '새 파일을 생성하거나 기존 파일을 덮어씁니다. 파일 생성 요청 시 전체 내용을 content에 포함하여 즉시 실행하세요. 디렉토리가 없으면 자동으로 생성됩니다.',
   icon: '✍️',
   dangerous: true, // 파일 덮어쓰기는 위험할 수 있음
   parameters: {
@@ -78,11 +80,13 @@ const writeFileTool: EditorTool = {
     properties: {
       filePath: {
         type: 'string',
-        description: '쓸 파일의 절대 경로 또는 working directory 기준 상대 경로',
+        description:
+          '쓸 파일의 절대 경로 또는 working directory 기준 상대 경로 (예: "TEST.md", "docs/README.md")',
       },
       content: {
         type: 'string',
-        description: '파일에 쓸 내용',
+        description:
+          '파일에 쓸 전체 내용. 마크다운, 코드, 텍스트 등 모든 형식 지원. 완전한 내용을 작성하세요.',
       },
     },
     required: ['filePath', 'content'],
@@ -98,12 +102,13 @@ const writeFileTool: EditorTool = {
       const fs = await import('fs/promises');
       const path = await import('path');
 
-      const workingDir = state.editorContext?.filePath
-        ? path.dirname(state.editorContext.filePath)
-        : process.cwd();
-      const absolutePath = path.isAbsolute(filePath)
-        ? filePath
-        : path.join(workingDir, filePath);
+      // Working directory 우선순위: state.workingDirectory > editorContext.filePath의 dirname > process.cwd()
+      const workingDir =
+        state.workingDirectory ||
+        (state.editorContext?.filePath
+          ? path.dirname(state.editorContext.filePath)
+          : process.cwd());
+      const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
 
       // 디렉토리가 없으면 생성
       const dir = path.dirname(absolutePath);
@@ -173,12 +178,13 @@ const editFileTool: EditorTool = {
       const fs = await import('fs/promises');
       const path = await import('path');
 
-      const workingDir = state.editorContext?.filePath
-        ? path.dirname(state.editorContext.filePath)
-        : process.cwd();
-      const absolutePath = path.isAbsolute(filePath)
-        ? filePath
-        : path.join(workingDir, filePath);
+      // Working directory 우선순위: state.workingDirectory > editorContext.filePath의 dirname > process.cwd()
+      const workingDir =
+        state.workingDirectory ||
+        (state.editorContext?.filePath
+          ? path.dirname(state.editorContext.filePath)
+          : process.cwd());
+      const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
 
       // 파일 읽기
       const content = await fs.readFile(absolutePath, 'utf-8');
@@ -248,9 +254,12 @@ const listFilesTool: EditorTool = {
       const fs = await import('fs/promises');
       const path = await import('path');
 
-      const workingDir = state.editorContext?.filePath
-        ? path.dirname(state.editorContext.filePath)
-        : process.cwd();
+      // Working directory 우선순위: state.workingDirectory > editorContext.filePath의 dirname > process.cwd()
+      const workingDir =
+        state.workingDirectory ||
+        (state.editorContext?.filePath
+          ? path.dirname(state.editorContext.filePath)
+          : process.cwd());
       const absolutePath = dirPath
         ? path.isAbsolute(dirPath)
           ? dirPath
@@ -350,9 +359,12 @@ const searchFilesTool: EditorTool = {
       const { promisify } = await import('util');
       const execAsync = promisify(exec);
 
-      const workingDir = state.editorContext?.filePath
-        ? path.dirname(state.editorContext.filePath)
-        : process.cwd();
+      // Working directory 우선순위: state.workingDirectory > editorContext.filePath의 dirname > process.cwd()
+      const workingDir =
+        state.workingDirectory ||
+        (state.editorContext?.filePath
+          ? path.dirname(state.editorContext.filePath)
+          : process.cwd());
       const searchDir = dirPath
         ? path.isAbsolute(dirPath)
           ? dirPath
@@ -361,9 +373,15 @@ const searchFilesTool: EditorTool = {
 
       // ripgrep 명령 구성
       let rgCommand = 'rg --json';
-      if (!caseSensitive) {rgCommand += ' -i';}
-      if (filePattern) {rgCommand += ` -g "${filePattern}"`;}
-      if (maxResults) {rgCommand += ` --max-count ${maxResults}`;}
+      if (!caseSensitive) {
+        rgCommand += ' -i';
+      }
+      if (filePattern) {
+        rgCommand += ` -g "${filePattern}"`;
+      }
+      if (maxResults) {
+        rgCommand += ` --max-count ${maxResults}`;
+      }
       rgCommand += ` "${query}" "${searchDir}"`;
 
       console.log('[search_files] Running:', rgCommand);
@@ -443,12 +461,13 @@ const deleteFileTool: EditorTool = {
       const fs = await import('fs/promises');
       const path = await import('path');
 
-      const workingDir = state.editorContext?.filePath
-        ? path.dirname(state.editorContext.filePath)
-        : process.cwd();
-      const absolutePath = path.isAbsolute(filePath)
-        ? filePath
-        : path.join(workingDir, filePath);
+      // Working directory 우선순위: state.workingDirectory > editorContext.filePath의 dirname > process.cwd()
+      const workingDir =
+        state.workingDirectory ||
+        (state.editorContext?.filePath
+          ? path.dirname(state.editorContext.filePath)
+          : process.cwd());
+      const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
 
       // 파일/디렉토리 확인
       const stats = await fs.stat(absolutePath);

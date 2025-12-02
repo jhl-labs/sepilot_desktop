@@ -24,6 +24,8 @@ import { editorToolsRegistry, registerAllEditorTools } from '@/lib/langgraph/too
  */
 
 export interface EditorAgentState extends AgentState {
+  // Working directory for file operations
+  workingDirectory?: string;
   // Editor 전용 상태
   editorContext?: {
     filePath?: string;
@@ -290,8 +292,42 @@ export class EditorAgentGraph {
       tools.map((t) => t.function.name)
     );
 
-    // RAG 문서가 있으면 시스템 메시지에 컨텍스트 추가
+    // 시스템 메시지 구성
     let messages = [...state.messages];
+    const systemMessages: Message[] = [];
+
+    // 1. 기본 Editor Agent 역할 시스템 메시지 (항상 추가)
+    const baseSystemMessage: Message = {
+      id: 'editor-agent-system',
+      role: 'system',
+      content: `You are an Editor Agent with powerful file management and code assistance tools.
+
+**Context:**
+- Working Directory: ${state.workingDirectory || 'not specified'}
+- Current File: ${state.editorContext?.filePath || 'none'}
+- Language: ${state.editorContext?.language || 'unknown'}
+- Action Type: ${state.editorContext?.action || 'general'}
+
+**Instructions:**
+- Use tools proactively to complete user requests
+- For file creation: use write_file with complete content immediately
+- For file editing: read_file first, then write_file with updated content
+- Always confirm actions with clear, concise feedback
+- Execute multi-step tasks systematically
+
+**Tool Usage Guidelines:**
+- write_file: Create or overwrite files with full content
+- edit_file: Replace specific line ranges in existing files
+- read_file: Read file contents before editing
+- list_files: Browse directory structure
+- run_command: Execute terminal commands when needed
+
+Respond in Korean and use tools efficiently.`,
+      created_at: Date.now(),
+    };
+    systemMessages.push(baseSystemMessage);
+
+    // 2. RAG 문서가 있으면 RAG 컨텍스트 시스템 메시지 추가
     if (state.ragDocuments && state.ragDocuments.length > 0) {
       const ragContext = state.ragDocuments
         .map((doc, i) => `[문서 ${i + 1}] (관련도: ${(doc.score || 0).toFixed(2)})\n${doc.content}`)
@@ -308,13 +344,15 @@ ${ragContext}
         created_at: Date.now(),
       };
 
-      // 시스템 메시지를 맨 앞에 삽입
-      messages = [ragSystemMessage, ...messages];
+      systemMessages.push(ragSystemMessage);
 
       console.log(
         `[EditorAgent] Added RAG context with ${state.ragDocuments.length} documents to system message`
       );
     }
+
+    // 시스템 메시지들을 맨 앞에 삽입
+    messages = [...systemMessages, ...messages];
 
     const response = await provider.chat(messages, {
       tools: tools.length > 0 ? tools : undefined,
