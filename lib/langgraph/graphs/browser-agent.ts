@@ -473,6 +473,7 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
 5. **VERIFY YOUR WORK** - After actions, check the page to confirm success.
 6. **USE SEMANTIC UNDERSTANDING** - Tools now provide semantic element analysis with roles, labels, and context.
 7. **SEARCH WHEN UNSURE** - If you can't find the right element, use browser_search_elements with natural language.
+8. **ALWAYS FETCH FRESH DATA** - NEVER rely on previous tool results or cached information. When asked about "현재 페이지" or "current page", ALWAYS call the browser tools again to get the LATEST page content, even if you analyzed it before. Pages can change at any time.
 
 # ENHANCED CAPABILITIES
 

@@ -1009,6 +1009,25 @@ export function InputBox() {
                 }
               }
 
+              // Extract referenced_documents from all node events (for RAG and other modes)
+              // This ensures RAG sources are displayed even in non-coding modes
+              if (
+                thinkingMode !== 'coding' &&
+                event.type === 'node' &&
+                event.data?.messages &&
+                event.data.messages.length > 0
+              ) {
+                const lastMessage = event.data.messages[event.data.messages.length - 1];
+                if (
+                  lastMessage?.referenced_documents &&
+                  lastMessage.referenced_documents.length > 0
+                ) {
+                  scheduleUpdate({
+                    referenced_documents: lastMessage.referenced_documents,
+                  });
+                }
+              }
+
               // Extract generated images from tool results
               if (event.type === 'node' && event.node === 'tools' && event.data?.toolResults) {
                 const toolResults = event.data.toolResults;
