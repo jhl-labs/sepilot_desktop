@@ -185,18 +185,36 @@ export function CodeEditor() {
     }
 
     let debounceTimer: NodeJS.Timeout | null = null;
+    let currentAbortController: AbortController | null = null;
+    let lastRequestId = 0;
+    let isRequestInProgress = false;
+
     const DEBOUNCE_MS = 300;
+    const REQUEST_TIMEOUT_MS = 5000; // 5초 타임아웃
 
     // Create the provider object with all required methods
     const providerObject = {
-      provideInlineCompletions: async (model: any, position: any, _context: any, _token: any) => {
-        console.log('[Autocomplete] provideInlineCompletions called');
-
+      provideInlineCompletions: async (model: any, position: any, _context: any, token: any) => {
         // Return empty if autocomplete is not available
         if (!window.electronAPI?.llm?.editorAutocomplete) {
-          console.warn('[Autocomplete] electronAPI.llm.editorAutocomplete not available');
           return { items: [] };
         }
+
+        // Monaco의 CancellationToken 체크
+        if (token?.isCancellationRequested) {
+          return { items: [] };
+        }
+
+        // 이전 요청 취소
+        if (currentAbortController) {
+          currentAbortController.abort();
+          currentAbortController = null;
+        }
+
+        // 새로운 AbortController 생성
+        const abortController = new AbortController();
+        currentAbortController = abortController;
+        const requestId = ++lastRequestId;
 
         // Debounce to avoid too many requests
         return new Promise((resolve) => {
@@ -205,6 +223,18 @@ export function CodeEditor() {
           }
 
           debounceTimer = setTimeout(async () => {
+            // 토큰 취소 체크
+            if (token?.isCancellationRequested || abortController.signal.aborted) {
+              resolve({ items: [] });
+              return;
+            }
+
+            // 이미 요청이 진행 중이면 스킵
+            if (isRequestInProgress) {
+              resolve({ items: [] });
+              return;
+            }
+
             try {
               const code = model.getValue();
               const offset = model.getOffsetAt(position);
@@ -216,45 +246,48 @@ export function CodeEditor() {
               const currentLine = lines[lines.length - 1];
               const previousLine = lines.length > 1 ? lines[lines.length - 2] : '';
 
-              console.log('[Autocomplete] Context:', {
-                language,
-                offset,
-                currentLine,
-                previousLine,
-                lineNumber: position.lineNumber,
-                column: position.column,
-              });
-
               // Don't autocomplete only if there are 2+ consecutive empty lines
               // (current line is empty AND previous line is also empty)
               if (!currentLine.trim() && !previousLine.trim()) {
-                console.log('[Autocomplete] Skipping - 2+ consecutive empty lines');
                 resolve({ items: [] });
                 return;
               }
 
-              console.log('[Autocomplete] Requesting autocomplete...');
+              // 다시 한번 취소 체크
+              if (token?.isCancellationRequested || abortController.signal.aborted) {
+                resolve({ items: [] });
+                return;
+              }
 
-              const result = await window.electronAPI.llm.editorAutocomplete({
+              isRequestInProgress = true;
+
+              // 타임아웃과 함께 요청
+              const timeoutPromise = new Promise<never>((_, reject) => {
+                setTimeout(() => reject(new Error('Timeout')), REQUEST_TIMEOUT_MS);
+              });
+
+              const requestPromise = window.electronAPI.llm.editorAutocomplete({
                 code,
                 cursorPosition: offset,
                 language,
               });
 
-              console.log('[Autocomplete] Response received:', result);
+              const result = await Promise.race([requestPromise, timeoutPromise]);
+
+              // 요청 완료 후 취소 체크
+              if (
+                token?.isCancellationRequested ||
+                abortController.signal.aborted ||
+                requestId !== lastRequestId
+              ) {
+                resolve({ items: [] });
+                return;
+              }
 
               if (result.success && result.data?.completion) {
                 const completion = result.data.completion.trim();
 
-                console.log('[Autocomplete] Completion text:', {
-                  original: result.data.completion,
-                  trimmed: completion,
-                  length: completion.length,
-                });
-
                 if (completion) {
-                  console.log('[Autocomplete] Showing suggestion:', completion);
-
                   resolve({
                     items: [
                       {
@@ -270,19 +303,18 @@ export function CodeEditor() {
                     ],
                   });
                   return;
-                } else {
-                  console.log('[Autocomplete] Completion is empty after trim');
                 }
-              } else {
-                console.log('[Autocomplete] Failed:', {
-                  success: result.success,
-                  hasData: !!result.data,
-                  hasCompletion: !!result.data?.completion,
-                  error: result.error,
-                });
               }
             } catch (error) {
-              console.error('[Autocomplete] Exception caught:', error);
+              // 에러는 조용히 처리 (사용자 경험 방해 X)
+              if (error instanceof Error && error.message !== 'Timeout') {
+                console.error('[Autocomplete] Error:', error.message);
+              }
+            } finally {
+              isRequestInProgress = false;
+              if (currentAbortController === abortController) {
+                currentAbortController = null;
+              }
             }
 
             resolve({ items: [] });
@@ -295,7 +327,6 @@ export function CodeEditor() {
       handleItemDidShow: (_completions: any, _item: any) => {
         // Optional: Called when an item is shown
       },
-      // Add the missing disposeInlineCompletions method
       disposeInlineCompletions: (_completions: any) => {
         // Dispose inline completions
       },
@@ -312,6 +343,9 @@ export function CodeEditor() {
     return () => {
       if (debounceTimer) {
         clearTimeout(debounceTimer);
+      }
+      if (currentAbortController) {
+        currentAbortController.abort();
       }
       provider.dispose();
       console.log('Inline completion provider disposed');
