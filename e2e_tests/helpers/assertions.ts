@@ -19,11 +19,12 @@ export async function assertTextEquals(
   selectorOrText: string,
   expectedText?: string
 ): Promise<void> {
-  if (locator instanceof Page) {
+  // Page 타입인지 확인 (Page에만 있는 context 속성 확인)
+  if ('context' in locator && typeof locator.context === 'function') {
     const element = locator.locator(selectorOrText);
     await expect(element).toHaveText(expectedText as string);
   } else {
-    await expect(locator).toHaveText(selectorOrText);
+    await expect(locator as Locator).toHaveText(selectorOrText);
   }
 }
 
@@ -33,10 +34,7 @@ export async function assertTextEquals(
  * @param locator - Locator
  * @param expectedText - 기대하는 텍스트 (부분 일치)
  */
-export async function assertTextContains(
-  locator: Locator,
-  expectedText: string
-): Promise<void> {
+export async function assertTextContains(locator: Locator, expectedText: string): Promise<void> {
   await expect(locator).toContainText(expectedText);
 }
 
@@ -82,10 +80,7 @@ export async function assertDisabled(locator: Locator): Promise<void> {
  * @param locator - Locator
  * @param expectedCount - 기대하는 개수
  */
-export async function assertCount(
-  locator: Locator,
-  expectedCount: number
-): Promise<void> {
+export async function assertCount(locator: Locator, expectedCount: number): Promise<void> {
   await expect(locator).toHaveCount(expectedCount);
 }
 
@@ -110,10 +105,7 @@ export async function assertAttribute(
  * @param locator - Locator
  * @param className - 클래스 이름
  */
-export async function assertHasClass(
-  locator: Locator,
-  className: string
-): Promise<void> {
+export async function assertHasClass(locator: Locator, className: string): Promise<void> {
   await expect(locator).toHaveClass(new RegExp(className));
 }
 
@@ -123,10 +115,7 @@ export async function assertHasClass(
  * @param page - Page
  * @param expectedUrl - 기대하는 URL 또는 정규식
  */
-export async function assertURL(
-  page: Page,
-  expectedUrl: string | RegExp
-): Promise<void> {
+export async function assertURL(page: Page, expectedUrl: string | RegExp): Promise<void> {
   await expect(page).toHaveURL(expectedUrl);
 }
 
@@ -136,10 +125,7 @@ export async function assertURL(
  * @param page - Page
  * @param expectedTitle - 기대하는 타이틀
  */
-export async function assertTitle(
-  page: Page,
-  expectedTitle: string | RegExp
-): Promise<void> {
+export async function assertTitle(page: Page, expectedTitle: string | RegExp): Promise<void> {
   await expect(page).toHaveTitle(expectedTitle);
 }
 
@@ -167,10 +153,7 @@ export async function assertNotChecked(locator: Locator): Promise<void> {
  * @param locator - Locator
  * @param expectedValue - 기대하는 값
  */
-export async function assertInputValue(
-  locator: Locator,
-  expectedValue: string
-): Promise<void> {
+export async function assertInputValue(locator: Locator, expectedValue: string): Promise<void> {
   await expect(locator).toHaveValue(expectedValue);
 }
 
@@ -191,10 +174,7 @@ export async function assertInputEmpty(locator: Locator): Promise<void> {
  * @param page - Page
  * @param expectedMessage - 기대하는 메시지 내용
  */
-export async function assertMessageSent(
-  page: Page,
-  expectedMessage: string
-): Promise<void> {
+export async function assertMessageSent(page: Page, expectedMessage: string): Promise<void> {
   const userMessages = page.locator('[data-testid="message-bubble"][data-role="user"]');
   await expect(userMessages.last()).toContainText(expectedMessage);
 }
@@ -215,10 +195,7 @@ export async function assertAIResponseReceived(page: Page): Promise<void> {
  * @param page - Page
  * @param expectedText - 기대하는 텍스트
  */
-export async function assertAIResponseContains(
-  page: Page,
-  expectedText: string
-): Promise<void> {
+export async function assertAIResponseContains(page: Page, expectedText: string): Promise<void> {
   const aiMessages = page.locator('[data-testid="message-bubble"][data-role="assistant"]');
   await expect(aiMessages.last()).toContainText(expectedText);
 }
@@ -240,10 +217,7 @@ export async function assertSettingsSaved(page: Page): Promise<void> {
  * @param page - Page
  * @param serverName - 서버 이름
  */
-export async function assertMCPServerConnected(
-  page: Page,
-  serverName: string
-): Promise<void> {
+export async function assertMCPServerConnected(page: Page, serverName: string): Promise<void> {
   const server = page.locator(`[data-testid="mcp-server"][data-name="${serverName}"]`);
   await expect(server).toHaveAttribute('data-status', 'connected');
 }
@@ -284,10 +258,7 @@ export async function assertLoadingComplete(page: Page): Promise<void> {
  * @param page - Page
  * @param expectedError - 기대하는 에러 메시지 (선택)
  */
-export async function assertErrorVisible(
-  page: Page,
-  expectedError?: string
-): Promise<void> {
+export async function assertErrorVisible(page: Page, expectedError?: string): Promise<void> {
   const error = page.locator('[data-testid="error-message"]');
   await expect(error).toBeVisible();
 
@@ -302,10 +273,7 @@ export async function assertErrorVisible(
  * @param page - Page
  * @param expectedMessage - 기대하는 성공 메시지 (선택)
  */
-export async function assertSuccessVisible(
-  page: Page,
-  expectedMessage?: string
-): Promise<void> {
+export async function assertSuccessVisible(page: Page, expectedMessage?: string): Promise<void> {
   const success = page.locator('[data-testid="success-message"]');
   await expect(success).toBeVisible();
 
@@ -320,10 +288,7 @@ export async function assertSuccessVisible(
  * @param page - Page
  * @param filename - 파일 이름
  */
-export async function assertFileUploaded(
-  page: Page,
-  filename: string
-): Promise<void> {
+export async function assertFileUploaded(page: Page, filename: string): Promise<void> {
   const uploadedFile = page.locator(`[data-testid="uploaded-file"][data-filename="${filename}"]`);
   await expect(uploadedFile).toBeVisible();
 }
@@ -358,10 +323,7 @@ export async function assertListOrder(
  * @param locator - Locator
  * @param timeout - 타임아웃 (ms)
  */
-export async function assertVisibleWithinTimeout(
-  locator: Locator,
-  timeout = 5000
-): Promise<void> {
+export async function assertVisibleWithinTimeout(locator: Locator, timeout = 5000): Promise<void> {
   await expect(locator).toBeVisible({ timeout });
 }
 
@@ -371,10 +333,7 @@ export async function assertVisibleWithinTimeout(
  * @param locator - Locator
  * @param timeout - 타임아웃 (ms)
  */
-export async function assertHiddenWithinTimeout(
-  locator: Locator,
-  timeout = 5000
-): Promise<void> {
+export async function assertHiddenWithinTimeout(locator: Locator, timeout = 5000): Promise<void> {
   await expect(locator).toBeHidden({ timeout });
 }
 
@@ -408,10 +367,7 @@ export async function assertNoConsoleErrors(page: Page): Promise<void> {
  * @param page - Page
  * @param name - 스크린샷 이름
  */
-export async function assertScreenshotMatches(
-  page: Page,
-  name: string
-): Promise<void> {
+export async function assertScreenshotMatches(page: Page, name: string): Promise<void> {
   await expect(page).toHaveScreenshot(`${name}.png`);
 }
 

@@ -13,6 +13,18 @@ const nextConfig = {
   },
 
   webpack: (config, { isServer, webpack }) => {
+    // Enable WebAssembly support (for tiktoken)
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+    };
+
+    // Handle .wasm files
+    config.module.rules.push({
+      test: /\.wasm$/,
+      type: 'webassembly/async',
+    });
+
     // Bundle analysis (only for client-side)
     if (!isServer && process.env.ANALYZE === 'true') {
       const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
