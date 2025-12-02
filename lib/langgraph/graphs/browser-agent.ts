@@ -735,7 +735,12 @@ export class BrowserAgentGraph {
         },
       });
 
-      // Emit progress event
+      // Emit progress event with detailed logging
+      emitStreamingChunk(
+        `\n\n---\n🔄 **Iteration ${iterations + 1}/${actualMaxIterations}**\n💭 AI가 다음 작업을 계획하고 있습니다...\n`,
+        state.conversationId
+      );
+
       yield {
         progress: {
           iteration: iterations + 1,
@@ -854,6 +859,8 @@ export class BrowserAgentGraph {
 
       // 로그: 도구 호출 계획
       if (toolCalls.length > 0) {
+        let logMessage = '\n';
+
         for (const toolCall of toolCalls) {
           addBrowserAgentLog({
             level: 'info',
@@ -866,7 +873,21 @@ export class BrowserAgentGraph {
               maxIterations: actualMaxIterations,
             },
           });
+
+          // Detailed tool call logging (like coding-agent)
+          logMessage += `🛠️ **Call:** \`${toolCall.name}\`\n`;
+          try {
+            const args =
+              typeof toolCall.arguments === 'string'
+                ? toolCall.arguments
+                : JSON.stringify(toolCall.arguments, null, 2);
+            logMessage += `📂 **Args:**\n\`\`\`json\n${args}\n\`\`\`\n`;
+          } catch {
+            logMessage += `📂 **Args:** (parsing failed)\n`;
+          }
         }
+
+        emitStreamingChunk(logMessage, state.conversationId);
       }
 
       // Emit tool execution progress
@@ -912,6 +933,7 @@ export class BrowserAgentGraph {
         const verificationHints: string[] = [];
         const accumulatedFailures: string[] = [];
         let annotatedGuidance: Message | null = null;
+        let resultsLogMessage = '\n';
 
         for (const result of toolsResult.toolResults) {
           if (result.error) {
@@ -931,10 +953,8 @@ export class BrowserAgentGraph {
               },
             });
 
-            emitStreamingChunk(
-              `❌ **도구 실행 실패:** ${result.toolName}\n> ${result.error}\n`,
-              state.conversationId
-            );
+            resultsLogMessage += `❌ **Error:** \`${result.toolName}\`\n`;
+            resultsLogMessage += `📄 **Output:**\n\`\`\`\n${result.error}\n\`\`\`\n`;
           } else {
             // Reset failure counter on success
             failureCounts.delete(result.toolName);
@@ -1032,8 +1052,25 @@ export class BrowserAgentGraph {
               },
             });
 
-            emitStreamingChunk(`✅ **도구 실행 성공:** ${result.toolName}\n`, state.conversationId);
+            // Detailed success logging
+            resultsLogMessage += `✅ **Result:** \`${result.toolName}\`\n`;
+
+            let output = result.result || '(no output)';
+            if (typeof output !== 'string') {
+              output = JSON.stringify(output, null, 2);
+            }
+
+            if (output.length > 1000) {
+              output = `${output.substring(0, 1000)}\n... (truncated)`;
+            }
+
+            resultsLogMessage += `📄 **Output:**\n\`\`\`\n${output}\n\`\`\`\n`;
           }
+        }
+
+        // Emit all tool results at once
+        if (resultsLogMessage.length > 1) {
+          emitStreamingChunk(`${resultsLogMessage}---\n`, state.conversationId);
         }
 
         // Reflection: repeated failures -> guide to alternative strategy

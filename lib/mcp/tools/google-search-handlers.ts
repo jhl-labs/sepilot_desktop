@@ -169,34 +169,52 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
     // Google 홈페이지가 아니면 먼저 방문 (쿠키 및 세션 설정)
     if (!currentURL.includes('google.com')) {
       console.warn('[GoogleSearch] Visiting Google homepage first to establish session...');
-      await browserView.webContents.loadURL('https://www.google.com');
 
-      await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Homepage load timeout')), 10000);
+      try {
+        await browserView.webContents.loadURL('https://www.google.com');
 
-        const cleanup = () => {
-          clearTimeout(timeout);
-          browserView.webContents.off('did-finish-load', onFinish);
-          browserView.webContents.off('did-fail-load', onFail);
-        };
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            console.warn('[GoogleSearch] Homepage load timeout - proceeding anyway');
+            reject(
+              new Error(
+                'Homepage load timeout (15s) - 홈페이지 로드가 지연되고 있습니다. 네트워크 상태를 확인해주세요.'
+              )
+            );
+          }, 15000); // 15초로 증가
 
-        const onFinish = () => {
-          cleanup();
-          resolve();
-        };
+          const cleanup = () => {
+            clearTimeout(timeout);
+            browserView.webContents.off('did-finish-load', onFinish);
+            browserView.webContents.off('did-fail-load', onFail);
+          };
 
-        const onFail = () => {
-          cleanup();
-          // Homepage 실패는 무시하고 계속 진행
-          resolve();
-        };
+          const onFinish = () => {
+            console.log('[GoogleSearch] Homepage loaded successfully');
+            cleanup();
+            resolve();
+          };
 
-        browserView.webContents.once('did-finish-load', onFinish);
-        browserView.webContents.once('did-fail-load', onFail);
-      });
+          const onFail = (_event: any, errorCode: number, errorDescription: string) => {
+            console.warn(
+              `[GoogleSearch] Homepage load failed (${errorCode}): ${errorDescription} - proceeding anyway`
+            );
+            cleanup();
+            // Homepage 실패는 무시하고 계속 진행
+            resolve();
+          };
 
-      // 홈페이지 로딩 후 추가 대기
-      await naturalDelay(1000, 2000);
+          browserView.webContents.once('did-finish-load', onFinish);
+          browserView.webContents.once('did-fail-load', onFail);
+        });
+
+        // 홈페이지 로딩 후 추가 대기
+        await naturalDelay(1000, 2000);
+      } catch (homeError) {
+        // 홈페이지 로드 실패 시에도 검색은 시도
+        console.warn('[GoogleSearch] Homepage load error, but continuing with search:', homeError);
+        await naturalDelay(500, 1000);
+      }
     }
 
     // 자연스러운 지연 추가 (bot 감지 방지)
@@ -234,7 +252,12 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
         resolve();
       };
 
-      const onFail = (_event: any, errorCode: number, errorDescription: string, validatedURL: string) => {
+      const onFail = (
+        _event: any,
+        errorCode: number,
+        errorDescription: string,
+        validatedURL: string
+      ) => {
         cleanup();
         reject(
           new Error(
