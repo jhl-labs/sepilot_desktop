@@ -11,6 +11,10 @@ import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { ContextManager } from '../utils/context-manager';
 import { VerificationPipeline } from '../utils/verification-pipeline';
+import { ErrorRecovery } from '../utils/error-recovery';
+import { ToolSelector } from '../utils/tool-selector';
+import { FileTracker } from '../utils/file-tracker';
+import { CodebaseAnalyzer } from '../utils/codebase-analyzer';
 
 /**
  * Coding Agent Graph
@@ -771,7 +775,10 @@ ${state.planSteps[currentStep]}
 
   // Use ContextManager for intelligent context management
   const contextManager = new ContextManager(100000); // 100k tokens
-  const optimizedMessages = contextManager.getOptimizedContext(filteredMessages, messagesWithContext);
+  const optimizedMessages = contextManager.getOptimizedContext(
+    filteredMessages,
+    messagesWithContext
+  );
 
   // Replace messages with optimized set (system messages already included)
   messagesWithContext.length = 0;
@@ -1058,21 +1065,21 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
         if (builtinToolNames.has(call.name)) {
           console.log(`[CodingAgent.Tools] Executing builtin tool: ${call.name}`);
 
-          // Add timeout wrapper for all tool executions (6 minutes - slightly longer than command_execute's 5 min)
+          // Execute with retry and timeout
           const TOOL_EXECUTION_TIMEOUT = 360000; // 6 minutes
-          const result = await Promise.race([
-            executeBuiltinTool(call.name, call.arguments),
-            new Promise<string>((_, reject) =>
-              setTimeout(
-                () =>
-                  reject(
-                    new Error(`Tool execution timeout after ${TOOL_EXECUTION_TIMEOUT / 1000}s`)
-                  ),
-                TOOL_EXECUTION_TIMEOUT
-              )
-            ),
-          ]);
-          const duration = Date.now() - startTime;
+          const retryResult = await ErrorRecovery.withTimeoutAndRetry(
+            () => executeBuiltinTool(call.name, call.arguments),
+            TOOL_EXECUTION_TIMEOUT,
+            { maxRetries: 2, initialDelayMs: 2000 }, // Retry twice with 2s initial delay
+            `builtin tool '${call.name}'`
+          );
+
+          if (!retryResult.success) {
+            throw retryResult.error;
+          }
+
+          const result = retryResult.result!;
+          const duration = retryResult.totalDurationMs;
 
           // Save activity to database (non-blocking)
           if (
@@ -1113,26 +1120,25 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
               `[CodingAgent.Tools] Executing MCP tool: ${call.name} on server ${targetTool.serverName}`
             );
 
-            // Add timeout wrapper for MCP tools as well
+            // Execute with retry and timeout
             const TOOL_EXECUTION_TIMEOUT = 360000; // 6 minutes
-            const mcpResult = await Promise.race([
-              MCPServerManager.callToolInMainProcess(
-                targetTool.serverName,
-                call.name,
-                call.arguments
-              ),
-              new Promise<any>((_, reject) =>
-                setTimeout(
-                  () =>
-                    reject(
-                      new Error(
-                        `MCP tool execution timeout after ${TOOL_EXECUTION_TIMEOUT / 1000}s`
-                      )
-                    ),
-                  TOOL_EXECUTION_TIMEOUT
-                )
-              ),
-            ]);
+            const retryResult = await ErrorRecovery.withTimeoutAndRetry(
+              () =>
+                MCPServerManager.callToolInMainProcess(
+                  targetTool.serverName,
+                  call.name,
+                  call.arguments
+                ),
+              TOOL_EXECUTION_TIMEOUT,
+              { maxRetries: 2, initialDelayMs: 2000 },
+              `MCP tool '${call.name}'`
+            );
+
+            if (!retryResult.success) {
+              throw retryResult.error;
+            }
+
+            const mcpResult = retryResult.result!;
 
             // Extract text result
             let resultText = '';
@@ -1149,7 +1155,7 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
               resultText = JSON.stringify(mcpResult);
             }
 
-            const duration = Date.now() - startTime;
+            const duration = retryResult.totalDurationMs;
 
             // Save activity
             if (
@@ -1219,15 +1225,10 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
         console.error(`[CodingAgent.Tools] Error executing ${call.name}:`, error);
         const duration = Date.now() - startTime;
 
-        // Provide helpful error message for timeouts
-        let errorMsg = error.message || 'Tool execution failed';
-        if (errorMsg.includes('timeout')) {
-          errorMsg =
-            `${errorMsg}\n\n⚠️ 도구 실행이 타임아웃되었습니다. 다음을 시도해보세요:\n` +
-            `- 작업을 더 작은 단계로 나누기\n` +
-            `- 필터링/제한 옵션 사용하기\n` +
-            `- 대상 범위 좁히기`;
-        }
+        // Format error message with recovery suggestion
+        const formattedError = ErrorRecovery.formatErrorMessage(error, 1);
+        const suggestion = ErrorRecovery.getRecoverySuggestion(error);
+        const errorMsg = `${formattedError}\n\n${suggestion}`;
 
         // Save error activity
         if (state.conversationId && typeof window !== 'undefined' && window.electronAPI?.activity) {
@@ -1378,12 +1379,12 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
       if (!verificationResult.allPassed) {
         console.log('[Verification] Verification failed:', verificationResult);
 
-        const failedChecks = verificationResult.checks.filter(c => !c.passed);
+        const failedChecks = verificationResult.checks.filter((c) => !c.passed);
         const failureMessage: Message = {
           id: `verification-${Date.now()}`,
           role: 'user',
           content: `⚠️ 코드 검증 실패:
-${failedChecks.map(c => `- ${c.message}: ${c.details?.substring(0, 200)}`).join('\n')}
+${failedChecks.map((c) => `- ${c.message}: ${c.details?.substring(0, 200)}`).join('\n')}
 
 ${verificationResult.suggestions.join('\n')}
 
@@ -1393,7 +1394,7 @@ ${verificationResult.suggestions.join('\n')}
 
         return {
           messages: [failureMessage],
-          verificationNotes: failedChecks.map(c => `❌ ${c.name}: ${c.message}`),
+          verificationNotes: failedChecks.map((c) => `❌ ${c.name}: ${c.message}`),
           needsAdditionalIteration: true,
         };
       } else {
@@ -1441,7 +1442,7 @@ ${verificationResult.suggestions.join('\n')}
 
     emitStreamingChunk(
       `\n📋 **Step ${currentStep + 1}/${planSteps.length} 완료** ✅\n` +
-      `➡️ 다음 단계: ${planSteps[currentStep + 1]}\n\n`,
+        `➡️ 다음 단계: ${planSteps[currentStep + 1]}\n\n`,
       state.conversationId
     );
 
@@ -1511,9 +1512,14 @@ async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgen
 
   // File changes
   if (modifiedFilesCount > 0 || deletedFilesCount > 0) {
-    summaryParts.push(`📁 **변경된 파일**: ${modifiedFilesCount}개 수정${deletedFilesCount > 0 ? `, ${deletedFilesCount}개 삭제` : ''}`);
+    summaryParts.push(
+      `📁 **변경된 파일**: ${modifiedFilesCount}개 수정${deletedFilesCount > 0 ? `, ${deletedFilesCount}개 삭제` : ''}`
+    );
     if (state.modifiedFiles && state.modifiedFiles.length > 0) {
-      const fileList = state.modifiedFiles.slice(0, 10).map(f => `  - ${f}`).join('\n');
+      const fileList = state.modifiedFiles
+        .slice(0, 10)
+        .map((f) => `  - ${f}`)
+        .join('\n');
       summaryParts.push(fileList);
       if (state.modifiedFiles.length > 10) {
         summaryParts.push(`  ... 및 ${state.modifiedFiles.length - 10}개 파일 더`);
@@ -1526,7 +1532,9 @@ async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgen
 
   // Plan completion
   if (state.planSteps && state.planSteps.length > 0) {
-    summaryParts.push(`📋 **Plan Steps**: ${state.currentPlanStep + 1}/${state.planSteps.length} 완료`);
+    summaryParts.push(
+      `📋 **Plan Steps**: ${state.currentPlanStep + 1}/${state.planSteps.length} 완료`
+    );
   }
 
   const summaryMessage: Message = {
@@ -1637,6 +1645,15 @@ export function createCodingAgentGraph() {
 
 export class CodingAgentGraph {
   private toolApprovalCallback?: (toolCalls: any[]) => Promise<boolean>;
+  private toolSelector: ToolSelector;
+  private fileTracker: FileTracker;
+  private codebaseAnalyzer: CodebaseAnalyzer;
+
+  constructor() {
+    this.toolSelector = new ToolSelector();
+    this.fileTracker = new FileTracker();
+    this.codebaseAnalyzer = new CodebaseAnalyzer();
+  }
 
   async *stream(
     initialState: CodingAgentState,
@@ -1661,7 +1678,11 @@ export class CodingAgentGraph {
         yield { type: 'node', node: 'direct_response', data: { status: 'starting' } };
         const directResult = await directResponseNode(state);
         state = { ...state, messages: [...state.messages, ...(directResult.messages || [])] };
-        yield { type: 'node', node: 'direct_response', data: { ...directResult, messages: state.messages } };
+        yield {
+          type: 'node',
+          node: 'direct_response',
+          data: { ...directResult, messages: state.messages },
+        };
         return;
       }
 
@@ -1672,7 +1693,7 @@ export class CodingAgentGraph {
       state = {
         ...state,
         ...planResult,
-        messages: [...state.messages, ...(planResult.messages || [])]
+        messages: [...state.messages, ...(planResult.messages || [])],
       };
       yield { type: 'node', node: 'planner', data: { ...planResult, messages: state.messages } };
 
@@ -1842,7 +1863,11 @@ export class CodingAgentGraph {
           messages: [...state.messages, ...(verificationResult.messages || [])],
           iterationCount: iterations + 1, // Update iteration count
         };
-        yield { type: 'node', node: 'verifier', data: { ...verificationResult, messages: state.messages } };
+        yield {
+          type: 'node',
+          node: 'verifier',
+          data: { ...verificationResult, messages: state.messages },
+        };
 
         // Check if we need to continue (based on verification)
         if (!verificationResult.needsAdditionalIteration) {
