@@ -502,6 +502,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   deleteConversation: async (id: string) => {
     const state = get();
     const wasActive = state.activeConversationId === id;
+    const wasStreaming = state.streamingConversations.has(id);
+
+    // If the conversation was streaming, abort and cleanup
+    if (wasStreaming && isElectron() && window.electronAPI?.langgraph) {
+      try {
+        await window.electronAPI.langgraph.abort(id);
+        window.electronAPI.langgraph.removeAllStreamListeners();
+        console.warn(`[deleteConversation] Aborted streaming for conversation: ${id}`);
+      } catch (error) {
+        console.error('[deleteConversation] Failed to abort streaming:', error);
+      }
+    }
 
     // Immediately update UI state to prevent input blocking
     // This prevents the textarea from being disabled during async DB operation
