@@ -164,7 +164,8 @@ function createWindow() {
   if (isDev) {
     // 개발 환경: Next.js dev 서버
     mainWindow.loadURL('http://localhost:3000');
-    mainWindow.webContents.openDevTools();
+    // DevTools는 필요시 F12 또는 메뉴에서 수동으로 열 수 있습니다
+    // mainWindow.webContents.openDevTools();
     logger.info('Loaded development server');
   } else {
     // 프로덕션: electron-serve를 통해 app:// 프로토콜로 로드

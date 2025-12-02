@@ -1,11 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { AppLauncher } from '../helpers/app-launcher';
 import { SettingsPage } from '../helpers/page-objects/settings-page';
-import {
-  generateTestAPIKey,
-  generateLLMConfig,
-  generateProxyConfig,
-} from '../helpers/test-data';
+import { generateTestAPIKey, generateLLMConfig } from '../helpers/test-data';
 import { assertVisible, assertSettingsSaved } from '../helpers/assertions';
 
 /**
@@ -212,11 +208,7 @@ test.describe('MCP 설정', () => {
     const initialCount = await settingsPage.getMCPServerCount();
 
     // When: 새 MCP 서버 추가
-    await settingsPage.addMCPServer(
-      'test-server',
-      'node',
-      'test-server.js'
-    );
+    await settingsPage.addMCPServer('test-server', 'node', 'test-server.js');
 
     // Then: 서버 개수가 증가해야 함
     const finalCount = await settingsPage.getMCPServerCount();

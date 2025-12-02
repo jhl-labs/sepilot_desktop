@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { BasePage } from './base-page';
 
 /**
@@ -363,10 +363,7 @@ export class ChatPage extends BasePage {
    * @param timeout - 응답 대기 타임아웃
    * @returns AI 응답 내용
    */
-  async sendAndWaitForResponse(
-    message: string,
-    timeout = 30000
-  ): Promise<string> {
+  async sendAndWaitForResponse(message: string, timeout = 30000): Promise<string> {
     await this.sendMessageAndWait(message);
     await this.waitForResponse(timeout);
     return this.getLastAIResponse();

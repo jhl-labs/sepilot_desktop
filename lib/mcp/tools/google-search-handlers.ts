@@ -236,39 +236,73 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
     });
 
     // 페이지 로딩 완료 대기 (에러 핸들링 포함)
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Page load timeout (30s)'));
-      }, 30000);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          console.warn('[GoogleSearch] Page load timeout (30s) - attempting to continue anyway');
+          // 타임아웃이지만 페이지가 부분적으로 로드되었을 수 있으므로 계속 진행
+          reject(new Error('Page load timeout (30s)'));
+        }, 30000);
 
-      const cleanup = () => {
-        clearTimeout(timeout);
-        browserView.webContents.off('did-finish-load', onFinish);
-        browserView.webContents.off('did-fail-load', onFail);
-      };
+        const cleanup = () => {
+          clearTimeout(timeout);
+          browserView.webContents.off('did-finish-load', onFinish);
+          browserView.webContents.off('did-fail-load', onFail);
+        };
 
-      const onFinish = () => {
-        cleanup();
-        resolve();
-      };
+        const onFinish = () => {
+          console.log('[GoogleSearch] Page loaded successfully');
+          cleanup();
+          resolve();
+        };
 
-      const onFail = (
-        _event: any,
-        errorCode: number,
-        errorDescription: string,
-        validatedURL: string
-      ) => {
-        cleanup();
-        reject(
-          new Error(
-            `ERR_ABORTED (${errorCode}) loading '${validatedURL}': ${errorDescription}. Google이 요청을 차단했을 수 있습니다. 잠시 후 다시 시도하거나, 브라우저를 직접 사용해주세요.`
-          )
+        const onFail = (
+          _event: any,
+          errorCode: number,
+          errorDescription: string,
+          _validatedURL: string
+        ) => {
+          console.warn(`[GoogleSearch] Page load failed (${errorCode}): ${errorDescription}`);
+          cleanup();
+          reject(
+            new Error(
+              `페이지 로드 실패 (ERR ${errorCode}): ${errorDescription}. Google이 요청을 차단했을 수 있습니다.`
+            )
+          );
+        };
+
+        browserView.webContents.once('did-finish-load', onFinish);
+        browserView.webContents.once('did-fail-load', onFail);
+      });
+    } catch (loadError) {
+      // 타임아웃 또는 로드 실패 시
+      console.warn('[GoogleSearch] Load error, checking page state:', loadError);
+
+      // 페이지가 부분적으로라도 로드되었는지 확인
+      try {
+        const currentURL = browserView.webContents.getURL();
+        const title = browserView.webContents.getTitle();
+
+        console.log('[GoogleSearch] Current page state:', { url: currentURL, title });
+
+        // Google 페이지에 있고 제목이 있으면 부분 성공으로 간주
+        if (currentURL.includes('google.com') && title) {
+          console.warn(
+            '[GoogleSearch] Partial page load detected, continuing with available content'
+          );
+          // 부분 로드 성공 - 계속 진행
+        } else {
+          // 완전 실패
+          throw new Error(
+            `Google 검색 페이지 로드 실패. CAPTCHA가 표시되었거나 Google이 요청을 차단했을 수 있습니다.\n\n해결 방법:\n1. Browser 탭을 직접 열어서 CAPTCHA를 해결하세요\n2. 잠시 후 다시 시도하세요\n3. 다른 검색 방법을 사용하세요 (browser_navigate로 직접 이동)`
+          );
+        }
+      } catch {
+        throw new Error(
+          `Google 검색 실패: ${loadError instanceof Error ? loadError.message : String(loadError)}`
         );
-      };
-
-      browserView.webContents.once('did-finish-load', onFinish);
-      browserView.webContents.once('did-fail-load', onFail);
-    });
+      }
+    }
 
     // 자연스러운 추가 대기 (JavaScript 실행 + 사람처럼 보이기)
     await naturalDelay(800, 1500);

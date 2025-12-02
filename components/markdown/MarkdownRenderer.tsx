@@ -380,7 +380,7 @@ export function MarkdownRenderer({
   };
 
   return (
-    <div className={cn('prose prose-sm dark:prose-invert max-w-none', className)}>
+    <div className={cn('prose prose-sm dark:prose-invert max-w-none text-sm', className)}>
       {renderMarkdownContent()}
     </div>
   );

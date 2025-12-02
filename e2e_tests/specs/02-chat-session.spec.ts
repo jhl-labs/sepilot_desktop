@@ -1,15 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { AppLauncher } from '../helpers/app-launcher';
 import { ChatPage } from '../helpers/page-objects/chat-page';
-import {
-  generateChatMessage,
-  generateCodeQuestion,
-} from '../helpers/test-data';
-import {
-  assertVisible,
-  assertMessageSent,
-  assertAIResponseReceived,
-} from '../helpers/assertions';
+import { generateChatMessage, generateCodeQuestion } from '../helpers/test-data';
+import { assertVisible } from '../helpers/assertions';
 
 /**
  * 채팅 세션 테스트
@@ -98,11 +91,7 @@ test.describe('채팅 세션 기본 기능', () => {
     await chatPage.createNewSession();
 
     // When: 여러 메시지 전송
-    const messages = [
-      generateChatMessage(0),
-      generateChatMessage(1),
-      generateChatMessage(2),
-    ];
+    const messages = [generateChatMessage(0), generateChatMessage(1), generateChatMessage(2)];
 
     for (const message of messages) {
       await chatPage.sendMessageAndWait(message);
@@ -332,7 +321,7 @@ test.describe('AI 응답 처리', () => {
 
     // Then: AI 응답 영역이 존재해야 함
     const window = await launcher.getFirstWindow();
-    const aiMessage = window.locator('[data-testid="ai-streaming"]');
+    const _aiMessage = window.locator('[data-testid="ai-streaming"]');
 
     // 스트리밍 중이거나 완료되었을 것
     // (타이밍에 따라 이미 완료되었을 수 있음)
@@ -444,13 +433,13 @@ test.describe('메시지 UI 및 스크롤', () => {
 
 test.describe('에러 처리', () => {
   let launcher: AppLauncher;
-  let chatPage: ChatPage;
+  let _chatPage: ChatPage;
 
   test.beforeEach(async () => {
     launcher = new AppLauncher();
     await launcher.launch();
     const window = await launcher.getFirstWindow();
-    chatPage = new ChatPage(window);
+    _chatPage = new ChatPage(window);
   });
 
   test.afterEach(async () => {

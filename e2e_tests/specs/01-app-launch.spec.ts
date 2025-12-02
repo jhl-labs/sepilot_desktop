@@ -1,10 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { AppLauncher } from '../helpers/app-launcher';
-import {
-  assertVisible,
-  assertTitle,
-  assertNoConsoleErrors,
-} from '../helpers/assertions';
+import { assertVisible, assertTitle } from '../helpers/assertions';
 
 /**
  * 앱 실행 기본 테스트
@@ -32,7 +28,7 @@ test.describe('앱 실행 기본 테스트', () => {
 
   test('Electron 앱이 정상적으로 시작된다', async () => {
     // Given: Electron 앱 시작
-    const app = await launcher.launch({
+    const _app = await launcher.launch({
       timeout: 60000, // 앱 시작에 최대 60초
     });
 
@@ -119,7 +115,7 @@ test.describe('앱 실행 기본 테스트', () => {
 
   test('앱 종료가 정상적으로 동작한다', async () => {
     // Given: Electron 앱 시작
-    const app = await launcher.launch();
+    const _app = await launcher.launch();
     const window = await launcher.getFirstWindow();
 
     // When: 앱 종료
@@ -296,7 +292,7 @@ test.describe('앱 초기화 상태', () => {
     // Then: body에 스타일이 적용되어 있어야 함
     const hasStyles = await window.evaluate(() => {
       const body = document.body;
-      const styles = window.getComputedStyle(body);
+      const styles = globalThis.getComputedStyle(body);
       // 최소한 몇 가지 스타일이 적용되어 있어야 함
       return styles.margin !== '' || styles.padding !== '';
     });
@@ -314,7 +310,7 @@ test.describe('앱 초기화 상태', () => {
     // Then: 이미지가 있다면 로드되어야 함
     if (images > 0) {
       const firstImage = window.locator('img').first();
-      const isLoaded = await firstImage.evaluate((img: HTMLImageElement) => {
+      const _isLoaded = await firstImage.evaluate((img: HTMLImageElement) => {
         return img.complete && img.naturalHeight > 0;
       });
 
