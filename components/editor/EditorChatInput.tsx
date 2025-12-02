@@ -27,6 +27,9 @@ export function EditorChatInput() {
     editorChatMessages,
     workingDirectory,
     setEditorChatStreaming,
+    setPendingToolApproval,
+    clearPendingToolApproval,
+    alwaysApproveToolsForSession,
   } = useChatStore();
 
   // Auto-resize textarea
@@ -148,6 +151,9 @@ Execute tasks step by step and use tools proactively.`,
               type?: string;
               chunk?: string;
               conversationId?: string;
+              messageId?: string;
+              toolCalls?: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+              approved?: boolean;
               data?: {
                 messages?: Array<{ role: string; content?: string }>;
                 iteration?: number;
@@ -185,6 +191,65 @@ Execute tasks step by step and use tools proactively.`,
               const lastMessage = messages[messages.length - 1];
               if (lastMessage && lastMessage.role === 'assistant') {
                 updateEditorChatMessage(lastMessage.id, { content: accumulatedContent });
+              }
+              return;
+            }
+
+            // Handle tool approval request (Human-in-the-loop)
+            if (evt.type === 'tool_approval_request') {
+              console.log('[EditorChatInput] Tool approval request received:', evt.toolCalls);
+
+              // Auto-approve if session-wide approval is enabled
+              if (alwaysApproveToolsForSession) {
+                console.log(
+                  '[EditorChatInput] Auto-approving tools (session-wide approval enabled)'
+                );
+                (async () => {
+                  try {
+                    if (isElectron() && window.electronAPI?.langgraph) {
+                      await window.electronAPI.langgraph.respondToolApproval(
+                        'editor-chat-temp',
+                        true
+                      );
+                    }
+                  } catch (error) {
+                    console.error('[EditorChatInput] Failed to auto-approve tools:', error);
+                  }
+                })();
+                return;
+              }
+
+              // Show approval dialog
+              if (evt.conversationId && evt.messageId && evt.toolCalls) {
+                setPendingToolApproval({
+                  conversationId: evt.conversationId,
+                  messageId: evt.messageId,
+                  toolCalls: evt.toolCalls,
+                  timestamp: Date.now(),
+                });
+
+                // Append approval waiting message
+                accumulatedContent += '\n\n🔔 도구 실행 승인을 기다리는 중...';
+                const messages = useChatStore.getState().editorChatMessages;
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage && lastMessage.role === 'assistant') {
+                  updateEditorChatMessage(lastMessage.id, { content: accumulatedContent });
+                }
+              }
+              return;
+            }
+
+            // Handle tool approval result
+            if (evt.type === 'tool_approval_result') {
+              console.log('[EditorChatInput] Tool approval result:', evt.approved);
+              clearPendingToolApproval();
+              if (!evt.approved) {
+                accumulatedContent += '\n\n❌ 도구 실행이 거부되었습니다.';
+                const messages = useChatStore.getState().editorChatMessages;
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage && lastMessage.role === 'assistant') {
+                  updateEditorChatMessage(lastMessage.id, { content: accumulatedContent });
+                }
               }
               return;
             }
