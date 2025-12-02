@@ -5,7 +5,8 @@
  * Main Chat, Browser Chat, Editor Chat 모두에서 사용
  */
 
-import type { Message, ImageAttachment, Persona } from '@/types';
+import type { Message, ImageAttachment } from '@/types';
+import type { Persona } from '@/types/persona';
 import type { ThinkingMode } from '@/lib/langgraph';
 import type { BrowserAgentLogEntry } from '@/types/browser-agent';
 

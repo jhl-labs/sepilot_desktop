@@ -19,6 +19,8 @@ import {
   User,
   RefreshCw,
   Check,
+  AlertTriangle,
+  Bug,
 } from 'lucide-react';
 import { GitHubSyncConfig } from '@/types';
 
@@ -96,6 +98,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       setOwner(config.owner || '');
       setRepo(config.repo || '');
       setBranch(config.branch || 'main');
+      setErrorReportingEnabled(config.errorReporting ?? false);
       setSyncItems((prev) =>
         prev.map((item) => ({
           ...item,
@@ -163,6 +166,11 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
     }
   };
 
+  // Error reporting state
+  const [errorReportingEnabled, setErrorReportingEnabled] = useState(
+    config?.errorReporting ?? false
+  );
+
   const handleSave = async () => {
     if (!token || !owner || !repo) {
       setMessage({ type: 'error', text: '모든 필드를 입력해주세요.' });
@@ -183,6 +191,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         syncImages: syncItems.find((i) => i.id === 'images')?.enabled ?? false,
         syncConversations: syncItems.find((i) => i.id === 'conversations')?.enabled ?? false,
         syncPersonas: syncItems.find((i) => i.id === 'personas')?.enabled ?? false,
+        errorReporting: errorReportingEnabled,
       };
 
       await onSave(newConfig);
@@ -527,6 +536,54 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
           </CardContent>
         </Card>
       )}
+
+      {/* 에러 리포팅 설정 */}
+      <Card className="border-blue-500/50 bg-blue-500/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bug className="h-5 w-5" />
+            에러 자동 리포팅
+          </CardTitle>
+          <CardDescription>
+            프로그램 에러 발생 시 GitHub Issue로 자동 리포트하여 개선에 도움을 줍니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-card border">
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-500" />
+                <p className="font-medium text-sm">에러 자동 리포팅 활성화</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                에러 발생 시 자동으로 GitHub Issue를 생성하여 개발팀에 전달합니다.
+                <br />
+                에러 메시지, 스택 트레이스, 시스템 정보가 포함되며, 개인정보는 포함되지 않습니다.
+              </p>
+            </div>
+            <Switch
+              checked={errorReportingEnabled}
+              onCheckedChange={setErrorReportingEnabled}
+              disabled={!token || !owner || !repo}
+            />
+          </div>
+
+          <div className="rounded-md bg-blue-500/10 border border-blue-500/20 px-4 py-3 text-sm">
+            <p className="font-medium mb-2 text-blue-600 dark:text-blue-500">
+              💡 에러 리포팅 정보
+            </p>
+            <ul className="space-y-1 text-xs list-disc list-inside text-blue-700 dark:text-blue-400">
+              <li>에러 메시지와 스택 트레이스가 GitHub Issue로 전송됩니다.</li>
+              <li>앱 버전, OS 플랫폼 등 기본 시스템 정보가 포함됩니다.</li>
+              <li>API 키, 토큰 등 민감한 정보는 절대 전송되지 않습니다.</li>
+              <li>프로그램 개선을 위해 매우 중요한 정보입니다.</li>
+              <li>
+                이 기능은 GitHub Token이 설정된 경우에만 사용할 수 있습니다.
+              </li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 보안 안내 */}
       <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-500">

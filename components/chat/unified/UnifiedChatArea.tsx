@@ -16,9 +16,11 @@ import type { ChatConfig } from './types';
 
 interface UnifiedChatAreaProps {
   config: ChatConfig;
+  onEdit?: (messageId: string, newContent: string) => Promise<void>;
+  onRegenerate?: (messageId: string) => Promise<void>;
 }
 
-export function UnifiedChatArea({ config }: UnifiedChatAreaProps) {
+export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAreaProps) {
   const { mode, features, style, dataSource, activePersona } = config;
   const { messages, isStreaming, scrollRef } = useChatMessages(dataSource);
 
@@ -87,8 +89,8 @@ export function UnifiedChatArea({ config }: UnifiedChatAreaProps) {
               <MessageBubble
                 key={message.id}
                 message={message}
-                onEdit={features.enableEdit ? undefined : undefined} // Will be passed from parent
-                onRegenerate={features.enableRegenerate ? undefined : undefined}
+                onEdit={features.enableEdit ? onEdit : undefined}
+                onRegenerate={features.enableRegenerate ? onRegenerate : undefined}
                 isLastAssistantMessage={isLastAssistantMessage}
                 isStreaming={isMessageStreaming}
                 activePersona={activePersona}

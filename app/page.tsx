@@ -2,8 +2,7 @@
 
 import { useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ChatArea } from '@/components/chat/ChatArea';
-import { InputBox } from '@/components/chat/InputBox';
+import { ChatContainer } from '@/components/chat/ChatContainer';
 import { WorkingDirectoryIndicator } from '@/components/chat/WorkingDirectoryIndicator';
 import { UpdateNotificationDialog } from '@/components/UpdateNotificationDialog';
 import { EditorWithTerminal } from '@/components/editor/EditorWithTerminal';
@@ -96,9 +95,8 @@ export default function Home() {
       <div className="flex h-full flex-col">
         {appMode === 'chat' ? (
           <>
-            <ChatArea />
+            <ChatContainer />
             <WorkingDirectoryIndicator />
-            <InputBox />
           </>
         ) : appMode === 'editor' ? (
           <EditorWithTerminal />

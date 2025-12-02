@@ -217,13 +217,20 @@ export interface NanoBananaConfig {
   apiKey: string; // Google Cloud API Key
   projectId?: string; // Google Cloud Project ID
   location?: string; // Default: 'us-central1'
-  model?: string; // Default: 'imagen-3.0-generate-001'
+  model?: string; // 'imagen-3.0-fast-generate-001' or 'imagen-3.0-generate-001'
 
-  // Generation parameters
+  // Generation parameters (defaults - can be overridden per request)
   negativePrompt?: string;
   aspectRatio?: string; // '1:1', '16:9', '9:16', '4:3', '3:4'
-  numberOfImages?: number; // 1-8, default: 1
+  numberOfImages?: number; // Fast: 1-4, Standard: 1-8
   seed?: number;
+
+  // Standard model additional options
+  outputMimeType?: 'image/png' | 'image/jpeg'; // Default: image/png
+  compressionQuality?: number; // JPEG quality: 0-100 (only for image/jpeg)
+
+  // Interactive mode - ask user for options when generating
+  askOptionsOnGenerate?: boolean; // If true, prompt user for aspect ratio, size, etc.
 }
 
 /**
@@ -278,6 +285,9 @@ export interface GitHubSyncConfig {
   syncConversations: boolean; // 대화 내역 동기화 여부
   syncPersonas: boolean; // AI 페르소나 동기화 여부
 
+  // 에러 리포팅 옵션
+  errorReporting?: boolean; // 에러 자동 리포팅 여부
+
   // 암호화 설정
   encryptionKey?: string; // 민감 정보 암호화 키 (자동 생성)
 
@@ -285,6 +295,26 @@ export interface GitHubSyncConfig {
   lastSyncAt?: number; // 마지막 동기화 시간 (timestamp)
   lastSyncStatus?: 'success' | 'error'; // 마지막 동기화 상태
   lastSyncError?: string; // 마지막 동기화 에러 메시지
+}
+
+/**
+ * Error Report Data: GitHub Issue로 전송될 에러 정보
+ */
+export interface ErrorReportData {
+  title: string; // 에러 제목
+  error: {
+    message: string; // 에러 메시지
+    stack?: string; // 스택 트레이스
+    type: 'frontend' | 'backend' | 'ipc'; // 에러 발생 위치
+  };
+  context: {
+    version: string; // 앱 버전
+    platform: string; // OS 플랫폼
+    timestamp: number; // 에러 발생 시간
+    userAgent?: string; // 브라우저 정보 (프론트엔드만)
+  };
+  reproduction?: string; // 재현 방법 (선택)
+  additionalInfo?: Record<string, unknown>; // 추가 정보
 }
 
 // 이전 GitHub OAuth 설정 (하위 호환성 유지)
