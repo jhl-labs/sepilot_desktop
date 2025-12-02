@@ -373,6 +373,56 @@ class DatabaseService {
     this.saveDatabase();
   }
 
+  /**
+   * Replace all messages in a conversation with new messages (atomic operation)
+   * Used for conversation compression
+   */
+  replaceConversationMessages(conversationId: string, newMessages: Message[]): void {
+    if (!this.db) throw new Error('Database not initialized');
+
+    console.log('[Database] Replacing messages for conversation:', {
+      conversationId,
+      oldCount: this.getMessages(conversationId).length,
+      newCount: newMessages.length,
+    });
+
+    // Use transaction for atomic operation
+    try {
+      this.db.run('BEGIN TRANSACTION');
+
+      // Delete existing messages
+      this.db.run('DELETE FROM messages WHERE conversation_id = ?', [conversationId]);
+
+      // Insert new messages
+      for (const message of newMessages) {
+        this.db.run(
+          `INSERT INTO messages (id, conversation_id, role, content, created_at, tool_calls, tool_results, images, referenced_documents)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            message.id,
+            message.conversation_id ?? conversationId,
+            message.role,
+            message.content,
+            message.created_at,
+            message.tool_calls ? JSON.stringify(message.tool_calls) : null,
+            message.tool_results ? JSON.stringify(message.tool_results) : null,
+            message.images ? JSON.stringify(message.images) : null,
+            message.referenced_documents ? JSON.stringify(message.referenced_documents) : null,
+          ]
+        );
+      }
+
+      this.db.run('COMMIT');
+      this.saveDatabase();
+
+      console.log('[Database] Successfully replaced messages');
+    } catch (error) {
+      console.error('[Database] Failed to replace messages:', error);
+      this.db.run('ROLLBACK');
+      throw error;
+    }
+  }
+
   // Settings
   getSetting(key: string): string | null {
     if (!this.db) throw new Error('Database not initialized');

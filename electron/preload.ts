@@ -23,6 +23,8 @@ const electronAPI = {
     deleteMessage: (id: string) => ipcRenderer.invoke('delete-message', id),
     deleteConversationMessages: (conversationId: string) =>
       ipcRenderer.invoke('delete-conversation-messages', conversationId),
+    replaceConversationMessages: (conversationId: string, newMessages: any[]) =>
+      ipcRenderer.invoke('replace-conversation-messages', conversationId, newMessages),
   },
 
   // Activity operations (도구 실행 이력)

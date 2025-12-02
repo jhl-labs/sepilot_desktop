@@ -274,17 +274,13 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     }
 
     try {
-      // Delete all existing messages for this conversation
+      // Replace conversation messages atomically
       if (isElectron() && window.electronAPI) {
-        await window.electronAPI.chat.deleteConversationMessages(compressConversation.id);
-
-        // Save compressed messages
-        for (const message of compressedMessages) {
-          await window.electronAPI.chat.saveMessage({
-            ...message,
-            conversation_id: compressConversation.id,
-          });
-        }
+        // Use atomic replace operation (transaction-based)
+        await window.electronAPI.chat.replaceConversationMessages(
+          compressConversation.id,
+          compressedMessages
+        );
       } else {
         // Web: localStorage에 저장
         const allMessages = localStorage.getItem('sepilot_messages');
