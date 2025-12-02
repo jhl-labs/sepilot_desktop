@@ -69,7 +69,9 @@ async function planNode(state: AgentState): Promise<Partial<AgentState>> {
   const allFailed = lastBatchResults.length > 0 && lastBatchResults.every((r) => !!r.error);
 
   if (allFailed && !isFirstStep) {
-    console.log('[DeepWebResearch] Previous searches all failed. Retrying without incrementing iteration.');
+    console.log(
+      '[DeepWebResearch] Previous searches all failed. Retrying without incrementing iteration.'
+    );
     emitStreamingChunk(
       `⚠️ **이전 검색 실패. 다른 방법으로 재시도합니다...**\n\n`,
       state.conversationId
@@ -363,7 +365,9 @@ function checkPlan(state: AgentState) {
     return 'synthesize';
   }
 
-  console.log(`[DeepWebResearch] Proceeding to search (iteration ${notes.iteration + 1}/${MAX_ITERATIONS})`);
+  console.log(
+    `[DeepWebResearch] Proceeding to search (iteration ${notes.iteration + 1}/${MAX_ITERATIONS})`
+  );
   return 'search';
 }
 
