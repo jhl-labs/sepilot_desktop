@@ -150,6 +150,8 @@ interface ChatStore {
   // Editor Settings
   editorAppearanceConfig: EditorAppearanceConfig;
   editorLLMPromptsConfig: EditorLLMPromptsConfig;
+  editorUseRagInAutocomplete: boolean; // RAG 문서 사용 여부 (autocomplete)
+  editorUseToolsInAutocomplete: boolean; // MCP Tools 사용 여부 (autocomplete)
 
   // Chat Mode View
   chatViewMode: 'history' | 'documents'; // history or documents view in Chat sidebar
@@ -243,6 +245,8 @@ interface ChatStore {
   resetEditorAppearanceConfig: () => void;
   setEditorLLMPromptsConfig: (config: Partial<EditorLLMPromptsConfig>) => void;
   resetEditorLLMPromptsConfig: () => void;
+  setEditorUseRagInAutocomplete: (enable: boolean) => void;
+  setEditorUseToolsInAutocomplete: (enable: boolean) => void;
 
   // Actions - Chat Mode View
   setChatViewMode: (mode: 'history' | 'documents') => void;
@@ -415,6 +419,33 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       console.error('Failed to load Editor LLM Prompts config from localStorage:', error);
     }
     return DEFAULT_EDITOR_LLM_PROMPTS;
+  })(),
+
+  // Editor Autocomplete Settings
+  editorUseRagInAutocomplete: (() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    try {
+      const saved = localStorage.getItem('sepilot_editor_use_rag_in_autocomplete');
+      return saved === 'true';
+    } catch (error) {
+      console.error('Failed to load editor RAG setting from localStorage:', error);
+    }
+    return false;
+  })(),
+
+  editorUseToolsInAutocomplete: (() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    try {
+      const saved = localStorage.getItem('sepilot_editor_use_tools_in_autocomplete');
+      return saved === 'true';
+    } catch (error) {
+      console.error('Failed to load editor Tools setting from localStorage:', error);
+    }
+    return false;
   })(),
 
   // Chat Mode View
@@ -1335,6 +1366,20 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ editorLLMPromptsConfig: DEFAULT_EDITOR_LLM_PROMPTS });
     if (typeof window !== 'undefined') {
       localStorage.removeItem('sepilot_editor_llm_prompts_config');
+    }
+  },
+
+  setEditorUseRagInAutocomplete: (enable: boolean) => {
+    set({ editorUseRagInAutocomplete: enable });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sepilot_editor_use_rag_in_autocomplete', enable.toString());
+    }
+  },
+
+  setEditorUseToolsInAutocomplete: (enable: boolean) => {
+    set({ editorUseToolsInAutocomplete: enable });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sepilot_editor_use_tools_in_autocomplete', enable.toString());
     }
   },
 

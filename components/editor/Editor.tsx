@@ -30,6 +30,8 @@ export function CodeEditor() {
     clearInitialPosition,
     editorAppearanceConfig,
     workingDirectory,
+    editorUseRagInAutocomplete,
+    editorUseToolsInAutocomplete,
   } = useChatStore();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -270,6 +272,8 @@ export function CodeEditor() {
                 code,
                 cursorPosition: offset,
                 language,
+                useRag: editorUseRagInAutocomplete,
+                useTools: editorUseToolsInAutocomplete,
               });
 
               const result = await Promise.race([requestPromise, timeoutPromise]);
@@ -350,7 +354,7 @@ export function CodeEditor() {
       provider.dispose();
       console.log('Inline completion provider disposed');
     };
-  }, [editor]);
+  }, [editor, editorUseRagInAutocomplete, editorUseToolsInAutocomplete]);
 
   // Register Monaco context menu actions
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, Terminal, FileText } from 'lucide-react';
+import { Settings, Terminal, FileText, Database, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
@@ -21,6 +21,10 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
     showTerminalPanel,
     setShowTerminalPanel,
     workingDirectory,
+    editorUseRagInAutocomplete,
+    setEditorUseRagInAutocomplete,
+    editorUseToolsInAutocomplete,
+    setEditorUseToolsInAutocomplete,
   } = useChatStore();
 
   return (
@@ -45,6 +49,32 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
       <div className="shrink-0 border-t p-2">
         <div className="flex gap-1">
           <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setEditorUseToolsInAutocomplete(!editorUseToolsInAutocomplete)}
+            title={
+              editorUseToolsInAutocomplete
+                ? 'Autocomplete에서 Tools 사용 중 (클릭하여 비활성화)'
+                : 'Autocomplete에서 Tools 사용 안함 (클릭하여 활성화)'
+            }
+            className={`flex-1 ${editorUseToolsInAutocomplete ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
+          >
+            <Wrench className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setEditorUseRagInAutocomplete(!editorUseRagInAutocomplete)}
+            title={
+              editorUseRagInAutocomplete
+                ? 'Autocomplete에서 RAG 문서 사용 중 (클릭하여 비활성화)'
+                : 'Autocomplete에서 RAG 문서 사용 안함 (클릭하여 활성화)'
+            }
+            className={`flex-1 ${editorUseRagInAutocomplete ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
+          >
+            <Database className="h-5 w-5" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

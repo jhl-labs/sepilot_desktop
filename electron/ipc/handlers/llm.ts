@@ -495,6 +495,8 @@ Return ONLY the title, without quotes or additional text.`,
         cursorPosition: number;
         language?: string;
         filePath?: string;
+        useRag?: boolean;
+        useTools?: boolean;
       }
     ) => {
       try {
@@ -503,6 +505,8 @@ Return ONLY the title, without quotes or additional text.`,
           cursorPosition: context.cursorPosition,
           language: context.language,
           filePath: context.filePath,
+          useRag: context.useRag,
+          useTools: context.useTools,
         });
 
         // Get autocomplete config from database
@@ -577,6 +581,8 @@ Return ONLY the title, without quotes or additional text.`,
         const linesAfter = textAfterCursor.split('\n').slice(0, 2).join('\n');
 
         // Prepare initial state for Editor Agent
+        // TODO: RAG와 Tools 기능을 Editor Agent 그래프에 통합하여 실제로 사용하도록 구현
+        // 현재는 설정만 전달하고 있으며, 실제 구현은 추후 진행 필요
         const initialState = {
           messages: [
             {
@@ -589,7 +595,7 @@ CRITICAL RULES:
 - Write ONLY what comes AFTER █
 - Return raw text without quotes, markdown, or explanations
 - Keep completion concise (1-3 lines max)
-- Match the writing style and context`,
+- Match the writing style and context${context.useRag ? '\n- You can reference uploaded documents if needed' : ''}${context.useTools ? '\n- You can use available tools if needed' : ''}`,
               created_at: Date.now(),
             },
             {
@@ -605,6 +611,8 @@ CRITICAL RULES:
             language: context.language,
             cursorPosition: context.cursorPosition,
             action: 'autocomplete' as const,
+            useRag: context.useRag,
+            useTools: context.useTools,
           },
         };
 

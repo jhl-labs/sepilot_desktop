@@ -165,6 +165,8 @@ interface LLMAPI {
     code: string;
     cursorPosition: number;
     language?: string;
+    useRag?: boolean;
+    useTools?: boolean;
   }) => Promise<IPCResponse<{ completion: string }>>;
   editorAction: (params: {
     action:

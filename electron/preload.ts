@@ -130,8 +130,13 @@ const electronAPI = {
       ipcRenderer.removeAllListeners('llm-stream-done');
       ipcRenderer.removeAllListeners('llm-stream-error');
     },
-    editorAutocomplete: (context: { code: string; cursorPosition: number; language?: string }) =>
-      ipcRenderer.invoke('llm-editor-autocomplete', context),
+    editorAutocomplete: (context: {
+      code: string;
+      cursorPosition: number;
+      language?: string;
+      useRag?: boolean;
+      useTools?: boolean;
+    }) => ipcRenderer.invoke('llm-editor-autocomplete', context),
     editorAction: (params: {
       action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve';
       text: string;
