@@ -215,7 +215,7 @@ export class ChatAgentGraph {
         let logMessage = `\n`;
 
         for (const result of toolsResult.toolResults) {
-          const status = result.error ? '❌ **Error**' : '✅ **Result**';
+          const status = result.error ? '❌ Error' : '✅ Result';
           logMessage += `${status}: \`${result.toolName}\`\n`;
 
           let output = result.error || result.result || '(no output)';
@@ -223,11 +223,17 @@ export class ChatAgentGraph {
             output = JSON.stringify(output, null, 2);
           }
 
-          if (output.length > 1000) {
-            output = `${output.substring(0, 1000)}\n... (truncated)`;
+          // Shorten output for better UX (300 chars instead of 1000)
+          if (output.length > 300) {
+            output = `${output.substring(0, 300)}\n... (output truncated for readability)`;
           }
 
-          logMessage += `📄 **Output:**\n\`\`\`\n${output}\n\`\`\`\n`;
+          // Use inline code instead of code block for shorter output
+          if (output.length < 100 && !output.includes('\n')) {
+            logMessage += `📄 Output: \`${output}\`\n`;
+          } else {
+            logMessage += `📄 Output:\n\`\`\`\n${output}\n\`\`\`\n`;
+          }
         }
         emitStreamingChunk(`${logMessage}---\n\n`, state.conversationId);
       }

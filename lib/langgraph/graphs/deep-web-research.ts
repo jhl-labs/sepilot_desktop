@@ -101,11 +101,25 @@ async function planNode(state: AgentState): Promise<Partial<AgentState>> {
 1. 현재까지 수집된 정보를 분석하여, 더 필요한 정보가 무엇인지 판단하세요.
 2. 정보가 충분하다면 'queries'를 빈 배열 []로 반환하여 검색을 종료하세요.
 3. 더 정보가 필요하다면, Tavily 검색 도구를 위한 최적의 쿼리를 생성하세요.
-4. **매우 중요**: 'tavily_search' 도구의 파라미터는 **오직** {"query": "...", "max_results": 5} 형태만 허용됩니다.
-   - "query"와 "max_results"만 사용하세요
-   - "country", "topic", "topn", "search_depth" 등 다른 키는 **절대 사용 금지**입니다
-   - 예시: {"query": "최신 AI 뉴스", "max_results": 5} ✅
-   - 잘못된 예시: {"query": "...", "max_results": 5, "country": "ko"} ❌
+4. **매우 중요**: 'tavily_search' 도구는 **정확히 2개의 파라미터만** 허용합니다:
+
+   ✅ **허용되는 파라미터:**
+   - "query": (string) 검색어
+   - "max_results": (number) 최대 결과 수 (기본값: 5)
+
+   ❌ **절대 사용 금지 파라미터 (에러 발생):**
+   - "country", "topic", "topn", "search_depth", "days", "include_domains",
+     "exclude_domains", "include_answer", "include_raw_content", "include_images"
+
+   **올바른 예시:**
+   {"query": "latest AI news 2025", "max_results": 5} ✅
+   {"query": "Python tutorial", "max_results": 3} ✅
+
+   **잘못된 예시 (절대 사용 금지):**
+   {"query": "news", "max_results": 5, "country": "ko"} ❌
+   {"query": "AI", "days": "week"} ❌
+   {"query": "research", "search_depth": "advanced"} ❌
+
 5. 한 번에 최대 3개의 병렬 쿼리를 생성할 수 있습니다.
 6. 반드시 아래 JSON 형식으로만 응답하세요.
 

@@ -546,7 +546,10 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
       ragContext = await retrieveContextIfEnabled(lastUserMessage.content);
       if (ragContext) {
         if (ragContext.startsWith('[RAG retrieval failed')) {
-          emitStreamingChunk('⚠️ RAG 컨텍스트를 불러오지 못했습니다. 자체 지식으로 진행합니다.\n', state.conversationId);
+          emitStreamingChunk(
+            '⚠️ RAG 컨텍스트를 불러오지 못했습니다. 자체 지식으로 진행합니다.\n',
+            state.conversationId
+          );
         }
         emitStreamingChunk(
           `\n📚 **관련 문서 ${ragContext.split('[참고 문서').length - 1}개를 참조합니다.**\n\n`,
@@ -556,7 +559,10 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     }
   } catch (e) {
     console.error('[CodingAgent.Agent] RAG error:', e);
-    emitStreamingChunk('⚠️ RAG 컨텍스트 조회 중 오류가 발생했습니다. 자체 지식으로 진행합니다.\n', state.conversationId);
+    emitStreamingChunk(
+      '⚠️ RAG 컨텍스트 조회 중 오류가 발생했습니다. 자체 지식으로 진행합니다.\n',
+      state.conversationId
+    );
   }
 
   // Debug: Log message count and sizes
@@ -936,9 +942,9 @@ async function approvalNode(state: CodingAgentState): Promise<Partial<CodingAgen
   }
 
   if (needsApproval && !alwaysApprove && !oneTimeApprove) {
-    const note =
-      `⚠️ 네트워크/패키지 설치 명령은 승인 후 실행됩니다. 승인하려면 "승인", 항상 승인하려면 "항상 승인"이라고 답변해주세요. 명령: ${ 
-      needsApproval.arguments.command}`;
+    const note = `⚠️ 네트워크/패키지 설치 명령은 승인 후 실행됩니다. 승인하려면 "승인", 항상 승인하려면 "항상 승인"이라고 답변해주세요. 명령: ${
+      needsApproval.arguments.command
+    }`;
     emitStreamingChunk(note, state.conversationId);
     console.log('[Approval] Network/install command requires explicit approval');
     return {
@@ -1207,7 +1213,7 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
     let logMessage = `\n`;
 
     for (const result of results) {
-      const status = result.error ? '❌ **Error**' : '✅ **Result**';
+      const status = result.error ? '❌ Error' : '✅ Result';
       logMessage += `${status}: \`${result.toolName}\`\n`;
 
       let output = result.error || result.result || '(no output)';
@@ -1215,11 +1221,17 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
         output = JSON.stringify(output, null, 2);
       }
 
-      if (output.length > 1000) {
-        output = `${output.substring(0, 1000)}\n... (truncated)`;
+      // Shorten output for better UX (300 chars instead of 1000)
+      if (output.length > 300) {
+        output = `${output.substring(0, 300)}\n... (output truncated for readability)`;
       }
 
-      logMessage += `📄 **Output:**\n\`\`\`\n${output}\n\`\`\`\n`;
+      // Use inline code instead of code block for shorter output
+      if (output.length < 100 && !output.includes('\n')) {
+        logMessage += `📄 Output: \`${output}\`\n`;
+      } else {
+        logMessage += `📄 Output:\n\`\`\`\n${output}\n\`\`\`\n`;
+      }
     }
     emitStreamingChunk(`${logMessage}---\n\n`, state.conversationId);
   }
@@ -1543,7 +1555,14 @@ export class CodingAgentGraph {
             return false;
           }
           const cmd = call.arguments.command;
-          const danger = [/rm\s+-rf/i, /del\s+\/s/i, /rd\s+\/s/i, /format\s+/i, /mkfs/i, /dd\s+if=/i];
+          const danger = [
+            /rm\s+-rf/i,
+            /del\s+\/s/i,
+            /rd\s+\/s/i,
+            /format\s+/i,
+            /mkfs/i,
+            /dd\s+if=/i,
+          ];
           const installs = [
             /\bnpm\s+(install|i)\b/i,
             /\byarn\s+add\b/i,
@@ -1557,7 +1576,11 @@ export class CodingAgentGraph {
           return danger.some((p) => p.test(cmd)) || installs.some((p) => p.test(cmd));
         });
 
-        if (!state.alwaysApproveTools && sensitiveToolCalls.length > 0 && !this.toolApprovalCallback) {
+        if (
+          !state.alwaysApproveTools &&
+          sensitiveToolCalls.length > 0 &&
+          !this.toolApprovalCallback
+        ) {
           const approvalNote =
             '⚠️ 민감한 명령이 포함되어 실행 전 승인이 필요합니다. "승인" 또는 "항상 승인" 여부를 알려주세요.';
           yield {

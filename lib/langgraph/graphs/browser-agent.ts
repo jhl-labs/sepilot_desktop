@@ -1241,8 +1241,19 @@ export class BrowserAgentGraph {
               },
             });
 
-            resultsLogMessage += `❌ **Error:** \`${result.toolName}\`\n`;
-            resultsLogMessage += `📄 **Output:**\n\`\`\`\n${result.error}\n\`\`\`\n`;
+            resultsLogMessage += `❌ Error: \`${result.toolName}\`\n`;
+
+            let errorOutput = result.error || '(no error message)';
+            if (errorOutput.length > 300) {
+              errorOutput = `${errorOutput.substring(0, 300)}\n... (error message truncated)`;
+            }
+
+            // Use inline code for short errors
+            if (errorOutput.length < 100 && !errorOutput.includes('\n')) {
+              resultsLogMessage += `📄 Output: \`${errorOutput}\`\n`;
+            } else {
+              resultsLogMessage += `📄 Output:\n\`\`\`\n${errorOutput}\n\`\`\`\n`;
+            }
           } else {
             // Reset failure counter on success
             failureCounts.delete(result.toolName);
@@ -1341,18 +1352,24 @@ export class BrowserAgentGraph {
             });
 
             // Detailed success logging
-            resultsLogMessage += `✅ **Result:** \`${result.toolName}\`\n`;
+            resultsLogMessage += `✅ Result: \`${result.toolName}\`\n`;
 
             let output = result.result || '(no output)';
             if (typeof output !== 'string') {
               output = JSON.stringify(output, null, 2);
             }
 
-            if (output.length > 1000) {
-              output = `${output.substring(0, 1000)}\n... (truncated)`;
+            // Shorten output for better UX (300 chars instead of 1000)
+            if (output.length > 300) {
+              output = `${output.substring(0, 300)}\n... (output truncated for readability)`;
             }
 
-            resultsLogMessage += `📄 **Output:**\n\`\`\`\n${output}\n\`\`\`\n`;
+            // Use inline code instead of code block for shorter output
+            if (output.length < 100 && !output.includes('\n')) {
+              resultsLogMessage += `📄 Output: \`${output}\`\n`;
+            } else {
+              resultsLogMessage += `📄 Output:\n\`\`\`\n${output}\n\`\`\`\n`;
+            }
           }
         }
 
