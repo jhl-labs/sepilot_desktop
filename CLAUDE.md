@@ -109,3 +109,5 @@ Skills는 자동으로 적용되며, 별도로 호출할 필요 없음.
 ```
 
 또는 슬래시 명령어 사용 시 자동 호출됨.
+
+- claude code와 같은 agent 작업 시 pre commit hook이 변경사항을 되돌리지 않게 disable 하던지 무시하게 해줘

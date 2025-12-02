@@ -190,7 +190,6 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
           };
 
           const onFinish = () => {
-            console.log('[GoogleSearch] Homepage loaded successfully');
             cleanup();
             resolve();
           };
@@ -251,7 +250,6 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
         };
 
         const onFinish = () => {
-          console.log('[GoogleSearch] Page loaded successfully');
           cleanup();
           resolve();
         };
@@ -282,8 +280,6 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
       try {
         const currentURL = browserView.webContents.getURL();
         const title = browserView.webContents.getTitle();
-
-        console.log('[GoogleSearch] Current page state:', { url: currentURL, title });
 
         // Google 페이지에 있고 제목이 있으면 부분 성공으로 간주
         if (currentURL.includes('google.com') && title) {
@@ -522,8 +518,6 @@ export async function handleGoogleVisitResult(options: GoogleVisitResultOptions)
     if (!clickResult.success) {
       throw new Error(clickResult.error);
     }
-
-    console.log(`[GoogleVisitResult] Visiting rank ${rank}: ${clickResult.url}`);
 
     // 페이지 로드
     await browserView.webContents.loadURL(clickResult.url);
