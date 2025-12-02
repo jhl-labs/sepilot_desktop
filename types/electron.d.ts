@@ -509,12 +509,14 @@ interface GitHubSyncAPI {
   syncDocuments: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
   syncImages: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
   syncConversations: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncPersonas: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
   syncAll: (config: import('./index').GitHubSyncConfig) => Promise<
     IPCResponse<{
       settings: GitHubSyncResult;
       documents: GitHubSyncResult;
       images: GitHubSyncResult;
       conversations: GitHubSyncResult;
+      personas: GitHubSyncResult;
     }>
   >;
 }

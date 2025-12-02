@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
 import {
   Loader2,
   CheckCircle,
@@ -15,13 +16,24 @@ import {
   FileText,
   Image,
   MessageSquare,
+  User,
   RefreshCw,
+  Check,
 } from 'lucide-react';
 import { GitHubSyncConfig } from '@/types';
 
 interface GitHubSyncSettingsProps {
   config: GitHubSyncConfig | null;
   onSave: (config: GitHubSyncConfig) => Promise<void>;
+}
+
+interface SyncItemConfig {
+  id: 'settings' | 'documents' | 'images' | 'conversations' | 'personas';
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  enabled: boolean;
+  warning?: string;
 }
 
 export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) {
@@ -32,10 +44,45 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
   const [branch, setBranch] = useState(config?.branch || 'main');
 
   // Sync options
-  const [syncSettings, setSyncSettings] = useState(config?.syncSettings ?? true);
-  const [syncDocuments, setSyncDocuments] = useState(config?.syncDocuments ?? false);
-  const [syncImages, setSyncImages] = useState(config?.syncImages ?? false);
-  const [syncConversations, setSyncConversations] = useState(config?.syncConversations ?? false);
+  const [syncItems, setSyncItems] = useState<SyncItemConfig[]>([
+    {
+      id: 'settings',
+      title: '설정 동기화',
+      description: 'LLM, Network, VectorDB 등 애플리케이션 설정',
+      icon: Settings,
+      enabled: config?.syncSettings ?? true,
+    },
+    {
+      id: 'documents',
+      title: '문서 동기화',
+      description: 'RAG 벡터 데이터베이스 문서',
+      icon: FileText,
+      enabled: config?.syncDocuments ?? false,
+    },
+    {
+      id: 'personas',
+      title: 'AI 페르소나',
+      description: '사용자 정의 AI 페르소나 설정',
+      icon: User,
+      enabled: config?.syncPersonas ?? false,
+    },
+    {
+      id: 'images',
+      title: '이미지 동기화',
+      description: '생성된 이미지 메타데이터',
+      icon: Image,
+      enabled: config?.syncImages ?? false,
+      warning: '용량 주의',
+    },
+    {
+      id: 'conversations',
+      title: '대화 동기화',
+      description: '대화 내역 및 메시지',
+      icon: MessageSquare,
+      enabled: config?.syncConversations ?? false,
+      warning: '개인정보 주의',
+    },
+  ]);
 
   // UI states
   const [isTesting, setIsTesting] = useState(false);
@@ -49,12 +96,29 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       setOwner(config.owner || '');
       setRepo(config.repo || '');
       setBranch(config.branch || 'main');
-      setSyncSettings(config.syncSettings ?? true);
-      setSyncDocuments(config.syncDocuments ?? false);
-      setSyncImages(config.syncImages ?? false);
-      setSyncConversations(config.syncConversations ?? false);
+      setSyncItems((prev) =>
+        prev.map((item) => ({
+          ...item,
+          enabled:
+            item.id === 'settings'
+              ? (config.syncSettings ?? true)
+              : item.id === 'documents'
+                ? (config.syncDocuments ?? false)
+                : item.id === 'personas'
+                  ? (config.syncPersonas ?? false)
+                  : item.id === 'images'
+                    ? (config.syncImages ?? false)
+                    : (config.syncConversations ?? false),
+        }))
+      );
     }
   }, [config]);
+
+  const toggleSyncItem = (id: string) => {
+    setSyncItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, enabled: !item.enabled } : item))
+    );
+  };
 
   const handleTestConnection = async () => {
     if (!token || !owner || !repo) {
@@ -71,10 +135,11 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         owner,
         repo,
         branch,
-        syncSettings,
-        syncDocuments,
-        syncImages,
-        syncConversations,
+        syncSettings: syncItems.find((i) => i.id === 'settings')?.enabled ?? true,
+        syncDocuments: syncItems.find((i) => i.id === 'documents')?.enabled ?? false,
+        syncImages: syncItems.find((i) => i.id === 'images')?.enabled ?? false,
+        syncConversations: syncItems.find((i) => i.id === 'conversations')?.enabled ?? false,
+        syncPersonas: syncItems.find((i) => i.id === 'personas')?.enabled ?? false,
       };
 
       if (typeof window !== 'undefined' && window.electronAPI) {
@@ -89,9 +154,10 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
           throw new Error(result.error || '연결 테스트 실패');
         }
       }
-    } catch (error: any) {
-      console.error('Connection test failed:', error);
-      setMessage({ type: 'error', text: error.message || '연결 테스트 실패' });
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Connection test failed:', err);
+      setMessage({ type: 'error', text: err.message || '연결 테스트 실패' });
     } finally {
       setIsTesting(false);
     }
@@ -112,24 +178,26 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         owner,
         repo,
         branch: branch || 'main',
-        syncSettings,
-        syncDocuments,
-        syncImages,
-        syncConversations,
+        syncSettings: syncItems.find((i) => i.id === 'settings')?.enabled ?? true,
+        syncDocuments: syncItems.find((i) => i.id === 'documents')?.enabled ?? false,
+        syncImages: syncItems.find((i) => i.id === 'images')?.enabled ?? false,
+        syncConversations: syncItems.find((i) => i.id === 'conversations')?.enabled ?? false,
+        syncPersonas: syncItems.find((i) => i.id === 'personas')?.enabled ?? false,
       };
 
       await onSave(newConfig);
       setMessage({ type: 'success', text: 'GitHub Sync 설정이 저장되었습니다!' });
-    } catch (error: any) {
-      console.error('Failed to save config:', error);
-      setMessage({ type: 'error', text: error.message || '설정 저장 실패' });
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Failed to save config:', err);
+      setMessage({ type: 'error', text: err.message || '설정 저장 실패' });
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleSync = async (
-    type: 'settings' | 'documents' | 'images' | 'conversations' | 'all'
+    type: 'settings' | 'documents' | 'images' | 'conversations' | 'personas' | 'all'
   ) => {
     if (!token || !owner || !repo) {
       setMessage({ type: 'error', text: '먼저 설정을 저장해주세요.' });
@@ -145,10 +213,11 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         owner,
         repo,
         branch: branch || 'main',
-        syncSettings,
-        syncDocuments,
-        syncImages,
-        syncConversations,
+        syncSettings: syncItems.find((i) => i.id === 'settings')?.enabled ?? true,
+        syncDocuments: syncItems.find((i) => i.id === 'documents')?.enabled ?? false,
+        syncImages: syncItems.find((i) => i.id === 'images')?.enabled ?? false,
+        syncConversations: syncItems.find((i) => i.id === 'conversations')?.enabled ?? false,
+        syncPersonas: syncItems.find((i) => i.id === 'personas')?.enabled ?? false,
       };
 
       if (typeof window !== 'undefined' && window.electronAPI) {
@@ -169,6 +238,14 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
               setMessage({ type: 'success', text: result.message || '문서 동기화 완료!' });
             } else {
               throw new Error(result.error || '문서 동기화 실패');
+            }
+            break;
+          case 'personas':
+            result = await window.electronAPI.githubSync.syncPersonas(syncConfig);
+            if (result.success) {
+              setMessage({ type: 'success', text: result.message || 'AI 페르소나 동기화 완료!' });
+            } else {
+              throw new Error(result.error || 'AI 페르소나 동기화 실패');
             }
             break;
           case 'images':
@@ -198,9 +275,10 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
           }
         }
       }
-    } catch (error: any) {
-      console.error(`Failed to sync ${type}:`, error);
-      setMessage({ type: 'error', text: error.message || `${type} 동기화 실패` });
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error(`Failed to sync ${type}:`, err);
+      setMessage({ type: 'error', text: err.message || `${type} 동기화 실패` });
     } finally {
       setIsSyncing(null);
     }
@@ -219,10 +297,13 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         </Alert>
       )}
 
-      {/* GitHub Token 설정 */}
+      {/* GitHub 연결 설정 */}
       <Card>
         <CardHeader>
-          <CardTitle>GitHub 연결 설정</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Github className="h-5 w-5" />
+            GitHub 연결 설정
+          </CardTitle>
           <CardDescription>
             GitHub Personal Access Token을 사용하여 레포지토리에 연결합니다.
             <br />
@@ -237,237 +318,174 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Token */}
-          <div className="space-y-2">
-            <Label htmlFor="token">GitHub Personal Access Token</Label>
-            <Input
-              id="token"
-              type="password"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-            />
-            <p className="text-xs text-muted-foreground">
-              repo 권한이 있는 Personal Access Token이 필요합니다.
-            </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="token">GitHub Personal Access Token</Label>
+              <Input
+                id="token"
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              />
+              <p className="text-xs text-muted-foreground">
+                repo 권한이 있는 Personal Access Token이 필요합니다.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="owner">Owner (Organization 또는 User)</Label>
+              <Input
+                id="owner"
+                value={owner}
+                onChange={(e) => setOwner(e.target.value)}
+                placeholder="my-org 또는 my-username"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="repo">Repository</Label>
+              <Input
+                id="repo"
+                value={repo}
+                onChange={(e) => setRepo(e.target.value)}
+                placeholder="my-repo"
+              />
+            </div>
+
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="branch">Branch (기본값: main)</Label>
+              <Input
+                id="branch"
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                placeholder="main"
+              />
+            </div>
           </div>
 
-          {/* Owner */}
-          <div className="space-y-2">
-            <Label htmlFor="owner">Owner (Organization 또는 User)</Label>
-            <Input
-              id="owner"
-              value={owner}
-              onChange={(e) => setOwner(e.target.value)}
-              placeholder="my-org 또는 my-username"
-            />
-          </div>
-
-          {/* Repository */}
-          <div className="space-y-2">
-            <Label htmlFor="repo">Repository</Label>
-            <Input
-              id="repo"
-              value={repo}
-              onChange={(e) => setRepo(e.target.value)}
-              placeholder="my-repo"
-            />
-          </div>
-
-          {/* Branch */}
-          <div className="space-y-2">
-            <Label htmlFor="branch">Branch (기본값: main)</Label>
-            <Input
-              id="branch"
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-              placeholder="main"
-            />
-          </div>
-
-          {/* Test Connection */}
-          <Button
-            onClick={handleTestConnection}
-            disabled={isTesting}
-            variant="outline"
-            className="w-full"
-          >
-            {isTesting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                연결 테스트 중...
-              </>
-            ) : (
-              <>
-                <Github className="mr-2 h-4 w-4" />
-                연결 테스트
-              </>
-            )}
-          </Button>
-
-          {/* Save */}
-          <Button onClick={handleSave} disabled={isSaving} className="w-full">
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                저장 중...
-              </>
-            ) : (
-              '설정 저장'
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* 동기화 옵션 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>동기화 옵션</CardTitle>
-          <CardDescription>GitHub에 동기화할 데이터를 선택하세요.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="syncSettings"
-              checked={syncSettings}
-              onChange={(e) => setSyncSettings(e.target.checked)}
-              className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-            />
-            <label
-              htmlFor="syncSettings"
-              className="text-sm font-medium leading-none cursor-pointer"
+          <div className="flex gap-2">
+            <Button
+              onClick={handleTestConnection}
+              disabled={isTesting}
+              variant="outline"
+              className="flex-1"
             >
-              설정 동기화 (LLM, Network, VectorDB 등)
-            </label>
-          </div>
+              {isTesting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  연결 테스트 중...
+                </>
+              ) : (
+                <>
+                  <Github className="mr-2 h-4 w-4" />
+                  연결 테스트
+                </>
+              )}
+            </Button>
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="syncDocuments"
-              checked={syncDocuments}
-              onChange={(e) => setSyncDocuments(e.target.checked)}
-              className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-            />
-            <label
-              htmlFor="syncDocuments"
-              className="text-sm font-medium leading-none cursor-pointer"
-            >
-              문서 동기화 (RAG 문서)
-            </label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="syncImages"
-              checked={syncImages}
-              onChange={(e) => setSyncImages(e.target.checked)}
-              className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-            />
-            <label htmlFor="syncImages" className="text-sm font-medium leading-none cursor-pointer">
-              이미지 동기화 (메타데이터만, 용량 주의)
-            </label>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="syncConversations"
-              checked={syncConversations}
-              onChange={(e) => setSyncConversations(e.target.checked)}
-              className="w-4 h-4 text-primary bg-background border-gray-300 rounded focus:ring-primary"
-            />
-            <label
-              htmlFor="syncConversations"
-              className="text-sm font-medium leading-none cursor-pointer"
-            >
-              대화 동기화 (개인정보 주의)
-            </label>
+            <Button onClick={handleSave} disabled={isSaving} className="flex-1">
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  저장 중...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  설정 저장
+                </>
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* 개별 동기화 버튼 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>데이터 동기화</CardTitle>
-          <CardDescription>선택한 데이터를 GitHub 레포지토리에 동기화합니다.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Button
-            onClick={() => handleSync('settings')}
-            disabled={!syncSettings || isSyncing !== null}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            {isSyncing === 'settings' ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Settings className="mr-2 h-4 w-4" />
-            )}
-            설정 동기화
-          </Button>
+      {/* 동기화 항목 카드 그리드 */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4">데이터 동기화</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {syncItems.map((item) => {
+            const Icon = item.icon;
+            const isDisabled = !item.enabled || isSyncing !== null;
 
-          <Button
-            onClick={() => handleSync('documents')}
-            disabled={!syncDocuments || isSyncing !== null}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            {isSyncing === 'documents' ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <FileText className="mr-2 h-4 w-4" />
-            )}
-            문서 동기화
-          </Button>
+            return (
+              <Card key={item.id} className={item.enabled ? 'border-primary/50' : ''}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`p-2 rounded-lg ${item.enabled ? 'bg-primary/10' : 'bg-muted'}`}
+                      >
+                        <Icon
+                          className={`h-5 w-5 ${item.enabled ? 'text-primary' : 'text-muted-foreground'}`}
+                        />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          {item.title}
+                          {item.warning && (
+                            <span className="text-xs font-normal text-yellow-600 dark:text-yellow-500">
+                              ({item.warning})
+                            </span>
+                          )}
+                        </CardTitle>
+                        <CardDescription className="text-xs mt-1">
+                          {item.description}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={item.enabled}
+                      onCheckedChange={() => toggleSyncItem(item.id)}
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Button
+                    onClick={() => handleSync(item.id)}
+                    disabled={isDisabled}
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                  >
+                    {isSyncing === item.id ? (
+                      <>
+                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                        동기화 중...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-3 w-3" />
+                        동기화 실행
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
 
-          <Button
-            onClick={() => handleSync('images')}
-            disabled={!syncImages || isSyncing !== null}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            {isSyncing === 'images' ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Image className="mr-2 h-4 w-4" />
-            )}
-            이미지 동기화
-          </Button>
-
-          <Button
-            onClick={() => handleSync('conversations')}
-            disabled={!syncConversations || isSyncing !== null}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            {isSyncing === 'conversations' ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <MessageSquare className="mr-2 h-4 w-4" />
-            )}
-            대화 동기화
-          </Button>
-
-          <div className="h-4" />
-
+      {/* 전체 동기화 버튼 */}
+      <Card className="border-primary/50 bg-primary/5">
+        <CardContent className="pt-6">
           <Button
             onClick={() => handleSync('all')}
             disabled={isSyncing !== null}
-            className="w-full"
+            className="w-full h-12 text-base"
+            size="lg"
           >
             {isSyncing === 'all' ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 전체 동기화 중...
               </>
             ) : (
               <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                전체 동기화
+                <RefreshCw className="mr-2 h-5 w-5" />
+                전체 동기화 (활성화된 항목만)
               </>
             )}
           </Button>
@@ -478,22 +496,33 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       {config?.lastSyncAt && (
         <Card>
           <CardHeader>
-            <CardTitle>마지막 동기화 정보</CardTitle>
+            <CardTitle className="text-base">마지막 동기화 정보</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-muted-foreground">
-              <p>시간: {new Date(config.lastSyncAt).toLocaleString('ko-KR')}</p>
-              <p>
-                상태:{' '}
+            <div className="text-sm space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">시간:</span>
+                <span className="font-medium">
+                  {new Date(config.lastSyncAt).toLocaleString('ko-KR')}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">상태:</span>
                 <span
-                  className={
-                    config.lastSyncStatus === 'success' ? 'text-green-600' : 'text-red-600'
-                  }
+                  className={`font-medium ${
+                    config.lastSyncStatus === 'success'
+                      ? 'text-green-600 dark:text-green-500'
+                      : 'text-red-600 dark:text-red-500'
+                  }`}
                 >
                   {config.lastSyncStatus === 'success' ? '성공' : '실패'}
                 </span>
-              </p>
-              {config.lastSyncError && <p className="text-red-600">에러: {config.lastSyncError}</p>}
+              </div>
+              {config.lastSyncError && (
+                <div className="mt-2 p-2 rounded bg-red-500/10 text-red-600 dark:text-red-400 text-xs">
+                  에러: {config.lastSyncError}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -501,8 +530,8 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
 
       {/* 보안 안내 */}
       <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-500">
-        <p className="font-medium">🔒 보안 정보</p>
-        <ul className="mt-2 space-y-1 text-xs list-disc list-inside">
+        <p className="font-medium mb-2">🔒 보안 정보</p>
+        <ul className="space-y-1 text-xs list-disc list-inside text-yellow-700 dark:text-yellow-400">
           <li>민감한 정보(LLM API 키 등)는 AES-256-GCM으로 암호화되어 저장됩니다.</li>
           <li>GitHub Token은 로컬에만 저장되며 동기화되지 않습니다.</li>
           <li>동기화된 파일은 sepilot/ 폴더에 저장됩니다.</li>

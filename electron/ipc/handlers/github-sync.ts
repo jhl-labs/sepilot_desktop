@@ -326,6 +326,57 @@ export function setupGitHubSyncHandlers() {
   });
 
   /**
+   * AI 페르소나 동기화
+   */
+  ipcMain.handle('github-sync-personas', async (_event, config: GitHubSyncConfig) => {
+    try {
+      // 데이터베이스에서 모든 페르소나 가져오기
+      const personasResult = await new Promise<any>((resolve) => {
+        databaseService.db.all('SELECT * FROM personas ORDER BY created_at ASC', (err, rows) => {
+          if (err) {
+            console.error('[GitHubSync] Failed to load personas:', err);
+            resolve([]);
+          } else {
+            resolve(rows || []);
+          }
+        });
+      });
+
+      // GitHub Sync 클라이언트 생성
+      const client = new GitHubSyncClient(config);
+
+      // 페르소나 동기화
+      const result = await client.syncPersonas(personasResult);
+
+      // 마지막 동기화 정보 업데이트
+      if (result.success) {
+        const appConfigStr = databaseService.getSetting('app_config');
+        if (appConfigStr) {
+          const appConfig: AppConfig = JSON.parse(appConfigStr);
+          const updatedConfig: AppConfig = {
+            ...appConfig,
+            githubSync: {
+              ...config,
+              lastSyncAt: Date.now(),
+              lastSyncStatus: 'success',
+            },
+          };
+          databaseService.updateSetting('app_config', JSON.stringify(updatedConfig));
+        }
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error('[GitHubSync] Failed to sync personas:', error);
+      return {
+        success: false,
+        message: 'AI 페르소나 동기화 실패',
+        error: error.message,
+      };
+    }
+  });
+
+  /**
    * 모든 데이터 동기화 (한 번에)
    */
   ipcMain.handle('github-sync-all', async (_event, config: GitHubSyncConfig) => {
@@ -335,6 +386,7 @@ export function setupGitHubSyncHandlers() {
         documents: { success: false, message: '' },
         images: { success: false, message: '' },
         conversations: { success: false, message: '' },
+        personas: { success: false, message: '' },
       };
 
       const client = new GitHubSyncClient(config);
@@ -355,6 +407,21 @@ export function setupGitHubSyncHandlers() {
         results.documents = await client.syncDocuments(documents);
       }
 
+      // AI 페르소나 동기화
+      if (config.syncPersonas) {
+        const personasResult = await new Promise<any>((resolve) => {
+          databaseService.db.all('SELECT * FROM personas ORDER BY created_at ASC', (err, rows) => {
+            if (err) {
+              console.error('[GitHubSync] Failed to load personas:', err);
+              resolve([]);
+            } else {
+              resolve(rows || []);
+            }
+          });
+        });
+        results.personas = await client.syncPersonas(personasResult);
+      }
+
       // 이미지는 동기화하지 않음 (용량 문제)
       // 대화 내역은 동기화하지 않음 (개인정보)
 
@@ -362,7 +429,8 @@ export function setupGitHubSyncHandlers() {
       const appConfigStr = databaseService.getSetting('app_config');
       if (appConfigStr) {
         const appConfig: AppConfig = JSON.parse(appConfigStr);
-        const allSuccess = results.settings.success && results.documents.success;
+        const allSuccess =
+          results.settings.success && results.documents.success && results.personas.success;
         const updatedConfig: AppConfig = {
           ...appConfig,
           githubSync: {
@@ -371,14 +439,14 @@ export function setupGitHubSyncHandlers() {
             lastSyncStatus: allSuccess ? 'success' : 'error',
             lastSyncError: allSuccess
               ? undefined
-              : `설정: ${results.settings.message}, 문서: ${results.documents.message}`,
+              : `설정: ${results.settings.message}, 문서: ${results.documents.message}, 페르소나: ${results.personas.message}`,
           },
         };
         databaseService.updateSetting('app_config', JSON.stringify(updatedConfig));
       }
 
       return {
-        success: results.settings.success || results.documents.success,
+        success: results.settings.success || results.documents.success || results.personas.success,
         message: '동기화 완료',
         data: results,
       };
