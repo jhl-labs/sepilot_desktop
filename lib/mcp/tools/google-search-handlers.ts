@@ -346,8 +346,19 @@ export async function handleGoogleExtractResults(
         const results = [];
         const maxResults = ${maxResults};
 
-        // Google 검색 결과 선택자
-        const resultElements = document.querySelectorAll('div.g, div[data-sokoban-container]');
+        // Google 검색 결과 선택자 (여러 버전 시도)
+        let resultElements = document.querySelectorAll('div.MjjYud, div.g, div[data-sokoban-container], div[jscontroller]');
+
+        // Fallback: h3를 포함한 div 찾기
+        if (resultElements.length === 0) {
+          const allDivs = document.querySelectorAll('div');
+          const divsWithH3 = Array.from(allDivs).filter(div => {
+            const h3 = div.querySelector('h3');
+            const link = div.querySelector('a[href]');
+            return h3 && link && link.getAttribute('href')?.startsWith('http');
+          });
+          resultElements = divsWithH3;
+        }
 
         let rank = 1;
         for (const el of resultElements) {
@@ -357,7 +368,8 @@ export async function handleGoogleExtractResults(
           const titleEl = el.querySelector('h3');
           if (!titleEl) continue;
 
-          const title = titleEl.textContent || '';
+          const title = titleEl.textContent?.trim() || '';
+          if (!title) continue;
 
           // URL 추출
           const linkEl = el.querySelector('a[href]');
@@ -365,22 +377,30 @@ export async function handleGoogleExtractResults(
 
           const url = linkEl.getAttribute('href') || '';
           if (!url.startsWith('http')) continue;
+          if (url.includes('google.com/search') || url.includes('google.com/url')) continue;
 
           // 표시 URL 추출
           const citeEl = el.querySelector('cite');
-          const displayUrl = citeEl ? citeEl.textContent || url : url;
+          const displayUrl = citeEl ? citeEl.textContent?.trim() || url : url;
 
-          // 스니펫 추출
-          const snippetEl = el.querySelector('[data-sncf], [style*="line-height"]');
-          const snippet = snippetEl ? snippetEl.textContent || '' : '';
+          // 스니펫 추출 (여러 선택자 시도)
+          let snippet = '';
+          const snippetSelectors = ['[data-sncf]', '[style*="line-height"]', 'div[data-content-feature]', 'div.VwiC3b', 'div.yDYNvb', 'span.aCOpRe'];
+          for (const selector of snippetSelectors) {
+            const snippetEl = el.querySelector(selector);
+            if (snippetEl) {
+              snippet = snippetEl.textContent?.trim() || '';
+              if (snippet) break;
+            }
+          }
 
           // 날짜 정보 (뉴스 등)
-          const dateEl = el.querySelector('span[data-ttu]');
-          const date = dateEl ? dateEl.textContent || undefined : undefined;
+          const dateEl = el.querySelector('span[data-ttu], span.f, span.LEwnzc');
+          const date = dateEl ? dateEl.textContent?.trim() || undefined : undefined;
 
           // 출처 정보 (뉴스 등)
-          const sourceEl = el.querySelector('[data-st-cnt]');
-          const source = sourceEl ? sourceEl.textContent || undefined : undefined;
+          const sourceEl = el.querySelector('[data-st-cnt], span.source');
+          const source = sourceEl ? sourceEl.textContent?.trim() || undefined : undefined;
 
           results.push({
             rank: rank++,
@@ -497,13 +517,33 @@ export async function handleGoogleVisitResult(options: GoogleVisitResultOptions)
     // 해당 순위의 링크 찾기 및 클릭
     const clickResult = await browserView.webContents.executeJavaScript(`
       (function() {
-        const resultElements = document.querySelectorAll('div.g, div[data-sokoban-container]');
+        // Google 검색 결과 선택자 (여러 버전 시도)
+        let resultElements = document.querySelectorAll('div.MjjYud, div.g, div[data-sokoban-container], div[jscontroller]');
 
-        if (${rank} > resultElements.length) {
-          return { success: false, error: '해당 순위의 검색 결과가 없습니다.' };
+        // Fallback: h3를 포함한 div 찾기
+        if (resultElements.length === 0) {
+          const allDivs = document.querySelectorAll('div');
+          const divsWithH3 = Array.from(allDivs).filter(div => {
+            const h3 = div.querySelector('h3');
+            const link = div.querySelector('a[href]');
+            return h3 && link && link.getAttribute('href')?.startsWith('http');
+          });
+          resultElements = divsWithH3;
         }
 
-        const targetResult = resultElements[${rank - 1}];
+        // 실제 검색 결과만 필터링 (내부 링크 제외)
+        const validResults = Array.from(resultElements).filter(el => {
+          const linkEl = el.querySelector('a[href]');
+          if (!linkEl) return false;
+          const url = linkEl.getAttribute('href') || '';
+          return url.startsWith('http') && !url.includes('google.com/search') && !url.includes('google.com/url');
+        });
+
+        if (${rank} > validResults.length) {
+          return { success: false, error: '해당 순위의 검색 결과가 없습니다. (총 ' + validResults.length + '개)' };
+        }
+
+        const targetResult = validResults[${rank - 1}];
         const linkEl = targetResult.querySelector('a[href]');
 
         if (!linkEl) {
@@ -511,7 +551,7 @@ export async function handleGoogleVisitResult(options: GoogleVisitResultOptions)
         }
 
         const url = linkEl.getAttribute('href');
-        const title = targetResult.querySelector('h3')?.textContent || '';
+        const title = targetResult.querySelector('h3')?.textContent?.trim() || '';
 
         return { success: true, url, title };
       })();
