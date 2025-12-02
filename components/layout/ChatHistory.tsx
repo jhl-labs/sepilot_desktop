@@ -487,7 +487,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                           </span>
                         </button>
                       </ContextMenuTrigger>
-                      <ContextMenuContent>
+                      <ContextMenuContent collisionPadding={8} avoidCollisions={true}>
                         <ContextMenuItem
                           onClick={() => handleStartEdit(conversation.id, conversation.title)}
                         >
