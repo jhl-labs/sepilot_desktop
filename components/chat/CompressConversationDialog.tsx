@@ -102,13 +102,24 @@ export function CompressConversationDialog({
 
       const compressedText = result.data.content;
 
+      console.log('[CompressDialog] Raw LLM response:', compressedText);
+
       // 압축된 메시지 파싱
       const messageBlocks = compressedText.split('---').filter((block) => block.trim());
       const parsedMessages: Message[] = [];
 
+      console.log('[CompressDialog] Message blocks:', messageBlocks.length);
+
       for (const block of messageBlocks) {
         const roleMatch = block.match(/\[ROLE:\s*(user|assistant)\]/i);
-        const contentMatch = block.match(/\[CONTENT:\s*(.+?)\](?=\s*$|\s*\[)/s);
+        const contentMatch = block.match(/\[CONTENT:\s*(.+)\s*\]/s);
+
+        console.log('[CompressDialog] Block:', {
+          hasRole: !!roleMatch,
+          hasContent: !!contentMatch,
+          role: roleMatch?.[1],
+          contentLength: contentMatch?.[1]?.length,
+        });
 
         if (roleMatch && contentMatch) {
           const role = roleMatch[1].toLowerCase() as 'user' | 'assistant';
@@ -121,8 +132,12 @@ export function CompressConversationDialog({
             conversation_id: conversation!.id,
             created_at: Date.now(),
           });
+        } else {
+          console.warn('[CompressDialog] Failed to parse block:', block);
         }
       }
+
+      console.log('[CompressDialog] Parsed messages:', parsedMessages.length);
 
       if (parsedMessages.length === 0) {
         throw new Error('압축된 메시지를 파싱하는데 실패했습니다.');

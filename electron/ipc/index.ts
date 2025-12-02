@@ -14,6 +14,7 @@ import { setupLangGraphHandlers } from './handlers/langgraph';
 import { setupVectorDBHandlers } from './handlers/vectordb';
 import { registerFileHandlers } from './handlers/file';
 import { setupGitHubHandlers } from './handlers/github';
+import { setupGitHubSyncHandlers } from './handlers/github-sync';
 import { setupEmbeddingsHandlers } from './handlers/embeddings';
 import { setupComfyUIHandlers } from './handlers/comfyui';
 import { setupUpdateHandlers } from './handlers/update';
@@ -40,6 +41,7 @@ export function setupIpcHandlers(mainWindow?: BrowserWindow) {
   setupVectorDBHandlers();
   registerFileHandlers();
   setupGitHubHandlers();
+  setupGitHubSyncHandlers();
   setupEmbeddingsHandlers();
   setupComfyUIHandlers();
   setupUpdateHandlers();

@@ -314,6 +314,17 @@ const electronAPI = {
       ),
   },
 
+  // GitHub Sync operations (Token 기반)
+  githubSync: {
+    getMasterKey: () => ipcRenderer.invoke('github-sync-get-master-key'),
+    testConnection: (config: any) => ipcRenderer.invoke('github-sync-test-connection', config),
+    syncSettings: (config: any) => ipcRenderer.invoke('github-sync-settings', config),
+    syncDocuments: (config: any) => ipcRenderer.invoke('github-sync-documents', config),
+    syncImages: (config: any) => ipcRenderer.invoke('github-sync-images', config),
+    syncConversations: (config: any) => ipcRenderer.invoke('github-sync-conversations', config),
+    syncAll: (config: any) => ipcRenderer.invoke('github-sync-all', config),
+  },
+
   // Shell operations
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke('shell-open-external', url),

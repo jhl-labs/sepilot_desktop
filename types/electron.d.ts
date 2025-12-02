@@ -493,6 +493,32 @@ interface GitHubAPI {
   ) => Promise<IPCResponse>;
 }
 
+// GitHub Sync Result 타입
+interface GitHubSyncResult {
+  success: boolean;
+  message: string;
+  sha?: string;
+  error?: string;
+}
+
+// GitHub Sync API (Token 기반)
+interface GitHubSyncAPI {
+  getMasterKey: () => Promise<IPCResponse<string>>;
+  testConnection: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncSettings: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncDocuments: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncImages: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncConversations: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncAll: (config: import('./index').GitHubSyncConfig) => Promise<
+    IPCResponse<{
+      settings: GitHubSyncResult;
+      documents: GitHubSyncResult;
+      images: GitHubSyncResult;
+      conversations: GitHubSyncResult;
+    }>
+  >;
+}
+
 // Embeddings 설정 타입
 interface EmbeddingsConfig {
   apiKey: string;
@@ -772,6 +798,7 @@ interface ElectronAPI {
   file: FileAPI;
   fs: FileSystemAPI;
   github: GitHubAPI;
+  githubSync: GitHubSyncAPI; // 새로운 Token 기반 Sync API
   shell: ShellAPI;
   embeddings: EmbeddingsAPI;
   comfyui: ComfyUIAPI;
@@ -822,6 +849,8 @@ export type {
   FetchedUrl,
   GitHubAPI,
   GitHubRepository,
+  GitHubSyncAPI,
+  GitHubSyncResult,
   ShellAPI,
   EmbeddingsAPI,
   EmbeddingsConfig,

@@ -15,6 +15,7 @@ import {
   LLMConfigV2,
   NetworkConfig,
   QuickInputConfig,
+  GitHubOAuthConfig,
 } from '@/types';
 import { initializeLLMClient } from '@/lib/llm/client';
 import { VectorDBSettings } from '@/components/rag/VectorDBSettings';
@@ -23,8 +24,8 @@ import { initializeVectorDB } from '@/lib/vectordb/client';
 import { initializeEmbedding } from '@/lib/vectordb/embeddings/client';
 import { isElectron } from '@/lib/platform';
 import { configureWebLLMClient } from '@/lib/llm/web-client';
-import { GitHubOAuthSettings } from '@/components/settings/GitHubOAuthSettings';
-import { GitHubOAuthConfig } from '@/types';
+import { GitHubSyncSettings } from '@/components/settings/GitHubSyncSettings';
+import { GitHubSyncConfig } from '@/types';
 import { BackupRestoreSettings } from '@/components/settings/BackupRestoreSettings';
 import { LLMSettingsTab } from './LLMSettingsTab';
 import { NetworkSettingsTab } from './NetworkSettingsTab';
@@ -64,6 +65,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [configV2, setConfigV2] = useState<LLMConfigV2 | null>(null); // New V2 config
   const [networkConfig, setNetworkConfig] = useState<NetworkConfig>(createDefaultNetworkConfig());
   const [githubConfig, setGithubConfig] = useState<GitHubOAuthConfig | null>(null);
+  const [githubSyncConfig, setGithubSyncConfig] = useState<GitHubSyncConfig | null>(null);
   const [quickInputConfig, setQuickInputConfig] = useState<QuickInputConfig>(
     createDefaultQuickInputConfig()
   );
@@ -116,6 +118,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               embedding: result.data.embedding,
               comfyUI: result.data.comfyUI ? mergeComfyConfig(result.data.comfyUI) : undefined,
               github: result.data.github,
+              githubSync: result.data.githubSync,
               quickInput: result.data.quickInput ?? createDefaultQuickInputConfig(),
             };
             setAppConfigSnapshot(normalizedConfig);
@@ -124,6 +127,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             setNetworkConfig(normalizedConfig.network ?? createDefaultNetworkConfig());
             setComfyConfig(normalizedConfig.comfyUI ?? createDefaultComfyUIConfig());
             setGithubConfig(normalizedConfig.github ?? null);
+            setGithubSyncConfig(normalizedConfig.githubSync ?? null);
             setQuickInputConfig(normalizedConfig.quickInput ?? createDefaultQuickInputConfig());
 
             // VectorDB 설정 로드 (DB에서)
@@ -242,6 +246,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       mcp: partial.mcp ?? appConfigSnapshot?.mcp ?? [],
       comfyUI: partial.comfyUI ?? appConfigSnapshot?.comfyUI,
       github: partial.github ?? appConfigSnapshot?.github,
+      githubSync: partial.githubSync ?? appConfigSnapshot?.githubSync,
       quickInput: partial.quickInput ?? appConfigSnapshot?.quickInput,
     };
 
@@ -666,6 +671,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       setNetworkConfig(newConfig.network ?? createDefaultNetworkConfig());
       setComfyConfig(newConfig.comfyUI ?? createDefaultComfyUIConfig());
       setGithubConfig(newConfig.github ?? null);
+      setGithubSyncConfig(newConfig.githubSync ?? null);
       setQuickInputConfig(newConfig.quickInput ?? createDefaultQuickInputConfig());
       setVectorDBConfig(newConfig.vectorDB ?? null);
       setEmbeddingConfig(newConfig.embedding ?? null);
@@ -715,6 +721,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       embedding: embeddingConfig ?? undefined,
       comfyUI: comfyConfig,
       github: githubConfig ?? undefined,
+      githubSync: githubSyncConfig ?? undefined,
       quickInput: quickInputConfig,
     };
   };
@@ -823,25 +830,25 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 {activeTab === 'mcp' && <MCPSettingsTab />}
 
                 {activeTab === 'github' && (
-                  <GitHubOAuthSettings
-                    config={githubConfig}
+                  <GitHubSyncSettings
+                    config={githubSyncConfig}
                     onSave={async (newConfig) => {
-                      setGithubConfig(newConfig);
+                      setGithubSyncConfig(newConfig);
                       let savedConfig: AppConfig | null = null;
                       if (isElectron() && window.electronAPI) {
-                        savedConfig = await persistAppConfig({ github: newConfig });
+                        savedConfig = await persistAppConfig({ githubSync: newConfig });
                       }
                       if (!savedConfig) {
                         const currentAppConfig = localStorage.getItem('sepilot_app_config');
                         const appConfig = currentAppConfig ? JSON.parse(currentAppConfig) : {};
-                        appConfig.github = newConfig;
+                        appConfig.githubSync = newConfig;
                         localStorage.setItem('sepilot_app_config', JSON.stringify(appConfig));
                       }
 
-                      // Notify other components about GitHub config update
+                      // Notify other components about GitHub Sync config update
                       window.dispatchEvent(
                         new CustomEvent('sepilot:config-updated', {
-                          detail: { github: newConfig },
+                          detail: { githubSync: newConfig },
                         })
                       );
                     }}

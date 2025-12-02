@@ -234,6 +234,32 @@ export interface MCPServerConfig {
   headers?: Record<string, string>; // Custom headers (e.g., Authorization, API keys)
 }
 
+/**
+ * GitHub Sync Configuration: GitHub Token 기반 동기화 설정
+ */
+export interface GitHubSyncConfig {
+  // GitHub 연결 정보
+  token: string; // GitHub Personal Access Token (encrypted)
+  owner: string; // Organization 또는 User name
+  repo: string; // Repository name
+  branch?: string; // 기본값: 'main'
+
+  // 동기화 옵션
+  syncSettings: boolean; // 설정 동기화 여부
+  syncDocuments: boolean; // RAG 문서 동기화 여부
+  syncImages: boolean; // 생성 이미지 동기화 여부
+  syncConversations: boolean; // 대화 내역 동기화 여부
+
+  // 암호화 설정
+  encryptionKey?: string; // 민감 정보 암호화 키 (자동 생성)
+
+  // 마지막 동기화 정보
+  lastSyncAt?: number; // 마지막 동기화 시간 (timestamp)
+  lastSyncStatus?: 'success' | 'error'; // 마지막 동기화 상태
+  lastSyncError?: string; // 마지막 동기화 에러 메시지
+}
+
+// 이전 GitHub OAuth 설정 (하위 호환성 유지)
 export interface GitHubOAuthConfig {
   serverType: 'github.com' | 'ghes'; // GitHub.com or GitHub Enterprise Server
   ghesUrl?: string; // GHES URL (e.g., https://github.company.com)
@@ -267,7 +293,8 @@ export interface AppConfig {
   embedding?: EmbeddingConfig;
   mcp: MCPServerConfig[];
   comfyUI?: ComfyUIConfig;
-  github?: GitHubOAuthConfig;
+  github?: GitHubOAuthConfig; // 이전 버전 호환성
+  githubSync?: GitHubSyncConfig; // 새로운 Token 기반 동기화
   quickInput?: QuickInputConfig;
   theme?: 'light' | 'dark' | 'system';
 }
