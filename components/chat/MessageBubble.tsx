@@ -26,6 +26,7 @@ import { isElectron } from '@/lib/platform';
 import { ToolResult } from './ToolResult';
 import { InteractiveSelect } from './InteractiveSelect';
 import { InteractiveInput } from './InteractiveInput';
+import { ToolApprovalRequest } from './ToolApprovalRequest';
 import { parseInteractiveContent } from '@/lib/utils/interactive-parser';
 
 interface MessageBubbleProps {
@@ -323,6 +324,14 @@ export function MessageBubble({
                               summary={block.summary}
                               details={block.details}
                               duration={block.duration}
+                            />
+                          );
+                        } else if (block.type === 'tool-approval') {
+                          return (
+                            <ToolApprovalRequest
+                              key={index}
+                              messageId={block.messageId}
+                              toolCalls={block.toolCalls}
                             />
                           );
                         }

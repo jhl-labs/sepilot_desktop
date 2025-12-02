@@ -122,6 +122,39 @@ details: ENOENT: no such file or directory '/workspace/missing.ts'
 - 도구 실행 결과를 사용자 친화적으로 표시
 - 긴 출력을 요약하여 보여주기
 
+### 4. Tool Approval (도구 실행 승인 - Human-in-the-loop)
+
+도구 실행 전 사용자 승인을 요청합니다. **주의: 이 컴포넌트는 시스템이 자동으로 생성하므로, Agent가 직접 사용하지 마세요.**
+
+**형식:**
+```
+:::tool-approval
+messageId: msg-12345
+toolCall: call-1|file_write
+arguments:
+{
+  "path": "/workspace/example.ts",
+  "content": "console.log('Hello');"
+}
+toolCall: call-2|command_execute
+arguments:
+{
+  "command": "npm install"
+}
+:::
+```
+
+**동작:**
+- 사용자에게 도구 실행 승인/거부 버튼 제공
+- 승인 시 도구가 실행되고 대화가 이어짐
+- 거부 시 도구 실행이 취소됨
+- 별도 팝업 없이 대화창 내에서 처리
+
+**주의:**
+- **이 컴포넌트는 시스템이 자동으로 생성합니다**
+- Agent는 tool_approval_request 이벤트를 받으면 시스템이 자동으로 이 블록을 생성합니다
+- Agent가 직접 이 블록을 생성할 필요가 없습니다
+
 ## 사용 가이드라인
 
 ### 언제 사용하면 좋을까요?

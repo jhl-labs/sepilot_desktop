@@ -33,7 +33,21 @@ export interface ToolResultData {
   duration?: number;
 }
 
-export type InteractiveBlock = InteractiveSelectData | InteractiveInputData | ToolResultData;
+export interface ToolApprovalData {
+  type: 'tool-approval';
+  messageId: string;
+  toolCalls: Array<{
+    id: string;
+    name: string;
+    arguments: Record<string, unknown>;
+  }>;
+}
+
+export type InteractiveBlock =
+  | InteractiveSelectData
+  | InteractiveInputData
+  | ToolResultData
+  | ToolApprovalData;
 
 export interface ParsedContent {
   segments: Array<{
@@ -47,7 +61,8 @@ export interface ParsedContent {
  */
 export function parseInteractiveContent(markdown: string): ParsedContent {
   const segments: ParsedContent['segments'] = [];
-  const blockRegex = /:::(interactive-select|interactive-input|tool-result)\n([\s\S]*?):::/g;
+  const blockRegex =
+    /:::(interactive-select|interactive-input|tool-result|tool-approval)\n([\s\S]*?):::/g;
 
   let lastIndex = 0;
   let match;
@@ -77,6 +92,8 @@ export function parseInteractiveContent(markdown: string): ParsedContent {
       parsedBlock = parseInteractiveInput(blockContent);
     } else if (blockType === 'tool-result') {
       parsedBlock = parseToolResult(blockContent);
+    } else if (blockType === 'tool-approval') {
+      parsedBlock = parseToolApproval(blockContent);
     }
 
     if (parsedBlock) {
@@ -203,5 +220,71 @@ function parseToolResult(content: string): ToolResultData {
     summary,
     details,
     duration,
+  };
+}
+
+function parseToolApproval(content: string): ToolApprovalData {
+  const lines = content.trim().split('\n');
+  let messageId = '';
+  const toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }> = [];
+
+  let currentToolCall: { id: string; name: string; arguments: Record<string, unknown> } | null =
+    null;
+  let inArguments = false;
+  let argumentsJson = '';
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    if (trimmedLine.startsWith('messageId:')) {
+      messageId = trimmedLine.substring(10).trim();
+    } else if (trimmedLine.startsWith('toolCall:')) {
+      // Save previous tool call if exists
+      if (currentToolCall) {
+        // Parse arguments JSON if accumulated
+        if (argumentsJson) {
+          try {
+            currentToolCall.arguments = JSON.parse(argumentsJson);
+          } catch {
+            currentToolCall.arguments = {};
+          }
+          argumentsJson = '';
+        }
+        toolCalls.push(currentToolCall);
+      }
+
+      // Start new tool call
+      const toolCallStr = trimmedLine.substring(9).trim();
+      const [id, name] = toolCallStr.split('|').map((s) => s.trim());
+      currentToolCall = {
+        id: id || `tool-${Date.now()}`,
+        name: name || 'unknown',
+        arguments: {},
+      };
+      inArguments = false;
+    } else if (trimmedLine.startsWith('arguments:')) {
+      inArguments = true;
+      argumentsJson = '';
+    } else if (inArguments && trimmedLine) {
+      argumentsJson += trimmedLine + '\n';
+    }
+  }
+
+  // Save last tool call
+  if (currentToolCall) {
+    if (argumentsJson) {
+      try {
+        currentToolCall.arguments = JSON.parse(argumentsJson);
+      } catch {
+        currentToolCall.arguments = {};
+      }
+    }
+    toolCalls.push(currentToolCall);
+  }
+
+  return {
+    type: 'tool-approval',
+    messageId,
+    toolCalls,
   };
 }

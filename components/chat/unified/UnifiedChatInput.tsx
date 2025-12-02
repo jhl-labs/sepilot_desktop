@@ -51,6 +51,70 @@ export function UnifiedChatInput({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isStreaming, onStopStreaming]);
 
+  // Listen for interactive component events (select/input)
+  useEffect(() => {
+    const handleInteractiveSelect = async (e: CustomEvent<{ value: string }>) => {
+      const { value } = e.detail;
+      setInput(value);
+      // Auto-send after a short delay
+      setTimeout(async () => {
+        if (onSendMessage) {
+          await onSendMessage(value);
+          clearInput();
+          setTimeout(() => focusInput(), 100);
+        }
+      }, 100);
+    };
+
+    const handleInteractiveInput = async (e: CustomEvent<{ value: string }>) => {
+      const { value } = e.detail;
+      setInput(value);
+      // Auto-send after a short delay
+      setTimeout(async () => {
+        if (onSendMessage) {
+          await onSendMessage(value);
+          clearInput();
+          setTimeout(() => focusInput(), 100);
+        }
+      }, 100);
+    };
+
+    const handleToolApproval = async (
+      e: CustomEvent<{ messageId: string; approved: boolean }>
+    ) => {
+      const { messageId, approved } = e.detail;
+      console.log('[UnifiedChatInput] Tool approval event:', { messageId, approved });
+
+      // Dispatch to Electron via IPC
+      if (window.electronAPI?.langgraph) {
+        try {
+          await window.electronAPI.langgraph.respondToolApproval(
+            dataSource.conversationId || '',
+            approved
+          );
+        } catch (error) {
+          console.error('[UnifiedChatInput] Failed to respond tool approval:', error);
+        }
+      }
+    };
+
+    window.addEventListener('sepilot:interactive-select', handleInteractiveSelect as EventListener);
+    window.addEventListener('sepilot:interactive-input', handleInteractiveInput as EventListener);
+    window.addEventListener('sepilot:tool-approval', handleToolApproval as EventListener);
+
+    return () => {
+      window.removeEventListener(
+        'sepilot:interactive-select',
+        handleInteractiveSelect as EventListener
+      );
+      window.removeEventListener(
+        'sepilot:interactive-input',
+        handleInteractiveInput as EventListener
+      );
+      window.removeEventListener('sepilot:tool-approval', handleToolApproval as EventListener);
+    };
+  }, [onSendMessage, clearInput, focusInput, setInput, dataSource.conversationId]);
+
   const handleSend = async () => {
     if (!input.trim() || isStreaming) {
       return;

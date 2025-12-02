@@ -13,6 +13,11 @@ import { MessageBubble } from '../MessageBubble';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 import { useChatMessages } from './hooks/useChatMessages';
 import type { ChatConfig } from './types';
+import { parseInteractiveContent } from '@/lib/utils/interactive-parser';
+import { ToolResult } from '../ToolResult';
+import { InteractiveSelect } from '../InteractiveSelect';
+import { InteractiveInput } from '../InteractiveInput';
+import { ToolApprovalRequest } from '../ToolApprovalRequest';
 
 interface UnifiedChatAreaProps {
   config: ChatConfig;
@@ -98,7 +103,7 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
             );
           }
 
-          // Compact mode (Browser/Editor): Simple bubble
+          // Compact mode (Browser/Editor): Parse interactive components
           return (
             <div
               key={message.id}
@@ -114,12 +119,70 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
                 }`}
               >
                 {message.role === 'assistant' ? (
-                  <div className={`prose ${style?.compact ? 'prose-xs' : 'prose-sm'} dark:prose-invert max-w-none`}>
-                    <MarkdownRenderer
-                      content={message.content}
-                      className={style?.compact ? 'text-[11px] leading-tight' : undefined}
-                    />
-                  </div>
+                  <>
+                    {/* Parse and render interactive components */}
+                    {(() => {
+                      const parsed = parseInteractiveContent(message.content);
+                      return parsed.segments.map((segment, segIndex) => {
+                        if (segment.type === 'text') {
+                          return (
+                            <div
+                              key={segIndex}
+                              className={`prose ${style?.compact ? 'prose-xs' : 'prose-sm'} dark:prose-invert max-w-none`}
+                            >
+                              <MarkdownRenderer
+                                content={segment.content as string}
+                                className={style?.compact ? 'text-[11px] leading-tight' : undefined}
+                              />
+                            </div>
+                          );
+                        } else {
+                          // Render interactive component
+                          const block = segment.content as any;
+
+                          if (block.type === 'interactive-select') {
+                            return (
+                              <InteractiveSelect
+                                key={segIndex}
+                                title={block.title}
+                                options={block.options}
+                              />
+                            );
+                          } else if (block.type === 'interactive-input') {
+                            return (
+                              <InteractiveInput
+                                key={segIndex}
+                                title={block.title}
+                                placeholder={block.placeholder}
+                                multiline={block.multiline}
+                              />
+                            );
+                          } else if (block.type === 'tool-result') {
+                            return (
+                              <ToolResult
+                                key={segIndex}
+                                toolName={block.toolName}
+                                status={block.status}
+                                summary={block.summary}
+                                details={block.details}
+                                duration={block.duration}
+                              />
+                            );
+                          } else if (block.type === 'tool-approval') {
+                            return (
+                              <ToolApprovalRequest
+                                key={segIndex}
+                                messageId={block.messageId}
+                                toolCalls={block.toolCalls}
+                              />
+                            );
+                          }
+
+                          return null;
+                        }
+                      });
+                    })()}
+                  </>
                 ) : (
                   <p
                     className={`whitespace-pre-wrap break-words ${style?.compact ? 'leading-tight' : ''}`}
