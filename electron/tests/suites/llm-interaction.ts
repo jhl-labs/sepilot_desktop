@@ -78,26 +78,27 @@ export class LLMInteractionTestSuite {
       }
 
       const appConfig: AppConfig = JSON.parse(config.value);
-      const providers = appConfig.llm?.providers || {};
-      const providerNames = Object.keys(providers);
+      const connections = appConfig.llm?.connections || [];
 
-      if (providerNames.length === 0) {
+      if (connections.length === 0) {
         return {
           id: testId,
           name: 'LLM Provider Configuration',
           status: 'fail',
           duration: Date.now() - startTime,
-          message: 'No LLM providers configured',
+          message: 'No LLM connections configured',
           timestamp: Date.now(),
         };
       }
+
+      const connectionNames = connections.map((c) => c.provider).join(', ');
 
       return {
         id: testId,
         name: 'LLM Provider Configuration',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: `Found ${providerNames.length} provider(s): ${providerNames.join(', ')}`,
+        message: `Found ${connections.length} connection(s): ${connectionNames}`,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -137,21 +138,19 @@ export class LLMInteractionTestSuite {
       }
 
       const appConfig: AppConfig = JSON.parse(config.value);
-      const providers = appConfig.llm?.providers || {};
-      const providerNames = Object.keys(providers);
+      const connections = appConfig.llm?.connections || [];
 
-      const configuredProviders = providerNames.filter((name) => {
-        const provider = providers[name];
-        return provider?.apiKey && provider.apiKey.length > 0;
+      const configuredConnections = connections.filter((conn) => {
+        return conn.apiKey && conn.apiKey.length > 0;
       });
 
-      if (configuredProviders.length === 0) {
+      if (configuredConnections.length === 0) {
         return {
           id: testId,
           name: 'API Key Validation',
           status: 'fail',
           duration: Date.now() - startTime,
-          message: 'No providers have API keys configured',
+          message: 'No connections have API keys configured',
           timestamp: Date.now(),
         };
       }
@@ -161,7 +160,7 @@ export class LLMInteractionTestSuite {
         name: 'API Key Validation',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: `${configuredProviders.length}/${providerNames.length} provider(s) have API keys`,
+        message: `${configuredConnections.length}/${connections.length} connection(s) have API keys`,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -201,17 +200,27 @@ export class LLMInteractionTestSuite {
       }
 
       const appConfig: AppConfig = JSON.parse(config.value);
-      const providers = appConfig.llm?.providers || {};
+      const models = appConfig.llm?.models || [];
+      const defaultMaxTokens = appConfig.llm?.defaultMaxTokens;
 
       let allValid = true;
       const issues: string[] = [];
 
-      for (const [name, provider] of Object.entries(providers)) {
-        const maxTokens = provider?.maxTokens;
+      // Check default max tokens
+      if (defaultMaxTokens !== undefined && defaultMaxTokens !== null) {
+        if (defaultMaxTokens <= 0 || defaultMaxTokens > 128000) {
+          allValid = false;
+          issues.push(`default: invalid maxTokens (${defaultMaxTokens})`);
+        }
+      }
+
+      // Check model-specific max tokens
+      for (const model of models) {
+        const maxTokens = model.maxTokens;
         if (maxTokens !== undefined && maxTokens !== null) {
           if (maxTokens <= 0 || maxTokens > 128000) {
             allValid = false;
-            issues.push(`${name}: invalid maxTokens (${maxTokens})`);
+            issues.push(`${model.name}: invalid maxTokens (${maxTokens})`);
           }
         }
       }
@@ -272,17 +281,27 @@ export class LLMInteractionTestSuite {
       }
 
       const appConfig: AppConfig = JSON.parse(config.value);
-      const providers = appConfig.llm?.providers || {};
+      const models = appConfig.llm?.models || [];
+      const defaultTemperature = appConfig.llm?.defaultTemperature;
 
       let allValid = true;
       const issues: string[] = [];
 
-      for (const [name, provider] of Object.entries(providers)) {
-        const temperature = provider?.temperature;
+      // Check default temperature
+      if (defaultTemperature !== undefined && defaultTemperature !== null) {
+        if (defaultTemperature < 0 || defaultTemperature > 2) {
+          allValid = false;
+          issues.push(`default: invalid temperature (${defaultTemperature})`);
+        }
+      }
+
+      // Check model-specific temperature
+      for (const model of models) {
+        const temperature = model.temperature;
         if (temperature !== undefined && temperature !== null) {
           if (temperature < 0 || temperature > 2) {
             allValid = false;
-            issues.push(`${name}: invalid temperature (${temperature})`);
+            issues.push(`${model.name}: invalid temperature (${temperature})`);
           }
         }
       }

@@ -61,6 +61,7 @@ export function TestDashboard() {
 
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [autoRefresh]);
 
   // 메뉴에서 트리거된 테스트 실행 IPC 이벤트 리스너

@@ -86,6 +86,16 @@ class DatabaseService {
     fs.writeFileSync(this.dbPath, buffer);
   }
 
+  /**
+   * Get database instance (for health checks and tests)
+   */
+  getDatabase(): Database {
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+    return this.db;
+  }
+
   private createTables() {
     if (!this.db) throw new Error('Database not initialized');
 

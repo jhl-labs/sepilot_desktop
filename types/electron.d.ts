@@ -818,14 +818,14 @@ interface TerminalAPI {
 }
 
 // Test Runner 관련 타입
-interface HealthStatus {
+export interface HealthStatus {
   status: 'pass' | 'fail' | 'warn';
   message?: string;
   details?: Record<string, unknown>;
   latency?: number;
 }
 
-interface HealthCheckResult {
+export interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy';
   checks: {
     database: HealthStatus;
@@ -837,7 +837,7 @@ interface HealthCheckResult {
   message?: string;
 }
 
-interface TestResult {
+export interface TestResult {
   id: string;
   name: string;
   status: 'pass' | 'fail' | 'skip';
@@ -847,7 +847,7 @@ interface TestResult {
   timestamp: number;
 }
 
-interface TestSuiteResult {
+export interface TestSuiteResult {
   id: string;
   name: string;
   tests: TestResult[];

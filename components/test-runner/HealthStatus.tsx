@@ -101,7 +101,7 @@ export function HealthStatus({ result }: HealthStatusProps) {
                 <p className="text-sm text-muted-foreground">{result.checks.vectordb.message}</p>
                 {result.checks.vectordb.details?.collectionCount !== undefined && (
                   <p className="text-xs text-muted-foreground">
-                    Collections: {result.checks.vectordb.details.collectionCount}
+                    Collections: {String(result.checks.vectordb.details.collectionCount)}
                   </p>
                 )}
                 {result.checks.vectordb.latency !== undefined && (
@@ -129,8 +129,8 @@ export function HealthStatus({ result }: HealthStatusProps) {
                 <p className="text-sm text-muted-foreground">{result.checks.mcpTools.message}</p>
                 {result.checks.mcpTools.details?.serverCount !== undefined && (
                   <p className="text-xs text-muted-foreground">
-                    Servers: {result.checks.mcpTools.details.connectedCount}/
-                    {result.checks.mcpTools.details.serverCount}
+                    Servers: {String(result.checks.mcpTools.details.connectedCount)}/
+                    {String(result.checks.mcpTools.details.serverCount)}
                   </p>
                 )}
                 {result.checks.mcpTools.latency !== undefined && (
@@ -160,8 +160,8 @@ export function HealthStatus({ result }: HealthStatusProps) {
                 </p>
                 {result.checks.llmProviders.details?.configuredCount !== undefined && (
                   <p className="text-xs text-muted-foreground">
-                    Configured: {result.checks.llmProviders.details.configuredCount}/
-                    {result.checks.llmProviders.details.totalProviders}
+                    Configured: {String(result.checks.llmProviders.details.configuredCount)}/
+                    {String(result.checks.llmProviders.details.totalProviders)}
                   </p>
                 )}
                 {result.checks.llmProviders.latency !== undefined && (

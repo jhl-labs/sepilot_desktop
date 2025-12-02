@@ -77,7 +77,7 @@ export function ConversationReportDialog({
             <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-500" />
             <DialogTitle>대화 내용 리포트</DialogTitle>
           </div>
-          <DialogDescription className="pt-2">
+          <DialogDescription>
             AI 응답이나 Agent 동작에 문제가 있나요? 전체 대화 내용을 개발팀에 전송하여 개선에 도움을
             주세요.
           </DialogDescription>

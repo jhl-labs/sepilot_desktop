@@ -1,7 +1,7 @@
 import { databaseService } from './database';
 import { vectorDBService } from './vectordb';
 import { logger } from './logger';
-import { mcpManager } from '../../lib/mcp/manager';
+import { mcpManager } from '../../lib/mcp/server-manager';
 
 /**
  * Health Check 결과 인터페이스

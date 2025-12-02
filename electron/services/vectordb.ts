@@ -418,6 +418,36 @@ class VectorDBService {
     return dotProduct / denominator;
   }
 
+  /**
+   * List all collections/indices in the database
+   */
+  async listCollections(): Promise<string[]> {
+    if (!this.db) {
+      throw new Error('VectorDB not initialized');
+    }
+
+    try {
+      const result = this.db.exec(`SELECT name FROM sqlite_master WHERE type='table'`);
+
+      if (result.length === 0) return [];
+
+      const tables = result[0].values.map((row) => row[0] as string);
+
+      // Filter out internal SQLite tables and return unique collection names
+      const collections = new Set<string>();
+      tables.forEach((table) => {
+        if (!table.startsWith('sqlite_')) {
+          collections.add(table);
+        }
+      });
+
+      return Array.from(collections);
+    } catch (error) {
+      console.error('[VectorDB] Failed to list collections:', error);
+      return [];
+    }
+  }
+
   close() {
     if (this.db) {
       this.saveDatabase();

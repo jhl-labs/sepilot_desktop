@@ -1,6 +1,6 @@
 import { TestResult, TestSuiteResult } from '../../ipc/handlers/test-runner';
 import { logger } from '../../services/logger';
-import { mcpManager } from '../../../lib/mcp/manager';
+import { mcpManager } from '../../../lib/mcp/server-manager';
 
 /**
  * MCP Tools 테스트 스위트

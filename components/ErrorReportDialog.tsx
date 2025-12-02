@@ -59,7 +59,7 @@ export function ErrorReportDialog({
             <AlertTriangle className="h-6 w-6 text-destructive" />
             <DialogTitle>에러 리포트 전송</DialogTitle>
           </div>
-          <DialogDescription className="pt-2">
+          <DialogDescription>
             프로그램에서 에러가 발생했습니다. 개발팀에 에러 정보를 전송하여 문제 해결에 도움을
             주시겠습니까?
           </DialogDescription>

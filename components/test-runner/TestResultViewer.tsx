@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CheckCircle2, XCircle, Clock, ChevronDown, AlertCircle } from 'lucide-react';
-import type { TestSuiteResult } from '@/types/electron';
+import type { TestSuiteResult, TestResult } from '@/types/electron';
 
 interface TestResultViewerProps {
   result: TestSuiteResult;
@@ -68,7 +68,7 @@ export function TestResultViewer({ result }: TestResultViewerProps) {
 
       {/* Test Results */}
       <div className="space-y-2">
-        {result.tests.map((test, index) => (
+        {result.tests.map((test: TestResult, index: number) => (
           <Collapsible key={test.id || index}>
             <Card>
               <CollapsibleTrigger className="w-full">
