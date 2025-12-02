@@ -16,10 +16,6 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { SaveTextDialog } from './SaveTextDialog';
-import type { RawDocument } from '@/lib/vectordb/types';
-import { getVectorDB } from '@/lib/vectordb/client';
-import { getEmbeddingProvider } from '@/lib/vectordb/embeddings/client';
-import { indexDocuments } from '@/lib/vectordb/indexing';
 
 const FONT_SCALE_KEY = 'sepilot-chat-font-scale';
 const DEFAULT_FONT_SCALE = '100';
@@ -208,7 +204,7 @@ export function ChatArea() {
   }) => {
     try {
       // Create RawDocument
-      const rawDoc: RawDocument = {
+      const rawDoc = {
         id: `selected_text_${Date.now()}`,
         content: doc.content,
         metadata: {
@@ -219,16 +215,20 @@ export function ChatArea() {
         },
       };
 
-      // Get VectorDB and Embedder
-      const vectorDB = await getVectorDB();
-      const embedder = await getEmbeddingProvider();
+      // Index document via IPC
+      if (window.electronAPI?.vectorDB) {
+        const result = await window.electronAPI.vectorDB.indexDocuments([rawDoc], {
+          chunkSize: 500,
+          chunkOverlap: 50,
+          batchSize: 10,
+        });
 
-      // Index document with default options
-      await indexDocuments(vectorDB, embedder, [rawDoc], {
-        chunkSize: 500,
-        chunkOverlap: 50,
-        batchSize: 10,
-      });
+        if (!result.success) {
+          throw new Error(result.error || '지식 저장에 실패했습니다.');
+        }
+      } else {
+        throw new Error('VectorDB가 초기화되지 않았습니다.');
+      }
 
       console.log('Selected text saved as knowledge:', doc.title);
     } catch (error: any) {

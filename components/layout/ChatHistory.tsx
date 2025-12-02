@@ -42,10 +42,6 @@ import type { Conversation, Message } from '@/types';
 import { MoreHorizontal } from 'lucide-react';
 import { SaveKnowledgeDialog } from '@/components/chat/SaveKnowledgeDialog';
 import { CompressConversationDialog } from '@/components/chat/CompressConversationDialog';
-import { indexDocuments } from '@/lib/vectordb/indexing';
-import { getVectorDB } from '@/lib/vectordb/client';
-import { getEmbeddingProvider } from '@/lib/vectordb/embeddings/client';
-import { RawDocument } from '@/lib/vectordb/types';
 import { isElectron } from '@/lib/platform';
 
 interface ChatHistoryProps {
@@ -238,7 +234,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   }) => {
     try {
       // Create RawDocument
-      const rawDoc: RawDocument = {
+      const rawDoc = {
         id: `knowledge_${Date.now()}`,
         content: doc.content,
         metadata: {
@@ -249,16 +245,20 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
         },
       };
 
-      // Get VectorDB and Embedder
-      const vectorDB = await getVectorDB();
-      const embedder = await getEmbeddingProvider();
+      // Index document via IPC
+      if (window.electronAPI?.vectorDB) {
+        const result = await window.electronAPI.vectorDB.indexDocuments([rawDoc], {
+          chunkSize: 500,
+          chunkOverlap: 50,
+          batchSize: 10,
+        });
 
-      // Index document with default options
-      await indexDocuments(vectorDB, embedder, [rawDoc], {
-        chunkSize: 500,
-        chunkOverlap: 50,
-        batchSize: 10,
-      });
+        if (!result.success) {
+          throw new Error(result.error || '지식 저장에 실패했습니다.');
+        }
+      } else {
+        throw new Error('VectorDB가 초기화되지 않았습니다.');
+      }
 
       console.log('Knowledge saved successfully:', doc.title);
     } catch (error: any) {
