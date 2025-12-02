@@ -78,12 +78,6 @@ const settingsCategories: SettingsCategory[] = [
         icon: Plug,
         description: 'Model Context Protocol 서버',
       },
-      {
-        id: 'github',
-        label: 'GitHub',
-        icon: Github,
-        description: 'GitHub OAuth 연동',
-      },
     ],
   },
   {
@@ -114,6 +108,12 @@ const settingsCategories: SettingsCategory[] = [
     id: 'system',
     label: 'System',
     items: [
+      {
+        id: 'github',
+        label: 'GitHub Sync',
+        icon: Github,
+        description: 'GitHub 레포지토리 동기화',
+      },
       {
         id: 'backup',
         label: '백업/복구',
