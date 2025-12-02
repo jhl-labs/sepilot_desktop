@@ -320,3 +320,65 @@ export async function importDocuments(
 
   return { imported, overwritten, skipped };
 }
+
+/**
+ * 빈 폴더 생성 (VectorDB에 특수 문서로 저장)
+ */
+export async function createEmptyFolder(folderPath: string): Promise<void> {
+  if (isElectron() && window.electronAPI?.vectorDB) {
+    const result = await window.electronAPI.vectorDB.createEmptyFolder(folderPath);
+    if (!result.success) {
+      throw new Error(result.error || '빈 폴더 생성 실패');
+    }
+    return;
+  }
+
+  const db = VectorDBClient.getDB();
+
+  // 빈 폴더를 특수 문서로 저장
+  const folderDoc: VectorDocument = {
+    id: `folder::${folderPath}`,
+    content: '', // 빈 내용
+    metadata: {
+      _docType: 'folder',
+      folderPath,
+      title: folderPath.split('/').pop() || folderPath,
+      uploadedAt: Date.now(),
+    },
+    embedding: new Array(1536).fill(0), // 빈 임베딩 (검색 제외용)
+  };
+
+  await db.insert([folderDoc]);
+}
+
+/**
+ * 빈 폴더 삭제
+ */
+export async function deleteEmptyFolder(folderPath: string): Promise<void> {
+  if (isElectron() && window.electronAPI?.vectorDB) {
+    const result = await window.electronAPI.vectorDB.deleteEmptyFolder(folderPath);
+    if (!result.success) {
+      throw new Error(result.error || '빈 폴더 삭제 실패');
+    }
+    return;
+  }
+
+  await deleteDocuments([`folder::${folderPath}`]);
+}
+
+/**
+ * 모든 빈 폴더 가져오기
+ */
+export async function getAllEmptyFolders(): Promise<string[]> {
+  if (isElectron() && window.electronAPI?.vectorDB) {
+    const result = await window.electronAPI.vectorDB.getAllEmptyFolders();
+    if (!result.success) {
+      throw new Error(result.error || '빈 폴더 목록 가져오기 실패');
+    }
+    return result.data || [];
+  }
+
+  const allDocs = await getAllDocuments();
+  const folderDocs = allDocs.filter((doc) => doc.metadata?._docType === 'folder');
+  return folderDocs.map((doc) => doc.metadata.folderPath!).filter(Boolean);
+}

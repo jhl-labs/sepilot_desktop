@@ -389,6 +389,9 @@ interface VectorDBAPI {
     exportData: ExportData,
     options?: { overwrite?: boolean }
   ) => Promise<IPCResponse<ImportResult>>;
+  createEmptyFolder: (folderPath: string) => Promise<IPCResponse>;
+  deleteEmptyFolder: (folderPath: string) => Promise<IPCResponse>;
+  getAllEmptyFolders: () => Promise<IPCResponse<string[]>>;
 }
 
 // GitHub 저장소 타입

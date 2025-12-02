@@ -278,5 +278,56 @@ export function setupVectorDBHandlers() {
     }
   );
 
+  // 빈 폴더 생성
+  ipcMain.handle('vectordb-create-empty-folder', async (_, folderPath: string) => {
+    try {
+      logger.debug('Creating empty folder in VectorDB', { folderPath });
+
+      const folderDoc: VectorDocument = {
+        id: `folder::${folderPath}`,
+        content: '',
+        metadata: {
+          _docType: 'folder',
+          folderPath,
+          title: folderPath.split('/').pop() || folderPath,
+          uploadedAt: Date.now(),
+        },
+        embedding: new Array(1536).fill(0),
+      };
+
+      await vectorDBService.insert([folderDoc]);
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to create empty folder', error);
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
+  // 빈 폴더 삭제
+  ipcMain.handle('vectordb-delete-empty-folder', async (_, folderPath: string) => {
+    try {
+      logger.debug('Deleting empty folder from VectorDB', { folderPath });
+      await vectorDBService.delete([`folder::${folderPath}`]);
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to delete empty folder', error);
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
+  // 모든 빈 폴더 가져오기
+  ipcMain.handle('vectordb-get-all-empty-folders', async () => {
+    try {
+      logger.debug('Getting all empty folders from VectorDB');
+      const allDocs = await vectorDBService.getAllDocuments();
+      const folderDocs = allDocs.filter((doc) => doc.metadata?._docType === 'folder');
+      const folderPaths = folderDocs.map((doc) => doc.metadata.folderPath!).filter(Boolean);
+      return { success: true, data: folderPaths };
+    } catch (error) {
+      logger.error('Failed to get all empty folders', error);
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
   logger.info('VectorDB IPC handlers registered');
 }

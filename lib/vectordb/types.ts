@@ -18,6 +18,11 @@ export interface VectorDocument {
 }
 
 /**
+ * 특수 문서 타입
+ */
+export type SpecialDocumentType = 'folder' | 'normal';
+
+/**
  * 문서 메타데이터 확장 (Tree 구조용)
  */
 export interface DocumentMetadata {
@@ -35,6 +40,9 @@ export interface DocumentMetadata {
   tags?: string[]; // 태그 배열
   category?: string; // 카테고리
   order?: number; // 정렬 순서
+
+  // 특수 문서 타입 (빈 폴더 등)
+  _docType?: SpecialDocumentType; // 'folder' | 'normal' (기본값: 'normal')
 }
 
 /**

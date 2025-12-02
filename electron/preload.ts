@@ -237,6 +237,11 @@ const electronAPI = {
     export: () => ipcRenderer.invoke('vectordb-export'),
     import: (exportData: any, options?: { overwrite?: boolean }) =>
       ipcRenderer.invoke('vectordb-import', exportData, options),
+    createEmptyFolder: (folderPath: string) =>
+      ipcRenderer.invoke('vectordb-create-empty-folder', folderPath),
+    deleteEmptyFolder: (folderPath: string) =>
+      ipcRenderer.invoke('vectordb-delete-empty-folder', folderPath),
+    getAllEmptyFolders: () => ipcRenderer.invoke('vectordb-get-all-empty-folders'),
   },
 
   // File operations

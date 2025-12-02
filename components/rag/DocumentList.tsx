@@ -26,6 +26,9 @@ import {
   exportDocuments,
   importDocuments,
   updateDocumentMetadata,
+  getAllEmptyFolders,
+  createEmptyFolder,
+  deleteEmptyFolder,
 } from '@/lib/vectordb/client';
 import { VectorDocument, DocumentTreeNode } from '@/lib/vectordb/types';
 import { FolderManageDialog } from './FolderManageDialog';
@@ -52,25 +55,35 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 빈 폴더 로드
-  const loadEmptyFolders = () => {
+  // 빈 폴더 로드 (VectorDB에서)
+  const loadEmptyFolders = async () => {
     try {
-      const stored = localStorage.getItem('sepilot_rag_empty_folders');
-      if (stored) {
-        setEmptyFolders(JSON.parse(stored));
-      }
+      const folders = await getAllEmptyFolders();
+      setEmptyFolders(folders);
     } catch (error) {
       console.error('Failed to load empty folders:', error);
     }
   };
 
-  // 빈 폴더 저장
-  const saveEmptyFolders = (folders: string[]) => {
+  // 빈 폴더 추가 (VectorDB에 저장)
+  const addEmptyFolder = async (folderPath: string) => {
     try {
-      localStorage.setItem('sepilot_rag_empty_folders', JSON.stringify(folders));
-      setEmptyFolders(folders);
+      await createEmptyFolder(folderPath);
+      await loadEmptyFolders(); // 다시 로드
     } catch (error) {
-      console.error('Failed to save empty folders:', error);
+      console.error('Failed to add empty folder:', error);
+      throw error;
+    }
+  };
+
+  // 빈 폴더 삭제 (VectorDB에서)
+  const removeEmptyFolder = async (folderPath: string) => {
+    try {
+      await deleteEmptyFolder(folderPath);
+      await loadEmptyFolders(); // 다시 로드
+    } catch (error) {
+      console.error('Failed to remove empty folder:', error);
+      throw error;
     }
   };
 
@@ -117,7 +130,10 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     setMessage(null);
 
     try {
-      const docs = await getAllDocuments();
+      const allDocs = await getAllDocuments();
+
+      // 특수 문서 (폴더 등) 필터링 - 실제 문서만
+      const docs = allDocs.filter((doc) => doc.metadata?._docType !== 'folder');
 
       // 청크된 문서들을 원본 문서 단위로 그룹화
       const groupedDocs = new Map<string, VectorDocument>();
@@ -437,8 +453,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       }
 
       // 빈 폴더 목록에서 제거
-      const newEmptyFolders = emptyFolders.filter((f) => f !== folderPath);
-      saveEmptyFolders(newEmptyFolders);
+      await removeEmptyFolder(folderPath);
 
       setMessage({
         type: 'success',
@@ -451,39 +466,43 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   };
 
   // 폴더 생성 핸들러
-  const handleCreateFolder = (folderPath: string) => {
-    // 빈 폴더 목록에 추가
-    const trimmedPath = folderPath.trim();
-    if (!trimmedPath) {
-      setMessage({ type: 'error', text: '폴더 경로를 입력해주세요.' });
-      return;
+  const handleCreateFolder = async (folderPath: string) => {
+    try {
+      // 빈 폴더 목록에 추가
+      const trimmedPath = folderPath.trim();
+      if (!trimmedPath) {
+        setMessage({ type: 'error', text: '폴더 경로를 입력해주세요.' });
+        return;
+      }
+
+      // 이미 존재하는 폴더인지 확인
+      if (emptyFolders.includes(trimmedPath)) {
+        setMessage({ type: 'error', text: '이미 존재하는 폴더입니다.' });
+        return;
+      }
+
+      // 문서에서 사용 중인 폴더인지 확인
+      const existingFolder = documents.some((doc) => {
+        const docFolderPath = doc.metadata?.folderPath as string | undefined;
+        return docFolderPath === trimmedPath || docFolderPath?.startsWith(`${trimmedPath}/`);
+      });
+
+      if (existingFolder) {
+        setMessage({ type: 'error', text: '이미 문서가 있는 폴더입니다.' });
+        return;
+      }
+
+      // 빈 폴더 추가
+      await addEmptyFolder(trimmedPath);
+
+      setMessage({
+        type: 'success',
+        text: `폴더 "${trimmedPath}"가 생성되었습니다.`,
+      });
+    } catch (error: any) {
+      console.error('Failed to create folder:', error);
+      setMessage({ type: 'error', text: error.message || '폴더 생성 실패' });
     }
-
-    // 이미 존재하는 폴더인지 확인
-    if (emptyFolders.includes(trimmedPath)) {
-      setMessage({ type: 'error', text: '이미 존재하는 폴더입니다.' });
-      return;
-    }
-
-    // 문서에서 사용 중인 폴더인지 확인
-    const existingFolder = documents.some((doc) => {
-      const docFolderPath = doc.metadata?.folderPath as string | undefined;
-      return docFolderPath === trimmedPath || docFolderPath?.startsWith(`${trimmedPath}/`);
-    });
-
-    if (existingFolder) {
-      setMessage({ type: 'error', text: '이미 문서가 있는 폴더입니다.' });
-      return;
-    }
-
-    // 빈 폴더 추가
-    const newEmptyFolders = [...emptyFolders, trimmedPath];
-    saveEmptyFolders(newEmptyFolders);
-
-    setMessage({
-      type: 'success',
-      text: `폴더 "${trimmedPath}"가 생성되었습니다.`,
-    });
   };
 
   // 문서를 폴더로 이동
@@ -518,8 +537,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       // 빈 폴더 목록에서 제거 (문서가 있으면 더 이상 빈 폴더가 아님)
       if (emptyFolders.includes(targetFolderPath)) {
-        const newEmptyFolders = emptyFolders.filter((f) => f !== targetFolderPath);
-        saveEmptyFolders(newEmptyFolders);
+        await removeEmptyFolder(targetFolderPath);
       }
 
       setMessage({
