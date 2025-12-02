@@ -846,3 +846,137 @@ export interface GoogleSearchSession {
   /** 세션 상태 */
   status: 'active' | 'paused' | 'completed' | 'failed';
 }
+
+// =============================================================================
+// Browser Agent Reporter
+// =============================================================================
+
+/**
+ * Browser Agent 실행 결과 타입
+ */
+export type BrowserAgentCompletionStatus =
+  | 'success' // 정상 완료
+  | 'partial_success' // 부분 성공 (일부 작업 완료)
+  | 'stopped' // 사용자 중단
+  | 'max_iterations' // 최대 반복 횟수 도달
+  | 'error'; // 오류 발생
+
+/**
+ * Tool 사용 통계
+ */
+export interface BrowserAgentToolStats {
+  /** 도구 이름 */
+  toolName: string;
+
+  /** 호출 횟수 */
+  callCount: number;
+
+  /** 성공 횟수 */
+  successCount: number;
+
+  /** 실패 횟수 */
+  failureCount: number;
+
+  /** 마지막 실행 결과 */
+  lastResult?: string;
+}
+
+/**
+ * 방문한 페이지 정보
+ */
+export interface BrowserAgentVisitedPage {
+  /** 페이지 URL */
+  url: string;
+
+  /** 페이지 제목 */
+  title?: string;
+
+  /** 방문 시각 */
+  timestamp: number;
+
+  /** 방문 목적 (어떤 도구로 방문했는지) */
+  visitedBy: string;
+}
+
+/**
+ * Browser Agent 최종 보고서
+ */
+export interface BrowserAgentReport {
+  /** 완료 상태 */
+  status: BrowserAgentCompletionStatus;
+
+  /** 작업 요약 */
+  summary: string;
+
+  /** 상세 정보 */
+  details: {
+    /** 총 반복 횟수 */
+    totalIterations: number;
+
+    /** 최대 반복 횟수 */
+    maxIterations: number;
+
+    /** 실행 시간 (초) */
+    duration: number;
+
+    /** 사용한 도구 통계 */
+    toolStats: BrowserAgentToolStats[];
+
+    /** 방문한 페이지들 */
+    visitedPages: BrowserAgentVisitedPage[];
+
+    /** 주요 성과 */
+    achievements: string[];
+
+    /** 발생한 문제들 */
+    issues: string[];
+  };
+
+  /** 다음 단계 제안 */
+  nextSteps?: string[];
+
+  /** 에러 메시지 (에러 발생 시) */
+  errorMessage?: string;
+}
+
+/**
+ * Browser Agent 실행 컨텍스트 (보고서 생성용)
+ */
+export interface BrowserAgentExecutionContext {
+  /** 시작 시간 */
+  startTime: number;
+
+  /** 종료 시간 */
+  endTime?: number;
+
+  /** 실행된 반복 횟수 */
+  iterations: number;
+
+  /** 최대 반복 횟수 */
+  maxIterations: number;
+
+  /** 사용자 중단 여부 */
+  wasStopped: boolean;
+
+  /** 에러 발생 여부 */
+  hasError: boolean;
+
+  /** 에러 메시지 */
+  errorMessage?: string;
+
+  /** Tool 호출 기록 */
+  toolCalls: Array<{
+    toolName: string;
+    arguments: any;
+    result?: string;
+    error?: string;
+    timestamp: number;
+  }>;
+
+  /** 방문한 URL 기록 */
+  visitedUrls: Array<{
+    url: string;
+    title?: string;
+    timestamp: number;
+  }>;
+}
