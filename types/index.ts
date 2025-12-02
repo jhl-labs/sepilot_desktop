@@ -209,6 +209,33 @@ export interface ComfyUIConfig {
   seed?: number;
 }
 
+/**
+ * NanoBanana (Google Imagen) Configuration
+ */
+export interface NanoBananaConfig {
+  enabled: boolean;
+  apiKey: string; // Google Cloud API Key
+  projectId?: string; // Google Cloud Project ID
+  location?: string; // Default: 'us-central1'
+  model?: string; // Default: 'imagen-3.0-generate-001'
+
+  // Generation parameters
+  negativePrompt?: string;
+  aspectRatio?: string; // '1:1', '16:9', '9:16', '4:3', '3:4'
+  numberOfImages?: number; // 1-8, default: 1
+  seed?: number;
+}
+
+/**
+ * Image Generation Configuration (Unified)
+ * Supports multiple providers: ComfyUI, NanoBanana (Google Imagen)
+ */
+export interface ImageGenConfig {
+  provider: 'comfyui' | 'nanobanana'; // Selected provider
+  comfyui?: ComfyUIConfig;
+  nanobanana?: NanoBananaConfig;
+}
+
 export interface ImageGenerationProgress {
   conversationId: string;
   messageId: string;
@@ -293,7 +320,8 @@ export interface AppConfig {
   vectorDB?: VectorDBConfig;
   embedding?: EmbeddingConfig;
   mcp: MCPServerConfig[];
-  comfyUI?: ComfyUIConfig;
+  imageGen?: ImageGenConfig; // Image generation (ComfyUI, NanoBanana)
+  comfyUI?: ComfyUIConfig; // @deprecated - use imageGen instead (for backward compatibility)
   github?: GitHubOAuthConfig; // 이전 버전 호환성
   githubSync?: GitHubSyncConfig; // 새로운 Token 기반 동기화
   quickInput?: QuickInputConfig;

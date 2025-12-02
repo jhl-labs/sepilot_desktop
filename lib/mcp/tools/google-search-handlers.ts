@@ -564,21 +564,28 @@ export async function handleGoogleVisitResult(options: GoogleVisitResultOptions)
     // 페이지 로드
     await browserView.webContents.loadURL(clickResult.url);
 
-    // 페이지 로딩 완료 대기
+    // 페이지 로딩 완료 대기 (dom-ready: 더 빠르고 안정적)
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Page load timeout'));
+        reject(new Error('Page load timeout - try browser_navigate instead'));
       }, maxWaitTime * 1000);
 
-      browserView.webContents.once('did-finish-load', () => {
+      // dom-ready는 DOM이 준비되면 즉시 발생 (리소스 로딩 불필요)
+      browserView.webContents.once('dom-ready', () => {
         clearTimeout(timeout);
         resolve();
       });
+
+      // Fallback: did-fail-load 이벤트 처리
+      browserView.webContents.once('did-fail-load', (_event, errorCode, errorDescription) => {
+        clearTimeout(timeout);
+        reject(new Error(`Page load failed: ${errorDescription} (code: ${errorCode})`));
+      });
     });
 
-    // JavaScript 실행 대기
+    // JavaScript 실행 대기 (DOM 준비 후 렌더링 대기)
     if (waitForJs) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     }
 
     // 콘텐츠 추출

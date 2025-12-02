@@ -18,7 +18,7 @@ export type SettingSection =
   | 'llm'
   | 'network'
   | 'vectordb'
-  | 'comfyui'
+  | 'imagegen'
   | 'mcp'
   | 'github'
   | 'backup'
@@ -67,10 +67,10 @@ const settingsCategories: SettingsCategory[] = [
         description: '벡터 데이터베이스 및 임베딩',
       },
       {
-        id: 'comfyui',
-        label: 'ComfyUI',
+        id: 'imagegen',
+        label: 'ImageGen',
         icon: Image,
-        description: '이미지 생성 워크플로우',
+        description: '이미지 생성 (ComfyUI, NanoBanana)',
       },
       {
         id: 'mcp',

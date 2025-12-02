@@ -11,6 +11,7 @@ import {
 import {
   AppConfig,
   ComfyUIConfig,
+  ImageGenConfig,
   LLMConfig,
   LLMConfigV2,
   NetworkConfig,
@@ -29,7 +30,7 @@ import { GitHubSyncSettings } from '@/components/settings/GitHubSyncSettings';
 import { BackupRestoreSettings } from '@/components/settings/BackupRestoreSettings';
 import { LLMSettingsTab } from './LLMSettingsTab';
 import { NetworkSettingsTab } from './NetworkSettingsTab';
-import { ComfyUISettingsTab } from './ComfyUISettingsTab';
+import { ImageGenSettingsTab } from './ImageGenSettingsTab';
 import { MCPSettingsTab } from './MCPSettingsTab';
 import { QuickInputSettingsTab } from './QuickInputSettingsTab';
 import { SettingsSidebar, SettingSection } from './SettingsSidebar';
@@ -37,9 +38,11 @@ import {
   createDefaultLLMConfig,
   createDefaultNetworkConfig,
   createDefaultComfyUIConfig,
+  createDefaultImageGenConfig,
   mergeLLMConfig,
   mergeNetworkConfig,
   mergeComfyConfig,
+  mergeImageGenConfig,
 } from './settingsUtils';
 import { migrateLLMConfig, convertV2ToV1, isLLMConfigV2 } from '@/lib/config/llm-config-migration';
 import { SettingsJsonEditor } from './SettingsJsonEditor';
@@ -72,8 +75,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [isComfySaving, setIsComfySaving] = useState(false);
-  const [comfyMessage, setComfyMessage] = useState<{
+  const [isImageGenSaving, setIsImageGenSaving] = useState(false);
+  const [imageGenMessage, setImageGenMessage] = useState<{
     type: 'success' | 'error';
     text: string;
   } | null>(null);
@@ -81,7 +84,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   // VectorDB & Embedding 설정 상태
   const [vectorDBConfig, setVectorDBConfig] = useState<VectorDBConfig | null>(null);
   const [embeddingConfig, setEmbeddingConfig] = useState<EmbeddingConfig | null>(null);
-  const [comfyConfig, setComfyConfig] = useState<ComfyUIConfig>(createDefaultComfyUIConfig());
+  const [imageGenConfig, setImageGenConfig] = useState<ImageGenConfig>(
+    createDefaultImageGenConfig()
+  );
   const [appConfigSnapshot, setAppConfigSnapshot] = useState<AppConfig | null>(null);
 
   // Load config on mount
@@ -110,12 +115,26 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               llmConfigV2 = migrateLLMConfig(llmConfig);
             }
 
+            // Migration: comfyUI -> imageGen
+            let imageGenFromDB: ImageGenConfig | undefined;
+            if (result.data.imageGen) {
+              imageGenFromDB = mergeImageGenConfig(result.data.imageGen);
+            } else if (result.data.comfyUI) {
+              // Migrate from old comfyUI config to new imageGen config
+              imageGenFromDB = {
+                provider: 'comfyui',
+                comfyui: mergeComfyConfig(result.data.comfyUI),
+                nanobanana: createDefaultImageGenConfig().nanobanana,
+              };
+            }
+
             const normalizedConfig: AppConfig = {
               llm: llmConfig,
               network: mergeNetworkConfig(result.data.network),
               mcp: result.data.mcp ?? [],
               vectorDB: result.data.vectorDB,
               embedding: result.data.embedding,
+              imageGen: imageGenFromDB,
               comfyUI: result.data.comfyUI ? mergeComfyConfig(result.data.comfyUI) : undefined,
               github: result.data.github,
               githubSync: result.data.githubSync,
@@ -125,7 +144,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             setConfig(llmConfig);
             setConfigV2(llmConfigV2);
             setNetworkConfig(normalizedConfig.network ?? createDefaultNetworkConfig());
-            setComfyConfig(normalizedConfig.comfyUI ?? createDefaultComfyUIConfig());
+            setImageGenConfig(imageGenFromDB ?? createDefaultImageGenConfig());
             setGithubConfig(normalizedConfig.github ?? null);
             setGithubSyncConfig(normalizedConfig.githubSync ?? null);
             setQuickInputConfig(normalizedConfig.quickInput ?? createDefaultQuickInputConfig());
@@ -229,7 +248,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     if (open) {
       loadConfig();
       setMessage(null);
-      setComfyMessage(null);
+      setImageGenMessage(null);
     }
   }, [open]);
 
@@ -244,6 +263,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       vectorDB: partial.vectorDB ?? appConfigSnapshot?.vectorDB,
       embedding: partial.embedding ?? appConfigSnapshot?.embedding,
       mcp: partial.mcp ?? appConfigSnapshot?.mcp ?? [],
+      imageGen: partial.imageGen ?? appConfigSnapshot?.imageGen,
       comfyUI: partial.comfyUI ?? appConfigSnapshot?.comfyUI,
       github: partial.github ?? appConfigSnapshot?.github,
       githubSync: partial.githubSync ?? appConfigSnapshot?.githubSync,
@@ -413,49 +433,54 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     }
   };
 
-  const handleComfySave = async () => {
-    setIsComfySaving(true);
-    setComfyMessage(null);
+  const handleImageGenSave = async () => {
+    setIsImageGenSaving(true);
+    setImageGenMessage(null);
 
     try {
-      if (comfyConfig.enabled) {
-        if (!comfyConfig.httpUrl.trim()) {
+      // Validation based on selected provider
+      if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui?.enabled) {
+        if (!imageGenConfig.comfyui.httpUrl.trim()) {
           throw new Error('ComfyUI HTTP URL을 입력해주세요.');
         }
-        if (!comfyConfig.workflowId.trim()) {
+        if (!imageGenConfig.comfyui.workflowId.trim()) {
           throw new Error('기본 워크플로우 ID를 입력해주세요.');
+        }
+      } else if (imageGenConfig.provider === 'nanobanana' && imageGenConfig.nanobanana?.enabled) {
+        if (!imageGenConfig.nanobanana.apiKey.trim()) {
+          throw new Error('NanoBanana API Key를 입력해주세요.');
         }
       }
 
       let savedConfig: AppConfig | null = null;
       if (isElectron() && window.electronAPI) {
         try {
-          savedConfig = await persistAppConfig({ comfyUI: comfyConfig });
+          savedConfig = await persistAppConfig({ imageGen: imageGenConfig });
         } catch (error) {
-          console.error('Error saving ComfyUI config to DB:', error);
+          console.error('Error saving ImageGen config to DB:', error);
         }
       }
 
       if (!savedConfig) {
-        localStorage.setItem('sepilot_comfyui_config', JSON.stringify(comfyConfig));
+        localStorage.setItem('sepilot_imagegen_config', JSON.stringify(imageGenConfig));
       }
 
       // Notify InputBox and other components about config update
       window.dispatchEvent(
         new CustomEvent('sepilot:config-updated', {
-          detail: { comfyUI: comfyConfig },
+          detail: { imageGen: imageGenConfig },
         })
       );
 
-      setComfyMessage({ type: 'success', text: 'ComfyUI 설정이 저장되었습니다!' });
+      setImageGenMessage({ type: 'success', text: '이미지 생성 설정이 저장되었습니다!' });
     } catch (error: any) {
-      console.error('Failed to save ComfyUI config:', error);
-      setComfyMessage({
+      console.error('Failed to save ImageGen config:', error);
+      setImageGenMessage({
         type: 'error',
-        text: error.message || 'ComfyUI 설정 저장에 실패했습니다.',
+        text: error.message || '이미지 생성 설정 저장에 실패했습니다.',
       });
     } finally {
-      setIsComfySaving(false);
+      setIsImageGenSaving(false);
     }
   };
 
@@ -815,15 +840,15 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   />
                 )}
 
-                {activeTab === 'comfyui' && (
-                  <ComfyUISettingsTab
-                    comfyConfig={comfyConfig}
-                    setComfyConfig={setComfyConfig}
+                {activeTab === 'imagegen' && (
+                  <ImageGenSettingsTab
+                    imageGenConfig={imageGenConfig}
+                    setImageGenConfig={setImageGenConfig}
                     networkConfig={networkConfig}
-                    onSave={handleComfySave}
-                    isSaving={isComfySaving}
-                    message={comfyMessage}
-                    setMessage={setComfyMessage}
+                    onSave={handleImageGenSave}
+                    isSaving={isImageGenSaving}
+                    message={imageGenMessage}
+                    setMessage={setImageGenMessage}
                   />
                 )}
 

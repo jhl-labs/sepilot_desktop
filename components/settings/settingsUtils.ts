@@ -4,6 +4,8 @@ import {
   AutocompleteConfig,
   NetworkConfig,
   ComfyUIConfig,
+  ImageGenConfig,
+  NanoBananaConfig,
 } from '@/types';
 
 export const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
@@ -65,6 +67,24 @@ export const createDefaultComfyUIConfig = (): ComfyUIConfig => ({
   steps: 30,
   cfgScale: 7,
   seed: -1,
+});
+
+export const createDefaultNanoBananaConfig = (): NanoBananaConfig => ({
+  enabled: false,
+  apiKey: '',
+  projectId: '',
+  location: 'us-central1',
+  model: 'imagen-3.0-generate-001',
+  negativePrompt: '',
+  aspectRatio: '1:1',
+  numberOfImages: 1,
+  seed: -1,
+});
+
+export const createDefaultImageGenConfig = (): ImageGenConfig => ({
+  provider: 'comfyui',
+  comfyui: createDefaultComfyUIConfig(),
+  nanobanana: createDefaultNanoBananaConfig(),
 });
 
 export const mergeLLMConfig = (incoming?: Partial<LLMConfig>): LLMConfig => {
@@ -141,6 +161,34 @@ export const mergeComfyConfig = (incoming?: Partial<ComfyUIConfig>): ComfyUIConf
   return {
     ...base,
     ...incoming,
+  };
+};
+
+export const mergeNanoBananaConfig = (
+  incoming?: Partial<NanoBananaConfig>
+): NanoBananaConfig => {
+  const base = createDefaultNanoBananaConfig();
+  if (!incoming) {
+    return base;
+  }
+  return {
+    ...base,
+    ...incoming,
+  };
+};
+
+export const mergeImageGenConfig = (incoming?: Partial<ImageGenConfig>): ImageGenConfig => {
+  const base = createDefaultImageGenConfig();
+  if (!incoming) {
+    return base;
+  }
+
+  return {
+    provider: incoming.provider ?? base.provider,
+    comfyui: incoming.comfyui ? mergeComfyConfig(incoming.comfyui) : base.comfyui,
+    nanobanana: incoming.nanobanana
+      ? mergeNanoBananaConfig(incoming.nanobanana)
+      : base.nanobanana,
   };
 };
 

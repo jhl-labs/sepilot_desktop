@@ -61,6 +61,7 @@ export function InputBox() {
   const [quickSystemMessage, setQuickSystemMessage] = useState<string | null>(null);
   const [showPersonaAutocomplete, setShowPersonaAutocomplete] = useState(false);
   const [personaAutocompleteIndex, setPersonaAutocompleteIndex] = useState(0);
+  const [interactiveValueToSend, setInteractiveValueToSend] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
@@ -247,6 +248,35 @@ export function InputBox() {
     window.addEventListener('sepilot:file-drop', handleFileDrop as EventListener);
     return () => {
       window.removeEventListener('sepilot:file-drop', handleFileDrop as EventListener);
+    };
+  }, []);
+
+  // Listen for interactive component events (select/input)
+  useEffect(() => {
+    const handleInteractiveSelect = (e: CustomEvent<{ value: string }>) => {
+      const { value } = e.detail;
+      // Set value to trigger auto-send
+      setInteractiveValueToSend(value);
+    };
+
+    const handleInteractiveInput = (e: CustomEvent<{ value: string }>) => {
+      const { value } = e.detail;
+      // Set value to trigger auto-send
+      setInteractiveValueToSend(value);
+    };
+
+    window.addEventListener('sepilot:interactive-select', handleInteractiveSelect as EventListener);
+    window.addEventListener('sepilot:interactive-input', handleInteractiveInput as EventListener);
+
+    return () => {
+      window.removeEventListener(
+        'sepilot:interactive-select',
+        handleInteractiveSelect as EventListener
+      );
+      window.removeEventListener(
+        'sepilot:interactive-input',
+        handleInteractiveInput as EventListener
+      );
     };
   }, []);
 
@@ -613,6 +643,22 @@ export function InputBox() {
       setInput((prev) => (prev ? `${prev}\n\n${combinedText}` : combinedText));
     }
   };
+
+  // Auto-send when interactive value is set
+  useEffect(() => {
+    if (interactiveValueToSend) {
+      setInput(interactiveValueToSend);
+      setInteractiveValueToSend(null); // Reset
+      // Auto-trigger send after a short delay
+      setTimeout(() => {
+        // Directly invoke send logic
+        const sendButton = document.querySelector('[data-send-button]') as HTMLButtonElement;
+        if (sendButton) {
+          sendButton.click();
+        }
+      }, 100);
+    }
+  }, [interactiveValueToSend]);
 
   const handleSend = async () => {
     if ((!input.trim() && selectedImages.length === 0) || isStreaming) {

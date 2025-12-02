@@ -714,14 +714,25 @@ When a tool fails, DON'T GIVE UP! Try these recovery strategies:
    - Check browser_list_tabs to verify correct tab is active
 
 **Google Search Result Failures:**
-1. If google_visit_result times out or fails:
-   - Use browser_navigate to visit the URL directly (extract URL from google_extract_results)
-   - Then use browser_get_page_content to extract the content
-   - Example: google_extract_results → get URL → browser_navigate → browser_get_page_content
-2. If you want to visit a specific URL you found:
+1. If google_visit_result times out or fails ONCE:
+   - DO NOT retry with same rank - it will fail again
+   - IMMEDIATELY use browser_navigate with the URL from google_extract_results
+   - Then use browser_get_page_content to extract content
+   - Workflow: google_extract_results → extract URL → browser_navigate → browser_get_page_content
+   - Example: If rank 5 fails, get URL from result[4] and use browser_navigate
+2. If you want to visit a specific URL:
    - ALWAYS use browser_navigate (NOT "assistant" or any other tool)
    - There is NO "assistant" tool - only browser_navigate for navigation
    - After navigation, use browser_get_page_content, browser_get_interactive_elements, etc.
+
+**CRITICAL: DO NOT REPEAT FAILED ATTEMPTS**
+- NEVER call the same tool with the same arguments after it fails
+- If a tool fails, try a DIFFERENT approach immediately:
+  - google_visit_result fails → browser_navigate instead
+  - browser_navigate fails → try different URL or google_search again
+  - Timeout errors → use alternative tool, NOT longer timeout
+- Maximum 1 retry per unique tool+args combination
+- Repeating failures wastes iterations and frustrates users
 
 **General Strategy:**
 - Tool failures are TEMPORARY - always try an alternative approach
