@@ -31,12 +31,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useChatInput } from './unified/hooks/useChatInput';
 import { useImageUpload } from './unified/hooks/useImageUpload';
 import { useFileUpload } from './unified/hooks/useFileUpload';
@@ -103,13 +98,8 @@ export function MainChatInput({
     focusInput,
   } = useChatInput();
 
-  const {
-    selectedImages,
-    handleImageSelect,
-    handleRemoveImage,
-    handlePaste,
-    clearImages,
-  } = useImageUpload();
+  const { selectedImages, handleImageSelect, handleRemoveImage, handlePaste, clearImages } =
+    useImageUpload();
 
   const { isDragging, setIsDragging, handleFileDrop } = useFileUpload();
 
@@ -662,9 +652,7 @@ export function MainChatInput({
                       >
                         <div className="flex items-center justify-between w-full">
                           <span>ComfyUI</span>
-                          {selectedImageGenProvider === 'comfyui' && (
-                            <Check className="h-4 w-4" />
-                          )}
+                          {selectedImageGenProvider === 'comfyui' && <Check className="h-4 w-4" />}
                         </div>
                       </DropdownMenuItem>
                       <DropdownMenuItem
