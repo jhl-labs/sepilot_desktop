@@ -13,10 +13,18 @@ export interface NanoBananaGenerateParams {
   seed?: number;
 }
 
+export interface NanoBananaUsageInfo {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+  imageCount?: number;
+}
+
 export interface NanoBananaGenerateResult {
   success: boolean;
   images?: string[]; // base64 encoded images
   error?: string;
+  usage?: NanoBananaUsageInfo; // API usage/credit information
 }
 
 /**
@@ -71,7 +79,7 @@ export async function generateWithNanoBanana(
     // Prepare headers
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
+      Authorization: `Bearer ${config.apiKey}`,
     };
 
     // Add custom network headers (if any)
@@ -82,7 +90,7 @@ export async function generateWithNanoBanana(
     }
 
     console.log('[NanoBanana] Generating image with params:', {
-      prompt: params.prompt.substring(0, 50) + '...',
+      prompt: `${params.prompt.substring(0, 50)}...`,
       numberOfImages: payload.parameters.sampleCount,
       aspectRatio: payload.parameters.aspectRatio,
     });
@@ -122,11 +130,33 @@ export async function generateWithNanoBanana(
       throw new Error('No images generated from NanoBanana API');
     }
 
+    // Extract usage metadata (if available)
+    const usage: NanoBananaUsageInfo = {};
+    if (result.metadata) {
+      // Google Imagen may provide usage info in metadata
+      const metadata = result.metadata;
+      if (metadata.tokenMetadata) {
+        usage.promptTokenCount = metadata.tokenMetadata.inputTokenCount?.totalTokens;
+        usage.candidatesTokenCount = metadata.tokenMetadata.outputTokenCount?.totalTokens;
+        usage.totalTokenCount = (usage.promptTokenCount || 0) + (usage.candidatesTokenCount || 0);
+      }
+      usage.imageCount = images.length;
+    } else {
+      // If no metadata, just include image count
+      usage.imageCount = images.length;
+    }
+
     console.log(`[NanoBanana] Successfully generated ${images.length} image(s)`);
+    if (usage.totalTokenCount) {
+      console.log(
+        `[NanoBanana] Token usage: ${usage.totalTokenCount} (prompt: ${usage.promptTokenCount}, output: ${usage.candidatesTokenCount})`
+      );
+    }
 
     return {
       success: true,
       images,
+      usage,
     };
   } catch (error: any) {
     console.error('[NanoBanana] Image generation error:', error);

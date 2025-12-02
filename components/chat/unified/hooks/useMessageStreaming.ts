@@ -235,7 +235,9 @@ export function useMessageStreaming() {
               let nodeStatusMessage = '';
 
               if (event.node === 'generate') {
-                const hasToolResults = event.data?.messages?.some((msg: any) => msg.role === 'tool');
+                const hasToolResults = event.data?.messages?.some(
+                  (msg: any) => msg.role === 'tool'
+                );
                 if (event.data?.messages?.[0]?.tool_calls) {
                   const toolNames = event.data.messages[0].tool_calls
                     .map((tc: any) => tc.name)
@@ -275,7 +277,9 @@ export function useMessageStreaming() {
               if (allMsgs && allMsgs.length > 0) {
                 let displayContent = '';
                 for (const msg of allMsgs) {
-                  if (msg.role === 'user') continue;
+                  if (msg.role === 'user') {
+                    continue;
+                  }
 
                   if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
                     if (msg.content) {
@@ -288,9 +292,14 @@ export function useMessageStreaming() {
                     continue;
                   }
 
-                  if (msg.role === 'tool') continue;
+                  if (msg.role === 'tool') {
+                    continue;
+                  }
 
-                  if (msg.role === 'assistant' && (!msg.tool_calls || msg.tool_calls.length === 0)) {
+                  if (
+                    msg.role === 'assistant' &&
+                    (!msg.tool_calls || msg.tool_calls.length === 0)
+                  ) {
                     if (msg.content) {
                       displayContent += `${msg.content}\n\n`;
                     }
@@ -312,7 +321,10 @@ export function useMessageStreaming() {
               event.data.messages.length > 0
             ) {
               const lastMessage = event.data.messages[event.data.messages.length - 1];
-              if (lastMessage?.referenced_documents && lastMessage.referenced_documents.length > 0) {
+              if (
+                lastMessage?.referenced_documents &&
+                lastMessage.referenced_documents.length > 0
+              ) {
                 scheduleUpdate({
                   referenced_documents: lastMessage.referenced_documents,
                 });
@@ -323,16 +335,22 @@ export function useMessageStreaming() {
             if (event.type === 'node' && event.node === 'tools' && event.data?.toolResults) {
               const toolResults = event.data.toolResults;
               const generatedImages: ImageAttachment[] = [];
+              let usageInfo: any = null;
 
               for (const toolResult of toolResults) {
                 if (toolResult.toolName === 'generate_image' && toolResult.result) {
                   try {
-                    let resultData =
+                    const resultData =
                       typeof toolResult.result === 'string'
                         ? JSON.parse(toolResult.result)
                         : toolResult.result;
 
                     if (resultData.success) {
+                      // Extract usage info if available
+                      if (resultData.usage) {
+                        usageInfo = resultData.usage;
+                      }
+
                       if (resultData.imageBase64) {
                         generatedImages.push({
                           id: `generated-${Date.now()}-${Math.random()}`,
@@ -356,7 +374,10 @@ export function useMessageStreaming() {
                       }
                     }
                   } catch (error) {
-                    console.error('[useMessageStreaming] Failed to process image generation:', error);
+                    console.error(
+                      '[useMessageStreaming] Failed to process image generation:',
+                      error
+                    );
                   }
                 }
               }
@@ -364,6 +385,28 @@ export function useMessageStreaming() {
               if (generatedImages.length > 0) {
                 scheduleUpdate({ images: generatedImages });
                 setEnableImageGeneration(false);
+
+                // Append usage info to assistant message if available
+                if (usageInfo) {
+                  let usageMessage = '\n\n';
+                  if (usageInfo.imageCount) {
+                    usageMessage += `📊 **이미지 생성 정보**: ${usageInfo.imageCount}개의 이미지 생성됨`;
+                  }
+                  if (usageInfo.totalTokenCount) {
+                    usageMessage += `\n🎫 **토큰 사용량**: ${usageInfo.totalTokenCount.toLocaleString()} 토큰`;
+                    if (usageInfo.promptTokenCount) {
+                      usageMessage += ` (입력: ${usageInfo.promptTokenCount.toLocaleString()}`;
+                    }
+                    if (usageInfo.candidatesTokenCount) {
+                      usageMessage += `, 출력: ${usageInfo.candidatesTokenCount.toLocaleString()}`;
+                    }
+                    if (usageInfo.promptTokenCount || usageInfo.candidatesTokenCount) {
+                      usageMessage += ')';
+                    }
+                  }
+                  // Append usage info to the accumulated message content
+                  scheduleUpdate({ content: accumulatedMessage.content + usageMessage });
+                }
               }
             }
 
@@ -463,7 +506,8 @@ export function useMessageStreaming() {
         }
 
         // Auto-generate title if needed
-        const { shouldGenerateTitle, generateConversationTitle } = await import('@/lib/chat/title-generator');
+        const { shouldGenerateTitle, generateConversationTitle } =
+          await import('@/lib/chat/title-generator');
         const currentConversation = conversations.find((c) => c.id === conversationId);
         if (currentConversation && shouldGenerateTitle(currentConversation.title)) {
           const allMessagesForTitle = [
@@ -495,9 +539,15 @@ export function useMessageStreaming() {
           cancelAnimationFrame(rafIdRef.current);
         }
 
-        if (cleanupEventHandler) cleanupEventHandler();
-        if (cleanupDoneHandler) cleanupDoneHandler();
-        if (cleanupErrorHandler) cleanupErrorHandler();
+        if (cleanupEventHandler) {
+          cleanupEventHandler();
+        }
+        if (cleanupDoneHandler) {
+          cleanupDoneHandler();
+        }
+        if (cleanupErrorHandler) {
+          cleanupErrorHandler();
+        }
 
         stopStreaming(conversationId);
         abortControllerRef.current = null;

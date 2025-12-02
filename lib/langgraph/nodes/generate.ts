@@ -265,11 +265,25 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
 
             if (resultData.success) {
               // LLM에게는 이미지가 성공적으로 생성되었다는 정보만 전달
-              content = JSON.stringify({
+              const summary: any = {
                 success: true,
                 message: `Image generated successfully for prompt: "${resultData.prompt?.substring(0, 50)}..."`,
                 // base64는 제외 - UI에만 필요하고 LLM에게는 불필요
-              });
+              };
+
+              // Include usage/credit information if available
+              if (resultData.usage) {
+                summary.usage = resultData.usage;
+                // Add human-readable usage message
+                if (resultData.usage.imageCount) {
+                  summary.message += ` (${resultData.usage.imageCount} image${resultData.usage.imageCount > 1 ? 's' : ''} generated)`;
+                }
+                if (resultData.usage.totalTokenCount) {
+                  summary.message += ` [Token usage: ${resultData.usage.totalTokenCount}]`;
+                }
+              }
+
+              content = JSON.stringify(summary);
             } else {
               content = JSON.stringify({ success: false, error: resultData.error });
             }

@@ -423,14 +423,23 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
                   index: idx,
                 }));
 
+                // Prepare result with usage info
+                const resultData: any = {
+                  success: true,
+                  images: imagesJson,
+                  prompt: args.prompt,
+                };
+
+                // Include usage info if available
+                if (nanobananaResult.usage) {
+                  resultData.usage = nanobananaResult.usage;
+                  console.log('[Tools] NanoBanana usage info:', nanobananaResult.usage);
+                }
+
                 return {
                   toolCallId: call.id,
                   toolName: call.name,
-                  result: JSON.stringify({
-                    success: true,
-                    images: imagesJson,
-                    prompt: args.prompt,
-                  }),
+                  result: JSON.stringify(resultData),
                 };
               } else {
                 // Emit error progress
