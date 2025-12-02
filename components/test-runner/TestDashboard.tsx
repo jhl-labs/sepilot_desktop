@@ -47,10 +47,76 @@ export function TestDashboard() {
     }
   }, []);
 
+  // Health Check 실행
+  const runHealthCheck = React.useCallback(async () => {
+    try {
+      const result = await window.electronAPI.testRunner.healthCheck();
+      setHealthCheck(result);
+    } catch (error) {
+      console.error('Health check failed:', error);
+    }
+  }, []);
+
+  // 전체 테스트 실행
+  const runAllTests = React.useCallback(async () => {
+    setIsRunning(true);
+    try {
+      const result = await window.electronAPI.testRunner.runAll();
+      setAllTestsResult(result);
+      localStorage.setItem('test-history:all', JSON.stringify(result));
+    } catch (error) {
+      console.error('All tests failed:', error);
+    } finally {
+      setIsRunning(false);
+    }
+  }, []);
+
+  // LLM 테스트 실행
+  const runLlmTests = React.useCallback(async () => {
+    setIsRunning(true);
+    try {
+      const result = await window.electronAPI.testRunner.runLLM();
+      setLlmTestsResult(result);
+      localStorage.setItem('test-history:llm', JSON.stringify(result));
+    } catch (error) {
+      console.error('LLM tests failed:', error);
+    } finally {
+      setIsRunning(false);
+    }
+  }, []);
+
+  // Database 테스트 실행
+  const runDatabaseTests = React.useCallback(async () => {
+    setIsRunning(true);
+    try {
+      const result = await window.electronAPI.testRunner.runDatabase();
+      setDatabaseTestsResult(result);
+      localStorage.setItem('test-history:database', JSON.stringify(result));
+    } catch (error) {
+      console.error('Database tests failed:', error);
+    } finally {
+      setIsRunning(false);
+    }
+  }, []);
+
+  // MCP 테스트 실행
+  const runMcpTests = React.useCallback(async () => {
+    setIsRunning(true);
+    try {
+      const result = await window.electronAPI.testRunner.runMCP();
+      setMcpTestsResult(result);
+      localStorage.setItem('test-history:mcp', JSON.stringify(result));
+    } catch (error) {
+      console.error('MCP tests failed:', error);
+    } finally {
+      setIsRunning(false);
+    }
+  }, []);
+
   // 초기 Health Check 실행
   useEffect(() => {
     runHealthCheck();
-  }, []);
+  }, [runHealthCheck]);
 
   // Auto-refresh Health Check (60초마다)
   useEffect(() => {
@@ -62,7 +128,7 @@ export function TestDashboard() {
       return () => clearInterval(interval);
     }
     return undefined;
-  }, [autoRefresh]);
+  }, [autoRefresh, runHealthCheck]);
 
   // 메뉴에서 트리거된 테스트 실행 IPC 이벤트 리스너
   useEffect(() => {
@@ -70,92 +136,20 @@ export function TestDashboard() {
       return;
     }
 
-    const handleRunAllFromMenu = () => runAllTests();
-    const handleHealthCheckFromMenu = () => runHealthCheck();
-    const handleRunLLMFromMenu = () => runLlmTests();
-    const handleRunDatabaseFromMenu = () => runDatabaseTests();
-    const handleRunMCPFromMenu = () => runMcpTests();
-
-    window.electronAPI.on('test:run-all-from-menu', handleRunAllFromMenu);
-    window.electronAPI.on('test:health-check-from-menu', handleHealthCheckFromMenu);
-    window.electronAPI.on('test:run-llm-from-menu', handleRunLLMFromMenu);
-    window.electronAPI.on('test:run-database-from-menu', handleRunDatabaseFromMenu);
-    window.electronAPI.on('test:run-mcp-from-menu', handleRunMCPFromMenu);
+    window.electronAPI.on('test:run-all-from-menu', runAllTests);
+    window.electronAPI.on('test:health-check-from-menu', runHealthCheck);
+    window.electronAPI.on('test:run-llm-from-menu', runLlmTests);
+    window.electronAPI.on('test:run-database-from-menu', runDatabaseTests);
+    window.electronAPI.on('test:run-mcp-from-menu', runMcpTests);
 
     return () => {
-      window.electronAPI.removeListener('test:run-all-from-menu', handleRunAllFromMenu);
-      window.electronAPI.removeListener('test:health-check-from-menu', handleHealthCheckFromMenu);
-      window.electronAPI.removeListener('test:run-llm-from-menu', handleRunLLMFromMenu);
-      window.electronAPI.removeListener('test:run-database-from-menu', handleRunDatabaseFromMenu);
-      window.electronAPI.removeListener('test:run-mcp-from-menu', handleRunMCPFromMenu);
+      window.electronAPI.removeListener('test:run-all-from-menu', runAllTests);
+      window.electronAPI.removeListener('test:health-check-from-menu', runHealthCheck);
+      window.electronAPI.removeListener('test:run-llm-from-menu', runLlmTests);
+      window.electronAPI.removeListener('test:run-database-from-menu', runDatabaseTests);
+      window.electronAPI.removeListener('test:run-mcp-from-menu', runMcpTests);
     };
-  }, []);
-
-  // Health Check 실행
-  const runHealthCheck = async () => {
-    try {
-      const result = await window.electronAPI.testRunner.healthCheck();
-      setHealthCheck(result);
-    } catch (error) {
-      console.error('Health check failed:', error);
-    }
-  };
-
-  // 전체 테스트 실행
-  const runAllTests = async () => {
-    setIsRunning(true);
-    try {
-      const result = await window.electronAPI.testRunner.runAll();
-      setAllTestsResult(result);
-      localStorage.setItem('test-history:all', JSON.stringify(result));
-    } catch (error) {
-      console.error('All tests failed:', error);
-    } finally {
-      setIsRunning(false);
-    }
-  };
-
-  // LLM 테스트 실행
-  const runLlmTests = async () => {
-    setIsRunning(true);
-    try {
-      const result = await window.electronAPI.testRunner.runLLM();
-      setLlmTestsResult(result);
-      localStorage.setItem('test-history:llm', JSON.stringify(result));
-    } catch (error) {
-      console.error('LLM tests failed:', error);
-    } finally {
-      setIsRunning(false);
-    }
-  };
-
-  // Database 테스트 실행
-  const runDatabaseTests = async () => {
-    setIsRunning(true);
-    try {
-      const result = await window.electronAPI.testRunner.runDatabase();
-      setDatabaseTestsResult(result);
-      localStorage.setItem('test-history:database', JSON.stringify(result));
-    } catch (error) {
-      console.error('Database tests failed:', error);
-    } finally {
-      setIsRunning(false);
-    }
-  };
-
-  // MCP 테스트 실행
-  const runMcpTests = async () => {
-    setIsRunning(true);
-    try {
-      const result = await window.electronAPI.testRunner.runMCP();
-      setMcpTestsResult(result);
-      localStorage.setItem('test-history:mcp', JSON.stringify(result));
-    } catch (error) {
-      console.error('MCP tests failed:', error);
-    } finally {
-      setIsRunning(false);
-    }
-  };
+  }, [runAllTests, runHealthCheck, runLlmTests, runDatabaseTests, runMcpTests]);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
