@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Download, Image as ImageIcon, Sparkles, Clipboard, Copy } from 'lucide-react';
+import { X, Download, Image as ImageIcon, Sparkles, Clipboard, Copy, Link } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { isElectron } from '@/lib/platform';
@@ -22,7 +22,8 @@ interface GalleryImage {
   conversationTitle?: string;
   messageId?: string;
   createdAt: number;
-  type: 'pasted' | 'generated';
+  type: 'pasted' | 'generated' | 'linked';
+  url?: string; // 링크 이미지의 경우 원본 URL
 }
 
 interface GalleryViewProps {
@@ -33,12 +34,19 @@ export function GalleryView({ onClose }: GalleryViewProps) {
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pasted' | 'generated'>('all');
+  const [filter, setFilter] = useState<'all' | 'pasted' | 'generated' | 'linked'>('all');
 
   // Load all images from conversations
   useEffect(() => {
     loadImages();
   }, []);
+
+  // Extract image URLs from markdown content
+  const extractMarkdownImages = (content: string): string[] => {
+    const imageRegex = /!\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
+    const matches = content.matchAll(imageRegex);
+    return Array.from(matches, (match) => match[1]);
+  };
 
   const loadImages = async () => {
     setLoading(true);
@@ -89,6 +97,24 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                     }
                   }
                 }
+                // Extract markdown image links from message content
+                if (message.content) {
+                  const imageUrls = extractMarkdownImages(message.content);
+                  for (const url of imageUrls) {
+                    allImages.push({
+                      id: `${message.id}-${url}`,
+                      base64: url, // URL을 base64 필드에 저장 (표시용)
+                      filename: url.split('/').pop() || 'linked-image',
+                      mimeType: 'image/png', // 기본값
+                      conversationId: conversation.id,
+                      conversationTitle: conversation.title,
+                      messageId: message.id,
+                      createdAt: message.created_at,
+                      type: 'linked',
+                      url: url,
+                    });
+                  }
+                }
               }
             }
           }
@@ -114,6 +140,23 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                       type: message.role === 'user' ? 'pasted' : 'generated',
                     });
                   }
+                }
+              }
+              // Extract markdown image links from message content
+              if (message.content) {
+                const imageUrls = extractMarkdownImages(message.content);
+                for (const url of imageUrls) {
+                  allImages.push({
+                    id: `${message.id}-${url}`,
+                    base64: url, // URL을 base64 필드에 저장 (표시용)
+                    filename: url.split('/').pop() || 'linked-image',
+                    mimeType: 'image/png', // 기본값
+                    conversationId: convId,
+                    messageId: message.id,
+                    createdAt: message.created_at,
+                    type: 'linked',
+                    url: url,
+                  });
                 }
               }
             }
@@ -219,6 +262,15 @@ export function GalleryView({ onClose }: GalleryViewProps) {
             <Sparkles className="h-4 w-4" />
             생성됨 ({images.filter((i) => i.type === 'generated').length})
           </Button>
+          <Button
+            variant={filter === 'linked' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setFilter('linked')}
+            className="gap-1"
+          >
+            <Link className="h-4 w-4" />
+            링크 ({images.filter((i) => i.type === 'linked').length})
+          </Button>
         </div>
       </div>
 
@@ -237,7 +289,9 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                 ? '채팅에서 이미지를 붙여넣거나 생성하면 여기에 표시됩니다'
                 : filter === 'pasted'
                   ? '아직 붙여넣기한 이미지가 없습니다'
-                  : '아직 생성한 이미지가 없습니다'}
+                  : filter === 'generated'
+                    ? '아직 생성한 이미지가 없습니다'
+                    : '아직 링크된 이미지가 없습니다'}
             </p>
           </div>
         ) : (
@@ -260,10 +314,18 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                         <div className="flex items-center gap-1 text-white text-xs">
                           {image.type === 'generated' ? (
                             <Sparkles className="h-3 w-3" />
+                          ) : image.type === 'linked' ? (
+                            <Link className="h-3 w-3" />
                           ) : (
                             <Clipboard className="h-3 w-3" />
                           )}
-                          <span>{image.type === 'generated' ? '생성됨' : '붙여넣기'}</span>
+                          <span>
+                            {image.type === 'generated'
+                              ? '생성됨'
+                              : image.type === 'linked'
+                                ? '링크'
+                                : '붙여넣기'}
+                          </span>
                         </div>
                         <p className="text-white text-xs mt-1 line-clamp-1">
                           {image.conversationTitle || '대화'}
@@ -275,10 +337,16 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                       className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
                         image.type === 'generated'
                           ? 'bg-purple-500/80 text-white'
-                          : 'bg-blue-500/80 text-white'
+                          : image.type === 'linked'
+                            ? 'bg-green-500/80 text-white'
+                            : 'bg-blue-500/80 text-white'
                       }`}
                     >
-                      {image.type === 'generated' ? 'AI' : 'User'}
+                      {image.type === 'generated'
+                        ? 'AI'
+                        : image.type === 'linked'
+                          ? 'Link'
+                          : 'User'}
                     </div>
                   </div>
                 </ContextMenuTrigger>
@@ -316,11 +384,17 @@ export function GalleryView({ onClose }: GalleryViewProps) {
               <div className="flex items-center gap-2">
                 {selectedImage.type === 'generated' ? (
                   <Sparkles className="h-4 w-4 text-purple-500" />
+                ) : selectedImage.type === 'linked' ? (
+                  <Link className="h-4 w-4 text-green-500" />
                 ) : (
                   <Clipboard className="h-4 w-4 text-blue-500" />
                 )}
                 <span className="font-medium">
-                  {selectedImage.type === 'generated' ? 'AI 생성 이미지' : '붙여넣기 이미지'}
+                  {selectedImage.type === 'generated'
+                    ? 'AI 생성 이미지'
+                    : selectedImage.type === 'linked'
+                      ? '링크 이미지'
+                      : '붙여넣기 이미지'}
                 </span>
                 <span className="text-sm text-muted-foreground">
                   • {formatDate(selectedImage.createdAt)}
@@ -354,9 +428,23 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                 <span className="font-medium">대화:</span>{' '}
                 {selectedImage.conversationTitle || '알 수 없음'}
               </p>
-              <p className="line-clamp-1">
-                <span className="font-medium">파일명:</span> {selectedImage.filename}
-              </p>
+              {selectedImage.type === 'linked' && selectedImage.url ? (
+                <p className="line-clamp-1">
+                  <span className="font-medium">URL:</span>{' '}
+                  <a
+                    href={selectedImage.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    {selectedImage.url}
+                  </a>
+                </p>
+              ) : (
+                <p className="line-clamp-1">
+                  <span className="font-medium">파일명:</span> {selectedImage.filename}
+                </p>
+              )}
             </div>
           </div>
         </div>
