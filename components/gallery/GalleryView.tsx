@@ -24,6 +24,7 @@ interface GalleryImage {
   createdAt: number;
   type: 'pasted' | 'generated' | 'linked';
   url?: string; // 링크 이미지의 경우 원본 URL
+  provider?: 'comfyui' | 'nanobanana'; // 생성 이미지의 경우 생성 출처
 }
 
 interface GalleryViewProps {
@@ -93,6 +94,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                         messageId: message.id,
                         createdAt: message.created_at,
                         type: 'generated',
+                        provider: img.provider,
                       });
                     }
                   }
@@ -138,6 +140,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                       messageId: message.id,
                       createdAt: message.created_at,
                       type: message.role === 'user' ? 'pasted' : 'generated',
+                      provider: img.provider,
                     });
                   }
                 }
@@ -333,20 +336,28 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                       </div>
                     </div>
                     {/* Type badge */}
-                    <div
-                      className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        image.type === 'generated'
-                          ? 'bg-purple-500/80 text-white'
+                    <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                      <div
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          image.type === 'generated'
+                            ? 'bg-purple-500/80 text-white'
+                            : image.type === 'linked'
+                              ? 'bg-green-500/80 text-white'
+                              : 'bg-blue-500/80 text-white'
+                        }`}
+                      >
+                        {image.type === 'generated'
+                          ? 'AI'
                           : image.type === 'linked'
-                            ? 'bg-green-500/80 text-white'
-                            : 'bg-blue-500/80 text-white'
-                      }`}
-                    >
-                      {image.type === 'generated'
-                        ? 'AI'
-                        : image.type === 'linked'
-                          ? 'Link'
-                          : 'User'}
+                            ? 'Link'
+                            : 'User'}
+                      </div>
+                      {/* Provider badge for generated images */}
+                      {image.type === 'generated' && image.provider && (
+                        <div className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-black/60 text-white">
+                          {image.provider === 'comfyui' ? 'ComfyUI' : 'NanoBanana'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </ContextMenuTrigger>
@@ -443,6 +454,12 @@ export function GalleryView({ onClose }: GalleryViewProps) {
               ) : (
                 <p className="line-clamp-1">
                   <span className="font-medium">파일명:</span> {selectedImage.filename}
+                </p>
+              )}
+              {selectedImage.type === 'generated' && selectedImage.provider && (
+                <p>
+                  <span className="font-medium">생성 출처:</span>{' '}
+                  {selectedImage.provider === 'comfyui' ? 'ComfyUI' : 'NanoBanana (Google Imagen)'}
                 </p>
               )}
             </div>

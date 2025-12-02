@@ -13,6 +13,7 @@ export interface ImageAttachment {
   filename: string;
   mimeType: string;
   base64?: string; // For display
+  provider?: 'comfyui' | 'nanobanana'; // Image generation provider
 }
 
 export interface FileChange {
