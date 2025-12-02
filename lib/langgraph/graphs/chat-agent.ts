@@ -76,6 +76,10 @@ export class ChatAgentGraph {
     let hasError = false;
     let errorMessage = '';
 
+    // Track tool usage count to detect repetitive behavior
+    const toolUsageCount = new Map<string, number>();
+    let previousToolNames: string[] = [];
+
     while (iterations < actualMaxIterations) {
       console.log(`[AgentGraph] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`);
       console.log('[AgentGraph] Current state before generate:', {
@@ -251,6 +255,61 @@ export class ChatAgentGraph {
       console.log('[AgentGraph] Tool results:', toolsResult.toolResults);
 
       yield { tools: toolsResult };
+
+      // Track tool usage and check for excessive repetition
+      if (toolsResult.toolResults && toolsResult.toolResults.length > 0) {
+        const currentToolNames = toolsResult.toolResults.map((r) => r.toolName);
+
+        // Check for consecutive duplicate tool calls
+        if (iterations > 0 && previousToolNames.length > 0) {
+          const duplicates = currentToolNames.filter((name) => previousToolNames.includes(name));
+          if (duplicates.length > 0 && duplicates.length === currentToolNames.length) {
+            console.warn(
+              `[AgentGraph] ⚠️ Detected consecutive duplicate tool calls: ${duplicates.join(', ')}`
+            );
+            emitStreamingChunk(
+              `\n\n⚠️ **중복 감지**: 이전 iteration과 동일한 도구(${duplicates.join(', ')})가 연속으로 호출되었습니다.\n\n`,
+              state.conversationId
+            );
+          }
+        }
+
+        // Update previous tool names for next iteration
+        previousToolNames = currentToolNames;
+
+        // Track cumulative usage count
+        for (const result of toolsResult.toolResults) {
+          const currentCount = toolUsageCount.get(result.toolName) || 0;
+          const newCount = currentCount + 1;
+          toolUsageCount.set(result.toolName, newCount);
+
+          console.log(`[AgentGraph] Tool usage: ${result.toolName} = ${newCount} times`);
+
+          // Warning if same tool used more than 3 times
+          if (newCount >= 3) {
+            console.warn(
+              `[AgentGraph] ⚠️ Tool "${result.toolName}" has been called ${newCount} times. This may indicate repetitive behavior.`
+            );
+            emitStreamingChunk(
+              `\n\n⚠️ **경고**: \`${result.toolName}\` 도구가 ${newCount}번 호출되었습니다. 반복적인 동작이 감지되었습니다.\n\n`,
+              state.conversationId
+            );
+
+            // Stop if same tool called 5+ times
+            if (newCount >= 5) {
+              console.error(
+                `[AgentGraph] 🛑 Tool "${result.toolName}" called ${newCount} times. Stopping to prevent infinite loop.`
+              );
+              emitStreamingChunk(
+                `\n\n🛑 **중단**: \`${result.toolName}\` 도구가 ${newCount}번 호출되어 무한 루프를 방지하기 위해 작업을 중단합니다.\n\n`,
+                state.conversationId
+              );
+              iterations = actualMaxIterations; // Force exit
+              break;
+            }
+          }
+        }
+      }
 
       // 이미지 생성 도구가 성공적으로 실행되었으면 루프 종료
       // (이미지 생성은 일회성 작업이므로 추가 반복 불필요)

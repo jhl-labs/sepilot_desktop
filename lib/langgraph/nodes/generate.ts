@@ -261,13 +261,13 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
         content = 'No result';
       }
 
-      // 긴 결과 제한 (Truncation)
-      const MAX_TOOL_RESULT_LENGTH = 20000;
+      // 긴 결과 제한 (Truncation) - 50000자로 증가하여 더 많은 컨텍스트 제공
+      const MAX_TOOL_RESULT_LENGTH = 50000;
       if (content.length > MAX_TOOL_RESULT_LENGTH) {
         content = `${content.substring(
           0,
           MAX_TOOL_RESULT_LENGTH
-        )}\n\n... (Result truncated. Total length: ${content.length} chars. Please use pagination or specific queries to see more.)`;
+        )}\n\n... (Result truncated. Total length: ${content.length} chars. The available ${MAX_TOOL_RESULT_LENGTH} characters should be sufficient for analysis. Please work with this information rather than requesting additional searches.)`;
       }
 
       console.log('[Agent] Creating tool result message:', {
@@ -298,7 +298,22 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       name: toolMsg.name, // OpenAI API 호환성을 위해 추가
     }));
 
-    const messages = [...state.messages, ...convertedToolMessages];
+    // Add system prompt to guide LLM behavior with tools
+    const systemMessage: Message = {
+      id: 'system-tool-guidance',
+      role: 'system',
+      content: `You are a helpful assistant with access to tools. Follow these guidelines:
+1. Use tools when necessary to answer user questions accurately
+2. Avoid redundant or repeated tool calls - one tool call per task is usually sufficient
+3. After receiving a tool result, analyze it thoroughly and provide a complete answer
+4. Don't call the same tool multiple times with similar parameters unless explicitly needed
+5. For search queries, one comprehensive search is typically enough
+6. If a tool result is truncated, work with the available information rather than searching again
+7. Always prioritize providing a final answer over making additional tool calls`,
+      created_at: Date.now(),
+    };
+
+    const messages = [systemMessage, ...state.messages, ...convertedToolMessages];
 
     console.log(
       '[Agent] Messages to LLM:',
