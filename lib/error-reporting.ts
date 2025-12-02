@@ -140,8 +140,25 @@ export async function reportError(
 }
 
 /**
+ * 에러 리포팅 콜백 타입
+ * 에러 발생 시 UI에서 처리하기 위한 콜백
+ */
+type ErrorReportingCallback = (error: Error, additionalInfo?: Record<string, unknown>) => void;
+
+let errorReportingCallback: ErrorReportingCallback | null = null;
+
+/**
+ * 에러 리포팅 콜백 등록
+ * ErrorBoundary나 다른 컴포넌트에서 에러 발생 시 호출할 콜백을 등록
+ */
+export function setErrorReportingCallback(callback: ErrorReportingCallback | null) {
+  errorReportingCallback = callback;
+}
+
+/**
  * 전역 에러 핸들러 설정
  * React Error Boundary와 함께 사용
+ * 에러 발생 시 자동으로 리포트하지 않고, 콜백을 통해 UI에 전달
  */
 export function setupGlobalErrorHandler() {
   if (typeof window === 'undefined') {
@@ -152,16 +169,16 @@ export function setupGlobalErrorHandler() {
   window.addEventListener('error', (event) => {
     console.error('[Global Error Handler] Unhandled error:', event.error);
 
-    reportError(event.error || new Error(event.message), {
-      type: 'frontend',
-      additionalInfo: {
+    const error = event.error || new Error(event.message);
+
+    // 콜백이 등록되어 있으면 UI에서 처리하도록 위임
+    if (errorReportingCallback) {
+      errorReportingCallback(error, {
         filename: event.filename,
         lineno: event.lineno,
         colno: event.colno,
-      },
-    }).catch((err) => {
-      console.error('[ErrorReporting] Failed to report unhandled error:', err);
-    });
+      });
+    }
   });
 
   // Unhandled promise rejections
@@ -170,14 +187,12 @@ export function setupGlobalErrorHandler() {
 
     const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
 
-    reportError(error, {
-      type: 'frontend',
-      additionalInfo: {
+    // 콜백이 등록되어 있으면 UI에서 처리하도록 위임
+    if (errorReportingCallback) {
+      errorReportingCallback(error, {
         promiseRejection: true,
-      },
-    }).catch((err) => {
-      console.error('[ErrorReporting] Failed to report unhandled rejection:', err);
-    });
+      });
+    }
   });
 
   console.log('[ErrorReporting] Global error handlers registered');
