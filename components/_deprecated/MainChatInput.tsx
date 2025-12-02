@@ -417,7 +417,7 @@ export function MainChatInput({
                       </Button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
-                  <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuContent align="end" side="top" className="w-64">
                     <DropdownMenuItem
                       onClick={() => setThinkingMode('instant')}
                       className="cursor-pointer"
@@ -523,7 +523,11 @@ export function MainChatInput({
                       </Button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
-                  <DropdownMenuContent align="end" className="w-72 max-h-[400px] overflow-y-auto">
+                  <DropdownMenuContent
+                    align="end"
+                    side="top"
+                    className="w-72 max-h-[400px] overflow-y-auto"
+                  >
                     {/* Tools header with bulk actions */}
                     <div className="px-2 py-2 flex items-center justify-between border-b">
                       <span className="text-xs text-muted-foreground">
@@ -624,7 +628,7 @@ export function MainChatInput({
                         </Button>
                       </DropdownMenuTrigger>
                     </TooltipTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuContent align="end" side="top" className="w-48">
                       <DropdownMenuItem
                         onClick={() => setEnableImageGeneration(!enableImageGeneration)}
                         className="cursor-pointer"
