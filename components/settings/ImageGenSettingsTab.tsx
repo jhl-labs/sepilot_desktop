@@ -535,8 +535,9 @@ export function ImageGenSettingsTab({
 
               <div className="space-y-2">
                 <Label htmlFor="nanoBananaModel">Model</Label>
-                <Input
+                <select
                   id="nanoBananaModel"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={imageGenConfig.nanobanana?.model || 'imagen-3.0-generate-001'}
                   onChange={(e) =>
                     setImageGenConfig({
@@ -547,9 +548,38 @@ export function ImageGenSettingsTab({
                       },
                     })
                   }
-                  placeholder="imagen-3.0-generate-001"
-                />
+                >
+                  <option value="imagen-3.0-generate-001">Imagen 3.0 (Standard)</option>
+                  <option value="imagen-3.0-fast-generate-001">Imagen 3.0 Fast</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Fast: 빠른 생성, Standard: 더 높은 품질
+                </p>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={imageGenConfig.nanobanana?.askOptionsOnGenerate ?? false}
+                  onChange={(e) =>
+                    setImageGenConfig({
+                      ...imageGenConfig,
+                      nanobanana: {
+                        ...imageGenConfig.nanobanana!,
+                        askOptionsOnGenerate: e.target.checked,
+                      },
+                    })
+                  }
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                <span className="ml-3 text-sm font-medium">이미지 생성 시 옵션 물어보기</span>
+              </label>
+              <p className="text-xs text-muted-foreground ml-14">
+                활성화하면 이미지 생성할 때마다 aspect ratio, 이미지 개수 등을 선택할 수 있습니다.
+              </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">

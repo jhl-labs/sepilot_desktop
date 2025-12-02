@@ -79,6 +79,9 @@ export const createDefaultNanoBananaConfig = (): NanoBananaConfig => ({
   aspectRatio: '1:1',
   numberOfImages: 1,
   seed: -1,
+  outputMimeType: 'image/png',
+  compressionQuality: 90,
+  askOptionsOnGenerate: false,
 });
 
 export const createDefaultImageGenConfig = (): ImageGenConfig => ({
@@ -164,9 +167,7 @@ export const mergeComfyConfig = (incoming?: Partial<ComfyUIConfig>): ComfyUIConf
   };
 };
 
-export const mergeNanoBananaConfig = (
-  incoming?: Partial<NanoBananaConfig>
-): NanoBananaConfig => {
+export const mergeNanoBananaConfig = (incoming?: Partial<NanoBananaConfig>): NanoBananaConfig => {
   const base = createDefaultNanoBananaConfig();
   if (!incoming) {
     return base;
@@ -186,9 +187,7 @@ export const mergeImageGenConfig = (incoming?: Partial<ImageGenConfig>): ImageGe
   return {
     provider: incoming.provider ?? base.provider,
     comfyui: incoming.comfyui ? mergeComfyConfig(incoming.comfyui) : base.comfyui,
-    nanobanana: incoming.nanobanana
-      ? mergeNanoBananaConfig(incoming.nanobanana)
-      : base.nanobanana,
+    nanobanana: incoming.nanobanana ? mergeNanoBananaConfig(incoming.nanobanana) : base.nanobanana,
   };
 };
 

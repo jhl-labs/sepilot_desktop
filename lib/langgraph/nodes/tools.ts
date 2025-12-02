@@ -312,6 +312,8 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
               negativePrompt?: string;
               width?: number;
               height?: number;
+              aspectRatio?: string;
+              numberOfImages?: number;
             };
 
             // Emit initial progress (conversationId로 격리)
@@ -378,7 +380,10 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
                 };
               }
 
-              console.log('[Tools] Generating image with NanoBanana (Main Process):', call.arguments);
+              console.log(
+                '[Tools] Generating image with NanoBanana (Main Process):',
+                call.arguments
+              );
 
               // Emit progress
               emitImageProgress(
@@ -396,6 +401,8 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
                 {
                   prompt: args.prompt,
                   negativePrompt: args.negativePrompt,
+                  aspectRatio: args.aspectRatio,
+                  numberOfImages: args.numberOfImages,
                 }
               );
 

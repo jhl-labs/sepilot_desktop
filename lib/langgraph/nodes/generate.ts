@@ -2,7 +2,11 @@ import { ChatState, RAGState, AgentState } from '../state';
 import { LLMService } from '@/lib/llm/service';
 import { Message } from '@/types';
 import { MCPServerManager } from '@/lib/mcp/server-manager';
-import { getCurrentGraphConfig, emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import {
+  getCurrentGraphConfig,
+  emitStreamingChunk,
+  getCurrentImageGenConfig,
+} from '@/lib/llm/streaming-callback';
 
 /**
  * LLM 생성 노드 - 기본 Chat용 (스트리밍)
@@ -195,7 +199,7 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
         function: {
           name: 'generate_image',
           description:
-            'Generate a high-quality image using AI image generation (ComfyUI/Stable Diffusion). ALWAYS use this tool when the user asks to: create/generate/make/draw/paint an image, picture, or artwork. This generates actual photorealistic or artistic images, NOT text-based representations like SVG or ASCII art. Use detailed English prompts for best results.',
+            'Generate a high-quality image using AI image generation (ComfyUI/Stable Diffusion/Google Imagen). ALWAYS use this tool when the user asks to: create/generate/make/draw/paint an image, picture, or artwork. This generates actual photorealistic or artistic images, NOT text-based representations like SVG or ASCII art. Use detailed English prompts for best results.',
           parameters: {
             type: 'object',
             properties: {
@@ -211,20 +215,35 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
               },
               width: {
                 type: 'number',
-                description: 'Image width in pixels (must be multiple of 8)',
+                description:
+                  'Image width in pixels (must be multiple of 8). Only used for ComfyUI.',
                 default: 1328,
               },
               height: {
                 type: 'number',
-                description: 'Image height in pixels (must be multiple of 8)',
+                description:
+                  'Image height in pixels (must be multiple of 8). Only used for ComfyUI.',
                 default: 1328,
+              },
+              aspectRatio: {
+                type: 'string',
+                description:
+                  'Aspect ratio for the image. Only used for NanoBanana (Google Imagen). Options: "1:1" (square), "16:9" (landscape), "9:16" (portrait), "4:3", "3:4". Default: "1:1"',
+                enum: ['1:1', '16:9', '9:16', '4:3', '3:4'],
+              },
+              numberOfImages: {
+                type: 'number',
+                description:
+                  'Number of images to generate. Only used for NanoBanana (Google Imagen). Fast model: 1-4, Standard model: 1-8. Default: 1',
+                minimum: 1,
+                maximum: 8,
               },
             },
             required: ['prompt'],
           },
         },
       });
-      console.log('[Agent] Added generate_image tool (ComfyUI enabled)');
+      console.log('[Agent] Added generate_image tool (ImageGen enabled)');
     }
 
     if (toolsForLLM.length > 0) {
@@ -304,17 +323,42 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
     }));
 
     // Add system prompt to guide LLM behavior with tools
-    const systemMessage: Message = {
-      id: 'system-tool-guidance',
-      role: 'system',
-      content: `You are a helpful assistant with access to tools. Follow these guidelines:
+    // Check if NanoBanana askOptionsOnGenerate is enabled
+    const imageGenConfig = getCurrentImageGenConfig();
+    const nanobananaAskOptions =
+      imageGenConfig?.provider === 'nanobanana' &&
+      imageGenConfig?.nanobanana?.askOptionsOnGenerate === true;
+
+    let systemContent = `You are a helpful assistant with access to tools. Follow these guidelines:
 1. Use tools when necessary to answer user questions accurately
 2. Avoid redundant or repeated tool calls - one tool call per task is usually sufficient
 3. After receiving a tool result, analyze it thoroughly and provide a complete answer
 4. Don't call the same tool multiple times with similar parameters unless explicitly needed
 5. For search queries, one comprehensive search is typically enough
 6. If a tool result is truncated, work with the available information rather than searching again
-7. Always prioritize providing a final answer over making additional tool calls`,
+7. Always prioritize providing a final answer over making additional tool calls`;
+
+    // Add NanoBanana interactive options guidance
+    if (nanobananaAskOptions) {
+      systemContent += `
+
+**IMPORTANT - Image Generation with NanoBanana (Google Imagen):**
+Before calling the generate_image tool, you MUST ask the user for the following options:
+- Aspect ratio: "1:1" (square), "16:9" (landscape), "9:16" (portrait), "4:3", or "3:4"
+- Number of images: 1-4 for Fast model, 1-8 for Standard model (default: 1)
+
+Present these options clearly and wait for the user's response before generating the image.
+Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세요:
+1. 화면 비율 (aspect ratio): 1:1 (정사각형), 16:9 (가로형), 9:16 (세로형), 4:3, 3:4
+2. 생성할 이미지 개수: 1-4개 (Fast 모델) 또는 1-8개 (Standard 모델)
+
+선택해주세요!"`;
+    }
+
+    const systemMessage: Message = {
+      id: 'system-tool-guidance',
+      role: 'system',
+      content: systemContent,
       created_at: Date.now(),
     };
 
