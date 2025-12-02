@@ -89,10 +89,11 @@ const PRESETS = {
     },
     {
       name: 'Context7',
-      icon: Sparkles, // Or another suitable icon
-      description: '고급 컨텍스트 처리 MCP',
+      icon: Sparkles,
+      description: '최신 코드 예제와 문서 검색 (프롬프트에 "use context7" 입력)',
       command: 'npx',
-      args: '-y\n@modelcontextprotocol/server-context7',
+      args: '-y\n@upstash/context7-mcp',
+      env: 'CONTEXT7_API_KEY=',
       color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
       iconColor: 'text-indigo-500',
     },
