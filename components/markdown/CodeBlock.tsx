@@ -65,7 +65,7 @@ export function CodeBlock({ language, code }: CodeBlockProps) {
             margin: 0,
             padding: '1rem',
             background: 'transparent',
-            fontSize: '0.875rem',
+            fontSize: '0.75rem',
           }}
           wrapLongLines={false}
           showLineNumbers={false}
