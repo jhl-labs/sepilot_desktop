@@ -1,6 +1,6 @@
 import { TestResult, TestSuiteResult } from '../../ipc/handlers/test-runner';
 import { logger } from '../../services/logger';
-import { mcpManager } from '../../../lib/mcp/server-manager';
+import { MCPServerManager } from '../../../lib/mcp/server-manager';
 
 /**
  * MCP Tools 테스트 스위트
@@ -54,7 +54,7 @@ export class MCPToolsTestSuite {
     const testId = 'mcp-manager-init';
 
     try {
-      if (!mcpManager) {
+      if (!MCPServerManager) {
         return {
           id: testId,
           name: 'MCP Manager Initialization',
@@ -93,7 +93,7 @@ export class MCPToolsTestSuite {
     const testId = 'mcp-server-connections';
 
     try {
-      const servers = mcpManager.getAllServers();
+      const servers = MCPServerManager.getAllServers();
       const serverCount = servers.length;
 
       if (serverCount === 0) {
@@ -151,7 +151,7 @@ export class MCPToolsTestSuite {
     const testId = 'mcp-tool-availability';
 
     try {
-      const servers = mcpManager.getAllServers();
+      const servers = MCPServerManager.getAllServers();
       const connectedServers = servers.filter((s) => s.connected);
 
       if (connectedServers.length === 0) {
@@ -170,7 +170,7 @@ export class MCPToolsTestSuite {
 
       for (const server of connectedServers) {
         try {
-          const tools = await mcpManager.getServerTools(server.name);
+          const tools = await MCPServerManager.getServerTools(server.name);
           const toolCount = tools.length;
           totalTools += toolCount;
           toolsPerServer[server.name] = toolCount;

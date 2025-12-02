@@ -72,9 +72,9 @@ export class DatabaseTestSuite {
       }
 
       const db = databaseService.getDatabase();
-      const result = db.prepare('SELECT 1 as test').get() as { test: number } | undefined;
+      const result = db.prepare('SELECT 1 as test').all();
 
-      if (!result || result.test !== 1) {
+      if (!result || result.length === 0 || (result[0] as any).test !== 1) {
         return {
           id: testId,
           name: 'Database Connection',
@@ -114,16 +114,17 @@ export class DatabaseTestSuite {
 
     try {
       const db = databaseService.getDatabase();
-      const config = db.prepare('SELECT value FROM config WHERE key = ?').get('app_config') as
-        | { value: string }
-        | undefined;
+      const configResult = db.prepare('SELECT value FROM config WHERE key = ?').all(['app_config']);
 
       return {
         id: testId,
         name: 'Database Read Operation',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: config ? 'Configuration read successfully' : 'No configuration found (new install)',
+        message:
+          configResult.length > 0
+            ? 'Configuration read successfully'
+            : 'No configuration found (new install)',
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -151,20 +152,18 @@ export class DatabaseTestSuite {
       const testValue = JSON.stringify({ test: true, timestamp: Date.now() });
 
       // Write
-      db.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)').run(
+      db.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)').run([
         testKey,
-        testValue
-      );
+        testValue,
+      ]);
 
       // Verify
-      const result = db.prepare('SELECT value FROM config WHERE key = ?').get(testKey) as
-        | { value: string }
-        | undefined;
+      const result = db.prepare('SELECT value FROM config WHERE key = ?').all([testKey]);
 
       // Cleanup
-      db.prepare('DELETE FROM config WHERE key = ?').run(testKey);
+      db.prepare('DELETE FROM config WHERE key = ?').run([testKey]);
 
-      if (!result || result.value !== testValue) {
+      if (!result || result.length === 0 || (result[0] as any).value !== testValue) {
         return {
           id: testId,
           name: 'Database Write Operation',
@@ -208,9 +207,9 @@ export class DatabaseTestSuite {
         .prepare(
           "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='conversations'"
         )
-        .get() as { count: number };
+        .all();
 
-      if (result.count === 0) {
+      if (result.length === 0 || (result[0] as any).count === 0) {
         return {
           id: testId,
           name: 'Conversation Table',
@@ -222,16 +221,14 @@ export class DatabaseTestSuite {
       }
 
       // Count conversations
-      const countResult = db.prepare('SELECT COUNT(*) as count FROM conversations').get() as {
-        count: number;
-      };
+      const countResult = db.prepare('SELECT COUNT(*) as count FROM conversations').all();
 
       return {
         id: testId,
         name: 'Conversation Table',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: `Conversations table exists with ${countResult.count} record(s)`,
+        message: `Conversations table exists with ${(countResult[0] as any).count} record(s)`,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -256,10 +253,12 @@ export class DatabaseTestSuite {
     try {
       const db = databaseService.getDatabase();
       const result = db
-        .prepare("SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='messages'")
-        .get() as { count: number };
+        .prepare(
+          "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='messages'"
+        )
+        .all();
 
-      if (result.count === 0) {
+      if (result.length === 0 || (result[0] as any).count === 0) {
         return {
           id: testId,
           name: 'Message Table',
@@ -271,16 +270,14 @@ export class DatabaseTestSuite {
       }
 
       // Count messages
-      const countResult = db.prepare('SELECT COUNT(*) as count FROM messages').get() as {
-        count: number;
-      };
+      const countResult = db.prepare('SELECT COUNT(*) as count FROM messages').all();
 
       return {
         id: testId,
         name: 'Message Table',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: `Messages table exists with ${countResult.count} record(s)`,
+        message: `Messages table exists with ${(countResult[0] as any).count} record(s)`,
         timestamp: Date.now(),
       };
     } catch (error) {

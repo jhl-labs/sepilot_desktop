@@ -1,7 +1,7 @@
 import { databaseService } from './database';
 import { vectorDBService } from './vectordb';
 import { logger } from './logger';
-import { mcpManager } from '../../lib/mcp/server-manager';
+import { MCPServerManager } from '../../lib/mcp/server-manager';
 
 /**
  * Health Check 결과 인터페이스
@@ -139,9 +139,9 @@ export class HealthCheckService {
 
       // 간단한 쿼리로 연결 확인
       const db = databaseService.getDatabase();
-      const testQuery = db.prepare('SELECT 1 as test').get() as { test: number } | undefined;
+      const testResult = db.prepare('SELECT 1 as test').all();
 
-      if (!testQuery || testQuery.test !== 1) {
+      if (!testResult || testResult.length === 0 || (testResult[0] as any).test !== 1) {
         return {
           status: 'fail',
           message: 'Database query failed',
@@ -203,7 +203,7 @@ export class HealthCheckService {
   private async checkMCPTools(): Promise<HealthStatus> {
     const startTime = Date.now();
     try {
-      if (!mcpManager) {
+      if (!MCPServerManager) {
         return {
           status: 'warn',
           message: 'MCP manager not initialized',
@@ -212,7 +212,7 @@ export class HealthCheckService {
       }
 
       // MCP 서버 상태 확인
-      const servers = mcpManager.getAllServers();
+      const servers = MCPServerManager.getAllServers();
       const serverCount = servers.length;
       const connectedServers = servers.filter((s) => s.connected).length;
 
@@ -258,11 +258,9 @@ export class HealthCheckService {
     try {
       // 설정에서 LLM Provider 확인
       const db = databaseService.getDatabase();
-      const config = db.prepare('SELECT value FROM config WHERE key = ?').get('app_config') as
-        | { value: string }
-        | undefined;
+      const configResult = db.prepare('SELECT value FROM config WHERE key = ?').all(['app_config']);
 
-      if (!config) {
+      if (!configResult || configResult.length === 0) {
         return {
           status: 'warn',
           message: 'No LLM providers configured',
@@ -270,8 +268,9 @@ export class HealthCheckService {
         };
       }
 
+      const config = configResult[0] as { value: string };
       const appConfig = JSON.parse(config.value);
-      const providers = appConfig.llm?.providers || {};
+      const providers = appConfig.llm?.providers || appConfig.llm?.connections || {};
       const providerNames = Object.keys(providers);
 
       if (providerNames.length === 0) {

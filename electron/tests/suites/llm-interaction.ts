@@ -62,11 +62,9 @@ export class LLMInteractionTestSuite {
 
     try {
       const db = databaseService.getDatabase();
-      const config = db.prepare('SELECT value FROM config WHERE key = ?').get('app_config') as
-        | { value: string }
-        | undefined;
+      const configResult = db.prepare('SELECT value FROM config WHERE key = ?').all(['app_config']);
 
-      if (!config) {
+      if (!configResult || configResult.length === 0) {
         return {
           id: testId,
           name: 'LLM Provider Configuration',
@@ -77,28 +75,29 @@ export class LLMInteractionTestSuite {
         };
       }
 
+      const config = configResult[0] as { value: string };
       const appConfig: AppConfig = JSON.parse(config.value);
-      const connections = appConfig.llm?.connections || [];
 
-      if (connections.length === 0) {
+      // LLMConfig는 단일 provider, LLMConfigV2는 connections 배열
+      const provider = appConfig.llm?.provider;
+
+      if (!provider) {
         return {
           id: testId,
           name: 'LLM Provider Configuration',
           status: 'fail',
           duration: Date.now() - startTime,
-          message: 'No LLM connections configured',
+          message: 'No LLM provider configured',
           timestamp: Date.now(),
         };
       }
-
-      const connectionNames = connections.map((c) => c.provider).join(', ');
 
       return {
         id: testId,
         name: 'LLM Provider Configuration',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: `Found ${connections.length} connection(s): ${connectionNames}`,
+        message: `Found provider: ${provider}`,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -122,11 +121,9 @@ export class LLMInteractionTestSuite {
 
     try {
       const db = databaseService.getDatabase();
-      const config = db.prepare('SELECT value FROM config WHERE key = ?').get('app_config') as
-        | { value: string }
-        | undefined;
+      const configResult = db.prepare('SELECT value FROM config WHERE key = ?').all(['app_config']);
 
-      if (!config) {
+      if (!configResult || configResult.length === 0) {
         return {
           id: testId,
           name: 'API Key Validation',
@@ -137,20 +134,19 @@ export class LLMInteractionTestSuite {
         };
       }
 
+      const config = configResult[0] as { value: string };
       const appConfig: AppConfig = JSON.parse(config.value);
-      const connections = appConfig.llm?.connections || [];
 
-      const configuredConnections = connections.filter((conn) => {
-        return conn.apiKey && conn.apiKey.length > 0;
-      });
+      // Check if API key is configured
+      const hasApiKey = appConfig.llm?.apiKey && appConfig.llm.apiKey.length > 0;
 
-      if (configuredConnections.length === 0) {
+      if (!hasApiKey) {
         return {
           id: testId,
           name: 'API Key Validation',
           status: 'fail',
           duration: Date.now() - startTime,
-          message: 'No connections have API keys configured',
+          message: 'No API key configured',
           timestamp: Date.now(),
         };
       }
@@ -160,7 +156,7 @@ export class LLMInteractionTestSuite {
         name: 'API Key Validation',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: `${configuredConnections.length}/${connections.length} connection(s) have API keys`,
+        message: 'API key is configured',
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -184,11 +180,9 @@ export class LLMInteractionTestSuite {
 
     try {
       const db = databaseService.getDatabase();
-      const config = db.prepare('SELECT value FROM config WHERE key = ?').get('app_config') as
-        | { value: string }
-        | undefined;
+      const configResult = db.prepare('SELECT value FROM config WHERE key = ?').all(['app_config']);
 
-      if (!config) {
+      if (!configResult || configResult.length === 0) {
         return {
           id: testId,
           name: 'Token Limits Configuration',
@@ -199,41 +193,21 @@ export class LLMInteractionTestSuite {
         };
       }
 
+      const config = configResult[0] as { value: string };
       const appConfig: AppConfig = JSON.parse(config.value);
-      const models = appConfig.llm?.models || [];
-      const defaultMaxTokens = appConfig.llm?.defaultMaxTokens;
+      const maxTokens = appConfig.llm?.maxTokens;
 
-      let allValid = true;
-      const issues: string[] = [];
-
-      // Check default max tokens
-      if (defaultMaxTokens !== undefined && defaultMaxTokens !== null) {
-        if (defaultMaxTokens <= 0 || defaultMaxTokens > 128000) {
-          allValid = false;
-          issues.push(`default: invalid maxTokens (${defaultMaxTokens})`);
+      if (maxTokens !== undefined && maxTokens !== null) {
+        if (maxTokens <= 0 || maxTokens > 128000) {
+          return {
+            id: testId,
+            name: 'Token Limits Configuration',
+            status: 'fail',
+            duration: Date.now() - startTime,
+            message: `Invalid maxTokens: ${maxTokens}`,
+            timestamp: Date.now(),
+          };
         }
-      }
-
-      // Check model-specific max tokens
-      for (const model of models) {
-        const maxTokens = model.maxTokens;
-        if (maxTokens !== undefined && maxTokens !== null) {
-          if (maxTokens <= 0 || maxTokens > 128000) {
-            allValid = false;
-            issues.push(`${model.name}: invalid maxTokens (${maxTokens})`);
-          }
-        }
-      }
-
-      if (!allValid) {
-        return {
-          id: testId,
-          name: 'Token Limits Configuration',
-          status: 'fail',
-          duration: Date.now() - startTime,
-          message: `Invalid token limits: ${issues.join(', ')}`,
-          timestamp: Date.now(),
-        };
       }
 
       return {
@@ -241,7 +215,7 @@ export class LLMInteractionTestSuite {
         name: 'Token Limits Configuration',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: 'All token limits are within valid range',
+        message: 'Token limits are within valid range',
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -265,11 +239,9 @@ export class LLMInteractionTestSuite {
 
     try {
       const db = databaseService.getDatabase();
-      const config = db.prepare('SELECT value FROM config WHERE key = ?').get('app_config') as
-        | { value: string }
-        | undefined;
+      const configResult = db.prepare('SELECT value FROM config WHERE key = ?').all(['app_config']);
 
-      if (!config) {
+      if (!configResult || configResult.length === 0) {
         return {
           id: testId,
           name: 'Temperature Settings',
@@ -280,41 +252,21 @@ export class LLMInteractionTestSuite {
         };
       }
 
+      const config = configResult[0] as { value: string };
       const appConfig: AppConfig = JSON.parse(config.value);
-      const models = appConfig.llm?.models || [];
-      const defaultTemperature = appConfig.llm?.defaultTemperature;
+      const temperature = appConfig.llm?.temperature;
 
-      let allValid = true;
-      const issues: string[] = [];
-
-      // Check default temperature
-      if (defaultTemperature !== undefined && defaultTemperature !== null) {
-        if (defaultTemperature < 0 || defaultTemperature > 2) {
-          allValid = false;
-          issues.push(`default: invalid temperature (${defaultTemperature})`);
+      if (temperature !== undefined && temperature !== null) {
+        if (temperature < 0 || temperature > 2) {
+          return {
+            id: testId,
+            name: 'Temperature Settings',
+            status: 'fail',
+            duration: Date.now() - startTime,
+            message: `Invalid temperature: ${temperature}`,
+            timestamp: Date.now(),
+          };
         }
-      }
-
-      // Check model-specific temperature
-      for (const model of models) {
-        const temperature = model.temperature;
-        if (temperature !== undefined && temperature !== null) {
-          if (temperature < 0 || temperature > 2) {
-            allValid = false;
-            issues.push(`${model.name}: invalid temperature (${temperature})`);
-          }
-        }
-      }
-
-      if (!allValid) {
-        return {
-          id: testId,
-          name: 'Temperature Settings',
-          status: 'fail',
-          duration: Date.now() - startTime,
-          message: `Invalid temperature settings: ${issues.join(', ')}`,
-          timestamp: Date.now(),
-        };
       }
 
       return {
@@ -322,7 +274,7 @@ export class LLMInteractionTestSuite {
         name: 'Temperature Settings',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: 'All temperature settings are within valid range (0-2)',
+        message: 'Temperature setting is within valid range (0-2)',
         timestamp: Date.now(),
       };
     } catch (error) {
