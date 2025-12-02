@@ -15,12 +15,14 @@ interface UnifiedChatContainerProps {
   config: ChatConfig;
   onSendMessage?: (message: string) => Promise<void>;
   onStopStreaming?: () => void;
+  isStreaming: boolean;
 }
 
 export function UnifiedChatContainer({
   config,
   onSendMessage,
   onStopStreaming,
+  isStreaming,
 }: UnifiedChatContainerProps) {
   return (
     <div className="flex flex-col h-full">
@@ -29,6 +31,7 @@ export function UnifiedChatContainer({
         config={config}
         onSendMessage={onSendMessage}
         onStopStreaming={onStopStreaming}
+        isStreaming={isStreaming}
       />
     </div>
   );

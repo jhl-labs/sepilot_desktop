@@ -22,7 +22,6 @@ import { InteractiveInput } from '../InteractiveInput';
 import { ToolApprovalRequest } from '../ToolApprovalRequest';
 import { ConversationReportDialog } from '@/components/ConversationReportDialog';
 import { isErrorReportingEnabled } from '@/lib/error-reporting';
-import { useToast } from '@/hooks/use-toast';
 
 interface UnifiedChatAreaProps {
   config: ChatConfig;
@@ -31,9 +30,8 @@ interface UnifiedChatAreaProps {
 }
 
 export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAreaProps) {
-  const { mode, features, style, dataSource, activePersona } = config;
+  const { mode, features, style, dataSource, activePersona, conversationId } = config;
   const { messages, isStreaming, scrollRef } = useChatMessages(dataSource);
-  const { toast } = useToast();
 
   // 대화 리포트 다이얼로그 상태
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -48,28 +46,21 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
       const result = await window.electronAPI.errorReporting.sendConversation({
         issue,
         messages,
-        conversationId: dataSource.conversationId,
+        conversationId,
         additionalInfo,
       });
 
       if (result.success) {
-        toast({
-          title: '리포트 전송 완료',
-          description: result.data?.issueUrl
-            ? `GitHub Issue가 생성되었습니다: ${result.data.issueUrl}`
-            : '대화 리포트가 성공적으로 전송되었습니다.',
-        });
+        console.error('[ConversationReport] Report sent successfully:', result.data?.issueUrl);
         setShowReportDialog(false);
       } else {
         throw new Error(result.error || '리포트 전송 실패');
       }
     } catch (error) {
       console.error('[ConversationReport] Failed to send report:', error);
-      toast({
-        title: '리포트 전송 실패',
-        description: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
-        variant: 'destructive',
-      });
+      window.alert(
+        `리포트 전송 실패: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`
+      );
     }
   };
 
@@ -77,11 +68,9 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
   const handleReportClick = async () => {
     const enabled = await isErrorReportingEnabled();
     if (!enabled) {
-      toast({
-        title: '에러 리포팅 비활성화',
-        description: 'Settings > System > GitHub Sync에서 에러 리포팅을 활성화해주세요.',
-        variant: 'destructive',
-      });
+      window.alert(
+        '에러 리포팅 비활성화됨. Settings > System > GitHub Sync에서 에러 리포팅을 활성화해주세요.'
+      );
       return;
     }
 

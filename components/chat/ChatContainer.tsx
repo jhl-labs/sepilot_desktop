@@ -10,7 +10,7 @@
 import { useCallback } from 'react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { UnifiedChatArea } from './unified/UnifiedChatArea';
-import { MainChatInput } from './MainChatInput';
+import { UnifiedChatInput } from './unified/UnifiedChatInput';
 import { useMessageStreaming } from './unified/hooks/useMessageStreaming';
 import { useToolApproval } from './unified/hooks/useToolApproval';
 import { useConfigLoader } from './unified/hooks/useConfigLoader';
@@ -54,7 +54,7 @@ export function ChatContainer() {
     : null;
   const isStreaming = !!streamingMessageId;
 
-  // Build ChatConfig for UnifiedChatArea
+  // Build ChatConfig for Unified Chat (Area + Input)
   const chatConfig: ChatConfig = {
     mode: 'main',
     features: {
@@ -62,6 +62,12 @@ export function ChatContainer() {
       enableRegenerate: true,
       enableCopy: true,
       enableFontScale: true,
+      enableImageUpload: isElectron(),
+      enableFileUpload: true,
+      enableThinkingModeSelector: true,
+      enableRAGToggle: true,
+      enableToolsToggle: true,
+      enableImageGeneration: imageGenAvailable,
     },
     dataSource: {
       messages,
@@ -191,14 +197,11 @@ export function ChatContainer() {
   return (
     <div className="flex h-full flex-col">
       {/* Chat Area */}
-      <UnifiedChatArea
-        config={chatConfig}
-        onEdit={handleEdit}
-        onRegenerate={handleRegenerate}
-      />
+      <UnifiedChatArea config={chatConfig} onEdit={handleEdit} onRegenerate={handleRegenerate} />
 
-      {/* Main Chat Input */}
-      <MainChatInput
+      {/* Unified Chat Input */}
+      <UnifiedChatInput
+        config={chatConfig}
         onSendMessage={handleSendMessage}
         onStopStreaming={handleStopStreaming}
         isStreaming={isStreaming}
