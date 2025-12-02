@@ -668,6 +668,8 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
 - **command_execute**: Execute shell commands (npm, git, build tools, etc.)
   - npm install/run, git status/diff/add/commit, build commands, test runners
   - Returns both stdout and stderr
+  - ⚠️ **CRITICAL**: Commands have a 5-minute timeout. Long-running processes will be killed.
+  - For long tasks (large builds, extensive tests), break into smaller steps or use background execution
   - Example: command_execute with "npm install lodash" or "git status"
 
 # WORKFLOW BEST PRACTICES
@@ -1046,7 +1048,21 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
         // Check if it's a built-in tool
         if (builtinToolNames.has(call.name)) {
           console.log(`[CodingAgent.Tools] Executing builtin tool: ${call.name}`);
-          const result = await executeBuiltinTool(call.name, call.arguments);
+
+          // Add timeout wrapper for all tool executions (6 minutes - slightly longer than command_execute's 5 min)
+          const TOOL_EXECUTION_TIMEOUT = 360000; // 6 minutes
+          const result = await Promise.race([
+            executeBuiltinTool(call.name, call.arguments),
+            new Promise<string>((_, reject) =>
+              setTimeout(
+                () =>
+                  reject(
+                    new Error(`Tool execution timeout after ${TOOL_EXECUTION_TIMEOUT / 1000}s`)
+                  ),
+                TOOL_EXECUTION_TIMEOUT
+              )
+            ),
+          ]);
           const duration = Date.now() - startTime;
 
           // Save activity to database (non-blocking)
@@ -1088,11 +1104,26 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
               `[CodingAgent.Tools] Executing MCP tool: ${call.name} on server ${targetTool.serverName}`
             );
 
-            const mcpResult = await MCPServerManager.callToolInMainProcess(
-              targetTool.serverName,
-              call.name,
-              call.arguments
-            );
+            // Add timeout wrapper for MCP tools as well
+            const TOOL_EXECUTION_TIMEOUT = 360000; // 6 minutes
+            const mcpResult = await Promise.race([
+              MCPServerManager.callToolInMainProcess(
+                targetTool.serverName,
+                call.name,
+                call.arguments
+              ),
+              new Promise<any>((_, reject) =>
+                setTimeout(
+                  () =>
+                    reject(
+                      new Error(
+                        `MCP tool execution timeout after ${TOOL_EXECUTION_TIMEOUT / 1000}s`
+                      )
+                    ),
+                  TOOL_EXECUTION_TIMEOUT
+                )
+              ),
+            ]);
 
             // Extract text result
             let resultText = '';
@@ -1178,7 +1209,16 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
       } catch (error: any) {
         console.error(`[CodingAgent.Tools] Error executing ${call.name}:`, error);
         const duration = Date.now() - startTime;
-        const errorMsg = error.message || 'Tool execution failed';
+
+        // Provide helpful error message for timeouts
+        let errorMsg = error.message || 'Tool execution failed';
+        if (errorMsg.includes('timeout')) {
+          errorMsg =
+            `${errorMsg}\n\n⚠️ 도구 실행이 타임아웃되었습니다. 다음을 시도해보세요:\n` +
+            `- 작업을 더 작은 단계로 나누기\n` +
+            `- 필터링/제한 옵션 사용하기\n` +
+            `- 대상 범위 좁히기`;
+        }
 
         // Save error activity
         if (state.conversationId && typeof window !== 'undefined' && window.electronAPI?.activity) {
