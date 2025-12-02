@@ -3,8 +3,8 @@
 /**
  * UnifiedChatContainer Component
  *
- * 통합 Chat 컨테이너 - Area + Input 조합
- * 모든 Chat 모드의 최상위 컴포넌트
+ * 통합 채팅 컨테이너 - Area + Input 조합 및 플러그인 관리
+ * Main Chat, Browser Chat, Editor Chat 모두에서 사용
  */
 
 import { UnifiedChatArea } from './UnifiedChatArea';
@@ -13,7 +13,7 @@ import type { ChatConfig } from './types';
 
 interface UnifiedChatContainerProps {
   config: ChatConfig;
-  onSendMessage?: (content: string) => Promise<void>;
+  onSendMessage?: (message: string) => Promise<void>;
   onStopStreaming?: () => void;
 }
 
