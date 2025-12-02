@@ -3,12 +3,11 @@
 /**
  * AgentProgressPlugin
  *
- * Agent 진행 상태 표시 (Browser, Editor)
- * Iteration, status, message, progress bar
+ * Agent 진행 상태 표시 플러그인
+ * Browser Chat, Editor Chat에서 사용
  */
 
 import { Button } from '@/components/ui/button';
-import type { PluginProps } from '../types';
 
 interface AgentProgress {
   iteration: number;
@@ -17,29 +16,33 @@ interface AgentProgress {
   message: string;
 }
 
-interface AgentProgressPluginProps extends PluginProps {
+interface AgentProgressPluginProps {
   progress: AgentProgress | null;
-  onStop: () => void;
+  onStop?: () => void;
+  compact?: boolean;
 }
 
-export function AgentProgressPlugin({ progress, onStop, config }: AgentProgressPluginProps) {
+export function AgentProgressPlugin({
+  progress,
+  onStop,
+  compact = false,
+}: AgentProgressPluginProps) {
   if (!progress) {
     return null;
   }
 
-  const { mode } = config;
-  const isCompact = mode === 'browser';
-
   return (
     <div
-      className={`${isCompact ? 'mb-1.5' : 'mb-2'} ${isCompact ? 'rounded-md' : 'rounded-lg'} border border-primary/30 bg-primary/5 ${isCompact ? 'px-2 py-1' : 'px-3 py-2'}`}
+      className={`${compact ? 'mb-1.5' : 'mb-2'} rounded-${compact ? 'md' : 'lg'} border border-primary/30 bg-primary/5 px-${compact ? '2' : '3'} py-${compact ? '1' : '2'}`}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div
-            className={`flex items-center gap-2 ${isCompact ? 'text-[10px]' : 'text-xs'} font-medium text-primary`}
+            className={`flex items-center gap-2 ${compact ? 'text-[10px]' : 'text-xs'} font-medium text-primary`}
           >
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <div
+              className={`${compact ? 'h-1.5 w-1.5' : 'h-2 w-2'} rounded-full bg-primary animate-pulse`}
+            />
             <span>
               {progress.status === 'thinking' && '🤔 생각 중...'}
               {progress.status === 'executing' && '⚙️ 실행 중...'}
@@ -50,31 +53,34 @@ export function AgentProgressPlugin({ progress, onStop, config }: AgentProgressP
             </span>
           </div>
           <p
-            className={`mt-1 ${isCompact ? 'text-[10px]' : 'text-xs'} text-muted-foreground truncate`}
+            className={`mt-1 ${compact ? 'text-[10px]' : 'text-xs'} text-muted-foreground truncate`}
           >
             {progress.message}
           </p>
         </div>
-        <Button
-          onClick={onStop}
-          variant="ghost"
-          size="sm"
-          className={`${isCompact ? 'h-5 px-2 text-[10px]' : 'h-6 text-xs'} shrink-0`}
-          title="중단"
-        >
-          중단
-        </Button>
+        {onStop && (
+          <Button
+            onClick={onStop}
+            variant="ghost"
+            size="sm"
+            className={`${compact ? 'h-5 px-2 text-[10px]' : 'h-6 text-xs'} shrink-0`}
+            title="중단"
+          >
+            중단
+          </Button>
+        )}
       </div>
-
       {/* Progress bar */}
-      <div className={`${isCompact ? 'mt-1' : 'mt-2'} h-1 w-full bg-muted rounded-full overflow-hidden`}>
-        <div
-          className="h-full bg-primary transition-all duration-300"
-          style={{
-            width: `${(progress.iteration / progress.maxIterations) * 100}%`,
-          }}
-        />
-      </div>
+      {!compact && (
+        <div className="mt-2 h-1 w-full bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary transition-all duration-300"
+            style={{
+              width: `${(progress.iteration / progress.maxIterations) * 100}%`,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -3,27 +3,60 @@
 /**
  * FileUploadPlugin
  *
- * 파일 업로드 기능 (Main 모드 전용)
- * Text file upload, drag & drop
+ * 파일 업로드 기능 플러그인 (드래그앤드롭)
+ * Main Chat에서 사용
  */
 
-import { useState } from 'react';
-import { Paperclip } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { isTextFile } from '@/lib/utils';
-import type { PluginProps } from '../types';
+import { useState, useRef } from 'react';
 
-interface FileUploadPluginProps extends PluginProps {
-  onFileContent: (content: string) => void;
+interface FileUploadPluginProps {
+  onFileDrop: (files: {
+    textContents: string[];
+    imageFiles: { filename: string; mimeType: string; base64: string }[];
+  }) => void;
+  isTextFile: (file: File) => boolean;
+  children: React.ReactNode;
 }
 
-export function FileUploadPlugin({ onFileContent }: FileUploadPluginProps) {
+export function FileUploadPlugin({ onFileDrop, isTextFile, children }: FileUploadPluginProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  const handleFiles = async (files: FileList) => {
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // dropZone 바깥으로 나갈 때만 isDragging을 false로 설정
+    if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) {
+      return;
+    }
+
     const textContents: string[] = [];
+    const imageFiles: { filename: string; mimeType: string; base64: string }[] = [];
 
-    for (const file of Array.from(files)) {
+    for (const file of files) {
+      // 텍스트 파일인지 확인
       if (isTextFile(file)) {
         try {
           const text = await file.text();
@@ -31,61 +64,48 @@ export function FileUploadPlugin({ onFileContent }: FileUploadPluginProps) {
         } catch (error) {
           console.error(`Failed to read file ${file.name}:`, error);
         }
+      } else if (file.type.startsWith('image/')) {
+        // 이미지 파일 처리
+        try {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            imageFiles.push({
+              filename: file.name,
+              mimeType: file.type,
+              base64,
+            });
+          };
+          reader.readAsDataURL(file);
+        } catch (error) {
+          console.error(`Failed to read image ${file.name}:`, error);
+        }
       }
     }
 
-    if (textContents.length > 0) {
-      onFileContent(textContents.join('\n\n'));
-    }
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      await handleFiles(e.target.files);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    if (e.dataTransfer.files) {
-      await handleFiles(e.dataTransfer.files);
+    if (textContents.length > 0 || imageFiles.length > 0) {
+      onFileDrop({ textContents, imageFiles });
     }
   };
 
   return (
     <div
+      ref={dropZoneRef}
+      className={`transition-colors ${isDragging ? 'bg-primary/10 border-primary' : ''}`}
       onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={isDragging ? 'opacity-50' : ''}
     >
-      <input
-        type="file"
-        accept=".txt,.md,.json,.js,.ts,.tsx,.jsx,.py,.java,.c,.cpp,.html,.css,.xml,.yaml,.yml"
-        multiple
-        onChange={handleFileSelect}
-        className="hidden"
-        id="file-upload"
-      />
-      <label htmlFor="file-upload">
-        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-          <span>
-            <Paperclip className="h-4 w-4" />
-          </span>
-        </Button>
-      </label>
+      {isDragging && (
+        <div className="absolute inset-0 flex items-center justify-center bg-primary/5 border-2 border-dashed border-primary rounded-lg z-10 pointer-events-none">
+          <div className="text-center">
+            <p className="text-sm font-medium text-primary">텍스트 파일을 여기에 드롭하세요</p>
+            <p className="text-xs text-muted-foreground mt-1">.txt, .md, .json, .js, .ts 등</p>
+          </div>
+        </div>
+      )}
+      {children}
     </div>
   );
 }

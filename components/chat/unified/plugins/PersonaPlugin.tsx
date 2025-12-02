@@ -3,28 +3,38 @@
 /**
  * PersonaPlugin
  *
- * Persona 표시 및 선택 (Main 모드 전용)
- * Show active persona, autocomplete for /persona command
+ * Persona 선택 플러그인 (자동완성)
+ * Main Chat에서 사용
  */
 
-import { Bot } from 'lucide-react';
-import type { PluginProps } from '../types';
+import { Check } from 'lucide-react';
+import { useRef } from 'react';
 import type { Persona } from '@/types/persona';
 
-interface PersonaPluginProps extends PluginProps {
-  activePersona: Persona | null;
-  personas: Persona[];
+interface PersonaPluginProps {
   input: string;
-  onPersonaSelect?: (persona: Persona) => void;
+  personas: Persona[];
+  activePersonaId: string | null;
+  onPersonaSelect: (personaId: string) => void;
+  onInputClear: () => void;
+  onClose: () => void;
+  selectedIndex: number;
+  onIndexChange: (index: number) => void;
 }
 
 export function PersonaPlugin({
-  activePersona,
-  personas,
   input,
+  personas,
+  activePersonaId,
   onPersonaSelect,
+  onInputClear,
+  onClose,
+  selectedIndex,
+  onIndexChange,
 }: PersonaPluginProps) {
-  // Detect /persona command
+  const autocompleteRef = useRef<HTMLDivElement>(null);
+
+  // Detect slash command for persona switching
   const personaCommand = input.match(/^\/persona\s+(.*)$/);
   const filteredPersonas = personaCommand
     ? personas.filter(
@@ -36,31 +46,42 @@ export function PersonaPlugin({
 
   const showAutocomplete = personaCommand && filteredPersonas.length > 0;
 
-  return (
-    <>
-      {/* Active persona indicator */}
-      {activePersona && (
-        <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
-          <Bot className="h-3.5 w-3.5" />
-          <span>Persona: {activePersona.name}</span>
-        </div>
-      )}
+  if (!showAutocomplete) {
+    return null;
+  }
 
-      {/* Persona autocomplete */}
-      {showAutocomplete && (
-        <div className="absolute bottom-full left-0 right-0 mb-2 bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
-          {filteredPersonas.map((persona) => (
-            <button
-              key={persona.id}
-              className="w-full px-3 py-2 text-left hover:bg-accent text-sm"
-              onClick={() => onPersonaSelect?.(persona)}
-            >
-              <div className="font-medium">{persona.name}</div>
-              <div className="text-xs text-muted-foreground">{persona.description}</div>
-            </button>
-          ))}
-        </div>
-      )}
-    </>
+  const handleSelect = (persona: Persona) => {
+    onPersonaSelect(persona.id);
+    onInputClear();
+    onClose();
+  };
+
+  return (
+    <div
+      ref={autocompleteRef}
+      className="absolute bottom-full left-0 right-0 mb-2 max-h-[300px] overflow-y-auto rounded-lg border border-input bg-popover shadow-lg z-50"
+    >
+      <div className="p-2 space-y-1">
+        {filteredPersonas.map((persona, index) => (
+          <button
+            key={persona.id}
+            onClick={() => handleSelect(persona)}
+            onMouseEnter={() => onIndexChange(index)}
+            className={`w-full flex items-center gap-3 p-3 rounded-md text-left transition-colors ${
+              index === selectedIndex ? 'bg-accent' : 'hover:bg-accent/50'
+            }`}
+          >
+            <span className="text-2xl flex-shrink-0">{persona.avatar || '🤖'}</span>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm truncate">{persona.name}</div>
+              <div className="text-xs text-muted-foreground truncate">{persona.description}</div>
+            </div>
+            {activePersonaId === persona.id && (
+              <Check className="h-4 w-4 text-primary flex-shrink-0" />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
