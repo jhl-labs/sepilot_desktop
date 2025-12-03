@@ -9,7 +9,7 @@
 
 import { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Bug } from 'lucide-react';
+import { MessageSquare, Bug, Copy, Check, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MessageBubble } from '../MessageBubble';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
@@ -22,6 +22,13 @@ import { InteractiveInput } from '../InteractiveInput';
 import { ToolApprovalRequest } from '../ToolApprovalRequest';
 import { ConversationReportDialog } from '@/components/ConversationReportDialog';
 import { isErrorReportingEnabled } from '@/lib/error-reporting';
+import { copyToClipboard } from '@/lib/utils/clipboard';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 
 interface UnifiedChatAreaProps {
   config: ChatConfig;
@@ -35,6 +42,10 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
 
   // 대화 리포트 다이얼로그 상태
   const [showReportDialog, setShowReportDialog] = useState(false);
+
+  // 메시지별 복사 상태 및 hover 상태
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
 
   // 대화 리포트 전송 핸들러
   const handleSendReport = async (issue: string, additionalInfo?: string) => {
@@ -75,6 +86,42 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
     }
 
     setShowReportDialog(true);
+  };
+
+  // 메시지 복사 핸들러
+  const handleCopyMessage = async (messageId: string, content: string) => {
+    const success = await copyToClipboard(content);
+    if (success) {
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    }
+  };
+
+  // Document로 저장 핸들러
+  const handleSaveAsDocument = async (content: string) => {
+    if (typeof window === 'undefined' || !window.electronAPI) {
+      window.alert('Document 저장은 Electron 환경에서만 사용 가능합니다.');
+      return;
+    }
+
+    try {
+      const title = `Chat Message - ${new Date().toLocaleString('ko-KR')}`;
+      // @ts-expect-error: RAG API is available but not in type definition
+      const result = await window.electronAPI.rag?.addDocument({
+        title,
+        content,
+        source: 'browser-chat',
+      });
+
+      if (result?.success) {
+        window.alert('메시지가 Document로 저장되었습니다.');
+      } else {
+        window.alert(`Document 저장 실패: ${result?.error || '알 수 없는 오류'}`);
+      }
+    } catch (error) {
+      console.error('[UnifiedChatArea] Failed to save as document:', error);
+      window.alert('Document 저장 중 오류가 발생했습니다.');
+    }
   };
 
   // Empty state
@@ -158,93 +205,127 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
               );
             }
 
-            // Compact mode (Browser/Editor): Parse interactive components
+            // Compact mode (Browser/Editor): Parse interactive components with copy button and context menu
             return (
-              <div
-                key={message.id}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[${maxWidth}] rounded-lg px-${style?.compact ? '2' : '2.5'} py-${style?.compact ? '1.5' : '1.5'} ${
-                    style?.compact ? 'text-[11px]' : 'text-xs'
-                  } ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
-                >
-                  {message.role === 'assistant' ? (
-                    <>
-                      {/* Parse and render interactive components */}
-                      {(() => {
-                        const parsed = parseInteractiveContent(message.content);
-                        return parsed.segments.map((segment, segIndex) => {
-                          if (segment.type === 'text') {
-                            return (
-                              <div
-                                key={segIndex}
-                                className={`prose ${style?.compact ? 'prose-xs' : 'prose-sm'} dark:prose-invert max-w-none`}
-                              >
-                                <MarkdownRenderer
-                                  content={segment.content as string}
-                                  className={
-                                    style?.compact ? 'text-[11px] leading-tight' : undefined
-                                  }
-                                />
-                              </div>
-                            );
-                          } else {
-                            // Render interactive component
-                            const block = segment.content as any;
-
-                            if (block.type === 'interactive-select') {
-                              return (
-                                <InteractiveSelect
-                                  key={segIndex}
-                                  title={block.title}
-                                  options={block.options}
-                                />
-                              );
-                            } else if (block.type === 'interactive-input') {
-                              return (
-                                <InteractiveInput
-                                  key={segIndex}
-                                  title={block.title}
-                                  placeholder={block.placeholder}
-                                  multiline={block.multiline}
-                                />
-                              );
-                            } else if (block.type === 'tool-result') {
-                              return (
-                                <ToolResult
-                                  key={segIndex}
-                                  toolName={block.toolName}
-                                  status={block.status}
-                                  summary={block.summary}
-                                  details={block.details}
-                                  duration={block.duration}
-                                />
-                              );
-                            } else if (block.type === 'tool-approval') {
-                              return (
-                                <ToolApprovalRequest
-                                  key={segIndex}
-                                  messageId={block.messageId}
-                                  toolCalls={block.toolCalls}
-                                />
-                              );
-                            }
-
-                            return null;
-                          }
-                        });
-                      })()}
-                    </>
-                  ) : (
-                    <p
-                      className={`whitespace-pre-wrap break-words ${style?.compact ? 'leading-tight' : ''}`}
+              <ContextMenu key={message.id}>
+                <ContextMenuTrigger asChild>
+                  <div
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} group relative`}
+                    onMouseEnter={() => setHoveredMessageId(message.id)}
+                    onMouseLeave={() => setHoveredMessageId(null)}
+                  >
+                    <div
+                      className={`max-w-[${maxWidth}] rounded-lg px-${style?.compact ? '2' : '2.5'} py-${style?.compact ? '1.5' : '1.5'} ${
+                        style?.compact ? 'text-[11px]' : 'text-xs'
+                      } ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
                     >
-                      {message.content}
-                    </p>
+                      {message.role === 'assistant' ? (
+                        <>
+                          {/* Parse and render interactive components */}
+                          {(() => {
+                            const parsed = parseInteractiveContent(message.content);
+                            return parsed.segments.map((segment, segIndex) => {
+                              if (segment.type === 'text') {
+                                return (
+                                  <div
+                                    key={segIndex}
+                                    className={`prose ${style?.compact ? 'prose-xs' : 'prose-sm'} dark:prose-invert max-w-none`}
+                                  >
+                                    <MarkdownRenderer
+                                      content={segment.content as string}
+                                      className={
+                                        style?.compact ? 'text-[11px] leading-tight' : undefined
+                                      }
+                                    />
+                                  </div>
+                                );
+                              } else {
+                                // Render interactive component
+                                const block = segment.content as any;
+
+                                if (block.type === 'interactive-select') {
+                                  return (
+                                    <InteractiveSelect
+                                      key={segIndex}
+                                      title={block.title}
+                                      options={block.options}
+                                    />
+                                  );
+                                } else if (block.type === 'interactive-input') {
+                                  return (
+                                    <InteractiveInput
+                                      key={segIndex}
+                                      title={block.title}
+                                      placeholder={block.placeholder}
+                                      multiline={block.multiline}
+                                    />
+                                  );
+                                } else if (block.type === 'tool-result') {
+                                  return (
+                                    <ToolResult
+                                      key={segIndex}
+                                      toolName={block.toolName}
+                                      status={block.status}
+                                      summary={block.summary}
+                                      details={block.details}
+                                      duration={block.duration}
+                                    />
+                                  );
+                                } else if (block.type === 'tool-approval') {
+                                  return (
+                                    <ToolApprovalRequest
+                                      key={segIndex}
+                                      messageId={block.messageId}
+                                      toolCalls={block.toolCalls}
+                                    />
+                                  );
+                                }
+
+                                return null;
+                              }
+                            });
+                          })()}
+                        </>
+                      ) : (
+                        <p
+                          className={`whitespace-pre-wrap break-words ${style?.compact ? 'leading-tight' : ''}`}
+                        >
+                          {message.content}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Copy button (shown on hover) */}
+                    {features.enableCopy && hoveredMessageId === message.id && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleCopyMessage(message.id, message.content)}
+                        className="absolute right-2 top-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="복사"
+                      >
+                        {copiedMessageId === message.id ? (
+                          <Check className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-56">
+                  <ContextMenuItem onClick={() => handleCopyMessage(message.id, message.content)}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    <span>복사</span>
+                  </ContextMenuItem>
+                  {message.role === 'assistant' && (
+                    <ContextMenuItem onClick={() => handleSaveAsDocument(message.content)}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      <span>Document로 저장</span>
+                    </ContextMenuItem>
                   )}
-                </div>
-              </div>
+                </ContextMenuContent>
+              </ContextMenu>
             );
           })}
 
