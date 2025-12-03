@@ -90,7 +90,7 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setAppMode, setActiveEditorTab]);
 
-  // Test Dashboard 열기 IPC 이벤트 리스너
+  // Test Dashboard 관련 IPC 이벤트 리스너
   useEffect(() => {
     if (typeof window === 'undefined' || !window.electronAPI) {
       console.warn('[Home] electronAPI not available for test dashboard');
@@ -102,12 +102,63 @@ export default function Home() {
       window.location.href = '/test-dashboard';
     };
 
+    const handleRunAllTests = () => {
+      console.log('[Home] Run all tests triggered from menu, opening dashboard...');
+      window.location.href = '/test-dashboard';
+      // 페이지 이동 후 테스트 실행 이벤트를 다시 발행
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('test:run-all-from-menu'));
+      }, 500);
+    };
+
+    const handleHealthCheck = () => {
+      console.log('[Home] Health check triggered from menu, opening dashboard...');
+      window.location.href = '/test-dashboard';
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('test:health-check-from-menu'));
+      }, 500);
+    };
+
+    const handleRunLLM = () => {
+      console.log('[Home] LLM test triggered from menu, opening dashboard...');
+      window.location.href = '/test-dashboard';
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('test:run-llm-from-menu'));
+      }, 500);
+    };
+
+    const handleRunDatabase = () => {
+      console.log('[Home] Database test triggered from menu, opening dashboard...');
+      window.location.href = '/test-dashboard';
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('test:run-database-from-menu'));
+      }, 500);
+    };
+
+    const handleRunMCP = () => {
+      console.log('[Home] MCP test triggered from menu, opening dashboard...');
+      window.location.href = '/test-dashboard';
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('test:run-mcp-from-menu'));
+      }, 500);
+    };
+
     // IPC 이벤트 리스너 등록
-    console.log('[Home] Registering test:open-dashboard listener');
+    console.log('[Home] Registering test dashboard listeners');
     window.electronAPI.on('test:open-dashboard', handleOpenTestDashboard);
+    window.electronAPI.on('test:run-all-from-menu', handleRunAllTests);
+    window.electronAPI.on('test:health-check-from-menu', handleHealthCheck);
+    window.electronAPI.on('test:run-llm-from-menu', handleRunLLM);
+    window.electronAPI.on('test:run-database-from-menu', handleRunDatabase);
+    window.electronAPI.on('test:run-mcp-from-menu', handleRunMCP);
 
     return () => {
       window.electronAPI.removeListener('test:open-dashboard', handleOpenTestDashboard);
+      window.electronAPI.removeListener('test:run-all-from-menu', handleRunAllTests);
+      window.electronAPI.removeListener('test:health-check-from-menu', handleHealthCheck);
+      window.electronAPI.removeListener('test:run-llm-from-menu', handleRunLLM);
+      window.electronAPI.removeListener('test:run-database-from-menu', handleRunDatabase);
+      window.electronAPI.removeListener('test:run-mcp-from-menu', handleRunMCP);
     };
   }, []);
 

@@ -469,9 +469,39 @@ export function ImageGenSettingsTab({
           <div
             className={`space-y-4 ${!imageGenConfig.nanobanana?.enabled ? 'opacity-60 pointer-events-none' : ''}`}
           >
+            <div className="space-y-2">
+              <Label htmlFor="nanoBananaProvider">API Provider</Label>
+              <select
+                id="nanoBananaProvider"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={imageGenConfig.nanobanana?.provider || 'nanobananaapi'}
+                onChange={(e) =>
+                  setImageGenConfig({
+                    ...imageGenConfig,
+                    nanobanana: {
+                      ...imageGenConfig.nanobanana!,
+                      provider: e.target.value as 'nanobananaapi' | 'vertex-ai',
+                    },
+                  })
+                }
+              >
+                <option value="nanobananaapi">NanoBanana API (nanobananaapi.ai)</option>
+                <option value="vertex-ai">Google Vertex AI (직접 연결)</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                {imageGenConfig.nanobanana?.provider === 'vertex-ai'
+                  ? 'Google Cloud Vertex AI를 직접 사용합니다. OAuth 2 access token이 필요합니다.'
+                  : 'NanoBanana API를 사용합니다. 간단한 API key로 사용 가능합니다.'}
+              </p>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="nanoBananaApiKey">Google Cloud API Key</Label>
+                <Label htmlFor="nanoBananaApiKey">
+                  {imageGenConfig.nanobanana?.provider === 'vertex-ai'
+                    ? 'Google Cloud API Key (OAuth 2 Token)'
+                    : 'NanoBanana API Key'}
+                </Label>
                 <Input
                   id="nanoBananaApiKey"
                   type="password"
@@ -485,78 +515,91 @@ export function ImageGenSettingsTab({
                       },
                     })
                   }
-                  placeholder="Google Cloud API Key"
+                  placeholder={
+                    imageGenConfig.nanobanana?.provider === 'vertex-ai'
+                      ? 'Google Cloud OAuth 2 Token'
+                      : 'NanoBanana API Key'
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
-                  Google Cloud Console에서 발급받은 API Key를 입력하세요.
+                  {imageGenConfig.nanobanana?.provider === 'vertex-ai'
+                    ? 'Google Cloud Console에서 발급받은 OAuth 2 access token을 입력하세요.'
+                    : 'https://nanobananaapi.ai 에서 발급받은 API Key를 입력하세요.'}
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="nanoBananaProject">Project ID</Label>
-                <Input
-                  id="nanoBananaProject"
-                  value={imageGenConfig.nanobanana?.projectId || ''}
-                  onChange={(e) =>
-                    setImageGenConfig({
-                      ...imageGenConfig,
-                      nanobanana: {
-                        ...imageGenConfig.nanobanana!,
-                        projectId: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="my-project-id (선택 사항)"
-                />
-              </div>
+              {imageGenConfig.nanobanana?.provider === 'vertex-ai' && (
+                <div className="space-y-2">
+                  <Label htmlFor="nanoBananaProject">Project ID</Label>
+                  <Input
+                    id="nanoBananaProject"
+                    value={imageGenConfig.nanobanana?.projectId || ''}
+                    onChange={(e) =>
+                      setImageGenConfig({
+                        ...imageGenConfig,
+                        nanobanana: {
+                          ...imageGenConfig.nanobanana!,
+                          projectId: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="my-project-id"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Google Cloud Project ID (Vertex AI 사용 시 필수)
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="nanoBananaLocation">Location</Label>
-                <Input
-                  id="nanoBananaLocation"
-                  value={imageGenConfig.nanobanana?.location || 'us-central1'}
-                  onChange={(e) =>
-                    setImageGenConfig({
-                      ...imageGenConfig,
-                      nanobanana: {
-                        ...imageGenConfig.nanobanana!,
-                        location: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="us-central1"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Google Cloud 리전 (기본값: us-central1)
-                </p>
-              </div>
+            {imageGenConfig.nanobanana?.provider === 'vertex-ai' && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="nanoBananaLocation">Location</Label>
+                  <Input
+                    id="nanoBananaLocation"
+                    value={imageGenConfig.nanobanana?.location || 'us-central1'}
+                    onChange={(e) =>
+                      setImageGenConfig({
+                        ...imageGenConfig,
+                        nanobanana: {
+                          ...imageGenConfig.nanobanana!,
+                          location: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="us-central1"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Google Cloud 리전 (기본값: us-central1)
+                  </p>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="nanoBananaModel">Model</Label>
-                <select
-                  id="nanoBananaModel"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={imageGenConfig.nanobanana?.model || 'imagen-3.0-generate-001'}
-                  onChange={(e) =>
-                    setImageGenConfig({
-                      ...imageGenConfig,
-                      nanobanana: {
-                        ...imageGenConfig.nanobanana!,
-                        model: e.target.value,
-                      },
-                    })
-                  }
-                >
-                  <option value="imagen-3.0-generate-001">Imagen 3.0 (Standard)</option>
-                  <option value="imagen-3.0-fast-generate-001">Imagen 3.0 Fast</option>
-                </select>
-                <p className="text-xs text-muted-foreground">
-                  Fast: 빠른 생성, Standard: 더 높은 품질
-                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="nanoBananaModel">Model</Label>
+                  <select
+                    id="nanoBananaModel"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={imageGenConfig.nanobanana?.model || 'imagen-3.0-generate-001'}
+                    onChange={(e) =>
+                      setImageGenConfig({
+                        ...imageGenConfig,
+                        nanobanana: {
+                          ...imageGenConfig.nanobanana!,
+                          model: e.target.value,
+                        },
+                      })
+                    }
+                  >
+                    <option value="imagen-3.0-generate-001">Imagen 3.0 (Standard)</option>
+                    <option value="imagen-3.0-fast-generate-001">Imagen 3.0 Fast</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Fast: 빠른 생성, Standard: 더 높은 품질
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-2">
               <label className="relative inline-flex items-center cursor-pointer">

@@ -143,24 +143,66 @@ export function TestDashboard() {
     return undefined;
   }, [autoRefresh, runHealthCheck]);
 
-  // 메뉴에서 트리거된 테스트 실행 IPC 이벤트 리스너
+  // 메뉴에서 트리거된 테스트 실행 이벤트 리스너 (IPC + window custom events)
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.electronAPI) {
+    if (typeof window === 'undefined') {
       return;
     }
 
-    window.electronAPI.on('test:run-all-from-menu', runAllTests);
-    window.electronAPI.on('test:health-check-from-menu', runHealthCheck);
-    window.electronAPI.on('test:run-llm-from-menu', runLlmTests);
-    window.electronAPI.on('test:run-database-from-menu', runDatabaseTests);
-    window.electronAPI.on('test:run-mcp-from-menu', runMcpTests);
+    console.log('[TestDashboard] Registering event listeners');
+
+    // Window custom events 리스너 (메인 페이지에서 전달된 이벤트)
+    const handleRunAllFromWindow = () => {
+      console.log('[TestDashboard] Received window event: run-all');
+      runAllTests();
+    };
+    const handleHealthCheckFromWindow = () => {
+      console.log('[TestDashboard] Received window event: health-check');
+      runHealthCheck();
+    };
+    const handleRunLLMFromWindow = () => {
+      console.log('[TestDashboard] Received window event: run-llm');
+      runLlmTests();
+    };
+    const handleRunDatabaseFromWindow = () => {
+      console.log('[TestDashboard] Received window event: run-database');
+      runDatabaseTests();
+    };
+    const handleRunMCPFromWindow = () => {
+      console.log('[TestDashboard] Received window event: run-mcp');
+      runMcpTests();
+    };
+
+    window.addEventListener('test:run-all-from-menu', handleRunAllFromWindow);
+    window.addEventListener('test:health-check-from-menu', handleHealthCheckFromWindow);
+    window.addEventListener('test:run-llm-from-menu', handleRunLLMFromWindow);
+    window.addEventListener('test:run-database-from-menu', handleRunDatabaseFromWindow);
+    window.addEventListener('test:run-mcp-from-menu', handleRunMCPFromWindow);
+
+    // IPC 이벤트 리스너 (Dashboard가 이미 열려있을 때)
+    if (window.electronAPI) {
+      console.log('[TestDashboard] Registering IPC listeners');
+      window.electronAPI.on('test:run-all-from-menu', runAllTests);
+      window.electronAPI.on('test:health-check-from-menu', runHealthCheck);
+      window.electronAPI.on('test:run-llm-from-menu', runLlmTests);
+      window.electronAPI.on('test:run-database-from-menu', runDatabaseTests);
+      window.electronAPI.on('test:run-mcp-from-menu', runMcpTests);
+    }
 
     return () => {
-      window.electronAPI.removeListener('test:run-all-from-menu', runAllTests);
-      window.electronAPI.removeListener('test:health-check-from-menu', runHealthCheck);
-      window.electronAPI.removeListener('test:run-llm-from-menu', runLlmTests);
-      window.electronAPI.removeListener('test:run-database-from-menu', runDatabaseTests);
-      window.electronAPI.removeListener('test:run-mcp-from-menu', runMcpTests);
+      window.removeEventListener('test:run-all-from-menu', handleRunAllFromWindow);
+      window.removeEventListener('test:health-check-from-menu', handleHealthCheckFromWindow);
+      window.removeEventListener('test:run-llm-from-menu', handleRunLLMFromWindow);
+      window.removeEventListener('test:run-database-from-menu', handleRunDatabaseFromWindow);
+      window.removeEventListener('test:run-mcp-from-menu', handleRunMCPFromWindow);
+
+      if (window.electronAPI) {
+        window.electronAPI.removeListener('test:run-all-from-menu', runAllTests);
+        window.electronAPI.removeListener('test:health-check-from-menu', runHealthCheck);
+        window.electronAPI.removeListener('test:run-llm-from-menu', runLlmTests);
+        window.electronAPI.removeListener('test:run-database-from-menu', runDatabaseTests);
+        window.electronAPI.removeListener('test:run-mcp-from-menu', runMcpTests);
+      }
     };
   }, [runAllTests, runHealthCheck, runLlmTests, runDatabaseTests, runMcpTests]);
 

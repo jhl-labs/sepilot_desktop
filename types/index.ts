@@ -237,10 +237,11 @@ export interface ComfyUIConfig {
  */
 export interface NanoBananaConfig {
   enabled: boolean;
-  apiKey: string; // Google Cloud API Key
-  projectId?: string; // Google Cloud Project ID
-  location?: string; // Default: 'us-central1'
-  model?: string; // 'imagen-3.0-fast-generate-001' or 'imagen-3.0-generate-001'
+  provider?: 'nanobananaapi' | 'vertex-ai'; // API provider: nanobananaapi.ai (default) or Google Vertex AI
+  apiKey: string; // API Key (nanobananaapi.ai) or Google Cloud API Key (Vertex AI)
+  projectId?: string; // Google Cloud Project ID (only for Vertex AI)
+  location?: string; // Default: 'us-central1' (only for Vertex AI)
+  model?: string; // 'imagen-3.0-fast-generate-001' or 'imagen-3.0-generate-001' (only for Vertex AI)
 
   // Generation parameters (defaults - can be overridden per request)
   negativePrompt?: string;

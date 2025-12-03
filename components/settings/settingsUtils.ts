@@ -71,6 +71,7 @@ export const createDefaultComfyUIConfig = (): ComfyUIConfig => ({
 
 export const createDefaultNanoBananaConfig = (): NanoBananaConfig => ({
   enabled: false,
+  provider: 'nanobananaapi', // Default to nanobananaapi.ai
   apiKey: '',
   projectId: '',
   location: 'us-central1',
