@@ -63,20 +63,40 @@ export function createVisionSystemMessage(): string {
  * RAG용 시스템 메시지 생성
  */
 export function createRAGSystemMessage(documents: any[]): string {
-  const context =
-    documents.length > 0
-      ? documents
-          .map((doc, i) => {
-            const title = doc.metadata?.title || '제목 없음';
-            const source = doc.metadata?.source || 'manual';
-            return `[문서 ${i + 1}: ${source} - ${title}]\n${doc.content}`;
-          })
-          .join('\n\n')
-      : '';
+  if (documents.length === 0) {
+    return createBaseSystemMessage();
+  }
 
-  const ragInstructions = context
-    ? `# 문서 컨텍스트\n\n다음 문서들을 참고하여 사용자의 질문에 답변하세요. 문서의 정보를 바탕으로 정확하게 답변하되, 출처 표기는 하지 마세요. 참조된 문서는 자동으로 표시됩니다.\n\n${context}`
-    : '';
+  // 문서 컨텍스트를 명확하게 구조화
+  const context = documents
+    .map((doc, i) => {
+      const title = doc.metadata?.title || '제목 없음';
+      const source = doc.metadata?.source || 'manual';
+      const folderPath = doc.metadata?.folderPath || '';
+      const folderInfo = folderPath ? ` (폴더: ${folderPath})` : '';
+
+      return `[문서 ${i + 1}] ${title} (출처: ${source})${folderInfo}\n${doc.content}`;
+    })
+    .join('\n\n---\n\n');
+
+  // RAG 지시사항을 더 강력하게 작성
+  const ragInstructions = `# 중요: 반드시 아래 문서들을 참고하여 답변하세요!
+
+다음은 사용자의 질문과 관련된 문서들입니다. **반드시 이 문서들의 내용을 기반으로** 답변을 작성하세요.
+
+## 답변 작성 규칙
+1. **문서의 정보를 최대한 활용**하여 구체적으로 답변
+2. 문서에 없는 내용은 일반 지식으로 보완 가능하지만, 문서 내용을 우선시
+3. 출처 표기는 하지 마세요 (자동으로 표시됨)
+4. 문서의 내용을 그대로 복사하지 말고, 자연스럽게 재구성하여 설명
+
+## 참조 문서들
+
+${context}
+
+---
+
+위 문서들의 내용을 바탕으로 사용자의 질문에 답변하세요.`;
 
   return createBaseSystemMessage(ragInstructions);
 }

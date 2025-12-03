@@ -38,6 +38,20 @@ async function ragGenerateNode(state: typeof RAGStateAnnotation.State) {
 
   try {
     console.log('[RAGGraph] Starting generation with documents:', state.documents.length);
+    if (state.documents.length > 0) {
+      console.log(
+        '[RAGGraph] Document titles:',
+        state.documents.map((d) => d.metadata?.title)
+      );
+      console.log('[RAGGraph] Total context length:', context.length, 'chars');
+      console.log(
+        '[RAGGraph] System message length:',
+        messages.find((m) => m.role === 'system')?.content.length,
+        'chars'
+      );
+    } else {
+      console.warn('[RAGGraph] WARNING: No documents found for RAG!');
+    }
 
     // LLM 스트리밍 호출 - 각 청크를 즉시 렌더러로 전송
     for await (const chunk of LLMService.streamChat(messages)) {
