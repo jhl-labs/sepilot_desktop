@@ -61,9 +61,10 @@ async function generateWithNanoBananaAPI(
     const numberOfImages = params.numberOfImages || config.numberOfImages || 1;
 
     // Prepare request payload for nanobananaapi.ai
+    // Note: Their official API docs use 'TEXTTOIAMGE' (with the typo)
     const payload: any = {
       prompt: params.prompt,
-      type: 'TEXTTOIMAGE', // Correct: TEXTTOIMAGE (not TEXTTOIAMGE)
+      type: 'TEXTTOIAMGE',
       numImages: numberOfImages,
     };
 
@@ -84,8 +85,11 @@ async function generateWithNanoBananaAPI(
     }
 
     console.log('[NanoBanana] Generating image with nanobananaapi.ai:', {
+      endpoint,
       prompt: `${params.prompt.substring(0, 50)}...`,
       numberOfImages,
+      headers: { ...headers, Authorization: `Bearer ${config.apiKey.substring(0, 10)}...` },
+      payload,
     });
 
     // Call NanoBananaAPI.ai
@@ -94,6 +98,8 @@ async function generateWithNanoBananaAPI(
       headers,
       body: JSON.stringify(payload),
     });
+
+    console.log('[NanoBanana] Response status:', response.status, response.statusText);
 
     if (!response.ok) {
       const errorText = await response.text();
