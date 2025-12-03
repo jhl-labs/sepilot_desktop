@@ -36,6 +36,8 @@ export function CodeEditor() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAutocompleting, setIsAutocompleting] = useState(false);
+  const [processingAction, setProcessingAction] = useState<string>('');
   const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null);
   const [previewMode, setPreviewMode] = useState<'editor' | 'preview' | 'split'>('editor');
 
@@ -108,7 +110,28 @@ export function CodeEditor() {
         return;
       }
 
+      // 액션 이름을 한글로 변환
+      const actionNames: Record<string, string> = {
+        summarize: '요약',
+        translate: '번역',
+        complete: '코드 완성',
+        explain: '코드 설명',
+        fix: '코드 수정',
+        improve: '코드 개선',
+        continue: '계속 작성',
+        'make-shorter': '짧게 만들기',
+        'make-longer': '길게 만들기',
+        simplify: '단순화',
+        'fix-grammar': '문법 수정',
+        'change-tone-professional': '전문적 어조로 변경',
+        'change-tone-casual': '캐주얼 어조로 변경',
+        'change-tone-friendly': '친근한 어조로 변경',
+        'find-action-items': '액션 아이템 찾기',
+        'create-outline': '개요 작성',
+      };
+
       setIsProcessing(true);
+      setProcessingAction(actionNames[action] || action);
       try {
         const model = editor.getModel();
         const selection = editor.getSelection();
@@ -180,6 +203,7 @@ export function CodeEditor() {
         );
       } finally {
         setIsProcessing(false);
+        setProcessingAction('');
       }
     },
     [editor, activeFile?.language, activeFile?.path]
@@ -337,6 +361,7 @@ export function CodeEditor() {
           }
 
           isRequestInProgress = true;
+          setIsAutocompleting(true);
           console.log('[Autocomplete] Starting API request with enhanced context...');
 
           // 타임아웃과 함께 요청
@@ -419,6 +444,7 @@ export function CodeEditor() {
           }
         } finally {
           isRequestInProgress = false;
+          setIsAutocompleting(false);
           if (currentAbortController === abortController) {
             currentAbortController = null;
           }
@@ -907,10 +933,17 @@ export function CodeEditor() {
             {activeFile.path}
           </div>
           <div className="flex items-center gap-2">
-            {isProcessing && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            {/* AI 작업 진행 상태 표시 */}
+            {isProcessing && processingAction && (
+              <div className="flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                <span>Processing...</span>
+                <span className="font-medium">{processingAction} 중...</span>
+              </div>
+            )}
+            {isAutocompleting && (
+              <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950 px-2 py-1 rounded">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span className="font-medium">AI 자동완성 중...</span>
               </div>
             )}
             {activeFile.isDirty && <span className="text-xs text-orange-500">Unsaved changes</span>}
