@@ -2,6 +2,14 @@ import { databaseService } from './database';
 import { vectorDBService } from './vectordb';
 import { logger } from './logger';
 import { MCPServerManager } from '../../lib/mcp/server-manager';
+import type { AppConfig, LLMConfigV2 } from '../../types';
+
+/**
+ * Check if LLM config is V2
+ */
+function isLLMConfigV2(config: any): config is LLMConfigV2 {
+  return config && typeof config === 'object' && 'version' in config && config.version === 2;
+}
 
 /**
  * Health Check 결과 인터페이스
@@ -139,9 +147,14 @@ export class HealthCheckService {
 
       // 간단한 쿼리로 연결 확인
       const db = databaseService.getDatabase();
-      const testQuery = db.prepare('SELECT 1 as test').get();
+      const testQuery = db.exec('SELECT 1 as test');
 
-      if (!testQuery || (testQuery as any).test !== 1) {
+      if (
+        !testQuery ||
+        testQuery.length === 0 ||
+        testQuery[0].values.length === 0 ||
+        testQuery[0].values[0][0] !== 1
+      ) {
         return {
           status: 'fail',
           message: 'Database query failed',
@@ -266,14 +279,52 @@ export class HealthCheckService {
           latency: Date.now() - startTime,
         };
       }
-      const appConfig = JSON.parse(configValue);
-      const providers = appConfig.llm?.providers || appConfig.llm?.connections || {};
+      const appConfig: AppConfig = JSON.parse(configValue);
+      const llmConfig = appConfig.llm;
+
+      // V2 config 지원
+      if (isLLMConfigV2(llmConfig)) {
+        const connectionCount = llmConfig.connections?.length || 0;
+        const connectionsWithKey =
+          llmConfig.connections?.filter((conn) => conn.apiKey && conn.apiKey.length > 0) || [];
+
+        if (connectionCount === 0) {
+          return {
+            status: 'warn',
+            message: 'No LLM connections configured (V2)',
+            details: { connectionCount: 0 },
+            latency: Date.now() - startTime,
+          };
+        }
+
+        if (connectionsWithKey.length === 0) {
+          return {
+            status: 'fail',
+            message: 'No LLM connections have API keys configured (V2)',
+            details: { totalConnections: connectionCount, configuredCount: 0 },
+            latency: Date.now() - startTime,
+          };
+        }
+
+        return {
+          status: 'pass',
+          message: `${connectionsWithKey.length}/${connectionCount} LLM connection(s) configured (V2)`,
+          details: {
+            totalConnections: connectionCount,
+            configuredCount: connectionsWithKey.length,
+          },
+          latency: Date.now() - startTime,
+        };
+      }
+
+      // V1 config
+      const providers = llmConfig?.providers || {};
       const providerNames = Object.keys(providers);
 
       if (providerNames.length === 0) {
         return {
           status: 'warn',
-          message: 'No LLM providers configured',
+          message: 'No LLM providers configured (V1)',
           details: { providerCount: 0 },
           latency: Date.now() - startTime,
         };
@@ -288,7 +339,7 @@ export class HealthCheckService {
       if (configuredProviders.length === 0) {
         return {
           status: 'fail',
-          message: 'No LLM providers have API keys configured',
+          message: 'No LLM providers have API keys configured (V1)',
           details: { totalProviders: providerNames.length, configuredCount: 0 },
           latency: Date.now() - startTime,
         };
@@ -296,7 +347,7 @@ export class HealthCheckService {
 
       return {
         status: 'pass',
-        message: `${configuredProviders.length}/${providerNames.length} LLM providers configured`,
+        message: `${configuredProviders.length}/${providerNames.length} LLM provider(s) configured (V1)`,
         details: {
           totalProviders: providerNames.length,
           configuredCount: configuredProviders.length,
