@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, Terminal, FileText, Database, Wrench } from 'lucide-react';
+import { Settings, Terminal, FileText, Database, Wrench, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
@@ -26,6 +26,8 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
     setEditorUseRagInAutocomplete,
     editorUseToolsInAutocomplete,
     setEditorUseToolsInAutocomplete,
+    editorAgentMode,
+    setEditorAgentMode,
     pendingToolApproval,
     clearPendingToolApproval,
     setAlwaysApproveToolsForSession,
@@ -88,6 +90,19 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
         <div className="shrink-0 border-t p-2">
           <div className="flex gap-1">
             <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setEditorAgentMode(editorAgentMode === 'editor' ? 'coding' : 'editor')}
+              title={
+                editorAgentMode === 'editor'
+                  ? 'Editor Agent 모드 (클릭하여 Coding Agent로 전환)'
+                  : 'Coding Agent 모드 (클릭하여 Editor Agent로 전환)'
+              }
+              className={`flex-1 ${editorAgentMode === 'coding' ? 'bg-primary text-primary-foreground' : 'bg-accent text-accent-foreground'}`}
+            >
+              <Bot className="h-5 w-5" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"

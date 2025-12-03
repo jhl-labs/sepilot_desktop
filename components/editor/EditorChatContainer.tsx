@@ -22,6 +22,7 @@ export function EditorChatContainer() {
     addEditorChatMessage,
     updateEditorChatMessage,
     workingDirectory,
+    editorAgentMode,
     setEditorChatStreaming,
     setPendingToolApproval,
     clearPendingToolApproval,
@@ -118,19 +119,43 @@ export function EditorChatContainer() {
         let accumulatedContent = '';
 
         if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.langgraph) {
-          // Electron: Use Editor Agent with Advanced Tools
+          // Electron: Use selected Agent mode (Editor or Coding)
           const graphConfig = {
-            thinkingMode: 'editor-agent' as const,
+            thinkingMode:
+              editorAgentMode === 'coding' ? ('coding' as const) : ('editor-agent' as const),
             enableRAG: false,
-            enableTools: true, // Enable Editor Agent Tools
+            enableTools: true,
             enableImageGeneration: false,
           };
 
-          // Prepare messages for LLM with system message
-          const systemMessage = {
-            id: 'system',
-            role: 'system' as const,
-            content: `You are an AI-powered Editor Agent with advanced file management and code assistance capabilities.
+          // Prepare system message based on agent mode
+          const systemMessageContent =
+            editorAgentMode === 'coding'
+              ? `You are SE Pilot, a highly skilled autonomous coding assistant with comprehensive planning and verification capabilities.
+
+**Available Tools:**
+- **File Operations**: file_read, file_write, file_edit, file_list, grep_search
+- **Command Execution**: command_execute (build, test, git operations)
+- **Git Operations**: git_status, git_diff, git_log, git_branch
+- **Web Research**: web_search, web_fetch (for documentation and examples)
+
+**Your Role:**
+- Plan complex tasks with step-by-step breakdown
+- Execute user requests using appropriate tools
+- Read files before making modifications
+- Verify your work after changes
+- Track file changes throughout the workflow
+- Provide clear feedback about completed actions
+- Working directory: ${workingDirectory || 'not set'}
+
+**Workflow:**
+1. Understand the task and plan your approach
+2. Use tools to explore the codebase
+3. Make necessary changes with proper verification
+4. Confirm results and provide summary
+
+Use ReAct pattern: Think → Act → Observe → Repeat until task is complete.`
+              : `You are an AI-powered Editor Agent with advanced file management and code assistance capabilities.
 
 **Available Tools:**
 - **File Operations**: read_file, write_file, edit_file, list_files, search_files, delete_file
@@ -151,7 +176,12 @@ export function EditorChatContainer() {
 2. Confirm the file was created successfully
 3. Summarize what was written
 
-Execute tasks step by step and use tools proactively.`,
+Execute tasks step by step and use tools proactively.`;
+
+          const systemMessage = {
+            id: 'system',
+            role: 'system' as const,
+            content: systemMessageContent,
             created_at: Date.now(),
           };
 
@@ -367,6 +397,7 @@ Execute tasks step by step and use tools proactively.`,
       editorChatStreaming,
       editorChatMessages,
       workingDirectory,
+      editorAgentMode,
       addEditorChatMessage,
       updateEditorChatMessage,
       setEditorChatStreaming,

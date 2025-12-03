@@ -156,6 +156,7 @@ interface ChatStore {
   editorLLMPromptsConfig: EditorLLMPromptsConfig;
   editorUseRagInAutocomplete: boolean; // RAG 문서 사용 여부 (autocomplete)
   editorUseToolsInAutocomplete: boolean; // MCP Tools 사용 여부 (autocomplete)
+  editorAgentMode: 'editor' | 'coding'; // Agent 모드 (editor-agent 또는 coding-agent)
 
   // Chat Mode View
   chatViewMode: 'history' | 'documents'; // history or documents view in Chat sidebar
@@ -258,6 +259,7 @@ interface ChatStore {
   resetEditorLLMPromptsConfig: () => void;
   setEditorUseRagInAutocomplete: (enable: boolean) => void;
   setEditorUseToolsInAutocomplete: (enable: boolean) => void;
+  setEditorAgentMode: (mode: 'editor' | 'coding') => void;
 
   // Actions - Chat Mode View
   setChatViewMode: (mode: 'history' | 'documents') => void;
@@ -461,6 +463,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       console.error('Failed to load editor Tools setting from localStorage:', error);
     }
     return false;
+  })(),
+
+  editorAgentMode: (() => {
+    if (typeof window === 'undefined') {
+      return 'editor';
+    }
+    try {
+      const saved = localStorage.getItem('sepilot_editor_agent_mode');
+      return (saved === 'coding' ? 'coding' : 'editor') as 'editor' | 'coding';
+    } catch (error) {
+      console.error('Failed to load editor agent mode from localStorage:', error);
+    }
+    return 'editor';
   })(),
 
   // Chat Mode View
@@ -1435,6 +1450,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ editorUseToolsInAutocomplete: enable });
     if (typeof window !== 'undefined') {
       localStorage.setItem('sepilot_editor_use_tools_in_autocomplete', enable.toString());
+    }
+  },
+
+  setEditorAgentMode: (mode: 'editor' | 'coding') => {
+    set({ editorAgentMode: mode });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sepilot_editor_agent_mode', mode);
     }
   },
 
