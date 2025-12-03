@@ -73,13 +73,24 @@ export function TestDashboard() {
 
   // LLM 테스트 실행
   const runLlmTests = React.useCallback(async () => {
+    console.log('[TestDashboard] runLlmTests called');
+    console.log('[TestDashboard] window.electronAPI:', window.electronAPI);
+    console.log('[TestDashboard] window.electronAPI.testRunner:', window.electronAPI?.testRunner);
+
+    if (!window.electronAPI?.testRunner) {
+      console.error('[TestDashboard] testRunner API not available');
+      return;
+    }
+
     setIsRunning(true);
     try {
+      console.log('[TestDashboard] Calling window.electronAPI.testRunner.runLLM()');
       const result = await window.electronAPI.testRunner.runLLM();
+      console.log('[TestDashboard] LLM test result:', result);
       setLlmTestsResult(result);
       localStorage.setItem('test-history:llm', JSON.stringify(result));
     } catch (error) {
-      console.error('LLM tests failed:', error);
+      console.error('[TestDashboard] LLM tests failed:', error);
     } finally {
       setIsRunning(false);
     }
@@ -223,7 +234,15 @@ export function TestDashboard() {
             <CardDescription>LLM Provider 상태 테스트</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button onClick={runLlmTests} disabled={isRunning} className="w-full" variant="outline">
+            <Button
+              onClick={() => {
+                console.log('[TestDashboard] Button clicked!');
+                runLlmTests();
+              }}
+              disabled={isRunning}
+              className="w-full"
+              variant="outline"
+            >
               <Play className="w-4 h-4 mr-2" />
               Run LLM Tests
             </Button>
