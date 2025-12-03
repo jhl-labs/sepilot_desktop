@@ -1,6 +1,7 @@
 import { generateId } from '@/lib/utils';
-import { getWebLLMClient } from '@/lib/llm/web-client';
+import { LLMService } from '@/lib/llm/service';
 import type { PresentationSlide, PresentationExportFormat } from '@/types/presentation';
+import type { Message } from '@/types';
 
 export interface PresentationAgentOptions {
   tone?: string;
@@ -21,7 +22,8 @@ export interface PresentationAgentCallbacks {
   signal?: AbortSignal;
 }
 
-type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+// ChatMessage는 Message 타입과 호환되도록 변경
+type ChatMessage = Message;
 
 const SYSTEM_PROMPT = `You are ppt-agent, a presentation co-designer that follows the latest research on AI-first slide design.
 - Operate with the ReAct loop: think about the request, outline slides, propose visuals (vision model), then generate imagery (image model).
@@ -93,11 +95,19 @@ export async function runPresentationAgent(
   options: PresentationAgentOptions,
   callbacks: PresentationAgentCallbacks = {}
 ): Promise<{ response: string; slides: PresentationSlide[] }> {
-  const webClient = getWebLLMClient();
+  // LLMService를 사용하여 설정된 activeBaseModel을 IPC를 통해 호출
   const chatHistory: ChatMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    {
+      id: generateId(),
+      conversation_id: 'presentation-agent',
+      role: 'system',
+      content: SYSTEM_PROMPT,
+      created_at: Date.now(),
+    },
     ...messages,
     {
+      id: generateId(),
+      conversation_id: 'presentation-agent',
       role: 'system',
       content: `Target format: ${options.targetFormat || 'pptx'} | Tone: ${options.tone || 'bold'} | Slides: ${
         options.slideCount || 'auto'
@@ -107,18 +117,22 @@ export async function runPresentationAgent(
 - Theme palette: ${(options.theme?.palette || []).join(', ') || 'TBD'}
 - Typography: ${options.theme?.typography || 'modern sans (e.g., Sora/Inter)'}
 - Layout guidelines: ${options.theme?.layoutGuidelines || '16:9 grids, consistent margins, readable hierarchy'}`,
+      created_at: Date.now(),
     },
   ];
 
   let fullResponse = '';
-  for await (const chunk of webClient.stream(chatHistory)) {
-    if (callbacks.signal?.aborted) {
-      break;
+  try {
+    for await (const chunk of LLMService.streamChat(chatHistory)) {
+      if (callbacks.signal?.aborted) {
+        break;
+      }
+      fullResponse += chunk;
+      callbacks.onToken?.(chunk);
     }
-    if (!chunk.done && chunk.content) {
-      fullResponse += chunk.content;
-      callbacks.onToken?.(chunk.content);
-    }
+  } catch (error) {
+    console.error('[ppt-agent] Stream error:', error);
+    throw error;
   }
 
   if (callbacks.signal?.aborted) {
@@ -127,16 +141,35 @@ export async function runPresentationAgent(
 
   // Request explicit slide outline to keep UI in sync
   const outlinePrompt: ChatMessage = {
+    id: generateId(),
+    conversation_id: 'presentation-agent',
     role: 'user',
     content:
       'Summarize the slides you propose as compact JSON with fields: title, description, bullets, imagePrompt, notes, accentColor.',
+    created_at: Date.now(),
   };
 
-  const outline = await webClient.generate([
+  const outlineHistory: ChatMessage[] = [
     ...chatHistory,
-    { role: 'assistant', content: fullResponse },
+    {
+      id: generateId(),
+      conversation_id: 'presentation-agent',
+      role: 'assistant',
+      content: fullResponse,
+      created_at: Date.now(),
+    },
     outlinePrompt,
-  ]);
+  ];
+
+  let outline = '';
+  try {
+    for await (const chunk of LLMService.streamChat(outlineHistory)) {
+      outline += chunk;
+    }
+  } catch (error) {
+    console.error('[ppt-agent] Outline generation error:', error);
+  }
+
   const slides = coerceSlides(outline);
   if (slides.length > 0) {
     callbacks.onSlides?.(slides);

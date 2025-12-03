@@ -52,16 +52,9 @@ export function PresentationChat() {
 
     let buffer = '';
     try {
-      const history = [
-        ...presentationChatMessages.map((m) => ({
-          role: m.role as 'user' | 'assistant' | 'system',
-          content: m.content,
-        })),
-        { role: 'user' as const, content: userMessage },
-      ];
-
+      // runPresentationAgent는 이제 전체 Message 객체를 받으므로 그대로 전달
       const { response } = await runPresentationAgent(
-        history,
+        presentationChatMessages,
         {
           tone,
           targetFormat,
