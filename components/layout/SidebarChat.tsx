@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Image, Settings, User, FileText } from 'lucide-react';
+import { Image, Settings, User, FileText, Presentation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ChatHistory } from './ChatHistory';
 import { PersonaDialog } from '@/components/persona/PersonaDialog';
+import { useChatStore } from '@/lib/store/chat-store';
 import { isElectron } from '@/lib/platform';
 
 interface SidebarChatProps {
@@ -22,6 +23,7 @@ export function SidebarChat({
   onDocumentsClick,
 }: SidebarChatProps) {
   const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
+  const { setAppMode } = useChatStore();
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -70,6 +72,15 @@ export function SidebarChat({
             className="flex-1"
           >
             <Image className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setAppMode('presentation')}
+            title="AI Presentation Lab"
+            className="flex-1"
+          >
+            <Presentation className="h-5 w-5" />
           </Button>
           <Button
             variant="ghost"
