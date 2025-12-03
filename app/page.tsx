@@ -7,6 +7,7 @@ import { WorkingDirectoryIndicator } from '@/components/chat/WorkingDirectoryInd
 import { UpdateNotificationDialog } from '@/components/UpdateNotificationDialog';
 import { EditorWithTerminal } from '@/components/editor/EditorWithTerminal';
 import { BrowserPanel } from '@/components/browser/BrowserPanel';
+import { PresentationStudio } from '@/components/presentation/PresentationStudio';
 import { useChatStore } from '@/lib/store/chat-store';
 import { QuickInputMessageData } from '@/types';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
@@ -172,6 +173,8 @@ export default function Home() {
           </>
         ) : appMode === 'editor' ? (
           <EditorWithTerminal />
+        ) : appMode === 'presentation' ? (
+          <PresentationStudio />
         ) : (
           <BrowserPanel />
         )}

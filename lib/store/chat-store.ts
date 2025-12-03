@@ -18,9 +18,10 @@ import type { Persona } from '@/types/persona';
 import { BUILTIN_PERSONAS } from '@/types/persona';
 import type { EditorAppearanceConfig, EditorLLMPromptsConfig } from '@/types/editor-settings';
 import { DEFAULT_EDITOR_APPEARANCE, DEFAULT_EDITOR_LLM_PROMPTS } from '@/types/editor-settings';
+import type { PresentationSlide, PresentationExportState } from '@/types/presentation';
 
 // App mode types
-export type AppMode = 'chat' | 'editor' | 'browser';
+export type AppMode = 'chat' | 'editor' | 'browser' | 'presentation';
 
 // Open file tab interface
 export interface OpenFile {
@@ -146,6 +147,14 @@ interface ChatStore {
   browserChatMessages: Message[];
   browserViewMode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs';
 
+  // Presentation Designer
+  presentationChatMessages: Message[];
+  presentationChatStreaming: boolean;
+  presentationSlides: PresentationSlide[];
+  activePresentationSlideId: string | null;
+  presentationViewMode: 'chat' | 'outline' | 'assets';
+  presentationExportState: PresentationExportState | null;
+
   // Browser Agent Logs (실행 과정 가시성)
   browserAgentLogs: BrowserAgentLogEntry[];
   browserAgentIsRunning: boolean;
@@ -242,6 +251,22 @@ interface ChatStore {
   setBrowserViewMode: (
     mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs'
   ) => void;
+
+  // Actions - Presentation
+  addPresentationChatMessage: (
+    message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>
+  ) => void;
+  updatePresentationChatMessage: (id: string, updates: Partial<Message>) => void;
+  clearPresentationChat: () => void;
+  setPresentationChatStreaming: (isStreaming: boolean) => void;
+  setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets') => void;
+  setPresentationSlides: (slides: PresentationSlide[]) => void;
+  addPresentationSlide: (slide: PresentationSlide) => void;
+  updatePresentationSlide: (id: string, updates: Partial<PresentationSlide>) => void;
+  removePresentationSlide: (id: string) => void;
+  setActivePresentationSlide: (id: string | null) => void;
+  setPresentationExportState: (state: PresentationExportState | null) => void;
+  clearPresentationSession: () => void;
 
   // Actions - Browser Agent Logs
   addBrowserAgentLog: (log: Omit<BrowserAgentLogEntry, 'id' | 'timestamp'>) => void;
@@ -360,6 +385,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Browser Chat
   browserChatMessages: [],
   browserViewMode: 'chat',
+
+  // Presentation Designer
+  presentationChatMessages: [],
+  presentationChatStreaming: false,
+  presentationSlides: [],
+  activePresentationSlideId: null,
+  presentationViewMode: 'chat',
+  presentationExportState: null,
 
   // Browser Agent Logs
   browserAgentLogs: [],
@@ -1548,6 +1581,95 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs'
   ) => {
     set({ browserViewMode: mode });
+  },
+
+  // Presentation Chat Actions
+  addPresentationChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => {
+    const newMessage: Message = {
+      ...message,
+      id: generateId(),
+      conversation_id: 'presentation-chat',
+      created_at: Date.now(),
+    };
+
+    set((state) => ({
+      presentationChatMessages: [...state.presentationChatMessages, newMessage],
+    }));
+  },
+
+  updatePresentationChatMessage: (id: string, updates: Partial<Message>) => {
+    set((state) => ({
+      presentationChatMessages: state.presentationChatMessages.map((m) =>
+        m.id === id ? { ...m, ...updates } : m
+      ),
+    }));
+  },
+
+  clearPresentationChat: () => {
+    set({ presentationChatMessages: [], presentationChatStreaming: false });
+  },
+
+  setPresentationChatStreaming: (isStreaming: boolean) => {
+    set({ presentationChatStreaming: isStreaming });
+  },
+
+  setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets') => {
+    set({ presentationViewMode: mode });
+  },
+
+  setPresentationSlides: (slides: PresentationSlide[]) => {
+    set({ presentationSlides: slides });
+  },
+
+  addPresentationSlide: (slide: PresentationSlide) => {
+    set((state) => {
+      const slides = [...state.presentationSlides, slide];
+      return {
+        presentationSlides: slides,
+        activePresentationSlideId: slide.id,
+      };
+    });
+  },
+
+  updatePresentationSlide: (id: string, updates: Partial<PresentationSlide>) => {
+    set((state) => ({
+      presentationSlides: state.presentationSlides.map((slide) =>
+        slide.id === id ? { ...slide, ...updates } : slide
+      ),
+    }));
+  },
+
+  removePresentationSlide: (id: string) => {
+    set((state) => {
+      const slides = state.presentationSlides.filter((slide) => slide.id !== id);
+      const activeId =
+        state.activePresentationSlideId === id
+          ? slides[0]?.id || null
+          : state.activePresentationSlideId;
+      return {
+        presentationSlides: slides,
+        activePresentationSlideId: activeId,
+      };
+    });
+  },
+
+  setActivePresentationSlide: (id: string | null) => {
+    set({ activePresentationSlideId: id });
+  },
+
+  setPresentationExportState: (stateValue: PresentationExportState | null) => {
+    set({ presentationExportState: stateValue });
+  },
+
+  clearPresentationSession: () => {
+    set({
+      presentationChatMessages: [],
+      presentationSlides: [],
+      activePresentationSlideId: null,
+      presentationChatStreaming: false,
+      presentationExportState: null,
+      presentationViewMode: 'chat',
+    });
   },
 
   // Browser Agent Logs Actions

@@ -27,6 +27,7 @@ import { setupPersonaHandlers } from './handlers/persona';
 import { setupErrorReportingHandlers } from './handlers/error-reporting';
 import { setupTestRunnerHandlers } from './handlers/test-runner';
 import { logger } from '../services/logger';
+import { setupPresentationExportHandlers } from './handlers/presentation-export';
 
 /**
  * Register all IPC handlers
@@ -56,6 +57,7 @@ export function setupIpcHandlers(mainWindow?: BrowserWindow) {
   setupPersonaHandlers();
   setupErrorReportingHandlers();
   setupTestRunnerHandlers();
+  setupPresentationExportHandlers();
 
   logger.info('IPC handlers setup complete');
 }
