@@ -427,7 +427,17 @@ const electronAPI = {
 
   // 이벤트 리스너
   on: (channel: string, callback: (...args: unknown[]) => void) => {
-    const validChannels = ['update-available', 'download-progress', 'create-new-chat-with-message'];
+    const validChannels = [
+      'update-available',
+      'download-progress',
+      'create-new-chat-with-message',
+      'test:open-dashboard',
+      'test:run-all-from-menu',
+      'test:health-check-from-menu',
+      'test:run-llm-from-menu',
+      'test:run-database-from-menu',
+      'test:run-mcp-from-menu',
+    ];
 
     if (validChannels.includes(channel)) {
       // wrapper 함수 없이 직접 등록 (removeListener와 호환)
