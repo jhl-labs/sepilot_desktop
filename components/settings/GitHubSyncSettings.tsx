@@ -21,6 +21,7 @@ import {
   Check,
   AlertTriangle,
   Bug,
+  Download,
 } from 'lucide-react';
 import { GitHubSyncConfig } from '@/types';
 
@@ -94,6 +95,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
+  const [isPulling, setIsPulling] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -222,6 +224,92 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       setMessage({ type: 'error', text: err.message || '설정 저장 실패' });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePullDocuments = async () => {
+    if (!token || !owner || !repo) {
+      setMessage({ type: 'error', text: '먼저 설정을 저장해주세요.' });
+      return;
+    }
+
+    if (serverType === 'ghes' && !ghesUrl) {
+      setMessage({ type: 'error', text: 'GHES URL을 입력해주세요.' });
+      return;
+    }
+
+    setIsPulling('documents');
+    setMessage(null);
+
+    try {
+      const syncConfig: GitHubSyncConfig = {
+        serverType,
+        ghesUrl: serverType === 'ghes' ? ghesUrl : undefined,
+        token,
+        owner,
+        repo,
+        branch: branch || 'main',
+        syncSettings: syncItems.find((i) => i.id === 'settings')?.enabled ?? true,
+        syncDocuments: syncItems.find((i) => i.id === 'documents')?.enabled ?? false,
+        syncImages: syncItems.find((i) => i.id === 'images')?.enabled ?? false,
+        syncConversations: syncItems.find((i) => i.id === 'conversations')?.enabled ?? false,
+        syncPersonas: syncItems.find((i) => i.id === 'personas')?.enabled ?? false,
+      };
+
+      if (typeof window !== 'undefined' && window.electronAPI) {
+        const result = await window.electronAPI.githubSync.pullDocuments(syncConfig);
+
+        if (result.success && result.documents && result.documents.length > 0) {
+          // ID 생성 함수
+          const generateId = () => {
+            return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          };
+
+          // 문서에 ID 추가
+          const documentsWithIds = result.documents.map(
+            (doc: { title: string; content: string; metadata: Record<string, any> }) => ({
+              id: generateId(),
+              content: doc.content,
+              metadata: doc.metadata,
+            })
+          );
+
+          // VectorDB에 문서 인덱싱 (DocumentsPage와 동일한 옵션 사용)
+          const indexingOptions = {
+            chunkSize: 2500,
+            chunkOverlap: 250,
+            batchSize: 10,
+            chunkStrategy: 'sentence' as const,
+          };
+
+          const indexResult = await window.electronAPI.vectorDB.indexDocuments(
+            documentsWithIds,
+            indexingOptions
+          );
+
+          if (indexResult.success) {
+            setMessage({
+              type: 'success',
+              text: `${result.documents.length}개의 문서를 GitHub에서 가져와 VectorDB에 추가했습니다!`,
+            });
+          } else {
+            throw new Error(indexResult.error || '문서 인덱싱 실패');
+          }
+        } else if (result.success && result.documents && result.documents.length === 0) {
+          setMessage({
+            type: 'success',
+            text: 'GitHub에 동기화할 문서가 없습니다.',
+          });
+        } else {
+          throw new Error(result.error || '문서 가져오기 실패');
+        }
+      }
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Failed to pull documents:', err);
+      setMessage({ type: 'error', text: err.message || '문서 가져오기 실패' });
+    } finally {
+      setIsPulling(null);
     }
   };
 
@@ -475,7 +563,8 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {syncItems.map((item) => {
             const Icon = item.icon;
-            const isDisabled = !item.enabled || isSyncing !== null;
+            const isDisabled = !item.enabled || isSyncing !== null || isPulling !== null;
+            const isPullingItem = isPulling === item.id;
 
             return (
               <Card key={item.id} className={item.enabled ? 'border-primary/50' : ''}>
@@ -510,25 +599,48 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <Button
-                    onClick={() => handleSync(item.id)}
-                    disabled={isDisabled}
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                  >
-                    {isSyncing === item.id ? (
-                      <>
-                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                        동기화 중...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="mr-2 h-3 w-3" />
-                        동기화 실행
-                      </>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleSync(item.id)}
+                      disabled={isDisabled}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      {isSyncing === item.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                          Push 중...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="mr-2 h-3 w-3" />
+                          Push
+                        </>
+                      )}
+                    </Button>
+                    {item.id === 'documents' && (
+                      <Button
+                        onClick={handlePullDocuments}
+                        disabled={isDisabled}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        {isPullingItem ? (
+                          <>
+                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                            Pull 중...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="mr-2 h-3 w-3" />
+                            Pull
+                          </>
+                        )}
+                      </Button>
                     )}
-                  </Button>
+                  </div>
                 </CardContent>
               </Card>
             );

@@ -329,6 +329,7 @@ const electronAPI = {
     syncConversations: (config: any) => ipcRenderer.invoke('github-sync-conversations', config),
     syncPersonas: (config: any) => ipcRenderer.invoke('github-sync-personas', config),
     syncAll: (config: any) => ipcRenderer.invoke('github-sync-all', config),
+    pullDocuments: (config: any) => ipcRenderer.invoke('github-sync-pull-documents', config),
   },
 
   // Error Reporting operations

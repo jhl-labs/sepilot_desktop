@@ -538,6 +538,12 @@ interface GitHubSyncAPI {
       personas: GitHubSyncResult;
     }>
   >;
+  pullDocuments: (config: import('./index').GitHubSyncConfig) => Promise<{
+    success: boolean;
+    documents: Array<{ title: string; content: string; metadata: Record<string, any> }>;
+    message?: string;
+    error?: string;
+  }>;
 }
 
 // Error Reporting API

@@ -418,4 +418,37 @@ export function setupGitHubSyncHandlers() {
       };
     }
   });
+
+  /**
+   * GitHub에서 문서 가져오기 (Pull)
+   */
+  ipcMain.handle('github-sync-pull-documents', async (_event, config: GitHubSyncConfig) => {
+    try {
+      config = applyNetworkConfig(config);
+
+      // GitHub Sync 클라이언트 생성
+      const client = new GitHubSyncClient(config);
+
+      // 문서 가져오기
+      const result = await client.pullDocuments();
+
+      if (!result.success) {
+        throw new Error(result.error || '문서 가져오기 실패');
+      }
+
+      return {
+        success: true,
+        documents: result.documents,
+        message: result.message,
+      };
+    } catch (error: any) {
+      console.error('[GitHubSync] Failed to pull documents:', error);
+      return {
+        success: false,
+        documents: [],
+        message: '문서 가져오기 실패',
+        error: error.message,
+      };
+    }
+  });
 }

@@ -432,6 +432,189 @@ export class GitHubSyncClient {
   }
 
   /**
+   * GitHub에서 문서 가져오기 (Pull)
+   */
+  async pullDocuments(): Promise<{
+    success: boolean;
+    documents: Array<{ title: string; content: string; metadata: Record<string, any> }>;
+    message?: string;
+    error?: string;
+  }> {
+    try {
+      // sepilot/documents 디렉토리의 모든 파일 가져오기
+      const { data: tree } = await this.octokit.git.getTree({
+        owner: this.owner,
+        repo: this.repo,
+        tree_sha: this.branch,
+        recursive: 'true',
+      });
+
+      // .md 파일만 필터링
+      const markdownFiles = tree.tree.filter(
+        (item) =>
+          item.type === 'blob' &&
+          item.path?.startsWith('sepilot/documents/') &&
+          item.path.endsWith('.md') &&
+          item.path !== 'sepilot/documents/README.md' // 인덱스 파일 제외
+      );
+
+      const documents: Array<{ title: string; content: string; metadata: Record<string, any> }> =
+        [];
+
+      // 각 파일의 내용 가져오기
+      for (const file of markdownFiles) {
+        if (!file.path || !file.sha) {
+          continue;
+        }
+
+        try {
+          const { data: blob } = await this.octokit.git.getBlob({
+            owner: this.owner,
+            repo: this.repo,
+            file_sha: file.sha,
+          });
+
+          // Base64 디코딩
+          const content = Buffer.from(blob.content, 'base64').toString('utf-8');
+
+          // Markdown 파싱 (메타데이터 추출)
+          const parsed = this.parseMarkdownDocument(content, file.path);
+
+          documents.push(parsed);
+        } catch (error: any) {
+          console.error(`[GitHubSync] Failed to fetch file ${file.path}:`, error);
+        }
+      }
+
+      return {
+        success: true,
+        documents,
+        message: `${documents.length}개의 문서를 가져왔습니다.`,
+      };
+    } catch (error: any) {
+      console.error('[GitHubSync] Failed to pull documents:', error);
+      return {
+        success: false,
+        documents: [],
+        message: 'Failed to pull documents',
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Markdown 문서 파싱 (메타데이터 추출)
+   */
+  private parseMarkdownDocument(
+    content: string,
+    filepath: string
+  ): { title: string; content: string; metadata: Record<string, any> } {
+    const lines = content.split('\n');
+
+    let title = 'Untitled';
+    let mainContent = content;
+    const metadata: Record<string, any> = {};
+
+    // 폴더 경로 추출 (sepilot/documents/ 이후 경로)
+    const pathMatch = filepath.match(/sepilot\/documents\/(.+)\.md$/);
+    if (pathMatch) {
+      const fullPath = pathMatch[1];
+      const parts = fullPath.split('/');
+      if (parts.length > 1) {
+        metadata.folderPath = parts.slice(0, -1).join('/');
+      }
+    }
+
+    // 첫 번째 # 헤딩을 제목으로 추출
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith('# ')) {
+        title = line.substring(2).trim();
+        break;
+      }
+    }
+
+    // 메타데이터 섹션 파싱 (--- 로 구분된 부분)
+    let inMetadataSection = false;
+    let metadataEndIndex = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      if (line === '---') {
+        if (!inMetadataSection) {
+          inMetadataSection = true;
+        } else {
+          metadataEndIndex = i;
+          break;
+        }
+      } else if (inMetadataSection) {
+        // **출처:** 형태 파싱
+        const sourceMatch = line.match(/^\*\*출처:\*\*\s*(.+)$/);
+        if (sourceMatch) {
+          metadata.source = sourceMatch[1].trim();
+        }
+
+        const categoryMatch = line.match(/^\*\*카테고리:\*\*\s*(.+)$/);
+        if (categoryMatch) {
+          metadata.category = categoryMatch[1].trim();
+        }
+
+        const folderMatch = line.match(/^\*\*폴더:\*\*\s*(.+)$/);
+        if (folderMatch) {
+          metadata.folderPath = folderMatch[1].trim();
+        }
+
+        const tagsMatch = line.match(/^\*\*태그:\*\*\s*(.+)$/);
+        if (tagsMatch) {
+          metadata.tags = tagsMatch[1]
+            .split(',')
+            .map((t) => t.trim())
+            .filter((t) => t);
+        }
+
+        const uploadedAtMatch = line.match(/^\*\*업로드일:\*\*\s*(.+)$/);
+        if (uploadedAtMatch) {
+          const dateStr = uploadedAtMatch[1].trim();
+          try {
+            metadata.uploadedAt = new Date(dateStr).getTime();
+          } catch {
+            // 파싱 실패 시 무시
+          }
+        }
+      }
+    }
+
+    // 본문 추출 (제목과 메타데이터 제외)
+    if (metadataEndIndex > 0) {
+      mainContent = lines
+        .slice(metadataEndIndex + 1)
+        .join('\n')
+        .trim();
+    } else {
+      // 메타데이터 섹션이 없으면 첫 # 이후부터
+      const titleIndex = lines.findIndex((l) => l.trim().startsWith('# '));
+      if (titleIndex >= 0) {
+        mainContent = lines
+          .slice(titleIndex + 1)
+          .join('\n')
+          .trim();
+      }
+    }
+
+    return {
+      title,
+      content: mainContent,
+      metadata: {
+        ...metadata,
+        title,
+        source: metadata.source || 'github',
+        uploadedAt: metadata.uploadedAt || Date.now(),
+      },
+    };
+  }
+
+  /**
    * 이미지 동기화
    */
   async syncImages(images: any[]): Promise<GitHubSyncResult> {
