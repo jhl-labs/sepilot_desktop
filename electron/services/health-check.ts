@@ -258,9 +258,9 @@ export class HealthCheckService {
     try {
       // 설정에서 LLM Provider 확인
       const db = databaseService.getDatabase();
-      const config = db.prepare('SELECT value FROM config WHERE key = ?').get(['app_config']) as unknown as
-        | { value: string }
-        | undefined;
+      const config = db
+        .prepare('SELECT value FROM settings WHERE key = ?')
+        .get(['app_config']) as unknown as { value: string } | undefined;
 
       if (!config) {
         return {

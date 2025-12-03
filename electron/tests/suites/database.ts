@@ -114,9 +114,9 @@ export class DatabaseTestSuite {
 
     try {
       const db = databaseService.getDatabase();
-      const config = db.prepare('SELECT value FROM config WHERE key = ?').get(['app_config']) as unknown as
-        | { value: string }
-        | undefined;
+      const config = db
+        .prepare('SELECT value FROM settings WHERE key = ?')
+        .get(['app_config']) as unknown as { value: string } | undefined;
 
       return {
         id: testId,
@@ -153,18 +153,18 @@ export class DatabaseTestSuite {
       const testValue = JSON.stringify({ test: true, timestamp: Date.now() });
 
       // Write
-      db.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)').run([
+      db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run([
         testKey,
-        testValue
+        testValue,
       ]);
 
       // Verify
-      const result = db.prepare('SELECT value FROM config WHERE key = ?').get([testKey]) as unknown as
-        | { value: string }
-        | undefined;
+      const result = db
+        .prepare('SELECT value FROM settings WHERE key = ?')
+        .get([testKey]) as unknown as { value: string } | undefined;
 
       // Cleanup
-      db.prepare('DELETE FROM config WHERE key = ?').run([testKey]);
+      db.prepare('DELETE FROM settings WHERE key = ?').run([testKey]);
 
       if (!result || result.value !== testValue) {
         return {

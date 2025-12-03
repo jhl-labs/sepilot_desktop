@@ -70,7 +70,7 @@ export class LLMInteractionTestSuite {
     try {
       const db = databaseService.getDatabase();
       const configResult = db
-        .prepare('SELECT value FROM config WHERE key = ?')
+        .prepare('SELECT value FROM settings WHERE key = ?')
         .get(['app_config']) as unknown as { value: string } | undefined;
 
       if (!configResult) {
@@ -158,7 +158,7 @@ export class LLMInteractionTestSuite {
     try {
       const db = databaseService.getDatabase();
       const configResult = db
-        .prepare('SELECT value FROM config WHERE key = ?')
+        .prepare('SELECT value FROM settings WHERE key = ?')
         .get(['app_config']) as unknown as { value: string } | undefined;
 
       if (!configResult) {
@@ -246,7 +246,7 @@ export class LLMInteractionTestSuite {
     try {
       const db = databaseService.getDatabase();
       const configResult = db
-        .prepare('SELECT value FROM config WHERE key = ?')
+        .prepare('SELECT value FROM settings WHERE key = ?')
         .get(['app_config']) as unknown as { value: string } | undefined;
 
       if (!configResult) {
@@ -337,7 +337,7 @@ export class LLMInteractionTestSuite {
     try {
       const db = databaseService.getDatabase();
       const configResult = db
-        .prepare('SELECT value FROM config WHERE key = ?')
+        .prepare('SELECT value FROM settings WHERE key = ?')
         .get(['app_config']) as unknown as { value: string } | undefined;
 
       if (!configResult) {
