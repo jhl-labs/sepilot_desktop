@@ -494,6 +494,29 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
     const planSteps = parsePlanSteps(planContent);
     const requiredFiles = extractRequiredFiles(userPrompt);
 
+    // Use CodebaseAnalyzer to recommend relevant files
+    const workspacePath = process.cwd();
+    let recommendedFiles: string[] = [];
+    try {
+      const structure = await CodingAgentGraph.codebaseAnalyzer.analyzeStructure(
+        workspacePath,
+        3 // Max depth 3 for performance
+      );
+      recommendedFiles = CodingAgentGraph.codebaseAnalyzer.recommendFiles(
+        userPrompt,
+        structure,
+        5 // Top 5 recommendations
+      );
+      if (recommendedFiles.length > 0) {
+        console.log(`[Planning] Recommended files:`, recommendedFiles);
+      }
+    } catch (error) {
+      console.warn('[Planning] Failed to analyze codebase:', error);
+    }
+
+    // Combine manually extracted files with recommended files
+    const allRequiredFiles = [...new Set([...requiredFiles, ...recommendedFiles])];
+
     console.log(`[Planning] Plan created with ${planSteps.length} steps`);
 
     return {
@@ -502,7 +525,7 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
       planCreated: true,
       planSteps,
       currentPlanStep: 0,
-      requiredFiles: requiredFiles.length > 0 ? requiredFiles : undefined,
+      requiredFiles: allRequiredFiles.length > 0 ? allRequiredFiles : undefined,
     };
   } catch (error: any) {
     console.error('[Planning] Error:', error);
@@ -665,7 +688,11 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
       const stepMessage: Message = {
         id: `step-${Date.now()}`,
         role: 'system',
-        content: getPlanStepPrompt(currentStep, state.planSteps.length, state.planSteps[currentStep]),
+        content: getPlanStepPrompt(
+          currentStep,
+          state.planSteps.length,
+          state.planSteps[currentStep]
+        ),
         created_at: Date.now(),
       };
       messagesWithContext.push(stepMessage);
@@ -673,11 +700,18 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
   }
 
   // Use ContextManager for intelligent context management
-  const contextManager = new ContextManager(100000); // 100k tokens
-  const optimizedMessages = contextManager.getOptimizedContext(
+  const optimizedMessages = CodingAgentGraph.contextManager.getOptimizedContext(
     filteredMessages,
     messagesWithContext
   );
+
+  // Log token statistics
+  const tokenStats = CodingAgentGraph.contextManager.getTokenStats(optimizedMessages);
+  console.log('[CodingAgent.Agent] Token usage:', {
+    total: tokenStats.totalTokens,
+    utilization: `${tokenStats.utilization}%`,
+    remaining: tokenStats.remaining,
+  });
 
   // Replace messages with optimized set (system messages already included)
   messagesWithContext.length = 0;
@@ -926,6 +960,28 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
   );
   console.log('[CodingAgent.Tools] Built-in tools available:', Array.from(builtinToolNames));
 
+  // Check for redundant calls and optimization opportunities
+  const redundancyCheck = CodingAgentGraph.toolSelector.detectRedundantCalls(
+    lastMessage.tool_calls
+  );
+  if (redundancyCheck.isRedundant) {
+    console.warn(
+      '[CodingAgent.Tools] Redundant tool calls detected:',
+      redundancyCheck.redundantCalls.length
+    );
+    emitStreamingChunk(`\n⚠️ ${redundancyCheck.suggestion}\n`, state.conversationId);
+  }
+
+  const optimizationSuggestions = CodingAgentGraph.toolSelector.suggestOptimization(
+    lastMessage.tool_calls
+  );
+  if (optimizationSuggestions.length > 0) {
+    console.log('[CodingAgent.Tools] Optimization suggestions:', optimizationSuggestions);
+    for (const suggestion of optimizationSuggestions) {
+      emitStreamingChunk(`\n${suggestion}\n`, state.conversationId);
+    }
+  }
+
   // Execute tools
   type ToolExecutionResult = {
     toolCallId: string;
@@ -960,6 +1016,21 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
       const startTime = Date.now();
 
       try {
+        // Track file before modification (for file write/edit operations)
+        let beforeSnapshot = null;
+        const isFileModifyOp = call.name === 'file_write' || call.name === 'file_edit';
+        if (
+          isFileModifyOp &&
+          typeof call.arguments === 'object' &&
+          call.arguments !== null &&
+          'file_path' in call.arguments &&
+          typeof call.arguments.file_path === 'string'
+        ) {
+          beforeSnapshot = await CodingAgentGraph.fileTracker.trackBeforeModify(
+            call.arguments.file_path
+          );
+        }
+
         // Check if it's a built-in tool
         if (builtinToolNames.has(call.name)) {
           console.log(`[CodingAgent.Tools] Executing builtin tool: ${call.name}`);
@@ -979,6 +1050,23 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 
           const result = retryResult.result!;
           const duration = retryResult.totalDurationMs;
+
+          // Record tool usage in ToolSelector
+          CodingAgentGraph.toolSelector.recordUsage(call.name, true, duration);
+
+          // Track file after modification
+          if (
+            isFileModifyOp &&
+            typeof call.arguments === 'object' &&
+            call.arguments !== null &&
+            'file_path' in call.arguments &&
+            typeof call.arguments.file_path === 'string'
+          ) {
+            await CodingAgentGraph.fileTracker.trackAfterModify(
+              call.arguments.file_path,
+              beforeSnapshot
+            );
+          }
 
           // Save activity to database (non-blocking)
           if (
@@ -1056,6 +1144,9 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 
             const duration = retryResult.totalDurationMs;
 
+            // Record tool usage in ToolSelector
+            CodingAgentGraph.toolSelector.recordUsage(call.name, true, duration);
+
             // Save activity
             if (
               state.conversationId &&
@@ -1124,6 +1215,9 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
         console.error(`[CodingAgent.Tools] Error executing ${call.name}:`, error);
         const duration = Date.now() - startTime;
 
+        // Record tool failure in ToolSelector
+        CodingAgentGraph.toolSelector.recordUsage(call.name, false, duration, error.message);
+
         // Format error message with recovery suggestion
         const formattedError = ErrorRecovery.formatErrorMessage(error, 1);
         const suggestion = ErrorRecovery.getRecoverySuggestion(error);
@@ -1184,6 +1278,15 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
     }
     logMessage += `</small>`;
     emitStreamingChunk(`${logMessage}---\n\n`, state.conversationId);
+  }
+
+  // Create rollback point after successful file modifications
+  const hasFileModifications = results.some(
+    (r) => !r.error && (r.toolName === 'file_write' || r.toolName === 'file_edit')
+  );
+  if (hasFileModifications) {
+    const currentIter = (state.iterationCount || 0) + 1;
+    CodingAgentGraph.fileTracker.createRollbackPoint(`After iteration ${currentIter}`);
   }
 
   // Get file snapshot after tool execution
@@ -1544,14 +1647,13 @@ export function createCodingAgentGraph() {
 
 export class CodingAgentGraph {
   private toolApprovalCallback?: (toolCalls: any[]) => Promise<boolean>;
-  private toolSelector: ToolSelector;
-  private fileTracker: FileTracker;
-  private codebaseAnalyzer: CodebaseAnalyzer;
+  public static toolSelector: ToolSelector = new ToolSelector();
+  public static fileTracker: FileTracker = new FileTracker();
+  public static codebaseAnalyzer: CodebaseAnalyzer = new CodebaseAnalyzer();
+  public static contextManager: ContextManager = new ContextManager(100000); // 100k tokens
 
   constructor() {
-    this.toolSelector = new ToolSelector();
-    this.fileTracker = new FileTracker();
-    this.codebaseAnalyzer = new CodebaseAnalyzer();
+    // 유틸리티는 static으로 공유 (세션 간 통계 유지)
   }
 
   async *stream(

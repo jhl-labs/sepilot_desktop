@@ -5,6 +5,7 @@
  */
 
 import { Message } from '@/types';
+import { Tiktoken, encoding_for_model } from 'tiktoken';
 
 interface ContextWindow {
   systemMessages: Message[];
@@ -15,24 +16,44 @@ interface ContextWindow {
 
 export class ContextManager {
   private readonly MAX_TOKENS: number;
-  private readonly AVG_CHARS_PER_TOKEN = 4; // Rough estimate
+  private encoder: Tiktoken;
 
   constructor(maxTokens: number = 100000) {
     this.MAX_TOKENS = maxTokens;
+    // Use GPT-4 tokenizer (compatible with Claude models for estimation)
+    this.encoder = encoding_for_model('gpt-4');
   }
 
   /**
-   * Estimate token count from messages
+   * Calculate accurate token count from messages using tiktoken
+   */
+  private countTokens(messages: Message[]): number {
+    let totalTokens = 0;
+
+    for (const msg of messages) {
+      // Count tokens in content
+      if (msg.content) {
+        totalTokens += this.encoder.encode(msg.content).length;
+      }
+
+      // Count tokens in tool calls
+      if (msg.tool_calls) {
+        const toolCallsStr = JSON.stringify(msg.tool_calls);
+        totalTokens += this.encoder.encode(toolCallsStr).length;
+      }
+
+      // Add overhead for message structure (role, name, etc.)
+      totalTokens += 4; // Approximate overhead per message
+    }
+
+    return totalTokens;
+  }
+
+  /**
+   * Estimate token count from messages (alias for backward compatibility)
    */
   private estimateTokens(messages: Message[]): number {
-    const totalChars = messages.reduce((sum, msg) => {
-      const contentLength = msg.content?.length || 0;
-      const toolCallsLength = msg.tool_calls
-        ? JSON.stringify(msg.tool_calls).length
-        : 0;
-      return sum + contentLength + toolCallsLength;
-    }, 0);
-    return Math.ceil(totalChars / this.AVG_CHARS_PER_TOKEN);
+    return this.countTokens(messages);
   }
 
   /**
@@ -58,7 +79,7 @@ export class ContextManager {
           msg.content?.includes('error') ||
           msg.content?.includes('Error') ||
           msg.name?.includes('file_read') ||
-          msg.content && msg.content.length < 1000
+          (msg.content && msg.content.length < 1000)
         ) {
           window.importantToolResults.push(msg);
         }
@@ -98,7 +119,7 @@ export class ContextManager {
     // Combine and sort by timestamp
     const candidateMessages = [...recentMessages, ...importantResults]
       .sort((a, b) => (a.created_at || 0) - (b.created_at || 0))
-      .filter((msg, index, arr) => arr.findIndex(m => m.id === msg.id) === index); // Deduplicate
+      .filter((msg, index, arr) => arr.findIndex((m) => m.id === msg.id) === index); // Deduplicate
 
     // Add messages until we hit the limit
     for (const msg of candidateMessages) {
@@ -125,20 +146,84 @@ export class ContextManager {
   }
 
   /**
-   * Summarize old messages using LLM (future enhancement)
+   * Compress old messages by extracting key information
    */
-  async summarizeOldMessages(messages: Message[]): Promise<Message> {
-    // TODO: Implement LLM-based summarization
-    const summary = `이전 대화 요약 (${messages.length}개 메시지):
-- 사용자 요청 및 작업 내용
-- 주요 파일 변경 사항
-- 발생한 에러 및 해결 방법`;
+  compressOldMessages(messages: Message[]): Message {
+    const userMessages = messages.filter((m) => m.role === 'user');
+    const assistantMessages = messages.filter((m) => m.role === 'assistant');
+    const toolMessages = messages.filter((m) => m.role === 'tool');
+
+    // Extract key file operations
+    const fileOperations: string[] = [];
+    toolMessages.forEach((msg) => {
+      if (msg.name?.includes('file_write') || msg.name?.includes('file_edit')) {
+        fileOperations.push(msg.name);
+      }
+    });
+
+    // Extract errors
+    const errors: string[] = [];
+    toolMessages.forEach((msg) => {
+      if (msg.content?.includes('Error') || msg.content?.includes('error')) {
+        const errorLine = msg.content.split('\n')[0];
+        if (errorLine.length < 200) {
+          errors.push(errorLine);
+        }
+      }
+    });
+
+    // Build summary
+    const summaryParts = [
+      `📊 이전 대화 압축 요약 (${messages.length}개 메시지)`,
+      '',
+      `👤 사용자 요청: ${userMessages.length}건`,
+      userMessages
+        .slice(0, 3)
+        .map((m) => `  - ${m.content?.substring(0, 100)}...`)
+        .join('\n'),
+      '',
+      `🤖 어시스턴트 응답: ${assistantMessages.length}건`,
+      '',
+      `🔧 파일 작업: ${fileOperations.length}건`,
+      fileOperations.slice(-5).join(', '),
+      '',
+    ];
+
+    if (errors.length > 0) {
+      summaryParts.push(`❌ 발생한 에러: ${errors.length}건`);
+      summaryParts.push(errors.slice(-3).join('\n'));
+    }
 
     return {
-      id: `summary-${Date.now()}`,
+      id: `compressed-${Date.now()}`,
       role: 'system',
-      content: summary,
+      content: summaryParts.filter(Boolean).join('\n'),
       created_at: Date.now(),
     };
+  }
+
+  /**
+   * Get token usage statistics
+   */
+  getTokenStats(messages: Message[]): {
+    totalTokens: number;
+    utilization: number;
+    remaining: number;
+  } {
+    const totalTokens = this.countTokens(messages);
+    return {
+      totalTokens,
+      utilization: Math.round((totalTokens / this.MAX_TOKENS) * 100),
+      remaining: this.MAX_TOKENS - totalTokens,
+    };
+  }
+
+  /**
+   * Clean up encoder resources
+   */
+  dispose(): void {
+    if (this.encoder) {
+      this.encoder.free();
+    }
   }
 }
