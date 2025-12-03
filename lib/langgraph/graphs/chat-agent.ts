@@ -265,6 +265,14 @@ export class ChatAgentGraph {
       };
 
       console.log('[AgentGraph] Tool results:', toolsResult.toolResults);
+      console.log('[AgentGraph] Generated images in toolsResult:', toolsResult.generatedImages);
+      console.log('[AgentGraph] State generatedImages after merge:', {
+        count: state.generatedImages?.length || 0,
+        images: state.generatedImages?.map((img) => ({
+          id: img.id,
+          base64Length: img.base64?.length || 0,
+        })),
+      });
 
       yield { tools: toolsResult };
 

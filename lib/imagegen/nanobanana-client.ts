@@ -217,11 +217,21 @@ async function pollForResults(
         throw new Error('No image URLs in successful response');
       }
 
+      console.log('[NanoBanana] Found image URLs:', imageUrls);
+
       for (const imageUrl of imageUrls) {
+        console.log('[NanoBanana] Downloading image from:', imageUrl);
         const imageData = await downloadImageAsBase64(imageUrl, networkConfig);
+        console.log(
+          '[NanoBanana] Downloaded image, base64 length:',
+          imageData?.length || 0,
+          'prefix:',
+          imageData?.substring(0, 50)
+        );
         images.push(imageData);
       }
 
+      console.log('[NanoBanana] Total images collected:', images.length);
       return images;
     } else if (status === 2 || status === 3 || status === '2' || status === '3') {
       // Failed

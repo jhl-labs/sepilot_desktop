@@ -437,6 +437,15 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
       };
     });
 
+    console.log('[Agent] State generatedImages before creating assistant message:', {
+      count: state.generatedImages?.length || 0,
+      images: state.generatedImages?.map((img) => ({
+        id: img.id,
+        base64Length: img.base64?.length || 0,
+        base64Prefix: img.base64?.substring(0, 50),
+      })),
+    });
+
     const assistantMessage: Message = {
       id: `msg-${Date.now()}`,
       role: 'assistant',
@@ -456,6 +465,10 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
       toolCallsCount: assistantMessage.tool_calls?.length,
       hasImages: !!assistantMessage.images,
       imageCount: assistantMessage.images?.length || 0,
+      imagesDetail: assistantMessage.images?.map((img) => ({
+        id: img.id,
+        base64Length: img.base64?.length || 0,
+      })),
     });
 
     return {

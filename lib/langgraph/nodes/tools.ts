@@ -434,6 +434,12 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
                   provider: 'nanobanana' as const,
                 }));
 
+                console.log('[Tools] Created image objects:', {
+                  count: imageObjects.length,
+                  firstImageBase64Length: imageObjects[0]?.base64?.length || 0,
+                  firstImageBase64Prefix: imageObjects[0]?.base64?.substring(0, 50),
+                });
+
                 // Update state with generated images
                 return {
                   toolCallId: call.id,
