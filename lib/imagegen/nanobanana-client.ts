@@ -63,7 +63,7 @@ async function generateWithNanoBananaAPI(
     // Prepare request payload for nanobananaapi.ai
     const payload: any = {
       prompt: params.prompt,
-      type: 'TEXTTOIAMGE', // Their API uses this typo
+      type: 'TEXTTOIMAGE', // Correct: TEXTTOIMAGE (not TEXTTOIAMGE)
       numImages: numberOfImages,
     };
 
