@@ -621,7 +621,22 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               </h4>
             </div>
             <p className="text-xs text-muted-foreground mb-2">
-              출처: {doc.metadata?.source || 'manual'}
+              {doc.metadata?.docGroup === 'team' ? (
+                <>
+                  <Users className="h-3 w-3 inline mr-1" />
+                  팀: {doc.metadata?.teamName || 'Unknown'}
+                  {' • '}
+                  출처: {doc.metadata?.source || 'manual'}
+                </>
+              ) : (
+                <>
+                  <User className="h-3 w-3 inline mr-1" />
+                  개인 문서
+                  {doc.metadata?.source && doc.metadata.source !== 'manual' && (
+                    <> • 출처: {doc.metadata.source}</>
+                  )}
+                </>
+              )}
               {doc.metadata?.cleaned && (
                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                   LLM 정제됨
@@ -930,8 +945,30 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           업로드된 문서가 없습니다.
         </div>
       ) : filteredDocuments.length === 0 ? (
-        <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-          검색 결과가 없습니다.
+        <div className="rounded-md border border-dashed p-8 text-center">
+          {searchQuery ? (
+            <div className="text-sm text-muted-foreground">검색 결과가 없습니다.</div>
+          ) : activeTab === 'team' ? (
+            <div className="space-y-4">
+              <Users className="h-12 w-12 mx-auto opacity-20" />
+              <div>
+                <p className="text-sm text-muted-foreground">등록된 Team Docs가 없습니다.</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Settings → System → Team Docs에서 팀 레포지토리를 추가하고 동기화하세요.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <User className="h-12 w-12 mx-auto opacity-20" />
+              <div>
+                <p className="text-sm text-muted-foreground">개인 문서가 없습니다.</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  문서를 업로드하거나 GitHub에서 동기화하세요.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       ) : viewMode === 'tree' ? (
         renderTreeView()

@@ -31,6 +31,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Form states for editing
@@ -99,13 +100,27 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
   };
 
   const handleSaveConfig = async () => {
-    if (!formData.name || !formData.token || !formData.owner || !formData.repo) {
-      setMessage({ type: 'error', text: '필수 항목을 모두 입력해주세요.' });
+    // 필수 필드 검증 (개별 메시지)
+    if (!formData.name?.trim()) {
+      setMessage({ type: 'error', text: '팀 이름을 입력하세요.' });
+      return;
+    }
+    if (!formData.token?.trim()) {
+      setMessage({ type: 'error', text: 'GitHub Personal Access Token을 입력하세요.' });
+      return;
+    }
+    if (!formData.owner?.trim()) {
+      setMessage({ type: 'error', text: 'Owner를 입력하세요.' });
+      return;
+    }
+    if (!formData.repo?.trim()) {
+      setMessage({ type: 'error', text: 'Repository를 입력하세요.' });
       return;
     }
 
-    if (formData.serverType === 'ghes' && !formData.ghesUrl) {
-      setMessage({ type: 'error', text: 'GHES URL을 입력해주세요.' });
+    // GHES URL 검증
+    if (formData.serverType === 'ghes' && !formData.ghesUrl?.trim()) {
+      setMessage({ type: 'error', text: 'GHES URL을 입력하세요.' });
       return;
     }
 
@@ -229,6 +244,49 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
     }
   };
 
+  const handleSyncAll = async () => {
+    const enabledConfigs = configs.filter((c) => c.enabled);
+    if (enabledConfigs.length === 0) {
+      setMessage({ type: 'error', text: '활성화된 Team Docs가 없습니다.' });
+      return;
+    }
+
+    setIsSyncingAll(true);
+    setMessage(null);
+
+    try {
+      if (typeof window !== 'undefined' && window.electronAPI?.teamDocs) {
+        const result = await window.electronAPI.teamDocs.syncAll();
+
+        if (result.success) {
+          setMessage({
+            type: 'success',
+            text: result.message || '모든 팀 문서를 동기화했습니다!',
+          });
+
+          // 설정 다시 로드 (마지막 동기화 시간 업데이트)
+          const appConfigStr = localStorage.getItem('app_config');
+          if (appConfigStr) {
+            const appConfig = JSON.parse(appConfigStr);
+            if (appConfig.teamDocs) {
+              setConfigs(appConfig.teamDocs);
+            }
+          }
+        } else {
+          throw new Error(result.error || '일괄 동기화 실패');
+        }
+      } else {
+        throw new Error('ElectronAPI를 사용할 수 없습니다.');
+      }
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Failed to sync all team docs:', err);
+      setMessage({ type: 'error', text: err.message || '일괄 동기화 실패' });
+    } finally {
+      setIsSyncingAll(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {message && (
@@ -253,9 +311,28 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
             여러 GitHub 레포지토리에서 팀 문서를 동기화하세요
           </p>
         </div>
-        <Button onClick={handleAddNew} disabled={editingId !== null}>
-          <Plus className="h-4 w-4 mr-2" />새 Team Docs 추가
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleSyncAll}
+            disabled={isSyncingAll || configs.filter((c) => c.enabled).length === 0}
+          >
+            {isSyncingAll ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                동기화 중...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                모두 동기화
+              </>
+            )}
+          </Button>
+          <Button onClick={handleAddNew} disabled={editingId !== null}>
+            <Plus className="h-4 w-4 mr-2" />새 Team Docs 추가
+          </Button>
+        </div>
       </div>
 
       {/* 편집 폼 */}
@@ -331,6 +408,9 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
                   onChange={(e) => setFormData({ ...formData, token: e.target.value })}
                   placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                 />
+                <p className="text-xs text-muted-foreground">
+                  💡 Token은 로컬에만 저장되며 GitHub에 동기화되지 않습니다. repo 권한이 필요합니다.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -371,6 +451,9 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
                   onChange={(e) => setFormData({ ...formData, docsPath: e.target.value })}
                   placeholder="sepilot/documents"
                 />
+                <p className="text-xs text-muted-foreground">
+                  GitHub 레포지토리에서 문서를 가져올 폴더 경로 (기본값: sepilot/documents)
+                </p>
               </div>
 
               <div className="col-span-2 flex items-center justify-between p-3 border rounded-md">
