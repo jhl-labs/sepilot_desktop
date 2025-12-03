@@ -237,22 +237,25 @@ async function exportPptx(slides: PresentationSlide[]) {
           }
         );
       } catch (error) {
-        s.addText(`Chart (${slide.slots.chart.type})\n${slide.slots.chart.dataHint || ''}`, {
-          x: 0.5,
-          y: 5.2,
-          w: 4.5,
-          h: 1.2,
-          fontSize: 12,
-          color: accent,
-          bold: true,
-        });
+        s.addText(
+          `Chart (${slide.slots.chart.type})\n${slide.slots.chart.description || slide.slots.chart.title || ''}`,
+          {
+            x: 0.5,
+            y: 5.2,
+            w: 4.5,
+            h: 1.2,
+            fontSize: 12,
+            color: accent,
+            bold: true,
+          }
+        );
       }
     }
 
     if (slide.slots?.timeline) {
-      const steps = slide.slots.timeline.steps || 3;
-      const labels = Array.from({ length: steps }).map((_, idx) => `Step ${idx + 1}`);
-      s.addText(`Timeline (${steps} steps): ${labels.join(' → ')}`, {
+      const steps = Array.isArray(slide.slots.timeline.steps) ? slide.slots.timeline.steps : [];
+      const labels = steps.map((step) => step.title || 'Step');
+      s.addText(`Timeline (${steps.length} steps): ${labels.join(' → ')}`, {
         x: 5.2,
         y: 5.2,
         w: 4.3,
@@ -264,12 +267,10 @@ async function exportPptx(slides: PresentationSlide[]) {
     }
 
     if (slide.slots?.table) {
-      const rows = slide.slots.table.rowCount || 3;
-      const cols = slide.slots.table.columns;
-      const tableData: any[] = [cols];
-      for (let i = 0; i < rows; i++) {
-        tableData.push(cols.map((c, idx) => `${c} ${i + 1}-${idx + 1}`));
-      }
+      const headers = slide.slots.table.headers || [];
+      const rows = slide.slots.table.rows || [];
+      const tableData: any[] = [headers, ...rows];
+
       try {
         s.addTable(tableData, {
           x: 0.5,
@@ -282,7 +283,7 @@ async function exportPptx(slides: PresentationSlide[]) {
         });
       } catch (error) {
         s.addText(
-          `Table ${slide.slots.table.columns.join(' | ')} (rows: ${slide.slots.table.rowCount || 3})`,
+          `Table ${headers.join(' | ')} (${rows.length} rows)${slide.slots.table.caption ? ` - ${slide.slots.table.caption}` : ''}`,
           {
             x: 0.5,
             y: 6.5,
