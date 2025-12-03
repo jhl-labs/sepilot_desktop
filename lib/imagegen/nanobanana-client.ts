@@ -103,15 +103,19 @@ async function generateWithNanoBananaAPI(
     }
 
     const result = await response.json();
-    console.log('[NanoBanana] Initial response:', result);
+    console.log('[NanoBanana] Initial response:', JSON.stringify(result, null, 2));
 
-    // NanoBananaAPI.ai returns a taskId, need to poll for results
-    if (!result.taskId) {
-      throw new Error('No taskId returned from NanoBanana API');
+    // NanoBananaAPI.ai returns: { code: 200, msg: "success", data: { taskId: "..." } }
+    if (result.code !== 200 || !result.data?.taskId) {
+      console.error('[NanoBanana] Invalid response structure:', result);
+      throw new Error(`Invalid response from NanoBanana API: ${result.msg || 'Unknown error'}`);
     }
 
+    const taskId = result.data.taskId;
+    console.log('[NanoBanana] Task created:', taskId);
+
     // Poll for results
-    const images = await pollForResults(config, networkConfig, result.taskId);
+    const images = await pollForResults(config, networkConfig, taskId);
 
     console.log(`[NanoBanana] Successfully generated ${images.length} image(s)`);
 
@@ -171,29 +175,48 @@ async function pollForResults(
     }
 
     const result = await response.json();
+    console.log(`[NanoBanana] Poll response:`, JSON.stringify(result, null, 2));
 
-    // Check task status
-    if (result.status === 'completed' || result.status === 'success') {
-      // Extract image URLs and convert to data URLs
+    // NanoBananaAPI.ai status codes: 0=GENERATING, 1=SUCCESS, 2=CREATE_TASK_FAILED, 3=GENERATE_FAILED
+    const status = result.status ?? result.data?.status;
+
+    if (status === 1 || status === '1' || result.successFlag === true) {
+      // Success - extract image URLs
       const images: string[] = [];
 
-      if (result.images && Array.isArray(result.images)) {
-        for (const imageUrl of result.images) {
-          // Download image and convert to base64
-          const imageData = await downloadImageAsBase64(imageUrl, networkConfig);
-          images.push(imageData);
-        }
+      // Try various response structures
+      const imageUrls: string[] = [];
+
+      if (result.response?.resultImageUrl) {
+        imageUrls.push(result.response.resultImageUrl);
+      } else if (result.data?.response?.resultImageUrl) {
+        imageUrls.push(result.data.response.resultImageUrl);
       } else if (result.imageUrl) {
-        const imageData = await downloadImageAsBase64(result.imageUrl, networkConfig);
+        imageUrls.push(result.imageUrl);
+      } else if (result.images && Array.isArray(result.images)) {
+        imageUrls.push(...result.images);
+      } else if (result.data?.images && Array.isArray(result.data.images)) {
+        imageUrls.push(...result.data.images);
+      }
+
+      if (imageUrls.length === 0) {
+        console.error('[NanoBanana] No image URLs found in success response:', result);
+        throw new Error('No image URLs in successful response');
+      }
+
+      for (const imageUrl of imageUrls) {
+        const imageData = await downloadImageAsBase64(imageUrl, networkConfig);
         images.push(imageData);
       }
 
       return images;
-    } else if (result.status === 'failed' || result.status === 'error') {
-      throw new Error(`Image generation failed: ${result.error || 'Unknown error'}`);
+    } else if (status === 2 || status === 3 || status === '2' || status === '3') {
+      // Failed
+      const errorMsg = result.errorMessage || result.error || result.msg || 'Unknown error';
+      throw new Error(`Image generation failed: ${errorMsg}`);
     }
 
-    // Continue polling if status is 'pending' or 'processing'
+    // Continue polling if status is 0 (GENERATING)
   }
 
   throw new Error('Image generation timed out');
