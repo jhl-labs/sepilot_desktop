@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import http from 'http';
-import type { PresentationSlide, PresentationExportFormat } from '../../types/presentation';
+import type { PresentationSlide, PresentationExportFormat } from '@/types/presentation';
 
 interface ExportPayload {
   slides: PresentationSlide[];
