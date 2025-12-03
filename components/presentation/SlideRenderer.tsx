@@ -4,11 +4,22 @@ import type { PresentationSlide } from '@/types/presentation';
 import { CheckCircle2, TrendingUp, Calendar, Grid3x3 } from 'lucide-react';
 
 interface SlideRendererProps {
-  slide: PresentationSlide;
+  slide: PresentationSlide | undefined;
   className?: string;
 }
 
 export function SlideRenderer({ slide, className = '' }: SlideRendererProps) {
+  // Early return if slide is undefined
+  if (!slide) {
+    return (
+      <div
+        className={`flex h-full items-center justify-center rounded-lg border bg-muted/20 ${className}`}
+      >
+        <p className="text-sm text-muted-foreground">슬라이드를 불러올 수 없습니다.</p>
+      </div>
+    );
+  }
+
   const getBackgroundStyle = () => {
     const accent = slide.accentColor || '#0ea5e9';
 
