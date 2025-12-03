@@ -599,13 +599,12 @@ export function UnifiedChatInput({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 rounded-xl shrink-0"
+                    className="h-9 w-9 rounded-xl shrink-0 border-2 border-muted-foreground/30"
                     disabled={isStreaming || enableImageGeneration}
                   >
                     {thinkingModeIcon[thinkingMode as keyof typeof thinkingModeIcon] || (
                       <Brain className="h-4 w-4" />
                     )}
-                    <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
@@ -707,11 +706,10 @@ export function UnifiedChatInput({
                   <Button
                     variant={enableTools ? 'default' : 'ghost'}
                     size="icon"
-                    className="h-9 w-9 rounded-xl shrink-0"
+                    className="h-9 w-9 rounded-xl shrink-0 border-2 border-muted-foreground/30"
                     disabled={isStreaming || enableImageGeneration}
                   >
                     <Wrench className="h-4 w-4" />
-                    <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
@@ -812,11 +810,10 @@ export function UnifiedChatInput({
                     <Button
                       variant={enableImageGeneration ? 'default' : 'ghost'}
                       size="icon"
-                      className="h-9 w-9 rounded-xl shrink-0"
+                      className="h-9 w-9 rounded-xl shrink-0 border-2 border-muted-foreground/30"
                       disabled={isStreaming}
                     >
                       <Sparkles className="h-4 w-4" />
-                      <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
