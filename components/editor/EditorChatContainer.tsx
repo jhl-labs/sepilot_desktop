@@ -49,7 +49,6 @@ export function EditorChatContainer() {
     style: {
       compact: true,
       fontSize: '12px',
-      maxWidth: '85%',
     },
     dataSource: {
       messages: editorChatMessages,
