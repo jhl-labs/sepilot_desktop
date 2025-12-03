@@ -27,6 +27,8 @@ export function EditorChatContainer() {
     setPendingToolApproval,
     clearPendingToolApproval,
     alwaysApproveToolsForSession,
+    openFiles,
+    activeFilePath,
   } = useChatStore();
 
   const [agentProgress, setAgentProgress] = useState<{
@@ -128,6 +130,25 @@ export function EditorChatContainer() {
           };
 
           // Prepare system message based on agent mode
+          // Build current file context
+          const activeFile = activeFilePath
+            ? openFiles.find((f) => f.path === activeFilePath)
+            : null;
+          const currentFileContext = activeFile
+            ? `\n**Currently Active Tab:**
+- File: ${activeFile.filename}
+- Path: ${activeFile.path}
+- Language: ${activeFile.language || 'unknown'}
+- Status: ${activeFile.isDirty ? 'modified (unsaved)' : 'saved'}
+
+**IMPORTANT:** If the user does not explicitly specify a file name or path in their request, assume they are referring to the currently active tab (${activeFile.filename}). Apply all modifications to this file unless otherwise specified.`
+            : openFiles.length > 0
+              ? `\n**Open Tabs:**
+${openFiles.map((f) => `- ${f.filename} (${f.path})`).join('\n')}
+
+**Note:** No file is currently active. If the user does not specify a file, ask which file they want to work with.`
+              : '\n**Note:** No files are currently open.';
+
           const systemMessageContent =
             editorAgentMode === 'coding'
               ? `You are SE Pilot, a highly skilled autonomous coding assistant with comprehensive planning and verification capabilities.
@@ -146,6 +167,7 @@ export function EditorChatContainer() {
 - Track file changes throughout the workflow
 - Provide clear feedback about completed actions
 - Working directory: ${workingDirectory || 'not set'}
+${currentFileContext}
 
 **Workflow:**
 1. Understand the task and plan your approach
@@ -169,6 +191,7 @@ Use ReAct pattern: Think → Act → Observe → Repeat until task is complete.`
 - For file modifications, use edit_file or read_file + write_file
 - Always provide clear feedback about completed actions
 - Working directory: ${workingDirectory || 'not set'}
+${currentFileContext}
 
 **Example Workflow for "Create TEST.md about DevOps":**
 1. Use write_file tool with filePath: "TEST.md" and content: [DevOps 내용]
