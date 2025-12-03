@@ -68,17 +68,38 @@ export function setupVectorDBHandlers() {
   });
 
   // Search by vector
-  ipcMain.handle('vectordb-search', async (_, queryEmbedding: number[], k: number) => {
-    try {
-      logger.debug('Searching VectorDB', { k });
-      const results = await vectorDBService.searchByVector(queryEmbedding, k);
-      logger.debug('VectorDB search completed', { resultCount: results.length });
-      return { success: true, data: results };
-    } catch (error) {
-      logger.error('Failed to search VectorDB', error);
-      return { success: false, error: (error as Error).message };
+  ipcMain.handle(
+    'vectordb-search',
+    async (
+      _,
+      queryEmbedding: number[],
+      k: number,
+      options?: {
+        folderPath?: string;
+        tags?: string[];
+        category?: string;
+        source?: string;
+        folderPathBoost?: number;
+        titleBoost?: number;
+        tagBoost?: number;
+        useHybridSearch?: boolean;
+        hybridAlpha?: number;
+        includeAllMetadata?: boolean;
+        recentBoost?: boolean;
+        recentBoostDecay?: number;
+      }
+    ) => {
+      try {
+        logger.debug('Searching VectorDB', { k, options });
+        const results = await vectorDBService.searchByVector(queryEmbedding, k, options);
+        logger.debug('VectorDB search completed', { resultCount: results.length });
+        return { success: true, data: results };
+      } catch (error) {
+        logger.error('Failed to search VectorDB', error);
+        return { success: false, error: (error as Error).message };
+      }
     }
-  });
+  );
 
   // Delete documents
   ipcMain.handle('vectordb-delete', async (_, ids: string[]) => {

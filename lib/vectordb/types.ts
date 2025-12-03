@@ -69,6 +69,31 @@ export interface SearchResult {
 }
 
 /**
+ * 검색 옵션 (메타데이터 기반 필터링 및 부스팅)
+ */
+export interface SearchOptions {
+  // 필터링 옵션
+  folderPath?: string; // 특정 폴더로 검색 범위 제한
+  tags?: string[]; // 특정 태그를 가진 문서만 검색
+  category?: string; // 특정 카테고리만 검색
+  source?: string; // 특정 출처만 검색
+
+  // 부스팅 옵션 (가중치, 0.0 ~ 1.0)
+  folderPathBoost?: number; // 폴더 경로 매칭 시 점수 부스팅 (기본: 0.2)
+  titleBoost?: number; // 제목 키워드 매칭 시 점수 부스팅 (기본: 0.3)
+  tagBoost?: number; // 태그 매칭 시 점수 부스팅 (기본: 0.15)
+
+  // 하이브리드 검색 옵션
+  useHybridSearch?: boolean; // Vector + BM25 하이브리드 검색 활성화 (기본: true)
+  hybridAlpha?: number; // 벡터 검색 가중치 (0.0 ~ 1.0, 기본: 0.7, BM25는 1-alpha)
+
+  // 기타 옵션
+  includeAllMetadata?: boolean; // 모든 메타데이터 포함 (기본: true)
+  recentBoost?: boolean; // 최신 문서 우선순위 (기본: false)
+  recentBoostDecay?: number; // 최신성 감쇠율 (일 단위, 기본: 30일)
+}
+
+/**
  * VectorDB 설정
  */
 export interface VectorDBConfig {

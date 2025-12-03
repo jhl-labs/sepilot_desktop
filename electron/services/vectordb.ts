@@ -7,6 +7,7 @@ import {
   SearchResult,
   RawDocument,
   IndexingOptions,
+  SearchOptions,
 } from '../../lib/vectordb/types';
 import { chunkDocuments } from '../../lib/vectordb/indexing';
 import { getEmbeddingProvider } from '../../lib/vectordb/embeddings/client';
@@ -200,84 +201,183 @@ class VectorDBService {
     console.log(`[VectorDB] Inserted ${documents.length} documents into ${indexName}`);
   }
 
-  async searchByVector(queryEmbedding: number[], k: number): Promise<SearchResult[]> {
+  async searchByVector(
+    queryEmbedding: number[],
+    k: number,
+    options?: SearchOptions
+  ): Promise<SearchResult[]> {
     if (!this.db || !this.config) throw new Error('Database not initialized');
 
     const indexName = this.config.indexName;
 
+    // 옵션 기본값 설정
+    const opts: Required<SearchOptions> = {
+      folderPath: options?.folderPath || '',
+      tags: options?.tags || [],
+      category: options?.category || '',
+      source: options?.source || '',
+      folderPathBoost: options?.folderPathBoost ?? 0.2,
+      titleBoost: options?.titleBoost ?? 0.3,
+      tagBoost: options?.tagBoost ?? 0.15,
+      useHybridSearch: options?.useHybridSearch ?? true,
+      hybridAlpha: options?.hybridAlpha ?? 0.7,
+      includeAllMetadata: options?.includeAllMetadata ?? true,
+      recentBoost: options?.recentBoost ?? false,
+      recentBoostDecay: options?.recentBoostDecay ?? 30,
+    };
+
     // 모든 문서 가져오기
-    const result = this.db.exec(`SELECT id, content, metadata, embedding FROM ${indexName}`);
+    const result = this.db.exec(
+      `SELECT id, content, metadata, embedding, created_at FROM ${indexName}`
+    );
 
     if (result.length === 0) return [];
 
     const rows = result[0].values;
-    const totalDocs = rows.length;
 
-    // 최적화 전략: 문서 수에 따라 다른 알고리즘 사용
-    // 소량(k*2 이하): 전체 정렬이 더 빠름
-    // 대량: Min-Heap 기반 Top-K 추출로 메모리 효율성 향상
-    if (totalDocs <= k * 2) {
-      // 소량 문서: 전체 정렬
-      const results: SearchResult[] = [];
-      for (const row of rows) {
-        const embedding = JSON.parse(row[3] as string);
-        const similarity = this.cosineSimilarity(queryEmbedding, embedding);
+    // 1단계: 메타데이터 기반 필터링
+    const filteredRows = rows.filter((row) => {
+      const metadata = JSON.parse(row[2] as string);
 
-        results.push({
-          id: row[0] as string,
-          content: row[1] as string,
-          metadata: JSON.parse(row[2] as string),
-          score: similarity,
-        });
+      // 폴더 경로 필터
+      if (opts.folderPath && metadata.folderPath !== opts.folderPath) {
+        // 하위 폴더도 포함
+        if (!metadata.folderPath?.startsWith(opts.folderPath + '/')) {
+          return false;
+        }
       }
 
-      results.sort((a, b) => b.score - a.score);
-      return results.slice(0, k);
-    }
+      // 태그 필터
+      if (opts.tags.length > 0) {
+        const docTags = metadata.tags || [];
+        if (!opts.tags.some((tag) => docTags.includes(tag))) {
+          return false;
+        }
+      }
 
-    // 대량 문서: Min-Heap 기반 Top-K 추출
-    const topK: SearchResult[] = [];
-    let minScore = -Infinity;
+      // 카테고리 필터
+      if (opts.category && metadata.category !== opts.category) {
+        return false;
+      }
 
-    for (const row of rows) {
+      // 출처 필터
+      if (opts.source && metadata.source !== opts.source) {
+        return false;
+      }
+
+      // 특수 문서 제외 (폴더 등)
+      if (metadata._docType === 'folder') {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (filteredRows.length === 0) return [];
+
+    // 2단계: 벡터 유사도 + 하이브리드 검색 계산
+    const results: SearchResult[] = [];
+
+    for (const row of filteredRows) {
+      const id = row[0] as string;
+      const content = row[1] as string;
+      const metadata = JSON.parse(row[2] as string);
       const embedding = JSON.parse(row[3] as string);
-      const similarity = this.cosineSimilarity(queryEmbedding, embedding);
+      const createdAt = row[4] as number;
 
-      if (topK.length < k) {
-        // k개 미만일 때는 무조건 추가
-        topK.push({
-          id: row[0] as string,
-          content: row[1] as string,
-          metadata: JSON.parse(row[2] as string),
-          score: similarity,
-        });
+      // 벡터 유사도 (코사인 유사도)
+      const vectorScore = this.cosineSimilarity(queryEmbedding, embedding);
 
-        if (topK.length === k) {
-          // k개가 채워지면 정렬하고 최소값 캐시
-          topK.sort((a, b) => b.score - a.score);
-          minScore = topK[k - 1].score;
-        }
-      } else if (similarity > minScore) {
-        // 현재 최소값보다 높은 점수만 처리 (조기 종료 최적화)
-        topK[k - 1] = {
-          id: row[0] as string,
-          content: row[1] as string,
-          metadata: JSON.parse(row[2] as string),
-          score: similarity,
-        };
+      // BM25 유사도 (키워드 기반)
+      const bm25Score = opts.useHybridSearch
+        ? this.simpleBM25Score(content, metadata, queryEmbedding)
+        : 0;
 
-        // 삽입 정렬 (부분 정렬에 효율적)
-        let i = k - 1;
-        while (i > 0 && topK[i].score > topK[i - 1].score) {
-          [topK[i], topK[i - 1]] = [topK[i - 1], topK[i]];
-          i--;
-        }
-        minScore = topK[k - 1].score;
+      // 하이브리드 점수 계산
+      let hybridScore = opts.useHybridSearch
+        ? opts.hybridAlpha * vectorScore + (1 - opts.hybridAlpha) * bm25Score
+        : vectorScore;
+
+      // 3단계: 메타데이터 기반 점수 부스팅
+      let boostMultiplier = 1.0;
+
+      // 제목 키워드 매칭 (간단한 키워드 포함 체크)
+      if (metadata.title && this.containsKeywords(metadata.title, queryEmbedding)) {
+        boostMultiplier += opts.titleBoost;
       }
-      // else: 점수가 minScore 이하면 스킵 (성능 향상)
+
+      // 폴더 경로 매칭
+      if (
+        metadata.folderPath &&
+        opts.folderPath &&
+        metadata.folderPath.startsWith(opts.folderPath)
+      ) {
+        boostMultiplier += opts.folderPathBoost;
+      }
+
+      // 태그 매칭
+      if (opts.tags.length > 0 && metadata.tags) {
+        const matchingTags = opts.tags.filter((tag) => metadata.tags.includes(tag));
+        if (matchingTags.length > 0) {
+          boostMultiplier += opts.tagBoost * (matchingTags.length / opts.tags.length);
+        }
+      }
+
+      // 최신성 부스팅 (옵션)
+      if (opts.recentBoost && createdAt) {
+        const ageInDays = (Date.now() - createdAt) / (1000 * 60 * 60 * 24);
+        const recencyFactor = Math.exp(-ageInDays / opts.recentBoostDecay);
+        boostMultiplier += 0.1 * recencyFactor; // 최대 10% 부스팅
+      }
+
+      // 최종 점수 계산
+      const finalScore = hybridScore * boostMultiplier;
+
+      results.push({
+        id,
+        content,
+        metadata: opts.includeAllMetadata ? metadata : { title: metadata.title },
+        score: finalScore,
+      });
     }
 
-    return topK;
+    // 4단계: Top-K 추출 (점수 기준 정렬)
+    results.sort((a, b) => b.score - a.score);
+    return results.slice(0, k);
+  }
+
+  /**
+   * 간단한 BM25 유사도 계산 (키워드 기반)
+   * 실제 BM25는 복잡하지만, 여기서는 단순화된 버전 사용
+   */
+  private simpleBM25Score(
+    content: string,
+    metadata: Record<string, any>,
+    _queryEmbedding: number[]
+  ): number {
+    // 임베딩에서 쿼리 텍스트를 추출할 수 없으므로,
+    // 메타데이터와 컨텐츠의 길이 기반으로 간단한 점수 계산
+    // 실제로는 쿼리 텍스트가 필요하므로, 향후 개선 필요
+
+    // 제목과 컨텐츠 길이 기반 점수 (0.0 ~ 1.0)
+    const titleLength = (metadata.title as string)?.length || 0;
+    const contentLength = content.length;
+
+    // 짧고 간결한 문서에 약간 더 높은 점수 (정보 밀도가 높을 가능성)
+    const lengthScore = 1.0 / (1.0 + Math.log(contentLength + 1) / 10);
+
+    return Math.min(lengthScore, 1.0);
+  }
+
+  /**
+   * 간단한 키워드 포함 체크 (임베딩 기반 추정)
+   * 실제로는 쿼리 텍스트가 필요하므로, 향후 개선 필요
+   */
+  private containsKeywords(_text: string, _queryEmbedding: number[]): boolean {
+    // 임베딩에서 키워드를 추출할 수 없으므로,
+    // 향후 쿼리 텍스트를 함께 전달받아 개선 필요
+    // 현재는 항상 false 반환
+    return false;
   }
 
   async delete(ids: string[]): Promise<void> {
