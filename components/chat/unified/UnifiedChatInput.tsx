@@ -174,9 +174,9 @@ export function UnifiedChatInput({
   // Override layoutMode with forced compact mode
   const effectiveLayoutMode = style?.compact === true ? 'ultra-compact' : layoutMode;
 
-  // Load tools from IPC (Main Chat only)
+  // Load tools from IPC (all modes, but filtered by mode)
   useEffect(() => {
-    if (mode !== 'main' || !isElectron() || !window.electronAPI?.mcp) {
+    if (!isElectron() || !window.electronAPI?.mcp) {
       return;
     }
 
@@ -184,7 +184,40 @@ export function UnifiedChatInput({
       try {
         const response = await window.electronAPI.mcp.getAllTools();
         if (response.success && response.data) {
-          _setTools(response.data);
+          // Filter tools based on mode
+          let filteredTools = response.data;
+
+          if (mode === 'browser') {
+            // Browser mode: only browser* and google* tools
+            filteredTools = response.data.filter(
+              (tool) =>
+                tool.name.startsWith('browser') ||
+                tool.name.startsWith('google') ||
+                tool.name === 'webSearch' ||
+                tool.name === 'webFetch'
+            );
+          } else if (mode === 'editor') {
+            // Editor mode: file*, command*, grep* tools
+            filteredTools = response.data.filter(
+              (tool) =>
+                tool.name.startsWith('file') ||
+                tool.name.startsWith('command') ||
+                tool.name.startsWith('grep') ||
+                tool.name === 'grepSearch'
+            );
+          } else if (mode === 'main') {
+            // Main mode: exclude browser* and file* tools (only MCP server tools)
+            filteredTools = response.data.filter(
+              (tool) =>
+                !tool.name.startsWith('browser') &&
+                !tool.name.startsWith('google') &&
+                !tool.name.startsWith('file') &&
+                !tool.name.startsWith('command') &&
+                tool.name !== 'grepSearch'
+            );
+          }
+
+          _setTools(filteredTools);
         }
       } catch (error) {
         console.error('[UnifiedChatInput] Failed to load tools:', error);
@@ -440,7 +473,7 @@ export function UnifiedChatInput({
                 <Wrench className="h-3.5 w-3.5 mr-2" />
                 Tools {enableTools && <Check className="h-3 w-3 ml-auto" />}
               </DropdownMenuItem>
-              {imageGenAvailable && (
+              {mode === 'main' && imageGenAvailable && (
                 <DropdownMenuItem onClick={() => setEnableImageGeneration(!enableImageGeneration)}>
                   <Sparkles className="h-3.5 w-3.5 mr-2" />
                   ImageGen {enableImageGeneration && <Check className="h-3 w-3 ml-auto" />}
@@ -743,7 +776,7 @@ export function UnifiedChatInput({
         </TooltipProvider>
 
         {/* ImageGen Dropdown */}
-        {imageGenAvailable && (
+        {mode === 'main' && imageGenAvailable && (
           <TooltipProvider>
             <Tooltip>
               <DropdownMenu>
