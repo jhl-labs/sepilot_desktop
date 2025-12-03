@@ -183,6 +183,12 @@ export function createAuthHeader(provider: string, apiKey: string): Record<strin
     return {};
   }
 
+  // API Key가 없으면 Authorization 헤더를 추가하지 않음
+  // (Ollama OpenAI 호환 API 등 인증이 필요 없는 경우)
+  if (!apiKey || apiKey.trim() === '') {
+    return {};
+  }
+
   return {
     Authorization: `Bearer ${apiKey}`,
   };
