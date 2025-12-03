@@ -6,8 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useChatStore } from '@/lib/store/chat-store';
 import { runPresentationAgent } from '@/lib/presentation/ppt-agent';
 import type { PresentationExportFormat } from '@/types/presentation';
-import { Loader2, Sparkles, StopCircle } from 'lucide-react';
-import { StylePresetBar } from './StylePresetBar';
+import { ChevronDown, ChevronUp, Loader2, Send, Sparkles, StopCircle } from 'lucide-react';
 
 const QUICK_BRIEFS = [
   'AI/Edge 전략 브리핑, 8 슬라이드, 하이테크 무드',
@@ -28,6 +27,7 @@ export function PresentationChat() {
   } = useChatStore();
 
   const [input, setInput] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [tone, setTone] = useState('Bold & modern');
   const [targetFormat, setTargetFormat] = useState<PresentationExportFormat>('pptx');
   const [visualDirection, setVisualDirection] = useState('Dark neon tech with clean grids');
@@ -115,103 +115,106 @@ export function PresentationChat() {
 
   return (
     <div className="flex h-full flex-col">
+      {/* Header */}
       <div className="border-b px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold text-foreground">대화로 설계</p>
-            <p className="text-xs text-muted-foreground">
-              비전·이미지 모델을 함께 쓰는 ReAct 플래너. 슬라이드 구조/이미지 프롬프트를 바로
-              생성합니다.
-            </p>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">AI Presentation Designer</p>
+              <p className="text-xs text-muted-foreground">대화로 슬라이드를 생성하세요</p>
+            </div>
           </div>
-          {presentationChatStreaming ? (
-            <Button size="sm" variant="destructive" className="gap-2" onClick={handleStop}>
-              <StopCircle className="h-4 w-4" />
+          {presentationChatStreaming && (
+            <Button size="sm" variant="destructive" onClick={handleStop}>
+              <StopCircle className="h-4 w-4 mr-1" />
               중지
             </Button>
-          ) : (
-            <div className="text-[11px] text-muted-foreground">
-              턴 수 {presentationChatMessages.length}
-            </div>
           )}
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        {/* Quick Briefs */}
+        <div className="flex flex-wrap gap-2 mb-3">
           {QUICK_BRIEFS.map((brief) => (
             <Button
               key={brief}
               size="sm"
-              variant="secondary"
-              className="text-xs"
+              variant="outline"
+              className="text-xs h-auto py-1.5"
               onClick={() => handleSend(brief)}
               disabled={presentationChatStreaming}
             >
-              <Sparkles className="mr-1 h-3 w-3" />
               {brief}
             </Button>
           ))}
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-          <div className="space-y-1">
-            <label className="text-[11px] text-muted-foreground">Tone & Story</label>
-            <input
-              className="w-full rounded-md border bg-background px-2 py-1 text-xs"
-              value={tone}
-              onChange={(e) => setTone(e.target.value)}
-              placeholder="Bold & modern"
-            />
+        {/* Advanced Settings Toggle */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-between text-xs h-7"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+        >
+          <span className="text-muted-foreground">고급 설정</span>
+          {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </Button>
+
+        {/* Advanced Settings (Collapsible) */}
+        {showAdvanced && (
+          <div className="mt-2 space-y-2 text-xs">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Tone</label>
+                <input
+                  className="w-full rounded-md border bg-background px-2 py-1 text-xs"
+                  value={tone}
+                  onChange={(e) => setTone(e.target.value)}
+                  placeholder="Bold & modern"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-muted-foreground">Format</label>
+                <select
+                  className="w-full rounded-md border bg-background px-2 py-1 text-xs"
+                  value={targetFormat}
+                  onChange={(e) => setTargetFormat(e.target.value as PresentationExportFormat)}
+                >
+                  <option value="pptx">PPTX</option>
+                  <option value="pdf">PDF</option>
+                  <option value="html">HTML</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">Visual Direction</label>
+              <input
+                className="w-full rounded-md border bg-background px-2 py-1 text-xs"
+                value={visualDirection}
+                onChange={(e) => setVisualDirection(e.target.value)}
+                placeholder="Dark neon tech with clean grids"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">Color Palette</label>
+              <input
+                className="w-full rounded-md border bg-background px-2 py-1 text-xs font-mono"
+                value={palette}
+                onChange={(e) => setPalette(e.target.value)}
+                placeholder="#0ea5e9,#7c3aed,..."
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">Typography</label>
+              <input
+                className="w-full rounded-md border bg-background px-2 py-1 text-xs"
+                value={typography}
+                onChange={(e) => setTypography(e.target.value)}
+                placeholder="Sora Bold / Inter Regular"
+              />
+            </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-[11px] text-muted-foreground">Visual Direction</label>
-            <input
-              className="w-full rounded-md border bg-background px-2 py-1 text-xs"
-              value={visualDirection}
-              onChange={(e) => setVisualDirection(e.target.value)}
-              placeholder="Dark neon tech with clean grids"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] text-muted-foreground">Export Target</label>
-            <select
-              className="w-full rounded-md border bg-background px-2 py-1 text-xs"
-              value={targetFormat}
-              onChange={(e) => setTargetFormat(e.target.value as PresentationExportFormat)}
-            >
-              <option value="pptx">pptx</option>
-              <option value="pdf">pdf</option>
-              <option value="html">html</option>
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] text-muted-foreground">Palette (comma)</label>
-            <input
-              className="w-full rounded-md border bg-background px-2 py-1 text-xs"
-              value={palette}
-              onChange={(e) => setPalette(e.target.value)}
-              placeholder="#0ea5e9,#7c3aed,#0f172a,#e2e8f0"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] text-muted-foreground">Typography</label>
-            <input
-              className="w-full rounded-md border bg-background px-2 py-1 text-xs"
-              value={typography}
-              onChange={(e) => setTypography(e.target.value)}
-              placeholder="Sora Bold / Inter Regular"
-            />
-          </div>
-        </div>
-        <div className="mt-2">
-          <label className="text-[11px] text-muted-foreground">스타일 프리셋</label>
-          <StylePresetBar
-            onSelect={(preset) => {
-              setPalette(preset.palette);
-              setTypography(preset.typography);
-              setVisualDirection(preset.visual);
-            }}
-          />
-        </div>
+        )}
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
@@ -235,31 +238,32 @@ export function PresentationChat() {
         ))}
       </div>
 
+      {/* Input Area */}
       <div className="border-t px-4 py-3">
-        <Textarea
-          placeholder="주제, 톤, 원하는 시각적 레퍼런스, 필요한 슬라이드 수를 적어주세요."
-          value={input}
-          disabled={presentationChatStreaming}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          className="mb-2"
-        />
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">
-            비전/이미지 모델을 적극 활용하도록 프롬프트에 장면과 레이아웃을 구체적으로 작성하세요.
-            (Enter: 전송, Shift+Enter: 줄바꿈)
-          </div>
+        <div className="flex gap-2">
+          <Textarea
+            placeholder="프레젠테이션 주제와 원하는 스타일을 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
+            value={input}
+            disabled={presentationChatStreaming}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            className="flex-1 min-h-[80px] resize-none"
+          />
           <Button
             onClick={() => handleSend()}
             disabled={presentationChatStreaming || !input.trim()}
+            className="h-[80px]"
           >
-            {presentationChatStreaming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            전송
+            {presentationChatStreaming ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
           </Button>
         </div>
       </div>

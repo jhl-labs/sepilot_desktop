@@ -152,7 +152,7 @@ interface ChatStore {
   presentationChatStreaming: boolean;
   presentationSlides: PresentationSlide[];
   activePresentationSlideId: string | null;
-  presentationViewMode: 'chat' | 'outline' | 'assets';
+  presentationViewMode: 'chat' | 'outline' | 'assets' | 'settings';
   presentationExportState: PresentationExportState | null;
 
   // Browser Agent Logs (실행 과정 가시성)
@@ -259,7 +259,7 @@ interface ChatStore {
   updatePresentationChatMessage: (id: string, updates: Partial<Message>) => void;
   clearPresentationChat: () => void;
   setPresentationChatStreaming: (isStreaming: boolean) => void;
-  setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets') => void;
+  setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets' | 'settings') => void;
   setPresentationSlides: (slides: PresentationSlide[]) => void;
   addPresentationSlide: (slide: PresentationSlide) => void;
   updatePresentationSlide: (id: string, updates: Partial<PresentationSlide>) => void;
@@ -1613,7 +1613,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ presentationChatStreaming: isStreaming });
   },
 
-  setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets') => {
+  setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets' | 'settings') => {
     set({ presentationViewMode: mode });
   },
 
