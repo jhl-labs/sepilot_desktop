@@ -28,41 +28,42 @@ type ChatMessage = Message;
 
 function getSystemPrompt(userLanguage: 'ko' | 'en' | 'ja' | 'zh'): string {
   const languageInstructions = {
-    ko: `# ⚠️ 절대 규칙: 한국어 사용 필수 ⚠️
-**사용자가 한국어로 요청했습니다. 당신은 반드시 한국어로만 응답해야 합니다.**
+    ko: `# 감지된 언어: 한국어
+**사용자가 한국어로 요청했으므로, 모든 응답과 슬라이드 내용을 한국어로 작성하세요.**
 
-✅ 올바른 응답:
+응답 예시:
 - "네, 알겠습니다. 논문 요약 발표 자료를 만들어드리겠습니다."
 - Tool 호출: language: "ko"
 - 슬라이드 제목: "연구 배경", "방법론", "결과 분석"
 
-❌ 잘못된 응답:
-- "Sure, I'll create a presentation..." (영어 사용 금지!)
-- Tool 호출: language: "en" (절대 안됨!)
-- 슬라이드 제목: "Introduction", "Methods" (영어 제목 금지!)
+참고: 사용자가 "영어로", "in English" 등을 명시하면 해당 언어를 사용하세요.`,
+    en: `# Detected Language: English
+**The user requested in English, so respond and create all slide content in English.**
 
-**지금 당장 한국어로 응답을 시작하세요. 영어를 사용하면 안됩니다.**`,
-    en: `# CRITICAL: Language Rule
-**The user requested in English, so ALL your responses and slide content must be in English.**
-- Conversation responses: English
-- Slide titles, content, bullets: All in English
-- Tool call language parameter: "en"
+Response example:
+- "Sure, I'll create a presentation about your topic."
+- Tool call: language: "en"
+- Slide titles: "Background", "Methodology", "Results"
 
-Never respond in other languages. Everything must be in English.`,
-    ja: `# 重要: 言語ルール
+Note: If the user specifies another language (e.g., "한국어로", "in Korean"), use that language instead.`,
+    ja: `# 検出された言語: 日本語
 **ユーザーが日本語でリクエストしたので、すべての応答とスライドコンテンツを日本語で作成してください。**
-- 会話の応答: 日本語
-- スライドのタイトル、内容、箇条書き: すべて日本語
-- ツール呼び出しのlanguageパラメータ: "ja"
 
-他の言語で応答しないでください。すべて日本語で作成してください。`,
-    zh: `# 重要: 语言规则
-**用户用中文请求，因此您的所有回复和幻灯片内容必须使用中文。**
-- 对话回复: 中文
-- 幻灯片标题、内容、要点: 全部中文
-- 工具调用language参数: "zh"
+応答例:
+- "はい、わかりました。プレゼンテーションを作成します。"
+- ツール呼び出し: language: "ja"
+- スライドタイトル: "背景", "方法論", "結果"
 
-不要用其他语言回复。所有内容必须用中文。`,
+注: ユーザーが別の言語を指定した場合（例: "英語で", "in English"）、その言語を使用してください。`,
+    zh: `# 检测到的语言: 中文
+**用户用中文请求，因此请用中文回复并创建所有幻灯片内容。**
+
+回复示例:
+- "好的，我将为您创建演示文稿。"
+- 工具调用: language: "zh"
+- 幻灯片标题: "背景", "方法", "结果"
+
+注意: 如果用户指定了其他语言（例如: "英文", "in English"），请使用该语言。`,
   };
 
   return `You are ppt-agent, an expert presentation designer with access to powerful tools.
@@ -400,8 +401,48 @@ function coerceSlides(raw: string): PresentationSlide[] {
   return slides;
 }
 
-// 사용자 언어 감지
+// 사용자 언어 감지 (우선순위: 1. 명시적 언급 2. 작성 언어 3. 기본값 한국어)
 function detectLanguage(text: string): 'ko' | 'en' | 'ja' | 'zh' {
+  const lowerText = text.toLowerCase();
+
+  // 1순위: 사용자가 명시적으로 언어를 지정한 경우
+  // 영어 요청
+  if (
+    lowerText.includes('in english') ||
+    lowerText.includes('영어로') ||
+    lowerText.includes('영문으로') ||
+    lowerText.includes('english version')
+  ) {
+    return 'en';
+  }
+  // 일본어 요청
+  if (
+    lowerText.includes('in japanese') ||
+    lowerText.includes('일본어로') ||
+    lowerText.includes('日本語で') ||
+    lowerText.includes('japanese version')
+  ) {
+    return 'ja';
+  }
+  // 중국어 요청
+  if (
+    lowerText.includes('in chinese') ||
+    lowerText.includes('중국어로') ||
+    lowerText.includes('中文') ||
+    lowerText.includes('chinese version')
+  ) {
+    return 'zh';
+  }
+  // 한국어 요청
+  if (
+    lowerText.includes('in korean') ||
+    lowerText.includes('한국어로') ||
+    lowerText.includes('korean version')
+  ) {
+    return 'ko';
+  }
+
+  // 2순위: 사용자가 작성한 메시지의 언어 자동 감지
   // 한글 비율 체크
   const koreanChars = text.match(/[가-힣]/g);
   if (koreanChars && koreanChars.length / text.length > 0.3) {
@@ -420,7 +461,14 @@ function detectLanguage(text: string): 'ko' | 'en' | 'ja' | 'zh' {
     return 'zh';
   }
 
-  return 'en';
+  // 영어 체크 (알파벳이 대부분인 경우)
+  const englishChars = text.match(/[a-zA-Z]/g);
+  if (englishChars && englishChars.length / text.length > 0.5) {
+    return 'en';
+  }
+
+  // 3순위: 기본값 한국어
+  return 'ko';
 }
 
 // Tool 호출 파싱
@@ -501,17 +549,17 @@ export async function runPresentationAgent(
       id: generateId(),
       conversation_id: 'presentation-agent',
       role: 'system',
-      content: `# ⚠️ CRITICAL REMINDER ⚠️
+      content: `# Current Request Context
 
-**USER LANGUAGE: ${userLanguage.toUpperCase()}**
+**Detected Language: ${userLanguage.toUpperCase()}**
 ${
   userLanguage === 'ko'
-    ? '→ 모든 응답을 한국어로 작성하세요! 영어 사용 절대 금지!'
+    ? '→ 감지된 언어로 응답하세요. 사용자가 다른 언어를 명시하면 해당 언어를 사용하세요.'
     : userLanguage === 'ja'
-      ? '→ すべての応答を日本語で作成してください！'
+      ? '→ 検出された言語で応答してください。ユーザーが別の言語を指定した場合は、その言語を使用してください。'
       : userLanguage === 'zh'
-        ? '→ 用中文回复所有内容！'
-        : '→ Respond in English only!'
+        ? '→ 用检测到的语言回复。如果用户指定了其他语言，请使用该语言。'
+        : '→ Respond in detected language. If user specifies another language, use that language.'
 }
 
 # Current Context
