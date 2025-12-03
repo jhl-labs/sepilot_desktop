@@ -10,6 +10,7 @@ import {
   Search,
   FolderOpen,
   Bot,
+  Presentation,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -18,6 +19,7 @@ import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { SidebarChat } from './SidebarChat';
 import { SidebarEditor } from './SidebarEditor';
 import { SidebarBrowser } from './SidebarBrowser';
+import { SidebarPresentation } from './SidebarPresentation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,10 +50,20 @@ export function Sidebar({
     clearEditorChat,
     editorAgentMode,
     setEditorAgentMode,
+    clearPresentationSession,
+    presentationViewMode,
+    setPresentationViewMode,
   } = useChatStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const modeLabel = appMode === 'chat' ? 'Chat' : appMode === 'editor' ? 'Editor' : 'Browser';
+  const modeLabel =
+    appMode === 'chat'
+      ? 'Chat'
+      : appMode === 'editor'
+        ? 'Editor'
+        : appMode === 'presentation'
+          ? 'Presentation'
+          : 'Browser';
 
   const handleDeleteAll = async () => {
     if (conversations.length === 0) {
@@ -94,6 +106,10 @@ export function Sidebar({
             <DropdownMenuItem onClick={() => setAppMode('editor')}>
               <Code className="mr-2 h-4 w-4" />
               Editor
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAppMode('presentation')}>
+              <Presentation className="mr-2 h-4 w-4" />
+              Presentation
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setAppMode('browser')}>
               <Globe className="mr-2 h-4 w-4" />
@@ -188,6 +204,36 @@ export function Sidebar({
             )}
           </div>
         )}
+        {appMode === 'presentation' && (
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => clearPresentationSession()}
+              title="새 프레젠테이션 세션"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setPresentationViewMode('chat')}
+              title="AI 디자이너와 대화"
+              className={presentationViewMode === 'chat' ? 'bg-accent' : ''}
+            >
+              <MessageSquare className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setPresentationViewMode('outline')}
+              title="슬라이드 개요 미리보기"
+              className={presentationViewMode === 'outline' ? 'bg-accent' : ''}
+            >
+              <Presentation className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Render mode-specific component */}
@@ -201,6 +247,7 @@ export function Sidebar({
           />
         )}
         {appMode === 'editor' && <SidebarEditor onDocumentsClick={onDocumentsClick} />}
+        {appMode === 'presentation' && <SidebarPresentation />}
         {appMode === 'browser' && <SidebarBrowser />}
       </div>
 
