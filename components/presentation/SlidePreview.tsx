@@ -1,9 +1,11 @@
 'use client';
 
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { generateId } from '@/lib/utils';
-import { Image as ImageIcon, LayoutTemplate, Palette } from 'lucide-react';
+import { SlideRenderer } from './SlideRenderer';
+import { ChevronLeft, ChevronRight, LayoutTemplate, Maximize2, Minimize2 } from 'lucide-react';
 
 const ACCENT_COLORS = ['#7c3aed', '#0ea5e9', '#22c55e', '#f97316', '#06b6d4', '#ef4444'];
 
@@ -14,6 +16,66 @@ export function SlidePreview() {
     setActivePresentationSlide,
     addPresentationSlide,
   } = useChatStore();
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Navigation functions
+  const goToNext = useCallback(() => {
+    if (currentIndex < presentationSlides.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  }, [currentIndex, presentationSlides.length]);
+
+  const goToPrevious = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  }, [currentIndex]);
+
+  const goToSlide = useCallback((index: number) => {
+    setCurrentIndex(index);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(!isFullscreen);
+  }, [isFullscreen]);
+
+  // Sync currentIndex with activePresentationSlideId
+  useEffect(() => {
+    if (activePresentationSlideId) {
+      const idx = presentationSlides.findIndex((s) => s.id === activePresentationSlideId);
+      if (idx !== -1) {
+        setCurrentIndex(idx);
+      }
+    }
+  }, [activePresentationSlideId, presentationSlides]);
+
+  // Update active slide when currentIndex changes
+  useEffect(() => {
+    if (presentationSlides.length > 0 && presentationSlides[currentIndex]) {
+      setActivePresentationSlide(presentationSlides[currentIndex].id);
+    }
+  }, [currentIndex, presentationSlides, setActivePresentationSlide]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goToPrevious();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goToNext();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [goToNext, goToPrevious, toggleFullscreen]);
 
   const handleAddSlide = () => {
     const accentColor = ACCENT_COLORS[presentationSlides.length % ACCENT_COLORS.length];
@@ -29,108 +91,125 @@ export function SlidePreview() {
     });
   };
 
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">슬라이드 미리보기</p>
-          <p className="text-xs text-muted-foreground">
-            AI가 제안한 개요와 이미지 프롬프트를 한눈에 확인하세요.
-          </p>
+  if (presentationSlides.length === 0) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">슬라이드 미리보기</p>
+            <p className="text-xs text-muted-foreground">AI가 제안한 프레젠테이션을 확인하세요.</p>
+          </div>
+          <Button size="sm" variant="secondary" onClick={handleAddSlide}>
+            <LayoutTemplate className="mr-2 h-4 w-4" />
+            수동 추가
+          </Button>
         </div>
-        <Button size="sm" variant="secondary" onClick={handleAddSlide}>
-          <LayoutTemplate className="mr-2 h-4 w-4" />
-          수동 추가
-        </Button>
-      </div>
 
-      {presentationSlides.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
           <div className="text-sm text-muted-foreground">아직 생성된 슬라이드가 없습니다.</div>
           <div className="text-xs text-muted-foreground">
             좌측 Sidebar에서 브리핑을 보내거나 수동으로 추가하세요.
           </div>
         </div>
-      ) : (
-        <div className="grid flex-1 grid-cols-1 gap-3 overflow-y-auto p-4 md:grid-cols-2 xl:grid-cols-3">
-          {presentationSlides.map((slide) => (
-            <button
-              key={slide.id}
-              onClick={() => setActivePresentationSlide(slide.id)}
-              className={`flex flex-col rounded-lg border p-3 text-left transition hover:shadow-sm ${
-                activePresentationSlideId === slide.id ? 'border-primary shadow-sm' : ''
-              }`}
-            >
-              <div
-                className="mb-2 aspect-video w-full rounded-md border bg-gradient-to-br from-background to-muted relative overflow-hidden"
+      </div>
+    );
+  }
+
+  const currentSlide = presentationSlides[currentIndex];
+
+  return (
+    <div className="flex h-full flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
+      {/* Header */}
+      {!isFullscreen && (
+        <div className="flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur-sm">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              슬라이드 {currentIndex + 1} / {presentationSlides.length}
+            </p>
+            <p className="text-xs text-muted-foreground">화살표 키로 이동 · F키로 전체화면</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={toggleFullscreen}>
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={handleAddSlide}>
+              <LayoutTemplate className="mr-2 h-4 w-4" />
+              추가
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Slide Display */}
+      <div className="relative flex flex-1 items-center justify-center p-8">
+        {/* Navigation Buttons */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
+          onClick={goToPrevious}
+          disabled={currentIndex === 0}
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </Button>
+
+        {/* Current Slide */}
+        <div className="max-w-7xl flex-1">
+          <SlideRenderer slide={currentSlide} />
+        </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
+          onClick={goToNext}
+          disabled={currentIndex === presentationSlides.length - 1}
+        >
+          <ChevronRight className="h-6 w-6" />
+        </Button>
+      </div>
+
+      {/* Thumbnail Navigation */}
+      {!isFullscreen && presentationSlides.length > 1 && (
+        <div className="border-t bg-background/95 px-4 py-3 backdrop-blur-sm">
+          <div className="flex gap-2 overflow-x-auto">
+            {presentationSlides.map((slide, idx) => (
+              <button
+                key={slide.id}
+                onClick={() => goToSlide(idx)}
+                className={`group relative flex-shrink-0 rounded-md border-2 transition-all ${
+                  idx === currentIndex
+                    ? 'border-primary shadow-md'
+                    : 'border-transparent opacity-60 hover:opacity-100'
+                }`}
                 style={{
-                  borderColor: slide.accentColor || undefined,
-                  boxShadow: slide.accentColor
-                    ? `0 0 0 2px ${slide.accentColor}30 inset`
-                    : undefined,
+                  borderColor: idx === currentIndex ? slide.accentColor : undefined,
                 }}
               >
-                <div className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-background/80 px-2 py-1 text-[11px] font-semibold">
-                  <Palette className="h-3 w-3" />
-                  {slide.accentColor || 'palette'}
-                </div>
-                {slide.imageUrl ? (
-                  <img
-                    src={slide.imageUrl}
-                    alt={slide.title}
-                    className="h-full w-full rounded-md object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                    <ImageIcon className="mr-1 h-4 w-4" />
-                    이미지 프롬프트: {slide.imagePrompt || 'AI가 제안 예정'}
-                  </div>
-                )}
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-foreground">{slide.title}</p>
-                  {slide.accentColor && (
-                    <span
-                      className="h-3 w-3 rounded-full"
+                <div className="relative h-16 w-28 overflow-hidden rounded-sm bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+                  {/* Thumbnail mini preview */}
+                  <div className="absolute inset-0 flex flex-col justify-center px-2">
+                    <div className="truncate text-[10px] font-semibold">{slide.title}</div>
+                    <div
+                      className="mt-1 h-0.5 w-6 rounded-full"
                       style={{ backgroundColor: slide.accentColor }}
                     />
-                  )}
+                  </div>
+                  {/* Slide number badge */}
+                  <div className="absolute bottom-0.5 right-0.5 rounded-sm bg-black/40 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                    {idx + 1}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                  {slide.layout && (
-                    <span className="rounded-full border px-2 py-0.5">{slide.layout}</span>
-                  )}
-                  {slide.vibe && (
-                    <span className="rounded-full border px-2 py-0.5">{slide.vibe}</span>
-                  )}
-                  {slide.typography && (
-                    <span className="rounded-full border px-2 py-0.5">{slide.typography}</span>
-                  )}
-                  {slide.slots?.chart && (
-                    <span className="rounded-full border px-2 py-0.5">
-                      chart:{slide.slots.chart.type}
-                    </span>
-                  )}
-                  {slide.slots?.timeline && (
-                    <span className="rounded-full border px-2 py-0.5">
-                      timeline:{slide.slots.timeline.steps}
-                    </span>
-                  )}
-                </div>
-                {slide.description && (
-                  <p className="text-xs text-muted-foreground">{slide.description}</p>
-                )}
-                {slide.bullets && (
-                  <ul className="list-disc space-y-1 pl-4 text-xs text-foreground">
-                    {slide.bullets.slice(0, 4).map((item, idx) => (
-                      <li key={idx}>{item}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </button>
-          ))}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Exit Hint */}
+      {isFullscreen && (
+        <div className="absolute right-4 top-4 rounded-md bg-black/60 px-3 py-2 text-xs text-white backdrop-blur-sm">
+          ESC 또는 F키로 전체화면 종료
         </div>
       )}
     </div>
