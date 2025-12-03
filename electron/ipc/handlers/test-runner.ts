@@ -104,16 +104,28 @@ export function setupTestRunnerHandlers() {
       // 모든 테스트 결과 합치기
       const allTests = [...llmResult.tests, ...dbResult.tests, ...mcpResult.tests];
 
+      const passed = allTests.filter((t) => t.status === 'pass').length;
+      const failed = allTests.filter((t) => t.status === 'fail').length;
+      const skipped = allTests.filter((t) => t.status === 'skip').length;
+      const duration = Date.now() - startTime;
+
+      // 전체 요약 로깅
+      logger.info('===== All Tests Summary =====');
+      logger.info(
+        `Total: ${allTests.length}, Passed: ${passed}, Failed: ${failed}, Skipped: ${skipped}`
+      );
+      logger.info(`Duration: ${duration}ms`);
+
       const result: TestSuiteResult = {
         id: 'all-tests',
         name: 'All Tests',
         tests: allTests,
         summary: {
           total: allTests.length,
-          passed: allTests.filter((t) => t.status === 'pass').length,
-          failed: allTests.filter((t) => t.status === 'fail').length,
-          skipped: allTests.filter((t) => t.status === 'skip').length,
-          duration: Date.now() - startTime,
+          passed,
+          failed,
+          skipped,
+          duration,
         },
         timestamp: Date.now(),
       };

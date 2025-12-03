@@ -34,6 +34,17 @@ export class DatabaseTestSuite {
     const failed = tests.filter((t) => t.status === 'fail').length;
     const skipped = tests.filter((t) => t.status === 'skip').length;
 
+    // 상세 로깅: 각 테스트 결과 출력
+    tests.forEach((test) => {
+      if (test.status === 'pass') {
+        logger.info(`  ✓ ${test.name}: ${test.message || 'passed'}`);
+      } else if (test.status === 'fail') {
+        logger.error(`  ✗ ${test.name}: ${test.error || test.message || 'failed'}`);
+      } else if (test.status === 'skip') {
+        logger.warn(`  ⊘ ${test.name}: ${test.message || 'skipped'}`);
+      }
+    });
+
     const result: TestSuiteResult = {
       id: 'database',
       name: 'Database & VectorDB Tests',
