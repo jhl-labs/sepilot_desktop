@@ -317,42 +317,31 @@ export class HealthCheckService {
         };
       }
 
-      // V1 config
-      const providers = llmConfig?.providers || {};
-      const providerNames = Object.keys(providers);
+      // V1 config - 단일 provider
+      const provider = llmConfig?.provider;
+      const apiKey = llmConfig?.apiKey;
 
-      if (providerNames.length === 0) {
+      if (!provider) {
         return {
           status: 'warn',
-          message: 'No LLM providers configured (V1)',
-          details: { providerCount: 0 },
+          message: 'No LLM provider configured (V1)',
           latency: Date.now() - startTime,
         };
       }
 
-      // API 키가 설정된 Provider 확인
-      const configuredProviders = providerNames.filter((name) => {
-        const provider = providers[name];
-        return provider?.apiKey && provider.apiKey.length > 0;
-      });
-
-      if (configuredProviders.length === 0) {
+      if (!apiKey || apiKey.length === 0) {
         return {
           status: 'fail',
-          message: 'No LLM providers have API keys configured (V1)',
-          details: { totalProviders: providerNames.length, configuredCount: 0 },
+          message: 'LLM provider has no API key configured (V1)',
+          details: { provider },
           latency: Date.now() - startTime,
         };
       }
 
       return {
         status: 'pass',
-        message: `${configuredProviders.length}/${providerNames.length} LLM provider(s) configured (V1)`,
-        details: {
-          totalProviders: providerNames.length,
-          configuredCount: configuredProviders.length,
-          providers: configuredProviders,
-        },
+        message: `LLM provider configured: ${provider} (V1)`,
+        details: { provider },
         latency: Date.now() - startTime,
       };
     } catch (error) {
