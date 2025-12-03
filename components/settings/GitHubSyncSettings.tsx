@@ -260,12 +260,39 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         const result = await window.electronAPI.githubSync.pullDocuments(syncConfig);
 
         if (result.success && result.documents && result.documents.length > 0) {
-          // ID 생성 함수
+          // 1. 기존 문서 조회 (중복 확인)
+          const existingDocsResult = await window.electronAPI.vectorDB.getAll();
+          const existingDocs =
+            existingDocsResult.success && existingDocsResult.data ? existingDocsResult.data : [];
+
+          // 2. 중복 문서 찾기 (title + folderPath로 매칭)
+          const docsToDelete: string[] = [];
+          for (const newDoc of result.documents) {
+            const matchingDocs = existingDocs.filter(
+              (existing: any) =>
+                existing.metadata?.title === newDoc.title &&
+                existing.metadata?.folderPath === newDoc.metadata?.folderPath
+            );
+            // 중복된 모든 청크의 ID 수집
+            for (const match of matchingDocs) {
+              docsToDelete.push(match.id);
+            }
+          }
+
+          // 3. 중복 문서 삭제
+          if (docsToDelete.length > 0) {
+            const deleteResult = await window.electronAPI.vectorDB.delete(docsToDelete);
+            if (!deleteResult.success) {
+              console.error('Failed to delete duplicate documents:', deleteResult.error);
+            }
+          }
+
+          // 4. ID 생성 함수
           const generateId = () => {
             return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           };
 
-          // 문서에 ID 추가
+          // 5. 문서에 ID 추가
           const documentsWithIds = result.documents.map(
             (doc: { title: string; content: string; metadata: Record<string, any> }) => ({
               id: generateId(),
@@ -274,7 +301,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
             })
           );
 
-          // VectorDB에 문서 인덱싱 (DocumentsPage와 동일한 옵션 사용)
+          // 6. VectorDB에 문서 인덱싱 (DocumentsPage와 동일한 옵션 사용)
           const indexingOptions = {
             chunkSize: 2500,
             chunkOverlap: 250,
@@ -288,9 +315,11 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
           );
 
           if (indexResult.success) {
+            const deleteMsg =
+              docsToDelete.length > 0 ? ` (${docsToDelete.length}개 중복 제거)` : '';
             setMessage({
               type: 'success',
-              text: `${result.documents.length}개의 문서를 GitHub에서 가져와 VectorDB에 추가했습니다!`,
+              text: `${result.documents.length}개의 문서를 GitHub에서 가져와 VectorDB에 추가했습니다!${deleteMsg}`,
             });
           } else {
             throw new Error(indexResult.error || '문서 인덱싱 실패');
