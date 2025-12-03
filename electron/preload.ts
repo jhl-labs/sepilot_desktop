@@ -277,6 +277,7 @@ const electronAPI = {
     searchFiles: (query: string, dirPath: string, options?: any) =>
       ipcRenderer.invoke('fs:search-files', query, dirPath, options),
     saveClipboardImage: (destDir: string) => ipcRenderer.invoke('fs:save-clipboard-image', destDir),
+    getFileStat: (filePath: string) => ipcRenderer.invoke('fs:get-file-stat', filePath),
   },
 
   // GitHub operations

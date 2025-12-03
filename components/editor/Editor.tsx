@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import type monaco from 'monaco-editor';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
-import { X, Save, FileText, Loader2, Eye, Code } from 'lucide-react';
+import { X, Save, FileText, Loader2, Eye, Code, RefreshCw, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isElectron } from '@/lib/platform';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
@@ -40,8 +40,11 @@ export function CodeEditor() {
   const [processingAction, setProcessingAction] = useState<string>('');
   const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null);
   const [previewMode, setPreviewMode] = useState<'editor' | 'preview' | 'split'>('editor');
+  const [fileChangedExternally, setFileChangedExternally] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath);
+  const lastMtimeRef = useRef<Map<string, number>>(new Map());
 
   // Markdown 파일인지 확인 (language가 'markdown'이거나 확장자가 .md, .mdx인 경우)
   const isMarkdownFile =
@@ -67,6 +70,15 @@ export function CodeEditor() {
       if (result.success) {
         markFileDirty(activeFile.path, false);
         console.log('File saved successfully:', activeFile.path);
+
+        // 저장 후 mtime 업데이트
+        const statResult = await window.electronAPI.fs.getFileStat(activeFile.path);
+        if (statResult.success && statResult.data) {
+          lastMtimeRef.current.set(activeFile.path, statResult.data.mtime);
+        }
+
+        // 저장 후 변경 경고 숨김
+        setFileChangedExternally(false);
       } else {
         console.error('Failed to save file:', result.error);
       }
@@ -74,6 +86,38 @@ export function CodeEditor() {
       console.error('Failed to save file:', error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRefreshFile = async () => {
+    if (!activeFile || !isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    setIsRefreshing(true);
+    try {
+      const result = await window.electronAPI.fs.readFile(activeFile.path);
+      if (result.success && result.data !== undefined) {
+        updateFileContent(activeFile.path, result.data);
+        markFileDirty(activeFile.path, false);
+
+        // mtime 업데이트
+        const statResult = await window.electronAPI.fs.getFileStat(activeFile.path);
+        if (statResult.success && statResult.data) {
+          lastMtimeRef.current.set(activeFile.path, statResult.data.mtime);
+        }
+
+        setFileChangedExternally(false);
+        console.log('File refreshed successfully:', activeFile.path);
+      } else {
+        console.error('Failed to refresh file:', result.error);
+        window.alert(`파일을 새로고침할 수 없습니다: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to refresh file:', error);
+      window.alert('파일을 새로고침하는 중 오류가 발생했습니다.');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -848,6 +892,52 @@ export function CodeEditor() {
     return undefined;
   }, [editor, isMarkdownFile, activeFile, workingDirectory]);
 
+  // 파일 변경 감지 (5초마다 체크)
+  useEffect(() => {
+    if (!activeFile || !isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    // 초기 mtime 저장
+    const initMtime = async () => {
+      try {
+        const statResult = await window.electronAPI.fs.getFileStat(activeFile.path);
+        if (statResult.success && statResult.data) {
+          lastMtimeRef.current.set(activeFile.path, statResult.data.mtime);
+        }
+      } catch (error) {
+        console.error('[Editor] Error getting initial file stat:', error);
+      }
+    };
+
+    if (!lastMtimeRef.current.has(activeFile.path)) {
+      initMtime();
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const statResult = await window.electronAPI.fs.getFileStat(activeFile.path);
+        if (statResult.success && statResult.data) {
+          const lastMtime = lastMtimeRef.current.get(activeFile.path);
+          const currentMtime = statResult.data.mtime;
+
+          // mtime이 변경되었고, 파일이 dirty하지 않은 경우에만 알림
+          // (dirty인 경우는 사용자가 편집 중이므로 알리지 않음)
+          if (lastMtime && currentMtime > lastMtime && !activeFile.isDirty) {
+            console.log('[Editor] File changed externally:', activeFile.path);
+            setFileChangedExternally(true);
+            lastMtimeRef.current.set(activeFile.path, currentMtime);
+          }
+        }
+      } catch (error) {
+        // 파일이 삭제된 경우 등, 조용히 무시
+        console.warn('[Editor] Error checking file stat:', error);
+      }
+    }, 5000); // 5초마다 체크
+
+    return () => clearInterval(interval);
+  }, [activeFile?.path, activeFile?.isDirty]);
+
   // Navigate to initialPosition when file is opened
   useEffect(() => {
     if (editor && activeFile?.initialPosition && activeFilePath) {
@@ -981,6 +1071,17 @@ export function CodeEditor() {
               </div>
             )}
             <Button
+              onClick={handleRefreshFile}
+              variant="ghost"
+              size="sm"
+              disabled={isRefreshing}
+              className="h-7"
+              title="새로고침 (Refresh)"
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5 mr-1', isRefreshing && 'animate-spin')} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <Button
               onClick={handleSaveFile}
               variant="ghost"
               size="sm"
@@ -989,6 +1090,38 @@ export function CodeEditor() {
             >
               <Save className="h-3.5 w-3.5 mr-1" />
               {isSaving ? 'Saving...' : 'Save (Ctrl+S)'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 파일 변경 경고 배너 */}
+      {fileChangedExternally && (
+        <div className="flex items-center justify-between bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2">
+          <div className="flex items-center gap-2 text-sm">
+            <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            <span className="text-yellow-800 dark:text-yellow-200">
+              이 파일이 외부에서 수정되었습니다. 새로고침하시겠습니까?
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleRefreshFile}
+              variant="default"
+              size="sm"
+              disabled={isRefreshing}
+              className="h-7 bg-yellow-600 hover:bg-yellow-700 text-white"
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5 mr-1', isRefreshing && 'animate-spin')} />
+              새로고침
+            </Button>
+            <Button
+              onClick={() => setFileChangedExternally(false)}
+              variant="ghost"
+              size="sm"
+              className="h-7"
+            >
+              무시
             </Button>
           </div>
         </div>

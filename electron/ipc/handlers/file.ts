@@ -638,6 +638,29 @@ export function registerFileHandlers() {
     }
   });
 
+  // 파일 stat 정보 가져오기 (수정 시간 등)
+  ipcMain.handle('fs:get-file-stat', async (_event, filePath: string) => {
+    try {
+      const stats = await fs.stat(filePath);
+
+      return {
+        success: true,
+        data: {
+          mtime: stats.mtimeMs, // 수정 시간 (milliseconds)
+          size: stats.size,
+          isFile: stats.isFile(),
+          isDirectory: stats.isDirectory(),
+        },
+      };
+    } catch (error: any) {
+      console.error('[File] Error getting file stat:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get file stat',
+      };
+    }
+  });
+
   // 파일 복제 (같은 폴더에 복사본 생성)
   ipcMain.handle('fs:duplicate', async (_event, sourcePath: string) => {
     try {
