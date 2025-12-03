@@ -567,13 +567,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   createConversation: async () => {
     const state = get();
 
-    // Capture current chat settings to save with the new conversation
-    const currentChatSettings: ConversationChatSettings = {
-      thinkingMode: state.thinkingMode,
-      enableRAG: state.enableRAG,
-      enableTools: state.enableTools,
-      enabledTools: Array.from(state.enabledTools),
-      enableImageGeneration: state.enableImageGeneration,
+    // Default settings for new conversation
+    const defaultChatSettings: ConversationChatSettings = {
+      thinkingMode: 'instant',
+      enableRAG: false,
+      enableTools: false,
+      enabledTools: [],
+      enableImageGeneration: false,
       selectedImageGenProvider: state.selectedImageGenProvider,
     };
 
@@ -582,7 +582,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       title: '새 대화',
       created_at: Date.now(),
       updated_at: Date.now(),
-      chatSettings: currentChatSettings,
+      chatSettings: defaultChatSettings,
     };
 
     // Save to database or localStorage
@@ -617,6 +617,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         activeConversationId: newConversation.id,
         messages: [],
         messagesCache: newCache,
+        // Apply default settings to global state
+        thinkingMode: 'instant',
+        enableRAG: false,
+        enableTools: false,
+        enabledTools: new Set(),
+        enableImageGeneration: false,
       };
     });
 
