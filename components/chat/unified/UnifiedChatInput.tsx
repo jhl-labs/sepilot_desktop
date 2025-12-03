@@ -468,7 +468,7 @@ export function UnifiedChatInput({
     if (effectiveLayoutMode === 'ultra-compact') {
       // Ultra-compact: All controls in dropdown menu
       return (
-        <div className="flex items-center gap-1 mb-1">
+        <div className="flex items-center gap-2 mb-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
@@ -525,7 +525,7 @@ export function UnifiedChatInput({
     if (effectiveLayoutMode === 'compact') {
       // Compact: Essential controls visible
       return (
-        <div className="flex items-center gap-1 mb-2">
+        <div className="flex items-center gap-2 mb-2">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -589,7 +589,7 @@ export function UnifiedChatInput({
 
     // Full mode: All controls visible (MainChatInput style)
     return (
-      <div className="absolute bottom-2 right-2 flex items-center gap-1">
+      <div className="absolute bottom-2 right-2 flex items-center gap-2">
         {/* Thinking Mode Dropdown */}
         <TooltipProvider>
           <Tooltip>
