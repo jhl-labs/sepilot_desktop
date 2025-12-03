@@ -1,7 +1,14 @@
 import { TestResult, TestSuiteResult } from '../../ipc/handlers/test-runner';
 import { logger } from '../../services/logger';
 import { databaseService } from '../../services/database';
-import type { AppConfig } from '../../../types';
+import type { AppConfig, LLMConfigV2 } from '../../../types';
+
+/**
+ * Check if LLM config is V2
+ */
+function isLLMConfigV2(config: any): config is LLMConfigV2 {
+  return config && typeof config === 'object' && 'version' in config && config.version === 2;
+}
 
 /**
  * LLM 상호작용 테스트 스위트
@@ -79,9 +86,36 @@ export class LLMInteractionTestSuite {
 
       const config = configResult as { value: string };
       const appConfig: AppConfig = JSON.parse(config.value);
+      const llmConfig = appConfig.llm;
 
-      // LLMConfig는 단일 provider, LLMConfigV2는 connections 배열
-      const provider = appConfig.llm?.provider;
+      // V2 config 지원
+      if (isLLMConfigV2(llmConfig)) {
+        const connectionCount = llmConfig.connections?.length || 0;
+        const modelCount = llmConfig.models?.length || 0;
+
+        if (connectionCount === 0) {
+          return {
+            id: testId,
+            name: 'LLM Provider Configuration',
+            status: 'fail',
+            duration: Date.now() - startTime,
+            message: 'No LLM connections configured (V2)',
+            timestamp: Date.now(),
+          };
+        }
+
+        return {
+          id: testId,
+          name: 'LLM Provider Configuration',
+          status: 'pass',
+          duration: Date.now() - startTime,
+          message: `Found ${connectionCount} connection(s), ${modelCount} model(s) (V2)`,
+          timestamp: Date.now(),
+        };
+      }
+
+      // V1 config
+      const provider = llmConfig?.provider;
 
       if (!provider) {
         return {
@@ -99,7 +133,7 @@ export class LLMInteractionTestSuite {
         name: 'LLM Provider Configuration',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: `Found provider: ${provider}`,
+        message: `Found provider: ${provider} (V1)`,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -140,9 +174,36 @@ export class LLMInteractionTestSuite {
 
       const config = configResult as { value: string };
       const appConfig: AppConfig = JSON.parse(config.value);
+      const llmConfig = appConfig.llm;
 
-      // Check if API key is configured
-      const hasApiKey = appConfig.llm?.apiKey && appConfig.llm.apiKey.length > 0;
+      // V2 config 지원
+      if (isLLMConfigV2(llmConfig)) {
+        const connectionsWithKey =
+          llmConfig.connections?.filter((conn) => conn.apiKey && conn.apiKey.length > 0) || [];
+
+        if (connectionsWithKey.length === 0) {
+          return {
+            id: testId,
+            name: 'API Key Validation',
+            status: 'fail',
+            duration: Date.now() - startTime,
+            message: 'No connections with API key configured (V2)',
+            timestamp: Date.now(),
+          };
+        }
+
+        return {
+          id: testId,
+          name: 'API Key Validation',
+          status: 'pass',
+          duration: Date.now() - startTime,
+          message: `${connectionsWithKey.length} connection(s) with API key (V2)`,
+          timestamp: Date.now(),
+        };
+      }
+
+      // V1 config
+      const hasApiKey = llmConfig?.apiKey && llmConfig.apiKey.length > 0;
 
       if (!hasApiKey) {
         return {
@@ -150,7 +211,7 @@ export class LLMInteractionTestSuite {
           name: 'API Key Validation',
           status: 'fail',
           duration: Date.now() - startTime,
-          message: 'No API key configured',
+          message: 'No API key configured (V1)',
           timestamp: Date.now(),
         };
       }
@@ -160,7 +221,7 @@ export class LLMInteractionTestSuite {
         name: 'API Key Validation',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: 'API key is configured',
+        message: 'API key is configured (V1)',
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -201,7 +262,37 @@ export class LLMInteractionTestSuite {
 
       const config = configResult as { value: string };
       const appConfig: AppConfig = JSON.parse(config.value);
-      const maxTokens = appConfig.llm?.maxTokens;
+      const llmConfig = appConfig.llm;
+
+      // V2 config 지원
+      if (isLLMConfigV2(llmConfig)) {
+        const defaultMaxTokens = llmConfig.defaultMaxTokens;
+
+        if (defaultMaxTokens !== undefined && defaultMaxTokens !== null) {
+          if (defaultMaxTokens <= 0 || defaultMaxTokens > 200000) {
+            return {
+              id: testId,
+              name: 'Token Limits Configuration',
+              status: 'fail',
+              duration: Date.now() - startTime,
+              message: `Invalid defaultMaxTokens: ${defaultMaxTokens} (V2)`,
+              timestamp: Date.now(),
+            };
+          }
+        }
+
+        return {
+          id: testId,
+          name: 'Token Limits Configuration',
+          status: 'pass',
+          duration: Date.now() - startTime,
+          message: `Default maxTokens: ${defaultMaxTokens} (V2)`,
+          timestamp: Date.now(),
+        };
+      }
+
+      // V1 config
+      const maxTokens = llmConfig?.maxTokens;
 
       if (maxTokens !== undefined && maxTokens !== null) {
         if (maxTokens <= 0 || maxTokens > 128000) {
@@ -210,7 +301,7 @@ export class LLMInteractionTestSuite {
             name: 'Token Limits Configuration',
             status: 'fail',
             duration: Date.now() - startTime,
-            message: `Invalid maxTokens: ${maxTokens}`,
+            message: `Invalid maxTokens: ${maxTokens} (V1)`,
             timestamp: Date.now(),
           };
         }
@@ -221,7 +312,7 @@ export class LLMInteractionTestSuite {
         name: 'Token Limits Configuration',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: 'Token limits are within valid range',
+        message: `maxTokens: ${maxTokens} (V1)`,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -262,7 +353,37 @@ export class LLMInteractionTestSuite {
 
       const config = configResult as { value: string };
       const appConfig: AppConfig = JSON.parse(config.value);
-      const temperature = appConfig.llm?.temperature;
+      const llmConfig = appConfig.llm;
+
+      // V2 config 지원
+      if (isLLMConfigV2(llmConfig)) {
+        const defaultTemperature = llmConfig.defaultTemperature;
+
+        if (defaultTemperature !== undefined && defaultTemperature !== null) {
+          if (defaultTemperature < 0 || defaultTemperature > 2) {
+            return {
+              id: testId,
+              name: 'Temperature Settings',
+              status: 'fail',
+              duration: Date.now() - startTime,
+              message: `Invalid defaultTemperature: ${defaultTemperature} (V2)`,
+              timestamp: Date.now(),
+            };
+          }
+        }
+
+        return {
+          id: testId,
+          name: 'Temperature Settings',
+          status: 'pass',
+          duration: Date.now() - startTime,
+          message: `Default temperature: ${defaultTemperature} (V2)`,
+          timestamp: Date.now(),
+        };
+      }
+
+      // V1 config
+      const temperature = llmConfig?.temperature;
 
       if (temperature !== undefined && temperature !== null) {
         if (temperature < 0 || temperature > 2) {
@@ -271,7 +392,7 @@ export class LLMInteractionTestSuite {
             name: 'Temperature Settings',
             status: 'fail',
             duration: Date.now() - startTime,
-            message: `Invalid temperature: ${temperature}`,
+            message: `Invalid temperature: ${temperature} (V1)`,
             timestamp: Date.now(),
           };
         }
@@ -282,7 +403,7 @@ export class LLMInteractionTestSuite {
         name: 'Temperature Settings',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: 'Temperature setting is within valid range (0-2)',
+        message: `Temperature: ${temperature} (V1)`,
         timestamp: Date.now(),
       };
     } catch (error) {
