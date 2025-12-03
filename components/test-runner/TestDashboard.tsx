@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { HealthStatus } from './HealthStatus';
 import { TestResultViewer } from './TestResultViewer';
-import { Play, Activity, Database, Zap, Settings } from 'lucide-react';
+import { Play, Activity, Database, Zap, Settings, ArrowLeft, X } from 'lucide-react';
 import type { HealthCheckResult, TestSuiteResult } from '@/types/electron';
 
 /**
@@ -210,9 +210,21 @@ export function TestDashboard() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Test Dashboard</h1>
-          <p className="text-muted-foreground">시스템 상태 및 테스트 실행 결과</p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              window.location.href = '/';
+            }}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            뒤로가기
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Test Dashboard</h1>
+            <p className="text-muted-foreground">시스템 상태 및 테스트 실행 결과</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -222,6 +234,15 @@ export function TestDashboard() {
           >
             <Activity className="w-4 h-4 mr-2" />
             Auto-refresh {autoRefresh ? 'ON' : 'OFF'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              window.location.href = '/';
+            }}
+          >
+            <X className="w-4 h-4" />
           </Button>
         </div>
       </div>
