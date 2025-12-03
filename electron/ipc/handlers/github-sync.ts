@@ -8,7 +8,7 @@ import { GitHubSyncClient } from '../../../lib/github/client';
 import type { GitHubSyncConfig, AppConfig } from '../../../types';
 import { generateMasterKey } from '../../../lib/github/encryption';
 import { databaseService } from '../../services/database';
-import { getAllDocuments, exportDocuments } from '../../../lib/vectordb/client';
+import { vectorDBService } from '../../services/vectordb';
 
 /**
  * Network 설정을 GitHubSyncConfig에 적용하는 헬퍼 함수
@@ -131,8 +131,8 @@ export function setupGitHubSyncHandlers() {
     try {
       config = applyNetworkConfig(config);
 
-      // VectorDB에서 모든 문서 가져오기
-      const documents = await getAllDocuments();
+      // VectorDB에서 모든 문서 가져오기 (Main Process에서 직접 접근)
+      const documents = await vectorDBService.getAllDocuments();
 
       // GitHub Sync 클라이언트 생성
       const client = new GitHubSyncClient(config);
@@ -371,7 +371,7 @@ export function setupGitHubSyncHandlers() {
 
       // 문서 동기화
       if (config.syncDocuments) {
-        const documents = await getAllDocuments();
+        const documents = await vectorDBService.getAllDocuments();
         results.documents = await client.syncDocuments(documents);
       }
 
