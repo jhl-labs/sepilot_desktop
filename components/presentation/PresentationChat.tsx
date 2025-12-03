@@ -18,6 +18,7 @@ export function PresentationChat() {
   const {
     presentationChatMessages,
     presentationChatStreaming,
+    presentationSlides,
     addPresentationChatMessage,
     updatePresentationChatMessage,
     setPresentationChatStreaming,
@@ -78,7 +79,8 @@ export function PresentationChat() {
             setPresentationSlides(slides);
             setActivePresentationSlide(slides[0]?.id ?? null);
           },
-        }
+        },
+        presentationSlides // 현재 슬라이드 전달
       );
 
       if (!buffer && response) {
@@ -238,7 +240,26 @@ export function PresentationChat() {
                 {isStreaming && <Loader2 className="h-3 w-3 animate-spin" />}
               </div>
               <div className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">
-                {msg.content || (isStreaming ? '생성 중...' : '')}
+                {msg.content ? (
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: msg.content
+                        .replace(
+                          /✅/g,
+                          '<span class="text-green-600 dark:text-green-400">✅</span>'
+                        )
+                        .replace(/❌/g, '<span class="text-red-600 dark:text-red-400">❌</span>')
+                        .replace(
+                          /<tool_call>([\s\S]*?)<\/tool_call>/g,
+                          '<div class="my-2 p-2 bg-muted/50 rounded border border-dashed text-xs font-mono">Tool: $1</div>'
+                        ),
+                    }}
+                  />
+                ) : isStreaming ? (
+                  '생성 중...'
+                ) : (
+                  ''
+                )}
               </div>
             </div>
           );
