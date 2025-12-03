@@ -328,6 +328,17 @@ export function useMessageStreaming() {
               const lastMessage = event.data.messages[event.data.messages.length - 1];
               const updates: Partial<Message> = {};
 
+              // If this is a final assistant message (no tool_calls), update content
+              // This replaces status messages like "🤖 AI가 응답을 생성하고 있습니다..."
+              if (
+                lastMessage?.role === 'assistant' &&
+                (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) &&
+                lastMessage.content
+              ) {
+                accumulatedContent = lastMessage.content;
+                updates.content = accumulatedContent;
+              }
+
               if (
                 lastMessage?.referenced_documents &&
                 lastMessage.referenced_documents.length > 0
