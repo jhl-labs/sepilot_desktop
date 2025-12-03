@@ -265,12 +265,9 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
           });
 
           // 설정 다시 로드 (마지막 동기화 시간 업데이트)
-          const appConfigStr = localStorage.getItem('app_config');
-          if (appConfigStr) {
-            const appConfig = JSON.parse(appConfigStr);
-            if (appConfig.teamDocs) {
-              setConfigs(appConfig.teamDocs);
-            }
+          const configResult = await window.electronAPI.config.load();
+          if (configResult.success && configResult.data?.teamDocs) {
+            setConfigs(configResult.data.teamDocs);
           }
         } else {
           throw new Error(result.error || '일괄 동기화 실패');

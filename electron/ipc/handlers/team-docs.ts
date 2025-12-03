@@ -45,6 +45,92 @@ function toGitHubSyncConfig(config: TeamDocsConfig): GitHubSyncConfig {
   };
 }
 
+/**
+ * 단일 Team Docs 동기화 로직 (공통 함수)
+ */
+async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
+  success: boolean;
+  message: string;
+  data?: {
+    totalDocuments: number;
+    indexedDocuments: number;
+  };
+  error?: string;
+}> {
+  try {
+    const syncConfig = toGitHubSyncConfig(applyNetworkConfig(config));
+    const client = new GitHubSyncClient(syncConfig);
+
+    // GitHub에서 문서 가져오기
+    const result = await client.pullDocuments();
+
+    if (!result.success) {
+      throw new Error(result.error || '문서 가져오기 실패');
+    }
+
+    // 기존 팀 문서 삭제 (중복 방지)
+    const existingDocs = await vectorDBService.getAllDocuments();
+    const existingTeamDocIds = existingDocs
+      .filter((doc) => doc.metadata?.teamDocsId === config.id)
+      .map((doc) => doc.id);
+
+    if (existingTeamDocIds.length > 0) {
+      console.log(
+        `[TeamDocs] Removing ${existingTeamDocIds.length} existing documents from team ${config.name}`
+      );
+      await vectorDBService.delete(existingTeamDocIds);
+    }
+
+    // VectorDB에 문서 저장 (docGroup='team' 메타데이터 추가)
+    const documentsToIndex = result.documents.map((doc) => ({
+      id: `team_${config.id}_${doc.title.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      content: doc.content,
+      metadata: {
+        ...doc.metadata,
+        docGroup: 'team',
+        teamDocsId: config.id,
+        teamName: config.name,
+        source: `${config.owner}/${config.repo}`,
+      },
+    }));
+
+    // 임베딩 설정 로드
+    const { initializeEmbedding } = await import('../../../lib/vectordb/embeddings/client');
+    const embeddingConfigStr = databaseService.getSetting('app_config');
+    if (embeddingConfigStr) {
+      const embeddingAppConfig = JSON.parse(embeddingConfigStr);
+      if (embeddingAppConfig.embedding) {
+        initializeEmbedding(embeddingAppConfig.embedding);
+      }
+    }
+
+    // VectorDB에 인덱싱 (배치 처리)
+    await vectorDBService.indexDocuments(documentsToIndex, {
+      chunkSize: 1000,
+      chunkOverlap: 200,
+      batchSize: 10,
+    });
+
+    const indexedCount = documentsToIndex.length;
+
+    return {
+      success: true,
+      message: `${indexedCount}개의 팀 문서를 동기화했습니다.`,
+      data: {
+        totalDocuments: result.documents.length,
+        indexedDocuments: indexedCount,
+      },
+    };
+  } catch (error: any) {
+    console.error(`[TeamDocs] Failed to sync ${config.name}:`, error);
+    return {
+      success: false,
+      message: '팀 문서 동기화 실패',
+      error: error.message,
+    };
+  }
+}
+
 export function setupTeamDocsHandlers() {
   /**
    * Team Docs 레포지토리 연결 테스트
@@ -72,51 +158,8 @@ export function setupTeamDocsHandlers() {
    */
   ipcMain.handle('team-docs-sync-documents', async (_event, config: TeamDocsConfig) => {
     try {
-      config = applyNetworkConfig(config);
-      const syncConfig = toGitHubSyncConfig(config);
-      const client = new GitHubSyncClient(syncConfig);
-
-      // 문서 경로 설정 (기본값: sepilot/documents)
-      const docsPath = config.docsPath || 'sepilot/documents';
-
-      // GitHub에서 문서 가져오기
-      const result = await client.pullDocuments();
-
-      if (!result.success) {
-        throw new Error(result.error || '문서 가져오기 실패');
-      }
-
-      // VectorDB에 문서 저장 (docGroup='team' 메타데이터 추가)
-      const documentsToIndex = result.documents.map((doc) => ({
-        id: `team_${config.id}_${doc.title.replace(/[^a-zA-Z0-9]/g, '_')}`,
-        content: doc.content,
-        metadata: {
-          ...doc.metadata,
-          docGroup: 'team', // 팀 문서로 표시
-          teamDocsId: config.id, // 어느 팀에서 왔는지 기록
-          teamName: config.name, // 팀 이름
-          source: `${config.owner}/${config.repo}`, // GitHub 소스
-        },
-      }));
-
-      // 임베딩 설정 로드
-      const { initializeEmbedding } = await import('../../../lib/vectordb/embeddings/client');
-      const embeddingConfigStr = databaseService.getSetting('app_config');
-      if (embeddingConfigStr) {
-        const embeddingAppConfig = JSON.parse(embeddingConfigStr);
-        if (embeddingAppConfig.embedding) {
-          initializeEmbedding(embeddingAppConfig.embedding);
-        }
-      }
-
-      // VectorDB에 인덱싱 (배치 처리)
-      await vectorDBService.indexDocuments(documentsToIndex, {
-        chunkSize: 1000,
-        chunkOverlap: 200,
-        batchSize: 10,
-      });
-
-      const indexedCount = documentsToIndex.length;
+      // 공통 동기화 로직 사용
+      const result = await syncTeamDocsInternal(config);
 
       // 설정 업데이트 (마지막 동기화 시간)
       const appConfigStr = databaseService.getSetting('app_config');
@@ -129,8 +172,8 @@ export function setupTeamDocsHandlers() {
             return {
               ...td,
               lastSyncAt: Date.now(),
-              lastSyncStatus: 'success' as const,
-              lastSyncError: undefined,
+              lastSyncStatus: result.success ? ('success' as const) : ('error' as const),
+              lastSyncError: result.success ? undefined : result.error,
             };
           }
           return td;
@@ -140,14 +183,7 @@ export function setupTeamDocsHandlers() {
         databaseService.updateSetting('app_config', JSON.stringify(appConfig));
       }
 
-      return {
-        success: true,
-        message: `${indexedCount}개의 팀 문서를 동기화했습니다.`,
-        data: {
-          totalDocuments: result.documents.length,
-          indexedDocuments: indexedCount,
-        },
-      };
+      return result;
     } catch (error: any) {
       console.error('[TeamDocs] Failed to sync documents:', error);
 
@@ -199,72 +235,39 @@ export function setupTeamDocsHandlers() {
         return {
           success: true,
           message: '활성화된 팀 문서 설정이 없습니다.',
-          data: { totalSynced: 0 },
+          data: { totalSynced: 0, results: [] },
         };
       }
 
       const results = [];
       let totalSynced = 0;
 
+      // 각 활성화된 팀 문서를 순차적으로 동기화
       for (const config of enabledTeamDocs) {
         try {
-          const result = await new Promise<any>((resolve) => {
-            ipcMain.handleOnce('team-docs-sync-documents-internal', async () => {
-              const syncConfig = applyNetworkConfig(config);
-              const syncResult = await new Promise<any>((innerResolve) => {
-                // 직접 호출
-                const handler = async () => {
-                  const client = new GitHubSyncClient(toGitHubSyncConfig(syncConfig));
-                  const pullResult = await client.pullDocuments();
-
-                  if (!pullResult.success) {
-                    return innerResolve({
-                      success: false,
-                      message: pullResult.error || '문서 가져오기 실패',
-                    });
-                  }
-
-                  let indexedCount = 0;
-                  for (const doc of pullResult.documents) {
-                    try {
-                      const metadata = {
-                        ...doc.metadata,
-                        docGroup: 'team',
-                        teamDocsId: config.id,
-                        teamName: config.name,
-                        source: `${config.owner}/${config.repo}`,
-                      };
-                      await vectorDBService.indexDocument(doc.title, doc.content, metadata);
-                      indexedCount++;
-                    } catch (error) {
-                      console.error(`[TeamDocs] Failed to index document:`, error);
-                    }
-                  }
-
-                  return innerResolve({
-                    success: true,
-                    message: `${indexedCount}개의 팀 문서를 동기화했습니다.`,
-                    data: {
-                      totalDocuments: pullResult.documents.length,
-                      indexedDocuments: indexedCount,
-                    },
-                  });
-                };
-
-                handler();
-              });
-
-              return syncResult;
-            });
-
-            // Trigger the internal handler
-            resolve(ipcMain.emit('team-docs-sync-documents-internal' as any, {} as any, config));
-          });
+          // 공통 동기화 함수 사용
+          const result = await syncTeamDocsInternal(config);
 
           results.push({ teamName: config.name, ...result });
           if (result.success && result.data) {
             totalSynced += result.data.indexedDocuments;
           }
+
+          // 각 설정의 동기화 상태 업데이트
+          const updatedTeamDocs = teamDocs.map((td) => {
+            if (td.id === config.id) {
+              return {
+                ...td,
+                lastSyncAt: Date.now(),
+                lastSyncStatus: result.success ? ('success' as const) : ('error' as const),
+                lastSyncError: result.success ? undefined : result.error,
+              };
+            }
+            return td;
+          });
+
+          appConfig.teamDocs = updatedTeamDocs;
+          databaseService.updateSetting('app_config', JSON.stringify(appConfig));
         } catch (error: any) {
           console.error(`[TeamDocs] Failed to sync ${config.name}:`, error);
           results.push({
@@ -272,6 +275,22 @@ export function setupTeamDocsHandlers() {
             success: false,
             message: error.message,
           });
+
+          // 에러 상태 기록
+          const updatedTeamDocs = teamDocs.map((td) => {
+            if (td.id === config.id) {
+              return {
+                ...td,
+                lastSyncAt: Date.now(),
+                lastSyncStatus: 'error' as const,
+                lastSyncError: error.message,
+              };
+            }
+            return td;
+          });
+
+          appConfig.teamDocs = updatedTeamDocs;
+          databaseService.updateSetting('app_config', JSON.stringify(appConfig));
         }
       }
 
@@ -279,7 +298,9 @@ export function setupTeamDocsHandlers() {
 
       return {
         success: allSuccess,
-        message: `${totalSynced}개의 팀 문서를 동기화했습니다.`,
+        message: allSuccess
+          ? `${totalSynced}개의 팀 문서를 동기화했습니다.`
+          : `일부 동기화 실패 (성공: ${results.filter((r) => r.success).length}/${results.length})`,
         data: {
           totalSynced,
           results,
