@@ -9,6 +9,7 @@ import {
   Trash,
   Search,
   FolderOpen,
+  Bot,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -45,6 +46,8 @@ export function Sidebar({
     setEditorViewMode,
     setChatViewMode,
     clearEditorChat,
+    editorAgentMode,
+    setEditorAgentMode,
   } = useChatStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -142,6 +145,27 @@ export function Sidebar({
                 <MessageSquare className="h-5 w-5" />
               )}
             </Button>
+            {editorViewMode === 'chat' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() =>
+                  setEditorAgentMode(editorAgentMode === 'editor' ? 'coding' : 'editor')
+                }
+                title={
+                  editorAgentMode === 'editor'
+                    ? 'Editor Agent 모드 (클릭하여 Coding Agent로 전환)'
+                    : 'Coding Agent 모드 (클릭하여 Editor Agent로 전환)'
+                }
+                className={
+                  editorAgentMode === 'coding'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-accent text-accent-foreground'
+                }
+              >
+                <Bot className="h-5 w-5" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -151,15 +175,17 @@ export function Sidebar({
             >
               <FolderOpen className="h-5 w-5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setEditorViewMode('search')}
-              title="전체 검색"
-              className={editorViewMode === 'search' ? 'bg-accent' : ''}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
+            {editorViewMode !== 'chat' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setEditorViewMode('search')}
+                title="전체 검색"
+                className={editorViewMode === 'search' ? 'bg-accent' : ''}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            )}
           </div>
         )}
       </div>
