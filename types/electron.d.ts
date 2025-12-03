@@ -354,6 +354,29 @@ interface VectorSearchResult {
   metadata?: Record<string, unknown>;
 }
 
+// VectorDB 검색 옵션 타입
+interface VectorSearchOptions {
+  // 필터링 옵션
+  folderPath?: string;
+  tags?: string[];
+  category?: string;
+  source?: string;
+
+  // 부스팅 옵션
+  folderPathBoost?: number;
+  titleBoost?: number;
+  tagBoost?: number;
+
+  // 하이브리드 검색
+  useHybridSearch?: boolean;
+  hybridAlpha?: number;
+
+  // 기타
+  includeAllMetadata?: boolean;
+  recentBoost?: boolean;
+  recentBoostDecay?: number;
+}
+
 // Export 데이터 타입
 interface ExportData {
   version: string;
@@ -375,7 +398,12 @@ interface VectorDBAPI {
   deleteIndex: (name: string) => Promise<IPCResponse>;
   indexExists: (name: string) => Promise<IPCResponse<boolean>>;
   insert: (documents: VectorDocument[]) => Promise<IPCResponse>;
-  search: (queryEmbedding: number[], k: number) => Promise<IPCResponse<VectorSearchResult[]>>;
+  search: (
+    queryEmbedding: number[],
+    k: number,
+    options?: VectorSearchOptions,
+    queryText?: string
+  ) => Promise<IPCResponse<VectorSearchResult[]>>;
   delete: (ids: string[]) => Promise<IPCResponse>;
   updateMetadata: (id: string, metadata: Record<string, any>) => Promise<IPCResponse>;
   count: () => Promise<IPCResponse<number>>;
@@ -971,6 +999,7 @@ export type {
   VectorDBAPI,
   VectorDocument,
   VectorSearchResult,
+  VectorSearchOptions,
   FileAPI,
   FileNode,
   FileSystemAPI,

@@ -87,11 +87,12 @@ export function setupVectorDBHandlers() {
         includeAllMetadata?: boolean;
         recentBoost?: boolean;
         recentBoostDecay?: number;
-      }
+      },
+      queryText?: string
     ) => {
       try {
-        logger.debug('Searching VectorDB', { k, options });
-        const results = await vectorDBService.searchByVector(queryEmbedding, k, options);
+        logger.debug('Searching VectorDB', { k, options, hasQueryText: !!queryText });
+        const results = await vectorDBService.searchByVector(queryEmbedding, k, options, queryText);
         logger.debug('VectorDB search completed', { resultCount: results.length });
         return { success: true, data: results };
       } catch (error) {

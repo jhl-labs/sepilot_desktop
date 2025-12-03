@@ -223,8 +223,8 @@ const electronAPI = {
     deleteIndex: (name: string) => ipcRenderer.invoke('vectordb-delete-index', name),
     indexExists: (name: string) => ipcRenderer.invoke('vectordb-index-exists', name),
     insert: (documents: any[]) => ipcRenderer.invoke('vectordb-insert', documents),
-    search: (queryEmbedding: number[], k: number) =>
-      ipcRenderer.invoke('vectordb-search', queryEmbedding, k),
+    search: (queryEmbedding: number[], k: number, options?: any, queryText?: string) =>
+      ipcRenderer.invoke('vectordb-search', queryEmbedding, k, options, queryText),
     delete: (ids: string[]) => ipcRenderer.invoke('vectordb-delete', ids),
     updateMetadata: (id: string, metadata: Record<string, any>) =>
       ipcRenderer.invoke('vectordb-update-metadata', id, metadata),

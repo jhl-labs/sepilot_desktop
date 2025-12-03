@@ -204,7 +204,8 @@ class VectorDBService {
   async searchByVector(
     queryEmbedding: number[],
     k: number,
-    options?: SearchOptions
+    options?: SearchOptions,
+    queryText?: string
   ): Promise<SearchResult[]> {
     if (!this.db || !this.config) throw new Error('Database not initialized');
 
@@ -289,9 +290,10 @@ class VectorDBService {
       const vectorScore = this.cosineSimilarity(queryEmbedding, embedding);
 
       // BM25 유사도 (키워드 기반)
-      const bm25Score = opts.useHybridSearch
-        ? this.simpleBM25Score(content, metadata, queryEmbedding)
-        : 0;
+      const bm25Score =
+        opts.useHybridSearch && queryText
+          ? this.calculateBM25Score(queryText, content, metadata)
+          : 0;
 
       // 하이브리드 점수 계산
       let hybridScore = opts.useHybridSearch
@@ -301,8 +303,8 @@ class VectorDBService {
       // 3단계: 메타데이터 기반 점수 부스팅
       let boostMultiplier = 1.0;
 
-      // 제목 키워드 매칭 (간단한 키워드 포함 체크)
-      if (metadata.title && this.containsKeywords(metadata.title, queryEmbedding)) {
+      // 제목 키워드 매칭 (쿼리 텍스트로 키워드 체크)
+      if (queryText && metadata.title && this.containsKeywords(metadata.title, queryText)) {
         boostMultiplier += opts.titleBoost;
       }
 
@@ -370,14 +372,80 @@ class VectorDBService {
   }
 
   /**
-   * 간단한 키워드 포함 체크 (임베딩 기반 추정)
-   * 실제로는 쿼리 텍스트가 필요하므로, 향후 개선 필요
+   * BM25 점수 계산 (키워드 기반 검색)
+   * @param queryText 검색 쿼리 텍스트
+   * @param content 문서 내용
+   * @param metadata 문서 메타데이터
+   * @returns BM25 점수 (0~1 정규화)
    */
-  private containsKeywords(_text: string, _queryEmbedding: number[]): boolean {
-    // 임베딩에서 키워드를 추출할 수 없으므로,
-    // 향후 쿼리 텍스트를 함께 전달받아 개선 필요
-    // 현재는 항상 false 반환
-    return false;
+  private calculateBM25Score(
+    queryText: string,
+    content: string,
+    metadata: Record<string, any>
+  ): number {
+    const k1 = 1.5; // Term frequency saturation parameter
+    const b = 0.75; // Length normalization parameter
+
+    // 쿼리와 문서를 토큰화
+    const queryTerms = this.tokenize(queryText);
+    const docText = `${metadata.title || ''} ${content}`.toLowerCase();
+    const docTerms = this.tokenize(docText);
+
+    if (queryTerms.length === 0 || docTerms.length === 0) {
+      return 0;
+    }
+
+    const docLength = docTerms.length;
+    const avgDocLength = 100; // 평균 문서 길이 추정값
+
+    let score = 0;
+
+    // 각 쿼리 term에 대해 BM25 점수 계산
+    for (const term of queryTerms) {
+      // Term frequency (TF)
+      const tf = docTerms.filter((t) => t === term).length;
+
+      if (tf === 0) {
+        continue;
+      }
+
+      // IDF는 단순화 (전체 문서 수를 모르므로 1.0으로 고정)
+      const idf = 1.0;
+
+      // BM25 공식
+      const numerator = tf * (k1 + 1);
+      const denominator = tf + k1 * (1 - b + b * (docLength / avgDocLength));
+
+      score += (idf * numerator) / denominator;
+    }
+
+    // 쿼리 term 수로 정규화하여 0~1 범위로 변환
+    return Math.min(score / queryTerms.length, 1.0);
+  }
+
+  /**
+   * 텍스트를 토큰으로 분할 (한글 지원)
+   * @param text 토큰화할 텍스트
+   * @returns 토큰 배열
+   */
+  private tokenize(text: string): string[] {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\sㄱ-ㅎ가-힣]/g, ' ') // 영문, 숫자, 한글만 유지
+      .split(/\s+/)
+      .filter((token) => token.length > 1); // 1글자 토큰 제거
+  }
+
+  /**
+   * 키워드 포함 여부 체크
+   * @param text 검사할 텍스트
+   * @param queryText 쿼리 텍스트
+   * @returns 키워드 포함 여부
+   */
+  private containsKeywords(text: string, queryText: string): boolean {
+    const textLower = text.toLowerCase();
+    const queryTerms = this.tokenize(queryText);
+    return queryTerms.some((term) => textLower.includes(term));
   }
 
   async delete(ids: string[]): Promise<void> {
