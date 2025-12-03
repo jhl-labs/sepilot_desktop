@@ -18,22 +18,18 @@ export class ChatAgentGraph {
     const actualMaxIterations = Math.max(maxIterations, 50);
     let state = { ...initialState };
     let iterations = 0;
-    let imageGenerationCompleted = false;
 
     while (iterations < actualMaxIterations) {
-      // 이미지 생성이 완료되고 다음 iteration이면 종료
-      if (imageGenerationCompleted && iterations > 0) {
-        console.log(
-          '[AgentGraph.invoke] Image generation completed and final response generated, ending loop'
-        );
-        break;
-      }
-
       // 1. generate 노드 실행
       const generateResult = await generateWithToolsNode(state);
       state = {
         ...state,
         messages: [...state.messages, ...(generateResult.messages || [])],
+        toolResults: generateResult.toolResults || state.toolResults,
+        generatedImages:
+          generateResult.generatedImages !== undefined
+            ? generateResult.generatedImages
+            : state.generatedImages,
       };
 
       // 2. 도구 사용 여부 판단
@@ -52,17 +48,6 @@ export class ChatAgentGraph {
             ? [...(state.generatedImages || []), ...(toolsResult.generatedImages || [])]
             : state.generatedImages,
       };
-
-      // 이미지 생성 도구가 성공적으로 실행되었으면 플래그 설정
-      const hasSuccessfulImageGeneration = toolsResult.toolResults?.some(
-        (result) => result.toolName === 'generate_image' && !result.error
-      );
-      if (hasSuccessfulImageGeneration) {
-        console.log(
-          '[AgentGraph.invoke] Image generation completed, will generate final response and end'
-        );
-        imageGenerationCompleted = true;
-      }
 
       iterations++;
     }
@@ -104,14 +89,6 @@ export class ChatAgentGraph {
         toolResultsCount: state.toolResults.length,
         imageGenerationCompleted,
       });
-
-      // 이미지 생성이 완료되고 다음 iteration이면 종료
-      if (imageGenerationCompleted && iterations > 0) {
-        console.log(
-          '[AgentGraph] Image generation completed and final response generated, ending loop'
-        );
-        break;
-      }
 
       // 1. generate with tools (non-streaming for now)
       // TODO: Implement proper streaming with tool calls support
