@@ -546,6 +546,33 @@ interface GitHubSyncAPI {
   }>;
 }
 
+// Team Docs API (여러 GitHub Repo 동기화)
+interface TeamDocsAPI {
+  testConnection: (config: import('./index').TeamDocsConfig) => Promise<GitHubSyncResult>;
+  syncDocuments: (config: import('./index').TeamDocsConfig) => Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      totalDocuments: number;
+      indexedDocuments: number;
+    };
+    error?: string;
+  }>;
+  syncAll: () => Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      totalSynced: number;
+      results: Array<{
+        teamName: string;
+        success: boolean;
+        message: string;
+      }>;
+    };
+    error?: string;
+  }>;
+}
+
 // Error Reporting API
 interface ErrorReportingAPI {
   send: (
@@ -898,6 +925,7 @@ interface ElectronAPI {
   fs: FileSystemAPI;
   github: GitHubAPI;
   githubSync: GitHubSyncAPI; // 새로운 Token 기반 Sync API
+  teamDocs: TeamDocsAPI; // Team Docs 동기화 API (여러 GitHub Repo)
   errorReporting: ErrorReportingAPI; // 에러 자동 리포팅 API
   shell: ShellAPI;
   embeddings: EmbeddingsAPI;
@@ -952,6 +980,7 @@ export type {
   GitHubRepository,
   GitHubSyncAPI,
   GitHubSyncResult,
+  TeamDocsAPI,
   ErrorReportingAPI,
   ShellAPI,
   EmbeddingsAPI,

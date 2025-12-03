@@ -17,6 +17,7 @@ import {
   QuickInputConfig,
   GitHubOAuthConfig,
   GitHubSyncConfig,
+  TeamDocsConfig,
 } from '@/types';
 import { initializeLLMClient } from '@/lib/llm/client';
 import { VectorDBSettings } from '@/components/rag/VectorDBSettings';
@@ -26,6 +27,7 @@ import { initializeEmbedding } from '@/lib/vectordb/embeddings/client';
 import { isElectron } from '@/lib/platform';
 import { configureWebLLMClient } from '@/lib/llm/web-client';
 import { GitHubSyncSettings } from '@/components/settings/GitHubSyncSettings';
+import { TeamDocsSettings } from '@/components/settings/TeamDocsSettings';
 import { BackupRestoreSettings } from '@/components/settings/BackupRestoreSettings';
 import { LLMSettingsTab } from './LLMSettingsTab';
 import { NetworkSettingsTab } from './NetworkSettingsTab';
@@ -67,6 +69,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [networkConfig, setNetworkConfig] = useState<NetworkConfig>(createDefaultNetworkConfig());
   const [githubConfig, setGithubConfig] = useState<GitHubOAuthConfig | null>(null);
   const [githubSyncConfig, setGithubSyncConfig] = useState<GitHubSyncConfig | null>(null);
+  const [teamDocsConfigs, setTeamDocsConfigs] = useState<TeamDocsConfig[]>([]);
   const [quickInputConfig, setQuickInputConfig] = useState<QuickInputConfig>(
     createDefaultQuickInputConfig()
   );
@@ -136,6 +139,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               comfyUI: result.data.comfyUI ? mergeComfyConfig(result.data.comfyUI) : undefined,
               github: result.data.github,
               githubSync: result.data.githubSync,
+              teamDocs: result.data.teamDocs ?? [],
               quickInput: result.data.quickInput ?? createDefaultQuickInputConfig(),
             };
             setAppConfigSnapshot(normalizedConfig);
@@ -145,6 +149,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             setImageGenConfig(imageGenFromDB ?? createDefaultImageGenConfig());
             setGithubConfig(normalizedConfig.github ?? null);
             setGithubSyncConfig(normalizedConfig.githubSync ?? null);
+            setTeamDocsConfigs(normalizedConfig.teamDocs ?? []);
             setQuickInputConfig(normalizedConfig.quickInput ?? createDefaultQuickInputConfig());
 
             // VectorDB 설정 로드 (DB에서)
@@ -884,6 +889,32 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                       window.dispatchEvent(
                         new CustomEvent('sepilot:config-updated', {
                           detail: { githubSync: newConfig },
+                        })
+                      );
+                    }}
+                  />
+                )}
+
+                {activeTab === 'team-docs' && (
+                  <TeamDocsSettings
+                    teamDocs={teamDocsConfigs}
+                    onSave={async (newConfigs) => {
+                      setTeamDocsConfigs(newConfigs);
+                      let savedConfig: AppConfig | null = null;
+                      if (isElectron() && window.electronAPI) {
+                        savedConfig = await persistAppConfig({ teamDocs: newConfigs });
+                      }
+                      if (!savedConfig) {
+                        const currentAppConfig = localStorage.getItem('sepilot_app_config');
+                        const appConfig = currentAppConfig ? JSON.parse(currentAppConfig) : {};
+                        appConfig.teamDocs = newConfigs;
+                        localStorage.setItem('sepilot_app_config', JSON.stringify(appConfig));
+                      }
+
+                      // Notify other components about Team Docs config update
+                      window.dispatchEvent(
+                        new CustomEvent('sepilot:config-updated', {
+                          detail: { teamDocs: newConfigs },
                         })
                       );
                     }}

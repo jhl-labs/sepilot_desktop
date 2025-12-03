@@ -8,6 +8,7 @@ import {
   Image,
   Plug,
   Github,
+  Users,
   HardDrive,
   Zap,
   FileCode,
@@ -21,6 +22,7 @@ export type SettingSection =
   | 'imagegen'
   | 'mcp'
   | 'github'
+  | 'team-docs'
   | 'backup'
   | 'quickinput'
   | 'editor'
@@ -112,7 +114,13 @@ const settingsCategories: SettingsCategory[] = [
         id: 'github',
         label: 'GitHub Sync',
         icon: Github,
-        description: 'GitHub 레포지토리 동기화',
+        description: 'Personal Docs 동기화',
+      },
+      {
+        id: 'team-docs',
+        label: 'Team Docs',
+        icon: Users,
+        description: '팀 문서 동기화 (다중 Repo)',
       },
       {
         id: 'backup',

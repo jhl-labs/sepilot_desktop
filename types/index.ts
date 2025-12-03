@@ -304,6 +304,29 @@ export interface GitHubSyncConfig {
 }
 
 /**
+ * Team Docs Configuration: 여러 GitHub Repo에서 문서를 동기화
+ */
+export interface TeamDocsConfig {
+  id: string; // 고유 ID
+  name: string; // 팀 이름 (예: "Frontend Team", "Backend Team")
+  description?: string; // 설명
+  serverType?: 'github.com' | 'ghes'; // 기본값: 'github.com'
+  ghesUrl?: string; // GHES URL
+  token: string; // GitHub Personal Access Token
+  owner: string; // Organization 또는 User name
+  repo: string; // Repository name
+  branch?: string; // 기본값: 'main'
+  docsPath?: string; // 문서 경로 (기본값: 'sepilot/documents')
+  enabled: boolean; // 활성화 여부
+  autoSync?: boolean; // 자동 동기화 여부
+  syncInterval?: number; // 자동 동기화 간격 (분 단위)
+  lastSyncAt?: number; // 마지막 동기화 시간
+  lastSyncStatus?: 'success' | 'error'; // 마지막 동기화 상태
+  lastSyncError?: string; // 마지막 동기화 에러
+  networkConfig?: NetworkConfig; // 네트워크 설정
+}
+
+/**
  * Error Report Data: GitHub Issue로 전송될 에러 정보
  */
 export interface ErrorReportData {
@@ -359,7 +382,8 @@ export interface AppConfig {
   imageGen?: ImageGenConfig; // Image generation (ComfyUI, NanoBanana)
   comfyUI?: ComfyUIConfig; // @deprecated - use imageGen instead (for backward compatibility)
   github?: GitHubOAuthConfig; // 이전 버전 호환성
-  githubSync?: GitHubSyncConfig; // 새로운 Token 기반 동기화
+  githubSync?: GitHubSyncConfig; // 새로운 Token 기반 동기화 (Personal Docs)
+  teamDocs?: TeamDocsConfig[]; // Team Docs 설정 (여러 GitHub Repo)
   quickInput?: QuickInputConfig;
   theme?: 'light' | 'dark' | 'system';
 }

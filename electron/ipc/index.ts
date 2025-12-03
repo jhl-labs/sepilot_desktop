@@ -15,6 +15,7 @@ import { setupVectorDBHandlers } from './handlers/vectordb';
 import { registerFileHandlers } from './handlers/file';
 import { setupGitHubHandlers } from './handlers/github';
 import { setupGitHubSyncHandlers } from './handlers/github-sync';
+import { setupTeamDocsHandlers } from './handlers/team-docs';
 import { setupEmbeddingsHandlers } from './handlers/embeddings';
 import { setupComfyUIHandlers } from './handlers/comfyui';
 import { setupUpdateHandlers } from './handlers/update';
@@ -44,6 +45,7 @@ export function setupIpcHandlers(mainWindow?: BrowserWindow) {
   registerFileHandlers();
   setupGitHubHandlers();
   setupGitHubSyncHandlers();
+  setupTeamDocsHandlers();
   setupEmbeddingsHandlers();
   setupComfyUIHandlers();
   setupUpdateHandlers();

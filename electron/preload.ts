@@ -332,6 +332,13 @@ const electronAPI = {
     pullDocuments: (config: any) => ipcRenderer.invoke('github-sync-pull-documents', config),
   },
 
+  // Team Docs operations (여러 GitHub Repo 동기화)
+  teamDocs: {
+    testConnection: (config: any) => ipcRenderer.invoke('team-docs-test-connection', config),
+    syncDocuments: (config: any) => ipcRenderer.invoke('team-docs-sync-documents', config),
+    syncAll: () => ipcRenderer.invoke('team-docs-sync-all'),
+  },
+
   // Error Reporting operations
   errorReporting: {
     send: (errorData: any) => ipcRenderer.invoke('error-reporting-send', errorData),
