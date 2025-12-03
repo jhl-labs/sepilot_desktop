@@ -452,6 +452,25 @@ export function useMessageStreaming() {
               const result = await window.electronAPI.config.load();
               if (result.success && result.data) {
                 imageGenConfig = result.data.imageGen || null;
+
+                // Override provider if user selected a specific one
+                const selectedProvider = useChatStore.getState().selectedImageGenProvider;
+                if (
+                  imageGenConfig &&
+                  selectedProvider &&
+                  imageGenConfig.comfyui?.enabled &&
+                  imageGenConfig.nanobanana?.enabled
+                ) {
+                  imageGenConfig = {
+                    ...imageGenConfig,
+                    provider: selectedProvider,
+                  };
+                  console.log(
+                    '[useMessageStreaming] Overriding imageGen provider:',
+                    selectedProvider
+                  );
+                }
+
                 const networkConfigStr = localStorage.getItem('sepilot_network_config');
                 networkConfig = networkConfigStr ? JSON.parse(networkConfigStr) : null;
               }

@@ -124,6 +124,11 @@ interface ChatStore {
   selectedImageGenProvider: 'comfyui' | 'nanobanana' | null; // User-selected provider for this session
   workingDirectory: string | null; // Coding Agent working directory
 
+  // Saved settings for image generation mode (restored when disabling image generation)
+  savedThinkingMode: ThinkingMode | null;
+  savedEnableRAG: boolean | null;
+  savedEnableTools: boolean | null;
+
   // Tool Approval (Human-in-the-loop)
   pendingToolApproval: PendingToolApproval | null;
   alwaysApproveToolsForSession: boolean; // Session-wide auto-approval (like Claude Code)
@@ -332,6 +337,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   enableImageGeneration: false,
   selectedImageGenProvider: null,
   workingDirectory: null,
+
+  // Saved settings for image generation mode
+  savedThinkingMode: null,
+  savedEnableRAG: null,
+  savedEnableTools: null,
 
   // Tool Approval (Human-in-the-loop)
   pendingToolApproval: null,
@@ -1143,7 +1153,32 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setEnableImageGeneration: (enable: boolean) => {
-    set({ enableImageGeneration: enable });
+    const state = get();
+    if (enable) {
+      // Save current settings before enabling image generation mode
+      set({
+        savedThinkingMode: state.thinkingMode,
+        savedEnableRAG: state.enableRAG,
+        savedEnableTools: state.enableTools,
+        // Force settings for image generation mode
+        thinkingMode: 'instant',
+        enableRAG: false,
+        enableTools: true, // Keep tools enabled (only generate_image will be used)
+        enableImageGeneration: true,
+      });
+    } else {
+      // Restore previous settings when disabling image generation mode
+      set({
+        thinkingMode: state.savedThinkingMode || 'instant',
+        enableRAG: state.savedEnableRAG ?? false,
+        enableTools: state.savedEnableTools ?? false,
+        enableImageGeneration: false,
+        // Clear saved settings
+        savedThinkingMode: null,
+        savedEnableRAG: null,
+        savedEnableTools: null,
+      });
+    }
   },
 
   setSelectedImageGenProvider: (provider: 'comfyui' | 'nanobanana' | null) => {

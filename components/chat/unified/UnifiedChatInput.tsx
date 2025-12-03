@@ -140,9 +140,8 @@ export function UnifiedChatInput({
   // Local state
   const [personaAutocompleteIndex, setPersonaAutocompleteIndex] = useState(0);
   const [tools, _setTools] = useState<ToolInfo[]>([]);
-  const [selectedImageGenProvider, setSelectedImageGenProvider] = useState<
-    'comfyui' | 'nanobanana'
-  >('comfyui');
+  const [imageGenConfig, setImageGenConfig] = useState<any>(null);
+  const { selectedImageGenProvider, setSelectedImageGenProvider } = useChatStore();
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
   // Width-based responsive layout
@@ -173,6 +172,34 @@ export function UnifiedChatInput({
 
   // Override layoutMode with forced compact mode
   const effectiveLayoutMode = style?.compact === true ? 'ultra-compact' : layoutMode;
+
+  // Load imageGen config from IPC (Main mode only)
+  useEffect(() => {
+    if (mode !== 'main' || !isElectron() || !window.electronAPI?.config) {
+      return;
+    }
+
+    const loadImageGenConfig = async () => {
+      try {
+        const result = await window.electronAPI.config.load();
+        if (result.success && result.data?.imageGen) {
+          setImageGenConfig(result.data.imageGen);
+          // Set default provider if both are enabled
+          if (
+            result.data.imageGen.comfyui?.enabled &&
+            result.data.imageGen.nanobanana?.enabled &&
+            !selectedImageGenProvider
+          ) {
+            setSelectedImageGenProvider(result.data.imageGen.provider);
+          }
+        }
+      } catch (error) {
+        console.error('[UnifiedChatInput] Failed to load imageGen config:', error);
+      }
+    };
+
+    loadImageGenConfig();
+  }, [mode, selectedImageGenProvider, setSelectedImageGenProvider]);
 
   // Load tools from IPC (all modes, but filtered by mode)
   useEffect(() => {
@@ -573,7 +600,7 @@ export function UnifiedChatInput({
                     variant="ghost"
                     size="icon"
                     className="h-9 w-9 rounded-xl shrink-0"
-                    disabled={isStreaming}
+                    disabled={isStreaming || enableImageGeneration}
                   >
                     {thinkingModeIcon[thinkingMode as keyof typeof thinkingModeIcon] || (
                       <Brain className="h-4 w-4" />
@@ -660,7 +687,7 @@ export function UnifiedChatInput({
                 size="icon"
                 className="h-9 w-9 rounded-xl shrink-0"
                 onClick={() => setEnableRAG(!enableRAG)}
-                disabled={isStreaming}
+                disabled={isStreaming || enableImageGeneration}
               >
                 <BookText className="h-4 w-4" />
               </Button>
@@ -681,7 +708,7 @@ export function UnifiedChatInput({
                     variant={enableTools ? 'default' : 'ghost'}
                     size="icon"
                     className="h-9 w-9 rounded-xl shrink-0"
-                    disabled={isStreaming}
+                    disabled={isStreaming || enableImageGeneration}
                   >
                     <Wrench className="h-4 w-4" />
                     <ChevronDown className="h-3 w-3 ml-0.5 opacity-50" />
@@ -813,26 +840,34 @@ export function UnifiedChatInput({
                       </div>
                     </div>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <div className="px-2 py-1 text-xs text-muted-foreground">Provider</div>
-                  <DropdownMenuItem
-                    onClick={() => setSelectedImageGenProvider('comfyui')}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span>ComfyUI</span>
-                      {selectedImageGenProvider === 'comfyui' && <Check className="h-4 w-4" />}
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSelectedImageGenProvider('nanobanana')}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span>NanoBanana</span>
-                      {selectedImageGenProvider === 'nanobanana' && <Check className="h-4 w-4" />}
-                    </div>
-                  </DropdownMenuItem>
+
+                  {/* Provider selection - only show if both providers are enabled */}
+                  {imageGenConfig?.comfyui?.enabled && imageGenConfig?.nanobanana?.enabled && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1 text-xs text-muted-foreground">Provider</div>
+                      <DropdownMenuItem
+                        onClick={() => setSelectedImageGenProvider('comfyui')}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span>ComfyUI</span>
+                          {selectedImageGenProvider === 'comfyui' && <Check className="h-4 w-4" />}
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setSelectedImageGenProvider('nanobanana')}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span>NanoBanana</span>
+                          {selectedImageGenProvider === 'nanobanana' && (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </div>
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               <TooltipContent side="top">

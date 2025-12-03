@@ -178,17 +178,21 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
     }
 
     // MCP 도구를 OpenAI compatible tools 형식으로 변환
-    const toolsForLLM = availableTools.map((tool) => ({
-      type: 'function' as const,
-      function: {
-        name: tool.name,
-        description: tool.description || `Tool: ${tool.name}`,
-        parameters: tool.inputSchema || {
-          type: 'object',
-          properties: {},
-        },
-      },
-    }));
+    // Note: Image generation mode일 때는 MCP tools를 포함하지 않음 (generate_image만 사용)
+    const isImageGenerationMode = graphConfig?.enableImageGeneration === true;
+    const toolsForLLM = isImageGenerationMode
+      ? []
+      : availableTools.map((tool) => ({
+          type: 'function' as const,
+          function: {
+            name: tool.name,
+            description: tool.description || `Tool: ${tool.name}`,
+            parameters: tool.inputSchema || {
+              type: 'object',
+              properties: {},
+            },
+          },
+        }));
 
     // 이미지 생성 도구 추가 (GraphConfig 설정 확인)
     // Note: isComfyUIEnabled()는 Renderer Process에서만 동작하므로,
