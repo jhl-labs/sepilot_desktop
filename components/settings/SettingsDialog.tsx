@@ -36,7 +36,6 @@ import { SettingsSidebar, SettingSection } from './SettingsSidebar';
 import {
   createDefaultLLMConfig,
   createDefaultNetworkConfig,
-  createDefaultComfyUIConfig,
   createDefaultImageGenConfig,
   mergeLLMConfig,
   mergeNetworkConfig,

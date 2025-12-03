@@ -40,6 +40,10 @@ interface SyncItemConfig {
 
 export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) {
   // Form states
+  const [serverType, setServerType] = useState<'github.com' | 'ghes'>(
+    config?.serverType || 'github.com'
+  );
+  const [ghesUrl, setGhesUrl] = useState(config?.ghesUrl || '');
   const [token, setToken] = useState(config?.token || '');
   const [owner, setOwner] = useState(config?.owner || '');
   const [repo, setRepo] = useState(config?.repo || '');
@@ -94,6 +98,8 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
 
   useEffect(() => {
     if (config) {
+      setServerType(config.serverType || 'github.com');
+      setGhesUrl(config.ghesUrl || '');
       setToken(config.token || '');
       setOwner(config.owner || '');
       setRepo(config.repo || '');
@@ -129,11 +135,18 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       return;
     }
 
+    if (serverType === 'ghes' && !ghesUrl) {
+      setMessage({ type: 'error', text: 'GHES URL을 입력해주세요.' });
+      return;
+    }
+
     setIsTesting(true);
     setMessage(null);
 
     try {
       const testConfig: GitHubSyncConfig = {
+        serverType,
+        ghesUrl: serverType === 'ghes' ? ghesUrl : undefined,
         token,
         owner,
         repo,
@@ -177,11 +190,18 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       return;
     }
 
+    if (serverType === 'ghes' && !ghesUrl) {
+      setMessage({ type: 'error', text: 'GHES URL을 입력해주세요.' });
+      return;
+    }
+
     setIsSaving(true);
     setMessage(null);
 
     try {
       const newConfig: GitHubSyncConfig = {
+        serverType,
+        ghesUrl: serverType === 'ghes' ? ghesUrl : undefined,
         token,
         owner,
         repo,
@@ -213,11 +233,18 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       return;
     }
 
+    if (serverType === 'ghes' && !ghesUrl) {
+      setMessage({ type: 'error', text: 'GHES URL을 입력해주세요.' });
+      return;
+    }
+
     setIsSyncing(type);
     setMessage(null);
 
     try {
       const syncConfig: GitHubSyncConfig = {
+        serverType,
+        ghesUrl: serverType === 'ghes' ? ghesUrl : undefined,
         token,
         owner,
         repo,
@@ -328,6 +355,38 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="serverType">Server Type</Label>
+              <select
+                id="serverType"
+                value={serverType}
+                onChange={(e) => setServerType(e.target.value as 'github.com' | 'ghes')}
+                className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
+              >
+                <option value="github.com" className="bg-background text-foreground">
+                  GitHub.com
+                </option>
+                <option value="ghes" className="bg-background text-foreground">
+                  GitHub Enterprise Server (GHES)
+                </option>
+              </select>
+            </div>
+
+            {serverType === 'ghes' && (
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="ghesUrl">GHES URL</Label>
+                <Input
+                  id="ghesUrl"
+                  value={ghesUrl}
+                  onChange={(e) => setGhesUrl(e.target.value)}
+                  placeholder="https://github.company.com"
+                />
+                <p className="text-xs text-muted-foreground">
+                  GHES 인스턴스의 기본 URL을 입력하세요 (예: https://github.company.com)
+                </p>
+              </div>
+            )}
+
             <div className="col-span-2 space-y-2">
               <Label htmlFor="token">GitHub Personal Access Token</Label>
               <Input
@@ -569,17 +628,13 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
           </div>
 
           <div className="rounded-md bg-blue-500/10 border border-blue-500/20 px-4 py-3 text-sm">
-            <p className="font-medium mb-2 text-blue-600 dark:text-blue-500">
-              💡 에러 리포팅 정보
-            </p>
+            <p className="font-medium mb-2 text-blue-600 dark:text-blue-500">💡 에러 리포팅 정보</p>
             <ul className="space-y-1 text-xs list-disc list-inside text-blue-700 dark:text-blue-400">
               <li>에러 메시지와 스택 트레이스가 GitHub Issue로 전송됩니다.</li>
               <li>앱 버전, OS 플랫폼 등 기본 시스템 정보가 포함됩니다.</li>
               <li>API 키, 토큰 등 민감한 정보는 절대 전송되지 않습니다.</li>
               <li>프로그램 개선을 위해 매우 중요한 정보입니다.</li>
-              <li>
-                이 기능은 GitHub Token이 설정된 경우에만 사용할 수 있습니다.
-              </li>
+              <li>이 기능은 GitHub Token이 설정된 경우에만 사용할 수 있습니다.</li>
             </ul>
           </div>
         </CardContent>

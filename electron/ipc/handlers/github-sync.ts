@@ -10,6 +10,22 @@ import { generateMasterKey } from '../../../lib/github/encryption';
 import { databaseService } from '../../services/database';
 import { getAllDocuments, exportDocuments } from '../../../lib/vectordb/client';
 
+/**
+ * Network 설정을 GitHubSyncConfig에 적용하는 헬퍼 함수
+ */
+function applyNetworkConfig(config: GitHubSyncConfig): GitHubSyncConfig {
+  if (!config.networkConfig) {
+    const appConfigStr = databaseService.getSetting('app_config');
+    if (appConfigStr) {
+      const appConfig: AppConfig = JSON.parse(appConfigStr);
+      if (appConfig.network) {
+        config.networkConfig = appConfig.network;
+      }
+    }
+  }
+  return config;
+}
+
 export function setupGitHubSyncHandlers() {
   /**
    * 마스터 암호화 키 생성 또는 가져오기
@@ -42,6 +58,7 @@ export function setupGitHubSyncHandlers() {
    */
   ipcMain.handle('github-sync-test-connection', async (_event, config: GitHubSyncConfig) => {
     try {
+      config = applyNetworkConfig(config);
       const client = new GitHubSyncClient(config);
       const result = await client.testConnection();
 
@@ -61,6 +78,8 @@ export function setupGitHubSyncHandlers() {
    */
   ipcMain.handle('github-sync-settings', async (_event, config: GitHubSyncConfig) => {
     try {
+      config = applyNetworkConfig(config);
+
       // 마스터 키 가져오기
       const masterKey = databaseService.getSetting('github_sync_master_key');
       if (!masterKey) {
@@ -110,6 +129,8 @@ export function setupGitHubSyncHandlers() {
    */
   ipcMain.handle('github-sync-documents', async (_event, config: GitHubSyncConfig) => {
     try {
+      config = applyNetworkConfig(config);
+
       // VectorDB에서 모든 문서 가져오기
       const documents = await getAllDocuments();
 
@@ -152,6 +173,8 @@ export function setupGitHubSyncHandlers() {
    */
   ipcMain.handle('github-sync-images', async (_event, config: GitHubSyncConfig) => {
     try {
+      config = applyNetworkConfig(config);
+
       // 데이터베이스에서 모든 대화와 메시지 가져오기
       const conversations = databaseService.getAllConversations();
 
@@ -221,6 +244,8 @@ export function setupGitHubSyncHandlers() {
    */
   ipcMain.handle('github-sync-conversations', async (_event, config: GitHubSyncConfig) => {
     try {
+      config = applyNetworkConfig(config);
+
       // 데이터베이스에서 모든 대화와 메시지 가져오기
       const conversations = databaseService.getAllConversations();
 
@@ -278,6 +303,8 @@ export function setupGitHubSyncHandlers() {
    */
   ipcMain.handle('github-sync-personas', async (_event, config: GitHubSyncConfig) => {
     try {
+      config = applyNetworkConfig(config);
+
       // 데이터베이스에서 모든 페르소나 가져오기
       const personas = databaseService.getAllPersonas();
 
@@ -320,6 +347,8 @@ export function setupGitHubSyncHandlers() {
    */
   ipcMain.handle('github-sync-all', async (_event, config: GitHubSyncConfig) => {
     try {
+      config = applyNetworkConfig(config);
+
       const results = {
         settings: { success: false, message: '' },
         documents: { success: false, message: '' },

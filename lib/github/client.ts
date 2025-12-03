@@ -7,6 +7,8 @@ import { Octokit } from '@octokit/rest';
 import type { GitHubSyncConfig, AppConfig } from '@/types';
 import { encryptData } from './encryption';
 import crypto from 'crypto';
+import https from 'https';
+import { ProxyAgent } from 'proxy-agent';
 
 export interface GitHubFileContent {
   sha: string;
@@ -31,8 +33,46 @@ export class GitHubSyncClient {
   private branch: string;
 
   constructor(config: GitHubSyncConfig) {
+    // GHES 지원: baseUrl 설정
+    const baseUrl =
+      config.serverType === 'ghes' && config.ghesUrl
+        ? `${config.ghesUrl}/api/v3`
+        : 'https://api.github.com';
+
+    // Network 설정 적용
+    const requestOptions: any = {};
+
+    if (config.networkConfig) {
+      // Proxy와 SSL 설정을 함께 처리
+      const agentOptions: any = {};
+
+      // SSL 검증 설정
+      if (config.networkConfig.ssl?.verify === false) {
+        agentOptions.rejectUnauthorized = false;
+      }
+
+      // Proxy 설정
+      if (config.networkConfig.proxy?.enabled && config.networkConfig.proxy.mode !== 'none') {
+        if (config.networkConfig.proxy.mode === 'manual' && config.networkConfig.proxy.url) {
+          // 수동 프록시 설정
+          requestOptions.agent = new ProxyAgent({
+            ...agentOptions,
+            getProxyForUrl: () => config.networkConfig!.proxy!.url!,
+          });
+        } else if (config.networkConfig.proxy.mode === 'system') {
+          // 시스템 프록시 (환경 변수에서 자동 감지)
+          requestOptions.agent = new ProxyAgent(agentOptions);
+        }
+      } else if (config.networkConfig.ssl?.verify === false) {
+        // Proxy 없이 SSL만 비활성화
+        requestOptions.agent = new https.Agent(agentOptions);
+      }
+    }
+
     this.octokit = new Octokit({
       auth: config.token,
+      baseUrl,
+      request: requestOptions,
     });
     this.owner = config.owner;
     this.repo = config.repo;

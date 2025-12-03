@@ -274,6 +274,8 @@ export interface MCPServerConfig {
  */
 export interface GitHubSyncConfig {
   // GitHub 연결 정보
+  serverType?: 'github.com' | 'ghes'; // 기본값: 'github.com'
+  ghesUrl?: string; // GHES URL (예: https://github.company.com)
   token: string; // GitHub Personal Access Token (encrypted)
   owner: string; // Organization 또는 User name
   repo: string; // Repository name
@@ -288,6 +290,9 @@ export interface GitHubSyncConfig {
 
   // 에러 리포팅 옵션
   errorReporting?: boolean; // 에러 자동 리포팅 여부
+
+  // 네트워크 설정 (프록시, SSL 검증)
+  networkConfig?: NetworkConfig;
 
   // 암호화 설정
   encryptionKey?: string; // 민감 정보 암호화 키 (자동 생성)
