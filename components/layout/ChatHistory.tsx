@@ -329,8 +329,8 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     setIsSearching(false);
   };
 
-  const handleSearchResultClick = (conversationId: string) => {
-    setActiveConversation(conversationId);
+  const handleSearchResultClick = async (conversationId: string) => {
+    await setActiveConversation(conversationId);
     handleClearSearch();
     onConversationClick?.();
   };
@@ -462,8 +462,8 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                     <ContextMenu>
                       <ContextMenuTrigger asChild>
                         <button
-                          onClick={() => {
-                            setActiveConversation(conversation.id);
+                          onClick={async () => {
+                            await setActiveConversation(conversation.id);
                             onConversationClick?.();
                           }}
                           className="flex flex-1 flex-col items-start px-3 py-2 text-left"

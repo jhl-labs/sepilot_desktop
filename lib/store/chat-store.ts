@@ -786,25 +786,51 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     const conversationSettings = conversation.chatSettings;
     const settingsUpdate: Partial<ChatStore> = {};
 
+    console.log('[setActiveConversation] Restoring settings for conversation:', id);
+    console.log('[setActiveConversation] Conversation chatSettings:', conversationSettings);
+
     if (conversationSettings) {
       if (conversationSettings.thinkingMode !== undefined) {
         settingsUpdate.thinkingMode = conversationSettings.thinkingMode;
+        console.log(
+          '[setActiveConversation] Restoring thinkingMode:',
+          conversationSettings.thinkingMode
+        );
       }
       if (conversationSettings.enableRAG !== undefined) {
         settingsUpdate.enableRAG = conversationSettings.enableRAG;
+        console.log('[setActiveConversation] Restoring enableRAG:', conversationSettings.enableRAG);
       }
       if (conversationSettings.enableTools !== undefined) {
         settingsUpdate.enableTools = conversationSettings.enableTools;
+        console.log(
+          '[setActiveConversation] Restoring enableTools:',
+          conversationSettings.enableTools
+        );
       }
       if (conversationSettings.enabledTools !== undefined) {
         settingsUpdate.enabledTools = new Set(conversationSettings.enabledTools);
+        console.log(
+          '[setActiveConversation] Restoring enabledTools:',
+          conversationSettings.enabledTools
+        );
       }
       if (conversationSettings.enableImageGeneration !== undefined) {
         settingsUpdate.enableImageGeneration = conversationSettings.enableImageGeneration;
+        console.log(
+          '[setActiveConversation] Restoring enableImageGeneration:',
+          conversationSettings.enableImageGeneration
+        );
       }
       if (conversationSettings.selectedImageGenProvider !== undefined) {
         settingsUpdate.selectedImageGenProvider = conversationSettings.selectedImageGenProvider;
+        console.log(
+          '[setActiveConversation] Restoring selectedImageGenProvider:',
+          conversationSettings.selectedImageGenProvider
+        );
       }
+    } else {
+      console.log('[setActiveConversation] No chatSettings found, using defaults');
     }
 
     // If we have cached messages (e.g., from background streaming), use them immediately
