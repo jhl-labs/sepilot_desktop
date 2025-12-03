@@ -95,7 +95,8 @@ export function SlidePreview() {
       bullets: ['핵심 메시지', '지원 근거', '시각 요소 제안'],
       accentColor,
       layout: 'title-body',
-      typography: 'Sora / Inter',
+      titleFont: 'Sora Bold',
+      bodyFont: 'Inter Regular',
       vibe: 'modern tech',
     });
   };
