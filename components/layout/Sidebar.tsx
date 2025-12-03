@@ -11,6 +11,7 @@ import {
   FolderOpen,
   Bot,
   Presentation,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -50,6 +51,7 @@ export function Sidebar({
     clearEditorChat,
     editorAgentMode,
     setEditorAgentMode,
+    refreshFileTree,
     clearPresentationSession,
     presentationViewMode,
     setPresentationViewMode,
@@ -191,6 +193,16 @@ export function Sidebar({
             >
               <FolderOpen className="h-5 w-5" />
             </Button>
+            {editorViewMode === 'files' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={refreshFileTree}
+                title="파일 목록 새로고침"
+              >
+                <RefreshCw className="h-5 w-5" />
+              </Button>
+            )}
             {editorViewMode !== 'chat' && (
               <Button
                 variant="ghost"

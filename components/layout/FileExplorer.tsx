@@ -33,8 +33,15 @@ import { isElectron } from '@/lib/platform';
 import path from 'path-browserify';
 
 export function FileExplorer() {
-  const { workingDirectory, setWorkingDirectory, openFile, activeFilePath, loadWorkingDirectory } =
-    useChatStore();
+  const {
+    workingDirectory,
+    setWorkingDirectory,
+    openFile,
+    activeFilePath,
+    loadWorkingDirectory,
+    fileTreeRefreshTrigger,
+    refreshFileTree,
+  } = useChatStore();
   const [fileTree, setFileTree] = useState<FileNode[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showNewItemDialog, setShowNewItemDialog] = useState(false);
@@ -52,7 +59,7 @@ export function FileExplorer() {
     loadWorkingDirectory();
   }, [loadWorkingDirectory]);
 
-  // Load file tree when working directory changes
+  // Load file tree when working directory changes or refresh is triggered
   useEffect(() => {
     if (!workingDirectory) {
       setFileTree(null);
@@ -60,7 +67,7 @@ export function FileExplorer() {
     }
 
     loadFileTree(workingDirectory);
-  }, [workingDirectory]);
+  }, [workingDirectory, fileTreeRefreshTrigger]);
 
   // Focus input when new item dialog opens
   useEffect(() => {
@@ -201,6 +208,7 @@ export function FileExplorer() {
           workingDirectory ? () => openNewItemDialog('folder', workingDirectory) : undefined
         }
         onPaste={workingDirectory ? handlePasteInRoot : undefined}
+        onRefresh={refreshFileTree}
       >
         <div className="flex-1 overflow-y-auto px-2 py-2">
           {isLoading ? (
@@ -222,7 +230,7 @@ export function FileExplorer() {
                   level={0}
                   isActive={activeFilePath === node.path}
                   onFileClick={handleFileClick}
-                  onRefresh={() => loadFileTree(workingDirectory!)}
+                  onRefresh={refreshFileTree}
                   parentPath={workingDirectory!}
                   onNewFile={(parentPath) => openNewItemDialog('file', parentPath)}
                   onNewFolder={(parentPath) => openNewItemDialog('folder', parentPath)}

@@ -246,6 +246,7 @@ export function FileTreeItem({
         onShowInFolder={handleShowInFolder}
         onOpenInTerminal={handleOpenInTerminal}
         onDuplicate={handleDuplicate}
+        onRefresh={onRefresh}
       >
         {isRenaming ? (
           <Input

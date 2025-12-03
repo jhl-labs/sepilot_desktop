@@ -23,6 +23,7 @@ import {
   FolderOpen,
   Terminal,
   Files,
+  RefreshCw,
 } from 'lucide-react';
 import {
   ContextMenu,
@@ -51,6 +52,7 @@ interface FileTreeContextMenuProps {
   onShowInFolder?: () => void;
   onOpenInTerminal?: () => void;
   onDuplicate?: () => void;
+  onRefresh?: () => void;
 }
 
 export function FileTreeContextMenu({
@@ -70,6 +72,7 @@ export function FileTreeContextMenu({
   onShowInFolder,
   onOpenInTerminal,
   onDuplicate,
+  onRefresh,
 }: FileTreeContextMenuProps) {
   const { canPaste } = useFileClipboard();
 
@@ -97,6 +100,16 @@ export function FileTreeContextMenu({
                   <ClipboardPaste className="mr-2 h-4 w-4" />
                   붙여넣기
                   <ContextMenuShortcut>Ctrl+V</ContextMenuShortcut>
+                </ContextMenuItem>
+              </>
+            )}
+            {onRefresh && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={onRefresh}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  새로고침
+                  <ContextMenuShortcut>F5</ContextMenuShortcut>
                 </ContextMenuItem>
               </>
             )}
@@ -206,6 +219,16 @@ export function FileTreeContextMenu({
                 삭제
                 <ContextMenuShortcut>Del</ContextMenuShortcut>
               </ContextMenuItem>
+            )}
+            {onRefresh && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={onRefresh}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  새로고침
+                  <ContextMenuShortcut>F5</ContextMenuShortcut>
+                </ContextMenuItem>
+              </>
             )}
           </>
         )}

@@ -170,6 +170,7 @@ interface ChatStore {
   editorChatMessages: Message[];
   editorViewMode: 'files' | 'search' | 'chat' | 'settings'; // files, search, chat, or settings view in Editor sidebar
   editorChatStreaming: boolean; // Editor chat streaming 상태 (백그라운드 스트리밍 지원)
+  fileTreeRefreshTrigger: number; // File tree refresh trigger (timestamp)
 
   // Editor Settings
   editorAppearanceConfig: EditorAppearanceConfig;
@@ -288,6 +289,7 @@ interface ChatStore {
   clearEditorChat: () => void;
   setEditorViewMode: (mode: 'files' | 'search' | 'chat' | 'settings') => void;
   setEditorChatStreaming: (isStreaming: boolean) => void;
+  refreshFileTree: () => void;
 
   // Actions - Editor Settings
   setEditorAppearanceConfig: (config: Partial<EditorAppearanceConfig>) => void;
@@ -453,6 +455,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   editorChatMessages: [],
   editorViewMode: 'files',
   editorChatStreaming: false,
+  fileTreeRefreshTrigger: 0,
 
   // Editor Appearance Config
   editorAppearanceConfig: (() => {
@@ -1784,6 +1787,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setEditorChatStreaming: (isStreaming: boolean) => {
     set({ editorChatStreaming: isStreaming });
+  },
+
+  refreshFileTree: () => {
+    set({ fileTreeRefreshTrigger: Date.now() });
   },
 
   // Editor Settings
