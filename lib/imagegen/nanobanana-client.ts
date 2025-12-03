@@ -183,10 +183,17 @@ async function pollForResults(
     const result = await response.json();
     console.log(`[NanoBanana] Poll response:`, JSON.stringify(result, null, 2));
 
-    // NanoBananaAPI.ai status codes: 0=GENERATING, 1=SUCCESS, 2=CREATE_TASK_FAILED, 3=GENERATE_FAILED
+    // NanoBananaAPI.ai response: { code: 200, data: { successFlag: 1, response: { resultImageUrl } } }
+    const successFlag = result.data?.successFlag ?? result.successFlag;
     const status = result.status ?? result.data?.status;
 
-    if (status === 1 || status === '1' || result.successFlag === true) {
+    if (
+      successFlag === 1 ||
+      successFlag === '1' ||
+      successFlag === true ||
+      status === 1 ||
+      status === '1'
+    ) {
       // Success - extract image URLs
       const images: string[] = [];
 
