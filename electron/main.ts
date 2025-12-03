@@ -49,8 +49,10 @@ function toggleMenuVisibility() {
   if (!mainWindow) return;
 
   isMenuVisible = !isMenuVisible;
+  logger.info(`[Main] Menu visibility toggled: ${isMenuVisible}`);
 
   if (isMenuVisible) {
+    logger.info('[Main] Setting application menu...');
     // Show default menu
     Menu.setApplicationMenu(
       Menu.buildFromTemplate([
@@ -141,8 +143,12 @@ function toggleMenuVisibility() {
             {
               label: 'Open Test Dashboard',
               click: async () => {
+                logger.info('[Main] Open Test Dashboard menu clicked');
                 if (mainWindow) {
+                  logger.info('[Main] Sending test:open-dashboard event');
                   mainWindow.webContents.send('test:open-dashboard');
+                } else {
+                  logger.error('[Main] mainWindow is null');
                 }
               },
             },
@@ -212,6 +218,7 @@ function createWindow() {
   // Register F10 key to toggle menu
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.type === 'keyDown' && input.key === 'F10') {
+      logger.info('[Main] F10 key pressed, toggling menu');
       event.preventDefault();
       toggleMenuVisibility();
     }
