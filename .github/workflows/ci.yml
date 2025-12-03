@@ -89,9 +89,8 @@ jobs:
       - name: Save frontend coverage
         if: always()
         run: |
-          mkdir -p coverage-frontend
-          if [ -f coverage/lcov.info ]; then
-            cp coverage/lcov.info coverage-frontend/lcov.info
+          if [ -d coverage ]; then
+            mv coverage coverage-frontend
           fi
 
       - name: Run backend tests with coverage
@@ -100,9 +99,8 @@ jobs:
       - name: Save backend coverage
         if: always()
         run: |
-          mkdir -p coverage-backend
-          if [ -f coverage/lcov.info ]; then
-            cp coverage/lcov.info coverage-backend/lcov.info
+          if [ -d coverage ]; then
+            mv coverage coverage-backend
           fi
 
       - name: Upload frontend coverage to Codecov

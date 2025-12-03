@@ -92,7 +92,7 @@ const config = {
     },
   ],
 
-  // Global coverage settings (merged from all projects)
+  // Global coverage settings
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
