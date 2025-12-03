@@ -3,20 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import http from 'http';
-
-type PresentationExportFormat = 'pptx' | 'pdf' | 'html';
-
-interface PresentationSlide {
-  id: string;
-  title: string;
-  description?: string;
-  bullets?: string[];
-  imagePrompt?: string;
-  imageUrl?: string;
-  imageData?: string; // base64 data url
-  notes?: string;
-  accentColor?: string;
-}
+import type { PresentationSlide, PresentationExportFormat } from '../../types/presentation';
 
 interface ExportPayload {
   slides: PresentationSlide[];
