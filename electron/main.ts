@@ -28,6 +28,7 @@ import { vectorDBService } from './services/vectordb';
 import { AppConfig } from '../types';
 import { initializeBuiltinTools } from '../lib/mcp/tools/executor';
 import { getPTYManager } from './services/pty-manager';
+import { isLLMConfigV2, convertV2ToV1 } from '../lib/config/llm-config-migration';
 
 let mainWindow: BrowserWindow | null = null;
 let quickInputWindow: BrowserWindow | null = null;
@@ -550,11 +551,30 @@ app.whenReady().then(async () => {
       const configStr = databaseService.getSetting('app_config');
       if (configStr) {
         const config: AppConfig = JSON.parse(configStr);
-        if (config.llm && config.llm.apiKey) {
-          initializeLLMClient(config.llm);
-          logger.info('LLM client initialized from saved config');
+
+        if (config.llm) {
+          // Convert V2 config to V1 if needed
+          let llmConfig = config.llm;
+          if (isLLMConfigV2(llmConfig)) {
+            logger.info('Converting LLM config V2 to V1 for initialization');
+            try {
+              llmConfig = convertV2ToV1(llmConfig);
+            } catch (error) {
+              logger.error('Failed to convert LLM config V2 to V1:', error);
+              logger.info('No LLM config initialized - conversion failed');
+              throw error;
+            }
+          }
+
+          // Check if we have a valid API key
+          if (llmConfig.apiKey) {
+            initializeLLMClient(llmConfig);
+            logger.info('LLM client initialized from saved config');
+          } else {
+            logger.info('No LLM config found or API key missing');
+          }
         } else {
-          logger.info('No LLM config found or API key missing');
+          logger.info('No LLM config found in app_config');
         }
 
         // Initialize VectorDB from saved config
