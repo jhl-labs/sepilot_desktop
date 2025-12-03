@@ -38,6 +38,10 @@ export class ChatAgentGraph {
       state = {
         ...state,
         toolResults: [...state.toolResults, ...(toolsResult.toolResults || [])],
+        generatedImages:
+          toolsResult.generatedImages !== undefined
+            ? [...(state.generatedImages || []), ...(toolsResult.generatedImages || [])]
+            : state.generatedImages,
       };
 
       // 이미지 생성 도구가 성공적으로 실행되었으면 루프 종료
@@ -116,6 +120,10 @@ export class ChatAgentGraph {
           ...state,
           messages: [...state.messages, newMessage],
           toolResults: generateResult.toolResults || state.toolResults,
+          generatedImages:
+            generateResult.generatedImages !== undefined
+              ? generateResult.generatedImages
+              : state.generatedImages,
         };
 
         // Yield the message
@@ -250,6 +258,10 @@ export class ChatAgentGraph {
         ...state,
         messages: state.messages, // 메시지 변경 없음 (tool_calls 유지)
         toolResults: toolsResult.toolResults || [],
+        generatedImages:
+          toolsResult.generatedImages !== undefined
+            ? [...(state.generatedImages || []), ...(toolsResult.generatedImages || [])]
+            : state.generatedImages,
       };
 
       console.log('[AgentGraph] Tool results:', toolsResult.toolResults);
