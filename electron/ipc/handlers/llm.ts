@@ -568,12 +568,15 @@ Return ONLY the title, without quotes or additional text.`,
           maxTokens: providerConfig.maxTokens,
         });
 
-        // Initialize LLM client
+        // Initialize LLM client with autocomplete config
         const { initializeLLMClient } = await import('../../../lib/llm/client');
         initializeLLMClient(providerConfig);
 
-        // Use Editor Agent for autocomplete
+        // IMPORTANT: Clear EditorAgent graph cache to use new LLM client
+        // EditorAgent graph는 getLLMClient()를 통해 현재 LLM client를 가져오므로
+        // initializeLLMClient() 호출 후 캐시를 클리어해야 새 설정이 반영됨
         const { GraphFactory } = await import('../../../lib/langgraph');
+        (GraphFactory as any)._editorAgentGraph = null;
 
         // Extract context for autocomplete
         const textBeforeCursor = context.code.substring(0, context.cursorPosition);
@@ -693,6 +696,30 @@ CRITICAL RULES:
           success: false,
           error: error.message || 'Failed to generate autocomplete',
         };
+      } finally {
+        // Restore default LLM client for other operations
+        // Autocomplete 완료 후 기본 LLM 설정으로 복원
+        try {
+          const configStr = databaseService.getSetting('app_config');
+          if (configStr) {
+            let config = JSON.parse(configStr) as AppConfig;
+            if (config.llm && isLLMConfigV2(config.llm)) {
+              config.llm = convertV2ToV1(config.llm);
+            }
+            if (config.llm) {
+              const { initializeLLMClient } = await import('../../../lib/llm/client');
+              initializeLLMClient(config.llm);
+
+              // Clear graph cache again to use default LLM
+              const { GraphFactory } = await import('../../../lib/langgraph');
+              (GraphFactory as any)._editorAgentGraph = null;
+
+              logger.info('[EditorAgent/Autocomplete] Restored default LLM client');
+            }
+          }
+        } catch (restoreError) {
+          logger.error('[EditorAgent/Autocomplete] Failed to restore default LLM:', restoreError);
+        }
       }
     }
   );
