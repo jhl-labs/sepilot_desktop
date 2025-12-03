@@ -23,7 +23,6 @@ export function PresentationChat() {
     setPresentationChatStreaming,
     setPresentationSlides,
     setActivePresentationSlide,
-    setPresentationViewMode,
   } = useChatStore();
 
   const [input, setInput] = useState('');
@@ -78,7 +77,6 @@ export function PresentationChat() {
           onSlides: (slides) => {
             setPresentationSlides(slides);
             setActivePresentationSlide(slides[0]?.id ?? null);
-            setPresentationViewMode('outline');
           },
         }
       );
@@ -223,19 +221,28 @@ export function PresentationChat() {
             브리핑을 보내면 ppt-agent가 슬라이드 개요와 이미지 프롬프트를 실시간으로 제안합니다.
           </div>
         )}
-        {presentationChatMessages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`rounded-lg border p-3 ${
-              msg.role === 'user' ? 'bg-primary/5 border-primary/40' : 'bg-background'
-            }`}
-          >
-            <div className="text-[11px] font-semibold uppercase text-muted-foreground">
-              {msg.role}
+        {presentationChatMessages.map((msg, idx) => {
+          const isLastMessage = idx === presentationChatMessages.length - 1;
+          const isStreaming =
+            isLastMessage && presentationChatStreaming && msg.role === 'assistant';
+
+          return (
+            <div
+              key={msg.id}
+              className={`rounded-lg border p-3 ${
+                msg.role === 'user' ? 'bg-primary/5 border-primary/40' : 'bg-background'
+              }`}
+            >
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase text-muted-foreground">
+                <span>{msg.role}</span>
+                {isStreaming && <Loader2 className="h-3 w-3 animate-spin" />}
+              </div>
+              <div className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">
+                {msg.content || (isStreaming ? '생성 중...' : '')}
+              </div>
             </div>
-            <div className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Input Area */}

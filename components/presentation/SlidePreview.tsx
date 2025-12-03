@@ -45,8 +45,11 @@ export function SlidePreview() {
       </div>
 
       {presentationSlides.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
-          아직 생성된 슬라이드가 없습니다. 왼쪽에서 브리핑을 보내거나 수동으로 추가하세요.
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          <div className="text-sm text-muted-foreground">아직 생성된 슬라이드가 없습니다.</div>
+          <div className="text-xs text-muted-foreground">
+            좌측 Sidebar에서 브리핑을 보내거나 수동으로 추가하세요.
+          </div>
         </div>
       ) : (
         <div className="grid flex-1 grid-cols-1 gap-3 overflow-y-auto p-4 md:grid-cols-2 xl:grid-cols-3">

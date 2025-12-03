@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PresentationChat } from './PresentationChat';
 import { SlidePreview } from './SlidePreview';
 import { useChatStore } from '@/lib/store/chat-store';
 import type { PresentationExportFormat } from '@/types/presentation';
@@ -182,10 +181,7 @@ export function PresentationStudio() {
         </div>
       )}
 
-      <div className="flex flex-1 flex-col gap-3 px-2 pb-2 md:flex-row">
-        <div className="md:w-[42%] md:min-w-[360px] md:max-w-[520px] overflow-hidden rounded-lg border bg-card shadow-sm">
-          <PresentationChat />
-        </div>
+      <div className="flex flex-1 flex-col px-2 pb-2">
         <div className="flex-1 overflow-hidden rounded-lg border bg-card shadow-sm">
           <SlidePreview />
         </div>
