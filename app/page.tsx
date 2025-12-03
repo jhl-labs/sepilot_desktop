@@ -93,14 +93,17 @@ export default function Home() {
   // Test Dashboard 열기 IPC 이벤트 리스너
   useEffect(() => {
     if (typeof window === 'undefined' || !window.electronAPI) {
+      console.warn('[Home] electronAPI not available for test dashboard');
       return;
     }
 
     const handleOpenTestDashboard = () => {
+      console.log('[Home] Opening test dashboard...');
       window.location.href = '/test-dashboard';
     };
 
     // IPC 이벤트 리스너 등록
+    console.log('[Home] Registering test:open-dashboard listener');
     window.electronAPI.on('test:open-dashboard', handleOpenTestDashboard);
 
     return () => {

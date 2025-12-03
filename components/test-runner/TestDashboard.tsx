@@ -14,6 +14,8 @@ import type { HealthCheckResult, TestSuiteResult } from '@/types/electron';
  * 시스템 Health Check 및 테스트 실행 결과를 통합 표시
  */
 export function TestDashboard() {
+  console.log('[TestDashboard] Component rendering');
+
   const [healthCheck, setHealthCheck] = useState<HealthCheckResult | null>(null);
   const [allTestsResult, setAllTestsResult] = useState<TestSuiteResult | null>(null);
   const [llmTestsResult, setLlmTestsResult] = useState<TestSuiteResult | null>(null);
