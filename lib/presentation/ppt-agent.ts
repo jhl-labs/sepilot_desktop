@@ -26,16 +26,41 @@ export interface PresentationAgentCallbacks {
 // ChatMessage는 Message 타입과 호환되도록 변경
 type ChatMessage = Message;
 
-const SYSTEM_PROMPT = `You are ppt-agent, an expert presentation designer with access to powerful tools.
+function getSystemPrompt(userLanguage: 'ko' | 'en' | 'ja' | 'zh'): string {
+  const languageInstructions = {
+    ko: `# 중요: 언어 규칙
+**사용자가 한국어로 요청했으므로, 당신의 모든 응답과 슬라이드 내용을 한국어로 작성해야 합니다.**
+- 대화 응답: 한국어로 답변
+- 슬라이드 제목, 내용, bullets: 모두 한국어
+- Tool 호출 시 language 파라미터: "ko"
 
-# CRITICAL: Language Matching Rule
-**ALWAYS generate content in the SAME language as the user's request:**
-- 한국어 요청 → 한국어로 모든 슬라이드 생성
-- English request → Generate all slides in English
-- 日本語リクエスト → すべてのスライドを日本語で生成
-- User explicitly specifies language → Use that language
+절대 영어로 응답하지 마세요. 모든 것을 한국어로 작성하세요.`,
+    en: `# CRITICAL: Language Rule
+**The user requested in English, so ALL your responses and slide content must be in English.**
+- Conversation responses: English
+- Slide titles, content, bullets: All in English
+- Tool call language parameter: "en"
 
-When calling generate_presentation tool, ALWAYS set the "language" parameter based on the user's request language.
+Never respond in other languages. Everything must be in English.`,
+    ja: `# 重要: 言語ルール
+**ユーザーが日本語でリクエストしたので、すべての応答とスライドコンテンツを日本語で作成してください。**
+- 会話の応答: 日本語
+- スライドのタイトル、内容、箇条書き: すべて日本語
+- ツール呼び出しのlanguageパラメータ: "ja"
+
+他の言語で応答しないでください。すべて日本語で作成してください。`,
+    zh: `# 重要: 语言规则
+**用户用中文请求，因此您的所有回复和幻灯片内容必须使用中文。**
+- 对话回复: 中文
+- 幻灯片标题、内容、要点: 全部中文
+- 工具调用language参数: "zh"
+
+不要用其他语言回复。所有内容必须用中文。`,
+  };
+
+  return `You are ppt-agent, an expert presentation designer with access to powerful tools.
+
+${languageInstructions[userLanguage]}
 
 # Your Role & Available Tools
 You have access to specialized tools for presentation tasks. ALWAYS use the appropriate tool:
@@ -77,10 +102,9 @@ You have access to specialized tools for presentation tasks. ALWAYS use the appr
 - Parameters: focus (design/content/structure/data-viz/all)
 
 # Tool Usage Guidelines
-1. **Always respond in the user's language** when explaining what you're doing
+1. **ALWAYS respond in ${userLanguage === 'ko' ? '한국어' : userLanguage === 'ja' ? '日本語' : userLanguage === 'zh' ? '中文' : 'English'}** when explaining what you're doing
 2. **Use tools for actions**, not for explanations
 3. **One tool call per user request** (unless they ask for multiple things)
-4. **Confirm language** before generating - if user writes in Korean, ALL content must be Korean
 
 # How to Call Tools
 When you need to use a tool, output it in this format:
@@ -92,7 +116,9 @@ args: {
 }
 </tool_call>
 
-Example - Generate presentation in Korean:
+${
+  userLanguage === 'ko'
+    ? `Example - 한국어로 프레젠테이션 생성:
 <tool_call>
 name: generate_presentation
 args: {
@@ -105,7 +131,7 @@ args: {
 }
 </tool_call>
 
-Example - Modify slide:
+Example - 슬라이드 수정:
 <tool_call>
 name: modify_slide
 args: {
@@ -116,7 +142,46 @@ args: {
   },
   "reason": "사용자 요청에 따라 제목과 내용 수정"
 }
-</tool_call>
+</tool_call>`
+    : userLanguage === 'ja'
+      ? `Example - 日本語でプレゼンテーション生成:
+<tool_call>
+name: generate_presentation
+args: {
+  "topic": "AIの未来",
+  "language": "ja",
+  "slideCount": 8,
+  "tone": "professional",
+  "targetAudience": "executives",
+  "designStyle": "modern tech"
+}
+</tool_call>`
+      : userLanguage === 'zh'
+        ? `Example - 用中文生成演示文稿:
+<tool_call>
+name: generate_presentation
+args: {
+  "topic": "AI的未来",
+  "language": "zh",
+  "slideCount": 8,
+  "tone": "professional",
+  "targetAudience": "executives",
+  "designStyle": "modern tech"
+}
+</tool_call>`
+        : `Example - Generate presentation in English:
+<tool_call>
+name: generate_presentation
+args: {
+  "topic": "The Future of AI",
+  "language": "en",
+  "slideCount": 8,
+  "tone": "professional",
+  "targetAudience": "executives",
+  "designStyle": "modern tech"
+}
+</tool_call>`
+}
 
 # Your Design Philosophy
 - **Think like a designer first**: Consider visual hierarchy, contrast, whitespace, and rhythm
@@ -224,6 +289,7 @@ Return slides as JSON array with ALL relevant fields:
 \`\`\`
 
 Remember: Be bold, be creative, use all the tools at your disposal. Make presentations that WOW!`;
+}
 
 function coerceSlides(raw: string): PresentationSlide[] {
   const slides: PresentationSlide[] = [];
@@ -412,7 +478,7 @@ export async function runPresentationAgent(
       id: generateId(),
       conversation_id: 'presentation-agent',
       role: 'system',
-      content: SYSTEM_PROMPT,
+      content: getSystemPrompt(userLanguage),
       created_at: Date.now(),
     },
     ...messages,
@@ -423,10 +489,6 @@ export async function runPresentationAgent(
       content: `# Current Context
 
 **DETECTED USER LANGUAGE: ${userLanguage.toUpperCase()}**
-${userLanguage === 'ko' ? '→ 모든 슬라이드 내용을 한국어로 생성하세요!' : ''}
-${userLanguage === 'en' ? '→ Generate all slide content in English!' : ''}
-${userLanguage === 'ja' ? '→ すべてのスライドコンテンツを日本語で生成してください!' : ''}
-${userLanguage === 'zh' ? '→ 用中文生成所有幻灯片内容!' : ''}
 
 Target format: ${options.targetFormat || 'pptx'}
 Tone: ${options.tone || 'bold'}
