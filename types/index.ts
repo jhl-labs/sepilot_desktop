@@ -52,12 +52,34 @@ export interface PendingToolApproval {
   timestamp: number;
 }
 
+/**
+ * Chat Settings: 각 대화마다 저장되는 UnifiedChatInput 설정
+ * ThinkingMode는 lib/langgraph/types.ts에서 import해서 사용
+ */
+export interface ConversationChatSettings {
+  thinkingMode?:
+    | 'instant'
+    | 'sequential'
+    | 'tree-of-thought'
+    | 'deep'
+    | 'deep-web-research'
+    | 'coding'
+    | 'browser-agent'
+    | 'editor-agent';
+  enableRAG?: boolean;
+  enableTools?: boolean;
+  enabledTools?: string[]; // Individual tool names
+  enableImageGeneration?: boolean;
+  selectedImageGenProvider?: 'comfyui' | 'nanobanana' | null;
+}
+
 export interface Conversation {
   id: string;
   title: string;
   created_at: number;
   updated_at: number;
   personaId?: string; // 대화에 지정된 페르소나 ID
+  chatSettings?: ConversationChatSettings; // 대화별 채팅 설정
 }
 
 export interface VisionModelConfig {

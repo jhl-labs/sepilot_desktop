@@ -105,7 +105,8 @@ class DatabaseService {
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
+        updated_at INTEGER NOT NULL,
+        chatSettings TEXT
       )
     `);
 
@@ -193,6 +194,11 @@ class DatabaseService {
     } catch (error) {
       // Ignore errors if columns already exist
     }
+    try {
+      this.db.exec('ALTER TABLE conversations ADD COLUMN chatSettings TEXT');
+    } catch (error) {
+      // Ignore errors if columns already exist
+    }
 
     console.log('[Database] Tables created successfully');
   }
@@ -201,10 +207,20 @@ class DatabaseService {
   saveConversation(conversation: Conversation): void {
     if (!this.db) throw new Error('Database not initialized');
 
+    const chatSettingsJson = conversation.chatSettings
+      ? JSON.stringify(conversation.chatSettings)
+      : null;
+
     this.db.run(
-      `INSERT OR REPLACE INTO conversations (id, title, created_at, updated_at)
-       VALUES (?, ?, ?, ?)`,
-      [conversation.id, conversation.title, conversation.created_at, conversation.updated_at]
+      `INSERT OR REPLACE INTO conversations (id, title, created_at, updated_at, chatSettings)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        conversation.id,
+        conversation.title,
+        conversation.created_at,
+        conversation.updated_at,
+        chatSettingsJson,
+      ]
     );
 
     this.saveDatabase();
@@ -214,7 +230,7 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     const result = this.db.exec(`
-      SELECT id, title, created_at, updated_at
+      SELECT id, title, created_at, updated_at, chatSettings
       FROM conversations
       ORDER BY updated_at DESC
     `);
@@ -223,11 +239,22 @@ class DatabaseService {
 
     const conversations: Conversation[] = [];
     for (const row of result[0].values) {
+      const chatSettingsJson = row[4] as string | null;
+      let chatSettings = undefined;
+      if (chatSettingsJson) {
+        try {
+          chatSettings = JSON.parse(chatSettingsJson);
+        } catch (error) {
+          console.error('Failed to parse chatSettings:', error);
+        }
+      }
+
       conversations.push({
         id: row[0] as string,
         title: row[1] as string,
         created_at: row[2] as number,
         updated_at: row[3] as number,
+        chatSettings,
       });
     }
 
@@ -238,7 +265,7 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
 
     const result = this.db.exec(
-      `SELECT id, title, created_at, updated_at
+      `SELECT id, title, created_at, updated_at, chatSettings
        FROM conversations
        WHERE id = ?`,
       [id]
@@ -247,11 +274,22 @@ class DatabaseService {
     if (result.length === 0 || result[0].values.length === 0) return null;
 
     const row = result[0].values[0];
+    const chatSettingsJson = row[4] as string | null;
+    let chatSettings = undefined;
+    if (chatSettingsJson) {
+      try {
+        chatSettings = JSON.parse(chatSettingsJson);
+      } catch (error) {
+        console.error('Failed to parse chatSettings:', error);
+      }
+    }
+
     return {
       id: row[0] as string,
       title: row[1] as string,
       created_at: row[2] as number,
       updated_at: row[3] as number,
+      chatSettings,
     };
   }
 

@@ -1,5 +1,11 @@
 import { create } from 'zustand';
-import { Conversation, Message, PendingToolApproval, ImageGenerationProgress } from '@/types';
+import {
+  Conversation,
+  Message,
+  PendingToolApproval,
+  ImageGenerationProgress,
+  ConversationChatSettings,
+} from '@/types';
 import { generateId } from '@/lib/utils';
 import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
 import { isElectron } from '@/lib/platform';
@@ -182,6 +188,7 @@ interface ChatStore {
   setActiveConversation: (id: string) => Promise<void>;
   updateConversationTitle: (id: string, title: string) => Promise<void>;
   updateConversationPersona: (id: string, personaId: string | null) => Promise<void>;
+  updateConversationSettings: (id: string, settings: ConversationChatSettings) => Promise<void>;
   loadConversations: () => Promise<void>;
   searchConversations: (
     query: string
@@ -525,11 +532,24 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Conversations
   createConversation: async () => {
+    const state = get();
+
+    // Capture current chat settings to save with the new conversation
+    const currentChatSettings: ConversationChatSettings = {
+      thinkingMode: state.thinkingMode,
+      enableRAG: state.enableRAG,
+      enableTools: state.enableTools,
+      enabledTools: Array.from(state.enabledTools),
+      enableImageGeneration: state.enableImageGeneration,
+      selectedImageGenProvider: state.selectedImageGenProvider,
+    };
+
     const newConversation: Conversation = {
       id: generateId(),
       title: '새 대화',
       created_at: Date.now(),
       updated_at: Date.now(),
+      chatSettings: currentChatSettings,
     };
 
     // Save to database or localStorage
@@ -549,14 +569,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
 
     // Update state and fallback to localStorage if DB save failed
-    set((state) => {
-      const newConversations = [newConversation, ...state.conversations];
+    set((currentState) => {
+      const newConversations = [newConversation, ...currentState.conversations];
       // Web or Electron DB save failed: localStorage에 저장
       if (!saved) {
         saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, newConversations);
       }
       // Initialize empty cache for new conversation
-      const newCache = new Map(state.messagesCache);
+      const newCache = new Map(currentState.messagesCache);
       newCache.set(newConversation.id, []);
 
       return {
@@ -755,6 +775,38 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     const isCurrentlyStreaming = state.streamingConversations.has(id);
     const cachedMessages = state.messagesCache.get(id);
 
+    // Find the conversation to load its settings
+    const conversation = state.conversations.find((c) => c.id === id);
+    if (!conversation) {
+      console.error('Conversation not found:', id);
+      return;
+    }
+
+    // Restore conversation's chat settings to global state
+    const conversationSettings = conversation.chatSettings;
+    const settingsUpdate: Partial<ChatStore> = {};
+
+    if (conversationSettings) {
+      if (conversationSettings.thinkingMode !== undefined) {
+        settingsUpdate.thinkingMode = conversationSettings.thinkingMode;
+      }
+      if (conversationSettings.enableRAG !== undefined) {
+        settingsUpdate.enableRAG = conversationSettings.enableRAG;
+      }
+      if (conversationSettings.enableTools !== undefined) {
+        settingsUpdate.enableTools = conversationSettings.enableTools;
+      }
+      if (conversationSettings.enabledTools !== undefined) {
+        settingsUpdate.enabledTools = new Set(conversationSettings.enabledTools);
+      }
+      if (conversationSettings.enableImageGeneration !== undefined) {
+        settingsUpdate.enableImageGeneration = conversationSettings.enableImageGeneration;
+      }
+      if (conversationSettings.selectedImageGenProvider !== undefined) {
+        settingsUpdate.selectedImageGenProvider = conversationSettings.selectedImageGenProvider;
+      }
+    }
+
     // If we have cached messages (e.g., from background streaming), use them immediately
     if (cachedMessages && cachedMessages.length > 0) {
       set({
@@ -766,6 +818,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         streamingMessageId: isCurrentlyStreaming
           ? state.streamingConversations.get(id) || null
           : null,
+        ...settingsUpdate,
       });
       return;
     }
@@ -779,6 +832,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       streamingMessageId: isCurrentlyStreaming
         ? state.streamingConversations.get(id) || null
         : null,
+      ...settingsUpdate,
     });
 
     // Load messages from database or localStorage
@@ -859,6 +913,28 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       );
 
       // localStorage에 저장 (Electron DB는 personaId 필드를 아직 지원하지 않으므로)
+      saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, updatedConversations);
+
+      return { conversations: updatedConversations };
+    });
+  },
+
+  updateConversationSettings: async (id: string, settings: ConversationChatSettings) => {
+    // Note: Electron DB는 chatSettings 필드를 아직 완전히 지원하지 않으므로
+    // localStorage를 주로 사용합니다. 향후 DB 스키마 업데이트 시 개선 예정
+
+    set((state) => {
+      const updatedConversations = state.conversations.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              chatSettings: settings,
+              updated_at: Date.now(),
+            }
+          : c
+      );
+
+      // localStorage에 저장
       saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, updatedConversations);
 
       return { conversations: updatedConversations };
@@ -1122,14 +1198,50 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Graph Configuration
   setThinkingMode: (mode: ThinkingMode) => {
     set({ thinkingMode: mode });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          thinkingMode: mode,
+        });
+      }
+    }
   },
 
   setEnableRAG: (enable: boolean) => {
     set({ enableRAG: enable });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          enableRAG: enable,
+        });
+      }
+    }
   },
 
   setEnableTools: (enable: boolean) => {
     set({ enableTools: enable });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          enableTools: enable,
+        });
+      }
+    }
   },
 
   toggleTool: (toolName: string) => {
@@ -1142,14 +1254,50 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       }
       return { enabledTools: newEnabledTools };
     });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          enabledTools: Array.from(state.enabledTools),
+        });
+      }
+    }
   },
 
   enableAllTools: (toolNames: string[]) => {
     set({ enabledTools: new Set(toolNames) });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          enabledTools: toolNames,
+        });
+      }
+    }
   },
 
   disableAllTools: () => {
     set({ enabledTools: new Set<string>() });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          enabledTools: [],
+        });
+      }
+    }
   },
 
   setEnableImageGeneration: (enable: boolean) => {
@@ -1179,10 +1327,36 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         savedEnableTools: null,
       });
     }
+
+    // Update active conversation's settings
+    const currentState = get();
+    if (currentState.activeConversationId) {
+      const conversation = currentState.conversations.find(
+        (c) => c.id === currentState.activeConversationId
+      );
+      if (conversation) {
+        get().updateConversationSettings(currentState.activeConversationId, {
+          ...conversation.chatSettings,
+          enableImageGeneration: enable,
+        });
+      }
+    }
   },
 
   setSelectedImageGenProvider: (provider: 'comfyui' | 'nanobanana' | null) => {
     set({ selectedImageGenProvider: provider });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          selectedImageGenProvider: provider,
+        });
+      }
+    }
   },
 
   setWorkingDirectory: (directory: string | null) => {
