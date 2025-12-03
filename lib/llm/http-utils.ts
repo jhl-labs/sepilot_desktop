@@ -178,6 +178,11 @@ export function createAuthHeader(provider: string, apiKey: string): Record<strin
     };
   }
 
+  // Ollama는 API 키가 필요 없으므로 빈 헤더 반환
+  if (provider === 'ollama') {
+    return {};
+  }
+
   return {
     Authorization: `Bearer ${apiKey}`,
   };
