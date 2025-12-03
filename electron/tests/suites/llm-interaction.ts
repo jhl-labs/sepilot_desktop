@@ -68,12 +68,9 @@ export class LLMInteractionTestSuite {
     const testId = 'llm-provider-config';
 
     try {
-      const db = databaseService.getDatabase();
-      const configResult = db
-        .prepare('SELECT value FROM settings WHERE key = ?')
-        .get(['app_config']) as unknown as { value: string } | undefined;
+      const configValue = databaseService.getSetting('app_config');
 
-      if (!configResult || !configResult.value) {
+      if (!configValue) {
         return {
           id: testId,
           name: 'LLM Provider Configuration',
@@ -84,8 +81,7 @@ export class LLMInteractionTestSuite {
         };
       }
 
-      const config = configResult as { value: string };
-      const appConfig: AppConfig = JSON.parse(config.value);
+      const appConfig: AppConfig = JSON.parse(configValue);
       const llmConfig = appConfig.llm;
 
       // V2 config 지원
@@ -156,12 +152,9 @@ export class LLMInteractionTestSuite {
     const testId = 'llm-api-key';
 
     try {
-      const db = databaseService.getDatabase();
-      const configResult = db
-        .prepare('SELECT value FROM settings WHERE key = ?')
-        .get(['app_config']) as unknown as { value: string } | undefined;
+      const configValue = databaseService.getSetting('app_config');
 
-      if (!configResult || !configResult.value) {
+      if (!configValue) {
         return {
           id: testId,
           name: 'API Key Validation',
@@ -172,8 +165,7 @@ export class LLMInteractionTestSuite {
         };
       }
 
-      const config = configResult as { value: string };
-      const appConfig: AppConfig = JSON.parse(config.value);
+      const appConfig: AppConfig = JSON.parse(configValue);
       const llmConfig = appConfig.llm;
 
       // V2 config 지원
@@ -244,12 +236,9 @@ export class LLMInteractionTestSuite {
     const testId = 'llm-token-limits';
 
     try {
-      const db = databaseService.getDatabase();
-      const configResult = db
-        .prepare('SELECT value FROM settings WHERE key = ?')
-        .get(['app_config']) as unknown as { value: string } | undefined;
+      const configValue = databaseService.getSetting('app_config');
 
-      if (!configResult || !configResult.value) {
+      if (!configValue) {
         return {
           id: testId,
           name: 'Token Limits Configuration',
@@ -260,8 +249,7 @@ export class LLMInteractionTestSuite {
         };
       }
 
-      const config = configResult as { value: string };
-      const appConfig: AppConfig = JSON.parse(config.value);
+      const appConfig: AppConfig = JSON.parse(configValue);
       const llmConfig = appConfig.llm;
 
       // V2 config 지원
@@ -335,12 +323,9 @@ export class LLMInteractionTestSuite {
     const testId = 'llm-temperature';
 
     try {
-      const db = databaseService.getDatabase();
-      const configResult = db
-        .prepare('SELECT value FROM settings WHERE key = ?')
-        .get(['app_config']) as unknown as { value: string } | undefined;
+      const configValue = databaseService.getSetting('app_config');
 
-      if (!configResult || !configResult.value) {
+      if (!configValue) {
         return {
           id: testId,
           name: 'Temperature Settings',
@@ -351,8 +336,7 @@ export class LLMInteractionTestSuite {
         };
       }
 
-      const config = configResult as { value: string };
-      const appConfig: AppConfig = JSON.parse(config.value);
+      const appConfig: AppConfig = JSON.parse(configValue);
       const llmConfig = appConfig.llm;
 
       // V2 config 지원

@@ -257,19 +257,16 @@ export class HealthCheckService {
     const startTime = Date.now();
     try {
       // 설정에서 LLM Provider 확인
-      const db = databaseService.getDatabase();
-      const config = db
-        .prepare('SELECT value FROM settings WHERE key = ?')
-        .get(['app_config']) as unknown as { value: string } | undefined;
+      const configValue = databaseService.getSetting('app_config');
 
-      if (!config || !config.value) {
+      if (!configValue) {
         return {
           status: 'warn',
           message: 'No LLM providers configured',
           latency: Date.now() - startTime,
         };
       }
-      const appConfig = JSON.parse(config.value);
+      const appConfig = JSON.parse(configValue);
       const providers = appConfig.llm?.providers || appConfig.llm?.connections || {};
       const providerNames = Object.keys(providers);
 
