@@ -219,21 +219,153 @@ export class GitHubSyncClient {
   }
 
   /**
+   * 청킹된 문서를 원본으로 병합
+   */
+  private mergeChunkedDocuments(documents: any[]): Map<string, any> {
+    const originalDocs = new Map<string, any>();
+
+    for (const doc of documents) {
+      const originalId = doc.metadata?.originalId || doc.id;
+      const chunkIndex = doc.metadata?.chunkIndex;
+
+      if (!originalDocs.has(originalId)) {
+        // 새 원본 문서 생성
+        originalDocs.set(originalId, {
+          id: originalId,
+          title: doc.metadata?.title || 'Untitled',
+          source: doc.metadata?.source || '',
+          uploadedAt: doc.metadata?.uploadedAt || new Date().toISOString(),
+          folderPath: doc.metadata?.folderPath || '',
+          tags: doc.metadata?.tags || [],
+          category: doc.metadata?.category || '',
+          chunks: [],
+        });
+      }
+
+      const original = originalDocs.get(originalId);
+      if (chunkIndex !== undefined) {
+        // 청크 추가
+        original.chunks.push({
+          index: chunkIndex,
+          content: doc.content,
+        });
+      } else {
+        // 청크가 없는 원본 문서
+        original.chunks.push({
+          index: 0,
+          content: doc.content,
+        });
+      }
+    }
+
+    // 청크를 인덱스 순서로 정렬하고 병합
+    for (const [, doc] of originalDocs.entries()) {
+      doc.chunks.sort((a: any, b: any) => a.index - b.index);
+      doc.content = doc.chunks.map((chunk: any) => chunk.content).join('\n\n');
+      delete doc.chunks;
+    }
+
+    return originalDocs;
+  }
+
+  /**
+   * 문서를 Markdown 파일로 변환
+   */
+  private documentToMarkdown(doc: any): string {
+    const lines: string[] = [];
+
+    // 제목
+    lines.push(`# ${doc.title}`);
+    lines.push('');
+
+    // 메타데이터
+    if (doc.source || doc.category || doc.tags?.length > 0 || doc.folderPath) {
+      lines.push('---');
+      if (doc.source) {
+        lines.push(`**출처:** ${doc.source}`);
+      }
+      if (doc.category) {
+        lines.push(`**카테고리:** ${doc.category}`);
+      }
+      if (doc.folderPath) {
+        lines.push(`**폴더:** ${doc.folderPath}`);
+      }
+      if (doc.tags && doc.tags.length > 0) {
+        lines.push(`**태그:** ${doc.tags.join(', ')}`);
+      }
+      lines.push(`**업로드일:** ${new Date(doc.uploadedAt).toLocaleString('ko-KR')}`);
+      lines.push('---');
+      lines.push('');
+    }
+
+    // 본문 내용
+    lines.push(doc.content);
+
+    return lines.join('\n');
+  }
+
+  /**
+   * 파일명 생성 (안전한 파일명으로 변환)
+   */
+  private sanitizeFilename(filename: string): string {
+    return filename
+      .replace(/[<>:"/\\|?*]/g, '_') // 금지된 문자를 언더스코어로 변경
+      .replace(/\s+/g, '_') // 공백을 언더스코어로 변경
+      .replace(/_{2,}/g, '_') // 연속된 언더스코어를 하나로
+      .substring(0, 200); // 최대 길이 제한
+  }
+
+  /**
    * 문서 동기화
    */
   async syncDocuments(documents: any[]): Promise<GitHubSyncResult> {
     try {
-      const content = JSON.stringify(
-        {
-          version: '1.0',
-          exportDate: new Date().toISOString(),
-          documents,
-        },
-        null,
-        2
+      // 1. 청킹된 문서를 원본으로 병합
+      const originalDocs = this.mergeChunkedDocuments(documents);
+
+      // 2. 각 문서를 개별 Markdown 파일로 저장
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
+      for (const [id, doc] of originalDocs.entries()) {
+        try {
+          const markdown = this.documentToMarkdown(doc);
+          const filename = this.sanitizeFilename(doc.title || id);
+          const folderPath = doc.folderPath ? `${doc.folderPath}/` : '';
+          const filepath = `sepilot/documents/${folderPath}${filename}.md`;
+
+          const result = await this.upsertFile(
+            filepath,
+            markdown,
+            `docs: sync document "${doc.title}"`
+          );
+
+          if (result.success) {
+            successCount++;
+          } else {
+            errorCount++;
+            errors.push(`${doc.title}: ${result.error}`);
+          }
+        } catch (error: any) {
+          errorCount++;
+          errors.push(`${doc.title}: ${error.message}`);
+        }
+      }
+
+      // 3. 인덱스 파일 생성 (문서 목록)
+      const indexContent = this.generateDocumentIndex(originalDocs);
+      await this.upsertFile(
+        'sepilot/documents/README.md',
+        indexContent,
+        'docs: update document index'
       );
 
-      return await this.upsertFile('sepilot/documents.json', content, 'chore: sync documents');
+      return {
+        success: errorCount === 0,
+        message: `문서 동기화 완료: 성공 ${successCount}개, 실패 ${errorCount}개`,
+        error: errors.length > 0 ? errors.join('\n') : undefined,
+      };
     } catch (error: any) {
       console.error('[GitHubSync] Failed to sync documents:', error);
       return {
@@ -242,6 +374,61 @@ export class GitHubSyncClient {
         error: error.message,
       };
     }
+  }
+
+  /**
+   * 문서 인덱스 생성
+   */
+  private generateDocumentIndex(docs: Map<string, any>): string {
+    const lines: string[] = [];
+    lines.push('# 문서 목록');
+    lines.push('');
+    lines.push(`> 마지막 업데이트: ${new Date().toLocaleString('ko-KR')}`);
+    lines.push('');
+
+    // 폴더별로 그룹화
+    const folderGroups = new Map<string, any[]>();
+
+    for (const doc of docs.values()) {
+      const folder = doc.folderPath || '(루트)';
+      if (!folderGroups.has(folder)) {
+        folderGroups.set(folder, []);
+      }
+      folderGroups.get(folder)!.push(doc);
+    }
+
+    // 폴더별로 출력
+    const sortedFolders = Array.from(folderGroups.keys()).sort();
+
+    for (const folder of sortedFolders) {
+      lines.push(`## ${folder}`);
+      lines.push('');
+
+      const docsInFolder = folderGroups.get(folder)!;
+      docsInFolder.sort((a, b) => a.title.localeCompare(b.title));
+
+      for (const doc of docsInFolder) {
+        const filename = this.sanitizeFilename(doc.title || doc.id);
+        const folderPath = doc.folderPath ? `${doc.folderPath}/` : '';
+        const filepath = `${folderPath}${filename}.md`;
+
+        lines.push(`- [${doc.title}](./${filepath})`);
+        if (doc.category) {
+          lines.push(`  - 카테고리: ${doc.category}`);
+        }
+        if (doc.tags && doc.tags.length > 0) {
+          lines.push(`  - 태그: ${doc.tags.join(', ')}`);
+        }
+      }
+
+      lines.push('');
+    }
+
+    lines.push('---');
+    lines.push('');
+    lines.push('📝 이 문서들은 SEPilot Desktop에서 자동으로 동기화됩니다.');
+
+    return lines.join('\n');
   }
 
   /**
