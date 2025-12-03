@@ -27,9 +27,11 @@ function chunkTextCharacter(text: string, chunkSize: number, chunkOverlap: numbe
  * Sentence-boundary 청킹 (문장 경계 기반)
  * 장점: 컨텍스트 보존, 빠른 속도
  * 단점: 언어별 구분자 차이
+ *
+ * 개행과 공백을 보존합니다.
  */
 function chunkTextSentence(text: string, chunkSize: number, chunkOverlap: number): string[] {
-  // 문장 경계 정규식 (한글/영어 모두 지원)
+  // 문장 경계 정규식 (한글/영어 모두 지원, 개행 보존)
   const sentenceRegex = /[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g;
   const sentences = text.match(sentenceRegex) || [text];
 
@@ -38,25 +40,26 @@ function chunkTextSentence(text: string, chunkSize: number, chunkOverlap: number
   let overlapBuffer: string[] = [];
 
   for (const sentence of sentences) {
-    const trimmed = sentence.trim();
-    if (!trimmed) {
+    // trim()을 제거하여 개행과 공백 보존
+    if (!sentence) {
       continue;
     }
 
     // 현재 청크 + 새 문장이 chunkSize를 초과하면 청크 저장
-    if (currentChunk.length + trimmed.length > chunkSize && currentChunk.length > 0) {
+    if (currentChunk.length + sentence.length > chunkSize && currentChunk.length > 0) {
+      // 앞뒤 공백만 제거
       chunks.push(currentChunk.trim());
 
-      // Overlap 처리: 마지막 N개 문장 유지
-      const overlapText = overlapBuffer.join(' ');
-      currentChunk = overlapText + (overlapText ? ' ' : '') + trimmed;
-      overlapBuffer = [trimmed];
+      // Overlap 처리: 마지막 N개 문장 유지 (원본 그대로 유지)
+      const overlapText = overlapBuffer.join('');
+      currentChunk = overlapText + sentence;
+      overlapBuffer = [sentence];
     } else {
-      currentChunk += (currentChunk ? ' ' : '') + trimmed;
-      overlapBuffer.push(trimmed);
+      currentChunk += sentence;
+      overlapBuffer.push(sentence);
 
       // Overlap 버퍼가 너무 크면 앞에서 제거
-      while (overlapBuffer.join(' ').length > chunkOverlap && overlapBuffer.length > 1) {
+      while (overlapBuffer.join('').length > chunkOverlap && overlapBuffer.length > 1) {
         overlapBuffer.shift();
       }
     }
@@ -74,6 +77,8 @@ function chunkTextSentence(text: string, chunkSize: number, chunkOverlap: number
  * Structure-aware 청킹 (Markdown/코드 블록 구조 보존)
  * 장점: 구조 보존, 의미 단위 유지
  * 단점: Markdown 전용
+ *
+ * 개행과 공백을 보존하면서 구조적 경계를 유지합니다.
  */
 function chunkTextStructure(text: string, chunkSize: number, chunkOverlap: number): string[] {
   const chunks: string[] = [];
@@ -84,10 +89,13 @@ function chunkTextStructure(text: string, chunkSize: number, chunkOverlap: numbe
   const sections: string[] = [];
   let lastIndex = 0;
 
-  // 구조적 섹션 추출
+  // 구조적 섹션 추출 (원본 그대로 유지)
   text.replace(structureRegex, (match, _, offset) => {
     if (offset > lastIndex) {
-      sections.push(text.slice(lastIndex, offset));
+      const beforeSection = text.slice(lastIndex, offset);
+      if (beforeSection) {
+        sections.push(beforeSection);
+      }
     }
     sections.push(match);
     lastIndex = offset + match.length;
@@ -96,7 +104,10 @@ function chunkTextStructure(text: string, chunkSize: number, chunkOverlap: numbe
 
   // 마지막 섹션 추가
   if (lastIndex < text.length) {
-    sections.push(text.slice(lastIndex));
+    const lastSection = text.slice(lastIndex);
+    if (lastSection) {
+      sections.push(lastSection);
+    }
   }
 
   // 섹션을 청크로 그룹화
@@ -104,23 +115,23 @@ function chunkTextStructure(text: string, chunkSize: number, chunkOverlap: numbe
   let overlapBuffer: string[] = [];
 
   for (const section of sections) {
-    const trimmed = section.trim();
-    if (!trimmed) {
+    // 빈 섹션은 건너뛰되, 공백은 유지
+    if (!section) {
       continue;
     }
 
-    if (currentChunk.length + trimmed.length > chunkSize && currentChunk.length > 0) {
+    if (currentChunk.length + section.length > chunkSize && currentChunk.length > 0) {
       chunks.push(currentChunk.trim());
 
-      // Overlap 처리
-      const overlapText = overlapBuffer.join('\n\n');
-      currentChunk = overlapText + (overlapText ? '\n\n' : '') + trimmed;
-      overlapBuffer = [trimmed];
+      // Overlap 처리 (원본 그대로 연결)
+      const overlapText = overlapBuffer.join('');
+      currentChunk = overlapText + section;
+      overlapBuffer = [section];
     } else {
-      currentChunk += (currentChunk ? '\n\n' : '') + trimmed;
-      overlapBuffer.push(trimmed);
+      currentChunk += section;
+      overlapBuffer.push(section);
 
-      while (overlapBuffer.join('\n\n').length > chunkOverlap && overlapBuffer.length > 1) {
+      while (overlapBuffer.join('').length > chunkOverlap && overlapBuffer.length > 1) {
         overlapBuffer.shift();
       }
     }
