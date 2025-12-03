@@ -254,10 +254,7 @@ Corrected Mermaid code:`;
           });
         }
 
-        // Auto-fix attempt - 최대 횟수 미만일 때만
-        if (retryCount < MAX_RETRY_COUNT && !isFixing) {
-          attemptAutoFix(currentChart, errorMsg);
-        }
+        // 자동 수정 제거 - 사용자가 수동으로 트리거해야 함
       }
     };
 
@@ -272,7 +269,7 @@ Corrected Mermaid code:`;
         }
       });
     };
-  }, [currentChart, theme, retryCount, isFixing, attemptAutoFix, chart, onChartFixed]);
+  }, [currentChart, theme, retryCount, chart, onChartFixed]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(currentChart);
@@ -293,7 +290,7 @@ Corrected Mermaid code:`;
         <div className="flex items-center justify-between border-b border-primary/50 bg-primary/20 px-4 py-2">
           <span className="text-xs font-medium text-primary flex items-center gap-2">
             <Loader2 className="h-3 w-3 animate-spin" />
-            다이어그램 자동 수정 중... ({retryCount + 1}/{MAX_RETRY_COUNT})
+            다이어그램 수정 중... ({retryCount + 1}/{MAX_RETRY_COUNT})
           </span>
         </div>
         <div className="p-4">
@@ -310,7 +307,7 @@ Corrected Mermaid code:`;
         <div className="my-4 overflow-hidden rounded-lg border border-muted bg-muted/30">
           <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
             <span className="text-xs font-medium text-muted-foreground">
-              Mermaid Code (렌더링 실패 - {MAX_RETRY_COUNT}회 자동 수정 시도됨)
+              Mermaid Code (렌더링 실패 - {MAX_RETRY_COUNT}회 수정 시도됨)
             </span>
             <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 gap-1 px-2">
               {copied ? (
@@ -341,7 +338,7 @@ Corrected Mermaid code:`;
         <div className="flex items-center justify-between border-b border-destructive/50 bg-destructive/20 px-4 py-2">
           <span className="text-xs font-medium text-destructive">
             Mermaid Diagram Error{' '}
-            {retryCount > 0 && `(자동 수정 ${retryCount}/${MAX_RETRY_COUNT}회 시도됨)`}
+            {retryCount > 0 && `(수정 ${retryCount}/${MAX_RETRY_COUNT}회 시도됨)`}
           </span>
           <div className="flex gap-1">
             {retryCount < MAX_RETRY_COUNT && (
@@ -379,7 +376,7 @@ Corrected Mermaid code:`;
         <div className="p-4">
           <p className="text-sm text-destructive font-medium">다이어그램을 렌더링할 수 없습니다</p>
           <p className="text-xs text-destructive/80 mt-1">
-            문법 오류가 있습니다. AI가 자동으로 수정을 시도합니다...
+            문법 오류가 있습니다. &apos;수정&apos; 버튼을 클릭하여 AI로 자동 수정할 수 있습니다.
           </p>
           {/* 에러 상세 정보는 콘솔에만 출력 - UI에서는 간결하게 */}
         </div>
