@@ -18,8 +18,17 @@ export class ChatAgentGraph {
     const actualMaxIterations = Math.max(maxIterations, 50);
     let state = { ...initialState };
     let iterations = 0;
+    let imageGenerationCompleted = false;
 
     while (iterations < actualMaxIterations) {
+      // 이미지 생성이 완료되고 다음 iteration이면 종료
+      if (imageGenerationCompleted && iterations > 0) {
+        console.log(
+          '[AgentGraph.invoke] Image generation completed and final response generated, ending loop'
+        );
+        break;
+      }
+
       // 1. generate 노드 실행
       const generateResult = await generateWithToolsNode(state);
       state = {
@@ -44,13 +53,15 @@ export class ChatAgentGraph {
             : state.generatedImages,
       };
 
-      // 이미지 생성 도구가 성공적으로 실행되었으면 루프 종료
+      // 이미지 생성 도구가 성공적으로 실행되었으면 플래그 설정
       const hasSuccessfulImageGeneration = toolsResult.toolResults?.some(
         (result) => result.toolName === 'generate_image' && !result.error
       );
       if (hasSuccessfulImageGeneration) {
-        console.log('[AgentGraph.invoke] Image generation completed, ending loop');
-        break;
+        console.log(
+          '[AgentGraph.invoke] Image generation completed, will generate final response and end'
+        );
+        imageGenerationCompleted = true;
       }
 
       iterations++;
@@ -83,6 +94,7 @@ export class ChatAgentGraph {
     // Track tool usage count to detect repetitive behavior
     const toolUsageCount = new Map<string, number>();
     let previousToolNames: string[] = [];
+    let imageGenerationCompleted = false; // Track if image generation is done
 
     while (iterations < actualMaxIterations) {
       console.log(`[AgentGraph] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`);
@@ -90,7 +102,16 @@ export class ChatAgentGraph {
         messageCount: state.messages.length,
         lastMessageRole: state.messages[state.messages.length - 1]?.role,
         toolResultsCount: state.toolResults.length,
+        imageGenerationCompleted,
       });
+
+      // 이미지 생성이 완료되고 다음 iteration이면 종료
+      if (imageGenerationCompleted && iterations > 0) {
+        console.log(
+          '[AgentGraph] Image generation completed and final response generated, ending loop'
+        );
+        break;
+      }
 
       // 1. generate with tools (non-streaming for now)
       // TODO: Implement proper streaming with tool calls support
@@ -276,6 +297,11 @@ export class ChatAgentGraph {
 
       yield { tools: toolsResult };
 
+      // 이미지 생성 도구가 성공적으로 실행되었는지 체크
+      const hasSuccessfulImageGeneration = toolsResult.toolResults?.some(
+        (result) => result.toolName === 'generate_image' && !result.error
+      );
+
       // Track tool usage and check for excessive repetition
       if (toolsResult.toolResults && toolsResult.toolResults.length > 0) {
         const currentToolNames = toolsResult.toolResults.map((r) => r.toolName);
@@ -331,17 +357,16 @@ export class ChatAgentGraph {
         }
       }
 
-      // 이미지 생성 도구가 성공적으로 실행되었으면 루프 종료
-      // (이미지 생성은 일회성 작업이므로 추가 반복 불필요)
-      const hasSuccessfulImageGeneration = toolsResult.toolResults?.some(
-        (result) => result.toolName === 'generate_image' && !result.error
-      );
-      if (hasSuccessfulImageGeneration) {
-        console.log('[AgentGraph] Image generation completed successfully, ending loop');
-        break;
-      }
-
       iterations++;
+
+      // 이미지 생성 도구가 성공적으로 실행되었으면 플래그 설정
+      // (다음 iteration에서 이미지를 포함한 최종 응답을 생성한 후 종료)
+      if (hasSuccessfulImageGeneration) {
+        console.log(
+          '[AgentGraph] Image generation completed, will generate final response and end'
+        );
+        imageGenerationCompleted = true;
+      }
     }
 
     console.log('[AgentGraph] Stream completed, total iterations:', iterations);
