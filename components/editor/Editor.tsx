@@ -230,16 +230,17 @@ export function CodeEditor() {
     let currentAbortController: AbortController | null = null;
     let lastRequestId = 0;
     let isRequestInProgress = false;
-    let manualTriggerRequested = false;
+    let manualTriggerTime = 0; // 수동 트리거 시간 기록
 
     const REQUEST_TIMEOUT_MS = 10000; // 10초 타임아웃 (더 긴 컨텍스트 처리)
+    const MANUAL_TRIGGER_TIMEOUT_MS = 500; // 수동 트리거 유효 시간
 
     // Ctrl+. 키보드 단축키로 수동 트리거
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === '.') {
         e.preventDefault();
         console.log('[Autocomplete] Manual trigger requested (Ctrl+.)');
-        manualTriggerRequested = true;
+        manualTriggerTime = Date.now();
         // Monaco의 inline suggestions를 수동으로 트리거
         editor.trigger('keyboard', 'editor.action.inlineSuggest.trigger', {});
       }
@@ -250,9 +251,13 @@ export function CodeEditor() {
     // Create the provider object with all required methods
     const providerObject = {
       provideInlineCompletions: async (model: any, position: any, context: any, token: any) => {
+        const now = Date.now();
+        const isManualTrigger = now - manualTriggerTime < MANUAL_TRIGGER_TIMEOUT_MS;
+
         console.log('[Autocomplete] provideInlineCompletions called', {
           triggerKind: context?.triggerKind,
-          manualTrigger: manualTriggerRequested,
+          isManualTrigger,
+          timeSinceManualTrigger: now - manualTriggerTime,
         });
 
         // Return empty if autocomplete is not available
@@ -262,12 +267,9 @@ export function CodeEditor() {
         }
 
         // Ctrl+.로 수동 트리거한 경우가 아니면 자동 완성 제공 안함
-        if (!manualTriggerRequested) {
+        if (!isManualTrigger) {
           return { items: [] };
         }
-
-        // 수동 트리거 플래그 리셋
-        manualTriggerRequested = false;
 
         // Monaco의 CancellationToken 체크
         if (token?.isCancellationRequested) {
@@ -277,6 +279,7 @@ export function CodeEditor() {
 
         // 이전 요청 취소
         if (currentAbortController) {
+          console.log('[Autocomplete] Aborting previous request');
           currentAbortController.abort();
           currentAbortController = null;
         }
@@ -286,10 +289,9 @@ export function CodeEditor() {
         currentAbortController = abortController;
         const requestId = ++lastRequestId;
 
-        // 이미 요청이 진행 중이면 스킵
+        // 이미 요청이 진행 중이면 이전 요청을 취소했으므로 계속 진행
         if (isRequestInProgress) {
-          console.log('[Autocomplete] Request already in progress, skipping');
-          return { items: [] };
+          console.log('[Autocomplete] Previous request cancelled, starting new request');
         }
 
         try {
@@ -324,6 +326,8 @@ export function CodeEditor() {
             nextLine: nextLine.substring(0, 50),
             contextBeforeLength: contextBefore.length,
             contextAfterLength: contextAfter.length,
+            lineNumber: currentLineNumber,
+            column: position.column,
           });
 
           // 다시 한번 취소 체크
