@@ -829,6 +829,16 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           conversationSettings.selectedImageGenProvider
         );
       }
+
+      // CRITICAL: Enforce consistency - if image generation is enabled, tools must be enabled
+      if (settingsUpdate.enableImageGeneration === true) {
+        console.log(
+          '[setActiveConversation] Image generation is enabled, forcing enableTools=true and enableRAG=false'
+        );
+        settingsUpdate.enableTools = true;
+        settingsUpdate.enableRAG = false;
+        settingsUpdate.thinkingMode = 'instant';
+      }
     } else {
       console.log('[setActiveConversation] No chatSettings found, using defaults');
     }
@@ -1255,10 +1265,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setEnableTools: (enable: boolean) => {
+    const state = get();
+
+    // CRITICAL: Cannot disable tools when image generation is active
+    if (!enable && state.enableImageGeneration) {
+      console.warn(
+        '[setEnableTools] Cannot disable tools while image generation is active. Ignoring.'
+      );
+      return;
+    }
+
     set({ enableTools: enable });
 
     // Update active conversation's settings
-    const state = get();
     if (state.activeConversationId) {
       const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
       if (conversation) {
