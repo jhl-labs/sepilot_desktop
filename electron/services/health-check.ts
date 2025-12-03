@@ -262,7 +262,7 @@ export class HealthCheckService {
         .prepare('SELECT value FROM settings WHERE key = ?')
         .get(['app_config']) as unknown as { value: string } | undefined;
 
-      if (!config) {
+      if (!config || !config.value) {
         return {
           status: 'warn',
           message: 'No LLM providers configured',
