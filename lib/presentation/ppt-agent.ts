@@ -2,7 +2,6 @@ import { generateId } from '@/lib/utils';
 import { LLMService } from '@/lib/llm/service';
 import type { PresentationSlide, PresentationExportFormat } from '@/types/presentation';
 import type { Message } from '@/types';
-import { executePptTool, type ToolExecutionContext } from './ppt-tools';
 
 export interface PresentationAgentOptions {
   tone?: string;
@@ -66,137 +65,63 @@ Note: If the user specifies another language (e.g., "한국어로", "in Korean")
 注意: 如果用户指定了其他语言（例如: "英文", "in English"），请使用该语言。`,
   };
 
-  return `You are ppt-agent, an expert presentation designer with access to powerful tools.
+  return `You are ppt-agent, an expert presentation designer.
 
 ${languageInstructions[userLanguage]}
 
-# Your Role & Available Tools
-You have access to specialized tools for presentation tasks. ALWAYS use the appropriate tool:
+# Your Workflow
+1. User requests a presentation (e.g., "논문 요약 발표 자료, 15페이지")
+2. Extract: topic, slide count, language
+3. IMMEDIATELY output JSON slides - do NOT use tools, do NOT ask questions
+4. Generate slides one by one in streaming fashion
 
-**generate_presentation**: Create a new presentation from scratch
-- Use when: User wants a new presentation, gives a topic/brief
-- Parameters:
-  - topic (in user's language!)
-  - language (MUST match user's request language!)
-  - slideCount: **Extract from user's request!**
-    - "15페이지 이내" → slideCount: 15
-    - "10 slides" → slideCount: 10
-    - "약 20장" → slideCount: 20
-    - Not specified → slideCount: 8 (default)
-  - tone, targetAudience, designStyle
+# How to Extract Parameters
+- **Slide count**: "15페이지" → 15, "10 slides" → 10, "약 20장" → 20, default → 8
+- **Topic**: Main subject (e.g., "논문 요약", "AI의 미래", "Company Overview")
+- **Language**: Auto-detected (already provided to you)
 
-**modify_slide**: Edit a specific slide
-- Use when: User mentions slide number/title and wants changes
-- Parameters: slideIndex, modifications (title, bullets, layout, colors, etc.)
-
-**add_slide**: Insert a new slide
-- Use when: User wants to add content between existing slides
-- Parameters: position, slide (full slide object)
-
-**delete_slide**: Remove a slide
-- Use when: User wants to remove a specific slide
-- Parameters: slideIndex, reason
-
-**reorder_slides**: Change slide order
-- Use when: User wants to reorganize slides
-- Parameters: newOrder (array of indices)
-
-**translate_presentation**: Convert entire presentation to another language
-- Use when: User asks to translate the whole presentation
-- Parameters: targetLanguage
-
-**change_design_theme**: Apply a new design theme to all slides
-- Use when: User wants to change colors/fonts across all slides
-- Parameters: theme (name, colors, fonts)
-
-**add_chart_to_slide**: Add/update charts with data
-- Use when: User mentions adding a chart with specific data
-- Parameters: slideIndex, chart (type, data, labels, values)
-
-**suggest_improvements**: Analyze and provide improvement suggestions
-- Use when: User asks for feedback or improvements
-- Parameters: focus (design/content/structure/data-viz/all)
-
-# Tool Usage Guidelines
-1. **ALWAYS respond in ${userLanguage === 'ko' ? '한국어' : userLanguage === 'ja' ? '日本語' : userLanguage === 'zh' ? '中文' : 'English'}** when explaining what you're doing
-2. **Use tools for actions**, not for explanations
-3. **One tool call per user request** (unless they ask for multiple things)
-
-# How to Call Tools
-When you need to use a tool, output it in this format:
-<tool_call>
-name: tool_name
-args: {
-  "parameter1": "value1",
-  "parameter2": "value2"
-}
-</tool_call>
-
+# Response Format
 ${
   userLanguage === 'ko'
-    ? `Example - 한국어로 프레젠테이션 생성:
-<tool_call>
-name: generate_presentation
-args: {
-  "topic": "AI의 미래",
-  "language": "ko",
-  "slideCount": 8,
-  "tone": "professional",
-  "targetAudience": "executives",
-  "designStyle": "modern tech"
-}
-</tool_call>
+    ? `간단한 확인 메시지 + 즉시 JSON 배열 출력:
 
-Example - 슬라이드 수정:
-<tool_call>
-name: modify_slide
-args: {
-  "slideIndex": 0,
-  "modifications": {
-    "title": "새로운 제목",
-    "bullets": ["수정된 포인트 1", "수정된 포인트 2"]
+"네, 논문 요약 발표 자료를 15장으로 만들어드리겠습니다."
+
+\`\`\`json
+[
+  {
+    "title": "논문 소개",
+    "subtitle": "연구의 배경과 목적",
+    ...
   },
-  "reason": "사용자 요청에 따라 제목과 내용 수정"
-}
-</tool_call>`
+  ...
+]
+\`\`\``
     : userLanguage === 'ja'
-      ? `Example - 日本語でプレゼンテーション生成:
-<tool_call>
-name: generate_presentation
-args: {
-  "topic": "AIの未来",
-  "language": "ja",
-  "slideCount": 8,
-  "tone": "professional",
-  "targetAudience": "executives",
-  "designStyle": "modern tech"
-}
-</tool_call>`
-      : userLanguage === 'zh'
-        ? `Example - 用中文生成演示文稿:
-<tool_call>
-name: generate_presentation
-args: {
-  "topic": "AI的未来",
-  "language": "zh",
-  "slideCount": 8,
-  "tone": "professional",
-  "targetAudience": "executives",
-  "designStyle": "modern tech"
-}
-</tool_call>`
-        : `Example - Generate presentation in English:
-<tool_call>
-name: generate_presentation
-args: {
-  "topic": "The Future of AI",
-  "language": "en",
-  "slideCount": 8,
-  "tone": "professional",
-  "targetAudience": "executives",
-  "designStyle": "modern tech"
-}
-</tool_call>`
+      ? `簡単な確認メッセージ + すぐにJSON配列を出力:
+
+"はい、論文要約プレゼンテーションを15枚作成します。"
+
+\`\`\`json
+[
+  {
+    "title": "論文紹介",
+    ...
+  }
+]
+\`\`\``
+      : `Brief confirmation + immediate JSON array:
+
+"Sure, I'll create a 15-slide presentation."
+
+\`\`\`json
+[
+  {
+    "title": "Introduction",
+    ...
+  }
+]
+\`\`\``
 }
 
 # Your Design Philosophy
@@ -471,69 +396,41 @@ function detectLanguage(text: string): 'ko' | 'en' | 'ja' | 'zh' {
   return 'ko';
 }
 
-// Tool 호출 파싱
-interface ToolCall {
-  name: string;
-  arguments: any;
-}
+// 사용자 요청에서 슬라이드 개수 추출
+function extractSlideCount(text: string): number {
+  // 숫자 + 페이지/슬라이드/장 패턴
+  const patterns = [
+    /(\d+)\s*페이지/,
+    /(\d+)\s*슬라이드/,
+    /(\d+)\s*장/,
+    /(\d+)\s*slides?/i,
+    /(\d+)\s*pages?/i,
+  ];
 
-function parseToolCalls(text: string): ToolCall[] {
-  const toolCalls: ToolCall[] = [];
-
-  // Tool 호출 패턴 감지: <tool_call>name: tool_name, args: {...}</tool_call>
-  // 또는 JSON 형식: {"tool": "name", "arguments": {...}}
-
-  // 패턴 1: XML-like 형식
-  const xmlPattern = /<tool_call>([\s\S]*?)<\/tool_call>/g;
-  let match;
-
-  while ((match = xmlPattern.exec(text)) !== null) {
-    try {
-      const content = match[1].trim();
-      // name: xxx, args: {...} 형식 파싱
-      const nameMatch = content.match(/name:\s*['"]?(\w+)['"]?/);
-      const argsMatch = content.match(/args:\s*({[\s\S]*})/);
-
-      if (nameMatch && argsMatch) {
-        toolCalls.push({
-          name: nameMatch[1],
-          arguments: JSON.parse(argsMatch[1]),
-        });
-      }
-    } catch (e) {
-      console.warn('[ppt-agent] Failed to parse tool call:', match[1], e);
-    }
-  }
-
-  // 패턴 2: JSON 형식
-  if (toolCalls.length === 0) {
-    const jsonPattern =
-      /\{[\s]*"tool"[\s]*:[\s]*"(\w+)"[\s]*,[\s]*"arguments"[\s]*:[\s]*(\{[\s\S]*?\})[\s]*\}/g;
-
-    while ((match = jsonPattern.exec(text)) !== null) {
-      try {
-        toolCalls.push({
-          name: match[1],
-          arguments: JSON.parse(match[2]),
-        });
-      } catch (e) {
-        console.warn('[ppt-agent] Failed to parse JSON tool call:', match[0], e);
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const count = parseInt(match[1], 10);
+      // 합리적인 범위 체크 (1-50)
+      if (count >= 1 && count <= 50) {
+        return count;
       }
     }
   }
 
-  return toolCalls;
+  return 8; // 기본값
 }
 
 export async function runPresentationAgent(
   messages: ChatMessage[],
   options: PresentationAgentOptions,
   callbacks: PresentationAgentCallbacks = {},
-  currentSlides: PresentationSlide[] = []
+  _currentSlides: PresentationSlide[] = []
 ): Promise<{ response: string; slides: PresentationSlide[] }> {
-  // 마지막 사용자 메시지에서 언어 감지
+  // 마지막 사용자 메시지에서 언어 및 슬라이드 개수 감지
   const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user');
   const userLanguage = lastUserMessage ? detectLanguage(lastUserMessage.content) : 'en';
+  const requestedSlideCount = lastUserMessage ? extractSlideCount(lastUserMessage.content) : 8;
 
   // LLMService를 사용하여 설정된 activeBaseModel을 IPC를 통해 호출
   const chatHistory: ChatMessage[] = [
@@ -563,9 +460,9 @@ ${
 }
 
 # Current Context
+**Requested Slide Count: ${requestedSlideCount} slides** (MUST generate exactly this many slides)
 Target format: ${options.targetFormat || 'pptx'}
 Tone: ${options.tone || 'bold'}
-Slides: ${options.slideCount || 'auto (extract from user request!)'}
 Brand voice: ${options.brandVoice || 'unspecified'}
 Visual direction: ${options.visualDirection || 'sleek, high contrast'}
 Theme palette: ${(options.theme?.palette || []).join(', ') || 'TBD'}
@@ -576,8 +473,6 @@ Layout guidelines: ${options.theme?.layoutGuidelines || '16:9 grids, consistent 
   ];
 
   let fullResponse = '';
-  // Tool 실행에서 사용할 슬라이드 상태 (초기값은 전달받은 currentSlides)
-  let workingSlides: PresentationSlide[] = [...currentSlides];
 
   try {
     for await (const chunk of LLMService.streamChat(chatHistory)) {
@@ -596,51 +491,19 @@ Layout guidelines: ${options.theme?.layoutGuidelines || '16:9 grids, consistent 
     return { response: fullResponse, slides: [] };
   }
 
-  // Tool 호출 감지 및 실행
-  const toolCalls = parseToolCalls(fullResponse);
+  // 첫 번째 응답에서 바로 슬라이드 추출 시도
+  const slides = coerceSlides(fullResponse);
 
-  if (toolCalls.length > 0) {
-    console.log(
-      '[ppt-agent] Detected tool calls:',
-      toolCalls.map((t) => t.name)
-    );
-
-    const toolContext: ToolExecutionContext = {
-      currentSlides: workingSlides,
-      userLanguage,
-    };
-
-    for (const toolCall of toolCalls) {
-      try {
-        const result = await executePptTool(toolCall.name, toolCall.arguments, toolContext);
-
-        if (result.success && result.slides) {
-          workingSlides = result.slides;
-          toolContext.currentSlides = result.slides;
-          callbacks.onSlides?.(result.slides);
-        }
-
-        // Tool 실행 결과를 사용자에게 알림
-        const resultMessage = result.success ? `✅ ${result.message}` : `❌ ${result.message}`;
-        callbacks.onToken?.(`\n\n${resultMessage}`);
-      } catch (error) {
-        console.error('[ppt-agent] Tool execution error:', error);
-        callbacks.onToken?.(
-          `\n\n❌ Tool execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-      }
-    }
-
-    // Tool이 슬라이드를 생성했다면 바로 반환
-    if (workingSlides.length > 0) {
-      return { response: fullResponse, slides: workingSlides };
-    }
+  if (slides.length > 0) {
+    // 슬라이드를 실시간으로 UI에 전달
+    callbacks.onSlides?.(slides);
+    return { response: fullResponse, slides };
   }
 
-  // Request explicit slide outline to keep UI in sync
+  // JSON이 없으면 두 번째 요청으로 명시적 JSON 요청
   const outlinePromptContent =
     userLanguage === 'ko'
-      ? `이제 슬라이드 개요를 JSON 배열로 출력하세요. 모든 디자인 필드를 포함하세요:
+      ? `이제 정확히 ${requestedSlideCount}개의 슬라이드 개요를 JSON 배열로 출력하세요. 모든 디자인 필드를 포함하세요:
 
 **필수 필드** (각 슬라이드마다):
 - title, subtitle, description, bullets (3-5개, 한국어로!)
@@ -660,9 +523,11 @@ Layout guidelines: ${options.theme?.layoutGuidelines || '16:9 grids, consistent 
 
 **중요**: 모든 텍스트 내용(title, bullets 등)을 한국어로 작성하세요!
 
+**중요**: ${requestedSlideCount}개의 슬라이드를 모두 생성하세요!
+
 JSON만 반환하세요 (마크다운 펜스 없이, 설명 없이):
 [{"title": "...", "subtitle": "...", ...}]`
-      : `Now output the slide outline as a JSON array. Include ALL design fields you decided on:
+      : `Now output exactly ${requestedSlideCount} slides as a JSON array. Include ALL design fields you decided on:
 
 **REQUIRED for each slide**:
 - title, subtitle, description, bullets (3-5 per slide, in ${userLanguage.toUpperCase()}!)
@@ -681,6 +546,7 @@ JSON만 반환하세요 (마크다운 펜스 없이, 설명 없이):
 - notes (speaker notes)
 
 **IMPORTANT**: Write all text content (title, bullets, etc.) in ${userLanguage.toUpperCase()}!
+**IMPORTANT**: Generate exactly ${requestedSlideCount} slides!
 
 Return ONLY valid JSON, no markdown fences, no explanation:
 [{"title": "...", "subtitle": "...", ...}]`;
@@ -732,12 +598,12 @@ Return ONLY valid JSON, no markdown fences, no explanation:
     outline = fullResponse;
   }
 
-  const slides = coerceSlides(outline);
-  if (slides.length > 0) {
-    callbacks.onSlides?.(slides);
+  const outlineSlides = coerceSlides(outline);
+  if (outlineSlides.length > 0) {
+    callbacks.onSlides?.(outlineSlides);
   } else if (!outlineSuccess) {
     console.warn('[ppt-agent] No slides generated. Response may not contain slide data.');
   }
 
-  return { response: fullResponse, slides };
+  return { response: fullResponse, slides: outlineSlides };
 }
