@@ -28,13 +28,20 @@ type ChatMessage = Message;
 
 function getSystemPrompt(userLanguage: 'ko' | 'en' | 'ja' | 'zh'): string {
   const languageInstructions = {
-    ko: `# 중요: 언어 규칙
-**사용자가 한국어로 요청했으므로, 당신의 모든 응답과 슬라이드 내용을 한국어로 작성해야 합니다.**
-- 대화 응답: 한국어로 답변
-- 슬라이드 제목, 내용, bullets: 모두 한국어
-- Tool 호출 시 language 파라미터: "ko"
+    ko: `# ⚠️ 절대 규칙: 한국어 사용 필수 ⚠️
+**사용자가 한국어로 요청했습니다. 당신은 반드시 한국어로만 응답해야 합니다.**
 
-절대 영어로 응답하지 마세요. 모든 것을 한국어로 작성하세요.`,
+✅ 올바른 응답:
+- "네, 알겠습니다. 논문 요약 발표 자료를 만들어드리겠습니다."
+- Tool 호출: language: "ko"
+- 슬라이드 제목: "연구 배경", "방법론", "결과 분석"
+
+❌ 잘못된 응답:
+- "Sure, I'll create a presentation..." (영어 사용 금지!)
+- Tool 호출: language: "en" (절대 안됨!)
+- 슬라이드 제목: "Introduction", "Methods" (영어 제목 금지!)
+
+**지금 당장 한국어로 응답을 시작하세요. 영어를 사용하면 안됩니다.**`,
     en: `# CRITICAL: Language Rule
 **The user requested in English, so ALL your responses and slide content must be in English.**
 - Conversation responses: English
@@ -67,7 +74,15 @@ You have access to specialized tools for presentation tasks. ALWAYS use the appr
 
 **generate_presentation**: Create a new presentation from scratch
 - Use when: User wants a new presentation, gives a topic/brief
-- Parameters: topic (in user's language!), language, slideCount, tone, targetAudience, designStyle
+- Parameters:
+  - topic (in user's language!)
+  - language (MUST match user's request language!)
+  - slideCount: **Extract from user's request!**
+    - "15페이지 이내" → slideCount: 15
+    - "10 slides" → slideCount: 10
+    - "약 20장" → slideCount: 20
+    - Not specified → slideCount: 8 (default)
+  - tone, targetAudience, designStyle
 
 **modify_slide**: Edit a specific slide
 - Use when: User mentions slide number/title and wants changes
@@ -486,13 +501,23 @@ export async function runPresentationAgent(
       id: generateId(),
       conversation_id: 'presentation-agent',
       role: 'system',
-      content: `# Current Context
+      content: `# ⚠️ CRITICAL REMINDER ⚠️
 
-**DETECTED USER LANGUAGE: ${userLanguage.toUpperCase()}**
+**USER LANGUAGE: ${userLanguage.toUpperCase()}**
+${
+  userLanguage === 'ko'
+    ? '→ 모든 응답을 한국어로 작성하세요! 영어 사용 절대 금지!'
+    : userLanguage === 'ja'
+      ? '→ すべての応答を日本語で作成してください！'
+      : userLanguage === 'zh'
+        ? '→ 用中文回复所有内容！'
+        : '→ Respond in English only!'
+}
 
+# Current Context
 Target format: ${options.targetFormat || 'pptx'}
 Tone: ${options.tone || 'bold'}
-Slides: ${options.slideCount || 'auto'}
+Slides: ${options.slideCount || 'auto (extract from user request!)'}
 Brand voice: ${options.brandVoice || 'unspecified'}
 Visual direction: ${options.visualDirection || 'sleek, high contrast'}
 Theme palette: ${(options.theme?.palette || []).join(', ') || 'TBD'}
