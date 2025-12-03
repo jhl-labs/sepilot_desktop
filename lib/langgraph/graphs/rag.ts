@@ -10,6 +10,43 @@ import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
  * RAG 생성 노드
  */
 async function ragGenerateNode(state: typeof RAGStateAnnotation.State) {
+  // Main Process 환경에서 LLM 클라이언트 초기화 확인 및 설정
+  if (typeof window === 'undefined') {
+    try {
+      const { databaseService } = await import('../../../electron/services/database');
+      const { initializeLLMClient, getLLMClient } = await import('@/lib/llm/client');
+      const { isLLMConfigV2, convertV2ToV1 } = await import('@/lib/config/llm-config-migration');
+
+      const client = getLLMClient();
+      if (!client.isConfigured()) {
+        console.log('[RAGGraph] LLM client not configured, initializing from database...');
+
+        const configStr = databaseService.getSetting('app_config');
+        if (!configStr) {
+          throw new Error('App config not found in database');
+        }
+
+        const appConfig = JSON.parse(configStr);
+        if (!appConfig.llm) {
+          throw new Error('LLM config not found in app_config');
+        }
+
+        // V2 설정이면 V1으로 변환
+        if (isLLMConfigV2(appConfig.llm)) {
+          console.log('[RAGGraph] Converting V2 LLM config to V1');
+          appConfig.llm = convertV2ToV1(appConfig.llm);
+        }
+
+        // LLM 클라이언트 초기화
+        initializeLLMClient(appConfig.llm);
+        console.log('[RAGGraph] LLM client initialized successfully');
+      }
+    } catch (error: any) {
+      console.error('[RAGGraph] Failed to initialize LLM client:', error);
+      throw error;
+    }
+  }
+
   const messages = [
     {
       id: 'system',
