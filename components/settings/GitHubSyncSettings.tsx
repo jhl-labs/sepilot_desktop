@@ -13,7 +13,6 @@ import {
   AlertCircle,
   Github,
   Settings,
-  FileText,
   Image,
   MessageSquare,
   User,
@@ -21,7 +20,6 @@ import {
   Check,
   AlertTriangle,
   Bug,
-  Download,
 } from 'lucide-react';
 import { GitHubSyncConfig } from '@/types';
 
@@ -31,7 +29,7 @@ interface GitHubSyncSettingsProps {
 }
 
 interface SyncItemConfig {
-  id: 'settings' | 'documents' | 'images' | 'conversations' | 'personas';
+  id: 'settings' | 'images' | 'conversations' | 'personas';
   title: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -58,13 +56,6 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       description: 'LLM, Network, VectorDB 등 애플리케이션 설정',
       icon: Settings,
       enabled: config?.syncSettings ?? true,
-    },
-    {
-      id: 'documents',
-      title: '문서 동기화',
-      description: 'RAG 벡터 데이터베이스 문서',
-      icon: FileText,
-      enabled: config?.syncDocuments ?? false,
     },
     {
       id: 'personas',
@@ -95,7 +86,6 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
   const [isTesting, setIsTesting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
-  const [isPulling, setIsPulling] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -113,13 +103,11 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
           enabled:
             item.id === 'settings'
               ? (config.syncSettings ?? true)
-              : item.id === 'documents'
-                ? (config.syncDocuments ?? false)
-                : item.id === 'personas'
-                  ? (config.syncPersonas ?? false)
-                  : item.id === 'images'
-                    ? (config.syncImages ?? false)
-                    : (config.syncConversations ?? false),
+              : item.id === 'personas'
+                ? (config.syncPersonas ?? false)
+                : item.id === 'images'
+                  ? (config.syncImages ?? false)
+                  : (config.syncConversations ?? false),
         }))
       );
     }
@@ -154,7 +142,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         repo,
         branch,
         syncSettings: syncItems.find((i) => i.id === 'settings')?.enabled ?? true,
-        syncDocuments: syncItems.find((i) => i.id === 'documents')?.enabled ?? false,
+        syncDocuments: false,
         syncImages: syncItems.find((i) => i.id === 'images')?.enabled ?? false,
         syncConversations: syncItems.find((i) => i.id === 'conversations')?.enabled ?? false,
         syncPersonas: syncItems.find((i) => i.id === 'personas')?.enabled ?? false,
@@ -209,7 +197,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         repo,
         branch: branch || 'main',
         syncSettings: syncItems.find((i) => i.id === 'settings')?.enabled ?? true,
-        syncDocuments: syncItems.find((i) => i.id === 'documents')?.enabled ?? false,
+        syncDocuments: false,
         syncImages: syncItems.find((i) => i.id === 'images')?.enabled ?? false,
         syncConversations: syncItems.find((i) => i.id === 'conversations')?.enabled ?? false,
         syncPersonas: syncItems.find((i) => i.id === 'personas')?.enabled ?? false,
@@ -227,124 +215,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
     }
   };
 
-  const handlePullDocuments = async () => {
-    if (!token || !owner || !repo) {
-      setMessage({ type: 'error', text: '먼저 설정을 저장해주세요.' });
-      return;
-    }
-
-    if (serverType === 'ghes' && !ghesUrl) {
-      setMessage({ type: 'error', text: 'GHES URL을 입력해주세요.' });
-      return;
-    }
-
-    setIsPulling('documents');
-    setMessage(null);
-
-    try {
-      const syncConfig: GitHubSyncConfig = {
-        serverType,
-        ghesUrl: serverType === 'ghes' ? ghesUrl : undefined,
-        token,
-        owner,
-        repo,
-        branch: branch || 'main',
-        syncSettings: syncItems.find((i) => i.id === 'settings')?.enabled ?? true,
-        syncDocuments: syncItems.find((i) => i.id === 'documents')?.enabled ?? false,
-        syncImages: syncItems.find((i) => i.id === 'images')?.enabled ?? false,
-        syncConversations: syncItems.find((i) => i.id === 'conversations')?.enabled ?? false,
-        syncPersonas: syncItems.find((i) => i.id === 'personas')?.enabled ?? false,
-      };
-
-      if (typeof window !== 'undefined' && window.electronAPI) {
-        const result = await window.electronAPI.githubSync.pullDocuments(syncConfig);
-
-        if (result.success && result.documents && result.documents.length > 0) {
-          // 1. 기존 문서 조회 (중복 확인)
-          const existingDocsResult = await window.electronAPI.vectorDB.getAll();
-          const existingDocs =
-            existingDocsResult.success && existingDocsResult.data ? existingDocsResult.data : [];
-
-          // 2. 중복 문서 찾기 (title + folderPath로 매칭)
-          const docsToDelete: string[] = [];
-          for (const newDoc of result.documents) {
-            const matchingDocs = existingDocs.filter(
-              (existing: any) =>
-                existing.metadata?.title === newDoc.title &&
-                existing.metadata?.folderPath === newDoc.metadata?.folderPath
-            );
-            // 중복된 모든 청크의 ID 수집
-            for (const match of matchingDocs) {
-              docsToDelete.push(match.id);
-            }
-          }
-
-          // 3. 중복 문서 삭제
-          if (docsToDelete.length > 0) {
-            const deleteResult = await window.electronAPI.vectorDB.delete(docsToDelete);
-            if (!deleteResult.success) {
-              console.error('Failed to delete duplicate documents:', deleteResult.error);
-            }
-          }
-
-          // 4. ID 생성 함수
-          const generateId = () => {
-            return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          };
-
-          // 5. 문서에 ID 추가
-          const documentsWithIds = result.documents.map(
-            (doc: { title: string; content: string; metadata: Record<string, any> }) => ({
-              id: generateId(),
-              content: doc.content,
-              metadata: doc.metadata,
-            })
-          );
-
-          // 6. VectorDB에 문서 인덱싱 (DocumentsPage와 동일한 옵션 사용)
-          const indexingOptions = {
-            chunkSize: 2500,
-            chunkOverlap: 250,
-            batchSize: 10,
-            chunkStrategy: 'sentence' as const,
-          };
-
-          const indexResult = await window.electronAPI.vectorDB.indexDocuments(
-            documentsWithIds,
-            indexingOptions
-          );
-
-          if (indexResult.success) {
-            const deleteMsg =
-              docsToDelete.length > 0 ? ` (${docsToDelete.length}개 중복 제거)` : '';
-            setMessage({
-              type: 'success',
-              text: `${result.documents.length}개의 문서를 GitHub에서 가져와 VectorDB에 추가했습니다!${deleteMsg}`,
-            });
-          } else {
-            throw new Error(indexResult.error || '문서 인덱싱 실패');
-          }
-        } else if (result.success && result.documents && result.documents.length === 0) {
-          setMessage({
-            type: 'success',
-            text: 'GitHub에 동기화할 문서가 없습니다.',
-          });
-        } else {
-          throw new Error(result.error || '문서 가져오기 실패');
-        }
-      }
-    } catch (error: unknown) {
-      const err = error as Error;
-      console.error('Failed to pull documents:', err);
-      setMessage({ type: 'error', text: err.message || '문서 가져오기 실패' });
-    } finally {
-      setIsPulling(null);
-    }
-  };
-
-  const handleSync = async (
-    type: 'settings' | 'documents' | 'images' | 'conversations' | 'personas' | 'all'
-  ) => {
+  const handleSync = async (type: 'settings' | 'images' | 'conversations' | 'personas' | 'all') => {
     if (!token || !owner || !repo) {
       setMessage({ type: 'error', text: '먼저 설정을 저장해주세요.' });
       return;
@@ -367,7 +238,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         repo,
         branch: branch || 'main',
         syncSettings: syncItems.find((i) => i.id === 'settings')?.enabled ?? true,
-        syncDocuments: syncItems.find((i) => i.id === 'documents')?.enabled ?? false,
+        syncDocuments: false,
         syncImages: syncItems.find((i) => i.id === 'images')?.enabled ?? false,
         syncConversations: syncItems.find((i) => i.id === 'conversations')?.enabled ?? false,
         syncPersonas: syncItems.find((i) => i.id === 'personas')?.enabled ?? false,
@@ -383,14 +254,6 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
               setMessage({ type: 'success', text: result.message || '설정 동기화 완료!' });
             } else {
               throw new Error(result.error || '설정 동기화 실패');
-            }
-            break;
-          case 'documents':
-            result = await window.electronAPI.githubSync.syncDocuments(syncConfig);
-            if (result.success) {
-              setMessage({ type: 'success', text: result.message || '문서 동기화 완료!' });
-            } else {
-              throw new Error(result.error || '문서 동기화 실패');
             }
             break;
           case 'personas':
@@ -592,8 +455,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {syncItems.map((item) => {
             const Icon = item.icon;
-            const isDisabled = !item.enabled || isSyncing !== null || isPulling !== null;
-            const isPullingItem = isPulling === item.id;
+            const isDisabled = !item.enabled || isSyncing !== null;
 
             return (
               <Card key={item.id} className={item.enabled ? 'border-primary/50' : ''}>
@@ -634,7 +496,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
                       disabled={isDisabled}
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className="w-full"
                     >
                       {isSyncing === item.id ? (
                         <>
@@ -648,27 +510,6 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
                         </>
                       )}
                     </Button>
-                    {item.id === 'documents' && (
-                      <Button
-                        onClick={handlePullDocuments}
-                        disabled={isDisabled}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                      >
-                        {isPullingItem ? (
-                          <>
-                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                            Pull 중...
-                          </>
-                        ) : (
-                          <>
-                            <Download className="mr-2 h-3 w-3" />
-                            Pull
-                          </>
-                        )}
-                      </Button>
-                    )}
                   </div>
                 </CardContent>
               </Card>
