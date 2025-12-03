@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { generateId } from '@/lib/utils';
@@ -19,21 +19,25 @@ export function SlidePreview() {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const isInternalUpdate = useRef(false);
 
   // Navigation functions
   const goToNext = useCallback(() => {
     if (currentIndex < presentationSlides.length - 1) {
+      isInternalUpdate.current = true;
       setCurrentIndex(currentIndex + 1);
     }
   }, [currentIndex, presentationSlides.length]);
 
   const goToPrevious = useCallback(() => {
     if (currentIndex > 0) {
+      isInternalUpdate.current = true;
       setCurrentIndex(currentIndex - 1);
     }
   }, [currentIndex]);
 
   const goToSlide = useCallback((index: number) => {
+    isInternalUpdate.current = true;
     setCurrentIndex(index);
   }, []);
 
@@ -41,20 +45,25 @@ export function SlidePreview() {
     setIsFullscreen(!isFullscreen);
   }, [isFullscreen]);
 
-  // Sync currentIndex with activePresentationSlideId
+  // Sync currentIndex with activePresentationSlideId (외부에서 변경된 경우만)
   useEffect(() => {
-    if (activePresentationSlideId) {
+    if (!isInternalUpdate.current && activePresentationSlideId) {
       const idx = presentationSlides.findIndex((s) => s.id === activePresentationSlideId);
-      if (idx !== -1) {
+      if (idx !== -1 && idx !== currentIndex) {
         setCurrentIndex(idx);
       }
     }
-  }, [activePresentationSlideId, presentationSlides]);
+  }, [activePresentationSlideId, presentationSlides, currentIndex]);
 
-  // Update active slide when currentIndex changes
+  // Update active slide when currentIndex changes (내부에서 변경된 경우만)
   useEffect(() => {
-    if (presentationSlides.length > 0 && presentationSlides[currentIndex]) {
+    if (
+      isInternalUpdate.current &&
+      presentationSlides.length > 0 &&
+      presentationSlides[currentIndex]
+    ) {
       setActivePresentationSlide(presentationSlides[currentIndex].id);
+      isInternalUpdate.current = false;
     }
   }, [currentIndex, presentationSlides, setActivePresentationSlide]);
 
