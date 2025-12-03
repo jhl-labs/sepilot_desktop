@@ -73,7 +73,7 @@ export class LLMInteractionTestSuite {
         .prepare('SELECT value FROM settings WHERE key = ?')
         .get(['app_config']) as unknown as { value: string } | undefined;
 
-      if (!configResult) {
+      if (!configResult || !configResult.value) {
         return {
           id: testId,
           name: 'LLM Provider Configuration',
@@ -161,7 +161,7 @@ export class LLMInteractionTestSuite {
         .prepare('SELECT value FROM settings WHERE key = ?')
         .get(['app_config']) as unknown as { value: string } | undefined;
 
-      if (!configResult) {
+      if (!configResult || !configResult.value) {
         return {
           id: testId,
           name: 'API Key Validation',
@@ -249,7 +249,7 @@ export class LLMInteractionTestSuite {
         .prepare('SELECT value FROM settings WHERE key = ?')
         .get(['app_config']) as unknown as { value: string } | undefined;
 
-      if (!configResult) {
+      if (!configResult || !configResult.value) {
         return {
           id: testId,
           name: 'Token Limits Configuration',
@@ -340,7 +340,7 @@ export class LLMInteractionTestSuite {
         .prepare('SELECT value FROM settings WHERE key = ?')
         .get(['app_config']) as unknown as { value: string } | undefined;
 
-      if (!configResult) {
+      if (!configResult || !configResult.value) {
         return {
           id: testId,
           name: 'Temperature Settings',
