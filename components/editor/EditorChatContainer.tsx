@@ -288,12 +288,15 @@ Execute tasks step by step and use tools proactively.`;
                     timestamp: Date.now(),
                   });
 
-                  // Append approval waiting message
-                  accumulatedContent += '\n\n🔔 도구 실행 승인을 기다리는 중...';
-                  const messages = useChatStore.getState().editorChatMessages;
-                  const lastMessage = messages[messages.length - 1];
-                  if (lastMessage && lastMessage.role === 'assistant') {
-                    updateEditorChatMessage(lastMessage.id, { content: accumulatedContent });
+                  // Append approval waiting message only if not already present
+                  const approvalMessage = '🔔 도구 실행 승인을 기다리는 중...';
+                  if (!accumulatedContent.includes(approvalMessage)) {
+                    accumulatedContent += `\n\n${approvalMessage}`;
+                    const messages = useChatStore.getState().editorChatMessages;
+                    const lastMessage = messages[messages.length - 1];
+                    if (lastMessage && lastMessage.role === 'assistant') {
+                      updateEditorChatMessage(lastMessage.id, { content: accumulatedContent });
+                    }
                   }
                 }
                 return;

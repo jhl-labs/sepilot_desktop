@@ -197,8 +197,13 @@ export function useMessageStreaming() {
                 toolCalls: event.toolCalls!,
                 timestamp: Date.now(),
               });
-              accumulatedContent = `${accumulatedContent || ''}\n\n🔔 도구 실행 승인을 기다리는 중...`;
-              scheduleUpdate({ content: accumulatedContent });
+
+              // Add approval waiting message only if not already present
+              const approvalMessage = '🔔 도구 실행 승인을 기다리는 중...';
+              if (!accumulatedContent.includes(approvalMessage)) {
+                accumulatedContent = `${accumulatedContent || ''}\n\n${approvalMessage}`;
+                scheduleUpdate({ content: accumulatedContent });
+              }
               return;
             }
 
