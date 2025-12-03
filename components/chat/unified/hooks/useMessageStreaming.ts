@@ -318,7 +318,7 @@ export function useMessageStreaming() {
               }
             }
 
-            // Extract referenced_documents for non-coding modes
+            // Extract referenced_documents and images for non-coding modes
             if (
               thinkingMode !== 'coding' &&
               event.type === 'node' &&
@@ -326,13 +326,22 @@ export function useMessageStreaming() {
               event.data.messages.length > 0
             ) {
               const lastMessage = event.data.messages[event.data.messages.length - 1];
+              const updates: Partial<Message> = {};
+
               if (
                 lastMessage?.referenced_documents &&
                 lastMessage.referenced_documents.length > 0
               ) {
-                scheduleUpdate({
-                  referenced_documents: lastMessage.referenced_documents,
-                });
+                updates.referenced_documents = lastMessage.referenced_documents;
+              }
+
+              // Extract generated images from assistant message
+              if (lastMessage?.images && lastMessage.images.length > 0) {
+                updates.images = lastMessage.images;
+              }
+
+              if (Object.keys(updates).length > 0) {
+                scheduleUpdate(updates);
               }
             }
 
