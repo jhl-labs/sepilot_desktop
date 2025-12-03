@@ -158,12 +158,13 @@ export function convertV2ToV1(configV2: LLMConfigV2): LLMConfig {
       config.vision = {
         enabled: true,
         provider: visionConnection.provider,
+        // baseURL: base와 다르면 포함, 같으면 fallback
         baseURL:
           visionConnection.baseURL !== baseConnection.baseURL
             ? visionConnection.baseURL
-            : undefined,
-        apiKey:
-          visionConnection.apiKey !== baseConnection.apiKey ? visionConnection.apiKey : undefined,
+            : baseConnection.baseURL,
+        // apiKey: 항상 포함 (같은 connection 사용 시에도 필요)
+        apiKey: visionConnection.apiKey || baseConnection.apiKey,
         model: visionModel.modelId,
         maxImageTokens: visionModel.maxImageTokens,
         enableStreaming: visionModel.enableStreaming,
@@ -184,14 +185,13 @@ export function convertV2ToV1(configV2: LLMConfigV2): LLMConfig {
       config.autocomplete = {
         enabled: true,
         provider: autocompleteConnection.provider,
+        // baseURL: base와 다르면 포함, 같으면 fallback
         baseURL:
           autocompleteConnection.baseURL !== baseConnection.baseURL
             ? autocompleteConnection.baseURL
-            : undefined,
-        apiKey:
-          autocompleteConnection.apiKey !== baseConnection.apiKey
-            ? autocompleteConnection.apiKey
-            : undefined,
+            : baseConnection.baseURL,
+        // apiKey: 항상 포함 (같은 connection 사용 시에도 필요)
+        apiKey: autocompleteConnection.apiKey || baseConnection.apiKey,
         model: autocompleteModel.modelId,
         temperature: autocompleteModel.temperature,
         maxTokens: autocompleteModel.maxTokens,
