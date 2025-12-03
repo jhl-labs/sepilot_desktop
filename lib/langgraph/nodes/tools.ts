@@ -350,14 +350,22 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
               );
 
               if (imageResult.success && imageResult.imageBase64) {
+                const imageObject = {
+                  id: `comfyui-${Date.now()}`,
+                  base64: imageResult.imageBase64,
+                  filename: `comfyui-${Date.now()}.png`,
+                  mimeType: 'image/png',
+                  provider: 'comfyui' as const,
+                };
+
                 return {
                   toolCallId: call.id,
                   toolName: call.name,
                   result: JSON.stringify({
                     success: true,
-                    imageBase64: imageResult.imageBase64,
-                    prompt: args.prompt,
+                    imageCount: 1,
                   }),
+                  generatedImages: [imageObject],
                 };
               } else {
                 return {
@@ -417,29 +425,25 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
                   state.conversationId
                 );
 
-                // NanoBanana can return multiple images
-                const imagesJson = nanobananaResult.images.map((img, idx) => ({
-                  imageBase64: img,
-                  index: idx,
+                // Add images to state for later attachment to assistant message
+                const imageObjects = nanobananaResult.images.map((img, idx) => ({
+                  id: `nanobanana-${Date.now()}-${idx}`,
+                  base64: img,
+                  filename: `nanobanana-${Date.now()}-${idx}.png`,
+                  mimeType: 'image/png',
+                  provider: 'nanobanana' as const,
                 }));
 
-                // Prepare result with usage info
-                const resultData: any = {
-                  success: true,
-                  images: imagesJson,
-                  prompt: args.prompt,
-                };
-
-                // Include usage info if available
-                if (nanobananaResult.usage) {
-                  resultData.usage = nanobananaResult.usage;
-                  console.log('[Tools] NanoBanana usage info:', nanobananaResult.usage);
-                }
-
+                // Update state with generated images
                 return {
                   toolCallId: call.id,
                   toolName: call.name,
-                  result: JSON.stringify(resultData),
+                  result: JSON.stringify({
+                    success: true,
+                    imageCount: nanobananaResult.images.length,
+                    usage: nanobananaResult.usage,
+                  }),
+                  generatedImages: imageObjects,
                 };
               } else {
                 // Emit error progress
@@ -606,8 +610,26 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
 
     console.log('[Tools] All tool results:', results);
 
+    // Collect generated images from results
+    const generatedImages: Array<{
+      id: string;
+      base64: string;
+      filename: string;
+      mimeType: string;
+      provider?: 'comfyui' | 'nanobanana';
+    }> = [];
+
+    for (const result of results) {
+      if ((result as any).generatedImages) {
+        generatedImages.push(...(result as any).generatedImages);
+      }
+    }
+
+    console.log('[Tools] Generated images count:', generatedImages.length);
+
     return {
       toolResults: results,
+      generatedImages: generatedImages.length > 0 ? generatedImages : undefined,
     };
   } catch (error: any) {
     console.error('Tools node error:', error);

@@ -73,6 +73,19 @@ export const AgentStateAnnotation = Annotation.Root({
     reducer: (_existing: string, update: string) => update || _existing,
     default: () => '',
   }),
+  // Generated images from tools (e.g., generate_image)
+  generatedImages: Annotation<
+    Array<{
+      id: string;
+      base64: string;
+      filename: string;
+      mimeType: string;
+      provider?: 'comfyui' | 'nanobanana';
+    }>
+  >({
+    reducer: (existing, updates) => [...(existing || []), ...(updates || [])],
+    default: () => [],
+  }),
   // Deep Web Research용 planning notes (iteration, forceSynthesize 등)
   planningNotes: Annotation<Record<string, any>>({
     reducer: (_existing: Record<string, any>, update: Record<string, any>) => ({
@@ -106,6 +119,19 @@ export const CodingAgentStateAnnotation = Annotation.Root({
   conversationId: Annotation<string>({
     reducer: (_existing: string, update: string) => update || _existing,
     default: () => '',
+  }),
+  // Generated images from tools (e.g., generate_image)
+  generatedImages: Annotation<
+    Array<{
+      id: string;
+      base64: string;
+      filename: string;
+      mimeType: string;
+      provider?: 'comfyui' | 'nanobanana';
+    }>
+  >({
+    reducer: (existing, updates) => [...(existing || []), ...(updates || [])],
+    default: () => [],
   }),
   // Planning & Verification
   planningNotes: Annotation<string[]>({
@@ -248,6 +274,7 @@ export function createInitialAgentState(
     toolCalls: [],
     toolResults: [],
     conversationId,
+    generatedImages: [],
     planningNotes: {},
   };
 }
@@ -266,6 +293,7 @@ export function createInitialCodingAgentState(
     toolCalls: [],
     toolResults: [],
     conversationId,
+    generatedImages: [],
     alwaysApproveTools: false,
     approvalHistory: [],
     planningNotes: [],

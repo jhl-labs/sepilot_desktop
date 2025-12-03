@@ -96,8 +96,10 @@ async function researchNode(state: ChatState) {
     const genResult = await generateWithToolsNode({
       ...state,
       messages: currentMessages,
+      context: '',
       toolCalls: [],
       toolResults: [],
+      generatedImages: [],
       planningNotes: {},
     });
     const responseMsg = genResult.messages?.[0];
@@ -119,8 +121,10 @@ async function researchNode(state: ChatState) {
     const toolResult = await toolsNode({
       ...state,
       messages: currentMessages,
+      context: '',
       toolCalls: [],
       toolResults: [],
+      generatedImages: [],
       planningNotes: {},
     });
 

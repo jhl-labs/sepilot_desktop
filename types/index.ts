@@ -9,10 +9,10 @@ export interface ReferencedDocument {
 
 export interface ImageAttachment {
   id: string;
-  path: string;
+  path?: string; // Optional for generated images (only uploaded images have path)
   filename: string;
   mimeType: string;
-  base64?: string; // For display
+  base64?: string; // For display (required for generated images)
   provider?: 'comfyui' | 'nanobanana'; // Image generation provider
 }
 

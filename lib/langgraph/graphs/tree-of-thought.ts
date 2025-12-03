@@ -97,8 +97,10 @@ async function researchNode(state: TreeOfThoughtState) {
     const genResult = await generateWithToolsNode({
       ...state,
       messages: currentMessages,
+      context: '',
       toolCalls: [],
       toolResults: [],
+      generatedImages: [],
       planningNotes: {},
     });
     const responseMsg = genResult.messages?.[0];
@@ -120,8 +122,10 @@ async function researchNode(state: TreeOfThoughtState) {
     const toolResult = await toolsNode({
       ...state,
       messages: currentMessages,
+      context: '',
       toolCalls: [],
       toolResults: [],
+      generatedImages: [],
       planningNotes: {},
     });
 

@@ -443,17 +443,25 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
       content: accumulatedContent || '',
       created_at: Date.now(),
       tool_calls: toolCalls,
+      // Attach generated images if any
+      images:
+        state.generatedImages && state.generatedImages.length > 0
+          ? state.generatedImages
+          : undefined,
     };
 
     console.log('[Agent] Assistant message created:', {
       hasContent: !!assistantMessage.content,
       hasToolCalls: !!assistantMessage.tool_calls,
       toolCallsCount: assistantMessage.tool_calls?.length,
+      hasImages: !!assistantMessage.images,
+      imageCount: assistantMessage.images?.length || 0,
     });
 
     return {
       messages: [assistantMessage],
       toolResults: [], // 다음 iteration을 위해 초기화
+      generatedImages: [], // Clear generated images after attaching to message
     };
   } catch (error: any) {
     console.error('Generate with tools node error:', error);
