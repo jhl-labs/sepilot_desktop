@@ -35,8 +35,24 @@ const SYSTEM_PROMPT = `You are ppt-agent, a presentation co-designer that follow
 
 function coerceSlides(raw: string): PresentationSlide[] {
   const slides: PresentationSlide[] = [];
+
+  // Try to extract JSON from markdown code blocks
+  let jsonContent = raw.trim();
+
+  // Remove markdown code fences (```json ... ``` or ``` ... ```)
+  const codeBlockMatch = jsonContent.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+  if (codeBlockMatch) {
+    jsonContent = codeBlockMatch[1];
+  } else {
+    // Try to find JSON array directly
+    const arrayMatch = jsonContent.match(/(\[\s*\{[\s\S]*\}\s*\])/);
+    if (arrayMatch) {
+      jsonContent = arrayMatch[1];
+    }
+  }
+
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(jsonContent);
     if (Array.isArray(parsed)) {
       for (const item of parsed) {
         slides.push({
@@ -54,7 +70,8 @@ function coerceSlides(raw: string): PresentationSlide[] {
         return slides;
       }
     }
-  } catch {
+  } catch (e) {
+    console.warn('[ppt-agent] JSON parse failed, trying heuristic parsing:', e);
     // Fall back to heuristic parsing
   }
 
@@ -145,7 +162,7 @@ export async function runPresentationAgent(
     conversation_id: 'presentation-agent',
     role: 'user',
     content:
-      'Summarize the slides you propose as compact JSON with fields: title, description, bullets, imagePrompt, notes, accentColor.',
+      'Now output ONLY the slide outline as a JSON array. No explanation, no markdown code fences, just the raw JSON array: [{"title": "...", "description": "...", "bullets": ["..."], "imagePrompt": "...", "notes": "...", "accentColor": "..."}]. Start directly with [ and end with ].',
     created_at: Date.now(),
   };
 
@@ -173,7 +190,6 @@ export async function runPresentationAgent(
     const streamPromise = (async () => {
       for await (const chunk of LLMService.streamChat(outlineHistory)) {
         if (callbacks.signal?.aborted) {
-          console.log('[ppt-agent] Outline generation aborted');
           break;
         }
         outline += chunk;
@@ -185,7 +201,7 @@ export async function runPresentationAgent(
   } catch (error) {
     console.error('[ppt-agent] Outline generation error:', error);
     // Fallback: 첫 응답에서 슬라이드 추출 시도
-    console.log('[ppt-agent] Attempting to extract slides from initial response');
+    console.warn('[ppt-agent] Attempting to extract slides from initial response');
     outline = fullResponse;
   }
 
