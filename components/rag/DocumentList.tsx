@@ -23,6 +23,7 @@ import {
   X,
   User,
   Users,
+  Github,
 } from 'lucide-react';
 import {
   getAllDocuments,
@@ -35,6 +36,7 @@ import {
 } from '@/lib/vectordb/client';
 import { VectorDocument, DocumentTreeNode } from '@/lib/vectordb/types';
 import { FolderManageDialog } from './FolderManageDialog';
+import { DocsSyncDialog } from './DocsSyncDialog';
 
 type ViewMode = 'grid' | 'list' | 'tree';
 
@@ -53,6 +55,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>('tree');
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [draggedDoc, setDraggedDoc] = useState<VectorDocument | null>(null);
   const [emptyFolders, setEmptyFolders] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -906,6 +909,16 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           >
             <Upload className="h-4 w-4" />
           </Button>
+          <div className="h-6 w-px bg-border" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSyncDialogOpen(true)}
+            disabled={isLoading || disabled}
+            title="GitHub Sync"
+          >
+            <Github className="h-4 w-4" />
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -984,6 +997,13 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         onOpenChange={setFolderDialogOpen}
         mode="create"
         onConfirm={handleCreateFolder}
+      />
+
+      {/* GitHub Sync 다이얼로그 */}
+      <DocsSyncDialog
+        open={syncDialogOpen}
+        onOpenChange={setSyncDialogOpen}
+        onRefresh={loadDocuments}
       />
     </div>
   );
