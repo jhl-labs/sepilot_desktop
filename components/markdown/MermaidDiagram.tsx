@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Check, Copy, RefreshCw, Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { isElectron } from '@/lib/platform';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 
 interface MermaidDiagramProps {
   chart: string;
@@ -272,9 +273,11 @@ Corrected Mermaid code:`;
   }, [currentChart, theme, retryCount, chart, onChartFixed]);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(currentChart);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const success = await copyToClipboard(currentChart);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   // Manual retry handler

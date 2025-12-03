@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Check, Copy } from 'lucide-react';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 
 // Dynamically import Plotly to avoid SSR issues
 // Using factory pattern to bind plotly.js-dist-min
@@ -44,9 +45,11 @@ export function PlotlyChart({ data }: PlotlyChartProps) {
   }, [data]);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(data);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const success = await copyToClipboard(data);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   if (error) {

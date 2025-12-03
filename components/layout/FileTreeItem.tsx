@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { Folder, FolderOpen, File, ChevronRight, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 import { useFileSystem } from '@/hooks/use-file-system';
 import { useFileClipboard } from '@/hooks/use-file-clipboard';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -154,8 +155,10 @@ export function FileTreeItem({
     try {
       const result = await window.electronAPI.fs.getAbsolutePath(node.path);
       if (result.success && result.data) {
-        await navigator.clipboard.writeText(result.data);
-        console.log('[FileTreeItem] Absolute path copied:', result.data);
+        const success = await copyToClipboard(result.data);
+        if (success) {
+          console.log('[FileTreeItem] Absolute path copied:', result.data);
+        }
       }
     } catch (error) {
       console.error('[FileTreeItem] Error copying path:', error);
@@ -171,8 +174,10 @@ export function FileTreeItem({
     try {
       const result = await window.electronAPI.fs.getRelativePath(workingDirectory, node.path);
       if (result.success && result.data) {
-        await navigator.clipboard.writeText(result.data);
-        console.log('[FileTreeItem] Relative path copied:', result.data);
+        const success = await copyToClipboard(result.data);
+        if (success) {
+          console.log('[FileTreeItem] Relative path copied:', result.data);
+        }
       }
     } catch (error) {
       console.error('[FileTreeItem] Error copying relative path:', error);

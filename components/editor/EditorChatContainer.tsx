@@ -253,14 +253,11 @@ Execute tasks step by step and use tools proactively.`;
 
               // Handle tool approval request (Human-in-the-loop)
               if (evt.type === 'tool_approval_request') {
-                console.error(
-                  '[EditorChatContainer] Tool approval request received:',
-                  evt.toolCalls
-                );
+                console.log('[EditorChatContainer] Tool approval request received:', evt.toolCalls);
 
                 // Auto-approve if session-wide approval is enabled
                 if (alwaysApproveToolsForSession) {
-                  console.error(
+                  console.log(
                     '[EditorChatContainer] Auto-approving tools (session-wide approval enabled)'
                   );
                   (async () => {
@@ -303,7 +300,7 @@ Execute tasks step by step and use tools proactively.`;
 
               // Handle tool approval result
               if (evt.type === 'tool_approval_result') {
-                console.error('[EditorChatContainer] Tool approval result:', evt.approved);
+                console.log('[EditorChatContainer] Tool approval result:', evt.approved);
                 clearPendingToolApproval();
                 if (!evt.approved) {
                   accumulatedContent += '\n\n❌ 도구 실행이 거부되었습니다.';

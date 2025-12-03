@@ -3,6 +3,7 @@
 import { Message, FileChange } from '@/types';
 import { Persona } from '@/types/persona';
 import { cn } from '@/lib/utils';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 import {
   User,
   Bot,
@@ -64,9 +65,11 @@ export function MessageBubble({
   );
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const success = await copyToClipboard(message.content);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleEditSave = () => {

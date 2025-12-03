@@ -6,6 +6,7 @@ import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/pris
 import { Button } from '@/components/ui/button';
 import { Check, Copy } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 
 interface CodeBlockProps {
   language: string;
@@ -17,9 +18,11 @@ export function CodeBlock({ language, code }: CodeBlockProps) {
   const { theme } = useTheme();
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const success = await copyToClipboard(code);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   // Map common language aliases
