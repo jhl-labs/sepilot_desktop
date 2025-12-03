@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   FileText,
   Trash2,
@@ -20,6 +21,8 @@ import {
   FolderPlus,
   Search,
   X,
+  User,
+  Users,
 } from 'lucide-react';
 import {
   getAllDocuments,
@@ -53,6 +56,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [draggedDoc, setDraggedDoc] = useState<VectorDocument | null>(null);
   const [emptyFolders, setEmptyFolders] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'personal' | 'team'>('personal');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 빈 폴더 로드 (VectorDB에서)
@@ -87,15 +91,26 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     }
   };
 
+  // 문서 그룹 필터링 (Personal / Team)
+  const filterByDocGroup = (docs: VectorDocument[]): VectorDocument[] => {
+    return docs.filter((doc) => {
+      const docGroup = doc.metadata?.docGroup || 'personal';
+      return docGroup === activeTab;
+    });
+  };
+
   // 검색 필터링
   const filterDocuments = (docs: VectorDocument[]): VectorDocument[] => {
+    // 먼저 docGroup으로 필터링
+    const filtered = filterByDocGroup(docs);
+
     if (!searchQuery.trim()) {
-      return docs;
+      return filtered;
     }
 
     const query = searchQuery.toLowerCase();
 
-    return docs.filter((doc) => {
+    return filtered.filter((doc) => {
       // 제목 검색
       const title = doc.metadata?.title?.toLowerCase() || '';
       if (title.includes(query)) {
@@ -760,6 +775,20 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
   return (
     <div className="space-y-4">
+      {/* Personal / Team 탭 */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'personal' | 'team')}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="personal" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Personal Docs
+          </TabsTrigger>
+          <TabsTrigger value="team" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Team Docs
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {/* 검색 바 */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
