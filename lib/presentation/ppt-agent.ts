@@ -162,17 +162,38 @@ export async function runPresentationAgent(
   ];
 
   let outline = '';
+  let outlineSuccess = false;
+
   try {
-    for await (const chunk of LLMService.streamChat(outlineHistory)) {
-      outline += chunk;
-    }
+    // 타임아웃 설정 (60초)
+    const timeoutPromise = new Promise<void>((_, reject) => {
+      setTimeout(() => reject(new Error('Outline generation timeout after 60s')), 60000);
+    });
+
+    const streamPromise = (async () => {
+      for await (const chunk of LLMService.streamChat(outlineHistory)) {
+        if (callbacks.signal?.aborted) {
+          console.log('[ppt-agent] Outline generation aborted');
+          break;
+        }
+        outline += chunk;
+      }
+    })();
+
+    await Promise.race([streamPromise, timeoutPromise]);
+    outlineSuccess = true;
   } catch (error) {
     console.error('[ppt-agent] Outline generation error:', error);
+    // Fallback: 첫 응답에서 슬라이드 추출 시도
+    console.log('[ppt-agent] Attempting to extract slides from initial response');
+    outline = fullResponse;
   }
 
   const slides = coerceSlides(outline);
   if (slides.length > 0) {
     callbacks.onSlides?.(slides);
+  } else if (!outlineSuccess) {
+    console.warn('[ppt-agent] No slides generated. Response may not contain slide data.');
   }
 
   return { response: fullResponse, slides };
