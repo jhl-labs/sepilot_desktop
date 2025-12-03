@@ -480,6 +480,12 @@ export class GitHubSyncClient {
           // Markdown 파싱 (메타데이터 추출)
           const parsed = this.parseMarkdownDocument(content, file.path);
 
+          // GitHub 동기화 메타데이터 추가
+          parsed.metadata.githubSha = file.sha;
+          parsed.metadata.githubPath = file.path;
+          parsed.metadata.lastPulledAt = Date.now();
+          parsed.metadata.modifiedLocally = false;
+
           documents.push(parsed);
         } catch (error: any) {
           console.error(`[GitHubSync] Failed to fetch file ${file.path}:`, error);
@@ -500,6 +506,110 @@ export class GitHubSyncClient {
         error: error.message,
       };
     }
+  }
+
+  /**
+   * 문서를 GitHub에 Push (생성 또는 업데이트)
+   * @param document 문서 정보
+   * @param document.githubPath GitHub 경로 (예: sepilot/documents/folder/doc.md)
+   * @param document.title 문서 제목
+   * @param document.content 문서 내용
+   * @param document.metadata 문서 메타데이터
+   * @param document.sha 기존 파일의 SHA (업데이트 시)
+   * @param commitMessage 커밋 메시지 (선택)
+   */
+  async pushDocument(
+    document: {
+      githubPath: string;
+      title: string;
+      content: string;
+      metadata?: Record<string, any>;
+      sha?: string;
+    },
+    commitMessage?: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+    sha?: string;
+    error?: string;
+  }> {
+    try {
+      // Markdown 형식으로 변환
+      const markdown = this.formatDocumentAsMarkdown(
+        document.title,
+        document.content,
+        document.metadata
+      );
+
+      // GitHub에 파일 업로드
+      const result = await this.upsertFile(
+        document.githubPath,
+        markdown,
+        commitMessage || `Update ${document.title} from SEPilot`,
+        document.sha
+      );
+
+      if (!result.success) {
+        // 409 Conflict 처리
+        if (result.error?.includes('409') || result.error?.includes('does not match')) {
+          return {
+            success: false,
+            message: '문서 충돌 감지',
+            error: 'CONFLICT',
+          };
+        }
+        throw new Error(result.error || 'Push 실패');
+      }
+
+      return {
+        success: true,
+        message: `문서 "${document.title}"를 GitHub에 업로드했습니다.`,
+        sha: result.sha,
+      };
+    } catch (error: any) {
+      console.error('[GitHubSync] Failed to push document:', error);
+      return {
+        success: false,
+        message: '문서 Push 실패',
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * 문서를 Markdown 형식으로 변환
+   */
+  private formatDocumentAsMarkdown(
+    title: string,
+    content: string,
+    metadata?: Record<string, any>
+  ): string {
+    const lines: string[] = [];
+
+    // 제목
+    lines.push(`# ${title}`);
+    lines.push('');
+
+    // 메타데이터 (선택)
+    if (metadata && Object.keys(metadata).length > 0) {
+      lines.push('---');
+
+      // 특정 메타데이터만 포함 (내부 시스템 필드 제외)
+      const allowedFields = ['folderPath', 'tags', 'category', 'source', 'author'];
+      for (const [key, value] of Object.entries(metadata)) {
+        if (allowedFields.includes(key) && value !== undefined) {
+          lines.push(`${key}: ${JSON.stringify(value)}`);
+        }
+      }
+
+      lines.push('---');
+      lines.push('');
+    }
+
+    // 내용
+    lines.push(content);
+
+    return lines.join('\n');
   }
 
   /**

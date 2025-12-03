@@ -133,6 +133,91 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
 
 export function setupTeamDocsHandlers() {
   /**
+   * Team Docs 문서 Push (GitHub에 업로드)
+   */
+  ipcMain.handle(
+    'team-docs-push-document',
+    async (
+      _event,
+      params: {
+        teamDocsId: string;
+        githubPath: string;
+        title: string;
+        content: string;
+        metadata?: Record<string, any>;
+        sha?: string;
+        commitMessage?: string;
+      }
+    ) => {
+      try {
+        // Team Docs 설정 찾기
+        const appConfigStr = databaseService.getSetting('app_config');
+        if (!appConfigStr) {
+          throw new Error('설정을 찾을 수 없습니다.');
+        }
+
+        const appConfig: AppConfig = JSON.parse(appConfigStr);
+        const teamDocs = appConfig.teamDocs || [];
+        const config = teamDocs.find((td) => td.id === params.teamDocsId);
+
+        if (!config) {
+          throw new Error(`Team Docs 설정을 찾을 수 없습니다: ${params.teamDocsId}`);
+        }
+
+        // GitHub 클라이언트 생성
+        const syncConfig = toGitHubSyncConfig(applyNetworkConfig(config));
+        const client = new GitHubSyncClient(syncConfig);
+
+        // 문서 Push
+        const result = await client.pushDocument(
+          {
+            githubPath: params.githubPath,
+            title: params.title,
+            content: params.content,
+            metadata: params.metadata,
+            sha: params.sha,
+          },
+          params.commitMessage
+        );
+
+        if (!result.success) {
+          return result;
+        }
+
+        // Push 성공 시 로컬 VectorDB 메타데이터 업데이트
+        const allDocs = await vectorDBService.getAllDocuments();
+        const docToUpdate = allDocs.find(
+          (doc) =>
+            doc.metadata?.teamDocsId === params.teamDocsId &&
+            doc.metadata?.githubPath === params.githubPath
+        );
+
+        if (docToUpdate) {
+          await vectorDBService.updateMetadata(docToUpdate.id, {
+            ...docToUpdate.metadata,
+            githubSha: result.sha,
+            modifiedLocally: false,
+            lastPushedAt: Date.now(),
+          });
+        }
+
+        return {
+          success: true,
+          message: result.message,
+          data: { sha: result.sha },
+        };
+      } catch (error: any) {
+        console.error('[TeamDocs] Failed to push document:', error);
+        return {
+          success: false,
+          message: '문서 Push 실패',
+          error: error.message,
+        };
+      }
+    }
+  );
+
+  /**
    * Team Docs 레포지토리 연결 테스트
    */
   ipcMain.handle('team-docs-test-connection', async (_event, config: TeamDocsConfig) => {

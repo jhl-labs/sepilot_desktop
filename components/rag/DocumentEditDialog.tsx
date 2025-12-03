@@ -66,6 +66,7 @@ export function DocumentEditDialog({
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPushing, setIsPushing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedText, setSelectedText] = useState('');
   const [customPromptOpen, setCustomPromptOpen] = useState(false);
@@ -179,7 +180,7 @@ export function DocumentEditDialog({
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (pushToGitHub: boolean = false) => {
     if (!content.trim()) {
       setMessage({ type: 'error', text: '문서 내용을 입력해주세요.' });
       return;
@@ -193,19 +194,67 @@ export function DocumentEditDialog({
     setMessage(null);
 
     try {
+      const updatedMetadata: Record<string, any> = {
+        ...document.metadata,
+        title: title.trim() || '제목 없음',
+        source: source.trim() || 'manual',
+        folderPath: folderPath.trim() || undefined,
+        updatedAt: Date.now(),
+      };
+
+      // Team Docs인 경우 modifiedLocally 플래그 설정
+      if (document.metadata?.docGroup === 'team' && !pushToGitHub) {
+        updatedMetadata.modifiedLocally = true;
+      }
+
+      // 로컬 저장
       await onSave({
         id: document.id,
         content: content.trim(),
-        metadata: {
-          ...document.metadata,
-          title: title.trim() || '제목 없음',
-          source: source.trim() || 'manual',
-          folderPath: folderPath.trim() || undefined,
-          updatedAt: Date.now(),
-        },
+        metadata: updatedMetadata,
       });
 
-      setMessage({ type: 'success', text: '문서가 성공적으로 수정되었습니다!' });
+      // GitHub Push 처리
+      if (pushToGitHub && document.metadata?.docGroup === 'team') {
+        setIsPushing(true);
+
+        try {
+          const result = await window.electronAPI.teamDocs.pushDocument({
+            teamDocsId: document.metadata.teamDocsId,
+            githubPath: document.metadata.githubPath,
+            title: title.trim() || '제목 없음',
+            content: content.trim(),
+            metadata: {
+              folderPath: folderPath.trim() || undefined,
+              source: source.trim() || 'manual',
+            },
+            sha: document.metadata.githubSha,
+            commitMessage: `Update ${title.trim() || 'document'} from SEPilot`,
+          });
+
+          if (!result.success) {
+            if (result.error === 'CONFLICT') {
+              setMessage({
+                type: 'error',
+                text: '문서 충돌 감지! GitHub에 다른 사용자의 변경사항이 있습니다. 먼저 동기화(Pull)해주세요.',
+              });
+            } else {
+              throw new Error(result.error || 'Push 실패');
+            }
+            return;
+          }
+
+          setMessage({ type: 'success', text: '문서가 GitHub에 성공적으로 업로드되었습니다!' });
+        } catch (error: any) {
+          console.error('Push error:', error);
+          setMessage({ type: 'error', text: error.message || 'GitHub Push에 실패했습니다.' });
+          return;
+        } finally {
+          setIsPushing(false);
+        }
+      } else {
+        setMessage({ type: 'success', text: '문서가 성공적으로 수정되었습니다!' });
+      }
 
       setTimeout(() => {
         onOpenChange(false);
@@ -387,25 +436,65 @@ export function DocumentEditDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isSaving || isProcessing}
+            disabled={isSaving || isProcessing || isPushing}
           >
             취소
           </Button>
-          <Button onClick={handleSave} disabled={isSaving || isProcessing}>
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                저장 중...
-              </>
-            ) : isProcessing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                AI 작업 중...
-              </>
-            ) : (
-              '저장'
-            )}
-          </Button>
+
+          {/* Team Docs인 경우 Save & Push 버튼 표시 */}
+          {document?.metadata?.docGroup === 'team' ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => handleSave(false)}
+                disabled={isSaving || isProcessing || isPushing}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    저장 중...
+                  </>
+                ) : (
+                  '로컬 저장'
+                )}
+              </Button>
+              <Button
+                onClick={() => handleSave(true)}
+                disabled={isSaving || isProcessing || isPushing}
+              >
+                {isPushing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Push 중...
+                  </>
+                ) : isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    저장 중...
+                  </>
+                ) : (
+                  '저장 & Push'
+                )}
+              </Button>
+            </>
+          ) : (
+            /* Personal Docs는 저장만 */
+            <Button onClick={() => handleSave(false)} disabled={isSaving || isProcessing}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  저장 중...
+                </>
+              ) : isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  AI 작업 중...
+                </>
+              ) : (
+                '저장'
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
 

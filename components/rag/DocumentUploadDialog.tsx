@@ -75,6 +75,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               source: source.trim() || 'manual',
               uploadedAt: Date.now(),
               folderPath: folderPath.trim() || undefined,
+              docGroup: 'personal', // 수동 업로드는 항상 개인 문서
             },
           },
         ];
@@ -98,6 +99,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               ...doc.metadata,
               title: title.trim() || doc.metadata.title || 'Untitled',
               folderPath: folderPath.trim() || undefined,
+              docGroup: 'personal', // HTTP 문서도 개인 문서
             },
           })
         );
@@ -135,6 +137,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               ...doc.metadata,
               title: doc.metadata.title || 'Untitled',
               folderPath: folderPath.trim() || undefined,
+              docGroup: 'personal', // GitHub 문서도 개인 문서
             },
           })
         );

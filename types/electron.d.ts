@@ -599,6 +599,22 @@ interface TeamDocsAPI {
     };
     error?: string;
   }>;
+  pushDocument: (params: {
+    teamDocsId: string;
+    githubPath: string;
+    title: string;
+    content: string;
+    metadata?: Record<string, any>;
+    sha?: string;
+    commitMessage?: string;
+  }) => Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      sha: string;
+    };
+    error?: string;
+  }>;
 }
 
 // Error Reporting API
@@ -938,6 +954,13 @@ interface TestRunnerAPI {
   runMCP: () => Promise<TestSuiteResult>;
 }
 
+interface PresentationAPI {
+  exportSlides: (
+    slides: import('./presentation').PresentationSlide[],
+    format: import('./presentation').PresentationExportFormat
+  ) => Promise<string>;
+}
+
 interface ElectronAPI {
   platform: string;
   chat: ChatAPI;
@@ -964,6 +987,7 @@ interface ElectronAPI {
   browserControl: BrowserControlAPI;
   terminal: TerminalAPI;
   testRunner: TestRunnerAPI; // 테스트 러너 API
+  presentation: PresentationAPI;
   on: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => void;
 }

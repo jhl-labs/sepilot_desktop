@@ -337,6 +337,15 @@ const electronAPI = {
     testConnection: (config: any) => ipcRenderer.invoke('team-docs-test-connection', config),
     syncDocuments: (config: any) => ipcRenderer.invoke('team-docs-sync-documents', config),
     syncAll: () => ipcRenderer.invoke('team-docs-sync-all'),
+    pushDocument: (params: {
+      teamDocsId: string;
+      githubPath: string;
+      title: string;
+      content: string;
+      metadata?: Record<string, any>;
+      sha?: string;
+      commitMessage?: string;
+    }) => ipcRenderer.invoke('team-docs-push-document', params),
   },
 
   // Error Reporting operations
@@ -603,6 +612,12 @@ const electronAPI = {
     runLLM: () => ipcRenderer.invoke('test:run-llm'),
     runDatabase: () => ipcRenderer.invoke('test:run-database'),
     runMCP: () => ipcRenderer.invoke('test:run-mcp'),
+  },
+
+  // Presentation exports
+  presentation: {
+    exportSlides: (slides: any, format: 'pptx' | 'pdf' | 'html') =>
+      ipcRenderer.invoke('presentation:export', { slides, format }),
   },
 };
 

@@ -645,6 +645,11 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                   LLM 정제됨
                 </span>
               )}
+              {doc.metadata?.docGroup === 'team' && doc.metadata?.modifiedLocally && (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                  로컬 수정됨 (Push 필요)
+                </span>
+              )}
               {' • '}
               {doc.metadata?.uploadedAt
                 ? new Date(doc.metadata.uploadedAt).toLocaleString('ko-KR')
