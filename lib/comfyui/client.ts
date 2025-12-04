@@ -164,8 +164,8 @@ export class ComfyUIClient {
       },
       '75:58': {
         inputs: {
-          width: options.width || 1328,
-          height: options.height || 1328,
+          width: 512,
+          height: 512,
           batch_size: 1,
         },
         class_type: 'EmptySD3LatentImage',
