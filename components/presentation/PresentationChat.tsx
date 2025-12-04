@@ -9,6 +9,7 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { runPresentationAgent, createInitialState } from '@/lib/presentation/ppt-agent';
 import type { PresentationWorkflowStep, PresentationDesignMaster } from '@/types/presentation';
 import { generateId } from '@/lib/utils';
+import { PRESENTATION_TEMPLATES, type TemplateType } from '@/lib/presentation/templates';
 import {
   Loader2,
   Send,
@@ -181,6 +182,31 @@ export function PresentationChat() {
           },
         ]
       : STEP_QUICK_PROMPTS[currentStep] || [];
+
+  const handleTemplateSelect = (templateId: TemplateType) => {
+    const template = PRESENTATION_TEMPLATES.find((t) => t.id === templateId);
+    if (!template) {
+      return;
+    }
+
+    // 템플릿 상태 생성
+    const templateState = template.generateState();
+
+    // 상태 업데이트
+    setPresentationAgentState(templateState);
+    setPresentationSlides(templateState.slides);
+
+    // 첫 번째 슬라이드 활성화
+    if (templateState.slides.length > 0) {
+      setActivePresentationSlide(templateState.slides[0].id);
+    }
+
+    // 시스템 메시지 추가
+    addPresentationChatMessage({
+      role: 'assistant',
+      content: `✅ "${template.name}" 템플릿이 적용되었습니다!\n\n총 ${templateState.slides.length}개의 슬라이드가 생성되었습니다. 우측에서 슬라이드를 확인하고, 필요한 부분을 수정해주세요.`,
+    });
+  };
 
   const handleSend = async (message?: string, bulkCreation: boolean = false) => {
     const userMessage = message ?? input;
@@ -479,16 +505,46 @@ export function PresentationChat() {
         </div>
       )}
 
+      {/* Template Selection (Briefing 단계에서만 표시) */}
+      {currentStep === 'briefing' && presentationChatMessages.length === 0 && (
+        <div className="px-4 py-3 border-b">
+          <p className="text-sm font-semibold mb-3">템플릿으로 빠르게 시작하기</p>
+          <p className="text-xs text-muted-foreground mb-4">
+            완성된 템플릿을 선택하면 바로 검토 단계로 이동합니다.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { id: 'profile', name: '자기소개', icon: '👤', desc: '면접, 네트워킹' },
+              { id: 'tech-seminar', name: '기술 세미나', icon: '💻', desc: '개발자, 엔지니어' },
+              { id: 'paper-summary', name: '논문 요약', icon: '📄', desc: '학생, 연구원' },
+              { id: 'project-intro', name: '과제 소개', icon: '📁', desc: '팀원, 이해관계자' },
+            ].map((template) => (
+              <button
+                key={template.id}
+                onClick={() => handleTemplateSelect(template.id as TemplateType)}
+                className="flex flex-col items-start gap-2 rounded-lg border p-4 hover:bg-muted/50 hover:border-primary transition-all text-left"
+                disabled={presentationChatStreaming}
+              >
+                <div className="text-2xl">{template.icon}</div>
+                <div>
+                  <p className="text-sm font-semibold">{template.name}</p>
+                  <p className="text-xs text-muted-foreground">{template.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 text-xs text-muted-foreground text-center">
+            또는 아래에서 직접 입력하여 커스텀 프레젠테이션을 만드세요
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-        {presentationChatMessages.length === 0 && (
+        {presentationChatMessages.length === 0 && currentStep !== 'briefing' && (
           <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
             <p className="font-medium mb-2">프레젠테이션을 함께 만들어봐요! 👋</p>
-            <p className="text-xs">
-              {currentStep === 'briefing'
-                ? '어떤 주제의 프레젠테이션을 만들고 싶으신가요? 목적과 청중도 알려주세요.'
-                : '아래 Quick Actions를 선택하거나 직접 입력해주세요.'}
-            </p>
+            <p className="text-xs">아래 Quick Actions를 선택하거나 직접 입력해주세요.</p>
           </div>
         )}
         {presentationChatMessages.map((msg, idx) => {
