@@ -177,12 +177,13 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
 
     // VectorDB에 인덱싱 (배치 처리)
     if (documentsToIndex.length > 0) {
-      // 앱 설정에서 청킹 전략 가져오기 (없으면 기본값)
+      // 앱 설정에서 청킹 전략 가져오기 (없으면 2025 best practice 기본값)
       const appConfigStr = databaseService.getSetting('app_config');
       let chunkConfig = {
-        chunkSize: 1000,
-        chunkOverlap: 200,
+        chunkSize: 1000, // ~250 tokens (2025 권장: 500-1000 characters)
+        chunkOverlap: 150, // 15% overlap (2025 best practice)
         batchSize: 10,
+        storeParentDocument: true, // Parent Document Retrieval 활성화
       };
 
       if (appConfigStr) {
@@ -193,6 +194,11 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
         if (appConfig.vectorDB?.chunkOverlap) {
           chunkConfig.chunkOverlap = appConfig.vectorDB.chunkOverlap;
         }
+      }
+
+      // overlap이 chunkSize보다 크지 않도록 보정
+      if (chunkConfig.chunkOverlap >= chunkConfig.chunkSize) {
+        chunkConfig.chunkOverlap = Math.floor(chunkConfig.chunkSize * 0.15); // 15%로 자동 조정
       }
 
       await vectorDBService.indexDocuments(documentsToIndex, chunkConfig);

@@ -236,9 +236,14 @@ class VectorDBService {
 
     const rows = result[0].values;
 
-    // 1단계: 메타데이터 기반 필터링
+    // 1단계: 메타데이터 기반 필터링 (Parent 문서와 폴더 제외)
     const filteredRows = rows.filter((row) => {
       const metadata = JSON.parse(row[2] as string);
+
+      // Parent 문서는 검색에서 제외 (참조용으로만 사용)
+      if (metadata.isParentDoc) {
+        return false;
+      }
 
       // 폴더 경로 필터
       if (opts.folderPath && metadata.folderPath !== opts.folderPath) {
@@ -277,7 +282,13 @@ class VectorDBService {
     if (filteredRows.length === 0) return [];
 
     // 2단계: 벡터 유사도 + 하이브리드 검색 계산
-    const results: SearchResult[] = [];
+    const chunkResults: Array<{
+      id: string;
+      content: string;
+      metadata: any;
+      score: number;
+      parentDocId?: string;
+    }> = [];
 
     for (const row of filteredRows) {
       const id = row[0] as string;
@@ -335,17 +346,54 @@ class VectorDBService {
       // 최종 점수 계산
       const finalScore = hybridScore * boostMultiplier;
 
-      results.push({
+      chunkResults.push({
         id,
         content,
-        metadata: opts.includeAllMetadata ? metadata : { title: metadata.title },
+        metadata,
         score: finalScore,
+        parentDocId: metadata.parentDocId,
       });
     }
 
     // 4단계: Top-K 추출 (점수 기준 정렬)
-    results.sort((a, b) => b.score - a.score);
-    return results.slice(0, k);
+    chunkResults.sort((a, b) => b.score - a.score);
+    const topChunks = chunkResults.slice(0, k);
+
+    // 5단계: Parent Document Retrieval - 청크 대신 원본 문서 반환
+    const finalResults: SearchResult[] = [];
+
+    for (const chunk of topChunks) {
+      // Parent 문서가 있으면 가져오기
+      if (chunk.parentDocId) {
+        const parentDoc = await this.getById(chunk.parentDocId);
+
+        if (parentDoc) {
+          // 원본 문서 전체 내용 반환 (청크 대신)
+          finalResults.push({
+            id: chunk.id, // 원래 청크 ID 유지 (중복 제거용)
+            content: parentDoc.content, // 원본 전체 내용
+            metadata: {
+              ...chunk.metadata,
+              retrievedFrom: 'parent', // 원본 문서에서 가져왔음을 표시
+              chunkScore: chunk.score, // 매칭된 청크의 점수
+              matchedChunkIndex: chunk.metadata.chunkIndex, // 매칭된 청크 위치
+            },
+            score: chunk.score,
+          });
+          continue;
+        }
+      }
+
+      // Parent가 없거나 찾지 못한 경우 청크 그대로 반환
+      finalResults.push({
+        id: chunk.id,
+        content: chunk.content,
+        metadata: opts.includeAllMetadata ? chunk.metadata : { title: chunk.metadata.title },
+        score: chunk.score,
+      });
+    }
+
+    return finalResults;
   }
 
   /**
@@ -459,6 +507,28 @@ class VectorDBService {
 
     this.saveDatabase();
     console.log(`[VectorDB] Deleted ${ids.length} documents from ${indexName}`);
+  }
+
+  async getById(id: string): Promise<VectorDocument | null> {
+    if (!this.db || !this.config) throw new Error('Database not initialized');
+
+    const indexName = this.config.indexName;
+
+    const result = this.db.exec(
+      `SELECT id, content, metadata, embedding FROM ${indexName} WHERE id = ?`,
+      [id]
+    );
+
+    if (result.length === 0 || result[0].values.length === 0) return null;
+
+    const row = result[0].values[0];
+
+    return {
+      id: row[0] as string,
+      content: row[1] as string,
+      metadata: JSON.parse(row[2] as string),
+      embedding: JSON.parse(row[3] as string),
+    };
   }
 
   async updateMetadata(id: string, metadata: Record<string, any>): Promise<void> {

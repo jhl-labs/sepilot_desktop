@@ -186,25 +186,55 @@ export function chunkText(
 }
 
 /**
- * Raw 문서를 청크로 분할
+ * Raw 문서를 청크로 분할 (Parent Document Retrieval 지원)
  */
 export function chunkDocuments(documents: RawDocument[], options: IndexingOptions): RawDocument[] {
   const chunkedDocs: RawDocument[] = [];
   const strategy = options.chunkStrategy || 'sentence';
+  const storeParent = options.storeParentDocument !== false; // 기본값 true
 
   for (const doc of documents) {
     const chunks = chunkText(doc.content, options.chunkSize, options.chunkOverlap, strategy);
 
+    // Parent Document Retrieval: 원본 문서 전체를 별도로 저장
+    if (storeParent && chunks.length > 1) {
+      // 원본 문서는 검색되지 않지만 참조용으로 저장
+      const parentDocId = `${doc.id}_parent`;
+      chunkedDocs.push({
+        id: parentDocId,
+        content: doc.content, // 전체 원본 내용
+        metadata: {
+          ...doc.metadata,
+          isParentDoc: true, // 원본 문서 표시
+          originalId: doc.id,
+          totalChunks: chunks.length,
+          chunkStrategy: strategy,
+          // 문서 컨텍스트 (선택적)
+          documentContext: options.addDocumentContext
+            ? `문서 "${doc.metadata.title || 'Untitled'}"의 전체 내용 (${chunks.length}개 청크로 분할됨)`
+            : undefined,
+        },
+      });
+    }
+
+    // 청크 생성 (개선된 메타데이터)
     chunks.forEach((chunk, index) => {
+      const parentDocId = storeParent && chunks.length > 1 ? `${doc.id}_parent` : undefined;
+
       chunkedDocs.push({
         id: `${doc.id}_chunk_${index}`,
         content: chunk,
         metadata: {
           ...doc.metadata,
           originalId: doc.id,
+          parentDocId, // 원본 문서 참조
           chunkIndex: index,
           totalChunks: chunks.length,
-          chunkStrategy: strategy, // 어떤 전략으로 청킹되었는지 기록
+          chunkStrategy: strategy,
+          // Contextual Enhancement: 각 청크에 문서 컨텍스트 추가
+          documentContext: options.addDocumentContext
+            ? `이 청크는 "${doc.metadata.title || 'Untitled'}" 문서의 ${index + 1}/${chunks.length} 부분입니다.`
+            : undefined,
         },
       });
     });

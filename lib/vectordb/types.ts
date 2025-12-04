@@ -32,7 +32,13 @@ export interface DocumentMetadata {
   cleaned?: boolean;
   originalId?: string;
   chunkIndex?: number;
+  totalChunks?: number;
   _chunks?: Array<{ index: number; content: string }>;
+
+  // Parent Document Retrieval용
+  parentDocId?: string; // 원본 문서 ID (청크인 경우)
+  isParentDoc?: boolean; // 원본 전체 문서 여부
+  documentContext?: string; // 문서 전체 컨텍스트 요약 (Contextual Enhancement)
 
   // Tree 구조용 필드
   parentId?: string | null; // 부모 문서 ID (null이면 루트)
@@ -141,6 +147,8 @@ export interface IndexingOptions {
   chunkOverlap: number;
   batchSize: number;
   chunkStrategy?: ChunkStrategy; // 청킹 전략 (기본값: 'sentence')
+  storeParentDocument?: boolean; // 원본 문서 전체 저장 여부 (기본값: true)
+  addDocumentContext?: boolean; // 문서 컨텍스트 추가 여부 (기본값: false, LLM 필요)
 }
 
 /**
