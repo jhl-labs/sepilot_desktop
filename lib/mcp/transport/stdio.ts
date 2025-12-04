@@ -107,13 +107,13 @@ export class StdioMCPClient extends MCPClient {
       const message = `${JSON.stringify(requestWithId)}\n`;
       this.process.stdin.write(message);
 
-      // 타임아웃 설정 (30초)
+      // 타임아웃 설정 (10분)
       setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id);
-          reject(new Error('Request timeout'));
+          reject(new Error('Request timeout (10m)'));
         }
-      }, 30000);
+      }, 600000); // 10분 = 600초 = 600000ms
     });
   }
 

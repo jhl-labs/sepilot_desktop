@@ -40,7 +40,7 @@ async function generateImageInMainProcess(
         _meta: { title: '이미지 저장' },
       },
       '75:58': {
-        inputs: { width: args.width || 1328, height: args.height || 1328, batch_size: 1 },
+        inputs: { width: 512, height: 512, batch_size: 1 },
         class_type: 'EmptySD3LatentImage',
         _meta: { title: '빈 잠재 이미지 (SD3)' },
       },
@@ -190,8 +190,8 @@ function waitForCompletionInMainProcess(
     const ws = new WebSocket(`${wsUrl}?clientId=${clientId}`);
     const timeout = setTimeout(() => {
       ws.close();
-      reject(new Error('Image generation timeout (60s)'));
-    }, 60000);
+      reject(new Error('Image generation timeout (10m)'));
+    }, 600000); // 10분 = 600초 = 600000ms
 
     ws.on('message', async (data: Buffer) => {
       try {
