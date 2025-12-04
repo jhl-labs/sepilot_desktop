@@ -20,6 +20,8 @@ interface MarkdownRendererProps {
   onSourceClick?: (doc: { id: string; title: string; source: string; content: string }) => void;
   /** Optional: Path to the current markdown file (for resolving relative image paths) */
   currentFilePath?: string;
+  /** Optional: Working directory path (base path for resolving relative image paths) */
+  workingDirectory?: string;
 }
 
 // Helper function to extract text content from React children
@@ -117,6 +119,7 @@ export function MarkdownRenderer({
   className,
   isStreaming = false,
   currentFilePath,
+  workingDirectory,
 }: MarkdownRendererProps) {
   // Create a wrapped component that includes isStreaming
   const CustomPre = (props: any) => <CustomPreComponent {...props} isStreaming={isStreaming} />;
@@ -154,26 +157,36 @@ export function MarkdownRenderer({
           console.log('[MarkdownRenderer] Loading local image:', {
             src,
             currentFilePath,
+            workingDirectory,
           });
 
-          // 절대 경로 계산 - IPC 사용 (path-browserify는 신뢰할 수 없음)
+          // 절대 경로 계산 - working directory 기준으로 해석
+          // 이미지 경로는 working directory 기준 상대 경로이므로,
+          // working directory를 base로 사용
           let absolutePath: string;
 
-          if (currentFilePath) {
+          const basePath = workingDirectory || currentFilePath;
+
+          if (basePath) {
             // IPC로 절대 경로 계산
-            const resolveResult = await window.electronAPI.fs.resolvePath(currentFilePath, src);
+            const resolveResult = await window.electronAPI.fs.resolvePath(basePath, src);
 
             if (resolveResult.success && resolveResult.data) {
               absolutePath = resolveResult.data;
-              console.log('[MarkdownRenderer] Resolved path from IPC:', absolutePath);
+              console.log('[MarkdownRenderer] Resolved path from IPC:', {
+                basePath,
+                src,
+                absolutePath,
+              });
             } else {
               console.error('[MarkdownRenderer] Failed to resolve path:', resolveResult.error);
               setImageSrc(src); // Fallback
               return;
             }
           } else {
-            // currentFilePath가 없으면 그냥 src를 절대 경로로 간주
+            // basePath가 없으면 그냥 src를 절대 경로로 간주
             absolutePath = src;
+            console.warn('[MarkdownRenderer] No base path, using src as absolute:', src);
           }
 
           // IPC를 통해 이미지를 base64로 읽기
@@ -196,7 +209,7 @@ export function MarkdownRenderer({
       };
 
       loadLocalImage();
-    }, [src, currentFilePath]);
+    }, [src, currentFilePath, workingDirectory]);
 
     if (isLoading) {
       return (

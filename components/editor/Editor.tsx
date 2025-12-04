@@ -854,20 +854,20 @@ export function CodeEditor() {
             const { filename } = result.data;
             console.log('[Editor] Image saved:', filename);
 
-            // 상대 경로 계산 (IPC 사용 - path-browserify는 신뢰할 수 없음)
-            const fileDir = path.dirname(currentFile.path);
+            // 상대 경로 계산 - working directory 기준
+            // 이미지는 항상 working directory에 저장되므로,
+            // working directory 기준 상대 경로를 사용 (파일 이식성 향상)
             const imagePath = path.join(workingDirectory, filename);
 
             console.log('[Editor] Path info:', {
               currentFile: currentFile.path,
-              fileDir,
               imagePath,
               workingDirectory,
             });
 
-            // IPC로 상대 경로 계산 (서버측 path 모듈 사용)
+            // IPC로 working directory 기준 상대 경로 계산
             const relativePathResult = await window.electronAPI.fs.getRelativePath(
-              fileDir,
+              workingDirectory,
               imagePath
             );
 
@@ -876,9 +876,18 @@ export function CodeEditor() {
               relativePath = relativePathResult.data;
               // Windows 백슬래시를 forward slash로 변환 (Markdown 표준)
               relativePath = relativePath.replace(/\\/g, '/');
-              console.log('[Editor] Relative path from IPC:', relativePath);
+
+              // working directory와 같은 위치면 단순히 파일명만 사용
+              // 그렇지 않으면 ./ 접두사 추가
+              if (relativePath === filename || relativePath === `./${filename}`) {
+                relativePath = `./${filename}`;
+              } else if (!relativePath.startsWith('./') && !relativePath.startsWith('../')) {
+                relativePath = `./${relativePath}`;
+              }
+
+              console.log('[Editor] Relative path (working dir based):', relativePath);
             } else {
-              // Fallback: 같은 디렉토리에 있다고 가정
+              // Fallback: working directory에 있다고 가정
               relativePath = `./${filename}`;
               console.warn('[Editor] Failed to get relative path, using fallback:', relativePath);
             }
@@ -1227,7 +1236,11 @@ export function CodeEditor() {
               )}
             >
               <div className="p-6">
-                <MarkdownRenderer content={activeFile.content} currentFilePath={activeFile.path} />
+                <MarkdownRenderer
+                  content={activeFile.content}
+                  currentFilePath={activeFile.path}
+                  workingDirectory={workingDirectory || undefined}
+                />
               </div>
             </div>
           )}
