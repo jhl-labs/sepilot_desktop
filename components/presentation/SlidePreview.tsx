@@ -17,11 +17,16 @@ export function SlidePreview() {
     addPresentationSlide,
   } = useChatStore();
 
-  console.log('[SlidePreview] Rendering with', presentationSlides.length, 'slides');
-
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isInternalUpdate = useRef(false);
+
+  // Reset currentIndex if it's out of bounds
+  useEffect(() => {
+    if (presentationSlides.length > 0 && currentIndex >= presentationSlides.length) {
+      setCurrentIndex(presentationSlides.length - 1);
+    }
+  }, [presentationSlides.length, currentIndex]);
 
   // Navigation functions
   const goToNext = useCallback(() => {
@@ -55,7 +60,9 @@ export function SlidePreview() {
         setCurrentIndex(idx);
       }
     }
-  }, [activePresentationSlideId, presentationSlides, currentIndex]);
+    // currentIndex를 의존성에서 제거하여 무한 루프 방지
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePresentationSlideId, presentationSlides]);
 
   // Update active slide when currentIndex changes (내부에서 변경된 경우만)
   useEffect(() => {
@@ -127,7 +134,9 @@ export function SlidePreview() {
     );
   }
 
-  const currentSlide = presentationSlides[currentIndex];
+  // Ensure currentIndex is within bounds (safety check)
+  const safeIndex = Math.min(currentIndex, presentationSlides.length - 1);
+  const currentSlide = presentationSlides[safeIndex];
 
   return (
     <div className="flex h-full flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
@@ -136,7 +145,7 @@ export function SlidePreview() {
         <div className="flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur-sm">
           <div>
             <p className="text-sm font-semibold text-foreground">
-              슬라이드 {currentIndex + 1} / {presentationSlides.length}
+              슬라이드 {safeIndex + 1} / {presentationSlides.length}
             </p>
             <p className="text-xs text-muted-foreground">화살표 키로 이동 · F키로 전체화면</p>
           </div>
