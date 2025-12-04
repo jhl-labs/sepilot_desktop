@@ -472,9 +472,20 @@ export function setupTeamDocsHandlers() {
 
       for (const doc of teamDocs) {
         try {
-          const githubPath =
-            doc.metadata?.githubPath ||
-            `${config.docsPath || 'sepilot/documents'}/${doc.metadata?.title || doc.id}.md`;
+          // githubPath 생성: metadata.githubPath 우선, 없으면 folderPath + title 조합
+          let githubPath = doc.metadata?.githubPath;
+          if (!githubPath) {
+            const folder = doc.metadata?.folderPath || config.docsPath || 'documents';
+            const filename = doc.metadata?.title || doc.id;
+            githubPath = `${folder}/${filename}.md`;
+          }
+
+          console.log('[team-docs-push] Pushing document:', {
+            id: doc.id,
+            title: doc.metadata?.title,
+            githubPath,
+            folderPath: doc.metadata?.folderPath,
+          });
 
           const result = await client.pushDocument(
             {
