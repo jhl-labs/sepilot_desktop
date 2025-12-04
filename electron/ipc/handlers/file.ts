@@ -750,6 +750,10 @@ export function registerFileHandlers() {
       const buffer = image.toPNG();
       await fs.writeFile(destPath, buffer);
 
+      // Base64 data URL 생성 (미리보기용)
+      const base64 = buffer.toString('base64');
+      const dataUrl = `data:image/png;base64,${base64}`;
+
       console.log('[File] Clipboard image saved:', destPath);
 
       return {
@@ -757,6 +761,7 @@ export function registerFileHandlers() {
         data: {
           filename,
           path: destPath,
+          dataUrl, // 미리보기용 base64 data URL
         },
       };
     } catch (error: any) {
@@ -764,6 +769,56 @@ export function registerFileHandlers() {
       return {
         success: false,
         error: error.message || 'Failed to save clipboard image',
+      };
+    }
+  });
+
+  // 이미지 파일을 base64로 읽기 (미리보기용)
+  ipcMain.handle('fs:read-image-as-base64', async (_event, filePath: string) => {
+    try {
+      console.log('[File] Reading image as base64:', filePath);
+
+      // 파일 존재 여부 확인
+      try {
+        await fs.access(filePath);
+      } catch (accessError: any) {
+        console.error('[File] Image file does not exist:', filePath);
+        return {
+          success: false,
+          error: `Image file not found: ${filePath}`,
+          code: accessError.code || 'ENOENT',
+        };
+      }
+
+      // 바이너리로 읽기
+      const buffer = await fs.readFile(filePath);
+      const base64 = buffer.toString('base64');
+
+      // 파일 확장자로 MIME 타입 추정
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.webp': 'image/webp',
+      };
+      const mimeType = mimeTypes[ext] || 'image/png';
+
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+
+      console.log('[File] Image read successfully:', filePath, `(${buffer.length} bytes)`);
+
+      return {
+        success: true,
+        data: dataUrl,
+      };
+    } catch (error: any) {
+      console.error('[File] Error reading image:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to read image',
       };
     }
   });

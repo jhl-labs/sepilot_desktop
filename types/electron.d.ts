@@ -511,7 +511,10 @@ interface FileSystemAPI {
     dirPath: string,
     options?: SearchOptions
   ) => Promise<IPCResponse<SearchResponse>>;
-  saveClipboardImage: (destDir: string) => Promise<IPCResponse<{ filename: string; path: string }>>;
+  saveClipboardImage: (
+    destDir: string
+  ) => Promise<IPCResponse<{ filename: string; path: string; dataUrl: string }>>;
+  readImageAsBase64: (filePath: string) => Promise<IPCResponse<string>>;
   getFileStat: (
     filePath: string
   ) => Promise<IPCResponse<{ mtime: number; size: number; isFile: boolean; isDirectory: boolean }>>;

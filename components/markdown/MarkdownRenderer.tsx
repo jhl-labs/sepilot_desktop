@@ -1,11 +1,11 @@
 'use client';
 
+import React, { ReactNode } from 'react';
 import Markdown from 'markdown-to-jsx';
 import { CodeBlock } from './CodeBlock';
 import { MermaidDiagram } from './MermaidDiagram';
 import { PlotlyChart } from './PlotlyChart';
 import { cn } from '@/lib/utils';
-import { ReactNode } from 'react';
 
 interface MarkdownRendererProps {
   content: string;
@@ -123,47 +123,76 @@ export function MarkdownRenderer({
 
   // Custom image component for local file support
   const CustomImage = ({ src, alt, ...props }: any) => {
-    // If src is a relative path (doesn't start with http/https/data/file),
-    // treat it as a local file path and convert to absolute path
-    let imageSrc = src;
+    const [imageSrc, setImageSrc] = React.useState<string>(src);
+    const [isLoading, setIsLoading] = React.useState(false);
 
-    if (src && typeof src === 'string') {
-      // Check if it's NOT a URL or data URI
+    React.useEffect(() => {
+      // 이미 URL이거나 data URI면 그대로 사용
       if (
-        !src.startsWith('http://') &&
-        !src.startsWith('https://') &&
-        !src.startsWith('data:') &&
-        !src.startsWith('file://')
+        !src ||
+        typeof src !== 'string' ||
+        src.startsWith('http://') ||
+        src.startsWith('https://') ||
+        src.startsWith('data:')
       ) {
-        // It's a relative path - try to resolve it
-        // In Electron, we need to use file:// protocol for local files
+        setImageSrc(src);
+        return;
+      }
+
+      // 상대 경로인 경우 절대 경로로 변환하여 파일 읽기
+      const loadLocalImage = async () => {
         try {
-          // If path-browserify is available
-          if (typeof window !== 'undefined' && (window as any).require) {
-            const path = (window as any).require('path');
-            let absolutePath: string;
+          setIsLoading(true);
 
-            if (currentFilePath) {
-              // Resolve relative to the current markdown file
-              const fileDir = path.dirname(currentFilePath);
-              absolutePath = path.resolve(fileDir, src);
-            } else {
-              // Fallback: resolve relative to current working directory
-              absolutePath = path.resolve(src);
-            }
+          // Electron 환경인지 확인
+          if (typeof window === 'undefined' || !window.electronAPI) {
+            console.warn('[MarkdownRenderer] Not in Electron environment');
+            setImageSrc(src);
+            return;
+          }
 
-            imageSrc = `file://${absolutePath}`;
-            console.log('[MarkdownRenderer] Resolved image path:', { src, absolutePath, imageSrc });
+          // Path 모듈 가져오기
+          const path = (window as any).require('path');
+          let absolutePath: string;
+
+          if (currentFilePath) {
+            // 현재 Markdown 파일 기준으로 상대 경로 해석
+            const fileDir = path.dirname(currentFilePath);
+            absolutePath = path.resolve(fileDir, src);
           } else {
-            // Fallback: just prepend file://
-            // This won't work perfectly but better than nothing
-            imageSrc = `file://${src}`;
+            // Fallback: 현재 작업 디렉토리 기준
+            absolutePath = path.resolve(src);
+          }
+
+          console.log('[MarkdownRenderer] Loading local image:', { src, absolutePath });
+
+          // IPC를 통해 이미지를 base64로 읽기
+          const result = await window.electronAPI.fs.readImageAsBase64(absolutePath);
+
+          if (result.success && result.data) {
+            // 이미 data URL 형식으로 반환됨
+            setImageSrc(result.data);
+          } else {
+            console.error('[MarkdownRenderer] Failed to load image:', result.error);
+            setImageSrc(src); // Fallback to original src
           }
         } catch (error) {
-          console.warn('[MarkdownRenderer] Failed to resolve image path:', src, error);
-          imageSrc = src; // Keep original if resolution fails
+          console.error('[MarkdownRenderer] Error loading local image:', error);
+          setImageSrc(src); // Fallback to original src
+        } finally {
+          setIsLoading(false);
         }
-      }
+      };
+
+      loadLocalImage();
+    }, [src, currentFilePath]);
+
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-32 bg-muted rounded-lg my-4">
+          <span className="text-sm text-muted-foreground">이미지 로딩 중...</span>
+        </div>
+      );
     }
 
     return (

@@ -854,8 +854,11 @@ export function CodeEditor() {
             const { filename } = result.data;
             console.log('[Editor] Image saved:', filename);
 
+            // 상대 경로 계산 및 정규화 (forward slash 사용)
             const fileDir = path.dirname(currentFile.path);
-            const relativePath = path.relative(fileDir, path.join(workingDirectory, filename));
+            let relativePath = path.relative(fileDir, path.join(workingDirectory, filename));
+            // Windows 백슬래시를 forward slash로 변환 (Markdown 표준)
+            relativePath = relativePath.replace(/\\/g, '/');
             const imageMarkdown = `![${filename}](${relativePath})`;
 
             const position = editor.getPosition();
