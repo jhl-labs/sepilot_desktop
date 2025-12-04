@@ -55,7 +55,8 @@ export function SlidePreview() {
   // Sync currentIndex with activePresentationSlideId (외부에서 변경된 경우만)
   useEffect(() => {
     if (!isInternalUpdate.current && activePresentationSlideId) {
-      const idx = presentationSlides.findIndex((s) => s.id === activePresentationSlideId);
+      // undefined 요소를 필터링하여 안전하게 처리
+      const idx = presentationSlides.findIndex((s) => s && s.id === activePresentationSlideId);
       if (idx !== -1 && idx !== currentIndex) {
         setCurrentIndex(idx);
       }
@@ -194,35 +195,37 @@ export function SlidePreview() {
       {!isFullscreen && presentationSlides.length > 1 && (
         <div className="border-t bg-background/95 px-4 py-3 backdrop-blur-sm">
           <div className="flex gap-2 overflow-x-auto">
-            {presentationSlides.map((slide, idx) => (
-              <button
-                key={slide.id}
-                onClick={() => goToSlide(idx)}
-                className={`group relative flex-shrink-0 rounded-md border-2 transition-all ${
-                  idx === currentIndex
-                    ? 'border-primary shadow-md'
-                    : 'border-transparent opacity-60 hover:opacity-100'
-                }`}
-                style={{
-                  borderColor: idx === currentIndex ? slide.accentColor : undefined,
-                }}
-              >
-                <div className="relative h-16 w-28 overflow-hidden rounded-sm bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
-                  {/* Thumbnail mini preview */}
-                  <div className="absolute inset-0 flex flex-col justify-center px-2">
-                    <div className="truncate text-[10px] font-semibold">{slide.title}</div>
-                    <div
-                      className="mt-1 h-0.5 w-6 rounded-full"
-                      style={{ backgroundColor: slide.accentColor }}
-                    />
+            {presentationSlides
+              .filter((s) => s)
+              .map((slide, idx) => (
+                <button
+                  key={slide.id}
+                  onClick={() => goToSlide(idx)}
+                  className={`group relative flex-shrink-0 rounded-md border-2 transition-all ${
+                    idx === currentIndex
+                      ? 'border-primary shadow-md'
+                      : 'border-transparent opacity-60 hover:opacity-100'
+                  }`}
+                  style={{
+                    borderColor: idx === currentIndex ? slide.accentColor : undefined,
+                  }}
+                >
+                  <div className="relative h-16 w-28 overflow-hidden rounded-sm bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
+                    {/* Thumbnail mini preview */}
+                    <div className="absolute inset-0 flex flex-col justify-center px-2">
+                      <div className="truncate text-[10px] font-semibold">{slide.title}</div>
+                      <div
+                        className="mt-1 h-0.5 w-6 rounded-full"
+                        style={{ backgroundColor: slide.accentColor }}
+                      />
+                    </div>
+                    {/* Slide number badge */}
+                    <div className="absolute bottom-0.5 right-0.5 rounded-sm bg-black/40 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                      {idx + 1}
+                    </div>
                   </div>
-                  {/* Slide number badge */}
-                  <div className="absolute bottom-0.5 right-0.5 rounded-sm bg-black/40 px-1.5 py-0.5 text-[9px] font-medium text-white">
-                    {idx + 1}
-                  </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))}
           </div>
         </div>
       )}

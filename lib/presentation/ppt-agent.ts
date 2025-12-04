@@ -796,15 +796,23 @@ export async function runPresentationAgent(
         };
         console.log('[ppt-agent] Generated slide with ID:', newSlide.id);
 
-        const newSlides = [...newState.slides];
         const slideIndex = action.slideIndex ?? newState.currentSlideIndex ?? 0;
         console.log(
           '[ppt-agent] Inserting at index:',
           slideIndex,
           'Current slides array length:',
-          newSlides.length
+          newState.slides.length
         );
+
+        // 배열을 복사하고 undefined를 방지하기 위해 충분한 길이 확보
+        const newSlides = [...newState.slides];
+        // 배열 길이가 slideIndex보다 작으면 빈 슬롯을 null로 채움 (undefined 방지)
+        while (newSlides.length <= slideIndex) {
+          newSlides.push(null as any);
+        }
         newSlides[slideIndex] = newSlide;
+        // null 요소 필터링 (실제 슬라이드만 유지)
+        const filteredSlides = newSlides.filter((s) => s !== null) as PresentationSlide[];
 
         const completed = [...newState.completedSlideIndices];
         if (!completed.includes(slideIndex)) {
@@ -816,7 +824,7 @@ export async function runPresentationAgent(
 
         newState = {
           ...newState,
-          slides: newSlides,
+          slides: filteredSlides,
           completedSlideIndices: completed,
           currentSlideIndex: nextIndex < totalSlides ? nextIndex : undefined,
           currentStep: nextIndex < totalSlides ? 'slide-creation' : 'review',
@@ -826,9 +834,9 @@ export async function runPresentationAgent(
           '[ppt-agent] Created slide at index',
           slideIndex,
           'Total slides:',
-          newSlides.length
+          filteredSlides.length
         );
-        callbacks.onSlides?.(newSlides);
+        callbacks.onSlides?.(filteredSlides);
         break;
       }
 
