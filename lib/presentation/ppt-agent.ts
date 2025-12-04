@@ -1,475 +1,687 @@
 import { generateId } from '@/lib/utils';
 import { LLMService } from '@/lib/llm/service';
-import type { PresentationSlide, PresentationExportFormat } from '@/types/presentation';
+import type {
+  PresentationSlide,
+  PresentationAgentState,
+  PresentationBrief,
+  PresentationDesignMaster,
+  PresentationStructure,
+  PresentationWorkflowStep,
+} from '@/types/presentation';
 import type { Message } from '@/types';
-
-export interface PresentationAgentOptions {
-  tone?: string;
-  targetFormat?: PresentationExportFormat;
-  slideCount?: number;
-  brandVoice?: string;
-  visualDirection?: string;
-  theme?: {
-    palette?: string[];
-    typography?: string;
-    layoutGuidelines?: string;
-  };
-}
 
 export interface PresentationAgentCallbacks {
   onToken?: (chunk: string) => void;
+  onStateUpdate?: (state: PresentationAgentState) => void;
   onSlides?: (slides: PresentationSlide[]) => void;
   signal?: AbortSignal;
 }
 
-// ChatMessage는 Message 타입과 호환되도록 변경
 type ChatMessage = Message;
 
-function getSystemPrompt(userLanguage: 'ko' | 'en' | 'ja' | 'zh'): string {
-  const languageInstructions = {
-    ko: `# 감지된 언어: 한국어
-**사용자가 한국어로 요청했으므로, 모든 응답과 슬라이드 내용을 한국어로 작성하세요.**
+/**
+ * Step별 시스템 프롬프트 생성
+ */
+function getStepPrompt(
+  step: PresentationWorkflowStep,
+  state: PresentationAgentState,
+  userLanguage: 'ko' | 'en' | 'ja' | 'zh'
+): string {
+  const lang = userLanguage;
 
-응답 예시:
-- "네, 알겠습니다. 논문 요약 발표 자료를 만들어드리겠습니다."
-- Tool 호출: language: "ko"
-- 슬라이드 제목: "연구 배경", "방법론", "결과 분석"
+  const prompts = {
+    briefing: {
+      ko: `# 단계: 브리핑 수집
 
-참고: 사용자가 "영어로", "in English" 등을 명시하면 해당 언어를 사용하세요.`,
-    en: `# Detected Language: English
-**The user requested in English, so respond and create all slide content in English.**
+당신은 친절한 프레젠테이션 디자이너입니다. 사용자와 대화하며 프레젠테이션 요구사항을 파악하세요.
 
-Response example:
-- "Sure, I'll create a presentation about your topic."
-- Tool call: language: "en"
-- Slide titles: "Background", "Methodology", "Results"
+## 현재 목표
+사용자로부터 다음 정보를 수집하세요:
+1. **주제**: 무엇에 대한 프레젠테이션인가요?
+2. **목적**: 설득? 정보 전달? 교육?
+3. **청중**: 누구를 위한 발표인가요? (임원, 개발자, 학생 등)
+4. **슬라이드 수**: 몇 장 정도 필요한가요? (기본 8장)
+5. **발표 시간**: 몇 분 분량인가요? (선택사항)
 
-Note: If the user specifies another language (e.g., "한국어로", "in Korean"), use that language instead.`,
-    ja: `# 検出された言語: 日本語
-**ユーザーが日本語でリクエストしたので、すべての応答とスライドコンテンツを日本語で作成してください。**
+## 대화 스타일
+- 한 번에 모든 걸 묻지 마세요
+- 사용자가 이미 말한 정보는 다시 묻지 마세요
+- 자연스럽게 부족한 정보만 물어보세요
+- 사용자가 "다 말했어" 또는 "이제 만들어줘"라고 하면 다음 단계로 넘어가세요
 
-応答例:
-- "はい、わかりました。プレゼンテーションを作成します。"
-- ツール呼び出し: language: "ja"
-- スライドタイトル: "背景", "方法論", "結果"
-
-注: ユーザーが別の言語を指定した場合（例: "英語で", "in English"）、その言語を使用してください。`,
-    zh: `# 检测到的语言: 中文
-**用户用中文请求，因此请用中文回复并创建所有幻灯片内容。**
-
-回复示例:
-- "好的，我将为您创建演示文稿。"
-- 工具调用: language: "zh"
-- 幻灯片标题: "背景", "方法", "结果"
-
-注意: 如果用户指定了其他语言（例如: "英文", "in English"），请使用该语言。`,
-  };
-
-  return `You are ppt-agent, an expert presentation designer.
-
-${languageInstructions[userLanguage]}
-
-# Your Workflow
-1. User requests a presentation (e.g., "논문 요약 발표 자료, 15페이지")
-2. Extract: topic, slide count, language
-3. IMMEDIATELY output JSON slides - do NOT use tools, do NOT ask questions
-4. Generate slides one by one in streaming fashion
-
-# How to Extract Parameters
-- **Slide count**: "15페이지" → 15, "10 slides" → 10, "약 20장" → 20, default → 8
-- **Topic**: Main subject (e.g., "논문 요약", "AI의 미래", "Company Overview")
-- **Language**: Auto-detected (already provided to you)
-
-# Response Format
-${
-  userLanguage === 'ko'
-    ? `간단한 확인 메시지 + 즉시 JSON 배열 출력:
-
-"네, 논문 요약 발표 자료를 15장으로 만들어드리겠습니다."
+## 응답 형식
+대화형으로 응답하고, 정보가 충분히 모이면:
 
 \`\`\`json
-[
-  {
-    "title": "논문 소개",
-    "subtitle": "연구의 배경과 목적",
-    ...
-  },
-  ...
-]
-\`\`\``
-    : userLanguage === 'ja'
-      ? `簡単な確認メッセージ + すぐにJSON配列を出力:
-
-"はい、論文要約プレゼンテーションを15枚作成します。"
-
-\`\`\`json
-[
-  {
-    "title": "論文紹介",
-    ...
+{
+  "action": "complete_briefing",
+  "brief": {
+    "topic": "...",
+    "purpose": "...",
+    "audience": "...",
+    "slideCount": 8,
+    "language": "ko"
   }
-]
-\`\`\``
-      : `Brief confirmation + immediate JSON array:
-
-"Sure, I'll create a 15-slide presentation."
-
-\`\`\`json
-[
-  {
-    "title": "Introduction",
-    ...
-  }
-]
-\`\`\``
 }
-
-# Your Design Philosophy
-- **Think like a designer first**: Consider visual hierarchy, contrast, whitespace, and rhythm
-- **Be creative and diverse**: Each slide should have a unique personality while maintaining coherence
-- **Data visualization matters**: Use charts, tables, and stats to make numbers compelling
-- **Images are powerful**: Suggest relevant, high-quality images that enhance the message
-- **Typography creates emotion**: Mix fonts strategically (e.g., bold serif titles + clean sans body)
-
-# Available Layouts (use variety!)
-1. **hero**: Full-screen impact slide (opening/closing, big statements)
-2. **title-body**: Classic content slide (text + bullets + optional image)
-3. **two-column**: Split content (comparison, before/after, pros/cons)
-4. **timeline**: Process, roadmap, history (horizontal steps)
-5. **grid**: Multiple items showcase (features, team, portfolio)
-6. **split-image**: 50/50 text and large image
-7. **quote**: Highlight testimonials or important statements
-8. **stats**: Big numbers with impact (KPIs, achievements)
-
-# Design Elements You Can Control
-**Colors**: Choose accentColor, backgroundColor, textColor to create mood
-- Dark tech: #0f172a bg, #0ea5e9 accent, white text
-- Warm organic: cream bg, #f97316 accent, dark text
-- Professional: white bg, #7c3aed accent, gray text
-
-**Typography**: titleFont + bodyFont + titleSize
-- Modern: "Sora Bold" / "Inter Regular"
-- Elegant: "Playfair Display" / "Source Sans Pro"
-- Tech: "Space Grotesk" / "JetBrains Mono"
-- Size: small/medium/large/xl based on importance
-
-**Content Slots** (use these to enrich slides!):
-- \`chart\`: Bar, line, pie, area charts with real data
-- \`table\`: Structured data with headers and rows
-- \`stats\`: Big numbers (e.g., [{ value: "95%", label: "Satisfaction", icon: "❤️" }])
-- \`quote\`: Testimonials or key statements
-- \`timeline\`: Steps with titles, descriptions, dates
-
-**Visual Focus** (emphasis field):
-- "title": Text-heavy, minimal visuals
-- "visual": Image-dominant, minimal text
-- "data": Chart/table focused
-- "balanced": Equal text and visual
-
-# Your Creative Process
-1. **Analyze the brief**: Understand audience, tone, purpose
-2. **Plan visual rhythm**: Alternate between text-heavy and visual-heavy slides
-3. **Choose diverse layouts**: Don't use the same layout twice in a row
-4. **Add data visualization**: Use charts/tables for any numbers or comparisons
-5. **Suggest powerful images**: Describe images that enhance each message
-6. **Apply design system**: Consistent colors/fonts but varied execution
-
-# Examples of Creative Thinking
-
-**Bad (boring)**: All title-body layouts, no images, plain bullets
-**Good**: Hero intro → stats slide with big numbers → split-image for problem → chart comparing solutions → timeline roadmap → quote testimonial → grid features → hero conclusion
-
-**Bad**: Generic "increase revenue" bullet point
-**Good**: Chart showing revenue growth trend + stat card "127% YoY" + image prompt "upward trending graph with celebration"
-
-**Bad**: "Our team" with bullet list of names
-**Good**: Grid layout with team photos, or stats showing team size/experience, or timeline of company milestones
-
-# JSON Output Format
-Return slides as JSON array with ALL relevant fields:
-\`\`\`json
-[
-  {
-    "title": "Slide Title",
-    "subtitle": "Optional subtitle for context",
-    "description": "Brief description for preview",
-    "bullets": ["Key point 1", "Key point 2"],
-    "imagePrompt": "Detailed description for image generation",
-    "layout": "hero|title-body|two-column|timeline|grid|split-image|quote|stats",
-    "vibe": "dark neon tech|minimal white|warm organic|professional clean",
-    "accentColor": "#0ea5e9",
-    "backgroundColor": "#0f172a",
-    "textColor": "white",
-    "titleFont": "Sora Bold",
-    "bodyFont": "Inter Regular",
-    "titleSize": "large|xl",
-    "textAlign": "center|left|right",
-    "emphasis": "title|visual|data|balanced",
-    "slots": {
-      "chart": {
-        "type": "bar|line|pie|area",
-        "title": "Chart Title",
-        "data": {
-          "labels": ["Q1", "Q2", "Q3", "Q4"],
-          "values": [45, 67, 89, 102],
-          "colors": ["#0ea5e9", "#7c3aed"]
-        }
-      },
-      "stats": [
-        { "value": "95%", "label": "Customer Satisfaction", "icon": "❤️" }
-      ],
-      "quote": {
-        "text": "This changed everything for us",
-        "author": "Jane Doe",
-        "role": "CEO, TechCorp"
-      }
-    },
-    "notes": "Speaker notes for this slide"
-  }
-]
 \`\`\`
 
-Remember: Be bold, be creative, use all the tools at your disposal. Make presentations that WOW!`;
+정보가 부족하면 계속 대화하세요.`,
+      en: `# Step: Briefing Collection
+
+You are a friendly presentation designer. Have a conversation to understand the user's needs.
+
+## Current Goal
+Collect the following information:
+1. **Topic**: What is this presentation about?
+2. **Purpose**: Persuade? Inform? Educate?
+3. **Audience**: Who is this for? (executives, developers, students, etc.)
+4. **Slide count**: How many slides? (default 8)
+5. **Duration**: How many minutes? (optional)
+
+## Conversation Style
+- Don't ask everything at once
+- Don't repeat questions about info already provided
+- Naturally ask only what's missing
+- When user says "that's all" or "let's create it", move to next step
+
+## Response Format
+Respond conversationally, and when you have enough info:
+
+\`\`\`json
+{
+  "action": "complete_briefing",
+  "brief": {
+    "topic": "...",
+    "purpose": "...",
+    "audience": "...",
+    "slideCount": 8,
+    "language": "en"
+  }
+}
+\`\`\`
+
+If info is insufficient, continue the conversation.`,
+    },
+
+    'design-master': {
+      ko: `# 단계: 디자인 마스터 설정
+
+브리핑 정보:
+- 주제: ${state.brief?.topic}
+- 청중: ${state.brief?.audience || '일반'}
+- 목적: ${state.brief?.purpose || '정보 전달'}
+
+## 현재 목표
+사용자와 함께 프레젠테이션의 **통일된 디자인 시스템**을 만드세요:
+
+1. **분위기 (Vibe)**: 어떤 느낌을 원하나요?
+   - 예: "프로페셔널하고 모던한", "다크 테크 느낌", "따뜻하고 친근한", "미니멀 화이트"
+
+2. **색상 (Color Palette)**: 선호하는 색상이 있나요?
+   - 메인 색상, 강조 색상, 배경색, 텍스트 색상
+   - 예: 다크 배경 (#0f172a) + 네온 블루 강조 (#0ea5e9)
+
+3. **폰트 (Typography)**: 어떤 스타일의 폰트를 원하나요?
+   - 제목: 굵고 임팩트 있는 vs 우아하고 세련된
+   - 본문: 깔끔하고 읽기 쉬운
+   - 예: "Sora Bold / Inter Regular", "Playfair Display / Source Sans Pro"
+
+4. **레이아웃 선호**: 이미지 많이 vs 텍스트 위주 vs 균형
+
+## 제안 방식
+사용자의 주제와 청중을 고려해 **3가지 디자인 옵션**을 제안하고, 사용자가 선택하거나 커스터마이징하게 하세요.
+
+예:
+"${state.brief?.topic}"에 어울리는 디자인을 3가지 제안드립니다:
+
+**Option 1: Dark Tech** 🌃
+- 다크 네이비 배경 + 네온 블루/퍼플 강조
+- Sora Bold / Inter Regular
+- 현대적이고 기술적인 느낌
+
+**Option 2: Minimal White** ⚪
+- 화이트 배경 + 블랙/그레이 텍스트 + 포인트 컬러
+- Helvetica / Roboto
+- 깔끔하고 전문적
+
+**Option 3: Warm Organic** 🌿
+- 크림/베이지 배경 + 오렌지/브라운 강조
+- Playfair Display / Source Sans Pro
+- 따뜻하고 친근한 느낌
+
+어떤 스타일이 마음에 드시나요? 또는 다른 아이디어가 있으신가요?
+
+## 응답 형식
+사용자가 선택하거나 승인하면:
+
+\`\`\`json
+{
+  "action": "complete_design_master",
+  "designMaster": {
+    "name": "Dark Tech",
+    "vibe": "modern tech professional",
+    "palette": {
+      "primary": "#0ea5e9",
+      "accent": "#7c3aed",
+      "background": "#0f172a",
+      "text": "#ffffff"
+    },
+    "fonts": {
+      "title": "Sora Bold",
+      "body": "Inter Regular",
+      "titleSize": "large"
+    },
+    "layoutPreferences": {
+      "imageStyle": "balanced"
+    }
+  }
+}
+\`\`\``,
+      en: `# Step: Design Master Setup
+
+Briefing:
+- Topic: ${state.brief?.topic}
+- Audience: ${state.brief?.audience || 'general'}
+- Purpose: ${state.brief?.purpose || 'inform'}
+
+## Current Goal
+Work with the user to create a **unified design system**:
+
+1. **Vibe**: What feeling do you want?
+   - e.g., "professional modern", "dark tech", "warm friendly", "minimal white"
+
+2. **Color Palette**: Preferred colors?
+   - Primary, accent, background, text colors
+   - e.g., Dark bg (#0f172a) + Neon blue accent (#0ea5e9)
+
+3. **Typography**: Font style?
+   - Title: bold impactful vs elegant sophisticated
+   - Body: clean readable
+   - e.g., "Sora Bold / Inter Regular"
+
+4. **Layout preference**: Image-heavy vs text-heavy vs balanced
+
+## Suggestion Approach
+Propose **3 design options** based on topic and audience, let user choose or customize.
+
+Example:
+"Here are 3 design suggestions for '${state.brief?.topic}':
+
+**Option 1: Dark Tech** 🌃
+- Dark navy background + neon blue/purple accents
+- Sora Bold / Inter Regular
+- Modern and technical
+
+**Option 2: Minimal White** ⚪
+- White background + black/gray text + accent color
+- Helvetica / Roboto
+- Clean and professional
+
+**Option 3: Warm Organic** 🌿
+- Cream/beige background + orange/brown accents
+- Playfair Display / Source Sans Pro
+- Warm and friendly
+
+Which style do you prefer? Or do you have other ideas?"
+
+## Response Format
+When user chooses or approves:
+
+\`\`\`json
+{
+  "action": "complete_design_master",
+  "designMaster": {
+    "name": "Dark Tech",
+    "vibe": "modern tech professional",
+    "palette": {
+      "primary": "#0ea5e9",
+      "accent": "#7c3aed",
+      "background": "#0f172a",
+      "text": "#ffffff"
+    },
+    "fonts": {
+      "title": "Sora Bold",
+      "body": "Inter Regular",
+      "titleSize": "large"
+    }
+  }
+}
+\`\`\``,
+    },
+
+    structure: {
+      ko: `# 단계: 슬라이드 구조 계획
+
+브리핑:
+- 주제: ${state.brief?.topic}
+- 슬라이드 수: ${state.brief?.slideCount || 8}장
+- 청중: ${state.brief?.audience || '일반'}
+
+디자인:
+- 스타일: ${state.designMaster?.name || state.designMaster?.vibe}
+
+## 현재 목표
+${state.brief?.slideCount || 8}장의 슬라이드 **구조(목차)**를 만들어 사용자와 확인하세요.
+
+## 구조 제안 방식
+1. 각 슬라이드의 제목과 목적을 명확히
+2. 다양한 레이아웃 사용 (hero, title-body, two-column, timeline, grid, stats, quote 등)
+3. 논리적 흐름 (도입 → 본론 → 결론)
+
+예:
+"${state.brief?.topic}"을 ${state.brief?.slideCount || 8}장으로 구성해봤습니다:
+
+**슬라이드 1: Opening (Hero)** 🎬
+- 제목 슬라이드
+- 강렬한 첫인상
+
+**슬라이드 2: 문제 정의 (Title-Body)** 📊
+- 현재 상황 / 해결할 문제
+- 핵심 데이터
+
+**슬라이드 3: 솔루션 개요 (Two-Column)** 💡
+- 우리의 접근 방법
+- Before/After 비교
+
+... (나머지 슬라이드)
+
+이 구조가 괜찮으신가요? 수정하고 싶은 부분이 있나요?
+
+## 응답 형식
+사용자가 승인하면:
+
+\`\`\`json
+{
+  "action": "complete_structure",
+  "structure": {
+    "totalSlides": 8,
+    "outline": [
+      { "index": 0, "title": "...", "layout": "hero", "keyPoints": ["..."] },
+      { "index": 1, "title": "...", "layout": "title-body", "keyPoints": ["..."] },
+      ...
+    ]
+  }
+}
+\`\`\`
+
+사용자가 수정 요청하면 대화로 조율하세요.`,
+      en: `# Step: Structure Planning
+
+Briefing:
+- Topic: ${state.brief?.topic}
+- Slide count: ${state.brief?.slideCount || 8}
+- Audience: ${state.brief?.audience || 'general'}
+
+Design:
+- Style: ${state.designMaster?.name || state.designMaster?.vibe}
+
+## Current Goal
+Create a **structure (outline)** for ${state.brief?.slideCount || 8} slides and confirm with user.
+
+## Structure Proposal
+1. Clear title and purpose for each slide
+2. Diverse layouts (hero, title-body, two-column, timeline, grid, stats, quote)
+3. Logical flow (intro → body → conclusion)
+
+Example:
+"Here's a ${state.brief?.slideCount || 8}-slide structure for '${state.brief?.topic}':
+
+**Slide 1: Opening (Hero)** 🎬
+- Title slide
+- Strong first impression
+
+**Slide 2: Problem Definition (Title-Body)** 📊
+- Current situation / Problem to solve
+- Key data
+
+**Slide 3: Solution Overview (Two-Column)** 💡
+- Our approach
+- Before/After comparison
+
+... (remaining slides)
+
+Does this structure work? Any changes needed?"
+
+## Response Format
+When user approves:
+
+\`\`\`json
+{
+  "action": "complete_structure",
+  "structure": {
+    "totalSlides": 8,
+    "outline": [
+      { "index": 0, "title": "...", "layout": "hero", "keyPoints": ["..."] },
+      { "index": 1, "title": "...", "layout": "title-body", "keyPoints": ["..."] },
+      ...
+    ]
+  }
+}
+\`\`\`
+
+If user requests changes, negotiate through conversation.`,
+    },
+
+    'slide-creation': {
+      ko: `# 단계: 슬라이드 작성
+
+구조:
+${state.structure?.outline.map((s) => `${s.index + 1}. ${s.title} (${s.layout})`).join('\n')}
+
+디자인 마스터:
+- 색상: ${state.designMaster?.palette.primary} (메인), ${state.designMaster?.palette.accent} (강조)
+- 폰트: ${state.designMaster?.fonts.title} / ${state.designMaster?.fonts.body}
+- 분위기: ${state.designMaster?.vibe}
+
+## 현재 목표
+**${state.currentSlideIndex !== undefined ? `슬라이드 ${state.currentSlideIndex + 1}` : '다음 슬라이드'}**를 작성하세요.
+
+${
+  state.currentSlideIndex !== undefined && state.structure
+    ? `
+현재 슬라이드 정보:
+- 제목: ${state.structure.outline[state.currentSlideIndex]?.title}
+- 레이아웃: ${state.structure.outline[state.currentSlideIndex]?.layout}
+- 핵심 포인트: ${state.structure.outline[state.currentSlideIndex]?.keyPoints?.join(', ') || '(미정)'}
+`
+    : ''
 }
 
-function coerceSlides(raw: string): PresentationSlide[] {
-  const slides: PresentationSlide[] = [];
+## 작성 방식
+1. 사용자에게 슬라이드 내용을 물어보세요
+   - "슬라이드 ${(state.currentSlideIndex || 0) + 1}의 핵심 내용은 무엇인가요?"
+   - "어떤 데이터나 이미지를 넣고 싶으신가요?"
 
-  // Try to extract JSON from markdown code blocks
-  let jsonContent = raw.trim();
+2. 사용자가 내용을 주면 슬라이드를 생성하세요
 
-  // Remove markdown code fences (```json ... ``` or ``` ... ```)
-  const codeBlockMatch = jsonContent.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
-  if (codeBlockMatch) {
-    jsonContent = codeBlockMatch[1];
-  } else {
-    // Try to find JSON array directly
-    const arrayMatch = jsonContent.match(/(\[\s*\{[\s\S]*\}\s*\])/);
-    if (arrayMatch) {
-      jsonContent = arrayMatch[1];
-    }
+3. 생성한 슬라이드를 요약해서 보여주고 확인받으세요
+
+## 응답 형식
+슬라이드를 생성하면:
+
+\`\`\`json
+{
+  "action": "create_slide",
+  "slideIndex": ${state.currentSlideIndex || 0},
+  "slide": {
+    "title": "...",
+    "subtitle": "...",
+    "bullets": ["...", "..."],
+    "layout": "${state.structure?.outline[state.currentSlideIndex || 0]?.layout || 'title-body'}",
+    "accentColor": "${state.designMaster?.palette.accent}",
+    "backgroundColor": "${state.designMaster?.palette.background}",
+    "textColor": "${state.designMaster?.palette.text}",
+    "titleFont": "${state.designMaster?.fonts.title}",
+    "bodyFont": "${state.designMaster?.fonts.body}",
+    "imagePrompt": "...",
+    "vibe": "${state.designMaster?.vibe}"
   }
+}
+\`\`\`
 
-  try {
-    const parsed = JSON.parse(jsonContent);
-    if (Array.isArray(parsed)) {
-      for (const item of parsed) {
-        slides.push({
-          id: generateId(),
-          title: item.title || 'Untitled Slide',
-          subtitle: item.subtitle,
-          description: item.description,
-          bullets: item.bullets,
-          imagePrompt: item.imagePrompt,
-          imageUrl: item.imageUrl,
-          notes: item.notes,
+사용자가 수정 요청하면 대화로 조율하세요.
 
-          // 디자인 시스템
-          accentColor: item.accentColor,
-          backgroundColor: item.backgroundColor,
-          textColor: item.textColor,
-          layout: item.layout,
-          vibe: item.vibe,
+모든 슬라이드가 완성되면:
+\`\`\`json
+{ "action": "complete_all_slides" }
+\`\`\``,
+      en: `# Step: Slide Creation
 
-          // 타이포그래피
-          titleFont: item.titleFont,
-          bodyFont: item.bodyFont,
-          titleSize: item.titleSize,
-          textAlign: item.textAlign,
+Structure:
+${state.structure?.outline.map((s) => `${s.index + 1}. ${s.title} (${s.layout})`).join('\n')}
 
-          // 고급 콘텐츠 슬롯
-          slots: item.slots,
+Design Master:
+- Colors: ${state.designMaster?.palette.primary} (primary), ${state.designMaster?.palette.accent} (accent)
+- Fonts: ${state.designMaster?.fonts.title} / ${state.designMaster?.fonts.body}
+- Vibe: ${state.designMaster?.vibe}
 
-          // 애니메이션/전환
-          transition: item.transition,
-          emphasis: item.emphasis,
-        });
-      }
-      if (slides.length > 0) {
-        return slides;
-      }
-    }
-  } catch (e) {
-    console.warn('[ppt-agent] JSON parse failed, trying heuristic parsing:', e);
-    // Fall back to heuristic parsing
-  }
+## Current Goal
+Create **${state.currentSlideIndex !== undefined ? `Slide ${state.currentSlideIndex + 1}` : 'next slide'}**.
 
-  const lines = raw
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-  let current: PresentationSlide | null = null;
-
-  for (const line of lines) {
-    const match = line.match(/^Slide\s*\d+[-:]\s*(.*)$/i);
-    if (match) {
-      if (current) {
-        slides.push(current);
-      }
-      current = {
-        id: generateId(),
-        title: match[1] || 'Untitled Slide',
-      };
-      continue;
-    }
-    if (!current) {
-      current = { id: generateId(), title: line };
-      continue;
-    }
-    current.bullets = [...(current.bullets || []), line];
-  }
-
-  if (current) {
-    slides.push(current);
-  }
-
-  return slides;
+${
+  state.currentSlideIndex !== undefined && state.structure
+    ? `
+Current slide info:
+- Title: ${state.structure.outline[state.currentSlideIndex]?.title}
+- Layout: ${state.structure.outline[state.currentSlideIndex]?.layout}
+- Key points: ${state.structure.outline[state.currentSlideIndex]?.keyPoints?.join(', ') || '(TBD)'}
+`
+    : ''
 }
 
-// 사용자 언어 감지 (우선순위: 1. 명시적 언급 2. 작성 언어 3. 기본값 한국어)
+## Creation Process
+1. Ask user for slide content
+   - "What's the main content for slide ${(state.currentSlideIndex || 0) + 1}?"
+   - "Any data or images you want to include?"
+
+2. When user provides content, generate the slide
+
+3. Summarize the created slide and get confirmation
+
+## Response Format
+When creating a slide:
+
+\`\`\`json
+{
+  "action": "create_slide",
+  "slideIndex": ${state.currentSlideIndex || 0},
+  "slide": {
+    "title": "...",
+    "subtitle": "...",
+    "bullets": ["...", "..."],
+    "layout": "${state.structure?.outline[state.currentSlideIndex || 0]?.layout || 'title-body'}",
+    "accentColor": "${state.designMaster?.palette.accent}",
+    "backgroundColor": "${state.designMaster?.palette.background}",
+    "textColor": "${state.designMaster?.palette.text}",
+    "titleFont": "${state.designMaster?.fonts.title}",
+    "bodyFont": "${state.designMaster?.fonts.body}",
+    "imagePrompt": "...",
+    "vibe": "${state.designMaster?.vibe}"
+  }
+}
+\`\`\`
+
+If user requests changes, negotiate through conversation.
+
+When all slides are done:
+\`\`\`json
+{ "action": "complete_all_slides" }
+\`\`\``,
+    },
+
+    review: {
+      ko: `# 단계: 검토 및 수정
+
+생성된 슬라이드: ${state.slides.length}장
+
+## 현재 목표
+사용자와 함께 프레젠테이션을 검토하고 수정하세요.
+
+## 가능한 작업
+- "슬라이드 3 수정해줘" → 특정 슬라이드 수정
+- "전체적으로 색상을 더 밝게" → 디자인 마스터 수정
+- "슬라이드 2와 3 사이에 새 슬라이드 추가" → 슬라이드 추가
+- "슬라이드 5 삭제" → 슬라이드 삭제
+- "완료" → 최종 완료
+
+## 응답 형식
+수정 작업:
+\`\`\`json
+{
+  "action": "modify_slide",
+  "slideIndex": 2,
+  "modifications": { "title": "...", ... }
+}
+\`\`\`
+
+완료:
+\`\`\`json
+{ "action": "finalize_presentation" }
+\`\`\``,
+      en: `# Step: Review and Revise
+
+Generated slides: ${state.slides.length}
+
+## Current Goal
+Review and revise the presentation with the user.
+
+## Possible Actions
+- "Revise slide 3" → Modify specific slide
+- "Make colors brighter overall" → Update design master
+- "Add new slide between 2 and 3" → Insert slide
+- "Delete slide 5" → Remove slide
+- "Done" → Finalize
+
+## Response Format
+Modify:
+\`\`\`json
+{
+  "action": "modify_slide",
+  "slideIndex": 2,
+  "modifications": { "title": "...", ... }
+}
+\`\`\`
+
+Finalize:
+\`\`\`json
+{ "action": "finalize_presentation" }
+\`\`\``,
+    },
+
+    complete: {
+      ko: '프레젠테이션이 완성되었습니다! 내보내기 하시거나 추가 수정이 필요하면 말씀해주세요.',
+      en: 'Presentation complete! Export it or let me know if you need any changes.',
+      ja: 'プレゼンテーションが完成しました！エクスポートするか、追加の変更が必要な場合はお知らせください。',
+      zh: '演示文稿完成！导出或告诉我是否需要任何更改。',
+    },
+  };
+
+  const stepPrompts = prompts[step];
+  if (!stepPrompts) {
+    return '';
+  }
+
+  // lang에 해당하는 프롬프트가 있으면 반환, 없으면 en 또는 ko 반환
+  return stepPrompts[lang as keyof typeof stepPrompts] || stepPrompts.en || stepPrompts.ko || '';
+}
+
+/**
+ * 사용자 언어 감지
+ */
 function detectLanguage(text: string): 'ko' | 'en' | 'ja' | 'zh' {
   const lowerText = text.toLowerCase();
 
-  // 1순위: 사용자가 명시적으로 언어를 지정한 경우
-  // 영어 요청
+  // 1순위: 명시적 언어 지정
   if (
     lowerText.includes('in english') ||
     lowerText.includes('영어로') ||
-    lowerText.includes('영문으로') ||
     lowerText.includes('english version')
   ) {
     return 'en';
   }
-  // 일본어 요청
   if (
     lowerText.includes('in japanese') ||
     lowerText.includes('일본어로') ||
-    lowerText.includes('日本語で') ||
-    lowerText.includes('japanese version')
+    lowerText.includes('日本語で')
   ) {
     return 'ja';
   }
-  // 중국어 요청
   if (
     lowerText.includes('in chinese') ||
     lowerText.includes('중국어로') ||
-    lowerText.includes('中文') ||
-    lowerText.includes('chinese version')
+    lowerText.includes('中文')
   ) {
     return 'zh';
   }
-  // 한국어 요청
-  if (
-    lowerText.includes('in korean') ||
-    lowerText.includes('한국어로') ||
-    lowerText.includes('korean version')
-  ) {
-    return 'ko';
-  }
 
-  // 2순위: 사용자가 작성한 메시지의 언어 자동 감지
-  // 한글 비율 체크
+  // 2순위: 작성 언어 감지
   const koreanChars = text.match(/[가-힣]/g);
   if (koreanChars && koreanChars.length / text.length > 0.3) {
     return 'ko';
   }
 
-  // 일본어 체크
   const japaneseChars = text.match(/[ぁ-んァ-ン]/g);
   if (japaneseChars && japaneseChars.length / text.length > 0.2) {
     return 'ja';
   }
 
-  // 중국어 체크
   const chineseChars = text.match(/[\u4e00-\u9fa5]/g);
   if (chineseChars && chineseChars.length / text.length > 0.2) {
     return 'zh';
   }
 
-  // 영어 체크 (알파벳이 대부분인 경우)
   const englishChars = text.match(/[a-zA-Z]/g);
   if (englishChars && englishChars.length / text.length > 0.5) {
     return 'en';
   }
 
-  // 3순위: 기본값 한국어
   return 'ko';
 }
 
-// 사용자 요청에서 슬라이드 개수 추출
-function extractSlideCount(text: string): number {
-  // 숫자 + 페이지/슬라이드/장 패턴
-  const patterns = [
-    /(\d+)\s*페이지/,
-    /(\d+)\s*슬라이드/,
-    /(\d+)\s*장/,
-    /(\d+)\s*slides?/i,
-    /(\d+)\s*pages?/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) {
-      const count = parseInt(match[1], 10);
-      // 합리적인 범위 체크 (1-50)
-      if (count >= 1 && count <= 50) {
-        return count;
+/**
+ * LLM 응답에서 JSON Action 추출
+ */
+function extractAction(text: string): Record<string, any> | null {
+  try {
+    // ```json ... ``` 블록 찾기
+    const jsonMatch = text.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[1]);
+      if (parsed.action) {
+        return parsed;
       }
     }
-  }
 
-  return 8; // 기본값
+    // 직접 JSON 객체 찾기
+    const directMatch = text.match(/(\{[\s\S]*"action"[\s\S]*?\})/);
+    if (directMatch) {
+      const parsed = JSON.parse(directMatch[1]);
+      if (parsed.action) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('[ppt-agent] Failed to extract action:', e);
+  }
+  return null;
 }
 
+/**
+ * 초기 상태 생성
+ */
+export function createInitialState(): PresentationAgentState {
+  return {
+    currentStep: 'briefing',
+    completedSlideIndices: [],
+    slides: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+}
+
+/**
+ * Step-by-Step 대화형 PPT Agent
+ */
 export async function runPresentationAgent(
   messages: ChatMessage[],
-  options: PresentationAgentOptions,
-  callbacks: PresentationAgentCallbacks = {},
-  _currentSlides: PresentationSlide[] = []
-): Promise<{ response: string; slides: PresentationSlide[] }> {
-  // 마지막 사용자 메시지에서 언어 및 슬라이드 개수 감지
+  currentState: PresentationAgentState,
+  callbacks: PresentationAgentCallbacks = {}
+): Promise<{ response: string; state: PresentationAgentState }> {
   const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user');
-  const userLanguage = lastUserMessage ? detectLanguage(lastUserMessage.content) : 'en';
-  const requestedSlideCount = lastUserMessage ? extractSlideCount(lastUserMessage.content) : 8;
+  const userLanguage = lastUserMessage ? detectLanguage(lastUserMessage.content) : 'ko';
 
-  // LLMService를 사용하여 설정된 activeBaseModel을 IPC를 통해 호출
+  // 현재 단계에 맞는 시스템 프롬프트 생성
+  const systemPrompt = getStepPrompt(currentState.currentStep, currentState, userLanguage);
+
   const chatHistory: ChatMessage[] = [
     {
       id: generateId(),
       conversation_id: 'presentation-agent',
       role: 'system',
-      content: getSystemPrompt(userLanguage),
+      content: systemPrompt,
       created_at: Date.now(),
     },
     ...messages,
-    {
-      id: generateId(),
-      conversation_id: 'presentation-agent',
-      role: 'system',
-      content: `# Current Request Context
-
-**Detected Language: ${userLanguage.toUpperCase()}**
-${
-  userLanguage === 'ko'
-    ? '→ 감지된 언어로 응답하세요. 사용자가 다른 언어를 명시하면 해당 언어를 사용하세요.'
-    : userLanguage === 'ja'
-      ? '→ 検出された言語で応答してください。ユーザーが別の言語を指定した場合は、その言語を使用してください。'
-      : userLanguage === 'zh'
-        ? '→ 用检测到的语言回复。如果用户指定了其他语言，请使用该语言。'
-        : '→ Respond in detected language. If user specifies another language, use that language.'
-}
-
-# Current Context
-**Requested Slide Count: ${requestedSlideCount} slides** (MUST generate exactly this many slides)
-Target format: ${options.targetFormat || 'pptx'}
-Tone: ${options.tone || 'bold'}
-Brand voice: ${options.brandVoice || 'unspecified'}
-Visual direction: ${options.visualDirection || 'sleek, high contrast'}
-Theme palette: ${(options.theme?.palette || []).join(', ') || 'TBD'}
-Typography: ${options.theme?.typography || 'modern sans (e.g., Sora/Inter)'}
-Layout guidelines: ${options.theme?.layoutGuidelines || '16:9 grids, consistent margins, readable hierarchy'}`,
-      created_at: Date.now(),
-    },
   ];
 
   let fullResponse = '';
@@ -488,122 +700,105 @@ Layout guidelines: ${options.theme?.layoutGuidelines || '16:9 grids, consistent 
   }
 
   if (callbacks.signal?.aborted) {
-    return { response: fullResponse, slides: [] };
+    return { response: fullResponse, state: currentState };
   }
 
-  // 첫 번째 응답에서 바로 슬라이드 추출 시도
-  const slides = coerceSlides(fullResponse);
+  // LLM 응답에서 Action 추출
+  const action = extractAction(fullResponse);
+  let newState = { ...currentState, updatedAt: Date.now() };
 
-  if (slides.length > 0) {
-    // 슬라이드를 실시간으로 UI에 전달
-    callbacks.onSlides?.(slides);
-    return { response: fullResponse, slides };
-  }
+  if (action) {
+    // Action에 따라 상태 업데이트
+    switch (action.action) {
+      case 'complete_briefing':
+        newState = {
+          ...newState,
+          brief: action.brief as PresentationBrief,
+          currentStep: 'design-master',
+        };
+        break;
 
-  // JSON이 없으면 두 번째 요청으로 명시적 JSON 요청
-  const outlinePromptContent =
-    userLanguage === 'ko'
-      ? `이제 정확히 ${requestedSlideCount}개의 슬라이드 개요를 JSON 배열로 출력하세요. 모든 디자인 필드를 포함하세요:
+      case 'complete_design_master':
+        newState = {
+          ...newState,
+          designMaster: action.designMaster as PresentationDesignMaster,
+          currentStep: 'structure',
+        };
+        break;
 
-**필수 필드** (각 슬라이드마다):
-- title, subtitle, description, bullets (3-5개, 한국어로!)
-- layout (hero/title-body/two-column/timeline/grid/split-image/quote/stats 중 다양하게)
-- imagePrompt (구체적이고 상세한 설명)
-- accentColor, backgroundColor, textColor
-- titleFont, bodyFont, titleSize, textAlign
-- vibe, emphasis
+      case 'complete_structure':
+        newState = {
+          ...newState,
+          structure: action.structure as PresentationStructure,
+          currentStep: 'slide-creation',
+          currentSlideIndex: 0,
+        };
+        break;
 
-**선택 필드** (권장):
-- slots.chart (실제 데이터: labels, values, colors)
-- slots.stats (큰 숫자와 레이블)
-- slots.table (구조화된 데이터)
-- slots.quote (인용구)
-- slots.timeline (상세 단계)
-- notes (발표자 노트)
+      case 'create_slide': {
+        const slideData = action.slide;
+        const newSlide: PresentationSlide = {
+          id: generateId(),
+          ...slideData,
+        };
 
-**중요**: 모든 텍스트 내용(title, bullets 등)을 한국어로 작성하세요!
+        const newSlides = [...newState.slides];
+        const slideIndex = action.slideIndex ?? newState.currentSlideIndex ?? 0;
+        newSlides[slideIndex] = newSlide;
 
-**중요**: ${requestedSlideCount}개의 슬라이드를 모두 생성하세요!
-
-JSON만 반환하세요 (마크다운 펜스 없이, 설명 없이):
-[{"title": "...", "subtitle": "...", ...}]`
-      : `Now output exactly ${requestedSlideCount} slides as a JSON array. Include ALL design fields you decided on:
-
-**REQUIRED for each slide**:
-- title, subtitle, description, bullets (3-5 per slide, in ${userLanguage.toUpperCase()}!)
-- layout (vary between hero/title-body/two-column/timeline/grid/split-image/quote/stats)
-- imagePrompt (detailed, specific descriptions)
-- accentColor, backgroundColor, textColor
-- titleFont, bodyFont, titleSize, textAlign
-- vibe, emphasis
-
-**OPTIONAL but encouraged**:
-- slots.chart (with real data: labels, values, colors)
-- slots.stats (big numbers with labels and icons)
-- slots.table (structured data)
-- slots.quote (testimonials)
-- slots.timeline (detailed steps)
-- notes (speaker notes)
-
-**IMPORTANT**: Write all text content (title, bullets, etc.) in ${userLanguage.toUpperCase()}!
-**IMPORTANT**: Generate exactly ${requestedSlideCount} slides!
-
-Return ONLY valid JSON, no markdown fences, no explanation:
-[{"title": "...", "subtitle": "...", ...}]`;
-
-  const outlinePrompt: ChatMessage = {
-    id: generateId(),
-    conversation_id: 'presentation-agent',
-    role: 'user',
-    content: outlinePromptContent,
-    created_at: Date.now(),
-  };
-
-  const outlineHistory: ChatMessage[] = [
-    ...chatHistory,
-    {
-      id: generateId(),
-      conversation_id: 'presentation-agent',
-      role: 'assistant',
-      content: fullResponse,
-      created_at: Date.now(),
-    },
-    outlinePrompt,
-  ];
-
-  let outline = '';
-  let outlineSuccess = false;
-
-  try {
-    // 타임아웃 설정 (60초)
-    const timeoutPromise = new Promise<void>((_, reject) => {
-      setTimeout(() => reject(new Error('Outline generation timeout after 60s')), 60000);
-    });
-
-    const streamPromise = (async () => {
-      for await (const chunk of LLMService.streamChat(outlineHistory)) {
-        if (callbacks.signal?.aborted) {
-          break;
+        const completed = [...newState.completedSlideIndices];
+        if (!completed.includes(slideIndex)) {
+          completed.push(slideIndex);
         }
-        outline += chunk;
+
+        const totalSlides = newState.structure?.totalSlides || 8;
+        const nextIndex = slideIndex + 1;
+
+        newState = {
+          ...newState,
+          slides: newSlides,
+          completedSlideIndices: completed,
+          currentSlideIndex: nextIndex < totalSlides ? nextIndex : undefined,
+          currentStep: nextIndex < totalSlides ? 'slide-creation' : 'review',
+        };
+
+        callbacks.onSlides?.(newSlides);
+        break;
       }
-    })();
 
-    await Promise.race([streamPromise, timeoutPromise]);
-    outlineSuccess = true;
-  } catch (error) {
-    console.error('[ppt-agent] Outline generation error:', error);
-    // Fallback: 첫 응답에서 슬라이드 추출 시도
-    console.warn('[ppt-agent] Attempting to extract slides from initial response');
-    outline = fullResponse;
+      case 'complete_all_slides':
+        newState = {
+          ...newState,
+          currentStep: 'review',
+        };
+        break;
+
+      case 'modify_slide': {
+        const slideIndex = action.slideIndex;
+        const modifications = action.modifications;
+        const newSlides = [...newState.slides];
+
+        if (newSlides[slideIndex]) {
+          newSlides[slideIndex] = {
+            ...newSlides[slideIndex],
+            ...modifications,
+          };
+          newState = { ...newState, slides: newSlides };
+          callbacks.onSlides?.(newSlides);
+        }
+        break;
+      }
+
+      case 'finalize_presentation':
+        newState = {
+          ...newState,
+          currentStep: 'complete',
+        };
+        break;
+    }
   }
 
-  const outlineSlides = coerceSlides(outline);
-  if (outlineSlides.length > 0) {
-    callbacks.onSlides?.(outlineSlides);
-  } else if (!outlineSuccess) {
-    console.warn('[ppt-agent] No slides generated. Response may not contain slide data.');
-  }
+  callbacks.onStateUpdate?.(newState);
 
-  return { response: fullResponse, slides: outlineSlides };
+  return { response: fullResponse, state: newState };
 }

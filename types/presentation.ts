@@ -98,3 +98,96 @@ export interface PresentationExportState {
   filePath?: string;
   progressMessage?: string;
 }
+
+/**
+ * PPT 생성 워크플로우 단계
+ */
+export type PresentationWorkflowStep =
+  | 'briefing' // 주제, 목적, 청중 파악
+  | 'design-master' // 디자인 마스터 설정 (색상, 폰트, 분위기)
+  | 'structure' // 슬라이드 구조 계획 (개수, 제목, 레이아웃)
+  | 'slide-creation' // 슬라이드별 내용 작성
+  | 'review' // 검토 및 수정
+  | 'complete'; // 완료
+
+/**
+ * 브리핑 정보
+ */
+export interface PresentationBrief {
+  topic: string; // 주제
+  purpose?: string; // 목적 (설득/정보전달/교육 등)
+  audience?: string; // 청중 (임원/개발자/학생 등)
+  slideCount?: number; // 슬라이드 수
+  duration?: number; // 발표 시간 (분)
+  language?: 'ko' | 'en' | 'ja' | 'zh'; // 언어
+  additionalNotes?: string; // 추가 요청사항
+}
+
+/**
+ * 디자인 마스터 (모든 슬라이드에 적용되는 디자인 시스템)
+ */
+export interface PresentationDesignMaster {
+  name?: string; // 디자인 테마 이름 (e.g., "Dark Tech", "Minimal White")
+  vibe: string; // 분위기 (e.g., "professional", "creative", "bold")
+
+  // 색상 시스템
+  palette: {
+    primary: string; // 메인 색상
+    secondary?: string; // 보조 색상
+    accent: string; // 강조 색상
+    background: string; // 배경색
+    text: string; // 텍스트 색상
+  };
+
+  // 타이포그래피
+  fonts: {
+    title: string; // 제목 폰트
+    body: string; // 본문 폰트
+    titleSize: 'small' | 'medium' | 'large' | 'xl';
+  };
+
+  // 레이아웃 선호도
+  layoutPreferences?: {
+    preferredLayouts?: Array<PresentationSlide['layout']>; // 선호하는 레이아웃
+    avoidLayouts?: Array<PresentationSlide['layout']>; // 피할 레이아웃
+    imageStyle?: 'minimal' | 'abundant' | 'balanced'; // 이미지 사용 스타일
+  };
+}
+
+/**
+ * 슬라이드 구조 계획
+ */
+export interface PresentationStructure {
+  totalSlides: number;
+  outline: Array<{
+    index: number; // 슬라이드 번호
+    title: string; // 제목
+    layout: PresentationSlide['layout']; // 레이아웃
+    contentType?: 'text' | 'image' | 'chart' | 'mixed'; // 콘텐츠 유형
+    keyPoints?: string[]; // 핵심 포인트 (간략)
+  }>;
+}
+
+/**
+ * PPT Agent 대화 상태 (전체 워크플로우 추적)
+ */
+export interface PresentationAgentState {
+  // 현재 단계
+  currentStep: PresentationWorkflowStep;
+
+  // 각 단계별 데이터
+  brief?: PresentationBrief;
+  designMaster?: PresentationDesignMaster;
+  structure?: PresentationStructure;
+
+  // 슬라이드 작성 진행 상황
+  currentSlideIndex?: number; // 현재 작업 중인 슬라이드 인덱스
+  completedSlideIndices: number[]; // 완료된 슬라이드 인덱스
+
+  // 생성된 슬라이드
+  slides: PresentationSlide[];
+
+  // 메타데이터
+  createdAt: number;
+  updatedAt: number;
+}

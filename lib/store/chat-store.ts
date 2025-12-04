@@ -18,7 +18,11 @@ import type { Persona } from '@/types/persona';
 import { BUILTIN_PERSONAS } from '@/types/persona';
 import type { EditorAppearanceConfig, EditorLLMPromptsConfig } from '@/types/editor-settings';
 import { DEFAULT_EDITOR_APPEARANCE, DEFAULT_EDITOR_LLM_PROMPTS } from '@/types/editor-settings';
-import type { PresentationSlide, PresentationExportState } from '@/types/presentation';
+import type {
+  PresentationSlide,
+  PresentationExportState,
+  PresentationAgentState,
+} from '@/types/presentation';
 
 // App mode types
 export type AppMode = 'chat' | 'editor' | 'browser' | 'presentation';
@@ -154,6 +158,7 @@ interface ChatStore {
   activePresentationSlideId: string | null;
   presentationViewMode: 'chat' | 'outline' | 'assets' | 'settings';
   presentationExportState: PresentationExportState | null;
+  presentationAgentState: PresentationAgentState | null; // Step-by-step workflow state
 
   // Browser Agent Logs (실행 과정 가시성)
   browserAgentLogs: BrowserAgentLogEntry[];
@@ -267,6 +272,7 @@ interface ChatStore {
   removePresentationSlide: (id: string) => void;
   setActivePresentationSlide: (id: string | null) => void;
   setPresentationExportState: (state: PresentationExportState | null) => void;
+  setPresentationAgentState: (state: PresentationAgentState | null) => void;
   clearPresentationSession: () => void;
 
   // Actions - Browser Agent Logs
@@ -395,6 +401,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   activePresentationSlideId: null,
   presentationViewMode: 'chat',
   presentationExportState: null,
+  presentationAgentState: null,
 
   // Browser Agent Logs
   browserAgentLogs: [],
@@ -1670,6 +1677,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ presentationExportState: stateValue });
   },
 
+  setPresentationAgentState: (stateValue: PresentationAgentState | null) => {
+    set({ presentationAgentState: stateValue });
+  },
+
   clearPresentationSession: () => {
     set({
       presentationChatMessages: [],
@@ -1677,6 +1688,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       activePresentationSlideId: null,
       presentationChatStreaming: false,
       presentationExportState: null,
+      presentationAgentState: null,
       presentationViewMode: 'chat',
     });
   },
