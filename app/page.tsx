@@ -57,7 +57,7 @@ export default function Home() {
         // UI가 업데이트될 시간을 주고 메시지 전송
         setTimeout(() => {
           window.dispatchEvent(
-            new CustomEvent('sepilot:quick-input-message', {
+            new CustomEvent('sepilot:auto-send-message', {
               detail: messageData,
             })
           );
