@@ -30,6 +30,7 @@ interface DocumentUploadDialogProps {
 
 export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentUploadDialogProps) {
   const [sourceType, setSourceType] = useState<DocumentSourceType>('manual');
+  const [docGroup, setDocGroup] = useState<'personal' | 'team'>('personal');
   const [title, setTitle] = useState('');
   const [source, setSource] = useState('');
   const [content, setContent] = useState('');
@@ -75,7 +76,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               source: source.trim() || 'manual',
               uploadedAt: Date.now(),
               folderPath: folderPath.trim() || undefined,
-              docGroup: 'personal', // 수동 업로드는 항상 개인 문서
+              docGroup: docGroup,
             },
           },
         ];
@@ -99,7 +100,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               ...doc.metadata,
               title: title.trim() || doc.metadata.title || 'Untitled',
               folderPath: folderPath.trim() || undefined,
-              docGroup: 'personal', // HTTP 문서도 개인 문서
+              docGroup: docGroup,
             },
           })
         );
@@ -137,7 +138,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               ...doc.metadata,
               title: doc.metadata.title || 'Untitled',
               folderPath: folderPath.trim() || undefined,
-              docGroup: 'personal', // GitHub 문서도 개인 문서
+              docGroup: docGroup,
             },
           })
         );
@@ -163,6 +164,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
       });
 
       // 입력 필드 초기화
+      setDocGroup('personal');
       setContent('');
       setTitle('');
       setSource('');
@@ -199,6 +201,26 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
         </DialogHeader>
 
         <div className="space-y-4 py-4 flex-1 overflow-y-auto">
+          {/* Document Group */}
+          <div className="space-y-2">
+            <Label htmlFor="doc-group">문서 그룹</Label>
+            <select
+              id="doc-group"
+              value={docGroup}
+              onChange={(e) => setDocGroup(e.target.value as 'personal' | 'team')}
+              disabled={isUploading}
+              className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
+            >
+              <option value="personal">Personal Docs (개인 문서)</option>
+              <option value="team">Team Docs (팀 공유 문서)</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {docGroup === 'personal'
+                ? '개인 문서: 본인만 사용하는 문서입니다.'
+                : 'Team Docs: 팀 전체가 공유하는 문서입니다.'}
+            </p>
+          </div>
+
           {/* Document Source Type */}
           <div className="space-y-2">
             <Label htmlFor="source-type">문서 소스 타입</Label>
