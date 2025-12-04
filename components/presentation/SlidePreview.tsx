@@ -7,7 +7,19 @@ import { generateId } from '@/lib/utils';
 import { SlideRenderer } from './SlideRenderer';
 import { SlideMasterPreview } from './SlideMasterPreview';
 import { DesignOptionsPreview } from './DesignOptionsPreview';
-import { ChevronLeft, ChevronRight, LayoutTemplate, Maximize2, Minimize2 } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  LayoutTemplate,
+  Maximize2,
+  Minimize2,
+  Edit3,
+} from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import type { PresentationSlide } from '@/types/presentation';
 
 const ACCENT_COLORS = ['#7c3aed', '#0ea5e9', '#22c55e', '#f97316', '#06b6d4', '#ef4444'];
 
@@ -17,11 +29,14 @@ export function SlidePreview() {
     activePresentationSlideId,
     setActivePresentationSlide,
     addPresentationSlide,
+    updatePresentationSlide,
     presentationAgentState,
   } = useChatStore();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingSlide, setEditingSlide] = useState<PresentationSlide | null>(null);
   const isInternalUpdate = useRef(false);
 
   // Reset currentIndex if it's out of bounds
@@ -112,6 +127,44 @@ export function SlidePreview() {
       bodyFont: 'Inter Regular',
       vibe: 'modern tech',
     });
+  };
+
+  const handleEditSlide = () => {
+    const slide = presentationSlides[currentIndex];
+    if (slide) {
+      setEditingSlide({ ...slide });
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (editingSlide) {
+      updatePresentationSlide(editingSlide.id, editingSlide);
+      setIsEditDialogOpen(false);
+      setEditingSlide(null);
+    }
+  };
+
+  const handleBulletChange = (index: number, value: string) => {
+    if (editingSlide && editingSlide.bullets) {
+      const newBullets = [...editingSlide.bullets];
+      newBullets[index] = value;
+      setEditingSlide({ ...editingSlide, bullets: newBullets });
+    }
+  };
+
+  const handleAddBullet = () => {
+    if (editingSlide) {
+      const newBullets = editingSlide.bullets ? [...editingSlide.bullets, ''] : [''];
+      setEditingSlide({ ...editingSlide, bullets: newBullets });
+    }
+  };
+
+  const handleRemoveBullet = (index: number) => {
+    if (editingSlide && editingSlide.bullets) {
+      const newBullets = editingSlide.bullets.filter((_, i) => i !== index);
+      setEditingSlide({ ...editingSlide, bullets: newBullets });
+    }
   };
 
   // 디자인 단계에서 옵션 미리보기 표시
@@ -206,6 +259,10 @@ export function SlidePreview() {
             <Button size="sm" variant="ghost" onClick={toggleFullscreen}>
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
+            <Button size="sm" variant="outline" onClick={handleEditSlide}>
+              <Edit3 className="mr-2 h-4 w-4" />
+              편집
+            </Button>
             <Button size="sm" variant="secondary" onClick={handleAddSlide}>
               <LayoutTemplate className="mr-2 h-4 w-4" />
               추가
@@ -288,6 +345,109 @@ export function SlidePreview() {
           ESC 또는 F키로 전체화면 종료
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>슬라이드 편집</DialogTitle>
+          </DialogHeader>
+
+          {editingSlide && (
+            <div className="space-y-4">
+              {/* Title */}
+              <div className="space-y-2">
+                <Label htmlFor="title">제목</Label>
+                <Input
+                  id="title"
+                  value={editingSlide.title}
+                  onChange={(e) => setEditingSlide({ ...editingSlide, title: e.target.value })}
+                  placeholder="슬라이드 제목"
+                />
+              </div>
+
+              {/* Subtitle */}
+              <div className="space-y-2">
+                <Label htmlFor="subtitle">부제목 (선택사항)</Label>
+                <Input
+                  id="subtitle"
+                  value={editingSlide.subtitle || ''}
+                  onChange={(e) => setEditingSlide({ ...editingSlide, subtitle: e.target.value })}
+                  placeholder="부제목"
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description">설명 (선택사항)</Label>
+                <Textarea
+                  id="description"
+                  value={editingSlide.description || ''}
+                  onChange={(e) =>
+                    setEditingSlide({ ...editingSlide, description: e.target.value })
+                  }
+                  placeholder="슬라이드 설명"
+                  rows={2}
+                />
+              </div>
+
+              {/* Bullets */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>불릿 포인트</Label>
+                  <Button size="sm" variant="outline" onClick={handleAddBullet}>
+                    + 추가
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {editingSlide.bullets && editingSlide.bullets.length > 0 ? (
+                    editingSlide.bullets.map((bullet, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          value={bullet}
+                          onChange={(e) => handleBulletChange(index, e.target.value)}
+                          placeholder={`불릿 포인트 ${index + 1}`}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleRemoveBullet(index)}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      불릿 포인트가 없습니다. 추가 버튼을 클릭하세요.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="notes">발표자 노트 (선택사항)</Label>
+                <Textarea
+                  id="notes"
+                  value={editingSlide.notes || ''}
+                  onChange={(e) => setEditingSlide({ ...editingSlide, notes: e.target.value })}
+                  placeholder="발표자를 위한 메모"
+                  rows={3}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  취소
+                </Button>
+                <Button onClick={handleSaveEdit}>저장</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
