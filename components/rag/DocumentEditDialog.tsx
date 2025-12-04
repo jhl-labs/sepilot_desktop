@@ -230,17 +230,29 @@ export function DocumentEditDialog({
         setIsPushing(true);
 
         try {
+          // githubPath 생성: title이 변경되었을 수 있으므로 현재 title 기준으로 재생성
+          const newTitle = title.trim() || '제목 없음';
+          const newFolderPath = folderPath.trim();
+          let githubPath = document.metadata.githubPath;
+
+          // title이 변경되었거나 folderPath가 변경된 경우 githubPath 재생성
+          const oldTitle = document.metadata.title;
+          const oldFolderPath = document.metadata.folderPath;
+          if (newTitle !== oldTitle || newFolderPath !== oldFolderPath) {
+            githubPath = newFolderPath ? `${newFolderPath}/${newTitle}.md` : `${newTitle}.md`;
+          }
+
           const result = await window.electronAPI.teamDocs.pushDocument({
             teamDocsId: document.metadata.teamDocsId,
-            githubPath: document.metadata.githubPath,
-            title: title.trim() || '제목 없음',
+            githubPath: githubPath,
+            title: newTitle,
             content: content.trim(),
             metadata: {
-              folderPath: folderPath.trim() || undefined,
+              folderPath: newFolderPath || undefined,
               source: source.trim() || 'manual',
             },
             sha: document.metadata.githubSha,
-            commitMessage: `Update ${title.trim() || 'document'} from SEPilot`,
+            commitMessage: `Update ${newTitle} from SEPilot`,
           });
 
           if (!result.success) {

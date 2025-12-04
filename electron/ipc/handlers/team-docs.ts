@@ -329,10 +329,26 @@ export function setupTeamDocsHandlers() {
         const syncConfig = toGitHubSyncConfig(applyNetworkConfig(config));
         const client = new GitHubSyncClient(syncConfig);
 
+        // githubPath 검증 및 생성
+        let githubPath = params.githubPath;
+        if (!githubPath) {
+          const folder = params.metadata?.folderPath || config.docsPath || 'documents';
+          const filename = params.title || 'Untitled';
+          githubPath = `${folder}/${filename}.md`;
+          console.log('[team-docs-push-document] Generated githubPath:', githubPath);
+        }
+
+        console.log('[team-docs-push-document] Pushing document:', {
+          teamDocsId: params.teamDocsId,
+          title: params.title,
+          githubPath,
+          folderPath: params.metadata?.folderPath,
+        });
+
         // 문서 Push
         const result = await client.pushDocument(
           {
-            githubPath: params.githubPath,
+            githubPath,
             title: params.title,
             content: params.content,
             metadata: params.metadata,
@@ -350,12 +366,13 @@ export function setupTeamDocsHandlers() {
         const docToUpdate = allDocs.find(
           (doc) =>
             doc.metadata?.teamDocsId === params.teamDocsId &&
-            doc.metadata?.githubPath === params.githubPath
+            (doc.metadata?.githubPath === githubPath || doc.metadata?.title === params.title)
         );
 
         if (docToUpdate) {
           await vectorDBService.updateMetadata(docToUpdate.id, {
             ...docToUpdate.metadata,
+            githubPath, // 새로운 githubPath로 업데이트
             githubSha: result.sha,
             modifiedLocally: false,
             lastPushedAt: Date.now(),
