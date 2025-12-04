@@ -322,36 +322,70 @@ When user chooses or approves:
 - 주제: ${state.brief?.topic}
 - 슬라이드 수: ${state.brief?.slideCount || 8}장
 - 청중: ${state.brief?.audience || '일반'}
+- 목적: ${state.brief?.purpose || '정보 전달'}
 
 디자인:
 - 스타일: ${state.designMaster?.name || state.designMaster?.vibe}
+- 색상: ${state.designMaster?.palette.primary} / ${state.designMaster?.palette.accent}
 
 ## 현재 목표
-${state.brief?.slideCount || 8}장의 슬라이드 **구조(목차)**를 만들어 사용자와 확인하세요.
+${state.brief?.slideCount || 8}장의 슬라이드 **구조(목차)**를 만들어 사용자와 함께 검토하고 확정하세요.
+
+⚠️ **중요**: 우측에 디자인 템플릿이 표시되고 있습니다. 사용자는 선택한 디자인을 보면서 구조를 결정할 수 있습니다.
 
 ## 구조 제안 방식
-1. 각 슬라이드의 제목과 목적을 명확히
-2. 다양한 레이아웃 사용 (hero, title-body, two-column, timeline, grid, stats, quote 등)
-3. 논리적 흐름 (도입 → 본론 → 결론)
+각 슬라이드마다 **상세하게** 설명하세요:
 
-예:
+1. **슬라이드 번호와 제목**: 명확하고 구체적인 제목
+2. **레이아웃**: 어떤 레이아웃을 사용할지 (hero, title-body, two-column, timeline, grid, stats, quote 등)
+3. **목적**: 이 슬라이드가 전달할 핵심 메시지
+4. **담을 내용**: 어떤 내용이 들어갈지 2-3개 핵심 포인트
+5. **이유**: 왜 이 순서에 이 슬라이드가 필요한지
+
+### 제안 형식 예시:
 "${state.brief?.topic}"을 ${state.brief?.slideCount || 8}장으로 구성해봤습니다:
 
-**슬라이드 1: Opening (Hero)** 🎬
-- 제목 슬라이드
-- 강렬한 첫인상
+---
+**슬라이드 1: ${state.brief?.topic} 소개** 🎬
+- **레이아웃**: Hero (전체 화면 강조)
+- **목적**: 주제를 강렬하게 소개하고 청중의 관심 유도
+- **담을 내용**:
+  • 프레젠테이션 제목
+  • 핵심 가치 제안 (한 문장)
+  • 발표자 정보
+- **이유**: 첫인상이 중요하므로 hero 레이아웃으로 임팩트 있게 시작
 
-**슬라이드 2: 문제 정의 (Title-Body)** 📊
-- 현재 상황 / 해결할 문제
-- 핵심 데이터
+---
+**슬라이드 2: 문제 정의** 📊
+- **레이아웃**: Title-Body (제목 + 내용)
+- **목적**: 해결하려는 문제를 명확히 제시
+- **담을 내용**:
+  • 현재 상황 설명
+  • 문제의 심각성 (통계/데이터)
+  • 청중에게 미치는 영향
+- **이유**: 솔루션을 제시하기 전에 문제 인식이 필요
 
-**슬라이드 3: 솔루션 개요 (Two-Column)** 💡
-- 우리의 접근 방법
-- Before/After 비교
+---
+**슬라이드 3: 솔루션 개요** 💡
+- **레이아웃**: Two-Column (좌우 비교)
+- **목적**: 우리의 접근 방법을 간결하게 제시
+- **담을 내용**:
+  • 왼쪽: 기존 방식의 한계
+  • 오른쪽: 우리의 새로운 접근
+  • 핵심 차별점
+- **이유**: 비교를 통해 솔루션의 가치를 명확히 전달
 
-... (나머지 슬라이드)
+---
+... (나머지 슬라이드도 동일한 형식으로)
 
-이 구조가 괜찮으신가요? 수정하고 싶은 부분이 있나요?
+---
+
+이 구조가 괜찮으신가요?
+- 슬라이드 순서를 바꾸고 싶으신가요?
+- 추가하거나 제거할 슬라이드가 있나요?
+- 특정 슬라이드의 내용이나 레이아웃을 변경하고 싶으신가요?
+
+**사용자와 충분히 논의하고 합의한 후에만 구조를 확정하세요!**
 
 ## 응답 형식
 사용자가 승인하면:
@@ -373,6 +407,8 @@ ${state.brief?.slideCount || 8}장의 슬라이드 **구조(목차)**를 만들�
 사용자가 수정 요청하면 대화로 조율하세요.`,
       en: `# Step: Structure Planning
 
+⚠️ **Important**: The design template is displayed on the right side. Users can see the selected design while deciding on the structure.
+
 Briefing:
 - Topic: ${state.brief?.topic}
 - Slide count: ${state.brief?.slideCount || 8}
@@ -384,29 +420,37 @@ Design:
 ## Current Goal
 Create a **structure (outline)** for ${state.brief?.slideCount || 8} slides and confirm with user.
 
-## Structure Proposal
-1. Clear title and purpose for each slide
-2. Diverse layouts (hero, title-body, two-column, timeline, grid, stats, quote)
-3. Logical flow (intro → body → conclusion)
+## How to Propose Structure
+For each slide, explain **in detail**:
 
-Example:
-"Here's a ${state.brief?.slideCount || 8}-slide structure for '${state.brief?.topic}':
+1. **Slide Number & Title**: Clear and specific title
+2. **Layout**: Which layout to use
+3. **Purpose**: Core message this slide will deliver
+4. **Content**: 2-3 key points that will be included
+5. **Reasoning**: Why this slide is needed in this order
 
-**Slide 1: Opening (Hero)** 🎬
-- Title slide
-- Strong first impression
+**Example:**
 
-**Slide 2: Problem Definition (Title-Body)** 📊
-- Current situation / Problem to solve
-- Key data
+### Slide 3: Our Solution 💡
+- **Layout**: Two-Column (left-right comparison)
+- **Purpose**: Present our approach concisely
+- **Content**:
+  • Left: Limitations of existing methods
+  • Right: Our new approach
+  • Key differentiators
+- **Reasoning**: Clearly communicate solution value through comparison
 
-**Slide 3: Solution Overview (Two-Column)** 💡
-- Our approach
-- Before/After comparison
+---
+... (same format for remaining slides)
 
-... (remaining slides)
+---
 
-Does this structure work? Any changes needed?"
+Does this structure work for you?
+- Would you like to change the slide order?
+- Any slides to add or remove?
+- Want to modify content or layout of specific slides?
+
+**Only finalize the structure after thorough discussion and agreement with the user!**
 
 ## Response Format
 When user approves:
