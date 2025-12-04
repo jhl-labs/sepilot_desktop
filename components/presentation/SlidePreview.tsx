@@ -17,8 +17,6 @@ import {
   Check,
   X,
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import type { PresentationSlide } from '@/types/presentation';
 
 const ACCENT_COLORS = ['#7c3aed', '#0ea5e9', '#22c55e', '#f97316', '#06b6d4', '#ef4444'];
@@ -148,14 +146,6 @@ export function SlidePreview() {
   const handleCancelEdit = () => {
     setIsEditMode(false);
     setEditingSlide(null);
-  };
-
-  const handleBulletChange = (index: number, value: string) => {
-    if (editingSlide && editingSlide.bullets) {
-      const newBullets = [...editingSlide.bullets];
-      newBullets[index] = value;
-      setEditingSlide({ ...editingSlide, bullets: newBullets });
-    }
   };
 
   const handleAddBullet = () => {
@@ -322,87 +312,15 @@ export function SlidePreview() {
           </>
         )}
 
-        {/* Current Slide or Edit Mode */}
+        {/* Current Slide */}
         <div className="max-w-7xl flex-1">
-          {isEditMode && editingSlide ? (
-            <div
-              className="aspect-video w-full overflow-hidden rounded-lg shadow-2xl"
-              style={{ background: editingSlide.backgroundColor || '#ffffff' }}
-            >
-              <div className="flex h-full flex-col px-12 py-10 space-y-4">
-                {/* Title Input */}
-                <Input
-                  value={editingSlide.title}
-                  onChange={(e) => setEditingSlide({ ...editingSlide, title: e.target.value })}
-                  placeholder="제목"
-                  className="text-3xl font-bold border-2 border-dashed bg-white/80"
-                  style={{ color: editingSlide.textColor || '#1e293b' }}
-                />
-
-                {/* Subtitle Input */}
-                <Input
-                  value={editingSlide.subtitle || ''}
-                  onChange={(e) => setEditingSlide({ ...editingSlide, subtitle: e.target.value })}
-                  placeholder="부제목 (선택사항)"
-                  className="text-base font-medium border-2 border-dashed bg-white/80"
-                  style={{ color: editingSlide.textColor || '#1e293b', opacity: 0.7 }}
-                />
-
-                {/* Description Input */}
-                <Textarea
-                  value={editingSlide.description || ''}
-                  onChange={(e) =>
-                    setEditingSlide({ ...editingSlide, description: e.target.value })
-                  }
-                  placeholder="설명 (선택사항)"
-                  className="text-sm border-2 border-dashed bg-white/80 resize-none"
-                  rows={2}
-                  style={{ color: editingSlide.textColor || '#1e293b', opacity: 0.6 }}
-                />
-
-                {/* Bullets */}
-                <div className="flex-1 space-y-2 overflow-auto">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">불릿 포인트</span>
-                    <Button size="sm" variant="outline" onClick={handleAddBullet}>
-                      + 추가
-                    </Button>
-                  </div>
-                  {editingSlide.bullets && editingSlide.bullets.length > 0 ? (
-                    editingSlide.bullets.map((bullet, index) => (
-                      <div key={index} className="flex gap-2 items-center">
-                        <div
-                          className="h-2 w-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: editingSlide.accentColor }}
-                        />
-                        <Input
-                          value={bullet}
-                          onChange={(e) => handleBulletChange(index, e.target.value)}
-                          placeholder={`불릿 포인트 ${index + 1}`}
-                          className="text-sm border-2 border-dashed bg-white/80"
-                          style={{ color: editingSlide.textColor || '#1e293b' }}
-                        />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleRemoveBullet(index)}
-                          className="h-8 w-8"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      불릿 포인트가 없습니다. 추가 버튼을 클릭하세요.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <SlideRenderer slide={currentSlide} />
-          )}
+          <SlideRenderer
+            slide={isEditMode && editingSlide ? editingSlide : currentSlide}
+            isEditable={isEditMode}
+            onSlideChange={setEditingSlide}
+            onAddBullet={handleAddBullet}
+            onRemoveBullet={handleRemoveBullet}
+          />
         </div>
       </div>
 

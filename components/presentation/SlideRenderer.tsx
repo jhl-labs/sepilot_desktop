@@ -1,14 +1,28 @@
 'use client';
 
 import type { PresentationSlide } from '@/types/presentation';
-import { CheckCircle2, TrendingUp, Calendar, Grid3x3 } from 'lucide-react';
+import { CheckCircle2, TrendingUp, Calendar, Grid3x3, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 
 interface SlideRendererProps {
   slide: PresentationSlide | undefined;
   className?: string;
+  isEditable?: boolean;
+  onSlideChange?: (slide: PresentationSlide) => void;
+  onAddBullet?: () => void;
+  onRemoveBullet?: (index: number) => void;
 }
 
-export function SlideRenderer({ slide, className = '' }: SlideRendererProps) {
+export function SlideRenderer({
+  slide,
+  className = '',
+  isEditable = false,
+  onSlideChange,
+  onAddBullet,
+  onRemoveBullet,
+}: SlideRendererProps) {
   // Early return if slide is undefined
   if (!slide) {
     return (
@@ -48,17 +62,25 @@ export function SlideRenderer({ slide, className = '' }: SlideRendererProps) {
   };
 
   const renderLayout = () => {
+    const layoutProps = {
+      slide,
+      isEditable,
+      onSlideChange,
+      onAddBullet,
+      onRemoveBullet,
+    };
+
     switch (slide.layout) {
       case 'hero':
-        return <HeroLayout slide={slide} />;
+        return <HeroLayout {...layoutProps} />;
       case 'two-column':
-        return <TwoColumnLayout slide={slide} />;
+        return <TwoColumnLayout {...layoutProps} />;
       case 'timeline':
-        return <TimelineLayout slide={slide} />;
+        return <TimelineLayout {...layoutProps} />;
       case 'grid':
-        return <GridLayout slide={slide} />;
+        return <GridLayout {...layoutProps} />;
       default:
-        return <TitleBodyLayout slide={slide} />;
+        return <TitleBodyLayout {...layoutProps} />;
     }
   };
 
@@ -112,7 +134,19 @@ function HeroLayout({ slide }: { slide: PresentationSlide }) {
 }
 
 // Title-Body Layout: Classic slide with title and bullet points
-function TitleBodyLayout({ slide }: { slide: PresentationSlide }) {
+function TitleBodyLayout({
+  slide,
+  isEditable,
+  onSlideChange,
+  onAddBullet,
+  onRemoveBullet,
+}: {
+  slide: PresentationSlide;
+  isEditable?: boolean;
+  onSlideChange?: (slide: PresentationSlide) => void;
+  onAddBullet?: () => void;
+  onRemoveBullet?: (index: number) => void;
+}) {
   const textColor = slide.textColor || (slide.vibe?.includes('dark') ? '#f8fafc' : '#1e293b');
   const accentColor = slide.accentColor || '#0ea5e9';
   const imageSource = slide.imageData || slide.imageUrl;
@@ -121,18 +155,47 @@ function TitleBodyLayout({ slide }: { slide: PresentationSlide }) {
     <div className="flex h-full flex-col px-12 py-10">
       {/* Title Section */}
       <div className="mb-6 border-l-4 pl-4" style={{ borderColor: accentColor }}>
-        <h2 className="text-3xl font-bold" style={{ color: textColor }}>
-          {slide.title}
-        </h2>
-        {slide.subtitle && (
-          <p className="mt-2 text-base font-medium opacity-70" style={{ color: textColor }}>
-            {slide.subtitle}
-          </p>
-        )}
-        {slide.description && (
-          <p className="mt-2 text-sm opacity-60" style={{ color: textColor }}>
-            {slide.description}
-          </p>
+        {isEditable ? (
+          <>
+            <Input
+              value={slide.title}
+              onChange={(e) => onSlideChange?.({ ...slide, title: e.target.value })}
+              className="text-3xl font-bold border-0 bg-transparent p-0 focus-visible:ring-0"
+              style={{ color: textColor }}
+              placeholder="제목"
+            />
+            <Input
+              value={slide.subtitle || ''}
+              onChange={(e) => onSlideChange?.({ ...slide, subtitle: e.target.value })}
+              className="mt-2 text-base font-medium border-0 bg-transparent p-0 focus-visible:ring-0"
+              style={{ color: textColor, opacity: 0.7 }}
+              placeholder="부제목 (선택사항)"
+            />
+            <Textarea
+              value={slide.description || ''}
+              onChange={(e) => onSlideChange?.({ ...slide, description: e.target.value })}
+              className="mt-2 text-sm border-0 bg-transparent p-0 resize-none focus-visible:ring-0"
+              style={{ color: textColor, opacity: 0.6 }}
+              placeholder="설명 (선택사항)"
+              rows={1}
+            />
+          </>
+        ) : (
+          <>
+            <h2 className="text-3xl font-bold" style={{ color: textColor }}>
+              {slide.title}
+            </h2>
+            {slide.subtitle && (
+              <p className="mt-2 text-base font-medium opacity-70" style={{ color: textColor }}>
+                {slide.subtitle}
+              </p>
+            )}
+            {slide.description && (
+              <p className="mt-2 text-sm opacity-60" style={{ color: textColor }}>
+                {slide.description}
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -147,12 +210,47 @@ function TitleBodyLayout({ slide }: { slide: PresentationSlide }) {
                     className="mt-0.5 h-5 w-5 flex-shrink-0"
                     style={{ color: accentColor }}
                   />
-                  <span className="text-sm leading-relaxed" style={{ color: textColor }}>
-                    {bullet}
-                  </span>
+                  {isEditable ? (
+                    <div className="flex-1 flex items-center gap-2">
+                      <Input
+                        value={bullet}
+                        onChange={(e) => {
+                          const newBullets = [...(slide.bullets || [])];
+                          newBullets[idx] = e.target.value;
+                          onSlideChange?.({ ...slide, bullets: newBullets });
+                        }}
+                        className="text-sm border-0 bg-transparent p-0 focus-visible:ring-0"
+                        style={{ color: textColor }}
+                        placeholder={`불릿 포인트 ${idx + 1}`}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 opacity-50 hover:opacity-100"
+                        onClick={() => onRemoveBullet?.(idx)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-sm leading-relaxed" style={{ color: textColor }}>
+                      {bullet}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
+          )}
+          {isEditable && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onAddBullet}
+              className="mt-3"
+              style={{ borderColor: accentColor, color: accentColor }}
+            >
+              + 불릿 추가
+            </Button>
           )}
         </div>
 
