@@ -300,7 +300,8 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     if (tabs.length === 0 && workingDirectory) {
       handleNewTab();
     }
-  }, [tabs.length, workingDirectory, handleNewTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabs.length, workingDirectory]);
 
   // 리사이즈 처리
   useEffect(() => {
