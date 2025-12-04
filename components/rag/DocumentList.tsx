@@ -61,7 +61,8 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [draggedDoc, setDraggedDoc] = useState<VectorDocument | null>(null);
   const [emptyFolders, setEmptyFolders] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'personal' | 'team'>('personal');
+  // activeTab: 'personal' 또는 teamDocsId
+  const [activeTab, setActiveTab] = useState<string>('personal');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Team Docs 관련 상태
@@ -102,18 +103,26 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     }
   };
 
-  // 문서 그룹 필터링 (Personal / Team)
-  const filterByDocGroup = (docs: VectorDocument[]): VectorDocument[] => {
-    return docs.filter((doc) => {
-      const docGroup = doc.metadata?.docGroup || 'personal';
-      return docGroup === activeTab;
-    });
+  // 문서 필터링 (Personal 또는 특정 Team Docs)
+  const filterByActiveTab = (docs: VectorDocument[]): VectorDocument[] => {
+    if (activeTab === 'personal') {
+      // Personal Docs만 표시
+      return docs.filter((doc) => {
+        const docGroup = doc.metadata?.docGroup || 'personal';
+        return docGroup === 'personal';
+      });
+    } else {
+      // 특정 Team Docs만 표시 (activeTab이 teamDocsId)
+      return docs.filter((doc) => {
+        return doc.metadata?.teamDocsId === activeTab;
+      });
+    }
   };
 
   // 검색 필터링
   const filterDocuments = (docs: VectorDocument[]): VectorDocument[] => {
-    // 먼저 docGroup으로 필터링
-    const filtered = filterByDocGroup(docs);
+    // 먼저 activeTab으로 필터링 (Personal 또는 특정 Team Docs)
+    const filtered = filterByActiveTab(docs);
 
     if (!searchQuery.trim()) {
       return filtered;
@@ -974,17 +983,22 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
   return (
     <div className="space-y-4">
-      {/* Personal / Team 탭 */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'personal' | 'team')}>
-        <TabsList className="grid w-full grid-cols-2">
+      {/* Personal + 각 Team Docs 탭 */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList
+          className={`grid w-full`}
+          style={{ gridTemplateColumns: `repeat(${1 + teamDocs.length}, minmax(0, 1fr))` }}
+        >
           <TabsTrigger value="personal" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            Personal Docs
+            Personal
           </TabsTrigger>
-          <TabsTrigger value="team" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Team Docs
-          </TabsTrigger>
+          {teamDocs.map((team) => (
+            <TabsTrigger key={team.id} value={team.id} className="flex items-center gap-2">
+              <Github className="h-4 w-4" />
+              {team.name}
+            </TabsTrigger>
+          ))}
         </TabsList>
       </Tabs>
 
@@ -1045,90 +1059,86 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       )}
 
       {/* Team Docs Sync Controls */}
-      {activeTab === 'team' && teamDocs.length > 0 && (
-        <div className="space-y-2">
-          {teamDocs
-            .filter((td) => td.enabled)
-            .map((team) => {
-              const teamDocCount = filteredDocuments.filter(
-                (doc) => doc.metadata?.teamDocsId === team.id
-              ).length;
-              const hasModifiedDocs = filteredDocuments.some(
-                (doc) => doc.metadata?.teamDocsId === team.id && doc.metadata?.modifiedLocally
-              );
+      {activeTab !== 'personal' &&
+        (() => {
+          const currentTeam = teamDocs.find((td) => td.id === activeTab);
+          if (!currentTeam) {
+            return null;
+          }
 
-              return (
-                <div key={team.id} className="rounded-lg border bg-card p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Github className="h-4 w-4 text-muted-foreground" />
-                        <h4 className="font-medium text-sm">{team.name}</h4>
-                        <span className="text-xs text-muted-foreground">
-                          ({team.owner}/{team.repo})
-                        </span>
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                          {teamDocCount}개 문서
-                        </span>
-                        {hasModifiedDocs && (
-                          <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-2 py-0.5 rounded">
-                            로컬 수정됨
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {team.description || 'Team Documents Repository'}
-                        {team.lastSyncAt && (
-                          <span className="ml-2">
-                            • 마지막 동기화: {new Date(team.lastSyncAt).toLocaleString('ko-KR')}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePullTeamDoc(team)}
-                        disabled={syncingTeamId !== null || isLoading}
-                      >
-                        {syncingTeamId === `pull-${team.id}` ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Pull...
-                          </>
-                        ) : (
-                          <>
-                            <Download className="mr-2 h-4 w-4" />
-                            Pull
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePushTeamDoc(team)}
-                        disabled={syncingTeamId !== null || isLoading}
-                      >
-                        {syncingTeamId === `push-${team.id}` ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Push...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="mr-2 h-4 w-4" />
-                            Push
-                          </>
-                        )}
-                      </Button>
-                    </div>
+          const teamDocCount = filteredDocuments.length;
+          const hasModifiedDocs = filteredDocuments.some((doc) => doc.metadata?.modifiedLocally);
+
+          return (
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Github className="h-4 w-4 text-muted-foreground" />
+                    <h4 className="font-medium text-sm">
+                      {currentTeam.owner}/{currentTeam.repo}
+                    </h4>
+                    <span className="text-xs text-muted-foreground">({currentTeam.branch})</span>
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                      {teamDocCount}개 문서
+                    </span>
+                    {hasModifiedDocs && (
+                      <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-2 py-0.5 rounded">
+                        로컬 수정됨
+                      </span>
+                    )}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {currentTeam.description || 'Team Documents Repository'}
+                    {currentTeam.lastSyncAt && (
+                      <span className="ml-2">
+                        • 마지막 동기화: {new Date(currentTeam.lastSyncAt).toLocaleString('ko-KR')}
+                      </span>
+                    )}
+                  </p>
                 </div>
-              );
-            })}
-        </div>
-      )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePullTeamDoc(currentTeam)}
+                    disabled={syncingTeamId !== null || isLoading}
+                  >
+                    {syncingTeamId === `pull-${currentTeam.id}` ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Pull...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Pull
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePushTeamDoc(currentTeam)}
+                    disabled={syncingTeamId !== null || isLoading}
+                  >
+                    {syncingTeamId === `push-${currentTeam.id}` ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Push...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Push
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
       {/* 검색 바 */}
       <div className="relative">
