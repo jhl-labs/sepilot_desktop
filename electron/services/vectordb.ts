@@ -300,6 +300,16 @@ class VectorDBService {
     });
 
     console.log(`[VectorDB] After filtering: ${filteredRows.length} documents`);
+
+    // 필터링 후 docGroup 분포 확인
+    const filteredDocGroupCount: Record<string, number> = {};
+    filteredRows.forEach((row) => {
+      const metadata = JSON.parse(row[2] as string);
+      const docGroup = metadata.docGroup || 'personal';
+      filteredDocGroupCount[docGroup] = (filteredDocGroupCount[docGroup] || 0) + 1;
+    });
+    console.log('[VectorDB] After filtering by docGroup:', filteredDocGroupCount);
+
     if (filteredRows.length > 0) {
       const sampleMetadata = JSON.parse(filteredRows[0][2] as string);
       console.log('[VectorDB] Sample document metadata:', {
@@ -423,6 +433,15 @@ class VectorDBService {
         score: chunk.score,
       });
     }
+
+    // 최종 결과의 docGroup 분포 로그
+    const finalDocGroupCount: Record<string, number> = {};
+    finalResults.forEach((result) => {
+      const docGroup = result.metadata.docGroup || 'personal';
+      finalDocGroupCount[docGroup] = (finalDocGroupCount[docGroup] || 0) + 1;
+    });
+    console.log(`[VectorDB] Final search results by docGroup:`, finalDocGroupCount);
+    console.log(`[VectorDB] Returning ${finalResults.length} documents (top ${k})`);
 
     return finalResults;
   }
