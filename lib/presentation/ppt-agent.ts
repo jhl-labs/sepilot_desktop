@@ -387,14 +387,17 @@ ${
     : ''
 }
 
-## 작성 방식
-1. 사용자에게 슬라이드 내용을 물어보세요
-   - "슬라이드 ${(state.currentSlideIndex || 0) + 1}의 핵심 내용은 무엇인가요?"
-   - "어떤 데이터나 이미지를 넣고 싶으신가요?"
+## 작성 방식 (자동 생성 모드)
+**IMPORTANT**: 사용자가 명시적으로 요청하지 않는 한, 구조에 정의된 정보를 바탕으로 **자동으로 슬라이드를 생성**하세요.
 
-2. 사용자가 내용을 주면 슬라이드를 생성하세요
+1. **첫 번째 슬라이드 또는 사용자가 "다음" 요청 시**: 즉시 슬라이드를 생성하세요
+   - 구조의 제목, 레이아웃, keyPoints를 활용
+   - 주제와 청중에 맞는 내용을 자동 작성
+   - 적절한 이미지 프롬프트 생성
 
-3. 생성한 슬라이드를 요약해서 보여주고 확인받으세요
+2. **사용자가 구체적 내용 제공 시**: 해당 내용으로 슬라이드 생성
+
+3. 생성한 슬라이드를 간단히 설명하고 "다음 슬라이드를 만들까요?" 물어보세요
 
 ## 응답 형식
 슬라이드를 생성하면:
@@ -406,20 +409,18 @@ ${
   "slide": {
     "title": "...",
     "subtitle": "...",
-    "bullets": ["...", "..."],
+    "bullets": ["...", "...", "..."],
     "layout": "${state.structure?.outline[state.currentSlideIndex || 0]?.layout || 'title-body'}",
     "accentColor": "${state.designMaster?.palette.accent}",
     "backgroundColor": "${state.designMaster?.palette.background}",
     "textColor": "${state.designMaster?.palette.text}",
     "titleFont": "${state.designMaster?.fonts.title}",
     "bodyFont": "${state.designMaster?.fonts.body}",
-    "imagePrompt": "...",
+    "imagePrompt": "professional image for ${state.structure?.outline[state.currentSlideIndex || 0]?.title}, ${state.designMaster?.vibe} style",
     "vibe": "${state.designMaster?.vibe}"
   }
 }
 \`\`\`
-
-사용자가 수정 요청하면 대화로 조율하세요.
 
 모든 슬라이드가 완성되면:
 \`\`\`json
@@ -449,14 +450,17 @@ Current slide info:
     : ''
 }
 
-## Creation Process
-1. Ask user for slide content
-   - "What's the main content for slide ${(state.currentSlideIndex || 0) + 1}?"
-   - "Any data or images you want to include?"
+## Creation Process (Auto-generation Mode)
+**IMPORTANT**: Unless the user explicitly requests otherwise, **automatically generate slides** based on the structure information.
 
-2. When user provides content, generate the slide
+1. **For first slide or when user requests "next"**: Generate immediately
+   - Use the title, layout, and keyPoints from structure
+   - Write content appropriate for topic and audience
+   - Create suitable image prompts
 
-3. Summarize the created slide and get confirmation
+2. **When user provides specific content**: Generate slide with that content
+
+3. Briefly explain the created slide and ask "Shall I create the next slide?"
 
 ## Response Format
 When creating a slide:
@@ -468,20 +472,18 @@ When creating a slide:
   "slide": {
     "title": "...",
     "subtitle": "...",
-    "bullets": ["...", "..."],
+    "bullets": ["...", "...", "..."],
     "layout": "${state.structure?.outline[state.currentSlideIndex || 0]?.layout || 'title-body'}",
     "accentColor": "${state.designMaster?.palette.accent}",
     "backgroundColor": "${state.designMaster?.palette.background}",
     "textColor": "${state.designMaster?.palette.text}",
     "titleFont": "${state.designMaster?.fonts.title}",
     "bodyFont": "${state.designMaster?.fonts.body}",
-    "imagePrompt": "...",
+    "imagePrompt": "professional image for ${state.structure?.outline[state.currentSlideIndex || 0]?.title}, ${state.designMaster?.vibe} style",
     "vibe": "${state.designMaster?.vibe}"
   }
 }
 \`\`\`
-
-If user requests changes, negotiate through conversation.
 
 When all slides are done:
 \`\`\`json

@@ -52,9 +52,9 @@ const STEP_QUICK_PROMPTS: Record<PresentationWorkflowStep, { label: string; prom
     { label: '슬라이드 추가', prompt: '5번과 6번 사이에 "경쟁사 비교" 슬라이드 추가해주세요.' },
   ],
   'slide-creation': [
+    { label: '자동으로 생성', prompt: '구조에 맞춰 슬라이드를 자동으로 생성해주세요.' },
     { label: '다음 슬라이드', prompt: '다음 슬라이드 만들어주세요.' },
-    { label: '현재 슬라이드 완료', prompt: '이대로 괜찮아요. 다음 슬라이드로 넘어가주세요.' },
-    { label: '수정 요청', prompt: '이미지 대신 차트를 넣어주세요.' },
+    { label: '전부 자동 생성', prompt: '남은 모든 슬라이드를 자동으로 생성해주세요.' },
   ],
   review: [
     { label: '특정 슬라이드 수정', prompt: '3번 슬라이드 제목을 바꿔주세요.' },
