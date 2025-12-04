@@ -23,6 +23,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { VectorDocument } from '@/lib/vectordb/types';
 import {
   Loader2,
@@ -34,6 +35,7 @@ import {
   CheckCircle2,
   ShieldCheck,
   MessageSquare,
+  AlertCircle,
 } from 'lucide-react';
 
 interface DocumentEditDialogProps {
@@ -467,24 +469,47 @@ export function DocumentEditDialog({
                   '로컬 저장'
                 )}
               </Button>
-              <Button
-                onClick={() => handleSave(true)}
-                disabled={isSaving || isProcessing || isPushing}
-              >
-                {isPushing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Push 중...
-                  </>
-                ) : isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    저장 중...
-                  </>
-                ) : (
-                  '저장 & Push'
-                )}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="inline-block">
+                      <Button
+                        onClick={() => handleSave(true)}
+                        disabled={
+                          isSaving || isProcessing || isPushing || !document?.metadata?.teamDocsId
+                        }
+                      >
+                        {isPushing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Push 중...
+                          </>
+                        ) : isSaving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            저장 중...
+                          </>
+                        ) : (
+                          <>
+                            {!document?.metadata?.teamDocsId && (
+                              <AlertCircle className="mr-2 h-4 w-4" />
+                            )}
+                            저장 & Push
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {!document?.metadata?.teamDocsId && (
+                    <TooltipContent>
+                      <p>Team Docs ID가 없어 GitHub Push를 할 수 없습니다.</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        이 문서는 Team Docs에서 가져온 문서가 아닙니다.
+                      </p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </>
           ) : (
             /* Personal Docs는 저장만 */
