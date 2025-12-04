@@ -476,6 +476,8 @@ ${
     ? `**BULK CREATION MODE**: 사용자가 "전체 자동 생성" 또는 "모두 만들어줘"라고 요청했습니다.
 
 1. **즉시 모든 슬라이드를 순서대로 생성**하세요
+   - ⚠️ **중요**: slideIndex는 0부터 시작해서 순차적으로 증가시켜야 합니다 (0, 1, 2, 3, ...)
+   - 구조의 outline 배열 순서대로 정확히 생성하세요
    - 각 슬라이드를 create_slide 액션으로 생성
    - 사용자 확인 없이 연속으로 생성
    - 구조의 제목, 레이아웃, keyPoints를 활용
@@ -488,6 +490,7 @@ ${
     : `**INTERACTIVE MODE**: 사용자와 대화하며 한 장씩 생성합니다.
 
 1. **현재 슬라이드 생성**: 즉시 슬라이드를 생성하세요
+   - ⚠️ **중요**: slideIndex는 currentSlideIndex 값(${state.currentSlideIndex || 0})을 사용하세요
    - 구조의 제목, 레이아웃, keyPoints를 활용
    - 주제와 청중에 맞는 내용을 자동 작성
    - 적절한 이미지 프롬프트 생성
@@ -558,6 +561,8 @@ ${
     ? `**BULK CREATION MODE**: User requested "generate all" or "create all slides".
 
 1. **Immediately generate all slides in sequence**
+   - ⚠️ **IMPORTANT**: slideIndex must start from 0 and increment sequentially (0, 1, 2, 3, ...)
+   - Create slides in exact order of structure outline array
    - Create each slide with create_slide action
    - No user confirmation needed between slides
    - Use title, layout, and keyPoints from structure
@@ -570,6 +575,7 @@ ${
     : `**INTERACTIVE MODE**: Create one slide at a time with user.
 
 1. **Generate current slide**: Create immediately
+   - ⚠️ **IMPORTANT**: Use currentSlideIndex value (${state.currentSlideIndex || 0}) for slideIndex
    - Use title, layout, and keyPoints from structure
    - Write content appropriate for topic and audience
    - Create suitable image prompts
@@ -957,47 +963,42 @@ export async function runPresentationAgent(
         };
         console.log('[ppt-agent] Generated slide with ID:', newSlide.id);
 
-        const slideIndex = action.slideIndex ?? newState.currentSlideIndex ?? 0;
+        const requestedIndex = action.slideIndex ?? newState.currentSlideIndex ?? 0;
         console.log(
-          '[ppt-agent] Inserting at index:',
-          slideIndex,
+          '[ppt-agent] Requested slide index:',
+          requestedIndex,
           'Current slides array length:',
           newState.slides.length
         );
 
-        // 배열을 복사하고 undefined를 방지하기 위해 충분한 길이 확보
-        const newSlides = [...newState.slides];
-        // 배열 길이가 slideIndex보다 작으면 빈 슬롯을 null로 채움 (undefined 방지)
-        while (newSlides.length <= slideIndex) {
-          newSlides.push(null as any);
-        }
-        newSlides[slideIndex] = newSlide;
-        // null 요소 필터링 (실제 슬라이드만 유지)
-        const filteredSlides = newSlides.filter((s) => s !== null) as PresentationSlide[];
+        // 슬라이드를 순차적으로 배열 끝에 추가 (순서 유지)
+        const newSlides = [...newState.slides, newSlide];
 
         const completed = [...newState.completedSlideIndices];
-        if (!completed.includes(slideIndex)) {
-          completed.push(slideIndex);
+        if (!completed.includes(requestedIndex)) {
+          completed.push(requestedIndex);
         }
 
         const totalSlides = newState.structure?.totalSlides || 8;
-        const nextIndex = slideIndex + 1;
+        const nextIndex = requestedIndex + 1;
 
         newState = {
           ...newState,
-          slides: filteredSlides,
+          slides: newSlides,
           completedSlideIndices: completed,
           currentSlideIndex: nextIndex < totalSlides ? nextIndex : undefined,
           currentStep: nextIndex < totalSlides ? 'slide-creation' : 'review',
         };
 
         console.log(
-          '[ppt-agent] Created slide at index',
-          slideIndex,
-          'Total slides:',
-          filteredSlides.length
+          '[ppt-agent] Created slide at array position',
+          newSlides.length - 1,
+          '(requested index:',
+          requestedIndex,
+          ') Total slides:',
+          newSlides.length
         );
-        callbacks.onSlides?.(filteredSlides);
+        callbacks.onSlides?.(newSlides);
         callbacks.onStateUpdate?.(newState);
         break;
       }
@@ -1014,6 +1015,14 @@ export async function runPresentationAgent(
         const slideIndex = action.slideIndex;
         const modifications = action.modifications;
         const newSlides = [...newState.slides];
+
+        // 인덱스 유효성 검증
+        if (slideIndex < 0 || slideIndex >= newSlides.length) {
+          console.warn(
+            `[ppt-agent] Invalid slide index ${slideIndex} for modification (total: ${newSlides.length})`
+          );
+          break;
+        }
 
         if (newSlides[slideIndex]) {
           newSlides[slideIndex] = {
@@ -1033,6 +1042,14 @@ export async function runPresentationAgent(
         const modifications = action.modifications;
         const findings = action.findings; // 검증 결과 메시지
         const newSlides = [...newState.slides];
+
+        // 인덱스 유효성 검증
+        if (slideIndex < 0 || slideIndex >= newSlides.length) {
+          console.warn(
+            `[ppt-agent] Invalid slide index ${slideIndex} for verification (total: ${newSlides.length})`
+          );
+          break;
+        }
 
         if (newSlides[slideIndex]) {
           newSlides[slideIndex] = {
