@@ -828,48 +828,71 @@ export function CodeEditor() {
         return;
       }
 
-      try {
-        // Electron 클립보드에 이미지가 있는지 먼저 확인
-        // (웹 ClipboardEvent는 Electron 네이티브 클립보드와 다를 수 있음)
-        const result = await window.electronAPI.fs.saveClipboardImage(workingDirectory);
+      console.log('[Editor] Paste event detected in Markdown file');
 
-        if (result.success && result.data) {
-          // 클립보드에 이미지가 있었음 - 기본 paste 동작 방지
+      try {
+        // 웹 Clipboard API로 먼저 이미지 존재 여부 확인
+        const clipboardItems = e.clipboardData?.items;
+        let hasImage = false;
+
+        if (clipboardItems) {
+          for (let i = 0; i < clipboardItems.length; i++) {
+            if (clipboardItems[i].type.startsWith('image/')) {
+              hasImage = true;
+              break;
+            }
+          }
+        }
+
+        console.log('[Editor] Has image in clipboard:', hasImage);
+
+        // 이미지가 있으면 즉시 기본 동작 방지 (Monaco가 처리하기 전에)
+        if (hasImage) {
           e.preventDefault();
           e.stopPropagation();
+          console.log('[Editor] Prevented default paste behavior');
 
-          const { filename } = result.data;
+          // Electron 클립보드에서 이미지 저장
+          const result = await window.electronAPI.fs.saveClipboardImage(workingDirectory);
 
-          // 파일이 위치한 디렉토리 기준으로 이미지의 상대 경로 계산
-          const fileDir = path.dirname(activeFile.path);
-          const relativePath = path.relative(fileDir, path.join(workingDirectory, filename));
+          if (result.success && result.data) {
+            const { filename } = result.data;
+            console.log('[Editor] Image saved:', filename);
 
-          // Markdown 이미지 문법으로 삽입
-          const imageMarkdown = `![${filename}](${relativePath})`;
+            // 파일이 위치한 디렉토리 기준으로 이미지의 상대 경로 계산
+            const fileDir = path.dirname(activeFile.path);
+            const relativePath = path.relative(fileDir, path.join(workingDirectory, filename));
 
-          // 현재 커서 위치에 삽입
-          const position = editor.getPosition();
-          if (position) {
-            editor.executeEdits('paste-image', [
-              {
-                range: new (window as any).monaco.Range(
-                  position.lineNumber,
-                  position.column,
-                  position.lineNumber,
-                  position.column
-                ),
-                text: imageMarkdown,
-                forceMoveMarkers: true,
-              },
-            ]);
+            // Markdown 이미지 문법으로 삽입
+            const imageMarkdown = `![${filename}](${relativePath})`;
 
-            // 커서를 삽입된 텍스트 끝으로 이동
-            const newPosition = {
-              lineNumber: position.lineNumber,
-              column: position.column + imageMarkdown.length,
-            };
-            editor.setPosition(newPosition);
-            editor.focus();
+            // 현재 커서 위치에 삽입
+            const position = editor.getPosition();
+            if (position) {
+              editor.executeEdits('paste-image', [
+                {
+                  range: new (window as any).monaco.Range(
+                    position.lineNumber,
+                    position.column,
+                    position.lineNumber,
+                    position.column
+                  ),
+                  text: imageMarkdown,
+                  forceMoveMarkers: true,
+                },
+              ]);
+
+              // 커서를 삽입된 텍스트 끝으로 이동
+              const newPosition = {
+                lineNumber: position.lineNumber,
+                column: position.column + imageMarkdown.length,
+              };
+              editor.setPosition(newPosition);
+              editor.focus();
+              console.log('[Editor] Image markdown inserted');
+            }
+          } else {
+            console.warn('[Editor] Failed to save clipboard image:', result.error);
           }
         }
       } catch (error) {
@@ -883,9 +906,11 @@ export function CodeEditor() {
     if (editorDomNode) {
       // capture phase에서 이벤트를 먼저 잡음
       editorDomNode.addEventListener('paste', handlePaste, true);
+      console.log('[Editor] Paste event listener added');
 
       return () => {
         editorDomNode.removeEventListener('paste', handlePaste, true);
+        console.log('[Editor] Paste event listener removed');
       };
     }
 
