@@ -190,6 +190,7 @@ export interface PresentationAgentState {
 
   // 설정
   webSearchEnabled?: boolean; // 웹검색 사용 여부 (기본: false)
+  ragEnabled?: boolean; // RAG 사용 여부 (Personal Docs / Team Docs) (기본: false)
 
   // 메타데이터
   createdAt: number;

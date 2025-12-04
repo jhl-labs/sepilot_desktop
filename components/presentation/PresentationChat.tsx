@@ -20,6 +20,7 @@ import {
   FileText,
   Eye,
   Globe,
+  BookOpen,
 } from 'lucide-react';
 
 // Quick Prompt 아이템 타입
@@ -300,6 +301,29 @@ export function PresentationChat() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* RAG Toggle */}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="rag-toggle"
+                checked={presentationAgentState?.ragEnabled || false}
+                onCheckedChange={(checked) => {
+                  if (presentationAgentState) {
+                    setPresentationAgentState({
+                      ...presentationAgentState,
+                      ragEnabled: checked,
+                    });
+                  }
+                }}
+                disabled={presentationChatStreaming}
+              />
+              <Label
+                htmlFor="rag-toggle"
+                className="text-xs cursor-pointer flex items-center gap-1"
+              >
+                <BookOpen className="h-3 w-3" />
+                RAG
+              </Label>
+            </div>
             {/* Web Search Toggle */}
             <div className="flex items-center gap-2">
               <Switch

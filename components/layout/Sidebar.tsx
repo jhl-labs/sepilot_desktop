@@ -17,6 +17,16 @@ import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useState } from 'react';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { SidebarChat } from './SidebarChat';
 import { SidebarEditor } from './SidebarEditor';
 import { SidebarBrowser } from './SidebarBrowser';
@@ -53,10 +63,9 @@ export function Sidebar({
     setEditorAgentMode,
     refreshFileTree,
     clearPresentationSession,
-    presentationViewMode,
-    setPresentationViewMode,
   } = useChatStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [clearPresentationDialogOpen, setClearPresentationDialogOpen] = useState(false);
 
   const modeLabel =
     appMode === 'chat'
@@ -221,28 +230,10 @@ export function Sidebar({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => clearPresentationSession()}
+              onClick={() => setClearPresentationDialogOpen(true)}
               title="새 프레젠테이션 세션"
             >
               <Plus className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setPresentationViewMode('chat')}
-              title="AI 디자이너와 대화"
-              className={presentationViewMode === 'chat' ? 'bg-accent' : ''}
-            >
-              <MessageSquare className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setPresentationViewMode('outline')}
-              title="슬라이드 개요 미리보기"
-              className={presentationViewMode === 'outline' ? 'bg-accent' : ''}
-            >
-              <Presentation className="h-5 w-5" />
             </Button>
           </div>
         )}
@@ -265,6 +256,29 @@ export function Sidebar({
 
       {/* Settings Dialog */}
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+      {/* Clear Presentation Confirmation Dialog */}
+      <AlertDialog open={clearPresentationDialogOpen} onOpenChange={setClearPresentationDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>새 프레젠테이션 세션을 시작하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              현재 작업 중인 프레젠테이션이 모두 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>아니오</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                clearPresentationSession();
+                setClearPresentationDialogOpen(false);
+              }}
+            >
+              예
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
