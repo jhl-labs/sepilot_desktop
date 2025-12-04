@@ -142,7 +142,7 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
         };
         documentsToIndex.push(newDoc);
         console.log(
-          `[TeamDocs] Adding new document: ${newDoc.metadata.title}, docGroup=${newDoc.metadata.docGroup}`
+          `[TeamDocs] Adding new document: ${(newDoc.metadata as any).title}, docGroup=${(newDoc.metadata as any).docGroup}`
         );
       }
     }
