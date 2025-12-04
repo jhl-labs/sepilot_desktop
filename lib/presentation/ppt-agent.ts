@@ -431,8 +431,13 @@ If user requests changes, negotiate through conversation.`,
     'slide-creation': {
       ko: `# 단계: 슬라이드 작성
 
-구조:
+## ⚠️ 필수 규칙: 승인된 구조를 정확히 따르세요
+사용자와 함께 만든 아래 구조에서 **절대로 벗어나지 마세요**:
 ${state.structure?.outline.map((s) => `${s.index + 1}. ${s.title} (${s.layout})`).join('\n')}
+
+- 위 구조에 없는 슬라이드는 **절대 생성 금지**
+- 제목, 레이아웃, 순서를 **정확히** 따르세요
+- 사용자가 명시적으로 요청하지 않으면 구조를 변경하지 마세요
 
 디자인 마스터:
 - 색상: ${state.designMaster?.palette.primary} (메인), ${state.designMaster?.palette.accent} (강조)
@@ -456,16 +461,18 @@ ${
 ${
   options?.bulkCreation
     ? `**모든 슬라이드를 한번에 자동 생성**하세요.`
-    : `**${state.currentSlideIndex !== undefined ? `슬라이드 ${state.currentSlideIndex + 1}` : '다음 슬라이드'}**를 작성하세요.`
+    : `**슬라이드 ${(state.currentSlideIndex || 0) + 1}/${state.structure?.totalSlides || 0}**를 작성하세요.`
 }
 
 ${
   state.currentSlideIndex !== undefined && state.structure && !options?.bulkCreation
     ? `
-현재 슬라이드 정보:
-- 제목: ${state.structure.outline[state.currentSlideIndex]?.title}
-- 레이아웃: ${state.structure.outline[state.currentSlideIndex]?.layout}
-- 핵심 포인트: ${state.structure.outline[state.currentSlideIndex]?.keyPoints?.join(', ') || '(미정)'}
+### 지금 만들어야 할 슬라이드 (구조 ${state.currentSlideIndex + 1}번)
+**제목**: "${state.structure.outline[state.currentSlideIndex]?.title}"
+**레이아웃**: ${state.structure.outline[state.currentSlideIndex]?.layout}
+**핵심 포인트**: ${state.structure.outline[state.currentSlideIndex]?.keyPoints?.join(', ') || '(구조에서 계획한 내용으로 작성)'}
+
+⚠️ **이 슬라이드만 만드세요. 다른 슬라이드는 생성하지 마세요!**
 `
     : ''
 }
@@ -489,15 +496,20 @@ ${
 3. 간단한 완료 메시지와 함께 결과 전달`
     : `**INTERACTIVE MODE**: 사용자와 대화하며 한 장씩 생성합니다.
 
-1. **현재 슬라이드 생성**: 즉시 슬라이드를 생성하세요
-   - ⚠️ **중요**: slideIndex는 currentSlideIndex 값(${state.currentSlideIndex || 0})을 사용하세요
-   - 구조의 제목, 레이아웃, keyPoints를 활용
-   - 주제와 청중에 맞는 내용을 자동 작성
+1. **현재 슬라이드만 생성**:
+   - ⚠️ **중요**: slideIndex는 currentSlideIndex 값(${state.currentSlideIndex || 0})을 **반드시** 사용
+   - ⚠️ **중요**: 구조에서 정의한 제목 "${state.structure?.outline[state.currentSlideIndex || 0]?.title}"을 **정확히** 사용
+   - ⚠️ **중요**: 레이아웃 "${state.structure?.outline[state.currentSlideIndex || 0]?.layout}"을 **반드시** 사용
+   - 구조에서 계획한 내용을 바탕으로 슬라이드 작성
    - 적절한 이미지 프롬프트 생성
 
-2. **사용자가 구체적 내용 제공 시**: 해당 내용으로 슬라이드 생성
+2. **사용자가 구체적 내용 제공 시**:
+   - 구조의 제목과 레이아웃은 유지하고 내용만 사용자 요청대로 수정
 
-3. 생성한 슬라이드를 간단히 설명하고 "다음 슬라이드를 만들까요?" 물어보세요`
+3. **응답 형식**:
+   - 생성한 슬라이드를 간단히 설명
+   - 다음 슬라이드 정보 미리보기: "${state.structure?.outline[(state.currentSlideIndex || 0) + 1]?.title || '(마지막 슬라이드)'}"
+   - "다음 슬라이드를 만들까요?" 물어보기`
 }
 
 ## 응답 형식
@@ -529,8 +541,13 @@ ${options?.bulkCreation ? '**BULK MODE에서는 여러 개의 create_slide 액�
 \`\`\``,
       en: `# Step: Slide Creation
 
-Structure:
+## ⚠️ CRITICAL RULE: Follow the Approved Structure Exactly
+**NEVER deviate** from the structure created with the user:
 ${state.structure?.outline.map((s) => `${s.index + 1}. ${s.title} (${s.layout})`).join('\n')}
+
+- **NEVER create slides not in this structure**
+- Follow titles, layouts, and order **exactly**
+- Do not modify structure unless user explicitly requests
 
 Design Master:
 - Colors: ${state.designMaster?.palette.primary} (primary), ${state.designMaster?.palette.accent} (accent)
@@ -541,16 +558,18 @@ Design Master:
 ${
   options?.bulkCreation
     ? `**Generate ALL slides automatically at once**.`
-    : `Create **${state.currentSlideIndex !== undefined ? `Slide ${state.currentSlideIndex + 1}` : 'next slide'}**.`
+    : `Create **Slide ${(state.currentSlideIndex || 0) + 1}/${state.structure?.totalSlides || 0}**.`
 }
 
 ${
   state.currentSlideIndex !== undefined && state.structure && !options?.bulkCreation
     ? `
-Current slide info:
-- Title: ${state.structure.outline[state.currentSlideIndex]?.title}
-- Layout: ${state.structure.outline[state.currentSlideIndex]?.layout}
-- Key points: ${state.structure.outline[state.currentSlideIndex]?.keyPoints?.join(', ') || '(TBD)'}
+### Slide to Create Now (Structure #${state.currentSlideIndex + 1})
+**Title**: "${state.structure.outline[state.currentSlideIndex]?.title}"
+**Layout**: ${state.structure.outline[state.currentSlideIndex]?.layout}
+**Key Points**: ${state.structure.outline[state.currentSlideIndex]?.keyPoints?.join(', ') || '(Use planned content from structure)'}
+
+⚠️ **Create ONLY this slide. Do not create other slides!**
 `
     : ''
 }
@@ -574,15 +593,20 @@ ${
 3. Provide brief completion message with results`
     : `**INTERACTIVE MODE**: Create one slide at a time with user.
 
-1. **Generate current slide**: Create immediately
-   - ⚠️ **IMPORTANT**: Use currentSlideIndex value (${state.currentSlideIndex || 0}) for slideIndex
-   - Use title, layout, and keyPoints from structure
-   - Write content appropriate for topic and audience
+1. **Create ONLY the current slide**:
+   - ⚠️ **CRITICAL**: slideIndex MUST be currentSlideIndex value (${state.currentSlideIndex || 0})
+   - ⚠️ **CRITICAL**: Use EXACT title from structure: "${state.structure?.outline[state.currentSlideIndex || 0]?.title}"
+   - ⚠️ **CRITICAL**: Use EXACT layout from structure: "${state.structure?.outline[state.currentSlideIndex || 0]?.layout}"
+   - Write content based on planned structure
    - Create suitable image prompts
 
-2. **When user provides specific content**: Use that content
+2. **When user provides specific content**:
+   - Keep structure title and layout, modify content only per user request
 
-3. Briefly explain the created slide and ask "Shall I create the next slide?"`
+3. **Response format**:
+   - Briefly explain the created slide
+   - Preview next slide: "${state.structure?.outline[(state.currentSlideIndex || 0) + 1]?.title || '(Last slide)'}"
+   - Ask "Shall I create the next slide?"`
 }
 
 ## Response Format
