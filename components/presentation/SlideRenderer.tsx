@@ -71,6 +71,12 @@ export function SlideRenderer({
       onRemoveBullet,
     };
 
+    console.log('SlideRenderer - renderLayout called', {
+      layout: slide.layout,
+      isEditable,
+      slideTitle: slide.title,
+    });
+
     switch (slide.layout) {
       case 'hero':
         return <HeroLayout {...layoutProps} />;
@@ -152,6 +158,12 @@ function TitleBodyLayout({
   const textColor = slide.textColor || (slide.vibe?.includes('dark') ? '#f8fafc' : '#1e293b');
   const accentColor = slide.accentColor || '#0ea5e9';
   const imageSource = slide.imageData || slide.imageUrl;
+
+  console.log('TitleBodyLayout rendered', {
+    isEditable,
+    editingField,
+    slideTitle: slide.title,
+  });
 
   return (
     <div className="flex h-full flex-col px-12 py-10">
