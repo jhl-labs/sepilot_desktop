@@ -29,12 +29,20 @@ const MIN_TERMINAL_HEIGHT = 100; // 최소 터미널 높이 (px)
 const DEFAULT_TERMINAL_HEIGHT = 320; // 기본 터미널 높이 (px)
 
 export function EditorWithTerminal() {
+  console.log('[EditorWithTerminal] Component rendering');
   const { showTerminalPanel, workingDirectory } = useChatStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const [terminalHeight, setTerminalHeight] = useState(DEFAULT_TERMINAL_HEIGHT);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef(0);
   const dragStartHeight = useRef(0);
+
+  useEffect(() => {
+    console.log('[EditorWithTerminal] Component mounted');
+    return () => {
+      console.log('[EditorWithTerminal] Component unmounting');
+    };
+  }, []);
 
   // 드래그 시작
   const handleMouseDown = useCallback(

@@ -160,21 +160,21 @@ function TitleBodyLayout({
             <Input
               value={slide.title}
               onChange={(e) => onSlideChange?.({ ...slide, title: e.target.value })}
-              className="text-3xl font-bold border-0 bg-transparent p-0 focus-visible:ring-0"
+              className="text-3xl font-bold border-2 border-dashed border-gray-300 bg-white/10 p-2 focus-visible:ring-2 focus-visible:ring-primary hover:bg-white/20 transition-colors"
               style={{ color: textColor }}
               placeholder="제목"
             />
             <Input
               value={slide.subtitle || ''}
               onChange={(e) => onSlideChange?.({ ...slide, subtitle: e.target.value })}
-              className="mt-2 text-base font-medium border-0 bg-transparent p-0 focus-visible:ring-0"
+              className="mt-2 text-base font-medium border-2 border-dashed border-gray-300 bg-white/10 p-2 focus-visible:ring-2 focus-visible:ring-primary hover:bg-white/20 transition-colors"
               style={{ color: textColor, opacity: 0.7 }}
               placeholder="부제목 (선택사항)"
             />
             <Textarea
               value={slide.description || ''}
               onChange={(e) => onSlideChange?.({ ...slide, description: e.target.value })}
-              className="mt-2 text-sm border-0 bg-transparent p-0 resize-none focus-visible:ring-0"
+              className="mt-2 text-sm border-2 border-dashed border-gray-300 bg-white/10 p-2 resize-none focus-visible:ring-2 focus-visible:ring-primary hover:bg-white/20 transition-colors"
               style={{ color: textColor, opacity: 0.6 }}
               placeholder="설명 (선택사항)"
               rows={1}
@@ -219,7 +219,7 @@ function TitleBodyLayout({
                           newBullets[idx] = e.target.value;
                           onSlideChange?.({ ...slide, bullets: newBullets });
                         }}
-                        className="text-sm border-0 bg-transparent p-0 focus-visible:ring-0"
+                        className="text-sm border-2 border-dashed border-gray-300 bg-white/10 p-2 focus-visible:ring-2 focus-visible:ring-primary hover:bg-white/20 transition-colors"
                         style={{ color: textColor }}
                         placeholder={`불릿 포인트 ${idx + 1}`}
                       />
