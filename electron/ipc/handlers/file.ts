@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, shell, clipboard } from 'electron';
+import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { exec, spawn } from 'child_process';
@@ -995,50 +995,6 @@ export function registerFileHandlers() {
       }
     }
   );
-
-  // 클립보드 이미지 저장
-  ipcMain.handle('fs:save-clipboard-image', async (_event, destDir: string) => {
-    try {
-      console.log('[File] Saving clipboard image to:', destDir);
-
-      // 클립보드에서 이미지 읽기
-      const image = clipboard.readImage();
-
-      // 이미지가 비어있는지 확인
-      if (image.isEmpty()) {
-        console.log('[File] Clipboard is empty or does not contain an image');
-        return {
-          success: false,
-          error: 'No image in clipboard',
-        };
-      }
-
-      // 고유한 파일명 생성 (타임스탬프 사용)
-      const timestamp = Date.now();
-      const filename = `clipboard-${timestamp}.png`;
-      const filePath = path.join(destDir, filename);
-
-      // 이미지를 PNG로 저장
-      const buffer = image.toPNG();
-      await fs.writeFile(filePath, buffer);
-
-      console.log('[File] Clipboard image saved:', filePath);
-
-      return {
-        success: true,
-        data: {
-          filename,
-          path: filePath,
-        },
-      };
-    } catch (error: any) {
-      console.error('[File] Error saving clipboard image:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to save clipboard image',
-      };
-    }
-  });
 
   console.log('[File] IPC handlers registered');
 }
