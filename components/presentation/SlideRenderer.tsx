@@ -170,9 +170,15 @@ function TitleBodyLayout({
           />
         ) : (
           <h2
-            className={`text-3xl font-bold ${isEditable ? 'cursor-text hover:bg-white/10 rounded px-2 py-1 transition-colors' : ''}`}
+            className={`text-3xl font-bold ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
             style={{ color: textColor }}
-            onClick={() => isEditable && setEditingField('title')}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isEditable) {
+                console.log('Title clicked, setting editingField to title');
+                setEditingField('title');
+              }
+            }}
           >
             {slide.title || (isEditable ? '제목을 입력하세요' : '')}
           </h2>
@@ -193,9 +199,15 @@ function TitleBodyLayout({
               />
             ) : (
               <p
-                className={`mt-2 text-base font-medium opacity-70 ${isEditable ? 'cursor-text hover:bg-white/10 rounded px-2 py-1 transition-colors' : ''}`}
+                className={`mt-2 text-base font-medium opacity-70 ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
                 style={{ color: textColor }}
-                onClick={() => isEditable && setEditingField('subtitle')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isEditable) {
+                    console.log('Subtitle clicked');
+                    setEditingField('subtitle');
+                  }
+                }}
               >
                 {slide.subtitle || (isEditable ? '부제목 (선택사항)' : '')}
               </p>
@@ -219,9 +231,15 @@ function TitleBodyLayout({
               />
             ) : (
               <p
-                className={`mt-2 text-sm opacity-60 ${isEditable ? 'cursor-text hover:bg-white/10 rounded px-2 py-1 transition-colors' : ''}`}
+                className={`mt-2 text-sm opacity-60 ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
                 style={{ color: textColor }}
-                onClick={() => isEditable && setEditingField('description')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isEditable) {
+                    console.log('Description clicked');
+                    setEditingField('description');
+                  }
+                }}
               >
                 {slide.description || (isEditable ? '설명 (선택사항)' : '')}
               </p>
@@ -271,9 +289,15 @@ function TitleBodyLayout({
                       </div>
                     ) : (
                       <span
-                        className={`text-sm leading-relaxed flex-1 ${isEditable ? 'cursor-text hover:bg-white/10 rounded px-2 py-1 transition-colors' : ''}`}
+                        className={`text-sm leading-relaxed flex-1 ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
                         style={{ color: textColor }}
-                        onClick={() => isEditable && setEditingField(bulletField)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isEditable) {
+                            console.log('Bullet clicked:', bulletField);
+                            setEditingField(bulletField);
+                          }
+                        }}
                       >
                         {bullet || (isEditable ? '불릿 포인트를 입력하세요' : '')}
                       </span>
