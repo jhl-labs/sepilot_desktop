@@ -54,7 +54,10 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
   message: string;
   data?: {
     totalDocuments: number;
-    indexedDocuments: number;
+    indexedDocuments?: number;
+    addedDocuments: number;
+    updatedDocuments: number;
+    deletedDocuments: number;
   };
   error?: string;
 }> {
