@@ -145,6 +145,7 @@ export function PresentationChat() {
 
   const [input, setInput] = useState('');
   const abortRef = useRef<AbortController | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 초기화: presentationAgentState가 없으면 생성
   useEffect(() => {
@@ -152,6 +153,13 @@ export function PresentationChat() {
       setPresentationAgentState(createInitialState());
     }
   }, [presentationAgentState, setPresentationAgentState]);
+
+  // 스트리밍 중 자동 스크롤
+  useEffect(() => {
+    if (presentationChatStreaming) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [presentationChatStreaming, presentationChatMessages]);
 
   const currentStep = presentationAgentState?.currentStep || 'briefing';
 
@@ -410,68 +418,40 @@ export function PresentationChat() {
       </div>
 
       {/* Current State Info */}
-      {presentationAgentState && (
-        <div className="mx-4 mt-3 space-y-2">
-          {/* Design Preview */}
-          {presentationAgentState.designMaster && (
-            <div className="rounded-lg border bg-card p-3">
-              <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">
-                선택된 디자인
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1.5">
-                  <div
-                    className="h-8 w-8 rounded shadow-sm"
-                    style={{ backgroundColor: presentationAgentState.designMaster.palette.primary }}
-                    title="Primary"
-                  />
-                  <div
-                    className="h-8 w-8 rounded shadow-sm"
-                    style={{ backgroundColor: presentationAgentState.designMaster.palette.accent }}
-                    title="Accent"
-                  />
-                  <div
-                    className="h-8 w-5 rounded border shadow-sm"
-                    style={{
-                      backgroundColor: presentationAgentState.designMaster.palette.background,
-                      borderColor: `${presentationAgentState.designMaster.palette.text}40`,
-                    }}
-                    title="Background"
-                  />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">
-                    {presentationAgentState.designMaster.name ||
-                      presentationAgentState.designMaster.vibe}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {presentationAgentState.designMaster.fonts.title} /{' '}
-                    {presentationAgentState.designMaster.fonts.body}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Structure Preview */}
-          {presentationAgentState.structure && (
-            <div className="rounded-lg border bg-card p-3">
-              <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">
+      {presentationAgentState && presentationAgentState.structure && (
+        <div className="mx-4 mt-3">
+          {/* Structure Preview - Collapsible */}
+          <details className="group rounded-lg border bg-card">
+            <summary className="flex cursor-pointer items-center justify-between p-3 hover:bg-muted/50 transition-colors">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">
                 슬라이드 구조 ({presentationAgentState.structure.totalSlides}장)
               </p>
-              <div className="space-y-1 max-h-32 overflow-y-auto text-xs">
-                {presentationAgentState.structure.outline.map((slide, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <span className="font-mono text-muted-foreground">{idx + 1}.</span>
-                    <span className="flex-1">{slide.title}</span>
-                    <span className="text-muted-foreground text-[10px] uppercase">
-                      {slide.layout}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <svg
+                className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </summary>
+            <div className="border-t px-3 py-2 space-y-1 max-h-48 overflow-y-auto text-xs">
+              {presentationAgentState.structure.outline.map((slide, idx) => (
+                <div key={idx} className="flex items-center gap-2 py-1">
+                  <span className="font-mono text-muted-foreground">{idx + 1}.</span>
+                  <span className="flex-1">{slide.title}</span>
+                  <span className="text-muted-foreground text-[10px] uppercase">
+                    {slide.layout}
+                  </span>
+                </div>
+              ))}
             </div>
-          )}
+          </details>
         </div>
       )}
 
@@ -525,6 +505,7 @@ export function PresentationChat() {
             </div>
           );
         })}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
