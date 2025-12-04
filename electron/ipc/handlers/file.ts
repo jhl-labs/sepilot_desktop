@@ -619,8 +619,23 @@ export function registerFileHandlers() {
   // 상대 경로를 절대 경로로 변환 (Markdown 이미지 렌더링용)
   ipcMain.handle('fs:resolve-path', async (_event, basePath: string, relativePath: string) => {
     try {
-      // basePath가 파일이면 디렉토리로 변환
-      const baseDir = path.dirname(basePath);
+      // basePath가 파일인지 디렉토리인지 확인
+      let baseDir: string;
+
+      try {
+        const stats = await fs.stat(basePath);
+        if (stats.isDirectory()) {
+          // 이미 디렉토리면 그대로 사용
+          baseDir = basePath;
+        } else {
+          // 파일이면 디렉토리 추출
+          baseDir = path.dirname(basePath);
+        }
+      } catch {
+        // 파일/디렉토리가 존재하지 않으면 파일로 간주하고 dirname 사용
+        baseDir = path.dirname(basePath);
+      }
+
       const absolutePath = path.resolve(baseDir, relativePath);
 
       console.log('[File] Resolved path:', { basePath, relativePath, baseDir, absolutePath });
