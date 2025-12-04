@@ -129,7 +129,7 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
         });
       } else {
         // 새 문서 - 추가
-        documentsToIndex.push({
+        const newDoc = {
           id: `team_${config.id}_${randomUUID()}`,
           content: doc.content,
           metadata: {
@@ -139,7 +139,11 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
             teamName: config.name,
             source: `${config.owner}/${config.repo}`,
           },
-        });
+        };
+        documentsToIndex.push(newDoc);
+        console.log(
+          `[TeamDocs] Adding new document: ${newDoc.metadata.title}, docGroup=${newDoc.metadata.docGroup}`
+        );
       }
     }
 
@@ -177,6 +181,16 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
 
     // VectorDB에 인덱싱 (배치 처리)
     if (documentsToIndex.length > 0) {
+      console.log(
+        `[TeamDocs] Indexing ${documentsToIndex.length} documents to VectorDB for team '${config.name}'`
+      );
+      console.log(
+        `[TeamDocs] Sample docGroups: ${documentsToIndex
+          .slice(0, 3)
+          .map((d) => `${d.metadata.title}:${d.metadata.docGroup}`)
+          .join(', ')}`
+      );
+
       // 앱 설정에서 청킹 전략 가져오기 (없으면 2025 best practice 기본값)
       const appConfigStr = databaseService.getSetting('app_config');
       let chunkConfig = {

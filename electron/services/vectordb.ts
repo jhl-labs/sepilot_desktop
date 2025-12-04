@@ -629,12 +629,39 @@ class VectorDBService {
   async indexDocuments(documents: RawDocument[], options: IndexingOptions): Promise<void> {
     console.log(`[VectorDB] Indexing ${documents.length} documents...`);
 
+    // docGroup 분포 확인
+    const docGroupCount: Record<string, number> = {};
+    documents.forEach((doc) => {
+      const docGroup = doc.metadata.docGroup || 'personal';
+      docGroupCount[docGroup] = (docGroupCount[docGroup] || 0) + 1;
+    });
+    console.log(`[VectorDB] Documents by docGroup:`, docGroupCount);
+
+    // 샘플 문서 로그
+    if (documents.length > 0) {
+      const sampleDoc = documents[0];
+      console.log(`[VectorDB] Sample document metadata:`, {
+        title: sampleDoc.metadata.title,
+        docGroup: sampleDoc.metadata.docGroup,
+        teamName: sampleDoc.metadata.teamName,
+        source: sampleDoc.metadata.source,
+      });
+    }
+
     // Embedding Provider 가져오기
     const embedder = getEmbeddingProvider();
 
     // 1. 문서 청킹
     const chunkedDocs = chunkDocuments(documents, options);
     console.log(`[VectorDB] Created ${chunkedDocs.length} chunks`);
+
+    // 청킹 후 docGroup 확인
+    const chunkedDocGroupCount: Record<string, number> = {};
+    chunkedDocs.forEach((doc) => {
+      const docGroup = doc.metadata.docGroup || 'personal';
+      chunkedDocGroupCount[docGroup] = (chunkedDocGroupCount[docGroup] || 0) + 1;
+    });
+    console.log(`[VectorDB] Chunks by docGroup:`, chunkedDocGroupCount);
 
     // 2. 배치 처리
     const batches: RawDocument[][] = [];
