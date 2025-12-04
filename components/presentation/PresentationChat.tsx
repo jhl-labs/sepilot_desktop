@@ -33,16 +33,16 @@ type QuickPromptItem =
 const STEP_QUICK_PROMPTS: Record<PresentationWorkflowStep, { label: string; prompt: string }[]> = {
   briefing: [
     {
-      label: '논문 요약 발표',
-      prompt: '논문 요약 발표 자료를 만들고 싶어요. 슬라이드는 10장 정도로.',
+      label: '주제 변경',
+      prompt: '주제를 "[새로운 주제]"로 변경해주세요.',
     },
     {
-      label: '제품 소개 피치덱',
-      prompt: '우리 제품을 소개하는 피치덱을 만들어주세요. 투자자 대상입니다.',
+      label: '슬라이드 수 조정',
+      prompt: '슬라이드를 [N]장으로 조정해주세요.',
     },
     {
-      label: 'AI 기술 세미나',
-      prompt: 'AI 기술에 대한 세미나 자료를 만들고 싶습니다. 개발자가 청중이에요.',
+      label: '다음 단계로',
+      prompt: '이대로 좋습니다. 다음 단계로 진행해주세요.',
     },
   ],
   'design-master': [
@@ -189,8 +189,9 @@ export function PresentationChat() {
       return;
     }
 
-    // 템플릿 상태 생성
+    // 템플릿 상태 생성 (브리핑 단계로 유지)
     const templateState = template.generateState();
+    templateState.currentStep = 'briefing'; // 브리핑 단계에 머물기
 
     // 상태 업데이트
     setPresentationAgentState(templateState);
@@ -204,7 +205,7 @@ export function PresentationChat() {
     // 시스템 메시지 추가
     addPresentationChatMessage({
       role: 'assistant',
-      content: `✅ "${template.name}" 템플릿이 적용되었습니다!\n\n총 ${templateState.slides.length}개의 슬라이드가 생성되었습니다. 우측에서 슬라이드를 확인하고, 필요한 부분을 수정해주세요.`,
+      content: `✅ "${template.name}" 템플릿이 적용되었습니다!\n\n**브리핑 내용:**\n- 주제: ${templateState.brief?.topic}\n- 슬라이드: ${templateState.slides.length}장\n- 청중: ${templateState.brief?.audience}\n\n우측에서 미리보기를 확인하시고, 수정이 필요하면 말씀해주세요.\n다음 단계로 진행하시려면 "다음 단계" 또는 상단의 단계 버튼을 클릭하세요.`,
     });
   };
 
@@ -512,12 +513,16 @@ export function PresentationChat() {
         </div>
       )}
 
-      {/* Template Selection (Briefing 단계에서만 표시) */}
-      {currentStep === 'briefing' && presentationChatMessages.length === 0 && (
+      {/* Template Selection (Briefing 단계에서 표시) */}
+      {currentStep === 'briefing' && (
         <div className="px-4 py-3 border-b">
-          <p className="text-sm font-semibold mb-3">템플릿으로 빠르게 시작하기</p>
+          <p className="text-sm font-semibold mb-3">
+            {presentationAgentState?.brief ? '다른 템플릿 선택' : '템플릿으로 빠르게 시작하기'}
+          </p>
           <p className="text-xs text-muted-foreground mb-4">
-            완성된 템플릿을 선택하면 바로 검토 단계로 이동합니다.
+            {presentationAgentState?.brief
+              ? '다른 템플릿을 선택하여 변경할 수 있습니다.'
+              : '완성된 템플릿을 선택하거나, 아래에서 직접 입력하여 커스텀 프레젠테이션을 만드세요.'}
           </p>
           <div className="grid grid-cols-2 gap-3">
             {[
@@ -540,9 +545,11 @@ export function PresentationChat() {
               </button>
             ))}
           </div>
-          <div className="mt-4 text-xs text-muted-foreground text-center">
-            또는 아래에서 직접 입력하여 커스텀 프레젠테이션을 만드세요
-          </div>
+          {!presentationAgentState?.brief && (
+            <div className="mt-4 text-xs text-muted-foreground text-center">
+              또는 아래에서 직접 입력하여 커스텀 프레젠테이션을 만드세요
+            </div>
+          )}
         </div>
       )}
 
