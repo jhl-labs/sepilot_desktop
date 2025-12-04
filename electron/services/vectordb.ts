@@ -240,6 +240,23 @@ class VectorDBService {
       `[VectorDB] Total documents in DB: ${rows.length}, docGroup filter: ${opts.docGroup}`
     );
 
+    // 전체 문서의 docGroup 및 isParentDoc 분포
+    const allDocGroupCount: Record<string, { total: number; parent: number; chunk: number }> = {};
+    rows.forEach((row) => {
+      const metadata = JSON.parse(row[2] as string);
+      const docGroup = metadata.docGroup || 'personal';
+      if (!allDocGroupCount[docGroup]) {
+        allDocGroupCount[docGroup] = { total: 0, parent: 0, chunk: 0 };
+      }
+      allDocGroupCount[docGroup].total++;
+      if (metadata.isParentDoc) {
+        allDocGroupCount[docGroup].parent++;
+      } else {
+        allDocGroupCount[docGroup].chunk++;
+      }
+    });
+    console.log('[VectorDB] Document distribution before filtering:', allDocGroupCount);
+
     // 1단계: 메타데이터 기반 필터링 (Parent 문서와 폴더 제외)
     let filteredOutCount = 0;
     let parentDocCount = 0;
