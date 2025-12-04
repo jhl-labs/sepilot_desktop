@@ -6,6 +6,7 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { generateId } from '@/lib/utils';
 import { SlideRenderer } from './SlideRenderer';
 import { SlideMasterPreview } from './SlideMasterPreview';
+import { DesignOptionsPreview } from './DesignOptionsPreview';
 import { ChevronLeft, ChevronRight, LayoutTemplate, Maximize2, Minimize2 } from 'lucide-react';
 
 const ACCENT_COLORS = ['#7c3aed', '#0ea5e9', '#22c55e', '#f97316', '#06b6d4', '#ef4444'];
@@ -112,6 +113,31 @@ export function SlidePreview() {
       vibe: 'modern tech',
     });
   };
+
+  // 디자인 단계에서 옵션 미리보기 표시
+  if (
+    presentationSlides.length === 0 &&
+    presentationAgentState?.currentStep === 'design-master' &&
+    presentationAgentState?.designOptions &&
+    presentationAgentState.designOptions.length > 0
+  ) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">디자인 옵션 미리보기</p>
+            <p className="text-xs text-muted-foreground">
+              우측 상단에서 옵션을 선택하여 비교해보세요.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <DesignOptionsPreview designOptions={presentationAgentState.designOptions} />
+        </div>
+      </div>
+    );
+  }
 
   // 구조 단계에서 디자인 마스터 미리보기 표시
   if (
