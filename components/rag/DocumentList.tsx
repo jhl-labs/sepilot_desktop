@@ -25,8 +25,6 @@ import {
   Users,
   Github,
   Loader2,
-  AlertCircle,
-  CheckCircle,
 } from 'lucide-react';
 import {
   getAllDocuments,
@@ -41,7 +39,6 @@ import { VectorDocument, DocumentTreeNode } from '@/lib/vectordb/types';
 import { TeamDocsConfig, GitHubSyncConfig } from '@/types';
 import { FolderManageDialog } from './FolderManageDialog';
 import { DocsSyncDialog } from './DocsSyncDialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type ViewMode = 'grid' | 'list' | 'tree';
 
@@ -970,21 +967,6 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     } finally {
       setSyncingTeamId(null);
     }
-  };
-
-  // Team ID별로 문서 그룹화
-  const groupDocumentsByTeam = (docs: VectorDocument[]): Map<string, VectorDocument[]> => {
-    const grouped = new Map<string, VectorDocument[]>();
-
-    docs.forEach((doc) => {
-      const teamDocsId = doc.metadata?.teamDocsId || 'unknown';
-      if (!grouped.has(teamDocsId)) {
-        grouped.set(teamDocsId, []);
-      }
-      grouped.get(teamDocsId)!.push(doc);
-    });
-
-    return grouped;
   };
 
   // 필터링된 문서 목록

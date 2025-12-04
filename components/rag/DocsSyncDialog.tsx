@@ -31,12 +31,11 @@ import { GitHubSyncConfig, TeamDocsConfig } from '@/types';
 interface DocsSyncDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRefresh?: () => Promise<void>;
 }
 
-export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialogProps) {
+export function DocsSyncDialog({ open, onOpenChange }: DocsSyncDialogProps) {
   // Personal Docs Repo state
-  const [personalRepo, setPersonalRepo] = useState<GitHubSyncConfig | null>(null);
+  const [_personalRepo, setPersonalRepo] = useState<GitHubSyncConfig | null>(null);
   const [personalForm, setPersonalForm] = useState({
     serverType: 'github.com' as 'github.com' | 'ghes',
     ghesUrl: '',
