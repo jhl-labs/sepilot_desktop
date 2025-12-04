@@ -32,6 +32,8 @@ export default function Home() {
     }
 
     const handleQuickInput = async (data: unknown) => {
+      console.warn('[Home] handleQuickInput called with data:', typeof data, data);
+
       // Both Quick Input and Quick Question send simple strings
       if (typeof data !== 'string') {
         console.warn('[Home] Invalid quick input data:', data);
@@ -39,14 +41,18 @@ export default function Home() {
       }
 
       try {
+        console.warn('[Home] Creating new conversation...');
         // 새 대화 생성
         const conversationId = await createConversation();
+        console.warn('[Home] New conversation created:', conversationId);
 
         // 새 대화 활성화
         await setActiveConversation(conversationId);
+        console.warn('[Home] Conversation activated');
 
         // UI가 업데이트될 시간을 주고 메시지 전송
         setTimeout(() => {
+          console.warn('[Home] Dispatching sepilot:auto-send-message event with:', data);
           window.dispatchEvent(
             new CustomEvent('sepilot:auto-send-message', {
               detail: { userMessage: data },
