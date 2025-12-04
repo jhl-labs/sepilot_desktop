@@ -6,6 +6,7 @@ import {
   emitImageProgress,
   getCurrentNetworkConfig,
   getCurrentImageGenConfig,
+  isAborted,
 } from '@/lib/llm/streaming-callback';
 import type { ComfyUIConfig, NetworkConfig } from '@/types';
 import { generateWithNanoBanana } from '@/lib/imagegen/nanobanana-client';
@@ -193,6 +194,16 @@ function waitForCompletionInMainProcess(
       reject(new Error('Image generation timeout (10m)'));
     }, 600000); // 10분 = 600초 = 600000ms
 
+    // Periodic abort check (every 500ms)
+    const abortCheckInterval = setInterval(() => {
+      if (isAborted(conversationId)) {
+        clearInterval(abortCheckInterval);
+        clearTimeout(timeout);
+        ws.close();
+        reject(new Error('Image generation aborted by user'));
+      }
+    }, 500);
+
     ws.on('message', async (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString());
@@ -215,6 +226,7 @@ function waitForCompletionInMainProcess(
 
         if (message.type === 'executed' && message.data.prompt_id === promptId) {
           clearTimeout(timeout);
+          clearInterval(abortCheckInterval);
           emitImageProgress(
             { status: 'executing', message: '📥 생성된 이미지를 다운로드하는 중...', progress: 90 },
             conversationId
@@ -248,6 +260,7 @@ function waitForCompletionInMainProcess(
 
         if (message.type === 'execution_error' && message.data.prompt_id === promptId) {
           clearTimeout(timeout);
+          clearInterval(abortCheckInterval);
           ws.close();
           reject(new Error(`Execution error: ${JSON.stringify(message.data)}`));
         }
@@ -258,11 +271,13 @@ function waitForCompletionInMainProcess(
 
     ws.on('error', (error: Error) => {
       clearTimeout(timeout);
+      clearInterval(abortCheckInterval);
       reject(new Error(`WebSocket error: ${error.message}`));
     });
 
     ws.on('close', () => {
       clearTimeout(timeout);
+      clearInterval(abortCheckInterval);
     });
   });
 }
@@ -274,6 +289,12 @@ function waitForCompletionInMainProcess(
  */
 export async function toolsNode(state: AgentState): Promise<Partial<AgentState>> {
   try {
+    // Check if aborted at the start
+    if (isAborted(state.conversationId)) {
+      console.log('[Tools] Aborted before executing tools');
+      throw new Error('Operation aborted by user');
+    }
+
     const lastMessage = state.messages[state.messages.length - 1];
 
     if (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) {
@@ -289,6 +310,17 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
     const results: ToolResult[] = await Promise.all(
       lastMessage.tool_calls.map(async (call) => {
         try {
+          // Check if aborted before each tool call
+          if (isAborted(state.conversationId)) {
+            console.log(`[Tools] Aborted before executing ${call.name}`);
+            return {
+              toolCallId: call.id,
+              toolName: call.name,
+              result: null,
+              error: 'Operation aborted by user',
+            };
+          }
+
           console.log(`[Tools] Calling tool: ${call.name} with args:`, call.arguments);
 
           // 이미지 생성 tool 처리 (내장 도구) - MCP로 전달하지 않음
