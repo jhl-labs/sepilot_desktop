@@ -24,6 +24,9 @@ import {
   User,
   Users,
   Github,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
 } from 'lucide-react';
 import {
   getAllDocuments,
@@ -35,8 +38,10 @@ import {
   deleteEmptyFolder,
 } from '@/lib/vectordb/client';
 import { VectorDocument, DocumentTreeNode } from '@/lib/vectordb/types';
+import { TeamDocsConfig, GitHubSyncConfig } from '@/types';
 import { FolderManageDialog } from './FolderManageDialog';
 import { DocsSyncDialog } from './DocsSyncDialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type ViewMode = 'grid' | 'list' | 'tree';
 
@@ -61,6 +66,12 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'personal' | 'team'>('personal');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Team Docs 관련 상태
+  const [teamDocs, setTeamDocs] = useState<TeamDocsConfig[]>([]);
+  const [personalRepo, setPersonalRepo] = useState<GitHubSyncConfig | null>(null);
+  const [syncingTeamId, setSyncingTeamId] = useState<string | null>(null);
+  const [syncingPersonal, setSyncingPersonal] = useState<'pull' | 'push' | null>(null);
 
   // 빈 폴더 로드 (VectorDB에서)
   const loadEmptyFolders = async () => {
@@ -211,9 +222,29 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     }
   };
 
+  // Team Docs 설정 로드
+  const loadTeamDocsConfigs = async () => {
+    try {
+      if (typeof window !== 'undefined' && window.electronAPI?.config) {
+        const result = await window.electronAPI.config.load();
+        if (result.success && result.data) {
+          if (result.data.teamDocs) {
+            setTeamDocs(result.data.teamDocs);
+          }
+          if (result.data.githubSync) {
+            setPersonalRepo(result.data.githubSync);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load team docs configs:', error);
+    }
+  };
+
   useEffect(() => {
     loadDocuments();
     loadEmptyFolders();
+    loadTeamDocsConfigs();
     if (onRefresh) {
       onRefresh(loadDocuments);
     }
@@ -793,6 +824,169 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     return <div className="space-y-1">{treeNodes.map((node) => renderTreeNode(node, 0))}</div>;
   };
 
+  // Personal Docs Pull 핸들러
+  const handlePullPersonalDocs = async () => {
+    if (!personalRepo) {
+      setMessage({ type: 'error', text: 'Personal Docs 설정이 필요합니다.' });
+      return;
+    }
+
+    setSyncingPersonal('pull');
+    setMessage(null);
+
+    try {
+      const result = await window.electronAPI.githubSync.pullDocuments(personalRepo);
+
+      if (result.success && result.documents && result.documents.length > 0) {
+        const allDocs = await getAllDocuments();
+        const docsToDelete: string[] = [];
+
+        for (const newDoc of result.documents) {
+          const matchingDocs = allDocs.filter(
+            (existing: any) =>
+              existing.metadata?.title === newDoc.title &&
+              existing.metadata?.folderPath === newDoc.metadata?.folderPath &&
+              existing.metadata?.docGroup !== 'team'
+          );
+          for (const match of matchingDocs) {
+            docsToDelete.push(match.id);
+          }
+        }
+
+        if (docsToDelete.length > 0) {
+          await window.electronAPI.vectorDB.delete(docsToDelete);
+        }
+
+        const generateId = () => {
+          return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        };
+
+        const documentsWithIds = result.documents.map((doc: any) => ({
+          id: generateId(),
+          content: doc.content,
+          metadata: {
+            ...doc.metadata,
+            docGroup: 'personal',
+            source: `${personalRepo.owner}/${personalRepo.repo}`,
+          },
+        }));
+
+        const indexResult = await window.electronAPI.vectorDB.indexDocuments(documentsWithIds, {
+          chunkSize: 2500,
+          chunkOverlap: 250,
+          batchSize: 10,
+        });
+
+        if (indexResult.success) {
+          setMessage({
+            type: 'success',
+            text: `${result.documents.length}개의 Personal 문서를 동기화했습니다!`,
+          });
+          await loadDocuments();
+        } else {
+          throw new Error(indexResult.error || '문서 인덱싱 실패');
+        }
+      } else if (result.success && result.documents && result.documents.length === 0) {
+        setMessage({ type: 'success', text: '동기화할 Personal 문서가 없습니다.' });
+      } else {
+        throw new Error(result.error || '문서 가져오기 실패');
+      }
+    } catch (error: any) {
+      console.error('Failed to pull personal docs:', error);
+      setMessage({ type: 'error', text: error.message || 'Personal 문서 동기화 실패' });
+    } finally {
+      setSyncingPersonal(null);
+    }
+  };
+
+  // Personal Docs Push 핸들러
+  const handlePushPersonalDocs = async () => {
+    if (!personalRepo) {
+      setMessage({ type: 'error', text: 'Personal Docs 설정이 필요합니다.' });
+      return;
+    }
+
+    setSyncingPersonal('push');
+    setMessage(null);
+
+    try {
+      const result = await window.electronAPI.githubSync.syncDocuments(personalRepo);
+
+      if (result.success) {
+        setMessage({
+          type: 'success',
+          text: result.message || 'Personal 문서를 GitHub에 Push했습니다!',
+        });
+      } else {
+        throw new Error(result.error || 'Push 실패');
+      }
+    } catch (error: any) {
+      console.error('Failed to push personal docs:', error);
+      setMessage({ type: 'error', text: error.message || 'Personal 문서 Push 실패' });
+    } finally {
+      setSyncingPersonal(null);
+    }
+  };
+
+  // Team Docs Pull 핸들러
+  const handlePullTeamDoc = async (config: TeamDocsConfig) => {
+    setSyncingTeamId(`pull-${config.id}`);
+    setMessage(null);
+
+    try {
+      const result = await window.electronAPI.teamDocs.syncDocuments(config);
+
+      if (result.success) {
+        setMessage({ type: 'success', text: result.message || `${config.name} Pull 완료!` });
+        await loadDocuments();
+        await loadTeamDocsConfigs();
+      } else {
+        throw new Error(result.error || '동기화 실패');
+      }
+    } catch (error: any) {
+      console.error('Failed to sync team doc:', error);
+      setMessage({ type: 'error', text: error.message || '동기화 실패' });
+    } finally {
+      setSyncingTeamId(null);
+    }
+  };
+
+  // Team Docs Push 핸들러
+  const handlePushTeamDoc = async (config: TeamDocsConfig) => {
+    setSyncingTeamId(`push-${config.id}`);
+    setMessage(null);
+
+    try {
+      const result = await window.electronAPI.teamDocs.pushDocuments(config);
+
+      if (result.success) {
+        setMessage({ type: 'success', text: result.message || `${config.name} Push 완료!` });
+      } else {
+        throw new Error(result.error || 'Push 실패');
+      }
+    } catch (error: any) {
+      console.error('Failed to push team doc:', error);
+      setMessage({ type: 'error', text: error.message || 'Push 실패' });
+    } finally {
+      setSyncingTeamId(null);
+    }
+  };
+
+  // Team ID별로 문서 그룹화
+  const groupDocumentsByTeam = (docs: VectorDocument[]): Map<string, VectorDocument[]> => {
+    const grouped = new Map<string, VectorDocument[]>();
+
+    docs.forEach((doc) => {
+      const teamDocsId = doc.metadata?.teamDocsId || 'unknown';
+      if (!grouped.has(teamDocsId)) {
+        grouped.set(teamDocsId, []);
+      }
+      grouped.get(teamDocsId)!.push(doc);
+    });
+
+    return grouped;
+  };
+
   // 필터링된 문서 목록
   const filteredDocuments = filterDocuments(documents);
 
@@ -811,6 +1005,148 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {/* Personal Docs Sync Controls */}
+      {activeTab === 'personal' && personalRepo && (
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Github className="h-4 w-4 text-muted-foreground" />
+                <h4 className="font-medium text-sm">
+                  {personalRepo.owner}/{personalRepo.repo}
+                </h4>
+                <span className="text-xs text-muted-foreground">({personalRepo.branch})</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Personal Documents Repository</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePullPersonalDocs}
+                disabled={syncingPersonal !== null || isLoading}
+              >
+                {syncingPersonal === 'pull' ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Pull...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Pull
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePushPersonalDocs}
+                disabled={syncingPersonal !== null || isLoading}
+              >
+                {syncingPersonal === 'push' ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Push...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Push
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team Docs Sync Controls */}
+      {activeTab === 'team' && teamDocs.length > 0 && (
+        <div className="space-y-2">
+          {teamDocs
+            .filter((td) => td.enabled)
+            .map((team) => {
+              const teamDocCount = filteredDocuments.filter(
+                (doc) => doc.metadata?.teamDocsId === team.id
+              ).length;
+              const hasModifiedDocs = filteredDocuments.some(
+                (doc) => doc.metadata?.teamDocsId === team.id && doc.metadata?.modifiedLocally
+              );
+
+              return (
+                <div key={team.id} className="rounded-lg border bg-card p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <Github className="h-4 w-4 text-muted-foreground" />
+                        <h4 className="font-medium text-sm">{team.name}</h4>
+                        <span className="text-xs text-muted-foreground">
+                          ({team.owner}/{team.repo})
+                        </span>
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                          {teamDocCount}개 문서
+                        </span>
+                        {hasModifiedDocs && (
+                          <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-2 py-0.5 rounded">
+                            로컬 수정됨
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {team.description || 'Team Documents Repository'}
+                        {team.lastSyncAt && (
+                          <span className="ml-2">
+                            • 마지막 동기화: {new Date(team.lastSyncAt).toLocaleString('ko-KR')}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePullTeamDoc(team)}
+                        disabled={syncingTeamId !== null || isLoading}
+                      >
+                        {syncingTeamId === `pull-${team.id}` ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Pull...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="mr-2 h-4 w-4" />
+                            Pull
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePushTeamDoc(team)}
+                        disabled={syncingTeamId !== null || isLoading}
+                      >
+                        {syncingTeamId === `push-${team.id}` ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Push...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Push
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      )}
 
       {/* 검색 바 */}
       <div className="relative">

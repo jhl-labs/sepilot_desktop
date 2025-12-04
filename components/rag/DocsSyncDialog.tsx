@@ -22,12 +22,9 @@ import {
   Github,
   User,
   Users,
-  Download,
-  Upload,
   Plus,
   Trash2,
   Edit2,
-  RefreshCw,
 } from 'lucide-react';
 import { GitHubSyncConfig, TeamDocsConfig } from '@/types';
 
@@ -69,7 +66,6 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
   // UI state
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSyncing, setIsSyncing] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'personal' | 'team'>('personal');
 
   // Load configs on mount
@@ -161,118 +157,6 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
       setMessage({ type: 'error', text: error.message || '설정 저장 실패' });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handlePullPersonalDocs = async () => {
-    if (!personalRepo) {
-      setMessage({ type: 'error', text: '먼저 Personal Docs 설정을 저장하세요.' });
-      return;
-    }
-
-    setIsSyncing('personal-pull');
-    setMessage(null);
-
-    try {
-      const result = await window.electronAPI.githubSync.pullDocuments(personalRepo);
-
-      if (result.success && result.documents && result.documents.length > 0) {
-        // Get existing docs
-        const existingDocsResult = await window.electronAPI.vectorDB.getAll();
-        const existingDocs =
-          existingDocsResult.success && existingDocsResult.data ? existingDocsResult.data : [];
-
-        // Find duplicates
-        const docsToDelete: string[] = [];
-        for (const newDoc of result.documents) {
-          const matchingDocs = existingDocs.filter(
-            (existing: any) =>
-              existing.metadata?.title === newDoc.title &&
-              existing.metadata?.folderPath === newDoc.metadata?.folderPath &&
-              existing.metadata?.docGroup !== 'team' // Only delete personal docs
-          );
-          for (const match of matchingDocs) {
-            docsToDelete.push(match.id);
-          }
-        }
-
-        // Delete duplicates
-        if (docsToDelete.length > 0) {
-          await window.electronAPI.vectorDB.delete(docsToDelete);
-        }
-
-        // Generate IDs
-        const generateId = () => {
-          return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        };
-
-        // Add IDs and docGroup metadata
-        const documentsWithIds = result.documents.map((doc: any) => ({
-          id: generateId(),
-          content: doc.content,
-          metadata: {
-            ...doc.metadata,
-            docGroup: 'personal',
-            source: `${personalRepo.owner}/${personalRepo.repo}`,
-          },
-        }));
-
-        // Index documents
-        const indexResult = await window.electronAPI.vectorDB.indexDocuments(documentsWithIds, {
-          chunkSize: 2500,
-          chunkOverlap: 250,
-          batchSize: 10,
-        });
-
-        if (indexResult.success) {
-          setMessage({
-            type: 'success',
-            text: `${result.documents.length}개의 Personal 문서를 동기화했습니다!`,
-          });
-          if (onRefresh) {
-            await onRefresh();
-          }
-        } else {
-          throw new Error(indexResult.error || '문서 인덱싱 실패');
-        }
-      } else if (result.success && result.documents && result.documents.length === 0) {
-        setMessage({ type: 'success', text: '동기화할 Personal 문서가 없습니다.' });
-      } else {
-        throw new Error(result.error || '문서 가져오기 실패');
-      }
-    } catch (error: any) {
-      console.error('Failed to pull personal docs:', error);
-      setMessage({ type: 'error', text: error.message || 'Personal 문서 동기화 실패' });
-    } finally {
-      setIsSyncing(null);
-    }
-  };
-
-  const handlePushPersonalDocs = async () => {
-    if (!personalRepo) {
-      setMessage({ type: 'error', text: '먼저 Personal Docs 설정을 저장하세요.' });
-      return;
-    }
-
-    setIsSyncing('personal-push');
-    setMessage(null);
-
-    try {
-      const result = await window.electronAPI.githubSync.syncDocuments(personalRepo);
-
-      if (result.success) {
-        setMessage({
-          type: 'success',
-          text: result.message || 'Personal 문서를 GitHub에 Push했습니다!',
-        });
-      } else {
-        throw new Error(result.error || 'Push 실패');
-      }
-    } catch (error: any) {
-      console.error('Failed to push personal docs:', error);
-      setMessage({ type: 'error', text: error.message || 'Personal 문서 Push 실패' });
-    } finally {
-      setIsSyncing(null);
     }
   };
 
@@ -387,84 +271,6 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
     } catch (error: any) {
       console.error('Failed to delete team doc:', error);
       setMessage({ type: 'error', text: error.message || '삭제 실패' });
-    }
-  };
-
-  const handleSyncTeamDoc = async (config: TeamDocsConfig) => {
-    setIsSyncing(`team-pull-${config.id}`);
-    setMessage(null);
-
-    try {
-      const result = await window.electronAPI.teamDocs.syncDocuments(config);
-
-      if (result.success) {
-        setMessage({ type: 'success', text: result.message || `${config.name} Pull 완료!` });
-        if (onRefresh) {
-          await onRefresh();
-        }
-
-        // Update lastSyncAt
-        await loadConfigs();
-      } else {
-        throw new Error(result.error || '동기화 실패');
-      }
-    } catch (error: any) {
-      console.error('Failed to sync team doc:', error);
-      setMessage({ type: 'error', text: error.message || '동기화 실패' });
-    } finally {
-      setIsSyncing(null);
-    }
-  };
-
-  const handlePushTeamDoc = async (config: TeamDocsConfig) => {
-    setIsSyncing(`team-push-${config.id}`);
-    setMessage(null);
-
-    try {
-      const result = await window.electronAPI.teamDocs.pushDocuments(config);
-
-      if (result.success) {
-        setMessage({ type: 'success', text: result.message || `${config.name} Push 완료!` });
-      } else {
-        throw new Error(result.error || 'Push 실패');
-      }
-    } catch (error: any) {
-      console.error('Failed to push team doc:', error);
-      setMessage({ type: 'error', text: error.message || 'Push 실패' });
-    } finally {
-      setIsSyncing(null);
-    }
-  };
-
-  const handleSyncAllTeamDocs = async () => {
-    const enabledDocs = teamDocs.filter((td) => td.enabled);
-    if (enabledDocs.length === 0) {
-      setMessage({ type: 'error', text: '활성화된 Team Docs가 없습니다.' });
-      return;
-    }
-
-    setIsSyncing('team-all');
-    setMessage(null);
-
-    try {
-      const result = await window.electronAPI.teamDocs.syncAll();
-
-      if (result.success) {
-        setMessage({ type: 'success', text: result.message || '모든 Team Docs 동기화 완료!' });
-        if (onRefresh) {
-          await onRefresh();
-        }
-
-        // Update lastSyncAt
-        await loadConfigs();
-      } else {
-        throw new Error(result.error || '일괄 동기화 실패');
-      }
-    } catch (error: any) {
-      console.error('Failed to sync all team docs:', error);
-      setMessage({ type: 'error', text: error.message || '일괄 동기화 실패' });
-    } finally {
-      setIsSyncing(null);
     }
   };
 
@@ -588,7 +394,7 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
               </div>
 
               <div className="flex gap-2 pt-4">
-                <Button onClick={handleSavePersonalRepo} disabled={isSaving} className="flex-1">
+                <Button onClick={handleSavePersonalRepo} disabled={isSaving} className="w-full">
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -598,43 +404,10 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
                     '설정 저장'
                   )}
                 </Button>
-                <Button
-                  onClick={handlePullPersonalDocs}
-                  disabled={!personalRepo || isSyncing !== null}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  {isSyncing === 'personal-pull' ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Pull 중...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="mr-2 h-4 w-4" />
-                      Pull
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={handlePushPersonalDocs}
-                  disabled={!personalRepo || isSyncing !== null}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  {isSyncing === 'personal-push' ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Push 중...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Push
-                    </>
-                  )}
-                </Button>
               </div>
+              <p className="text-sm text-muted-foreground">
+                설정을 저장한 후 Document List에서 Pull/Push 작업을 수행할 수 있습니다.
+              </p>
             </div>
           </TabsContent>
 
@@ -771,32 +544,10 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
               <>
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">Team Docs 목록</h3>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleSyncAllTeamDocs}
-                      disabled={
-                        isSyncing !== null || teamDocs.filter((td) => td.enabled).length === 0
-                      }
-                      variant="outline"
-                      size="sm"
-                    >
-                      {isSyncing === 'team-all' ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          모두 동기화 중...
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          모두 동기화
-                        </>
-                      )}
-                    </Button>
-                    <Button onClick={handleAddTeamDoc} size="sm">
-                      <Plus className="mr-2 h-4 w-4" />
-                      추가
-                    </Button>
-                  </div>
+                  <Button onClick={handleAddTeamDoc} size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    추가
+                  </Button>
                 </div>
 
                 {teamDocs.length === 0 ? (
@@ -825,44 +576,8 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
                             <p className="text-xs text-muted-foreground mt-2">
                               {config.owner}/{config.repo} ({config.branch})
                             </p>
-                            {config.lastSyncAt && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                마지막 동기화: {new Date(config.lastSyncAt).toLocaleString('ko-KR')}
-                                {config.lastSyncStatus === 'error' && config.lastSyncError && (
-                                  <span className="text-destructive ml-2">
-                                    (실패: {config.lastSyncError})
-                                  </span>
-                                )}
-                              </p>
-                            )}
                           </div>
                           <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleSyncTeamDoc(config)}
-                              disabled={!config.enabled || isSyncing !== null}
-                              title="Pull (GitHub → Local)"
-                            >
-                              {isSyncing === `team-pull-${config.id}` ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Download className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handlePushTeamDoc(config)}
-                              disabled={!config.enabled || isSyncing !== null}
-                              title="Push (Local → GitHub)"
-                            >
-                              {isSyncing === `team-push-${config.id}` ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Upload className="h-4 w-4" />
-                              )}
-                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
