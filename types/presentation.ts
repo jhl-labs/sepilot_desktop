@@ -188,6 +188,9 @@ export interface PresentationAgentState {
   // 생성된 슬라이드
   slides: PresentationSlide[];
 
+  // 설정
+  webSearchEnabled?: boolean; // 웹검색 사용 여부 (기본: false)
+
   // 메타데이터
   createdAt: number;
   updatedAt: number;

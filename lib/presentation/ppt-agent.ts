@@ -439,6 +439,19 @@ ${state.structure?.outline.map((s) => `${s.index + 1}. ${s.title} (${s.layout})`
 - 폰트: ${state.designMaster?.fonts.title} / ${state.designMaster?.fonts.body}
 - 분위기: ${state.designMaster?.vibe}
 
+${
+  state.webSearchEnabled
+    ? `**웹검색 활성화됨** 🌐
+- 주제와 관련된 최신 정보, 통계, 사실을 웹검색을 통해 확인하세요
+- 정확한 수치, 날짜, 인용구가 필요한 경우 반드시 검색 후 사용하세요
+- 검색 결과를 바탕으로 더 신뢰할 수 있는 내용을 작성하세요
+- 검색한 정보의 출처를 슬라이드 노트나 하단에 간단히 표기하세요`
+    : `**웹검색 비활성화됨**
+- 일반적인 지식과 주제에 대한 이해를 바탕으로 내용을 작성하세요
+- 구체적인 통계나 수치는 예시로 표현하세요 (예: "약 70%", "최근 연구에 따르면")
+- 실제 데이터가 필요한 경우 사용자에게 확인을 요청할 수 있습니다`
+}
+
 ## 현재 목표
 ${
   options?.bulkCreation
@@ -600,15 +613,36 @@ ${options?.bulkCreation ? '**In BULK MODE, generate multiple create_slide action
 
 생성된 슬라이드: ${state.slides.length}장
 
+${
+  state.webSearchEnabled
+    ? `**웹검색 활성화됨** 🌐
+- 슬라이드 내용의 정확성을 웹검색으로 검증할 수 있습니다
+- 잘못된 정보, 오래된 통계, 부정확한 날짜 등을 확인하고 수정하세요`
+    : ''
+}
+
 ## 현재 목표
 사용자와 함께 프레젠테이션을 검토하고 수정하세요.
 
 ## 가능한 작업
-- "슬라이드 3 수정해줘" → 특정 슬라이드 수정
-- "전체적으로 색상을 더 밝게" → 디자인 마스터 수정
-- "슬라이드 2와 3 사이에 새 슬라이드 추가" → 슬라이드 추가
-- "슬라이드 5 삭제" → 슬라이드 삭제
-- "완료" → 최종 완료
+1. **일반 수정**
+   - "슬라이드 3 수정해줘" → 특정 슬라이드 수정
+   - "전체적으로 색상을 더 밝게" → 디자인 마스터 수정
+   - "슬라이드 2와 3 사이에 새 슬라이드 추가" → 슬라이드 추가
+   - "슬라이드 5 삭제" → 슬라이드 삭제
+
+2. **내용 검증/보정** ${state.webSearchEnabled ? '(웹검색 사용 가능)' : '(일반 지식 기반)'}
+   - "모든 슬라이드의 데이터 정확성 확인해줘" → 전체 검증
+   - "슬라이드 4의 통계가 맞는지 확인해줘" → 특정 슬라이드 검증
+   - "틀린 내용 찾아서 수정해줘" → 오류 찾기 및 자동 수정
+   ${
+     state.webSearchEnabled
+       ? '- 웹검색을 통해 최신 정보로 업데이트하고 출처를 명시합니다'
+       : '- 일반 지식을 바탕으로 명백한 오류를 수정합니다'
+   }
+
+3. **완료**
+   - "완료" → 최종 완료
 
 ## 응답 형식
 수정 작업:
@@ -616,7 +650,17 @@ ${options?.bulkCreation ? '**In BULK MODE, generate multiple create_slide action
 {
   "action": "modify_slide",
   "slideIndex": 2,
-  "modifications": { "title": "...", ... }
+  "modifications": { "title": "...", "bullets": [...], ... }
+}
+\`\`\`
+
+검증 작업 (웹검색 결과나 일반 지식 기반):
+\`\`\`json
+{
+  "action": "verify_and_correct",
+  "slideIndex": 2,
+  "findings": "슬라이드 2의 통계 수치가 2020년 데이터입니다. 최신 2025년 데이터로 업데이트했습니다.",
+  "modifications": { "bullets": ["업데이트된 내용..."] }
 }
 \`\`\`
 
@@ -980,6 +1024,28 @@ export async function runPresentationAgent(
           callbacks.onSlides?.(newSlides);
           callbacks.onStateUpdate?.(newState);
         }
+        break;
+      }
+
+      case 'verify_and_correct': {
+        // 슬라이드 검증 및 보정 (modify_slide와 동일하게 처리하되 findings 정보 포함)
+        const slideIndex = action.slideIndex;
+        const modifications = action.modifications;
+        const findings = action.findings; // 검증 결과 메시지
+        const newSlides = [...newState.slides];
+
+        if (newSlides[slideIndex]) {
+          newSlides[slideIndex] = {
+            ...newSlides[slideIndex],
+            ...modifications,
+          };
+          newState = { ...newState, slides: newSlides };
+          callbacks.onSlides?.(newSlides);
+          callbacks.onStateUpdate?.(newState);
+        }
+
+        // findings는 응답 메시지에 포함되어 사용자에게 전달됨
+        console.log('[ppt-agent] Verification findings:', findings);
         break;
       }
 

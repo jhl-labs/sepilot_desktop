@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useChatStore } from '@/lib/store/chat-store';
 import { runPresentationAgent, createInitialState } from '@/lib/presentation/ppt-agent';
 import type { PresentationWorkflowStep, PresentationDesignMaster } from '@/types/presentation';
@@ -17,6 +19,7 @@ import {
   LayoutList,
   FileText,
   Eye,
+  Globe,
 } from 'lucide-react';
 
 // Quick Prompt 아이템 타입
@@ -63,6 +66,11 @@ const STEP_QUICK_PROMPTS: Record<PresentationWorkflowStep, { label: string; prom
   ],
   review: [
     { label: '특정 슬라이드 수정', prompt: '3번 슬라이드 제목을 바꿔주세요.' },
+    {
+      label: '내용 검증',
+      prompt: '모든 슬라이드의 데이터 정확성을 확인하고 틀린 내용이 있으면 수정해주세요.',
+    },
+    { label: '오류 찾기', prompt: '틀린 내용이나 오래된 정보를 찾아서 수정해주세요.' },
     { label: '색상 변경', prompt: '전체적으로 색상을 더 밝게 해주세요.' },
     { label: '완료', prompt: '완료! 이제 내보내기 할게요.' },
   ],
@@ -283,12 +291,37 @@ export function PresentationChat() {
               </p>
             </div>
           </div>
-          {presentationChatStreaming && (
-            <Button size="sm" variant="destructive" onClick={handleStop}>
-              <StopCircle className="h-4 w-4 mr-1" />
-              중지
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            {/* Web Search Toggle */}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="web-search-toggle"
+                checked={presentationAgentState?.webSearchEnabled || false}
+                onCheckedChange={(checked) => {
+                  if (presentationAgentState) {
+                    setPresentationAgentState({
+                      ...presentationAgentState,
+                      webSearchEnabled: checked,
+                    });
+                  }
+                }}
+                disabled={presentationChatStreaming}
+              />
+              <Label
+                htmlFor="web-search-toggle"
+                className="text-xs cursor-pointer flex items-center gap-1"
+              >
+                <Globe className="h-3 w-3" />
+                웹검색
+              </Label>
+            </div>
+            {presentationChatStreaming && (
+              <Button size="sm" variant="destructive" onClick={handleStop}>
+                <StopCircle className="h-4 w-4 mr-1" />
+                중지
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Progress Steps */}
