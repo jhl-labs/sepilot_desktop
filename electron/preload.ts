@@ -272,6 +272,8 @@ const electronAPI = {
     getAbsolutePath: (filePath: string) => ipcRenderer.invoke('fs:get-absolute-path', filePath),
     getRelativePath: (from: string, to: string) =>
       ipcRenderer.invoke('fs:get-relative-path', from, to),
+    resolvePath: (basePath: string, relativePath: string) =>
+      ipcRenderer.invoke('fs:resolve-path', basePath, relativePath),
     showInFolder: (itemPath: string) => ipcRenderer.invoke('fs:show-in-folder', itemPath),
     duplicate: (sourcePath: string) => ipcRenderer.invoke('fs:duplicate', sourcePath),
     searchFiles: (query: string, dirPath: string, options?: any) =>

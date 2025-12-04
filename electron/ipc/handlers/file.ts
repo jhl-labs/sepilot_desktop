@@ -616,6 +616,28 @@ export function registerFileHandlers() {
     }
   });
 
+  // 상대 경로를 절대 경로로 변환 (Markdown 이미지 렌더링용)
+  ipcMain.handle('fs:resolve-path', async (_event, basePath: string, relativePath: string) => {
+    try {
+      // basePath가 파일이면 디렉토리로 변환
+      const baseDir = path.dirname(basePath);
+      const absolutePath = path.resolve(baseDir, relativePath);
+
+      console.log('[File] Resolved path:', { basePath, relativePath, baseDir, absolutePath });
+
+      return {
+        success: true,
+        data: absolutePath,
+      };
+    } catch (error: any) {
+      console.error('[File] Error resolving path:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to resolve path',
+      };
+    }
+  });
+
   // 시스템 탐색기에서 파일/폴더 열기
   ipcMain.handle('fs:show-in-folder', async (_event, itemPath: string) => {
     try {

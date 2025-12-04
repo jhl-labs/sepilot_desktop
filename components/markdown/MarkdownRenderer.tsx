@@ -151,20 +151,30 @@ export function MarkdownRenderer({
             return;
           }
 
-          // Path 모듈 가져오기
-          const path = (window as any).require('path');
+          console.log('[MarkdownRenderer] Loading local image:', {
+            src,
+            currentFilePath,
+          });
+
+          // 절대 경로 계산 - IPC 사용 (path-browserify는 신뢰할 수 없음)
           let absolutePath: string;
 
           if (currentFilePath) {
-            // 현재 Markdown 파일 기준으로 상대 경로 해석
-            const fileDir = path.dirname(currentFilePath);
-            absolutePath = path.resolve(fileDir, src);
-          } else {
-            // Fallback: 현재 작업 디렉토리 기준
-            absolutePath = path.resolve(src);
-          }
+            // IPC로 절대 경로 계산
+            const resolveResult = await window.electronAPI.fs.resolvePath(currentFilePath, src);
 
-          console.log('[MarkdownRenderer] Loading local image:', { src, absolutePath });
+            if (resolveResult.success && resolveResult.data) {
+              absolutePath = resolveResult.data;
+              console.log('[MarkdownRenderer] Resolved path from IPC:', absolutePath);
+            } else {
+              console.error('[MarkdownRenderer] Failed to resolve path:', resolveResult.error);
+              setImageSrc(src); // Fallback
+              return;
+            }
+          } else {
+            // currentFilePath가 없으면 그냥 src를 절대 경로로 간주
+            absolutePath = src;
+          }
 
           // IPC를 통해 이미지를 base64로 읽기
           const result = await window.electronAPI.fs.readImageAsBase64(absolutePath);
@@ -172,6 +182,7 @@ export function MarkdownRenderer({
           if (result.success && result.data) {
             // 이미 data URL 형식으로 반환됨
             setImageSrc(result.data);
+            console.log('[MarkdownRenderer] Image loaded successfully');
           } else {
             console.error('[MarkdownRenderer] Failed to load image:', result.error);
             setImageSrc(src); // Fallback to original src

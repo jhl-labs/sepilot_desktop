@@ -504,6 +504,7 @@ interface FileSystemAPI {
   move: (sourcePath: string, destPath: string) => Promise<IPCResponse>;
   getAbsolutePath: (filePath: string) => Promise<IPCResponse<string>>;
   getRelativePath: (from: string, to: string) => Promise<IPCResponse<string>>;
+  resolvePath: (basePath: string, relativePath: string) => Promise<IPCResponse<string>>;
   showInFolder: (itemPath: string) => Promise<IPCResponse>;
   duplicate: (sourcePath: string) => Promise<IPCResponse<string>>;
   searchFiles: (

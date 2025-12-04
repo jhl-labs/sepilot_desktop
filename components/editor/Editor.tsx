@@ -854,11 +854,35 @@ export function CodeEditor() {
             const { filename } = result.data;
             console.log('[Editor] Image saved:', filename);
 
-            // 상대 경로 계산 및 정규화 (forward slash 사용)
+            // 상대 경로 계산 (IPC 사용 - path-browserify는 신뢰할 수 없음)
             const fileDir = path.dirname(currentFile.path);
-            let relativePath = path.relative(fileDir, path.join(workingDirectory, filename));
-            // Windows 백슬래시를 forward slash로 변환 (Markdown 표준)
-            relativePath = relativePath.replace(/\\/g, '/');
+            const imagePath = path.join(workingDirectory, filename);
+
+            console.log('[Editor] Path info:', {
+              currentFile: currentFile.path,
+              fileDir,
+              imagePath,
+              workingDirectory,
+            });
+
+            // IPC로 상대 경로 계산 (서버측 path 모듈 사용)
+            const relativePathResult = await window.electronAPI.fs.getRelativePath(
+              fileDir,
+              imagePath
+            );
+
+            let relativePath: string;
+            if (relativePathResult.success && relativePathResult.data) {
+              relativePath = relativePathResult.data;
+              // Windows 백슬래시를 forward slash로 변환 (Markdown 표준)
+              relativePath = relativePath.replace(/\\/g, '/');
+              console.log('[Editor] Relative path from IPC:', relativePath);
+            } else {
+              // Fallback: 같은 디렉토리에 있다고 가정
+              relativePath = `./${filename}`;
+              console.warn('[Editor] Failed to get relative path, using fallback:', relativePath);
+            }
+
             const imageMarkdown = `![${filename}](${relativePath})`;
 
             const position = editor.getPosition();
