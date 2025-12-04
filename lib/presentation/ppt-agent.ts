@@ -17,6 +17,11 @@ export interface PresentationAgentCallbacks {
   signal?: AbortSignal;
 }
 
+export interface PresentationAgentOptions {
+  /** 전체 슬라이드를 한번에 자동 생성할지 여부 */
+  bulkCreation?: boolean;
+}
+
 type ChatMessage = Message;
 
 /**
@@ -25,7 +30,8 @@ type ChatMessage = Message;
 function getStepPrompt(
   step: PresentationWorkflowStep,
   state: PresentationAgentState,
-  userLanguage: 'ko' | 'en' | 'ja' | 'zh'
+  userLanguage: 'ko' | 'en' | 'ja' | 'zh',
+  options?: PresentationAgentOptions
 ): string {
   const lang = userLanguage;
 
@@ -374,10 +380,14 @@ ${state.structure?.outline.map((s) => `${s.index + 1}. ${s.title} (${s.layout})`
 - 분위기: ${state.designMaster?.vibe}
 
 ## 현재 목표
-**${state.currentSlideIndex !== undefined ? `슬라이드 ${state.currentSlideIndex + 1}` : '다음 슬라이드'}**를 작성하세요.
+${
+  options?.bulkCreation
+    ? `**모든 슬라이드를 한번에 자동 생성**하세요.`
+    : `**${state.currentSlideIndex !== undefined ? `슬라이드 ${state.currentSlideIndex + 1}` : '다음 슬라이드'}**를 작성하세요.`
+}
 
 ${
-  state.currentSlideIndex !== undefined && state.structure
+  state.currentSlideIndex !== undefined && state.structure && !options?.bulkCreation
     ? `
 현재 슬라이드 정보:
 - 제목: ${state.structure.outline[state.currentSlideIndex]?.title}
@@ -387,17 +397,32 @@ ${
     : ''
 }
 
-## 작성 방식 (자동 생성 모드)
-**IMPORTANT**: 사용자가 명시적으로 요청하지 않는 한, 구조에 정의된 정보를 바탕으로 **자동으로 슬라이드를 생성**하세요.
+## 작성 방식
+${
+  options?.bulkCreation
+    ? `**BULK CREATION MODE**: 사용자가 "전체 자동 생성" 또는 "모두 만들어줘"라고 요청했습니다.
 
-1. **첫 번째 슬라이드 또는 사용자가 "다음" 요청 시**: 즉시 슬라이드를 생성하세요
+1. **즉시 모든 슬라이드를 순서대로 생성**하세요
+   - 각 슬라이드를 create_slide 액션으로 생성
+   - 사용자 확인 없이 연속으로 생성
+   - 구조의 제목, 레이아웃, keyPoints를 활용
+   - 주제와 청중에 맞는 내용을 자동 작성
+   - 적절한 이미지 프롬프트 생성
+
+2. 모든 슬라이드 생성 후 complete_all_slides 액션 전송
+
+3. 간단한 완료 메시지와 함께 결과 전달`
+    : `**INTERACTIVE MODE**: 사용자와 대화하며 한 장씩 생성합니다.
+
+1. **현재 슬라이드 생성**: 즉시 슬라이드를 생성하세요
    - 구조의 제목, 레이아웃, keyPoints를 활용
    - 주제와 청중에 맞는 내용을 자동 작성
    - 적절한 이미지 프롬프트 생성
 
 2. **사용자가 구체적 내용 제공 시**: 해당 내용으로 슬라이드 생성
 
-3. 생성한 슬라이드를 간단히 설명하고 "다음 슬라이드를 만들까요?" 물어보세요
+3. 생성한 슬라이드를 간단히 설명하고 "다음 슬라이드를 만들까요?" 물어보세요`
+}
 
 ## 응답 형식
 슬라이드를 생성하면:
@@ -422,7 +447,7 @@ ${
 }
 \`\`\`
 
-모든 슬라이드가 완성되면:
+${options?.bulkCreation ? '**BULK MODE에서는 여러 개의 create_slide 액션을 연속으로 생성**하세요.\n\n' : ''}모든 슬라이드가 완성되면:
 \`\`\`json
 { "action": "complete_all_slides" }
 \`\`\``,
@@ -437,10 +462,14 @@ Design Master:
 - Vibe: ${state.designMaster?.vibe}
 
 ## Current Goal
-Create **${state.currentSlideIndex !== undefined ? `Slide ${state.currentSlideIndex + 1}` : 'next slide'}**.
+${
+  options?.bulkCreation
+    ? `**Generate ALL slides automatically at once**.`
+    : `Create **${state.currentSlideIndex !== undefined ? `Slide ${state.currentSlideIndex + 1}` : 'next slide'}**.`
+}
 
 ${
-  state.currentSlideIndex !== undefined && state.structure
+  state.currentSlideIndex !== undefined && state.structure && !options?.bulkCreation
     ? `
 Current slide info:
 - Title: ${state.structure.outline[state.currentSlideIndex]?.title}
@@ -450,17 +479,32 @@ Current slide info:
     : ''
 }
 
-## Creation Process (Auto-generation Mode)
-**IMPORTANT**: Unless the user explicitly requests otherwise, **automatically generate slides** based on the structure information.
+## Creation Process
+${
+  options?.bulkCreation
+    ? `**BULK CREATION MODE**: User requested "generate all" or "create all slides".
 
-1. **For first slide or when user requests "next"**: Generate immediately
-   - Use the title, layout, and keyPoints from structure
+1. **Immediately generate all slides in sequence**
+   - Create each slide with create_slide action
+   - No user confirmation needed between slides
+   - Use title, layout, and keyPoints from structure
    - Write content appropriate for topic and audience
    - Create suitable image prompts
 
-2. **When user provides specific content**: Generate slide with that content
+2. Send complete_all_slides action after all slides
 
-3. Briefly explain the created slide and ask "Shall I create the next slide?"
+3. Provide brief completion message with results`
+    : `**INTERACTIVE MODE**: Create one slide at a time with user.
+
+1. **Generate current slide**: Create immediately
+   - Use title, layout, and keyPoints from structure
+   - Write content appropriate for topic and audience
+   - Create suitable image prompts
+
+2. **When user provides specific content**: Use that content
+
+3. Briefly explain the created slide and ask "Shall I create the next slide?"`
+}
 
 ## Response Format
 When creating a slide:
@@ -485,7 +529,7 @@ When creating a slide:
 }
 \`\`\`
 
-When all slides are done:
+${options?.bulkCreation ? '**In BULK MODE, generate multiple create_slide actions consecutively**.\n\n' : ''}When all slides are done:
 \`\`\`json
 { "action": "complete_all_slides" }
 \`\`\``,
@@ -699,13 +743,14 @@ export function createInitialState(): PresentationAgentState {
 export async function runPresentationAgent(
   messages: ChatMessage[],
   currentState: PresentationAgentState,
-  callbacks: PresentationAgentCallbacks = {}
+  callbacks: PresentationAgentCallbacks = {},
+  options: PresentationAgentOptions = {}
 ): Promise<{ response: string; state: PresentationAgentState }> {
   const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user');
   const userLanguage = lastUserMessage ? detectLanguage(lastUserMessage.content) : 'ko';
 
   // 현재 단계에 맞는 시스템 프롬프트 생성
-  const systemPrompt = getStepPrompt(currentState.currentStep, currentState, userLanguage);
+  const systemPrompt = getStepPrompt(currentState.currentStep, currentState, userLanguage, options);
 
   const chatHistory: ChatMessage[] = [
     {
@@ -768,6 +813,7 @@ export async function runPresentationAgent(
           brief: action.brief as PresentationBrief,
           currentStep: 'design-master',
         };
+        callbacks.onStateUpdate?.(newState);
         break;
 
       case 'complete_design_master':
@@ -776,6 +822,7 @@ export async function runPresentationAgent(
           designMaster: action.designMaster as PresentationDesignMaster,
           currentStep: 'structure',
         };
+        callbacks.onStateUpdate?.(newState);
         break;
 
       case 'complete_structure':
@@ -785,6 +832,7 @@ export async function runPresentationAgent(
           currentStep: 'slide-creation',
           currentSlideIndex: 0,
         };
+        callbacks.onStateUpdate?.(newState);
         break;
 
       case 'create_slide': {
@@ -837,6 +885,7 @@ export async function runPresentationAgent(
           filteredSlides.length
         );
         callbacks.onSlides?.(filteredSlides);
+        callbacks.onStateUpdate?.(newState);
         break;
       }
 
@@ -845,6 +894,7 @@ export async function runPresentationAgent(
           ...newState,
           currentStep: 'review',
         };
+        callbacks.onStateUpdate?.(newState);
         break;
 
       case 'modify_slide': {
@@ -859,6 +909,7 @@ export async function runPresentationAgent(
           };
           newState = { ...newState, slides: newSlides };
           callbacks.onSlides?.(newSlides);
+          callbacks.onStateUpdate?.(newState);
         }
         break;
       }
@@ -868,6 +919,7 @@ export async function runPresentationAgent(
           ...newState,
           currentStep: 'complete',
         };
+        callbacks.onStateUpdate?.(newState);
         break;
     }
   }

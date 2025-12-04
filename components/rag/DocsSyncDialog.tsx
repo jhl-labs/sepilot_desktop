@@ -31,9 +31,10 @@ import { GitHubSyncConfig, TeamDocsConfig } from '@/types';
 interface DocsSyncDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onRefresh?: () => Promise<void>;
 }
 
-export function DocsSyncDialog({ open, onOpenChange }: DocsSyncDialogProps) {
+export function DocsSyncDialog({ open, onOpenChange, onRefresh: _onRefresh }: DocsSyncDialogProps) {
   // Personal Docs Repo state
   const [_personalRepo, setPersonalRepo] = useState<GitHubSyncConfig | null>(null);
   const [personalForm, setPersonalForm] = useState({

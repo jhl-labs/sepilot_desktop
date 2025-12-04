@@ -143,7 +143,7 @@ export function PresentationChat() {
   const currentStep = presentationAgentState?.currentStep || 'briefing';
   const quickPrompts = STEP_QUICK_PROMPTS[currentStep] || [];
 
-  const handleSend = async (message?: string) => {
+  const handleSend = async (message?: string, bulkCreation: boolean = false) => {
     const userMessage = message ?? input;
     if (!userMessage.trim() || presentationChatStreaming || !presentationAgentState) {
       return;
@@ -197,6 +197,9 @@ export function PresentationChat() {
               setActivePresentationSlide(lastSlide.id);
             }
           },
+        },
+        {
+          bulkCreation,
         }
       );
 
@@ -208,10 +211,8 @@ export function PresentationChat() {
         }
       }
 
-      // 상태 업데이트
-      setPresentationAgentState(state);
-
-      // onSlides 콜백이 호출되지 않았다면 state의 slides로 동기화
+      // onStateUpdate 콜백에서 이미 상태를 업데이트했으므로 중복 제거
+      // 단, onSlides 콜백이 호출되지 않았다면 최종 동기화
       if (state.slides.length > 0 && presentationSlides.length !== state.slides.length) {
         setPresentationSlides(state.slides);
         if (state.slides.length > 0 && !activePresentationSlideId) {
@@ -301,7 +302,12 @@ export function PresentationChat() {
                 size="sm"
                 variant="outline"
                 className="text-xs h-auto py-1.5"
-                onClick={() => handleSend(quick.prompt)}
+                onClick={() => {
+                  // "전부 자동 생성" 또는 "자동으로 생성" 버튼일 때 bulkCreation 모드 활성화
+                  const isBulkCreation =
+                    quick.label === '전부 자동 생성' || quick.label === '자동으로 생성';
+                  handleSend(quick.prompt, isBulkCreation);
+                }}
                 disabled={presentationChatStreaming}
               >
                 {quick.label}
