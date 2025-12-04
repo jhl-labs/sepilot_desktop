@@ -10,8 +10,12 @@ import { generateImagesForSlides } from '@/lib/presentation/image-generation';
 import { Download, FileDown, FileType2 } from 'lucide-react';
 
 export function PresentationStudio() {
-  const { presentationSlides, presentationExportState, setPresentationExportState } =
-    useChatStore();
+  const {
+    presentationSlides,
+    presentationAgentState,
+    presentationExportState,
+    setPresentationExportState,
+  } = useChatStore();
   const [exporting, setExporting] = useState(false);
   const [lastFormat, setLastFormat] = useState<PresentationExportFormat | null>(null);
 
@@ -178,6 +182,42 @@ export function PresentationStudio() {
               폴더 열기
             </Button>
           )}
+        </div>
+      )}
+
+      {/* Current Status */}
+      {presentationAgentState && presentationSlides.length === 0 && (
+        <div className="mx-4 rounded-lg border border-blue-500/40 bg-blue-500/5 p-4">
+          <p className="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">
+            현재 진행 상황
+          </p>
+          <div className="space-y-1 text-xs text-muted-foreground">
+            {presentationAgentState.brief && (
+              <p>✅ 브리핑 완료: {presentationAgentState.brief.topic}</p>
+            )}
+            {presentationAgentState.designMaster && (
+              <p>
+                ✅ 디자인 완료:{' '}
+                {presentationAgentState.designMaster.name ||
+                  presentationAgentState.designMaster.vibe}
+              </p>
+            )}
+            {presentationAgentState.structure && (
+              <p>✅ 구조 완료: {presentationAgentState.structure.totalSlides}장</p>
+            )}
+            {presentationAgentState.currentStep === 'slide-creation' && (
+              <p className="text-yellow-600 dark:text-yellow-400">
+                ⏳ 슬라이드 작성 중... ({presentationAgentState.completedSlideIndices.length} /{' '}
+                {presentationAgentState.structure?.totalSlides || 0})
+              </p>
+            )}
+            {presentationSlides.length === 0 &&
+              presentationAgentState.currentStep === 'slide-creation' && (
+                <p className="mt-2 text-blue-600 dark:text-blue-400">
+                  💡 좌측에서 &quot;자동으로 생성&quot; 버튼을 클릭하면 슬라이드가 생성됩니다
+                </p>
+              )}
+          </div>
         </div>
       )}
 
