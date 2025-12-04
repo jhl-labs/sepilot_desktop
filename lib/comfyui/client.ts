@@ -290,8 +290,8 @@ export class ComfyUIClient {
 
       const timeout = setTimeout(() => {
         ws.close();
-        reject(new Error('Image generation timeout (60s)'));
-      }, 60000);
+        reject(new Error('Image generation timeout (10m)'));
+      }, 600000); // 10분 = 600초 = 600000ms
 
       ws.onmessage = async (event) => {
         const data = JSON.parse(event.data);
