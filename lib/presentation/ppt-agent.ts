@@ -137,6 +137,8 @@ If info is insufficient, continue the conversation.`,
 ## 제안 방식
 사용자의 주제와 청중을 고려해 **3가지 디자인 옵션**을 제안하고, 사용자가 선택하거나 커스터마이징하게 하세요.
 
+**IMPORTANT**: 옵션을 제안할 때 반드시 아래 JSON 형식으로 옵션들을 함께 제공하세요.
+
 예:
 "${state.brief?.topic}"에 어울리는 디자인을 3가지 제안드립니다:
 
@@ -157,7 +159,35 @@ If info is insufficient, continue the conversation.`,
 
 어떤 스타일이 마음에 드시나요? 또는 다른 아이디어가 있으신가요?
 
+\`\`\`json
+{
+  "action": "propose_design_options",
+  "options": [
+    {
+      "name": "Dark Tech",
+      "vibe": "modern tech professional",
+      "palette": { "primary": "#0ea5e9", "accent": "#7c3aed", "background": "#0f172a", "text": "#ffffff" },
+      "fonts": { "title": "Sora Bold", "body": "Inter Regular", "titleSize": "large" }
+    },
+    {
+      "name": "Minimal White",
+      "vibe": "clean professional minimal",
+      "palette": { "primary": "#000000", "accent": "#3b82f6", "background": "#ffffff", "text": "#000000" },
+      "fonts": { "title": "Helvetica Bold", "body": "Roboto Regular", "titleSize": "medium" }
+    },
+    {
+      "name": "Warm Organic",
+      "vibe": "warm friendly approachable",
+      "palette": { "primary": "#ea580c", "accent": "#78350f", "background": "#fef3c7", "text": "#78350f" },
+      "fonts": { "title": "Playfair Display Bold", "body": "Source Sans Pro", "titleSize": "large" }
+    }
+  ]
+}
+\`\`\`
+
 ## 응답 형식
+옵션 제안 시: 위의 propose_design_options 액션 사용
+
 사용자가 선택하거나 승인하면:
 
 \`\`\`json
@@ -210,6 +240,8 @@ Work with the user to create a **unified design system**:
 ## Suggestion Approach
 Propose **3 design options** based on topic and audience, let user choose or customize.
 
+**IMPORTANT**: When proposing options, provide them in JSON format as shown below.
+
 Example:
 "Here are 3 design suggestions for '${state.brief?.topic}':
 
@@ -230,7 +262,35 @@ Example:
 
 Which style do you prefer? Or do you have other ideas?"
 
+\`\`\`json
+{
+  "action": "propose_design_options",
+  "options": [
+    {
+      "name": "Dark Tech",
+      "vibe": "modern tech professional",
+      "palette": { "primary": "#0ea5e9", "accent": "#7c3aed", "background": "#0f172a", "text": "#ffffff" },
+      "fonts": { "title": "Sora Bold", "body": "Inter Regular", "titleSize": "large" }
+    },
+    {
+      "name": "Minimal White",
+      "vibe": "clean professional minimal",
+      "palette": { "primary": "#000000", "accent": "#3b82f6", "background": "#ffffff", "text": "#000000" },
+      "fonts": { "title": "Helvetica Bold", "body": "Roboto Regular", "titleSize": "medium" }
+    },
+    {
+      "name": "Warm Organic",
+      "vibe": "warm friendly approachable",
+      "palette": { "primary": "#ea580c", "accent": "#78350f", "background": "#fef3c7", "text": "#78350f" },
+      "fonts": { "title": "Playfair Display Bold", "body": "Source Sans Pro", "titleSize": "large" }
+    }
+  ]
+}
+\`\`\`
+
 ## Response Format
+When proposing options: Use propose_design_options action above
+
 When user chooses or approves:
 
 \`\`\`json
@@ -812,6 +872,15 @@ export async function runPresentationAgent(
           ...newState,
           brief: action.brief as PresentationBrief,
           currentStep: 'design-master',
+        };
+        callbacks.onStateUpdate?.(newState);
+        break;
+
+      case 'propose_design_options':
+        // 디자인 옵션 제안 - 상태에 저장하고 사용자 선택 대기
+        newState = {
+          ...newState,
+          designOptions: action.options as PresentationDesignMaster[],
         };
         callbacks.onStateUpdate?.(newState);
         break;

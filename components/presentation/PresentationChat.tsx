@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useChatStore } from '@/lib/store/chat-store';
 import { runPresentationAgent, createInitialState } from '@/lib/presentation/ppt-agent';
-import type { PresentationWorkflowStep } from '@/types/presentation';
+import type { PresentationWorkflowStep, PresentationDesignMaster } from '@/types/presentation';
 import { generateId } from '@/lib/utils';
 import {
   Loader2,
@@ -18,6 +18,11 @@ import {
   FileText,
   Eye,
 } from 'lucide-react';
+
+// Quick Prompt 아이템 타입
+type QuickPromptItem =
+  | { label: string; prompt: string }
+  | { label: string; prompt: string; designOption: PresentationDesignMaster };
 
 // 단계별 Quick Prompts
 const STEP_QUICK_PROMPTS: Record<PresentationWorkflowStep, { label: string; prompt: string }[]> = {
@@ -141,7 +146,24 @@ export function PresentationChat() {
   }, [presentationAgentState, setPresentationAgentState]);
 
   const currentStep = presentationAgentState?.currentStep || 'briefing';
-  const quickPrompts = STEP_QUICK_PROMPTS[currentStep] || [];
+
+  // design-master 단계에서 designOptions가 있으면 동적으로 버튼 생성
+  const quickPrompts: QuickPromptItem[] =
+    currentStep === 'design-master' && presentationAgentState?.designOptions
+      ? [
+          ...presentationAgentState.designOptions.map(
+            (option, idx): QuickPromptItem => ({
+              label: option.name || `옵션 ${idx + 1}`,
+              prompt: `${option.name || `옵션 ${idx + 1}`}으로 선택하겠습니다.`,
+              designOption: option, // 선택된 디자인 정보 저장
+            })
+          ),
+          {
+            label: '커스텀 요청',
+            prompt: '조금 다르게 해볼게요. 배경은 화이트로, 강조색은 그린으로 해주세요.',
+          },
+        ]
+      : STEP_QUICK_PROMPTS[currentStep] || [];
 
   const handleSend = async (message?: string, bulkCreation: boolean = false) => {
     const userMessage = message ?? input;
@@ -296,23 +318,42 @@ export function PresentationChat() {
         {/* Quick Prompts */}
         {quickPrompts.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {quickPrompts.map((quick) => (
-              <Button
-                key={quick.label}
-                size="sm"
-                variant="outline"
-                className="text-xs h-auto py-1.5"
-                onClick={() => {
-                  // "전부 자동 생성" 또는 "자동으로 생성" 버튼일 때 bulkCreation 모드 활성화
-                  const isBulkCreation =
-                    quick.label === '전부 자동 생성' || quick.label === '자동으로 생성';
-                  handleSend(quick.prompt, isBulkCreation);
-                }}
-                disabled={presentationChatStreaming}
-              >
-                {quick.label}
-              </Button>
-            ))}
+            {quickPrompts.map((quick) => {
+              const hasDesignOption = 'designOption' in quick && quick.designOption;
+              return (
+                <Button
+                  key={quick.label}
+                  size="sm"
+                  variant="outline"
+                  className={`text-xs h-auto ${hasDesignOption ? 'py-2 px-3' : 'py-1.5'}`}
+                  onClick={() => {
+                    // "전부 자동 생성" 또는 "자동으로 생성" 버튼일 때 bulkCreation 모드 활성화
+                    const isBulkCreation =
+                      quick.label === '전부 자동 생성' || quick.label === '자동으로 생성';
+                    handleSend(quick.prompt, isBulkCreation);
+                  }}
+                  disabled={presentationChatStreaming}
+                >
+                  {hasDesignOption ? (
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-0.5">
+                        <div
+                          className="h-3 w-3 rounded-sm"
+                          style={{ backgroundColor: quick.designOption.palette.primary }}
+                        />
+                        <div
+                          className="h-3 w-3 rounded-sm"
+                          style={{ backgroundColor: quick.designOption.palette.accent }}
+                        />
+                      </div>
+                      <span>{quick.label}</span>
+                    </div>
+                  ) : (
+                    quick.label
+                  )}
+                </Button>
+              );
+            })}
           </div>
         )}
       </div>

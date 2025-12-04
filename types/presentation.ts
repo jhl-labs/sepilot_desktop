@@ -178,6 +178,7 @@ export interface PresentationAgentState {
   // 각 단계별 데이터
   brief?: PresentationBrief;
   designMaster?: PresentationDesignMaster;
+  designOptions?: PresentationDesignMaster[]; // AI가 제안한 디자인 옵션들
   structure?: PresentationStructure;
 
   // 슬라이드 작성 진행 상황
