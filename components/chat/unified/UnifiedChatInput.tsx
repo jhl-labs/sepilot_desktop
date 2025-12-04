@@ -282,30 +282,40 @@ export function UnifiedChatInput({
   // Handle Quick Input message (auto-send)
   useEffect(() => {
     const handleAutoSendMessage = async (e: Event) => {
-      const customEvent = e as CustomEvent<{
-        message: string;
-        systemMessage?: string;
-      }>;
-      const { message, systemMessage } = customEvent.detail;
+      console.warn('[UnifiedChatInput] Received sepilot:auto-send-message event');
+      const customEvent = e as CustomEvent<{ userMessage: string }>;
+      const { userMessage } = customEvent.detail;
+      console.warn('[UnifiedChatInput] userMessage:', userMessage);
 
-      if (message.trim()) {
-        setInput(message);
-        // Store system message in sessionStorage for streaming hook to pick up
-        if (systemMessage) {
-          sessionStorage.setItem('sepilot_quick_system_message', systemMessage);
-        }
-        // Auto-send
+      if (userMessage && userMessage.trim()) {
+        console.warn('[UnifiedChatInput] Setting input and sending message');
+        // Set input and immediately send
+        setInput(userMessage);
+
+        // Wait for input to be set, then trigger send
         setTimeout(() => {
-          handleSend();
+          console.warn('[UnifiedChatInput] Calling onSendMessage with:', userMessage);
+          // Directly call the send handler with the message
+          if (onSendMessage) {
+            onSendMessage(userMessage, selectedImages).catch((error) => {
+              console.error('[UnifiedChatInput] Auto-send failed:', error);
+            });
+          } else {
+            console.warn('[UnifiedChatInput] onSendMessage is not defined!');
+          }
         }, 100);
+      } else {
+        console.warn('[UnifiedChatInput] userMessage is empty or invalid');
       }
     };
 
+    console.warn('[UnifiedChatInput] Registering sepilot:auto-send-message listener');
     window.addEventListener('sepilot:auto-send-message', handleAutoSendMessage);
     return () => {
+      console.warn('[UnifiedChatInput] Removing sepilot:auto-send-message listener');
       window.removeEventListener('sepilot:auto-send-message', handleAutoSendMessage);
     };
-  }, [handleSend, setInput]);
+  }, [onSendMessage, selectedImages, setInput]);
 
   // Handle file drop event from ChatArea
   useEffect(() => {

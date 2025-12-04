@@ -95,12 +95,6 @@ export function ChatContainer() {
         return;
       }
 
-      // Get system message from Quick Input (if any)
-      const systemMessage = sessionStorage.getItem('sepilot_quick_system_message');
-      if (systemMessage) {
-        sessionStorage.removeItem('sepilot_quick_system_message');
-      }
-
       // Get persona system prompt
       const personaSystemPrompt = activePersona?.systemPrompt || null;
 
@@ -109,7 +103,7 @@ export function ChatContainer() {
         conversationId: activeConversationId,
         userMessage,
         images,
-        systemMessage,
+        systemMessage: null,
         personaSystemPrompt,
       });
     },

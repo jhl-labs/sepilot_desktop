@@ -63,8 +63,30 @@ export default function QuickInputPage() {
     }
   };
 
+  const handleBlur = () => {
+    // 포커스를 잃으면 창 닫기 (Spotlight 스타일)
+    // 약간의 딜레이를 주어 클릭 이벤트가 처리될 시간을 줌
+    setTimeout(() => {
+      if (window.electronAPI?.quickInput) {
+        window.electronAPI.quickInput.close();
+      }
+    }, 200);
+  };
+
+  const handleBackgroundClick = (e: React.MouseEvent) => {
+    // 배경 클릭 시 창 닫기
+    if (e.target === e.currentTarget) {
+      if (window.electronAPI?.quickInput) {
+        window.electronAPI.quickInput.close();
+      }
+    }
+  };
+
   return (
-    <div className="h-screen w-full flex items-center justify-center bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
+    <div
+      className="h-screen w-full flex items-center justify-center bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4"
+      onClick={handleBackgroundClick}
+    >
       <div className="w-full max-w-2xl">
         <form onSubmit={handleSubmit} className="w-full">
           <Input
@@ -73,6 +95,7 @@ export default function QuickInputPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
             placeholder="무엇을 도와드릴까요?"
             className="w-full text-base h-12 px-4 bg-background border-2 border-primary/20 focus:border-primary shadow-lg"
             autoComplete="off"

@@ -62,19 +62,34 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
   error?: string;
 }> {
   try {
+    console.log('[team-docs-sync] Starting sync for:', config.name, config.id);
+    console.log('[team-docs-sync] Config:', {
+      owner: config.owner,
+      repo: config.repo,
+      branch: config.branch,
+      docsPath: config.docsPath,
+    });
+
     const syncConfig = toGitHubSyncConfig(applyNetworkConfig(config));
     const client = new GitHubSyncClient(syncConfig);
 
     // GitHub에서 문서 가져오기 (docsPath 전달)
-    const result = await client.pullDocuments(config.docsPath || 'sepilot/documents');
+    const docsPath = config.docsPath || 'sepilot/documents';
+    console.log('[team-docs-sync] Pulling documents from:', docsPath);
+    const result = await client.pullDocuments(docsPath);
 
     if (!result.success) {
+      console.error('[team-docs-sync] Pull failed:', result.error);
       throw new Error(result.error || '문서 가져오기 실패');
     }
 
+    console.log('[team-docs-sync] Pulled documents:', result.documents.length);
+
     // 증분 동기화: 기존 문서와 비교하여 처리
     const existingDocs = await vectorDBService.getAllDocuments();
+    console.log('[team-docs-sync] Total existing documents:', existingDocs.length);
     const existingTeamDocs = existingDocs.filter((doc) => doc.metadata?.teamDocsId === config.id);
+    console.log('[team-docs-sync] Existing team docs for this team:', existingTeamDocs.length);
 
     // githubPath 또는 title로 매핑
     const existingDocsMap = new Map<string, any>();
@@ -84,6 +99,7 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
         existingDocsMap.set(key, doc);
       }
     }
+    console.log('[team-docs-sync] Existing docs map size:', existingDocsMap.size);
 
     const documentsToIndex: any[] = [];
     const documentsToUpdate: any[] = [];
@@ -222,6 +238,13 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
     const updatedCount = documentsToUpdate.length;
     const deletedCount = documentsToDelete.length;
 
+    console.log('[team-docs-sync] Sync summary:', {
+      added: addedCount,
+      updated: updatedCount,
+      deleted: deletedCount,
+      total: result.documents.length,
+    });
+
     const messageParts: string[] = [];
     if (addedCount > 0) messageParts.push(`추가 ${addedCount}개`);
     if (updatedCount > 0) messageParts.push(`업데이트 ${updatedCount}개`);
@@ -231,6 +254,8 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
       messageParts.length > 0
         ? `동기화 완료: ${messageParts.join(', ')}`
         : '변경 사항 없음 (모든 문서가 최신 상태)';
+
+    console.log('[team-docs-sync] Sync completed successfully:', message);
 
     return {
       success: true,
@@ -278,6 +303,7 @@ export function setupTeamDocsHandlers() {
       params: {
         teamDocsId: string;
         githubPath: string;
+        oldGithubPath?: string; // 파일명 변경 감지용
         title: string;
         content: string;
         metadata?: Record<string, any>;
@@ -304,14 +330,52 @@ export function setupTeamDocsHandlers() {
         const syncConfig = toGitHubSyncConfig(applyNetworkConfig(config));
         const client = new GitHubSyncClient(syncConfig);
 
+        // githubPath 검증 및 생성
+        let githubPath = params.githubPath;
+        if (!githubPath) {
+          const folder = params.metadata?.folderPath || config.docsPath || 'documents';
+          const filename = params.title || 'Untitled';
+          githubPath = `${folder}/${filename}.md`;
+          console.log('[team-docs-push-document] Generated githubPath:', githubPath);
+        }
+
+        console.log('[team-docs-push-document] Pushing document:', {
+          teamDocsId: params.teamDocsId,
+          title: params.title,
+          githubPath,
+          oldGithubPath: params.oldGithubPath,
+          folderPath: params.metadata?.folderPath,
+        });
+
+        // 파일명이 변경된 경우 이전 파일 삭제
+        if (params.oldGithubPath && params.oldGithubPath !== githubPath) {
+          console.log(
+            `[team-docs-push-document] File renamed: ${params.oldGithubPath} -> ${githubPath}`
+          );
+          const deleteResult = await client.deleteFile(
+            params.oldGithubPath,
+            `Delete old file ${params.oldGithubPath} (renamed to ${githubPath})`
+          );
+          if (deleteResult.success) {
+            console.log(
+              `[team-docs-push-document] Successfully deleted old file: ${params.oldGithubPath}`
+            );
+          } else {
+            console.warn(
+              `[team-docs-push-document] Failed to delete old file: ${deleteResult.error}`
+            );
+            // 삭제 실패해도 계속 진행 (파일이 이미 없을 수 있음)
+          }
+        }
+
         // 문서 Push
         const result = await client.pushDocument(
           {
-            githubPath: params.githubPath,
+            githubPath,
             title: params.title,
             content: params.content,
             metadata: params.metadata,
-            sha: params.sha,
+            sha: undefined, // 파일명이 변경된 경우 새 파일이므로 sha를 undefined로 설정
           },
           params.commitMessage
         );
@@ -325,12 +389,13 @@ export function setupTeamDocsHandlers() {
         const docToUpdate = allDocs.find(
           (doc) =>
             doc.metadata?.teamDocsId === params.teamDocsId &&
-            doc.metadata?.githubPath === params.githubPath
+            (doc.metadata?.githubPath === githubPath || doc.metadata?.title === params.title)
         );
 
         if (docToUpdate) {
           await vectorDBService.updateMetadata(docToUpdate.id, {
             ...docToUpdate.metadata,
+            githubPath, // 새로운 githubPath로 업데이트
             githubSha: result.sha,
             modifiedLocally: false,
             lastPushedAt: Date.now(),
@@ -445,7 +510,14 @@ export function setupTeamDocsHandlers() {
     try {
       // VectorDB에서 해당 Team의 문서만 가져오기
       const allDocs = await vectorDBService.getAllDocuments();
+      console.log('[team-docs-push] Total documents:', allDocs.length);
+      console.log('[team-docs-push] Looking for teamDocsId:', config.id);
+      console.log('[team-docs-push] Available teamDocsIds:', [
+        ...new Set(allDocs.map((doc) => doc.metadata?.teamDocsId).filter(Boolean)),
+      ]);
+
       const teamDocs = allDocs.filter((doc) => doc.metadata?.teamDocsId === config.id);
+      console.log('[team-docs-push] Found documents for this team:', teamDocs.length);
 
       if (teamDocs.length === 0) {
         return {
@@ -465,9 +537,20 @@ export function setupTeamDocsHandlers() {
 
       for (const doc of teamDocs) {
         try {
-          const githubPath =
-            doc.metadata?.githubPath ||
-            `${config.docsPath || 'sepilot/documents'}/${doc.metadata?.title || doc.id}.md`;
+          // githubPath 생성: metadata.githubPath 우선, 없으면 folderPath + title 조합
+          let githubPath = doc.metadata?.githubPath;
+          if (!githubPath) {
+            const folder = doc.metadata?.folderPath || config.docsPath || 'documents';
+            const filename = doc.metadata?.title || doc.id;
+            githubPath = `${folder}/${filename}.md`;
+          }
+
+          console.log('[team-docs-push] Pushing document:', {
+            id: doc.id,
+            title: doc.metadata?.title,
+            githubPath,
+            folderPath: doc.metadata?.folderPath,
+          });
 
           const result = await client.pushDocument(
             {

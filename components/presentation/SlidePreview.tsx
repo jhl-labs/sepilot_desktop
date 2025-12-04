@@ -5,7 +5,19 @@ import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { generateId } from '@/lib/utils';
 import { SlideRenderer } from './SlideRenderer';
-import { ChevronLeft, ChevronRight, LayoutTemplate, Maximize2, Minimize2 } from 'lucide-react';
+import { SlideMasterPreview } from './SlideMasterPreview';
+import { DesignOptionsPreview } from './DesignOptionsPreview';
+import {
+  ChevronLeft,
+  ChevronRight,
+  LayoutTemplate,
+  Maximize2,
+  Minimize2,
+  Edit3,
+  Check,
+  X,
+} from 'lucide-react';
+import type { PresentationSlide } from '@/types/presentation';
 
 const ACCENT_COLORS = ['#7c3aed', '#0ea5e9', '#22c55e', '#f97316', '#06b6d4', '#ef4444'];
 
@@ -15,10 +27,14 @@ export function SlidePreview() {
     activePresentationSlideId,
     setActivePresentationSlide,
     addPresentationSlide,
+    updatePresentationSlide,
+    presentationAgentState,
   } = useChatStore();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingSlide, setEditingSlide] = useState<PresentationSlide | null>(null);
   const isInternalUpdate = useRef(false);
 
   // Reset currentIndex if it's out of bounds
@@ -111,6 +127,90 @@ export function SlidePreview() {
     });
   };
 
+  const handleEditSlide = () => {
+    const slide = presentationSlides[currentIndex];
+    if (slide) {
+      setEditingSlide({ ...slide });
+      setIsEditMode(true);
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (editingSlide) {
+      updatePresentationSlide(editingSlide.id, editingSlide);
+      setIsEditMode(false);
+      setEditingSlide(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditingSlide(null);
+  };
+
+  const handleAddBullet = () => {
+    if (editingSlide) {
+      const newBullets = editingSlide.bullets ? [...editingSlide.bullets, ''] : [''];
+      setEditingSlide({ ...editingSlide, bullets: newBullets });
+    }
+  };
+
+  const handleRemoveBullet = (index: number) => {
+    if (editingSlide && editingSlide.bullets) {
+      const newBullets = editingSlide.bullets.filter((_, i) => i !== index);
+      setEditingSlide({ ...editingSlide, bullets: newBullets });
+    }
+  };
+
+  // 디자인 단계에서 옵션 미리보기 표시
+  if (
+    presentationSlides.length === 0 &&
+    presentationAgentState?.currentStep === 'design-master' &&
+    presentationAgentState?.designOptions &&
+    presentationAgentState.designOptions.length > 0
+  ) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">디자인 옵션 미리보기</p>
+            <p className="text-xs text-muted-foreground">
+              우측 상단에서 옵션을 선택하여 비교해보세요.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <DesignOptionsPreview designOptions={presentationAgentState.designOptions} />
+        </div>
+      </div>
+    );
+  }
+
+  // 구조 단계에서 디자인 마스터 미리보기 표시
+  if (
+    presentationSlides.length === 0 &&
+    presentationAgentState?.currentStep === 'structure' &&
+    presentationAgentState?.designMaster
+  ) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">디자인 템플릿 미리보기</p>
+            <p className="text-xs text-muted-foreground">
+              선택한 디자인으로 슬라이드가 생성됩니다.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <SlideMasterPreview designMaster={presentationAgentState.designMaster} />
+        </div>
+      </div>
+    );
+  }
+
   if (presentationSlides.length === 0) {
     return (
       <div className="flex h-full flex-col">
@@ -151,13 +251,36 @@ export function SlidePreview() {
             <p className="text-xs text-muted-foreground">화살표 키로 이동 · F키로 전체화면</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={toggleFullscreen}>
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
-            <Button size="sm" variant="secondary" onClick={handleAddSlide}>
-              <LayoutTemplate className="mr-2 h-4 w-4" />
-              추가
-            </Button>
+            {!isEditMode ? (
+              <>
+                <Button size="sm" variant="ghost" onClick={toggleFullscreen}>
+                  {isFullscreen ? (
+                    <Minimize2 className="h-4 w-4" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleEditSlide}>
+                  <Edit3 className="mr-2 h-4 w-4" />
+                  편집
+                </Button>
+                <Button size="sm" variant="secondary" onClick={handleAddSlide}>
+                  <LayoutTemplate className="mr-2 h-4 w-4" />
+                  추가
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                  <X className="mr-2 h-4 w-4" />
+                  취소
+                </Button>
+                <Button size="sm" variant="default" onClick={handleSaveEdit}>
+                  <Check className="mr-2 h-4 w-4" />
+                  저장
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -165,30 +288,40 @@ export function SlidePreview() {
       {/* Main Slide Display */}
       <div className="relative flex flex-1 items-center justify-center p-8">
         {/* Navigation Buttons */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
-          onClick={goToPrevious}
-          disabled={currentIndex === 0}
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Button>
+        {!isEditMode && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
+              onClick={goToPrevious}
+              disabled={currentIndex === 0}
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
+              onClick={goToNext}
+              disabled={currentIndex === presentationSlides.length - 1}
+            >
+              <ChevronRight className="h-6 w-6" />
+            </Button>
+          </>
+        )}
 
         {/* Current Slide */}
         <div className="max-w-7xl flex-1">
-          <SlideRenderer slide={currentSlide} />
+          <SlideRenderer
+            slide={isEditMode && editingSlide ? editingSlide : currentSlide}
+            isEditable={isEditMode}
+            onSlideChange={setEditingSlide}
+            onAddBullet={handleAddBullet}
+            onRemoveBullet={handleRemoveBullet}
+          />
         </div>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
-          onClick={goToNext}
-          disabled={currentIndex === presentationSlides.length - 1}
-        >
-          <ChevronRight className="h-6 w-6" />
-        </Button>
       </div>
 
       {/* Thumbnail Navigation */}

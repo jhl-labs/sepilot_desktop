@@ -1,11 +1,11 @@
 'use client';
 
+import React, { ReactNode } from 'react';
 import Markdown from 'markdown-to-jsx';
 import { CodeBlock } from './CodeBlock';
 import { MermaidDiagram } from './MermaidDiagram';
 import { PlotlyChart } from './PlotlyChart';
 import { cn } from '@/lib/utils';
-import { ReactNode } from 'react';
 
 interface MarkdownRendererProps {
   content: string;
@@ -18,6 +18,10 @@ interface MarkdownRendererProps {
     content: string;
   }>;
   onSourceClick?: (doc: { id: string; title: string; source: string; content: string }) => void;
+  /** Optional: Path to the current markdown file (for resolving relative image paths) */
+  currentFilePath?: string;
+  /** Optional: Working directory path (base path for resolving relative image paths) */
+  workingDirectory?: string;
 }
 
 // Helper function to extract text content from React children
@@ -114,9 +118,121 @@ export function MarkdownRenderer({
   content,
   className,
   isStreaming = false,
+  currentFilePath,
+  workingDirectory,
 }: MarkdownRendererProps) {
   // Create a wrapped component that includes isStreaming
   const CustomPre = (props: any) => <CustomPreComponent {...props} isStreaming={isStreaming} />;
+
+  // Custom image component for local file support
+  const CustomImage = ({ src, alt, ...props }: any) => {
+    const [imageSrc, setImageSrc] = React.useState<string>(src);
+    const [isLoading, setIsLoading] = React.useState(false);
+
+    React.useEffect(() => {
+      // 이미 URL이거나 data URI면 그대로 사용
+      if (
+        !src ||
+        typeof src !== 'string' ||
+        src.startsWith('http://') ||
+        src.startsWith('https://') ||
+        src.startsWith('data:')
+      ) {
+        setImageSrc(src);
+        return;
+      }
+
+      // 상대 경로인 경우 절대 경로로 변환하여 파일 읽기
+      const loadLocalImage = async () => {
+        try {
+          setIsLoading(true);
+
+          // Electron 환경인지 확인
+          if (typeof window === 'undefined' || !window.electronAPI) {
+            console.warn('[MarkdownRenderer] Not in Electron environment');
+            setImageSrc(src);
+            return;
+          }
+
+          console.log('[MarkdownRenderer] Loading local image:', {
+            src,
+            currentFilePath,
+            workingDirectory,
+          });
+
+          // 절대 경로 계산 - working directory 기준으로 해석
+          // 이미지 경로는 working directory 기준 상대 경로이므로,
+          // working directory를 base로 사용
+          let absolutePath: string;
+
+          const basePath = workingDirectory || currentFilePath;
+
+          if (basePath) {
+            // IPC로 절대 경로 계산
+            const resolveResult = await window.electronAPI.fs.resolvePath(basePath, src);
+
+            if (resolveResult.success && resolveResult.data) {
+              absolutePath = resolveResult.data;
+              console.log('[MarkdownRenderer] Resolved path from IPC:', {
+                basePath,
+                src,
+                absolutePath,
+              });
+            } else {
+              console.error('[MarkdownRenderer] Failed to resolve path:', resolveResult.error);
+              setImageSrc(src); // Fallback
+              return;
+            }
+          } else {
+            // basePath가 없으면 그냥 src를 절대 경로로 간주
+            absolutePath = src;
+            console.warn('[MarkdownRenderer] No base path, using src as absolute:', src);
+          }
+
+          // IPC를 통해 이미지를 base64로 읽기
+          const result = await window.electronAPI.fs.readImageAsBase64(absolutePath);
+
+          if (result.success && result.data) {
+            // 이미 data URL 형식으로 반환됨
+            setImageSrc(result.data);
+            console.log('[MarkdownRenderer] Image loaded successfully');
+          } else {
+            console.error('[MarkdownRenderer] Failed to load image:', result.error);
+            setImageSrc(src); // Fallback to original src
+          }
+        } catch (error) {
+          console.error('[MarkdownRenderer] Error loading local image:', error);
+          setImageSrc(src); // Fallback to original src
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadLocalImage();
+    }, [src, currentFilePath, workingDirectory]);
+
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-32 bg-muted rounded-lg my-4">
+          <span className="text-sm text-muted-foreground">이미지 로딩 중...</span>
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={imageSrc}
+        alt={alt || ''}
+        className="max-w-full h-auto rounded-lg my-4"
+        onError={(e) => {
+          console.error('[MarkdownRenderer] Image load error:', imageSrc);
+          // Show alt text or placeholder on error
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+        {...props}
+      />
+    );
+  };
 
   // Custom link component with URI error handling
   const CustomLink = ({ href, children, ...props }: any) => {
@@ -279,6 +395,9 @@ export function MarkdownRenderer({
               },
               code: {
                 component: CustomCode,
+              },
+              img: {
+                component: CustomImage,
               },
               a: {
                 component: CustomLink,

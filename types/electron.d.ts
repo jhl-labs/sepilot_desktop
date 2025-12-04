@@ -504,6 +504,7 @@ interface FileSystemAPI {
   move: (sourcePath: string, destPath: string) => Promise<IPCResponse>;
   getAbsolutePath: (filePath: string) => Promise<IPCResponse<string>>;
   getRelativePath: (from: string, to: string) => Promise<IPCResponse<string>>;
+  resolvePath: (basePath: string, relativePath: string) => Promise<IPCResponse<string>>;
   showInFolder: (itemPath: string) => Promise<IPCResponse>;
   duplicate: (sourcePath: string) => Promise<IPCResponse<string>>;
   searchFiles: (
@@ -511,7 +512,10 @@ interface FileSystemAPI {
     dirPath: string,
     options?: SearchOptions
   ) => Promise<IPCResponse<SearchResponse>>;
-  saveClipboardImage: (destDir: string) => Promise<IPCResponse<{ filename: string; path: string }>>;
+  saveClipboardImage: (
+    destDir: string
+  ) => Promise<IPCResponse<{ filename: string; path: string; dataUrl: string }>>;
+  readImageAsBase64: (filePath: string) => Promise<IPCResponse<string>>;
   getFileStat: (
     filePath: string
   ) => Promise<IPCResponse<{ mtime: number; size: number; isFile: boolean; isDirectory: boolean }>>;
@@ -613,6 +617,7 @@ interface TeamDocsAPI {
   pushDocument: (params: {
     teamDocsId: string;
     githubPath: string;
+    oldGithubPath?: string; // 파일명 변경 감지용
     title: string;
     content: string;
     metadata?: Record<string, any>;

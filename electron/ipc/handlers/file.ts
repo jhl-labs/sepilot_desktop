@@ -616,6 +616,43 @@ export function registerFileHandlers() {
     }
   });
 
+  // 상대 경로를 절대 경로로 변환 (Markdown 이미지 렌더링용)
+  ipcMain.handle('fs:resolve-path', async (_event, basePath: string, relativePath: string) => {
+    try {
+      // basePath가 파일인지 디렉토리인지 확인
+      let baseDir: string;
+
+      try {
+        const stats = await fs.stat(basePath);
+        if (stats.isDirectory()) {
+          // 이미 디렉토리면 그대로 사용
+          baseDir = basePath;
+        } else {
+          // 파일이면 디렉토리 추출
+          baseDir = path.dirname(basePath);
+        }
+      } catch {
+        // 파일/디렉토리가 존재하지 않으면 파일로 간주하고 dirname 사용
+        baseDir = path.dirname(basePath);
+      }
+
+      const absolutePath = path.resolve(baseDir, relativePath);
+
+      console.log('[File] Resolved path:', { basePath, relativePath, baseDir, absolutePath });
+
+      return {
+        success: true,
+        data: absolutePath,
+      };
+    } catch (error: any) {
+      console.error('[File] Error resolving path:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to resolve path',
+      };
+    }
+  });
+
   // 시스템 탐색기에서 파일/폴더 열기
   ipcMain.handle('fs:show-in-folder', async (_event, itemPath: string) => {
     try {
@@ -750,6 +787,10 @@ export function registerFileHandlers() {
       const buffer = image.toPNG();
       await fs.writeFile(destPath, buffer);
 
+      // Base64 data URL 생성 (미리보기용)
+      const base64 = buffer.toString('base64');
+      const dataUrl = `data:image/png;base64,${base64}`;
+
       console.log('[File] Clipboard image saved:', destPath);
 
       return {
@@ -757,6 +798,7 @@ export function registerFileHandlers() {
         data: {
           filename,
           path: destPath,
+          dataUrl, // 미리보기용 base64 data URL
         },
       };
     } catch (error: any) {
@@ -764,6 +806,56 @@ export function registerFileHandlers() {
       return {
         success: false,
         error: error.message || 'Failed to save clipboard image',
+      };
+    }
+  });
+
+  // 이미지 파일을 base64로 읽기 (미리보기용)
+  ipcMain.handle('fs:read-image-as-base64', async (_event, filePath: string) => {
+    try {
+      console.log('[File] Reading image as base64:', filePath);
+
+      // 파일 존재 여부 확인
+      try {
+        await fs.access(filePath);
+      } catch (accessError: any) {
+        console.error('[File] Image file does not exist:', filePath);
+        return {
+          success: false,
+          error: `Image file not found: ${filePath}`,
+          code: accessError.code || 'ENOENT',
+        };
+      }
+
+      // 바이너리로 읽기
+      const buffer = await fs.readFile(filePath);
+      const base64 = buffer.toString('base64');
+
+      // 파일 확장자로 MIME 타입 추정
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.webp': 'image/webp',
+      };
+      const mimeType = mimeTypes[ext] || 'image/png';
+
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+
+      console.log('[File] Image read successfully:', filePath, `(${buffer.length} bytes)`);
+
+      return {
+        success: true,
+        data: dataUrl,
+      };
+    } catch (error: any) {
+      console.error('[File] Error reading image:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to read image',
       };
     }
   });

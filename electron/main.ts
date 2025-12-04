@@ -372,24 +372,21 @@ async function registerShortcuts() {
           mainWindow.focus();
           logger.info('[Shortcuts] Main window shown and focused');
 
-          // Read clipboard and send as separate system/user messages
+          // Read clipboard and combine with prompt into single user message
           const { clipboard } = require('electron');
           const clipboardContent = clipboard.readText();
           logger.info(`[Shortcuts] Clipboard content length: ${clipboardContent.length}`);
 
-          // Send prompt as system message, clipboard as user message
-          const messageData = {
-            systemMessage: question.prompt,
-            userMessage: clipboardContent.trim() || '(클립보드가 비어있습니다)',
-          };
+          // Combine prompt and clipboard content into single user message
+          // Format: [Prompt]\n\n[Clipboard Content]
+          const userMessage = clipboardContent.trim()
+            ? `${question.prompt}\n\n${clipboardContent}`
+            : `${question.prompt}\n\n(클립보드가 비어있습니다)`;
 
           logger.info(
-            `[Shortcuts] Sending message with system prompt: ${question.prompt.substring(0, 50)}...`
+            `[Shortcuts] Sending combined user message: ${userMessage.substring(0, 100)}...`
           );
-          logger.info(
-            `[Shortcuts] User message (clipboard): ${messageData.userMessage.substring(0, 50)}...`
-          );
-          mainWindow.webContents.send('create-new-chat-with-message', messageData);
+          mainWindow.webContents.send('create-new-chat-with-message', userMessage);
           logger.info('[Shortcuts] Message sent successfully');
         } else {
           logger.error('[Shortcuts] Failed to create/access main window');

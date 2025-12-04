@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,11 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { DocumentSourceType } from '@/lib/documents/types';
 import { ChunkStrategy } from '@/lib/vectordb/types';
 import { fetchDocument } from '@/lib/documents/fetchers';
 import { cleanDocumentsWithLLM } from '@/lib/documents/cleaner';
+import { TeamDocsConfig } from '@/types';
 
 interface DocumentUploadDialogProps {
   open: boolean;
@@ -31,6 +32,8 @@ interface DocumentUploadDialogProps {
 export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentUploadDialogProps) {
   const [sourceType, setSourceType] = useState<DocumentSourceType>('manual');
   const [docGroup, setDocGroup] = useState<'personal' | 'team'>('personal');
+  const [selectedTeamDocsId, setSelectedTeamDocsId] = useState<string>('');
+  const [teamDocs, setTeamDocs] = useState<TeamDocsConfig[]>([]);
   const [title, setTitle] = useState('');
   const [source, setSource] = useState('');
   const [content, setContent] = useState('');
@@ -53,12 +56,71 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
   );
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Load Team Docs configs on mount
+  useEffect(() => {
+    const loadTeamDocs = async () => {
+      try {
+        if (typeof window !== 'undefined' && window.electronAPI?.config) {
+          const result = await window.electronAPI.config.load();
+          if (result.success && result.data?.teamDocs) {
+            setTeamDocs(result.data.teamDocs);
+            // Set first team docs as default if available
+            if (result.data.teamDocs.length > 0) {
+              setSelectedTeamDocsId(result.data.teamDocs[0].id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load team docs:', error);
+      }
+    };
+
+    if (open) {
+      loadTeamDocs();
+    }
+  }, [open]);
+
   const handleUpload = async () => {
     setIsUploading(true);
     setMessage(null);
 
     try {
+      // Team Docs 검증
+      if (docGroup === 'team') {
+        if (!selectedTeamDocsId) {
+          setMessage({ type: 'error', text: 'Team Docs를 선택해주세요.' });
+          setIsUploading(false);
+          return;
+        }
+
+        const selectedTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
+        if (!selectedTeam) {
+          setMessage({ type: 'error', text: '선택한 Team Docs를 찾을 수 없습니다.' });
+          setIsUploading(false);
+          return;
+        }
+      }
+
       let documentsToUpload: { content: string; metadata: Record<string, any> }[] = [];
+
+      // 기본 메타데이터 생성
+      const getBaseMetadata = () => {
+        const baseMetadata: Record<string, any> = {
+          docGroup: docGroup,
+          uploadedAt: Date.now(),
+          folderPath: folderPath.trim() || undefined,
+        };
+
+        // Team Docs인 경우 추가 정보
+        if (docGroup === 'team') {
+          const selectedTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
+          baseMetadata.teamDocsId = selectedTeamDocsId;
+          baseMetadata.teamName = selectedTeam?.name;
+          baseMetadata.source = `${selectedTeam?.owner}/${selectedTeam?.repo}`;
+        }
+
+        return baseMetadata;
+      };
 
       if (sourceType === 'manual') {
         // 직접 작성
@@ -72,11 +134,9 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
           {
             content: content.trim(),
             metadata: {
+              ...getBaseMetadata(),
               title: title.trim() || '제목 없음',
-              source: source.trim() || 'manual',
-              uploadedAt: Date.now(),
-              folderPath: folderPath.trim() || undefined,
-              docGroup: docGroup,
+              source: source.trim() || getBaseMetadata().source || 'manual',
             },
           },
         ];
@@ -98,9 +158,8 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
             content: doc.content,
             metadata: {
               ...doc.metadata,
+              ...getBaseMetadata(),
               title: title.trim() || doc.metadata.title || 'Untitled',
-              folderPath: folderPath.trim() || undefined,
-              docGroup: docGroup,
             },
           })
         );
@@ -136,9 +195,8 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
             content: doc.content,
             metadata: {
               ...doc.metadata,
+              ...getBaseMetadata(),
               title: doc.metadata.title || 'Untitled',
-              folderPath: folderPath.trim() || undefined,
-              docGroup: docGroup,
             },
           })
         );
@@ -165,6 +223,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
 
       // 입력 필드 초기화
       setDocGroup('personal');
+      setSelectedTeamDocsId('');
       setContent('');
       setTitle('');
       setSource('');
@@ -207,7 +266,14 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
             <select
               id="doc-group"
               value={docGroup}
-              onChange={(e) => setDocGroup(e.target.value as 'personal' | 'team')}
+              onChange={(e) => {
+                const newDocGroup = e.target.value as 'personal' | 'team';
+                setDocGroup(newDocGroup);
+                // Team으로 변경 시 첫 번째 Team Docs 선택
+                if (newDocGroup === 'team' && teamDocs.length > 0) {
+                  setSelectedTeamDocsId(teamDocs[0].id);
+                }
+              }}
               disabled={isUploading}
               className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
             >
@@ -220,6 +286,42 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
                 : 'Team Docs: 팀 전체가 공유하는 문서입니다.'}
             </p>
           </div>
+
+          {/* Team Docs 선택 (docGroup이 'team'일 때만 표시) */}
+          {docGroup === 'team' && (
+            <div className="space-y-2">
+              <Label htmlFor="team-docs-select">Team Docs Repository</Label>
+              {teamDocs.length > 0 ? (
+                <>
+                  <select
+                    id="team-docs-select"
+                    value={selectedTeamDocsId}
+                    onChange={(e) => setSelectedTeamDocsId(e.target.value)}
+                    disabled={isUploading}
+                    className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
+                  >
+                    {teamDocs.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name} ({team.owner}/{team.repo})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    이 문서가 속할 Team Docs Repository를 선택하세요.
+                  </p>
+                </>
+              ) : (
+                <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 p-3 text-sm text-yellow-600 dark:text-yellow-400">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>
+                      설정된 Team Docs가 없습니다. 먼저 Team Docs Repository를 설정해주세요.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Document Source Type */}
           <div className="space-y-2">
@@ -532,7 +634,10 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
             취소
           </Button>
-          <Button onClick={handleUpload} disabled={isUploading}>
+          <Button
+            onClick={handleUpload}
+            disabled={isUploading || (docGroup === 'team' && teamDocs.length === 0)}
+          >
             {isUploading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

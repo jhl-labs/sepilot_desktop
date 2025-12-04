@@ -162,6 +162,47 @@ export class GitHubSyncClient {
   }
 
   /**
+   * 파일 삭제
+   */
+  async deleteFile(path: string, message: string, sha?: string): Promise<GitHubSyncResult> {
+    try {
+      // SHA가 제공되지 않으면 먼저 파일 정보를 가져옴
+      let fileSha = sha;
+      if (!fileSha) {
+        const existingFile = await this.getFile(path);
+        if (!existingFile) {
+          return {
+            success: true,
+            message: `File ${path} does not exist`,
+          };
+        }
+        fileSha = existingFile.sha;
+      }
+
+      await this.octokit.repos.deleteFile({
+        owner: this.owner,
+        repo: this.repo,
+        path,
+        message,
+        branch: this.branch,
+        sha: fileSha,
+      });
+
+      return {
+        success: true,
+        message: `File ${path} deleted successfully`,
+      };
+    } catch (error: any) {
+      console.error(`[GitHubSync] Failed to delete file ${path}:`, error);
+      return {
+        success: false,
+        message: `Failed to delete file ${path}`,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
    * 폴더 내 모든 파일 가져오기
    */
   async listFiles(path: string): Promise<string[]> {

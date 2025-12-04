@@ -322,36 +322,70 @@ When user chooses or approves:
 - 주제: ${state.brief?.topic}
 - 슬라이드 수: ${state.brief?.slideCount || 8}장
 - 청중: ${state.brief?.audience || '일반'}
+- 목적: ${state.brief?.purpose || '정보 전달'}
 
 디자인:
 - 스타일: ${state.designMaster?.name || state.designMaster?.vibe}
+- 색상: ${state.designMaster?.palette.primary} / ${state.designMaster?.palette.accent}
 
 ## 현재 목표
-${state.brief?.slideCount || 8}장의 슬라이드 **구조(목차)**를 만들어 사용자와 확인하세요.
+${state.brief?.slideCount || 8}장의 슬라이드 **구조(목차)**를 만들어 사용자와 함께 검토하고 확정하세요.
+
+⚠️ **중요**: 우측에 디자인 템플릿이 표시되고 있습니다. 사용자는 선택한 디자인을 보면서 구조를 결정할 수 있습니다.
 
 ## 구조 제안 방식
-1. 각 슬라이드의 제목과 목적을 명확히
-2. 다양한 레이아웃 사용 (hero, title-body, two-column, timeline, grid, stats, quote 등)
-3. 논리적 흐름 (도입 → 본론 → 결론)
+각 슬라이드마다 **상세하게** 설명하세요:
 
-예:
+1. **슬라이드 번호와 제목**: 명확하고 구체적인 제목
+2. **레이아웃**: 어떤 레이아웃을 사용할지 (hero, title-body, two-column, timeline, grid, stats, quote 등)
+3. **목적**: 이 슬라이드가 전달할 핵심 메시지
+4. **담을 내용**: 어떤 내용이 들어갈지 2-3개 핵심 포인트
+5. **이유**: 왜 이 순서에 이 슬라이드가 필요한지
+
+### 제안 형식 예시:
 "${state.brief?.topic}"을 ${state.brief?.slideCount || 8}장으로 구성해봤습니다:
 
-**슬라이드 1: Opening (Hero)** 🎬
-- 제목 슬라이드
-- 강렬한 첫인상
+---
+**슬라이드 1: ${state.brief?.topic} 소개** 🎬
+- **레이아웃**: Hero (전체 화면 강조)
+- **목적**: 주제를 강렬하게 소개하고 청중의 관심 유도
+- **담을 내용**:
+  • 프레젠테이션 제목
+  • 핵심 가치 제안 (한 문장)
+  • 발표자 정보
+- **이유**: 첫인상이 중요하므로 hero 레이아웃으로 임팩트 있게 시작
 
-**슬라이드 2: 문제 정의 (Title-Body)** 📊
-- 현재 상황 / 해결할 문제
-- 핵심 데이터
+---
+**슬라이드 2: 문제 정의** 📊
+- **레이아웃**: Title-Body (제목 + 내용)
+- **목적**: 해결하려는 문제를 명확히 제시
+- **담을 내용**:
+  • 현재 상황 설명
+  • 문제의 심각성 (통계/데이터)
+  • 청중에게 미치는 영향
+- **이유**: 솔루션을 제시하기 전에 문제 인식이 필요
 
-**슬라이드 3: 솔루션 개요 (Two-Column)** 💡
-- 우리의 접근 방법
-- Before/After 비교
+---
+**슬라이드 3: 솔루션 개요** 💡
+- **레이아웃**: Two-Column (좌우 비교)
+- **목적**: 우리의 접근 방법을 간결하게 제시
+- **담을 내용**:
+  • 왼쪽: 기존 방식의 한계
+  • 오른쪽: 우리의 새로운 접근
+  • 핵심 차별점
+- **이유**: 비교를 통해 솔루션의 가치를 명확히 전달
 
-... (나머지 슬라이드)
+---
+... (나머지 슬라이드도 동일한 형식으로)
 
-이 구조가 괜찮으신가요? 수정하고 싶은 부분이 있나요?
+---
+
+이 구조가 괜찮으신가요?
+- 슬라이드 순서를 바꾸고 싶으신가요?
+- 추가하거나 제거할 슬라이드가 있나요?
+- 특정 슬라이드의 내용이나 레이아웃을 변경하고 싶으신가요?
+
+**사용자와 충분히 논의하고 합의한 후에만 구조를 확정하세요!**
 
 ## 응답 형식
 사용자가 승인하면:
@@ -373,6 +407,8 @@ ${state.brief?.slideCount || 8}장의 슬라이드 **구조(목차)**를 만들�
 사용자가 수정 요청하면 대화로 조율하세요.`,
       en: `# Step: Structure Planning
 
+⚠️ **Important**: The design template is displayed on the right side. Users can see the selected design while deciding on the structure.
+
 Briefing:
 - Topic: ${state.brief?.topic}
 - Slide count: ${state.brief?.slideCount || 8}
@@ -384,29 +420,37 @@ Design:
 ## Current Goal
 Create a **structure (outline)** for ${state.brief?.slideCount || 8} slides and confirm with user.
 
-## Structure Proposal
-1. Clear title and purpose for each slide
-2. Diverse layouts (hero, title-body, two-column, timeline, grid, stats, quote)
-3. Logical flow (intro → body → conclusion)
+## How to Propose Structure
+For each slide, explain **in detail**:
 
-Example:
-"Here's a ${state.brief?.slideCount || 8}-slide structure for '${state.brief?.topic}':
+1. **Slide Number & Title**: Clear and specific title
+2. **Layout**: Which layout to use
+3. **Purpose**: Core message this slide will deliver
+4. **Content**: 2-3 key points that will be included
+5. **Reasoning**: Why this slide is needed in this order
 
-**Slide 1: Opening (Hero)** 🎬
-- Title slide
-- Strong first impression
+**Example:**
 
-**Slide 2: Problem Definition (Title-Body)** 📊
-- Current situation / Problem to solve
-- Key data
+### Slide 3: Our Solution 💡
+- **Layout**: Two-Column (left-right comparison)
+- **Purpose**: Present our approach concisely
+- **Content**:
+  • Left: Limitations of existing methods
+  • Right: Our new approach
+  • Key differentiators
+- **Reasoning**: Clearly communicate solution value through comparison
 
-**Slide 3: Solution Overview (Two-Column)** 💡
-- Our approach
-- Before/After comparison
+---
+... (same format for remaining slides)
 
-... (remaining slides)
+---
 
-Does this structure work? Any changes needed?"
+Does this structure work for you?
+- Would you like to change the slide order?
+- Any slides to add or remove?
+- Want to modify content or layout of specific slides?
+
+**Only finalize the structure after thorough discussion and agreement with the user!**
 
 ## Response Format
 When user approves:
@@ -431,8 +475,13 @@ If user requests changes, negotiate through conversation.`,
     'slide-creation': {
       ko: `# 단계: 슬라이드 작성
 
-구조:
+## ⚠️ 필수 규칙: 승인된 구조를 정확히 따르세요
+사용자와 함께 만든 아래 구조에서 **절대로 벗어나지 마세요**:
 ${state.structure?.outline.map((s) => `${s.index + 1}. ${s.title} (${s.layout})`).join('\n')}
+
+- 위 구조에 없는 슬라이드는 **절대 생성 금지**
+- 제목, 레이아웃, 순서를 **정확히** 따르세요
+- 사용자가 명시적으로 요청하지 않으면 구조를 변경하지 마세요
 
 디자인 마스터:
 - 색상: ${state.designMaster?.palette.primary} (메인), ${state.designMaster?.palette.accent} (강조)
@@ -456,16 +505,18 @@ ${
 ${
   options?.bulkCreation
     ? `**모든 슬라이드를 한번에 자동 생성**하세요.`
-    : `**${state.currentSlideIndex !== undefined ? `슬라이드 ${state.currentSlideIndex + 1}` : '다음 슬라이드'}**를 작성하세요.`
+    : `**슬라이드 ${(state.currentSlideIndex || 0) + 1}/${state.structure?.totalSlides || 0}**를 작성하세요.`
 }
 
 ${
   state.currentSlideIndex !== undefined && state.structure && !options?.bulkCreation
     ? `
-현재 슬라이드 정보:
-- 제목: ${state.structure.outline[state.currentSlideIndex]?.title}
-- 레이아웃: ${state.structure.outline[state.currentSlideIndex]?.layout}
-- 핵심 포인트: ${state.structure.outline[state.currentSlideIndex]?.keyPoints?.join(', ') || '(미정)'}
+### 지금 만들어야 할 슬라이드 (구조 ${state.currentSlideIndex + 1}번)
+**제목**: "${state.structure.outline[state.currentSlideIndex]?.title}"
+**레이아웃**: ${state.structure.outline[state.currentSlideIndex]?.layout}
+**핵심 포인트**: ${state.structure.outline[state.currentSlideIndex]?.keyPoints?.join(', ') || '(구조에서 계획한 내용으로 작성)'}
+
+⚠️ **이 슬라이드만 만드세요. 다른 슬라이드는 생성하지 마세요!**
 `
     : ''
 }
@@ -476,6 +527,8 @@ ${
     ? `**BULK CREATION MODE**: 사용자가 "전체 자동 생성" 또는 "모두 만들어줘"라고 요청했습니다.
 
 1. **즉시 모든 슬라이드를 순서대로 생성**하세요
+   - ⚠️ **중요**: slideIndex는 0부터 시작해서 순차적으로 증가시켜야 합니다 (0, 1, 2, 3, ...)
+   - 구조의 outline 배열 순서대로 정확히 생성하세요
    - 각 슬라이드를 create_slide 액션으로 생성
    - 사용자 확인 없이 연속으로 생성
    - 구조의 제목, 레이아웃, keyPoints를 활용
@@ -487,14 +540,20 @@ ${
 3. 간단한 완료 메시지와 함께 결과 전달`
     : `**INTERACTIVE MODE**: 사용자와 대화하며 한 장씩 생성합니다.
 
-1. **현재 슬라이드 생성**: 즉시 슬라이드를 생성하세요
-   - 구조의 제목, 레이아웃, keyPoints를 활용
-   - 주제와 청중에 맞는 내용을 자동 작성
+1. **현재 슬라이드만 생성**:
+   - ⚠️ **중요**: slideIndex는 currentSlideIndex 값(${state.currentSlideIndex || 0})을 **반드시** 사용
+   - ⚠️ **중요**: 구조에서 정의한 제목 "${state.structure?.outline[state.currentSlideIndex || 0]?.title}"을 **정확히** 사용
+   - ⚠️ **중요**: 레이아웃 "${state.structure?.outline[state.currentSlideIndex || 0]?.layout}"을 **반드시** 사용
+   - 구조에서 계획한 내용을 바탕으로 슬라이드 작성
    - 적절한 이미지 프롬프트 생성
 
-2. **사용자가 구체적 내용 제공 시**: 해당 내용으로 슬라이드 생성
+2. **사용자가 구체적 내용 제공 시**:
+   - 구조의 제목과 레이아웃은 유지하고 내용만 사용자 요청대로 수정
 
-3. 생성한 슬라이드를 간단히 설명하고 "다음 슬라이드를 만들까요?" 물어보세요`
+3. **응답 형식**:
+   - 생성한 슬라이드를 간단히 설명
+   - 다음 슬라이드 정보 미리보기: "${state.structure?.outline[(state.currentSlideIndex || 0) + 1]?.title || '(마지막 슬라이드)'}"
+   - "다음 슬라이드를 만들까요?" 물어보기`
 }
 
 ## 응답 형식
@@ -526,8 +585,13 @@ ${options?.bulkCreation ? '**BULK MODE에서는 여러 개의 create_slide 액�
 \`\`\``,
       en: `# Step: Slide Creation
 
-Structure:
+## ⚠️ CRITICAL RULE: Follow the Approved Structure Exactly
+**NEVER deviate** from the structure created with the user:
 ${state.structure?.outline.map((s) => `${s.index + 1}. ${s.title} (${s.layout})`).join('\n')}
+
+- **NEVER create slides not in this structure**
+- Follow titles, layouts, and order **exactly**
+- Do not modify structure unless user explicitly requests
 
 Design Master:
 - Colors: ${state.designMaster?.palette.primary} (primary), ${state.designMaster?.palette.accent} (accent)
@@ -538,16 +602,18 @@ Design Master:
 ${
   options?.bulkCreation
     ? `**Generate ALL slides automatically at once**.`
-    : `Create **${state.currentSlideIndex !== undefined ? `Slide ${state.currentSlideIndex + 1}` : 'next slide'}**.`
+    : `Create **Slide ${(state.currentSlideIndex || 0) + 1}/${state.structure?.totalSlides || 0}**.`
 }
 
 ${
   state.currentSlideIndex !== undefined && state.structure && !options?.bulkCreation
     ? `
-Current slide info:
-- Title: ${state.structure.outline[state.currentSlideIndex]?.title}
-- Layout: ${state.structure.outline[state.currentSlideIndex]?.layout}
-- Key points: ${state.structure.outline[state.currentSlideIndex]?.keyPoints?.join(', ') || '(TBD)'}
+### Slide to Create Now (Structure #${state.currentSlideIndex + 1})
+**Title**: "${state.structure.outline[state.currentSlideIndex]?.title}"
+**Layout**: ${state.structure.outline[state.currentSlideIndex]?.layout}
+**Key Points**: ${state.structure.outline[state.currentSlideIndex]?.keyPoints?.join(', ') || '(Use planned content from structure)'}
+
+⚠️ **Create ONLY this slide. Do not create other slides!**
 `
     : ''
 }
@@ -558,6 +624,8 @@ ${
     ? `**BULK CREATION MODE**: User requested "generate all" or "create all slides".
 
 1. **Immediately generate all slides in sequence**
+   - ⚠️ **IMPORTANT**: slideIndex must start from 0 and increment sequentially (0, 1, 2, 3, ...)
+   - Create slides in exact order of structure outline array
    - Create each slide with create_slide action
    - No user confirmation needed between slides
    - Use title, layout, and keyPoints from structure
@@ -569,14 +637,20 @@ ${
 3. Provide brief completion message with results`
     : `**INTERACTIVE MODE**: Create one slide at a time with user.
 
-1. **Generate current slide**: Create immediately
-   - Use title, layout, and keyPoints from structure
-   - Write content appropriate for topic and audience
+1. **Create ONLY the current slide**:
+   - ⚠️ **CRITICAL**: slideIndex MUST be currentSlideIndex value (${state.currentSlideIndex || 0})
+   - ⚠️ **CRITICAL**: Use EXACT title from structure: "${state.structure?.outline[state.currentSlideIndex || 0]?.title}"
+   - ⚠️ **CRITICAL**: Use EXACT layout from structure: "${state.structure?.outline[state.currentSlideIndex || 0]?.layout}"
+   - Write content based on planned structure
    - Create suitable image prompts
 
-2. **When user provides specific content**: Use that content
+2. **When user provides specific content**:
+   - Keep structure title and layout, modify content only per user request
 
-3. Briefly explain the created slide and ask "Shall I create the next slide?"`
+3. **Response format**:
+   - Briefly explain the created slide
+   - Preview next slide: "${state.structure?.outline[(state.currentSlideIndex || 0) + 1]?.title || '(Last slide)'}"
+   - Ask "Shall I create the next slide?"`
 }
 
 ## Response Format
@@ -957,47 +1031,42 @@ export async function runPresentationAgent(
         };
         console.log('[ppt-agent] Generated slide with ID:', newSlide.id);
 
-        const slideIndex = action.slideIndex ?? newState.currentSlideIndex ?? 0;
+        const requestedIndex = action.slideIndex ?? newState.currentSlideIndex ?? 0;
         console.log(
-          '[ppt-agent] Inserting at index:',
-          slideIndex,
+          '[ppt-agent] Requested slide index:',
+          requestedIndex,
           'Current slides array length:',
           newState.slides.length
         );
 
-        // 배열을 복사하고 undefined를 방지하기 위해 충분한 길이 확보
-        const newSlides = [...newState.slides];
-        // 배열 길이가 slideIndex보다 작으면 빈 슬롯을 null로 채움 (undefined 방지)
-        while (newSlides.length <= slideIndex) {
-          newSlides.push(null as any);
-        }
-        newSlides[slideIndex] = newSlide;
-        // null 요소 필터링 (실제 슬라이드만 유지)
-        const filteredSlides = newSlides.filter((s) => s !== null) as PresentationSlide[];
+        // 슬라이드를 순차적으로 배열 끝에 추가 (순서 유지)
+        const newSlides = [...newState.slides, newSlide];
 
         const completed = [...newState.completedSlideIndices];
-        if (!completed.includes(slideIndex)) {
-          completed.push(slideIndex);
+        if (!completed.includes(requestedIndex)) {
+          completed.push(requestedIndex);
         }
 
         const totalSlides = newState.structure?.totalSlides || 8;
-        const nextIndex = slideIndex + 1;
+        const nextIndex = requestedIndex + 1;
 
         newState = {
           ...newState,
-          slides: filteredSlides,
+          slides: newSlides,
           completedSlideIndices: completed,
           currentSlideIndex: nextIndex < totalSlides ? nextIndex : undefined,
           currentStep: nextIndex < totalSlides ? 'slide-creation' : 'review',
         };
 
         console.log(
-          '[ppt-agent] Created slide at index',
-          slideIndex,
-          'Total slides:',
-          filteredSlides.length
+          '[ppt-agent] Created slide at array position',
+          newSlides.length - 1,
+          '(requested index:',
+          requestedIndex,
+          ') Total slides:',
+          newSlides.length
         );
-        callbacks.onSlides?.(filteredSlides);
+        callbacks.onSlides?.(newSlides);
         callbacks.onStateUpdate?.(newState);
         break;
       }
@@ -1014,6 +1083,14 @@ export async function runPresentationAgent(
         const slideIndex = action.slideIndex;
         const modifications = action.modifications;
         const newSlides = [...newState.slides];
+
+        // 인덱스 유효성 검증
+        if (slideIndex < 0 || slideIndex >= newSlides.length) {
+          console.warn(
+            `[ppt-agent] Invalid slide index ${slideIndex} for modification (total: ${newSlides.length})`
+          );
+          break;
+        }
 
         if (newSlides[slideIndex]) {
           newSlides[slideIndex] = {
@@ -1033,6 +1110,14 @@ export async function runPresentationAgent(
         const modifications = action.modifications;
         const findings = action.findings; // 검증 결과 메시지
         const newSlides = [...newState.slides];
+
+        // 인덱스 유효성 검증
+        if (slideIndex < 0 || slideIndex >= newSlides.length) {
+          console.warn(
+            `[ppt-agent] Invalid slide index ${slideIndex} for verification (total: ${newSlides.length})`
+          );
+          break;
+        }
 
         if (newSlides[slideIndex]) {
           newSlides[slideIndex] = {

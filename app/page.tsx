@@ -9,7 +9,6 @@ import { EditorWithTerminal } from '@/components/editor/EditorWithTerminal';
 import { BrowserPanel } from '@/components/browser/BrowserPanel';
 import { PresentationStudio } from '@/components/presentation/PresentationStudio';
 import { useChatStore } from '@/lib/store/chat-store';
-import { QuickInputMessageData } from '@/types';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
 
 export default function Home() {
@@ -33,32 +32,30 @@ export default function Home() {
     }
 
     const handleQuickInput = async (data: unknown) => {
-      // Support both string (legacy Quick Input) and object (Quick Question with system message)
-      let messageData: QuickInputMessageData;
+      console.warn('[Home] handleQuickInput called with data:', typeof data, data);
 
-      if (typeof data === 'string') {
-        // Legacy Quick Input: just user message
-        messageData = { userMessage: data };
-      } else if (typeof data === 'object' && data !== null && 'userMessage' in data) {
-        // Quick Question: system message + user message
-        messageData = data as QuickInputMessageData;
-      } else {
+      // Both Quick Input and Quick Question send simple strings
+      if (typeof data !== 'string') {
         console.warn('[Home] Invalid quick input data:', data);
         return;
       }
 
       try {
+        console.warn('[Home] Creating new conversation...');
         // 새 대화 생성
         const conversationId = await createConversation();
+        console.warn('[Home] New conversation created:', conversationId);
 
         // 새 대화 활성화
         await setActiveConversation(conversationId);
+        console.warn('[Home] Conversation activated');
 
         // UI가 업데이트될 시간을 주고 메시지 전송
         setTimeout(() => {
+          console.warn('[Home] Dispatching sepilot:auto-send-message event with:', data);
           window.dispatchEvent(
-            new CustomEvent('sepilot:quick-input-message', {
-              detail: messageData,
+            new CustomEvent('sepilot:auto-send-message', {
+              detail: { userMessage: data },
             })
           );
         }, 200);

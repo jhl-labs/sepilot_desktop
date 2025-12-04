@@ -23,6 +23,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { VectorDocument } from '@/lib/vectordb/types';
 import {
   Loader2,
@@ -34,6 +35,7 @@ import {
   CheckCircle2,
   ShieldCheck,
   MessageSquare,
+  AlertCircle,
 } from 'lucide-react';
 
 interface DocumentEditDialogProps {
@@ -216,20 +218,42 @@ export function DocumentEditDialog({
 
       // GitHub Push 처리
       if (pushToGitHub && document.metadata?.docGroup === 'team') {
+        // teamDocsId 검증
+        if (!document.metadata.teamDocsId) {
+          setMessage({
+            type: 'error',
+            text: 'Team Docs ID가 누락되었습니다. 이 문서는 Team Docs 동기화 대상이 아닙니다.',
+          });
+          return;
+        }
+
         setIsPushing(true);
 
         try {
+          // githubPath 생성: title이 변경되었을 수 있으므로 현재 title 기준으로 재생성
+          const newTitle = title.trim() || '제목 없음';
+          const newFolderPath = folderPath.trim();
+          let githubPath = document.metadata.githubPath;
+
+          // title이 변경되었거나 folderPath가 변경된 경우 githubPath 재생성
+          const oldTitle = document.metadata.title;
+          const oldFolderPath = document.metadata.folderPath;
+          if (newTitle !== oldTitle || newFolderPath !== oldFolderPath) {
+            githubPath = newFolderPath ? `${newFolderPath}/${newTitle}.md` : `${newTitle}.md`;
+          }
+
           const result = await window.electronAPI.teamDocs.pushDocument({
             teamDocsId: document.metadata.teamDocsId,
-            githubPath: document.metadata.githubPath,
-            title: title.trim() || '제목 없음',
+            githubPath: githubPath,
+            oldGithubPath: document.metadata.githubPath, // 파일명 변경 감지용
+            title: newTitle,
             content: content.trim(),
             metadata: {
-              folderPath: folderPath.trim() || undefined,
+              folderPath: newFolderPath || undefined,
               source: source.trim() || 'manual',
             },
             sha: document.metadata.githubSha,
-            commitMessage: `Update ${title.trim() || 'document'} from SEPilot`,
+            commitMessage: `Update ${newTitle} from SEPilot`,
           });
 
           if (!result.success) {
@@ -458,24 +482,47 @@ export function DocumentEditDialog({
                   '로컬 저장'
                 )}
               </Button>
-              <Button
-                onClick={() => handleSave(true)}
-                disabled={isSaving || isProcessing || isPushing}
-              >
-                {isPushing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Push 중...
-                  </>
-                ) : isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    저장 중...
-                  </>
-                ) : (
-                  '저장 & Push'
-                )}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="inline-block">
+                      <Button
+                        onClick={() => handleSave(true)}
+                        disabled={
+                          isSaving || isProcessing || isPushing || !document?.metadata?.teamDocsId
+                        }
+                      >
+                        {isPushing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Push 중...
+                          </>
+                        ) : isSaving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            저장 중...
+                          </>
+                        ) : (
+                          <>
+                            {!document?.metadata?.teamDocsId && (
+                              <AlertCircle className="mr-2 h-4 w-4" />
+                            )}
+                            저장 & Push
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {!document?.metadata?.teamDocsId && (
+                    <TooltipContent>
+                      <p>Team Docs ID가 없어 GitHub Push를 할 수 없습니다.</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        이 문서는 Team Docs에서 가져온 문서가 아닙니다.
+                      </p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </>
           ) : (
             /* Personal Docs는 저장만 */

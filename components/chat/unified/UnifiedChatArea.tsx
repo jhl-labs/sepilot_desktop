@@ -75,6 +75,23 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
     }
   };
 
+  // 에러 발생 여부 확인
+  const hasError = messages.some((msg) => {
+    if (msg.role === 'assistant') {
+      const content = msg.content.toLowerCase();
+      return (
+        content.includes('error:') ||
+        content.includes('오류:') ||
+        content.includes('실패:') ||
+        content.includes('failed:') ||
+        content.includes('exception:') ||
+        content.includes('cannot') ||
+        content.includes('할 수 없습니다')
+      );
+    }
+    return false;
+  });
+
   // 리포트 버튼 클릭 핸들러
   const handleReportClick = async () => {
     const enabled = await isErrorReportingEnabled();
@@ -348,8 +365,8 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
             <div className="flex justify-start">{/* AgentLogsPlugin will render here */}</div>
           )}
 
-          {/* 대화 리포트 버튼 */}
-          {messages.length > 0 && !style?.compact && (
+          {/* 대화 리포트 버튼 - 에러 발생 시에만 표시 */}
+          {messages.length > 0 && !style?.compact && hasError && (
             <div className="flex justify-center mt-6 pb-4">
               <Button
                 variant="outline"

@@ -30,6 +30,7 @@ export interface TerminalPanelProps {
 }
 
 export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
+  console.log('[TerminalPanel] Component rendering, workingDirectory:', workingDirectory);
   const containerRef = useRef<HTMLDivElement>(null);
   const tabListRef = useRef<HTMLDivElement>(null);
   const terminalsRef = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -38,6 +39,15 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const { theme } = useTheme();
+  const isCreatingTabRef = useRef(false); // 탭 생성 중인지 추적
+
+  // 컴포넌트 마운트/언마운트 추적
+  useEffect(() => {
+    console.log('[TerminalPanel] Component mounted with workingDirectory:', workingDirectory);
+    return () => {
+      console.log('[TerminalPanel] Component unmounting');
+    };
+  }, [workingDirectory]);
 
   // tabs 상태가 변경될 때마다 ref 업데이트
   useEffect(() => {
@@ -149,9 +159,26 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 새 탭 생성
   const handleNewTab = useCallback(async () => {
-    if (!containerRef.current) {
+    console.log(
+      '[TerminalPanel] handleNewTab called, current tabs:',
+      tabs.length,
+      'isCreating:',
+      isCreatingTabRef.current
+    );
+
+    // 이미 생성 중이면 무시
+    if (isCreatingTabRef.current) {
+      console.log('[TerminalPanel] Tab creation already in progress, skipping');
       return;
     }
+
+    if (!containerRef.current) {
+      console.log('[TerminalPanel] containerRef not available, returning');
+      return;
+    }
+
+    isCreatingTabRef.current = true;
+    console.log('[TerminalPanel] Starting tab creation');
 
     // Terminal 인스턴스 생성
     const term = new Terminal({
@@ -187,6 +214,8 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     if (!session) {
       term.dispose();
       terminalDiv.remove();
+      isCreatingTabRef.current = false;
+      console.log('[TerminalPanel] Failed to create session, resetting flag');
       return;
     }
 
@@ -226,6 +255,8 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     setTimeout(() => {
       fitAddon.fit();
       updateScrollState();
+      isCreatingTabRef.current = false;
+      console.log('[TerminalPanel] Tab creation completed, resetting flag');
     }, 0);
   }, [workingDirectory, createSession, write, updateScrollState, getTerminalTheme]);
 
@@ -296,11 +327,17 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 초기 탭 생성 - 탭이 없을 때 자동으로 하나 생성
   useEffect(() => {
+    console.log('[TerminalPanel] Initial tab creation effect triggered:', {
+      tabsLength: tabs.length,
+      workingDirectory,
+    });
     // 탭이 없고, workingDirectory가 있으면 자동으로 첫 탭 생성
     if (tabs.length === 0 && workingDirectory) {
+      console.log('[TerminalPanel] Creating initial tab');
       handleNewTab();
     }
-  }, [tabs.length, workingDirectory, handleNewTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabs.length, workingDirectory]);
 
   // 리사이즈 처리
   useEffect(() => {

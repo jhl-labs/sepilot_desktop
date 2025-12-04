@@ -9,6 +9,7 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { runPresentationAgent, createInitialState } from '@/lib/presentation/ppt-agent';
 import type { PresentationWorkflowStep, PresentationDesignMaster } from '@/types/presentation';
 import { generateId } from '@/lib/utils';
+import { PRESENTATION_TEMPLATES, type TemplateType } from '@/lib/presentation/templates';
 import {
   Loader2,
   Send,
@@ -20,6 +21,7 @@ import {
   FileText,
   Eye,
   Globe,
+  BookOpen,
 } from 'lucide-react';
 
 // Quick Prompt 아이템 타입
@@ -31,16 +33,16 @@ type QuickPromptItem =
 const STEP_QUICK_PROMPTS: Record<PresentationWorkflowStep, { label: string; prompt: string }[]> = {
   briefing: [
     {
-      label: '논문 요약 발표',
-      prompt: '논문 요약 발표 자료를 만들고 싶어요. 슬라이드는 10장 정도로.',
+      label: '주제 변경',
+      prompt: '주제를 "[새로운 주제]"로 변경해주세요.',
     },
     {
-      label: '제품 소개 피치덱',
-      prompt: '우리 제품을 소개하는 피치덱을 만들어주세요. 투자자 대상입니다.',
+      label: '슬라이드 수 조정',
+      prompt: '슬라이드를 [N]장으로 조정해주세요.',
     },
     {
-      label: 'AI 기술 세미나',
-      prompt: 'AI 기술에 대한 세미나 자료를 만들고 싶습니다. 개발자가 청중이에요.',
+      label: '다음 단계로',
+      prompt: '이대로 좋습니다. 다음 단계로 진행해주세요.',
     },
   ],
   'design-master': [
@@ -145,6 +147,7 @@ export function PresentationChat() {
 
   const [input, setInput] = useState('');
   const abortRef = useRef<AbortController | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 초기화: presentationAgentState가 없으면 생성
   useEffect(() => {
@@ -152,6 +155,13 @@ export function PresentationChat() {
       setPresentationAgentState(createInitialState());
     }
   }, [presentationAgentState, setPresentationAgentState]);
+
+  // 스트리밍 중 자동 스크롤
+  useEffect(() => {
+    if (presentationChatStreaming) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [presentationChatStreaming, presentationChatMessages]);
 
   const currentStep = presentationAgentState?.currentStep || 'briefing';
 
@@ -172,6 +182,32 @@ export function PresentationChat() {
           },
         ]
       : STEP_QUICK_PROMPTS[currentStep] || [];
+
+  const handleTemplateSelect = (templateId: TemplateType) => {
+    const template = PRESENTATION_TEMPLATES.find((t) => t.id === templateId);
+    if (!template) {
+      return;
+    }
+
+    // 템플릿 상태 생성 (브리핑 단계로 유지)
+    const templateState = template.generateState();
+    templateState.currentStep = 'briefing'; // 브리핑 단계에 머물기
+
+    // 상태 업데이트
+    setPresentationAgentState(templateState);
+    setPresentationSlides(templateState.slides);
+
+    // 첫 번째 슬라이드 활성화
+    if (templateState.slides.length > 0) {
+      setActivePresentationSlide(templateState.slides[0].id);
+    }
+
+    // 시스템 메시지 추가
+    addPresentationChatMessage({
+      role: 'assistant',
+      content: `✅ "${template.name}" 템플릿이 적용되었습니다!\n\n**브리핑 내용:**\n- 주제: ${templateState.brief?.topic}\n- 슬라이드: ${templateState.slides.length}장\n- 청중: ${templateState.brief?.audience}\n\n우측에서 미리보기를 확인하시고, 수정이 필요하면 말씀해주세요.\n다음 단계로 진행하시려면 "다음 단계" 또는 상단의 단계 버튼을 클릭하세요.`,
+    });
+  };
 
   const handleSend = async (message?: string, bulkCreation: boolean = false) => {
     const userMessage = message ?? input;
@@ -292,6 +328,29 @@ export function PresentationChat() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* RAG Toggle */}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="rag-toggle"
+                checked={presentationAgentState?.ragEnabled || false}
+                onCheckedChange={(checked) => {
+                  if (presentationAgentState) {
+                    setPresentationAgentState({
+                      ...presentationAgentState,
+                      ragEnabled: checked,
+                    });
+                  }
+                }}
+                disabled={presentationChatStreaming}
+              />
+              <Label
+                htmlFor="rag-toggle"
+                className="text-xs cursor-pointer flex items-center gap-1"
+              >
+                <BookOpen className="h-3 w-3" />
+                RAG
+              </Label>
+            </div>
             {/* Web Search Toggle */}
             <div className="flex items-center gap-2">
               <Switch
@@ -329,21 +388,46 @@ export function PresentationChat() {
           {STEP_ORDER.map((step, idx) => {
             const isActive = step === currentStep;
             const isCompleted = idx < currentStepIndex;
+            // 템플릿 적용 후에는 모든 단계가 접근 가능 (brief, designMaster, structure, slides가 모두 있음)
+            const hasTemplateData =
+              presentationAgentState?.brief &&
+              presentationAgentState?.designMaster &&
+              presentationAgentState?.structure &&
+              presentationAgentState?.slides &&
+              presentationAgentState.slides.length > 0;
+            const isAccessible = isActive || isCompleted || hasTemplateData;
 
             return (
-              <div
+              <button
                 key={step}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                onClick={() => {
+                  if (isAccessible && presentationAgentState) {
+                    // 모든 접근 가능한 단계로 자유롭게 이동
+                    setPresentationAgentState({
+                      ...presentationAgentState,
+                      currentStep: step,
+                    });
+                  }
+                }}
+                disabled={!isAccessible || presentationChatStreaming}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-all ${
                   isActive
                     ? 'bg-primary text-primary-foreground font-medium'
-                    : isCompleted
-                      ? 'bg-green-500/20 text-green-700 dark:text-green-400'
-                      : 'bg-muted/40 text-muted-foreground'
-                }`}
+                    : isCompleted || hasTemplateData
+                      ? 'bg-green-500/20 text-green-700 dark:text-green-400 hover:bg-green-500/30 cursor-pointer'
+                      : 'bg-muted/40 text-muted-foreground cursor-not-allowed'
+                } ${isAccessible && !presentationChatStreaming ? 'hover:opacity-80' : ''}`}
+                title={
+                  isAccessible
+                    ? isActive
+                      ? '현재 단계'
+                      : '이 단계로 이동하기'
+                    : '아직 진행하지 않은 단계'
+                }
               >
                 {STEP_ICONS[step]}
                 <span>{STEP_DESCRIPTIONS[step].title}</span>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -392,66 +476,78 @@ export function PresentationChat() {
       </div>
 
       {/* Current State Info */}
-      {presentationAgentState && (
-        <div className="mx-4 mt-3 space-y-2">
-          {/* Design Preview */}
-          {presentationAgentState.designMaster && (
-            <div className="rounded-lg border bg-card p-3">
-              <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">
-                선택된 디자인
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1.5">
-                  <div
-                    className="h-8 w-8 rounded shadow-sm"
-                    style={{ backgroundColor: presentationAgentState.designMaster.palette.primary }}
-                    title="Primary"
-                  />
-                  <div
-                    className="h-8 w-8 rounded shadow-sm"
-                    style={{ backgroundColor: presentationAgentState.designMaster.palette.accent }}
-                    title="Accent"
-                  />
-                  <div
-                    className="h-8 w-5 rounded border shadow-sm"
-                    style={{
-                      backgroundColor: presentationAgentState.designMaster.palette.background,
-                      borderColor: `${presentationAgentState.designMaster.palette.text}40`,
-                    }}
-                    title="Background"
-                  />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">
-                    {presentationAgentState.designMaster.name ||
-                      presentationAgentState.designMaster.vibe}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {presentationAgentState.designMaster.fonts.title} /{' '}
-                    {presentationAgentState.designMaster.fonts.body}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Structure Preview */}
-          {presentationAgentState.structure && (
-            <div className="rounded-lg border bg-card p-3">
-              <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">
+      {presentationAgentState && presentationAgentState.structure && (
+        <div className="mx-4 mt-3">
+          {/* Structure Preview - Collapsible */}
+          <details className="group rounded-lg border bg-card">
+            <summary className="flex cursor-pointer items-center justify-between p-3 hover:bg-muted/50 transition-colors">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">
                 슬라이드 구조 ({presentationAgentState.structure.totalSlides}장)
               </p>
-              <div className="space-y-1 max-h-32 overflow-y-auto text-xs">
-                {presentationAgentState.structure.outline.map((slide, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <span className="font-mono text-muted-foreground">{idx + 1}.</span>
-                    <span className="flex-1">{slide.title}</span>
-                    <span className="text-muted-foreground text-[10px] uppercase">
-                      {slide.layout}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <svg
+                className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </summary>
+            <div className="border-t px-3 py-2 space-y-1 max-h-48 overflow-y-auto text-xs">
+              {presentationAgentState.structure.outline.map((slide, idx) => (
+                <div key={idx} className="flex items-center gap-2 py-1">
+                  <span className="font-mono text-muted-foreground">{idx + 1}.</span>
+                  <span className="flex-1">{slide.title}</span>
+                  <span className="text-muted-foreground text-[10px] uppercase">
+                    {slide.layout}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
+      )}
+
+      {/* Template Selection (Briefing 단계에서 표시) */}
+      {currentStep === 'briefing' && (
+        <div className="px-4 py-3 border-b">
+          <p className="text-sm font-semibold mb-3">
+            {presentationAgentState?.brief ? '다른 템플릿 선택' : '템플릿으로 빠르게 시작하기'}
+          </p>
+          <p className="text-xs text-muted-foreground mb-4">
+            {presentationAgentState?.brief
+              ? '다른 템플릿을 선택하여 변경할 수 있습니다.'
+              : '완성된 템플릿을 선택하거나, 아래에서 직접 입력하여 커스텀 프레젠테이션을 만드세요.'}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { id: 'profile', name: '자기소개', icon: '👤', desc: '면접, 네트워킹' },
+              { id: 'tech-seminar', name: '기술 세미나', icon: '💻', desc: '개발자, 엔지니어' },
+              { id: 'paper-summary', name: '논문 요약', icon: '📄', desc: '학생, 연구원' },
+              { id: 'project-intro', name: '과제 소개', icon: '📁', desc: '팀원, 이해관계자' },
+            ].map((template) => (
+              <button
+                key={template.id}
+                onClick={() => handleTemplateSelect(template.id as TemplateType)}
+                className="flex flex-col items-start gap-2 rounded-lg border p-4 hover:bg-muted/50 hover:border-primary transition-all text-left"
+                disabled={presentationChatStreaming}
+              >
+                <div className="text-2xl">{template.icon}</div>
+                <div>
+                  <p className="text-sm font-semibold">{template.name}</p>
+                  <p className="text-xs text-muted-foreground">{template.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          {!presentationAgentState?.brief && (
+            <div className="mt-4 text-xs text-muted-foreground text-center">
+              또는 아래에서 직접 입력하여 커스텀 프레젠테이션을 만드세요
             </div>
           )}
         </div>
@@ -459,14 +555,10 @@ export function PresentationChat() {
 
       {/* Messages */}
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-        {presentationChatMessages.length === 0 && (
+        {presentationChatMessages.length === 0 && currentStep !== 'briefing' && (
           <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
             <p className="font-medium mb-2">프레젠테이션을 함께 만들어봐요! 👋</p>
-            <p className="text-xs">
-              {currentStep === 'briefing'
-                ? '어떤 주제의 프레젠테이션을 만들고 싶으신가요? 목적과 청중도 알려주세요.'
-                : '아래 Quick Actions를 선택하거나 직접 입력해주세요.'}
-            </p>
+            <p className="text-xs">아래 Quick Actions를 선택하거나 직접 입력해주세요.</p>
           </div>
         )}
         {presentationChatMessages.map((msg, idx) => {
@@ -495,10 +587,7 @@ export function PresentationChat() {
                           '<span class="text-green-600 dark:text-green-400">✅</span>'
                         )
                         .replace(/❌/g, '<span class="text-red-600 dark:text-red-400">❌</span>')
-                        .replace(
-                          /```json[\s\S]*?```/g,
-                          '<div class="my-2 p-2 bg-muted/50 rounded border border-dashed text-xs font-mono opacity-50">[JSON 데이터 처리됨]</div>'
-                        ),
+                        .replace(/```json[\s\S]*?```/g, ''),
                     }}
                   />
                 ) : isStreaming ? (
@@ -510,6 +599,7 @@ export function PresentationChat() {
             </div>
           );
         })}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
