@@ -241,6 +241,7 @@ class VectorDBService {
     );
 
     // 1단계: 메타데이터 기반 필터링 (Parent 문서와 폴더 제외)
+    let filteredOutCount = 0;
     const filteredRows = rows.filter((row) => {
       const metadata = JSON.parse(row[2] as string);
 
@@ -279,6 +280,13 @@ class VectorDBService {
       if (opts.docGroup && opts.docGroup !== 'all') {
         const docGroup = metadata.docGroup || 'personal'; // 기본값: personal
         if (opts.docGroup !== docGroup) {
+          // 필터링 로그 (처음 5개만)
+          if (filteredOutCount < 5) {
+            console.log(
+              `[VectorDB] Filtered out document: docGroup='${docGroup}' (filter='${opts.docGroup}'), title='${metadata.title}'`
+            );
+          }
+          filteredOutCount++;
           return false;
         }
       }
@@ -592,14 +600,25 @@ class VectorDBService {
     if (result.length === 0) return [];
 
     const documents: VectorDocument[] = [];
+    let personalCount = 0;
+    let teamCount = 0;
     for (const row of result[0].values) {
+      const metadata = JSON.parse(row[2] as string);
+      const docGroup = metadata.docGroup || 'personal';
+      if (docGroup === 'team') teamCount++;
+      else personalCount++;
+
       documents.push({
         id: row[0] as string,
         content: row[1] as string,
-        metadata: JSON.parse(row[2] as string),
+        metadata: metadata,
         embedding: JSON.parse(row[3] as string),
       });
     }
+
+    console.log(
+      `[VectorDB] getAllDocuments: Total ${documents.length} (personal: ${personalCount}, team: ${teamCount})`
+    );
 
     return documents;
   }
