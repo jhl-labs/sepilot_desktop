@@ -387,14 +387,21 @@ export function PresentationChat() {
           {STEP_ORDER.map((step, idx) => {
             const isActive = step === currentStep;
             const isCompleted = idx < currentStepIndex;
-            const isAccessible = isActive || isCompleted;
+            // 템플릿 적용 후에는 모든 단계가 접근 가능 (brief, designMaster, structure, slides가 모두 있음)
+            const hasTemplateData =
+              presentationAgentState?.brief &&
+              presentationAgentState?.designMaster &&
+              presentationAgentState?.structure &&
+              presentationAgentState?.slides &&
+              presentationAgentState.slides.length > 0;
+            const isAccessible = isActive || isCompleted || hasTemplateData;
 
             return (
               <button
                 key={step}
                 onClick={() => {
                   if (isAccessible && presentationAgentState) {
-                    // 이전 단계로 돌아갈 수 있음
+                    // 모든 접근 가능한 단계로 자유롭게 이동
                     setPresentationAgentState({
                       ...presentationAgentState,
                       currentStep: step,
@@ -405,7 +412,7 @@ export function PresentationChat() {
                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-all ${
                   isActive
                     ? 'bg-primary text-primary-foreground font-medium'
-                    : isCompleted
+                    : isCompleted || hasTemplateData
                       ? 'bg-green-500/20 text-green-700 dark:text-green-400 hover:bg-green-500/30 cursor-pointer'
                       : 'bg-muted/40 text-muted-foreground cursor-not-allowed'
                 } ${isAccessible && !presentationChatStreaming ? 'hover:opacity-80' : ''}`}
@@ -413,7 +420,7 @@ export function PresentationChat() {
                   isAccessible
                     ? isActive
                       ? '현재 단계'
-                      : '이 단계로 돌아가기'
+                      : '이 단계로 이동하기'
                     : '아직 진행하지 않은 단계'
                 }
               >
