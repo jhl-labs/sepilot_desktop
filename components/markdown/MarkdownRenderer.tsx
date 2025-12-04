@@ -18,6 +18,8 @@ interface MarkdownRendererProps {
     content: string;
   }>;
   onSourceClick?: (doc: { id: string; title: string; source: string; content: string }) => void;
+  /** Optional: Path to the current markdown file (for resolving relative image paths) */
+  currentFilePath?: string;
 }
 
 // Helper function to extract text content from React children
@@ -114,9 +116,70 @@ export function MarkdownRenderer({
   content,
   className,
   isStreaming = false,
+  currentFilePath,
 }: MarkdownRendererProps) {
   // Create a wrapped component that includes isStreaming
   const CustomPre = (props: any) => <CustomPreComponent {...props} isStreaming={isStreaming} />;
+
+  // Custom image component for local file support
+  const CustomImage = ({ src, alt, ...props }: any) => {
+    // If src is a relative path (doesn't start with http/https/data/file),
+    // treat it as a local file path and convert to absolute path
+    let imageSrc = src;
+
+    if (src && typeof src === 'string') {
+      // Check if it's NOT a URL or data URI
+      if (
+        !src.startsWith('http://') &&
+        !src.startsWith('https://') &&
+        !src.startsWith('data:') &&
+        !src.startsWith('file://')
+      ) {
+        // It's a relative path - try to resolve it
+        // In Electron, we need to use file:// protocol for local files
+        try {
+          // If path-browserify is available
+          if (typeof window !== 'undefined' && (window as any).require) {
+            const path = (window as any).require('path');
+            let absolutePath: string;
+
+            if (currentFilePath) {
+              // Resolve relative to the current markdown file
+              const fileDir = path.dirname(currentFilePath);
+              absolutePath = path.resolve(fileDir, src);
+            } else {
+              // Fallback: resolve relative to current working directory
+              absolutePath = path.resolve(src);
+            }
+
+            imageSrc = `file://${absolutePath}`;
+            console.log('[MarkdownRenderer] Resolved image path:', { src, absolutePath, imageSrc });
+          } else {
+            // Fallback: just prepend file://
+            // This won't work perfectly but better than nothing
+            imageSrc = `file://${src}`;
+          }
+        } catch (error) {
+          console.warn('[MarkdownRenderer] Failed to resolve image path:', src, error);
+          imageSrc = src; // Keep original if resolution fails
+        }
+      }
+    }
+
+    return (
+      <img
+        src={imageSrc}
+        alt={alt || ''}
+        className="max-w-full h-auto rounded-lg my-4"
+        onError={(e) => {
+          console.error('[MarkdownRenderer] Image load error:', imageSrc);
+          // Show alt text or placeholder on error
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+        {...props}
+      />
+    );
+  };
 
   // Custom link component with URI error handling
   const CustomLink = ({ href, children, ...props }: any) => {
@@ -279,6 +342,9 @@ export function MarkdownRenderer({
               },
               code: {
                 component: CustomCode,
+              },
+              img: {
+                component: CustomImage,
               },
               a: {
                 component: CustomLink,

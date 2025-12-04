@@ -1200,7 +1200,7 @@ export function CodeEditor() {
               )}
             >
               <div className="p-6">
-                <MarkdownRenderer content={activeFile.content} />
+                <MarkdownRenderer content={activeFile.content} currentFilePath={activeFile.path} />
               </div>
             </div>
           )}
