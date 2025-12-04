@@ -445,7 +445,14 @@ export function setupTeamDocsHandlers() {
     try {
       // VectorDB에서 해당 Team의 문서만 가져오기
       const allDocs = await vectorDBService.getAllDocuments();
+      console.log('[team-docs-push] Total documents:', allDocs.length);
+      console.log('[team-docs-push] Looking for teamDocsId:', config.id);
+      console.log('[team-docs-push] Available teamDocsIds:', [
+        ...new Set(allDocs.map((doc) => doc.metadata?.teamDocsId).filter(Boolean)),
+      ]);
+
       const teamDocs = allDocs.filter((doc) => doc.metadata?.teamDocsId === config.id);
+      console.log('[team-docs-push] Found documents for this team:', teamDocs.length);
 
       if (teamDocs.length === 0) {
         return {

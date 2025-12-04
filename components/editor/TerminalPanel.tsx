@@ -149,7 +149,9 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 새 탭 생성
   const handleNewTab = useCallback(async () => {
+    console.log('[TerminalPanel] handleNewTab called, current tabs:', tabs.length);
     if (!containerRef.current) {
+      console.log('[TerminalPanel] containerRef not available, returning');
       return;
     }
 
@@ -296,8 +298,13 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 초기 탭 생성 - 탭이 없을 때 자동으로 하나 생성
   useEffect(() => {
+    console.log('[TerminalPanel] Initial tab creation effect triggered:', {
+      tabsLength: tabs.length,
+      workingDirectory,
+    });
     // 탭이 없고, workingDirectory가 있으면 자동으로 첫 탭 생성
     if (tabs.length === 0 && workingDirectory) {
+      console.log('[TerminalPanel] Creating initial tab');
       handleNewTab();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -233,9 +233,13 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     try {
       if (typeof window !== 'undefined' && window.electronAPI?.config) {
         const result = await window.electronAPI.config.load();
+        console.log('[DocumentList] Config load result:', result);
         if (result.success && result.data) {
           if (result.data.teamDocs) {
+            console.log('[DocumentList] Team Docs loaded:', result.data.teamDocs);
             setTeamDocs(result.data.teamDocs);
+          } else {
+            console.log('[DocumentList] No teamDocs in config');
           }
           if (result.data.githubSync) {
             setPersonalRepo(result.data.githubSync);
@@ -255,6 +259,14 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       onRefresh(loadDocuments);
     }
   }, []);
+
+  // teamDocs 변경 감지
+  useEffect(() => {
+    console.log('[DocumentList] teamDocs state updated:', teamDocs.length, 'teams');
+    teamDocs.forEach((team) => {
+      console.log(`  - ${team.name} (${team.id})`);
+    });
+  }, [teamDocs]);
 
   const handleDelete = async (id: string) => {
     if (!onDelete) {
@@ -961,6 +973,16 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const handlePushTeamDoc = async (config: TeamDocsConfig) => {
     setSyncingTeamId(`push-${config.id}`);
     setMessage(null);
+
+    console.log('[DocumentList] Pushing to team docs:', config.id, config.name);
+    console.log('[DocumentList] Current documents:', documents.length);
+    console.log(
+      '[DocumentList] Documents with this teamDocsId:',
+      documents.filter((doc) => doc.metadata?.teamDocsId === config.id).length
+    );
+    console.log('[DocumentList] All teamDocsIds:', [
+      ...new Set(documents.map((doc) => doc.metadata?.teamDocsId).filter(Boolean)),
+    ]);
 
     try {
       const result = await window.electronAPI.teamDocs.pushDocuments(config);
