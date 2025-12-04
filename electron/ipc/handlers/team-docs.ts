@@ -303,6 +303,7 @@ export function setupTeamDocsHandlers() {
       params: {
         teamDocsId: string;
         githubPath: string;
+        oldGithubPath?: string; // 파일명 변경 감지용
         title: string;
         content: string;
         metadata?: Record<string, any>;
@@ -342,8 +343,30 @@ export function setupTeamDocsHandlers() {
           teamDocsId: params.teamDocsId,
           title: params.title,
           githubPath,
+          oldGithubPath: params.oldGithubPath,
           folderPath: params.metadata?.folderPath,
         });
+
+        // 파일명이 변경된 경우 이전 파일 삭제
+        if (params.oldGithubPath && params.oldGithubPath !== githubPath) {
+          console.log(
+            `[team-docs-push-document] File renamed: ${params.oldGithubPath} -> ${githubPath}`
+          );
+          const deleteResult = await client.deleteFile(
+            params.oldGithubPath,
+            `Delete old file ${params.oldGithubPath} (renamed to ${githubPath})`
+          );
+          if (deleteResult.success) {
+            console.log(
+              `[team-docs-push-document] Successfully deleted old file: ${params.oldGithubPath}`
+            );
+          } else {
+            console.warn(
+              `[team-docs-push-document] Failed to delete old file: ${deleteResult.error}`
+            );
+            // 삭제 실패해도 계속 진행 (파일이 이미 없을 수 있음)
+          }
+        }
 
         // 문서 Push
         const result = await client.pushDocument(
@@ -352,7 +375,7 @@ export function setupTeamDocsHandlers() {
             title: params.title,
             content: params.content,
             metadata: params.metadata,
-            sha: params.sha,
+            sha: undefined, // 파일명이 변경된 경우 새 파일이므로 sha를 undefined로 설정
           },
           params.commitMessage
         );

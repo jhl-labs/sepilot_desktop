@@ -616,6 +616,7 @@ interface TeamDocsAPI {
   pushDocument: (params: {
     teamDocsId: string;
     githubPath: string;
+    oldGithubPath?: string; // 파일명 변경 감지용
     title: string;
     content: string;
     metadata?: Record<string, any>;

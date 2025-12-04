@@ -245,6 +245,7 @@ export function DocumentEditDialog({
           const result = await window.electronAPI.teamDocs.pushDocument({
             teamDocsId: document.metadata.teamDocsId,
             githubPath: githubPath,
+            oldGithubPath: document.metadata.githubPath, // 파일명 변경 감지용
             title: newTitle,
             content: content.trim(),
             metadata: {
