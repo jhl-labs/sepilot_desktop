@@ -73,6 +73,15 @@ export async function retrieveNode(state: RAGState): Promise<Partial<RAGState>> 
         }));
 
         console.log(`[RetrieveNode] Found ${documents.length} documents in Main Process`);
+        console.log(
+          '[RetrieveNode] Document sources:',
+          documents.map((d) => ({
+            title: d.metadata?.title,
+            docGroup: d.metadata?.docGroup,
+            teamName: d.metadata?.teamName,
+            source: d.metadata?.source,
+          }))
+        );
       } catch (error: any) {
         console.error('[RetrieveNode] Vector search error:', error);
         // 에러 시 더미 문서 반환

@@ -236,6 +236,9 @@ class VectorDBService {
     if (result.length === 0) return [];
 
     const rows = result[0].values;
+    console.log(
+      `[VectorDB] Total documents in DB: ${rows.length}, docGroup filter: ${opts.docGroup}`
+    );
 
     // 1단계: 메타데이터 기반 필터링 (Parent 문서와 폴더 제외)
     const filteredRows = rows.filter((row) => {
@@ -287,6 +290,17 @@ class VectorDBService {
 
       return true;
     });
+
+    console.log(`[VectorDB] After filtering: ${filteredRows.length} documents`);
+    if (filteredRows.length > 0) {
+      const sampleMetadata = JSON.parse(filteredRows[0][2] as string);
+      console.log('[VectorDB] Sample document metadata:', {
+        title: sampleMetadata.title,
+        docGroup: sampleMetadata.docGroup,
+        teamName: sampleMetadata.teamName,
+        source: sampleMetadata.source,
+      });
+    }
 
     if (filteredRows.length === 0) return [];
 
