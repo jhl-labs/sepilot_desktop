@@ -1,15 +1,6 @@
 'use client';
 
-import {
-  Plus,
-  Settings,
-  Camera,
-  Album,
-  Bookmark,
-  Wrench,
-  ScrollText,
-  Presentation,
-} from 'lucide-react';
+import { Plus, Settings, Camera, Album, Bookmark, Wrench, ScrollText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { BrowserChat } from '@/components/browser/BrowserChat';
@@ -21,13 +12,8 @@ import { BrowserAgentLogsView } from '@/components/browser/BrowserAgentLogsView'
 import { isElectron } from '@/lib/platform';
 
 export function SidebarBrowser() {
-  const {
-    clearBrowserChat,
-    browserViewMode,
-    setBrowserViewMode,
-    browserAgentIsRunning,
-    setAppMode,
-  } = useChatStore();
+  const { clearBrowserChat, browserViewMode, setBrowserViewMode, browserAgentIsRunning } =
+    useChatStore();
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -140,15 +126,6 @@ export function SidebarBrowser() {
               className="flex-1"
             >
               <Bookmark className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setAppMode('presentation')}
-              title="AI Presentation Lab"
-              className="flex-1"
-            >
-              <Presentation className="h-5 w-5" />
             </Button>
             <Button
               variant="ghost"

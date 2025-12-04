@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, Terminal, FileText, Database, Wrench, Presentation } from 'lucide-react';
+import { Settings, Terminal, FileText, Database, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
@@ -29,7 +29,6 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
     pendingToolApproval,
     clearPendingToolApproval,
     setAlwaysApproveToolsForSession,
-    setAppMode,
   } = useChatStore();
 
   // Tool approval handlers
@@ -143,15 +142,6 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
               className={`flex-1 ${showTerminalPanel ? 'bg-accent' : ''}`}
             >
               <Terminal className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setAppMode('presentation')}
-              title="AI Presentation Lab"
-              className="flex-1"
-            >
-              <Presentation className="h-5 w-5" />
             </Button>
             <Button
               variant="ghost"
