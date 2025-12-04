@@ -242,11 +242,19 @@ class VectorDBService {
 
     // 1단계: 메타데이터 기반 필터링 (Parent 문서와 폴더 제외)
     let filteredOutCount = 0;
+    let parentDocCount = 0;
+    let folderDocCount = 0;
     const filteredRows = rows.filter((row) => {
       const metadata = JSON.parse(row[2] as string);
 
       // Parent 문서는 검색에서 제외 (참조용으로만 사용)
       if (metadata.isParentDoc) {
+        parentDocCount++;
+        if (parentDocCount <= 2) {
+          console.log(
+            `[VectorDB] Filtered out parent doc: ${metadata.title}, docGroup=${metadata.docGroup}`
+          );
+        }
         return false;
       }
 
@@ -293,6 +301,7 @@ class VectorDBService {
 
       // 특수 문서 제외 (폴더 등)
       if (metadata._docType === 'folder') {
+        folderDocCount++;
         return false;
       }
 
@@ -300,6 +309,9 @@ class VectorDBService {
     });
 
     console.log(`[VectorDB] After filtering: ${filteredRows.length} documents`);
+    console.log(
+      `[VectorDB] Filtered out: ${parentDocCount} parent docs, ${folderDocCount} folders, ${filteredOutCount} by docGroup`
+    );
 
     // 필터링 후 docGroup 분포 확인
     const filteredDocGroupCount: Record<string, number> = {};
