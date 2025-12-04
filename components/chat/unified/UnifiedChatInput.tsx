@@ -282,21 +282,21 @@ export function UnifiedChatInput({
   // Handle Quick Input message (auto-send)
   useEffect(() => {
     const handleAutoSendMessage = async (e: Event) => {
-      const customEvent = e as CustomEvent<{
-        userMessage: string;
-        systemMessage?: string;
-      }>;
-      const { userMessage, systemMessage } = customEvent.detail;
+      const customEvent = e as CustomEvent<{ userMessage: string }>;
+      const { userMessage } = customEvent.detail;
 
       if (userMessage && userMessage.trim()) {
+        // Set input and immediately send
         setInput(userMessage);
-        // Store system message in sessionStorage for streaming hook to pick up
-        if (systemMessage) {
-          sessionStorage.setItem('sepilot_quick_system_message', systemMessage);
-        }
-        // Auto-send
+
+        // Wait for input to be set, then trigger send
         setTimeout(() => {
-          handleSend();
+          // Directly call the send handler with the message
+          if (onSendMessage) {
+            onSendMessage(userMessage, selectedImages).catch((error) => {
+              console.error('[UnifiedChatInput] Auto-send failed:', error);
+            });
+          }
         }, 100);
       }
     };
@@ -305,7 +305,7 @@ export function UnifiedChatInput({
     return () => {
       window.removeEventListener('sepilot:auto-send-message', handleAutoSendMessage);
     };
-  }, [handleSend, setInput]);
+  }, [onSendMessage, selectedImages, setInput]);
 
   // Handle file drop event from ChatArea
   useEffect(() => {

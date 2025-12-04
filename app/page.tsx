@@ -9,7 +9,6 @@ import { EditorWithTerminal } from '@/components/editor/EditorWithTerminal';
 import { BrowserPanel } from '@/components/browser/BrowserPanel';
 import { PresentationStudio } from '@/components/presentation/PresentationStudio';
 import { useChatStore } from '@/lib/store/chat-store';
-import { QuickInputMessageData } from '@/types';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
 
 export default function Home() {
@@ -33,16 +32,8 @@ export default function Home() {
     }
 
     const handleQuickInput = async (data: unknown) => {
-      // Support both string (legacy Quick Input) and object (Quick Question with system message)
-      let messageData: QuickInputMessageData;
-
-      if (typeof data === 'string') {
-        // Legacy Quick Input: just user message
-        messageData = { userMessage: data };
-      } else if (typeof data === 'object' && data !== null && 'userMessage' in data) {
-        // Quick Question: system message + user message
-        messageData = data as QuickInputMessageData;
-      } else {
+      // Both Quick Input and Quick Question send simple strings
+      if (typeof data !== 'string') {
         console.warn('[Home] Invalid quick input data:', data);
         return;
       }
@@ -58,7 +49,7 @@ export default function Home() {
         setTimeout(() => {
           window.dispatchEvent(
             new CustomEvent('sepilot:auto-send-message', {
-              detail: messageData,
+              detail: { userMessage: data },
             })
           );
         }, 200);
