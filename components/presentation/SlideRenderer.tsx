@@ -416,8 +416,8 @@ function TwoColumnLayout({
   slide,
   isEditable,
   onSlideChange,
-  onAddBullet: _onAddBullet,
-  onRemoveBullet: _onRemoveBullet,
+  onAddBullet,
+  onRemoveBullet,
 }: {
   slide: PresentationSlide;
   isEditable?: boolean;
@@ -450,7 +450,9 @@ function TwoColumnLayout({
             style={{ color: textColor }}
             onClick={(e) => {
               e.stopPropagation();
-              if (isEditable) setEditingField('title');
+              if (isEditable) {
+                setEditingField('title');
+              }
             }}
           >
             {slide.title || (isEditable ? '제목을 입력하세요' : '')}
@@ -475,7 +477,9 @@ function TwoColumnLayout({
                 style={{ color: textColor }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (isEditable) setEditingField('subtitle');
+                  if (isEditable) {
+                    setEditingField('subtitle');
+                  }
                 }}
               >
                 {slide.subtitle || (isEditable ? '부제목 (선택사항)' : '')}
@@ -503,7 +507,9 @@ function TwoColumnLayout({
                 style={{ color: textColor }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (isEditable) setEditingField('description');
+                  if (isEditable) {
+                    setEditingField('description');
+                  }
                 }}
               >
                 {slide.description || (isEditable ? '설명 (선택사항)' : '')}
@@ -518,35 +524,129 @@ function TwoColumnLayout({
         {/* Left Column */}
         <div className="flex-1 rounded-xl bg-white/50 p-6 backdrop-blur-sm dark:bg-black/20">
           {slide.bullets &&
-            slide.bullets.slice(0, Math.ceil(slide.bullets.length / 2)).map((bullet, idx) => (
-              <div key={idx} className="mb-3 flex items-start gap-2">
-                <div
-                  className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: accentColor }}
-                />
-                <span className="text-sm leading-relaxed" style={{ color: textColor }}>
-                  {bullet}
-                </span>
-              </div>
-            ))}
+            slide.bullets.slice(0, Math.ceil(slide.bullets.length / 2)).map((bullet, idx) => {
+              const bulletField = `bullet-${idx}`;
+              const isEditingBullet = isEditable && editingField === bulletField;
+
+              return (
+                <div key={idx} className="mb-3 flex items-start gap-2">
+                  <div
+                    className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: accentColor }}
+                  />
+                  {isEditingBullet ? (
+                    <div className="flex-1 flex items-center gap-2">
+                      <Input
+                        value={bullet}
+                        onChange={(e) => {
+                          const newBullets = [...(slide.bullets || [])];
+                          newBullets[idx] = e.target.value;
+                          onSlideChange?.({ ...slide, bullets: newBullets });
+                        }}
+                        onBlur={() => setEditingField(null)}
+                        autoFocus
+                        className="text-sm leading-relaxed border-2 border-primary bg-white/20 h-auto py-1 px-2 shadow-sm"
+                        style={{ color: textColor }}
+                        placeholder={`불릿 포인트 ${idx + 1}`}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 opacity-50 hover:opacity-100"
+                        onClick={() => onRemoveBullet?.(idx)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span
+                      className={`text-sm leading-relaxed flex-1 ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
+                      style={{ color: textColor }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isEditable) {
+                          setEditingField(bulletField);
+                        }
+                      }}
+                    >
+                      {bullet}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
         </div>
 
         {/* Right Column */}
         <div className="flex-1 rounded-xl bg-white/50 p-6 backdrop-blur-sm dark:bg-black/20">
           {slide.bullets &&
-            slide.bullets.slice(Math.ceil(slide.bullets.length / 2)).map((bullet, idx) => (
-              <div key={idx} className="mb-3 flex items-start gap-2">
-                <div
-                  className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: accentColor }}
-                />
-                <span className="text-sm leading-relaxed" style={{ color: textColor }}>
-                  {bullet}
-                </span>
-              </div>
-            ))}
+            slide.bullets.slice(Math.ceil(slide.bullets.length / 2)).map((bullet, idx) => {
+              const actualIdx = idx + Math.ceil(slide.bullets!.length / 2);
+              const bulletField = `bullet-${actualIdx}`;
+              const isEditingBullet = isEditable && editingField === bulletField;
+
+              return (
+                <div key={idx} className="mb-3 flex items-start gap-2">
+                  <div
+                    className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: accentColor }}
+                  />
+                  {isEditingBullet ? (
+                    <div className="flex-1 flex items-center gap-2">
+                      <Input
+                        value={bullet}
+                        onChange={(e) => {
+                          const newBullets = [...(slide.bullets || [])];
+                          newBullets[actualIdx] = e.target.value;
+                          onSlideChange?.({ ...slide, bullets: newBullets });
+                        }}
+                        onBlur={() => setEditingField(null)}
+                        autoFocus
+                        className="text-sm leading-relaxed border-2 border-primary bg-white/20 h-auto py-1 px-2 shadow-sm"
+                        style={{ color: textColor }}
+                        placeholder={`불릿 포인트 ${actualIdx + 1}`}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 opacity-50 hover:opacity-100"
+                        onClick={() => onRemoveBullet?.(actualIdx)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span
+                      className={`text-sm leading-relaxed flex-1 ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
+                      style={{ color: textColor }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isEditable) {
+                          setEditingField(bulletField);
+                        }
+                      }}
+                    >
+                      {bullet}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
         </div>
       </div>
+
+      {isEditable && (
+        <div className="mt-4 text-center">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onAddBullet}
+            style={{ borderColor: accentColor, color: accentColor }}
+          >
+            + 불릿 추가
+          </Button>
+        </div>
+      )}
 
       {/* Image Section (if exists) */}
       {imageSource && (
