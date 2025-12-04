@@ -61,12 +61,12 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [draggedDoc, setDraggedDoc] = useState<VectorDocument | null>(null);
   const [emptyFolders, setEmptyFolders] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  // activeTab: 'personal' 또는 teamDocsId
-  const [activeTab, setActiveTab] = useState<string>('personal');
+  const [activeTab, setActiveTab] = useState<'personal' | 'team'>('personal');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Team Docs 관련 상태
   const [teamDocs, setTeamDocs] = useState<TeamDocsConfig[]>([]);
+  const [selectedTeamDocsId, setSelectedTeamDocsId] = useState<string>('');
   const [personalRepo, setPersonalRepo] = useState<GitHubSyncConfig | null>(null);
   const [syncingTeamId, setSyncingTeamId] = useState<string | null>(null);
   const [syncingPersonal, setSyncingPersonal] = useState<'pull' | 'push' | null>(null);
@@ -112,9 +112,12 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         return docGroup === 'personal';
       });
     } else {
-      // 특정 Team Docs만 표시 (activeTab이 teamDocsId)
+      // Team 탭: 선택된 Team Docs만 표시
+      if (!selectedTeamDocsId) {
+        return [];
+      }
       return docs.filter((doc) => {
-        return doc.metadata?.teamDocsId === activeTab;
+        return doc.metadata?.teamDocsId === selectedTeamDocsId;
       });
     }
   };
@@ -238,6 +241,10 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           if (result.data.teamDocs) {
             console.log('[DocumentList] Team Docs loaded:', result.data.teamDocs);
             setTeamDocs(result.data.teamDocs);
+            // 첫 번째 Team Docs를 기본 선택
+            if (result.data.teamDocs.length > 0) {
+              setSelectedTeamDocsId(result.data.teamDocs[0].id);
+            }
           } else {
             console.log('[DocumentList] No teamDocs in config');
           }
@@ -1005,24 +1012,39 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
   return (
     <div className="space-y-4">
-      {/* Personal + 각 Team Docs 탭 */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList
-          className={`grid w-full`}
-          style={{ gridTemplateColumns: `repeat(${1 + teamDocs.length}, minmax(0, 1fr))` }}
-        >
+      {/* Personal / Team 탭 */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'personal' | 'team')}>
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="personal" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Personal
           </TabsTrigger>
-          {teamDocs.map((team) => (
-            <TabsTrigger key={team.id} value={team.id} className="flex items-center gap-2">
-              <Github className="h-4 w-4" />
-              {team.name}
-            </TabsTrigger>
-          ))}
+          <TabsTrigger value="team" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Team Docs
+          </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {/* Team Docs Repository 선택 */}
+      {activeTab === 'team' && teamDocs.length > 0 && (
+        <div className="rounded-lg border bg-card p-3">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium whitespace-nowrap">Repository:</label>
+            <select
+              className="flex-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+              value={selectedTeamDocsId}
+              onChange={(e) => setSelectedTeamDocsId(e.target.value)}
+            >
+              {teamDocs.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name} ({team.owner}/{team.repo})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* Personal Docs Sync Controls */}
       {activeTab === 'personal' && personalRepo && (
@@ -1081,9 +1103,10 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       )}
 
       {/* Team Docs Sync Controls */}
-      {activeTab !== 'personal' &&
+      {activeTab === 'team' &&
+        selectedTeamDocsId &&
         (() => {
-          const currentTeam = teamDocs.find((td) => td.id === activeTab);
+          const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
           if (!currentTeam) {
             return null;
           }
