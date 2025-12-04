@@ -625,26 +625,58 @@ function detectLanguage(text: string): 'ko' | 'en' | 'ja' | 'zh' {
  */
 function extractAction(text: string): Record<string, any> | null {
   try {
-    // ```json ... ``` 블록 찾기
-    const jsonMatch = text.match(/```json\s*(\{[\s\S]*?\})\s*```/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[1]);
-      if (parsed.action) {
-        return parsed;
+    // ```json ... ``` 블록 찾기 (non-greedy에서 최대한 긴 매치로 변경)
+    const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)```/);
+    if (jsonBlockMatch) {
+      const jsonContent = jsonBlockMatch[1].trim();
+      try {
+        const parsed = JSON.parse(jsonContent);
+        if (parsed.action) {
+          console.log('[ppt-agent] Successfully parsed JSON from code block');
+          return parsed;
+        }
+      } catch (e) {
+        console.warn('[ppt-agent] Failed to parse JSON from code block:', e);
       }
     }
 
-    // 직접 JSON 객체 찾기
-    const directMatch = text.match(/(\{[\s\S]*"action"[\s\S]*?\})/);
-    if (directMatch) {
-      const parsed = JSON.parse(directMatch[1]);
-      if (parsed.action) {
-        return parsed;
+    // 직접 JSON 객체 찾기 (중괄호 균형 맞추기)
+    const startIndex = text.indexOf('{');
+    if (startIndex !== -1) {
+      let depth = 0;
+      let endIndex = -1;
+
+      for (let i = startIndex; i < text.length; i++) {
+        if (text[i] === '{') {
+          depth++;
+        }
+        if (text[i] === '}') {
+          depth--;
+          if (depth === 0) {
+            endIndex = i + 1;
+            break;
+          }
+        }
+      }
+
+      if (endIndex !== -1) {
+        const jsonStr = text.substring(startIndex, endIndex);
+        try {
+          const parsed = JSON.parse(jsonStr);
+          if (parsed.action) {
+            console.log('[ppt-agent] Successfully parsed JSON from direct match');
+            return parsed;
+          }
+        } catch (e) {
+          console.warn('[ppt-agent] Failed to parse JSON from direct match:', e);
+        }
       }
     }
   } catch (e) {
     console.warn('[ppt-agent] Failed to extract action:', e);
   }
+
+  console.warn('[ppt-agent] No valid action found in response');
   return null;
 }
 
@@ -718,10 +750,16 @@ export async function runPresentationAgent(
   }
 
   // LLM 응답에서 Action 추출
+  console.log('[ppt-agent] Full response length:', fullResponse.length);
+  console.log(
+    '[ppt-agent] Response preview:',
+    fullResponse.substring(0, 200).replace(/\n/g, '\\n')
+  );
   const action = extractAction(fullResponse);
   let newState = { ...currentState, updatedAt: Date.now() };
 
   if (action) {
+    console.log('[ppt-agent] Extracted action:', action.action, action);
     // Action에 따라 상태 업데이트
     switch (action.action) {
       case 'complete_briefing':
@@ -776,6 +814,12 @@ export async function runPresentationAgent(
           currentStep: nextIndex < totalSlides ? 'slide-creation' : 'review',
         };
 
+        console.log(
+          '[ppt-agent] Created slide at index',
+          slideIndex,
+          'Total slides:',
+          newSlides.length
+        );
         callbacks.onSlides?.(newSlides);
         break;
       }

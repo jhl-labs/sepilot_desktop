@@ -190,8 +190,13 @@ export function PresentationChat() {
             setPresentationAgentState(newState);
           },
           onSlides: (slides) => {
+            console.log('[PresentationChat] onSlides called with', slides.length, 'slides');
             setPresentationSlides(slides);
-            setActivePresentationSlide(slides[0]?.id ?? null);
+            // 새 슬라이드가 추가되면 마지막 슬라이드를 활성화
+            if (slides.length > 0) {
+              const lastSlide = slides[slides.length - 1];
+              setActivePresentationSlide(lastSlide.id);
+            }
           },
         }
       );
