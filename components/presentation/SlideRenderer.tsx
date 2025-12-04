@@ -71,12 +71,6 @@ export function SlideRenderer({
       onRemoveBullet,
     };
 
-    console.log('SlideRenderer - renderLayout called', {
-      layout: slide.layout,
-      isEditable,
-      slideTitle: slide.title,
-    });
-
     switch (slide.layout) {
       case 'hero':
         return <HeroLayout {...layoutProps} />;
@@ -239,12 +233,6 @@ function TitleBodyLayout({
   const accentColor = slide.accentColor || '#0ea5e9';
   const imageSource = slide.imageData || slide.imageUrl;
 
-  console.log('TitleBodyLayout rendered', {
-    isEditable,
-    editingField,
-    slideTitle: slide.title,
-  });
-
   return (
     <div className="flex h-full flex-col px-12 py-10">
       {/* Title Section */}
@@ -267,7 +255,6 @@ function TitleBodyLayout({
             onClick={(e) => {
               e.stopPropagation();
               if (isEditable) {
-                console.log('Title clicked, setting editingField to title');
                 setEditingField('title');
               }
             }}
@@ -296,7 +283,6 @@ function TitleBodyLayout({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (isEditable) {
-                    console.log('Subtitle clicked');
                     setEditingField('subtitle');
                   }
                 }}
@@ -328,7 +314,6 @@ function TitleBodyLayout({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (isEditable) {
-                    console.log('Description clicked');
                     setEditingField('description');
                   }
                 }}
@@ -386,7 +371,6 @@ function TitleBodyLayout({
                         onClick={(e) => {
                           e.stopPropagation();
                           if (isEditable) {
-                            console.log('Bullet clicked:', bulletField);
                             setEditingField(bulletField);
                           }
                         }}
@@ -428,7 +412,20 @@ function TitleBodyLayout({
 }
 
 // Two-Column Layout: Split content design
-function TwoColumnLayout({ slide }: { slide: PresentationSlide }) {
+function TwoColumnLayout({
+  slide,
+  isEditable: _isEditable,
+  onSlideChange: _onSlideChange,
+  onAddBullet: _onAddBullet,
+  onRemoveBullet: _onRemoveBullet,
+}: {
+  slide: PresentationSlide;
+  isEditable?: boolean;
+  onSlideChange?: (slide: PresentationSlide) => void;
+  onAddBullet?: () => void;
+  onRemoveBullet?: (index: number) => void;
+}) {
+  const [_editingField, _setEditingField] = useState<string | null>(null);
   const textColor = slide.textColor || (slide.vibe?.includes('dark') ? '#f8fafc' : '#1e293b');
   const accentColor = slide.accentColor || '#0ea5e9';
   const imageSource = slide.imageData || slide.imageUrl;
