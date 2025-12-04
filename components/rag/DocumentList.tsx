@@ -1139,131 +1139,33 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           );
         })()}
 
-      {/* Personal Docs에서도 GitHub Sync 버튼 표시 */}
-      {activeTab === 'personal' && !personalRepo && (
-        <div className="rounded-lg border bg-card p-3">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              GitHub Repository를 연결하여 문서를 동기화하세요
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSyncDialogOpen(true)}
-              disabled={isLoading || disabled}
-              title="GitHub Sync 설정"
-            >
-              <Github className="mr-2 h-4 w-4" />
-              설정
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* Personal Docs Sync Controls */}
-      {activeTab === 'personal' && personalRepo && (
+      {activeTab === 'personal' && (
         <div className="rounded-lg border bg-card p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <Github className="h-4 w-4 text-muted-foreground" />
-                <h4 className="font-medium text-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 flex items-center gap-2">
+              <Github className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              {personalRepo ? (
+                <div className="text-sm font-medium">
                   {personalRepo.owner}/{personalRepo.repo}
-                </h4>
-                <span className="text-xs text-muted-foreground">({personalRepo.branch})</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Personal Documents Repository</p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePullPersonalDocs}
-                disabled={syncingPersonal !== null || isLoading}
-              >
-                {syncingPersonal === 'pull' ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Pull...
-                  </>
-                ) : (
-                  <>
-                    <Download className="mr-2 h-4 w-4" />
-                    Pull
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePushPersonalDocs}
-                disabled={syncingPersonal !== null || isLoading}
-              >
-                {syncingPersonal === 'push' ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Push...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Push
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Team Docs Sync Controls */}
-      {activeTab === 'team' &&
-        selectedTeamDocsId &&
-        (() => {
-          const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
-          if (!currentTeam) {
-            return null;
-          }
-
-          const teamDocCount = filteredDocuments.length;
-          const hasModifiedDocs = filteredDocuments.some((doc) => doc.metadata?.modifiedLocally);
-
-          return (
-            <div className="rounded-lg border bg-card p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Github className="h-4 w-4 text-muted-foreground" />
-                    <h4 className="font-medium text-sm">
-                      {currentTeam.owner}/{currentTeam.repo}
-                    </h4>
-                    <span className="text-xs text-muted-foreground">({currentTeam.branch})</span>
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                      {teamDocCount}개 문서
-                    </span>
-                    {hasModifiedDocs && (
-                      <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-2 py-0.5 rounded">
-                        로컬 수정됨
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {currentTeam.description || 'Team Documents Repository'}
-                    {currentTeam.lastSyncAt && (
-                      <span className="ml-2">
-                        • 마지막 동기화: {new Date(currentTeam.lastSyncAt).toLocaleString('ko-KR')}
-                      </span>
-                    )}
-                  </p>
+                  <span className="text-muted-foreground ml-2">({personalRepo.branch})</span>
                 </div>
-                <div className="flex gap-2">
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  GitHub Repository를 연결하여 문서를 동기화하세요
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              {personalRepo && (
+                <>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handlePullTeamDoc(currentTeam)}
-                    disabled={syncingTeamId !== null || isLoading}
+                    onClick={handlePullPersonalDocs}
+                    disabled={syncingPersonal !== null || isLoading}
                   >
-                    {syncingTeamId === `pull-${currentTeam.id}` ? (
+                    {syncingPersonal === 'pull' ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Pull...
@@ -1278,10 +1180,10 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handlePushTeamDoc(currentTeam)}
-                    disabled={syncingTeamId !== null || isLoading}
+                    onClick={handlePushPersonalDocs}
+                    disabled={syncingPersonal !== null || isLoading}
                   >
-                    {syncingTeamId === `push-${currentTeam.id}` ? (
+                    {syncingPersonal === 'push' ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Push...
@@ -1293,11 +1195,21 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                       </>
                     )}
                   </Button>
-                </div>
-              </div>
+                </>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSyncDialogOpen(true)}
+                disabled={isLoading || disabled}
+                title="GitHub Sync 설정"
+              >
+                <Github className="h-4 w-4" />
+              </Button>
             </div>
-          );
-        })()}
+          </div>
+        </div>
+      )}
 
       {/* 검색 바 */}
       <div className="relative">
