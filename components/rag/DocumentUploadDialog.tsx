@@ -189,7 +189,10 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!w-[90vw] !max-w-[1400px] h-[85vh] flex flex-col">
+      <DialogContent
+        className="!w-[90vw] !max-w-[1400px] h-[85vh] flex flex-col"
+        onClose={() => onOpenChange(false)}
+      >
         <DialogHeader>
           <DialogTitle>문서 업로드</DialogTitle>
           <DialogDescription>새 문서를 추가하여 RAG 검색에 활용하세요.</DialogDescription>

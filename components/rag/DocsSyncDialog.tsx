@@ -450,7 +450,10 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        onClose={() => onOpenChange(false)}
+      >
         <DialogHeader>
           <DialogTitle>
             <div className="flex items-center gap-2">
