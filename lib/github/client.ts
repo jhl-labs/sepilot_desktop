@@ -123,9 +123,18 @@ export class GitHubSyncClient {
       // Base64 인코딩
       const encodedContent = Buffer.from(content, 'utf-8').toString('base64');
 
-      // 기존 파일 확인
-      const existingFile = existingSha ? null : await this.getFile(path);
-      const sha = existingSha || existingFile?.sha;
+      // 기존 파일 확인 (항상 확인)
+      const existingFile = await this.getFile(path);
+
+      // SHA 결정: remote 파일이 존재하면 그 SHA 사용, 없으면 undefined (새 파일 생성)
+      const sha = existingFile?.sha;
+
+      // existingSha가 제공되었지만 실제 remote SHA와 다르면 경고
+      if (existingSha && sha && existingSha !== sha) {
+        console.warn(
+          `[GitHubSync] SHA mismatch for ${path}: provided=${existingSha}, remote=${sha}. Using remote SHA.`
+        );
+      }
 
       const { data } = await this.octokit.repos.createOrUpdateFileContents({
         owner: this.owner,
@@ -134,7 +143,7 @@ export class GitHubSyncClient {
         message,
         content: encodedContent,
         branch: this.branch,
-        sha, // 업데이트 시 필요
+        sha, // 업데이트 시 필요, 새 파일이면 undefined
       });
 
       return {
