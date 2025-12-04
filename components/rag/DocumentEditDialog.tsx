@@ -216,6 +216,15 @@ export function DocumentEditDialog({
 
       // GitHub Push 처리
       if (pushToGitHub && document.metadata?.docGroup === 'team') {
+        // teamDocsId 검증
+        if (!document.metadata.teamDocsId) {
+          setMessage({
+            type: 'error',
+            text: 'Team Docs ID가 누락되었습니다. 이 문서는 Team Docs 동기화 대상이 아닙니다.',
+          });
+          return;
+        }
+
         setIsPushing(true);
 
         try {
