@@ -1,17 +1,32 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Settings, Network, Database, Image, Plug, Github, HardDrive, Zap } from 'lucide-react';
+import {
+  Settings,
+  Network,
+  Database,
+  Image,
+  Plug,
+  Github,
+  Users,
+  HardDrive,
+  Zap,
+  FileCode,
+  Globe,
+} from 'lucide-react';
 
 export type SettingSection =
   | 'llm'
   | 'network'
   | 'vectordb'
-  | 'comfyui'
+  | 'imagegen'
   | 'mcp'
   | 'github'
+  | 'team-docs'
   | 'backup'
-  | 'quickinput';
+  | 'quickinput'
+  | 'editor'
+  | 'browser';
 
 interface SettingsCategory {
   id: string;
@@ -54,22 +69,16 @@ const settingsCategories: SettingsCategory[] = [
         description: '벡터 데이터베이스 및 임베딩',
       },
       {
-        id: 'comfyui',
-        label: 'ComfyUI',
+        id: 'imagegen',
+        label: 'ImageGen',
         icon: Image,
-        description: '이미지 생성 워크플로우',
+        description: '이미지 생성 (ComfyUI, NanoBanana)',
       },
       {
         id: 'mcp',
         label: 'MCP 서버',
         icon: Plug,
         description: 'Model Context Protocol 서버',
-      },
-      {
-        id: 'github',
-        label: 'GitHub',
-        icon: Github,
-        description: 'GitHub OAuth 연동',
       },
     ],
   },
@@ -83,12 +92,36 @@ const settingsCategories: SettingsCategory[] = [
         icon: Zap,
         description: '빠른 입력 및 단축키',
       },
+      {
+        id: 'editor',
+        label: 'Editor',
+        icon: FileCode,
+        description: '코드 에디터 설정',
+      },
+      {
+        id: 'browser',
+        label: 'Browser',
+        icon: Globe,
+        description: '브라우저 에이전트 설정',
+      },
     ],
   },
   {
     id: 'system',
     label: 'System',
     items: [
+      {
+        id: 'github',
+        label: 'GitHub Sync',
+        icon: Github,
+        description: 'Personal Docs 동기화',
+      },
+      {
+        id: 'team-docs',
+        label: 'Team Docs',
+        icon: Users,
+        description: '팀 문서 동기화 (다중 Repo)',
+      },
       {
         id: 'backup',
         label: '백업/복구',

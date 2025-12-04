@@ -2,22 +2,30 @@ import { AgentState } from '../state';
 import type { Message, ToolCall } from '@/types';
 import type { ToolApprovalCallback } from '../types';
 import { getLLMClient } from '@/lib/llm/client';
+import { emitStreamingChunk, isAborted } from '@/lib/llm/streaming-callback';
+import { editorToolsRegistry, registerAllEditorTools } from '@/lib/langgraph/tools/index';
 
 /**
  * Editor Agent Graph
  *
  * Editor 전용 Agent로 다음 기능 제공:
- * - Autocomplete: 코드/텍스트 자동완성
- * - Code Actions: Fix, Improve, Explain, Complete
+ * - Autocomplete: 코드/텍스트 자동완성 (RAG 항상 사용)
+ * - Code Actions: Fix, Improve, Explain, Complete (RAG 항상 사용)
  * - Writing Tools: Continue, Make shorter/longer, Simplify, Fix grammar, Change tone
  *
  * Built-in Tools:
  * - get_file_context: 현재 파일의 imports, types, 주변 코드 분석
  * - search_similar_code: 프로젝트에서 유사한 코드 패턴 검색
  * - get_documentation: 함수/라이브러리 문서 검색
+ *
+ * RAG Integration:
+ * - Autocomplete와 Code Action 시 벡터 DB에서 관련 문서 자동 검색
+ * - 검색된 문서를 컨텍스트로 포함하여 더 정확한 코드 제안 제공
  */
 
 export interface EditorAgentState extends AgentState {
+  // Working directory for file operations
+  workingDirectory?: string;
   // Editor 전용 상태
   editorContext?: {
     filePath?: string;
@@ -26,14 +34,26 @@ export interface EditorAgentState extends AgentState {
     selectedText?: string;
     action?: 'autocomplete' | 'code-action' | 'writing-tool';
     actionType?: string; // 'fix', 'improve', 'continue', etc.
+    useRag?: boolean; // RAG 문서 사용 여부
+    useTools?: boolean; // MCP Tools 사용 여부
   };
+  // RAG 관련 상태
+  ragDocuments?: Array<{
+    id: string;
+    content: string;
+    metadata: Record<string, any>;
+    score?: number;
+  }>;
 }
 
 export class EditorAgentGraph {
   private maxIterations: number;
 
-  constructor(maxIterations = 10) {
+  constructor(maxIterations = 50) {
     this.maxIterations = maxIterations;
+
+    // Register all editor tools
+    registerAllEditorTools();
   }
 
   /**
@@ -48,12 +68,64 @@ export class EditorAgentGraph {
 
     console.log('[EditorAgent] Starting with action:', state.editorContext?.action);
     console.log('[EditorAgent] Action type:', state.editorContext?.actionType);
+    console.log('[EditorAgent] Use RAG:', state.editorContext?.useRag);
+    console.log('[EditorAgent] Use Tools:', state.editorContext?.useTools);
+
+    // RAG: useRag가 활성화된 경우에만 문서 검색 수행
+    if (
+      state.editorContext?.useRag &&
+      (state.editorContext?.action === 'autocomplete' ||
+        state.editorContext?.action === 'code-action')
+    ) {
+      console.log('[EditorAgent] RAG enabled - retrieving relevant documents');
+      try {
+        const ragDocuments = await this.retrieveDocuments(state);
+        state = {
+          ...state,
+          ragDocuments,
+        };
+        console.log(`[EditorAgent] Retrieved ${ragDocuments.length} RAG documents`);
+
+        // RAG 문서 검색 결과를 yield
+        yield {
+          type: 'rag_documents',
+          documents: ragDocuments,
+        };
+      } catch (error: any) {
+        console.error('[EditorAgent] RAG retrieval error:', error);
+        // RAG 실패 시에도 계속 진행 (문서 없이)
+        state = {
+          ...state,
+          ragDocuments: [],
+        };
+      }
+    } else if (state.editorContext?.useRag === false) {
+      console.log('[EditorAgent] RAG disabled by user');
+    } else {
+      console.log('[EditorAgent] RAG not applicable for this action');
+    }
 
     let hasError = false;
     let errorMessage = '';
 
     while (iterations < this.maxIterations) {
       console.log(`[EditorAgent] ===== Iteration ${iterations + 1}/${this.maxIterations} =====`);
+
+      // Check if streaming was aborted
+      if (isAborted(state.conversationId)) {
+        console.log('[EditorAgent] Streaming aborted by user');
+        const abortMessage: Message = {
+          id: `msg-${Date.now()}`,
+          role: 'assistant',
+          content: '⏹️ 작업이 사용자에 의해 중단되었습니다.',
+          created_at: Date.now(),
+        };
+        yield {
+          type: 'message',
+          message: abortMessage,
+        };
+        break;
+      }
 
       // 1. Generate response with tools
       let generateResult;
@@ -147,7 +219,63 @@ export class EditorAgentGraph {
 
       // 4. Execute tools
       console.log('[EditorAgent] Executing tools');
+
+      // Check abort before tool execution
+      if (isAborted(state.conversationId)) {
+        console.log('[EditorAgent] Streaming aborted before tool execution');
+        break;
+      }
+
+      // Log tool execution start (Detailed)
+      const toolCalls = state.messages[state.messages.length - 1].tool_calls;
+      if (toolCalls && toolCalls.length > 0) {
+        let logMessage = `\n\n---\n🔄 **Iteration ${iterations + 1}/${this.maxIterations}**\n`;
+
+        for (const toolCall of toolCalls) {
+          logMessage += `\n🛠️ **Call:** \`${toolCall.name}\`\n`;
+          try {
+            const args =
+              typeof toolCall.arguments === 'string'
+                ? toolCall.arguments
+                : JSON.stringify(toolCall.arguments, null, 2);
+            logMessage += `📂 **Args:**\n\`\`\`json\n${args}\n\`\`\`\n`;
+          } catch {
+            logMessage += `📂 **Args:** (parsing failed)\n`;
+          }
+        }
+        emitStreamingChunk(logMessage, state.conversationId);
+      }
+
       const toolsResult = await this.toolsNode(state);
+
+      // Log tool execution end (Detailed)
+      if (toolsResult.toolResults && toolsResult.toolResults.length > 0) {
+        let logMessage = `\n<small>\n`;
+
+        for (const result of toolsResult.toolResults) {
+          const status = result.error ? '❌ Error' : '✅ Result';
+          logMessage += `${status}: \`${result.toolName}\`\n\n`;
+
+          let output = result.error || result.result || '(no output)';
+          if (typeof output !== 'string') {
+            output = JSON.stringify(output, null, 2);
+          }
+
+          // Shorten output for better UX (300 chars instead of 1000)
+          if (output.length > 300) {
+            output = `${output.substring(0, 300)}\n... (output truncated for readability)`;
+          }
+
+          // Use inline code instead of code block for shorter output
+          if (output.length < 100 && !output.includes('\n')) {
+            logMessage += `📄 Output: \`${output}\`\n\n`;
+          } else {
+            logMessage += `📄 Output:\n\`\`\`\n${output}\n\`\`\`\n\n`;
+          }
+        }
+        logMessage += `</small>`;
+        emitStreamingChunk(`${logMessage}---\n\n`, state.conversationId);
+      }
 
       // Remove tool_calls to prevent re-execution
       const updatedMessages = [...state.messages];
@@ -223,7 +351,69 @@ export class EditorAgentGraph {
       tools.map((t) => t.function.name)
     );
 
-    const response = await provider.chat(state.messages, {
+    // 시스템 메시지 구성
+    let messages = [...state.messages];
+    const systemMessages: Message[] = [];
+
+    // 1. 기본 Editor Agent 역할 시스템 메시지 (항상 추가)
+    const baseSystemMessage: Message = {
+      id: 'editor-agent-system',
+      role: 'system',
+      content: `You are an Editor Agent with powerful file management and code assistance tools.
+
+**Context:**
+- Working Directory: ${state.workingDirectory || 'not specified'}
+- Current File: ${state.editorContext?.filePath || 'none'}
+- Language: ${state.editorContext?.language || 'unknown'}
+- Action Type: ${state.editorContext?.action || 'general'}
+
+**Instructions:**
+- Use tools proactively to complete user requests
+- For file creation: use write_file with complete content immediately
+- For file editing: read_file first, then write_file with updated content
+- Always confirm actions with clear, concise feedback
+- Execute multi-step tasks systematically
+
+**Tool Usage Guidelines:**
+- write_file: Create or overwrite files with full content
+- edit_file: Replace specific line ranges in existing files
+- read_file: Read file contents before editing
+- list_files: Browse directory structure
+- run_command: Execute terminal commands when needed
+
+Respond in Korean and use tools efficiently.`,
+      created_at: Date.now(),
+    };
+    systemMessages.push(baseSystemMessage);
+
+    // 2. RAG 문서가 있으면 RAG 컨텍스트 시스템 메시지 추가
+    if (state.ragDocuments && state.ragDocuments.length > 0) {
+      const ragContext = state.ragDocuments
+        .map((doc, i) => `[문서 ${i + 1}] (관련도: ${(doc.score || 0).toFixed(2)})\n${doc.content}`)
+        .join('\n\n');
+
+      const ragSystemMessage: Message = {
+        id: 'rag-system',
+        role: 'system',
+        content: `다음은 코드베이스에서 검색된 관련 문서입니다. 이 정보를 활용하여 더 정확하고 일관된 코드를 제안하세요.
+
+${ragContext}
+
+위 문서의 패턴과 스타일을 참고하여 응답하되, 사용자의 요청에 집중하세요.`,
+        created_at: Date.now(),
+      };
+
+      systemMessages.push(ragSystemMessage);
+
+      console.log(
+        `[EditorAgent] Added RAG context with ${state.ragDocuments.length} documents to system message`
+      );
+    }
+
+    // 시스템 메시지들을 맨 앞에 삽입
+    messages = [...systemMessages, ...messages];
+
+    const response = await provider.chat(messages, {
       tools: tools.length > 0 ? tools : undefined,
     });
 
@@ -305,85 +495,51 @@ export class EditorAgentGraph {
   /**
    * Get Editor-specific tools based on context
    */
-  private getEditorTools(context?: EditorAgentState['editorContext']): any[] {
+  private getEditorTools(_context?: EditorAgentState['editorContext']): any[] {
     const tools: any[] = [];
 
-    // For autocomplete: add context-aware tools
-    if (context?.action === 'autocomplete') {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'get_file_context',
-          description:
-            'Get context about the current file including imports, types, and surrounding code',
-          parameters: {
-            type: 'object',
-            properties: {
-              includeImports: {
-                type: 'boolean',
-                description: 'Include import statements',
-              },
-              includeTypes: {
-                type: 'boolean',
-                description: 'Include type definitions',
-              },
-              linesBefore: {
-                type: 'number',
-                description: 'Number of lines before cursor to include',
-              },
-              linesAfter: {
-                type: 'number',
-                description: 'Number of lines after cursor to include',
-              },
-            },
-            required: [],
-          },
-        },
-      });
+    // Always include file management tools from registry
+    const fileTools = editorToolsRegistry.toOpenAIFormat([
+      'read_file',
+      'write_file',
+      'edit_file',
+      'list_files',
+      'search_files',
+      'delete_file',
+    ]);
+    tools.push(...fileTools);
 
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'search_similar_code',
-          description: 'Search for similar code patterns in the project',
-          parameters: {
-            type: 'object',
-            properties: {
-              pattern: {
-                type: 'string',
-                description: 'Code pattern to search for',
-              },
-              language: {
-                type: 'string',
-                description: 'Programming language',
-              },
-            },
-            required: ['pattern'],
-          },
-        },
-      });
-    }
+    // Always include tab management tools from registry
+    const tabTools = editorToolsRegistry.toOpenAIFormat([
+      'list_open_tabs',
+      'open_tab',
+      'close_tab',
+      'switch_tab',
+      'get_active_file',
+    ]);
+    tools.push(...tabTools);
 
-    // For code actions: add documentation tool
-    if (context?.action === 'code-action') {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'get_documentation',
-          description: 'Get documentation for a function or library',
-          parameters: {
-            type: 'object',
-            properties: {
-              query: {
-                type: 'string',
-                description: 'Function name or library to search documentation for',
-              },
-            },
-            required: ['query'],
-          },
-        },
-      });
-    }
+    // Always include terminal tools from registry
+    const terminalTools = editorToolsRegistry.toOpenAIFormat(['run_command']);
+    tools.push(...terminalTools);
+
+    // Always include git tools from registry
+    const gitTools = editorToolsRegistry.toOpenAIFormat([
+      'git_status',
+      'git_diff',
+      'git_log',
+      'git_branch',
+    ]);
+    tools.push(...gitTools);
+
+    // Always include code analysis tools from registry
+    const codeTools = editorToolsRegistry.toOpenAIFormat([
+      'get_file_context',
+      'search_similar_code',
+      'get_documentation',
+      'find_definition',
+    ]);
+    tools.push(...codeTools);
 
     return tools;
   }
@@ -398,73 +554,98 @@ export class EditorAgentGraph {
 
     console.log('[EditorAgent] Executing tool:', name, 'with args:', parsedArgs);
 
-    switch (name) {
-      case 'get_file_context':
-        return this.getFileContext(parsedArgs, state);
-
-      case 'search_similar_code':
-        return this.searchSimilarCode(parsedArgs, state);
-
-      case 'get_documentation':
-        return this.getDocumentation(parsedArgs, state);
-
-      default:
-        throw new Error(`Unknown tool: ${name}`);
-    }
-  }
-
-  /**
-   * Tool: Get file context
-   */
-  private async getFileContext(args: any, _state: EditorAgentState): Promise<string> {
-    const { includeImports = true, includeTypes = true, linesBefore = 10, linesAfter = 5 } = args;
-    const context = _state.editorContext;
-
-    if (!context) {
-      return 'No editor context available';
+    // All tools are now in the Tool Registry
+    const registryTool = editorToolsRegistry.get(name);
+    if (registryTool) {
+      return editorToolsRegistry.execute(name, parsedArgs, state);
     }
 
-    // This is a placeholder - actual implementation would read from file system
-    return `File context for ${context.filePath || 'current file'}:
-Language: ${context.language || 'unknown'}
-Cursor position: ${context.cursorPosition || 0}
-
-Note: Full file context extraction not yet implemented.
-This would include:
-- Imports: ${includeImports ? 'Yes' : 'No'}
-- Types: ${includeTypes ? 'Yes' : 'No'}
-- Lines before: ${linesBefore}
-- Lines after: ${linesAfter}`;
+    // Unknown tool
+    throw new Error(`Unknown tool: ${name}`);
   }
 
   /**
-   * Tool: Search similar code
+   * RAG: 벡터 DB에서 관련 문서 검색
    */
-  private async searchSimilarCode(args: any, _state: EditorAgentState): Promise<string> {
-    const { pattern, language } = args;
+  private async retrieveDocuments(
+    state: EditorAgentState
+  ): Promise<
+    Array<{ id: string; content: string; metadata: Record<string, any>; score?: number }>
+  > {
+    try {
+      // Main Process 환경 확인
+      if (typeof window !== 'undefined') {
+        console.error('[EditorAgent] retrieveDocuments should only run in Main Process');
+        return [];
+      }
 
-    // Placeholder - would use ripgrep or similar
-    return `Search results for pattern: "${pattern}" in ${language || 'all'} files:
+      // 검색 쿼리 생성: 마지막 사용자 메시지 + 에디터 컨텍스트
+      const lastMessage = state.messages[state.messages.length - 1];
+      let query = lastMessage?.content || '';
 
-Note: Code search not yet implemented.
-This would use ripgrep to find similar patterns across the project.`;
-  }
+      // 에디터 컨텍스트를 쿼리에 추가
+      if (state.editorContext) {
+        const { language, actionType, selectedText } = state.editorContext;
+        const contextParts = [];
 
-  /**
-   * Tool: Get documentation
-   */
-  private async getDocumentation(args: any, _state: EditorAgentState): Promise<string> {
-    const { query } = args;
+        if (language) {
+          contextParts.push(`Language: ${language}`);
+        }
+        if (actionType) {
+          contextParts.push(`Action: ${actionType}`);
+        }
+        if (selectedText && selectedText.length < 200) {
+          contextParts.push(`Code: ${selectedText}`);
+        }
 
-    // Placeholder - would fetch from online docs or local cache
-    return `Documentation for: "${query}"
+        if (contextParts.length > 0) {
+          query = `${contextParts.join(' | ')} | ${query}`;
+        }
+      }
 
-Note: Documentation search not yet implemented.
-This would fetch documentation from:
-- MDN (for web APIs)
-- DevDocs (for frameworks)
-- Local type definitions
-- Online API references`;
+      console.log('[EditorAgent] RAG query:', query);
+
+      // Dynamic import
+      const { vectorDBService } = await import('../../../electron/services/vectordb');
+      const { databaseService } = await import('../../../electron/services/database');
+      const { initializeEmbedding, getEmbeddingProvider } =
+        await import('@/lib/vectordb/embeddings/client');
+
+      // Embedding config 로드
+      const configStr = databaseService.getSetting('app_config');
+      if (!configStr) {
+        console.warn('[EditorAgent] App config not found, RAG disabled');
+        return [];
+      }
+
+      const appConfig = JSON.parse(configStr);
+      if (!appConfig.embedding) {
+        console.warn('[EditorAgent] Embedding config not found, RAG disabled');
+        return [];
+      }
+
+      // Embedding 초기화
+      initializeEmbedding(appConfig.embedding);
+
+      // 쿼리 임베딩
+      const embedder = getEmbeddingProvider();
+      const queryEmbedding = await embedder.embed(query);
+
+      // 벡터 검색 (상위 3개)
+      const results = await vectorDBService.searchByVector(queryEmbedding, 3);
+
+      console.log(`[EditorAgent] RAG retrieved ${results.length} documents`);
+
+      return results.map((result) => ({
+        id: result.id,
+        content: result.content,
+        metadata: result.metadata,
+        score: result.score,
+      }));
+    } catch (error: any) {
+      console.error('[EditorAgent] RAG retrieval error:', error);
+      return [];
+    }
   }
 }
 

@@ -1,4 +1,4 @@
-import { VectorDocument, SearchResult, VectorDBConfig } from './types';
+import { VectorDocument, SearchResult, VectorDBConfig, SearchOptions } from './types';
 
 /**
  * VectorDB 추상 인터페이스
@@ -45,12 +45,21 @@ export abstract class VectorDB {
   /**
    * 벡터 검색 (쿼리 임베딩으로)
    */
-  abstract searchByVector(queryEmbedding: number[], k: number): Promise<SearchResult[]>;
+  abstract searchByVector(
+    queryEmbedding: number[],
+    k: number,
+    options?: SearchOptions
+  ): Promise<SearchResult[]>;
 
   /**
    * 문서 삭제
    */
   abstract delete(ids: string[]): Promise<void>;
+
+  /**
+   * 문서 메타데이터 업데이트
+   */
+  abstract updateMetadata(id: string, metadata: Record<string, any>): Promise<void>;
 
   /**
    * 인덱스의 문서 개수

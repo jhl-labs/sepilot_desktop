@@ -5,7 +5,6 @@
 package-lock.json  # pnpm 프로젝트이므로 npm lockfile 제외
 
 # testing
-/coverage
 /test-results
 /backstop_data/bitmaps_test
 /backstop_data/html_report
@@ -105,6 +104,7 @@ Desktop.ini
 
 # test coverage
 coverage/
+coverage-*/
 .nyc_output/
 *.lcov
 

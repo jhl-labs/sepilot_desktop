@@ -15,20 +15,26 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { DocumentSourceType } from '@/lib/documents/types';
+import { ChunkStrategy } from '@/lib/vectordb/types';
 import { fetchDocument } from '@/lib/documents/fetchers';
 import { cleanDocumentsWithLLM } from '@/lib/documents/cleaner';
 
 interface DocumentUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (documents: { content: string; metadata: Record<string, any> }[]) => Promise<void>;
+  onUpload: (
+    documents: { content: string; metadata: Record<string, any> }[],
+    chunkStrategy?: ChunkStrategy
+  ) => Promise<void>;
 }
 
 export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentUploadDialogProps) {
   const [sourceType, setSourceType] = useState<DocumentSourceType>('manual');
+  const [docGroup, setDocGroup] = useState<'personal' | 'team'>('personal');
   const [title, setTitle] = useState('');
   const [source, setSource] = useState('');
   const [content, setContent] = useState('');
+  const [folderPath, setFolderPath] = useState('');
 
   // HTTP 문서용
   const [httpUrl, setHttpUrl] = useState('');
@@ -40,6 +46,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
   const [githubToken, setGithubToken] = useState('');
 
   const [cleanWithLLM, setCleanWithLLM] = useState(false);
+  const [chunkStrategy, setChunkStrategy] = useState<ChunkStrategy>('sentence');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(
     null
@@ -68,6 +75,8 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               title: title.trim() || '제목 없음',
               source: source.trim() || 'manual',
               uploadedAt: Date.now(),
+              folderPath: folderPath.trim() || undefined,
+              docGroup: docGroup,
             },
           },
         ];
@@ -90,6 +99,8 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
             metadata: {
               ...doc.metadata,
               title: title.trim() || doc.metadata.title || 'Untitled',
+              folderPath: folderPath.trim() || undefined,
+              docGroup: docGroup,
             },
           })
         );
@@ -126,6 +137,8 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
             metadata: {
               ...doc.metadata,
               title: doc.metadata.title || 'Untitled',
+              folderPath: folderPath.trim() || undefined,
+              docGroup: docGroup,
             },
           })
         );
@@ -142,7 +155,7 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
         documentsToUpload = processedDocs;
       }
 
-      await onUpload(documentsToUpload);
+      await onUpload(documentsToUpload, chunkStrategy);
 
       const docCount = documentsToUpload.length;
       setMessage({
@@ -151,15 +164,18 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
       });
 
       // 입력 필드 초기화
+      setDocGroup('personal');
       setContent('');
       setTitle('');
       setSource('');
+      setFolderPath('');
       setHttpUrl('');
       setGithubRepoUrl('');
       setGithubPath('');
       setGithubBranch('main');
       setGithubToken('');
       setCleanWithLLM(false);
+      setChunkStrategy('sentence');
 
       setTimeout(() => {
         onOpenChange(false);
@@ -175,13 +191,36 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!w-[90vw] !max-w-[1400px] h-[85vh] flex flex-col">
+      <DialogContent
+        className="!w-[90vw] !max-w-[1400px] h-[85vh] flex flex-col"
+        onClose={() => onOpenChange(false)}
+      >
         <DialogHeader>
           <DialogTitle>문서 업로드</DialogTitle>
           <DialogDescription>새 문서를 추가하여 RAG 검색에 활용하세요.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4 flex-1 overflow-y-auto">
+          {/* Document Group */}
+          <div className="space-y-2">
+            <Label htmlFor="doc-group">문서 그룹</Label>
+            <select
+              id="doc-group"
+              value={docGroup}
+              onChange={(e) => setDocGroup(e.target.value as 'personal' | 'team')}
+              disabled={isUploading}
+              className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
+            >
+              <option value="personal">Personal Docs (개인 문서)</option>
+              <option value="team">Team Docs (팀 공유 문서)</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {docGroup === 'personal'
+                ? '개인 문서: 본인만 사용하는 문서입니다.'
+                : 'Team Docs: 팀 전체가 공유하는 문서입니다.'}
+            </p>
+          </div>
+
           {/* Document Source Type */}
           <div className="space-y-2">
             <Label htmlFor="source-type">문서 소스 타입</Label>
@@ -221,6 +260,20 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
                   placeholder="예: Wikipedia, 내부 문서"
                   disabled={isUploading}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="upload-folder">폴더 경로 (선택)</Label>
+                <Input
+                  id="upload-folder"
+                  value={folderPath}
+                  onChange={(e) => setFolderPath(e.target.value)}
+                  placeholder="예: 프로젝트/백엔드/API"
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  슬래시(/)로 하위 폴더를 구분할 수 있습니다
+                </p>
               </div>
 
               <div className="space-y-2 flex-1 flex flex-col">
@@ -263,6 +316,20 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
                   placeholder="문서 제목 (비워두면 URL에서 추출)"
                   disabled={isUploading}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="http-folder">폴더 경로 (선택)</Label>
+                <Input
+                  id="http-folder"
+                  value={folderPath}
+                  onChange={(e) => setFolderPath(e.target.value)}
+                  placeholder="예: 프로젝트/백엔드/API"
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  슬래시(/)로 하위 폴더를 구분할 수 있습니다
+                </p>
               </div>
 
               {/* LLM 정제 옵션 */}
@@ -340,12 +407,44 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
                 </div>
               </div>
 
-              <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-3 text-xs text-blue-600 dark:text-blue-400">
-                <p className="font-medium">Private Repository 접근 시:</p>
-                <p className="mt-1">
-                  GitHub Personal Access Token이 필요합니다. Settings → Developer settings →
-                  Personal access tokens에서 생성할 수 있습니다.
+              <div className="space-y-2">
+                <Label htmlFor="github-folder">폴더 경로 (선택)</Label>
+                <Input
+                  id="github-folder"
+                  value={folderPath}
+                  onChange={(e) => setFolderPath(e.target.value)}
+                  placeholder="예: 프로젝트/백엔드/API"
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  슬래시(/)로 하위 폴더를 구분할 수 있습니다
                 </p>
+              </div>
+
+              <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-3 text-xs text-blue-600 dark:text-blue-400">
+                <p className="font-medium mb-2">GitHub 기능 안내:</p>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>
+                    <strong>디렉토리 경로</strong>: 모든 하위 폴더를 재귀적으로 탐색하여 .md, .txt,
+                    .json, .yaml 파일 수집
+                  </li>
+                  <li>
+                    <strong>단일 파일</strong>: 확장자가 있는 경로는 해당 파일만 가져옴
+                  </li>
+                  <li>
+                    <strong>Private Repository</strong>: Personal Access Token 필요
+                    <br />
+                    <span className="ml-4 text-muted-foreground">
+                      Settings → Developer settings → Personal access tokens → Tokens (classic) →
+                      Generate new token
+                    </span>
+                    <br />
+                    <span className="ml-4 text-muted-foreground">
+                      권한: <code className="text-xs bg-black/10 px-1 rounded">repo</code> 또는{' '}
+                      <code className="text-xs bg-black/10 px-1 rounded">public_repo</code> 체크
+                    </span>
+                  </li>
+                </ul>
               </div>
 
               {/* LLM 정제 옵션 */}
@@ -369,6 +468,33 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
               </div>
             </>
           )}
+
+          {/* Chunking Strategy */}
+          <div className="space-y-2">
+            <Label htmlFor="chunk-strategy">청킹 전략</Label>
+            <select
+              id="chunk-strategy"
+              value={chunkStrategy}
+              onChange={(e) => setChunkStrategy(e.target.value as ChunkStrategy)}
+              disabled={isUploading}
+              className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
+            >
+              <option value="sentence">문장 기반 (권장) - 문장 경계 보존</option>
+              <option value="structure">구조 기반 - Markdown/코드 블록 보존</option>
+              <option value="character">문자 기반 - 단순 분할 (빠름)</option>
+              <option value="token">토큰 기반 - LLM 토큰 단위 (향후 지원)</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {chunkStrategy === 'sentence' &&
+                '문장 단위로 청킹하여 컨텍스트를 보존합니다. 대부분의 경우 권장됩니다.'}
+              {chunkStrategy === 'structure' &&
+                'Markdown 헤딩, 코드 블록 등 구조를 유지합니다. 기술 문서에 적합합니다.'}
+              {chunkStrategy === 'character' &&
+                '단순히 문자 수로 분할합니다. 빠르지만 문맥이 손실될 수 있습니다.'}
+              {chunkStrategy === 'token' &&
+                'LLM 토큰 단위로 청킹합니다. (현재 sentence 방식으로 폴백됩니다)'}
+            </p>
+          </div>
 
           {/* Info */}
           <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">

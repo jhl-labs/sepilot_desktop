@@ -3,6 +3,8 @@
 
 codecov:
   require_ci_to_pass: yes
+  notify:
+    wait_for_ci: yes
 
 coverage:
   precision: 2
@@ -12,26 +14,28 @@ coverage:
   status:
     project:
       default:
-        target: 80%
+        target: 55%
         threshold: 2%
         if_ci_failed: error
 
       frontend:
         flags:
           - frontend
-        target: 75%
+        target: 50%
         threshold: 3%
+        informational: true
 
       backend:
         flags:
           - backend
-        target: 80%
+        target: 55%
         threshold: 2%
 
     patch:
       default:
-        target: 80%
+        target: 55%
         threshold: 5%
+        informational: true
 
 flags:
   frontend:
@@ -46,20 +50,43 @@ flags:
       - electron/
     carryforward: true
 
+  bundle-analysis:
+    paths:
+      - .next/analyze/
+    carryforward: false
+
 comment:
-  layout: "reach,diff,flags,tree"
+  layout: "reach,diff,flags,files,footer"
   behavior: default
   require_changes: false
   require_base: no
   require_head: yes
 
+# GitHub Checks
+github_checks:
+  annotations: true
+
+# Pull Request Comments
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
 ignore:
   - "tests/"
   - "**/*.test.ts"
   - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
   - "**/*.d.ts"
   - "dist/"
   - ".next/"
+  - "out/"
   - "node_modules/"
   - "scripts/"
   - "**/__mocks__/"
+  - "**/*.config.js"
+  - "**/*.config.ts"

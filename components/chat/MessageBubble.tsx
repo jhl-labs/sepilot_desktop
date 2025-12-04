@@ -3,6 +3,7 @@
 import { Message, FileChange } from '@/types';
 import { Persona } from '@/types/persona';
 import { cn } from '@/lib/utils';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 import {
   User,
   Bot,
@@ -16,13 +17,18 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useChatStore } from '@/lib/store/chat-store';
 import { ImageGenerationProgressBar } from './ImageGenerationProgressBar';
 import { CodeDiffViewer } from './CodeDiffViewer';
 import { isElectron } from '@/lib/platform';
+import { ToolResult } from './ToolResult';
+import { InteractiveSelect } from './InteractiveSelect';
+import { InteractiveInput } from './InteractiveInput';
+import { ToolApprovalRequest } from './ToolApprovalRequest';
+import { parseInteractiveContent } from '@/lib/utils/interactive-parser';
 
 interface MessageBubbleProps {
   message: Message;
@@ -59,9 +65,11 @@ export function MessageBubble({
   );
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const success = await copyToClipboard(message.content);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleEditSave = () => {
@@ -82,16 +90,20 @@ export function MessageBubble({
     }
   };
 
-  const handleViewDocument = (docId: string, docTitle: string, docContent: string) => {
-    // 문서 전문을 새 메시지로 추가
-    const documentMessage: Message = {
-      id: `doc-${Date.now()}`,
-      role: 'system',
-      content: `**📄 참조 문서: ${docTitle}**\n\n${docContent}`,
-      created_at: Date.now(),
-    };
-    addMessage(documentMessage);
-  };
+  const handleViewDocument = useCallback(
+    (docId: string, docTitle: string, docContent: string) => {
+      // 문서 전문을 새 메시지로 추가
+      const timestamp = Date.now();
+      const documentMessage: Message = {
+        id: `doc-${timestamp}`,
+        role: 'system',
+        content: `**📄 참조 문서: ${docTitle}**\n\n${docContent}`,
+        created_at: timestamp,
+      };
+      addMessage(documentMessage);
+    },
+    [addMessage]
+  );
 
   const toggleDocumentExpand = (docId: string) => {
     const newExpanded = new Set(expandedDocs);
@@ -268,12 +280,70 @@ export function MessageBubble({
               )}
 
               {isAssistant ? (
-                <MarkdownRenderer
-                  content={message.content}
-                  isStreaming={isStreaming}
-                  referencedDocuments={message.referenced_documents}
-                  onSourceClick={(doc) => handleViewDocument(doc.id, doc.title, doc.content)}
-                />
+                <>
+                  {/* Parse and render interactive components */}
+                  {(() => {
+                    const parsed = parseInteractiveContent(message.content);
+                    return parsed.segments.map((segment, index) => {
+                      if (segment.type === 'text') {
+                        return (
+                          <MarkdownRenderer
+                            key={index}
+                            content={segment.content as string}
+                            isStreaming={isStreaming && index === parsed.segments.length - 1}
+                            referencedDocuments={message.referenced_documents}
+                            onSourceClick={(doc) =>
+                              handleViewDocument(doc.id, doc.title, doc.content)
+                            }
+                          />
+                        );
+                      } else {
+                        // Render interactive component
+                        const block = segment.content as any;
+
+                        if (block.type === 'interactive-select') {
+                          return (
+                            <InteractiveSelect
+                              key={index}
+                              title={block.title}
+                              options={block.options}
+                            />
+                          );
+                        } else if (block.type === 'interactive-input') {
+                          return (
+                            <InteractiveInput
+                              key={index}
+                              title={block.title}
+                              placeholder={block.placeholder}
+                              multiline={block.multiline}
+                            />
+                          );
+                        } else if (block.type === 'tool-result') {
+                          return (
+                            <ToolResult
+                              key={index}
+                              toolName={block.toolName}
+                              status={block.status}
+                              summary={block.summary}
+                              details={block.details}
+                              duration={block.duration}
+                            />
+                          );
+                        } else if (block.type === 'tool-approval') {
+                          return (
+                            <ToolApprovalRequest
+                              key={index}
+                              messageId={block.messageId}
+                              toolCalls={block.toolCalls}
+                            />
+                          );
+                        }
+
+                        return null;
+                      }
+                    });
+                  })()}
+                </>
               ) : (
                 <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-blue-700 dark:text-blue-400">
                   {message.content}

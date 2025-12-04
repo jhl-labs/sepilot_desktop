@@ -7,8 +7,11 @@ import {
   Globe,
   Plus,
   Trash,
-  FileText,
   Search,
+  FolderOpen,
+  Bot,
+  Presentation,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -17,6 +20,7 @@ import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { SidebarChat } from './SidebarChat';
 import { SidebarEditor } from './SidebarEditor';
 import { SidebarBrowser } from './SidebarBrowser';
+import { SidebarPresentation } from './SidebarPresentation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,10 +48,24 @@ export function Sidebar({
     editorViewMode,
     setEditorViewMode,
     setChatViewMode,
+    clearEditorChat,
+    editorAgentMode,
+    setEditorAgentMode,
+    refreshFileTree,
+    clearPresentationSession,
+    presentationViewMode,
+    setPresentationViewMode,
   } = useChatStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const modeLabel = appMode === 'chat' ? 'Chat' : appMode === 'editor' ? 'Editor' : 'Browser';
+  const modeLabel =
+    appMode === 'chat'
+      ? 'Chat'
+      : appMode === 'editor'
+        ? 'Editor'
+        : appMode === 'presentation'
+          ? 'Presentation'
+          : 'Browser';
 
   const handleDeleteAll = async () => {
     if (conversations.length === 0) {
@@ -91,6 +109,10 @@ export function Sidebar({
               <Code className="mr-2 h-4 w-4" />
               Editor
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAppMode('presentation')}>
+              <Presentation className="mr-2 h-4 w-4" />
+              Presentation
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setAppMode('browser')}>
               <Globe className="mr-2 h-4 w-4" />
               Browser
@@ -122,20 +144,105 @@ export function Sidebar({
             <Button
               variant="ghost"
               size="icon"
+              onClick={() => {
+                if (editorViewMode === 'chat') {
+                  if (window.confirm('현재 대화 내역을 모두 삭제하시겠습니까?')) {
+                    clearEditorChat();
+                    setEditorViewMode('chat');
+                  }
+                } else {
+                  setEditorViewMode('chat');
+                }
+              }}
+              title={editorViewMode === 'chat' ? '새 대화' : 'AI 코딩 어시스턴트'}
+              className={editorViewMode === 'chat' ? 'bg-accent' : ''}
+            >
+              {editorViewMode === 'chat' ? (
+                <Plus className="h-5 w-5" />
+              ) : (
+                <MessageSquare className="h-5 w-5" />
+              )}
+            </Button>
+            {editorViewMode === 'chat' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() =>
+                  setEditorAgentMode(editorAgentMode === 'editor' ? 'coding' : 'editor')
+                }
+                title={
+                  editorAgentMode === 'editor'
+                    ? 'Editor Agent 모드 (클릭하여 Coding Agent로 전환)'
+                    : 'Coding Agent 모드 (클릭하여 Editor Agent로 전환)'
+                }
+                className={
+                  editorAgentMode === 'coding'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-accent text-accent-foreground'
+                }
+              >
+                <Bot className="h-5 w-5" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setEditorViewMode('files')}
               title="파일 탐색기"
               className={editorViewMode === 'files' ? 'bg-accent' : ''}
             >
-              <FileText className="h-5 w-5" />
+              <FolderOpen className="h-5 w-5" />
+            </Button>
+            {editorViewMode === 'files' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={refreshFileTree}
+                title="파일 목록 새로고침"
+              >
+                <RefreshCw className="h-5 w-5" />
+              </Button>
+            )}
+            {editorViewMode !== 'chat' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setEditorViewMode('search')}
+                title="전체 검색"
+                className={editorViewMode === 'search' ? 'bg-accent' : ''}
+              >
+                <Search className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
+        )}
+        {appMode === 'presentation' && (
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => clearPresentationSession()}
+              title="새 프레젠테이션 세션"
+            >
+              <Plus className="h-5 w-5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setEditorViewMode('search')}
-              title="전체 검색"
-              className={editorViewMode === 'search' ? 'bg-accent' : ''}
+              onClick={() => setPresentationViewMode('chat')}
+              title="AI 디자이너와 대화"
+              className={presentationViewMode === 'chat' ? 'bg-accent' : ''}
             >
-              <Search className="h-5 w-5" />
+              <MessageSquare className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setPresentationViewMode('outline')}
+              title="슬라이드 개요 미리보기"
+              className={presentationViewMode === 'outline' ? 'bg-accent' : ''}
+            >
+              <Presentation className="h-5 w-5" />
             </Button>
           </div>
         )}
@@ -151,7 +258,8 @@ export function Sidebar({
             onDocumentsClick={onDocumentsClick}
           />
         )}
-        {appMode === 'editor' && <SidebarEditor />}
+        {appMode === 'editor' && <SidebarEditor onDocumentsClick={onDocumentsClick} />}
+        {appMode === 'presentation' && <SidebarPresentation />}
         {appMode === 'browser' && <SidebarBrowser />}
       </div>
 

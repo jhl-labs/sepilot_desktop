@@ -36,10 +36,11 @@
     "components/**/*.ts",
     "components/**/*.tsx",
     "types/**/*.ts",
+    "e2e_tests/**/*.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "out/types/**/*.ts",
     "out/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "electron", "dist", "out", ".next"]
+  "exclude": ["node_modules", "electron", "dist", "out", ".next", "components/_deprecated"]
 }

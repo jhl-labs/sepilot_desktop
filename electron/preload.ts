@@ -21,6 +21,10 @@ const electronAPI = {
     saveMessage: (message: any) => ipcRenderer.invoke('save-message', message),
     loadMessages: (conversationId: string) => ipcRenderer.invoke('load-messages', conversationId),
     deleteMessage: (id: string) => ipcRenderer.invoke('delete-message', id),
+    deleteConversationMessages: (conversationId: string) =>
+      ipcRenderer.invoke('delete-conversation-messages', conversationId),
+    replaceConversationMessages: (conversationId: string, newMessages: any[]) =>
+      ipcRenderer.invoke('replace-conversation-messages', conversationId, newMessages),
   },
 
   // Activity operations (도구 실행 이력)
@@ -128,8 +132,13 @@ const electronAPI = {
       ipcRenderer.removeAllListeners('llm-stream-done');
       ipcRenderer.removeAllListeners('llm-stream-error');
     },
-    editorAutocomplete: (context: { code: string; cursorPosition: number; language?: string }) =>
-      ipcRenderer.invoke('llm-editor-autocomplete', context),
+    editorAutocomplete: (context: {
+      code: string;
+      cursorPosition: number;
+      language?: string;
+      useRag?: boolean;
+      useTools?: boolean;
+    }) => ipcRenderer.invoke('llm-editor-autocomplete', context),
     editorAction: (params: {
       action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve';
       text: string;
@@ -145,7 +154,7 @@ const electronAPI = {
       graphConfig: any,
       messages: any[],
       conversationId?: string,
-      comfyUIConfig?: any,
+      imageGenConfig?: any,
       networkConfig?: any,
       workingDirectory?: string
     ) =>
@@ -154,24 +163,27 @@ const electronAPI = {
         graphConfig,
         messages,
         conversationId,
-        comfyUIConfig,
+        imageGenConfig,
         networkConfig,
         workingDirectory
       ),
     onStreamEvent: (callback: (event: any) => void) => {
       const handler = (_: any, event: any) => callback(event);
       ipcRenderer.on('langgraph-stream-event', handler);
-      return handler;
+      // Return cleanup function instead of handler
+      return () => ipcRenderer.removeListener('langgraph-stream-event', handler);
     },
     onStreamDone: (callback: (data?: { conversationId?: string }) => void) => {
       const handler = (_: any, data?: { conversationId?: string }) => callback(data);
       ipcRenderer.on('langgraph-stream-done', handler);
-      return handler;
+      // Return cleanup function instead of handler
+      return () => ipcRenderer.removeListener('langgraph-stream-done', handler);
     },
     onStreamError: (callback: (data: { error: string; conversationId?: string }) => void) => {
       const handler = (_: any, data: { error: string; conversationId?: string }) => callback(data);
       ipcRenderer.on('langgraph-stream-error', handler);
-      return handler;
+      // Return cleanup function instead of handler
+      return () => ipcRenderer.removeListener('langgraph-stream-error', handler);
     },
     // Tool Approval (Human-in-the-loop)
     onToolApprovalRequest: (
@@ -183,7 +195,8 @@ const electronAPI = {
     ) => {
       const handler = (_: any, data: any) => callback(data);
       ipcRenderer.on('langgraph-tool-approval-request', handler);
-      return handler;
+      // Return cleanup function instead of handler
+      return () => ipcRenderer.removeListener('langgraph-tool-approval-request', handler);
     },
     respondToolApproval: (conversationId: string, approved: boolean) =>
       ipcRenderer.invoke('langgraph-tool-approval-response', conversationId, approved),
@@ -210,15 +223,25 @@ const electronAPI = {
     deleteIndex: (name: string) => ipcRenderer.invoke('vectordb-delete-index', name),
     indexExists: (name: string) => ipcRenderer.invoke('vectordb-index-exists', name),
     insert: (documents: any[]) => ipcRenderer.invoke('vectordb-insert', documents),
-    search: (queryEmbedding: number[], k: number) =>
-      ipcRenderer.invoke('vectordb-search', queryEmbedding, k),
+    search: (queryEmbedding: number[], k: number, options?: any, queryText?: string) =>
+      ipcRenderer.invoke('vectordb-search', queryEmbedding, k, options, queryText),
     delete: (ids: string[]) => ipcRenderer.invoke('vectordb-delete', ids),
+    updateMetadata: (id: string, metadata: Record<string, any>) =>
+      ipcRenderer.invoke('vectordb-update-metadata', id, metadata),
     count: () => ipcRenderer.invoke('vectordb-count'),
     getAll: () => ipcRenderer.invoke('vectordb-get-all'),
     indexDocuments: (
       documents: Array<{ id: string; content: string; metadata: Record<string, any> }>,
       options: { chunkSize: number; chunkOverlap: number; batchSize: number }
     ) => ipcRenderer.invoke('vectordb-index-documents', documents, options),
+    export: () => ipcRenderer.invoke('vectordb-export'),
+    import: (exportData: any, options?: { overwrite?: boolean }) =>
+      ipcRenderer.invoke('vectordb-import', exportData, options),
+    createEmptyFolder: (folderPath: string) =>
+      ipcRenderer.invoke('vectordb-create-empty-folder', folderPath),
+    deleteEmptyFolder: (folderPath: string) =>
+      ipcRenderer.invoke('vectordb-delete-empty-folder', folderPath),
+    getAllEmptyFolders: () => ipcRenderer.invoke('vectordb-get-all-empty-folders'),
   },
 
   // File operations
@@ -242,8 +265,19 @@ const electronAPI = {
     createDirectory: (dirPath: string) => ipcRenderer.invoke('fs:create-directory', dirPath),
     delete: (targetPath: string) => ipcRenderer.invoke('fs:delete', targetPath),
     rename: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:rename', oldPath, newPath),
+    copy: (sourcePath: string, destPath: string) =>
+      ipcRenderer.invoke('fs:copy', sourcePath, destPath),
+    move: (sourcePath: string, destPath: string) =>
+      ipcRenderer.invoke('fs:move', sourcePath, destPath),
+    getAbsolutePath: (filePath: string) => ipcRenderer.invoke('fs:get-absolute-path', filePath),
+    getRelativePath: (from: string, to: string) =>
+      ipcRenderer.invoke('fs:get-relative-path', from, to),
+    showInFolder: (itemPath: string) => ipcRenderer.invoke('fs:show-in-folder', itemPath),
+    duplicate: (sourcePath: string) => ipcRenderer.invoke('fs:duplicate', sourcePath),
     searchFiles: (query: string, dirPath: string, options?: any) =>
       ipcRenderer.invoke('fs:search-files', query, dirPath, options),
+    saveClipboardImage: (destDir: string) => ipcRenderer.invoke('fs:save-clipboard-image', destDir),
+    getFileStat: (filePath: string) => ipcRenderer.invoke('fs:get-file-stat', filePath),
   },
 
   // GitHub operations
@@ -284,6 +318,49 @@ const electronAPI = {
         masterPassword,
         networkConfig
       ),
+  },
+
+  // GitHub Sync operations (Token 기반)
+  githubSync: {
+    getMasterKey: () => ipcRenderer.invoke('github-sync-get-master-key'),
+    testConnection: (config: any) => ipcRenderer.invoke('github-sync-test-connection', config),
+    syncSettings: (config: any) => ipcRenderer.invoke('github-sync-settings', config),
+    syncDocuments: (config: any) => ipcRenderer.invoke('github-sync-documents', config),
+    syncImages: (config: any) => ipcRenderer.invoke('github-sync-images', config),
+    syncConversations: (config: any) => ipcRenderer.invoke('github-sync-conversations', config),
+    syncPersonas: (config: any) => ipcRenderer.invoke('github-sync-personas', config),
+    syncAll: (config: any) => ipcRenderer.invoke('github-sync-all', config),
+    pullDocuments: (config: any) => ipcRenderer.invoke('github-sync-pull-documents', config),
+  },
+
+  // Team Docs operations (여러 GitHub Repo 동기화)
+  teamDocs: {
+    testConnection: (config: any) => ipcRenderer.invoke('team-docs-test-connection', config),
+    syncDocuments: (config: any) => ipcRenderer.invoke('team-docs-sync-documents', config),
+    pushDocuments: (config: any) => ipcRenderer.invoke('team-docs-push-documents', config),
+    syncAll: () => ipcRenderer.invoke('team-docs-sync-all'),
+    pushDocument: (params: {
+      teamDocsId: string;
+      githubPath: string;
+      title: string;
+      content: string;
+      metadata?: Record<string, any>;
+      sha?: string;
+      commitMessage?: string;
+    }) => ipcRenderer.invoke('team-docs-push-document', params),
+  },
+
+  // Error Reporting operations
+  errorReporting: {
+    send: (errorData: any) => ipcRenderer.invoke('error-reporting-send', errorData),
+    isEnabled: () => ipcRenderer.invoke('error-reporting-is-enabled'),
+    getContext: () => ipcRenderer.invoke('error-reporting-get-context'),
+    sendConversation: (data: {
+      issue: string;
+      messages: any[];
+      conversationId?: string;
+      additionalInfo?: string;
+    }) => ipcRenderer.invoke('error-reporting-send-conversation', data),
   },
 
   // Shell operations
@@ -361,7 +438,17 @@ const electronAPI = {
 
   // 이벤트 리스너
   on: (channel: string, callback: (...args: unknown[]) => void) => {
-    const validChannels = ['update-available', 'download-progress', 'create-new-chat-with-message'];
+    const validChannels = [
+      'update-available',
+      'download-progress',
+      'create-new-chat-with-message',
+      'test:open-dashboard',
+      'test:run-all-from-menu',
+      'test:health-check-from-menu',
+      'test:run-llm-from-menu',
+      'test:run-database-from-menu',
+      'test:run-mcp-from-menu',
+    ];
 
     if (validChannels.includes(channel)) {
       // wrapper 함수 없이 직접 등록 (removeListener와 호환)
@@ -512,6 +599,27 @@ const electronAPI = {
     removeListener: (event: string, handler: any) => {
       ipcRenderer.removeListener(event, handler);
     },
+  },
+
+  // Test Runner operations
+  testRunner: {
+    // Health Check
+    healthCheck: () => ipcRenderer.invoke('test:health-check'),
+    getLastHealthCheck: () => ipcRenderer.invoke('test:get-last-health-check'),
+    startPeriodicHealthCheck: (intervalMs?: number) =>
+      ipcRenderer.invoke('test:start-periodic-health-check', intervalMs),
+    stopPeriodicHealthCheck: () => ipcRenderer.invoke('test:stop-periodic-health-check'),
+    // Test Suites
+    runAll: () => ipcRenderer.invoke('test:run-all'),
+    runLLM: () => ipcRenderer.invoke('test:run-llm'),
+    runDatabase: () => ipcRenderer.invoke('test:run-database'),
+    runMCP: () => ipcRenderer.invoke('test:run-mcp'),
+  },
+
+  // Presentation exports
+  presentation: {
+    exportSlides: (slides: any, format: 'pptx' | 'pdf' | 'html') =>
+      ipcRenderer.invoke('presentation:export', { slides, format }),
   },
 };
 

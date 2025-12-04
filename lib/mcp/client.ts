@@ -23,6 +23,20 @@ export abstract class MCPClient {
   }
 
   /**
+   * 서버 이름 가져오기
+   */
+  get name(): string {
+    return this.config.name;
+  }
+
+  /**
+   * 연결 상태 확인
+   */
+  get connected(): boolean {
+    return this.isConnected;
+  }
+
+  /**
    * 서버 연결
    */
   abstract connect(): Promise<void>;

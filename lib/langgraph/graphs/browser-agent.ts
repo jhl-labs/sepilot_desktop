@@ -2,9 +2,17 @@ import { StateGraph, END } from '@langchain/langgraph';
 import { AgentStateAnnotation, AgentState } from '../state';
 import { toolsNode, shouldUseTool } from '../nodes/tools';
 import type { Message } from '@/types';
+import type { ToolResult } from '../types';
 import { LLMService } from '@/lib/llm/service';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
 import { useChatStore } from '@/lib/store/chat-store';
+import type {
+  BrowserAgentReport,
+  BrowserAgentExecutionContext,
+  BrowserAgentCompletionStatus,
+  BrowserAgentToolStats,
+  BrowserAgentVisitedPage,
+} from '@/types/browser-agent';
 import {
   browserGetInteractiveElementsTool,
   browserGetPageContentTool,
@@ -19,12 +27,52 @@ import {
   browserTakeScreenshotTool,
   browserGetSelectedTextTool,
   browserSearchElementsTool,
+  browserWaitForElementTool,
   browserCaptureAnnotatedScreenshotTool,
   browserClickCoordinateTool,
   browserClickMarkerTool,
   browserGetClickableCoordinateTool,
   browserAnalyzeWithVisionTool,
 } from '@/lib/mcp/tools/builtin-tools';
+import {
+  googleSearchTool,
+  googleSearchNewsTool,
+  googleSearchScholarTool,
+  googleSearchImagesTool,
+  googleSearchAdvancedTool,
+  googleExtractResultsTool,
+  googleGetRelatedSearchesTool,
+  googleVisitResultTool,
+  googleNextPageTool,
+} from '@/lib/mcp/tools/google-search-tools';
+
+const TOOL_RESULT_HISTORY_LIMIT = 12;
+
+/**
+ * BrowserView가 활성화되어 있는지 확인
+ * Electron 환경이 아니면 true로 간주
+ */
+async function hasActiveBrowserView(): Promise<boolean> {
+  try {
+    const { getActiveBrowserView } = await import('../../../electron/ipc/handlers/browser-control');
+    return typeof getActiveBrowserView === 'function' ? !!getActiveBrowserView() : true;
+  } catch (error) {
+    console.warn('[BrowserAgent] Unable to verify active browser view, skipping check:', error);
+    return true;
+  }
+}
+
+/**
+ * Tool 결과를 누적하면서 프롬프트 크기를 제한
+ */
+function mergeToolResults(previous: ToolResult[], next?: ToolResult[]): ToolResult[] {
+  const combined = [...previous, ...(next || [])];
+  if (combined.length <= TOOL_RESULT_HISTORY_LIMIT) {
+    return combined;
+  }
+
+  return combined.slice(-TOOL_RESULT_HISTORY_LIMIT);
+}
 
 /**
  * Exponential Backoff 재시도 유틸리티
@@ -76,6 +124,241 @@ function pruneContextIfNeeded(messages: Message[], maxMessages: number = 50): Me
 }
 
 /**
+ * Browser Agent 최종 보고서 생성
+ */
+function generateBrowserAgentReport(context: BrowserAgentExecutionContext): BrowserAgentReport {
+  const duration = context.endTime
+    ? (context.endTime - context.startTime) / 1000
+    : (Date.now() - context.startTime) / 1000;
+
+  // 완료 상태 결정
+  let status: BrowserAgentCompletionStatus = 'success';
+  if (context.wasStopped) {
+    status = 'stopped';
+  } else if (context.hasError) {
+    status = 'error';
+  } else if (context.iterations >= context.maxIterations) {
+    status = 'max_iterations';
+  } else if (context.toolCalls.some((call) => call.error)) {
+    status = 'partial_success';
+  }
+
+  // Tool 사용 통계 계산
+  const toolStatsMap = new Map<string, BrowserAgentToolStats>();
+
+  for (const call of context.toolCalls) {
+    const stats = toolStatsMap.get(call.toolName) || {
+      toolName: call.toolName,
+      callCount: 0,
+      successCount: 0,
+      failureCount: 0,
+    };
+
+    stats.callCount++;
+    if (call.error) {
+      stats.failureCount++;
+    } else {
+      stats.successCount++;
+      stats.lastResult = call.result?.substring(0, 100);
+    }
+
+    toolStatsMap.set(call.toolName, stats);
+  }
+
+  const toolStats = Array.from(toolStatsMap.values()).sort((a, b) => b.callCount - a.callCount);
+
+  // 방문한 페이지 정리
+  const visitedPages: BrowserAgentVisitedPage[] = context.visitedUrls.map((visit) => ({
+    url: visit.url,
+    title: visit.title,
+    timestamp: visit.timestamp,
+    visitedBy: 'browser_navigate', // 간단히 처리
+  }));
+
+  // 주요 성과 추출
+  const achievements: string[] = [];
+
+  const navigations = context.toolCalls.filter((c) => c.toolName === 'browser_navigate');
+  if (navigations.length > 0) {
+    achievements.push(`${navigations.length}개의 페이지 방문`);
+  }
+
+  const searches = context.toolCalls.filter((c) => c.toolName.startsWith('google_search'));
+  if (searches.length > 0) {
+    achievements.push(`${searches.length}회의 검색 수행`);
+  }
+
+  const clicks = context.toolCalls.filter((c) => c.toolName === 'browser_click_element');
+  if (clicks.length > 0) {
+    achievements.push(`${clicks.length}개의 요소 클릭`);
+  }
+
+  const inputs = context.toolCalls.filter((c) => c.toolName === 'browser_type_text');
+  if (inputs.length > 0) {
+    achievements.push(`${inputs.length}개의 입력 필드 작성`);
+  }
+
+  const extractions = context.toolCalls.filter((c) =>
+    ['google_extract_results', 'google_visit_result', 'browser_get_page_content'].includes(
+      c.toolName
+    )
+  );
+  if (extractions.length > 0) {
+    achievements.push(`${extractions.length}회의 콘텐츠 추출`);
+  }
+
+  // 발생한 문제 추출
+  const issues: string[] = [];
+  const failedCalls = context.toolCalls.filter((c) => c.error);
+
+  if (failedCalls.length > 0) {
+    const errorsByTool = new Map<string, number>();
+    for (const call of failedCalls) {
+      errorsByTool.set(call.toolName, (errorsByTool.get(call.toolName) || 0) + 1);
+    }
+
+    for (const [toolName, count] of errorsByTool.entries()) {
+      issues.push(`${toolName} 실행 실패 (${count}회)`);
+    }
+  }
+
+  if (context.iterations >= context.maxIterations) {
+    issues.push('최대 반복 횟수에 도달하여 작업이 완료되지 못했을 수 있습니다');
+  }
+
+  // 작업 요약 생성
+  let summary = '';
+  switch (status) {
+    case 'success':
+      summary = `✅ 작업이 성공적으로 완료되었습니다. ${context.iterations}회 반복, ${duration.toFixed(1)}초 소요`;
+      break;
+    case 'partial_success':
+      summary = `⚠️ 작업이 부분적으로 완료되었습니다. 일부 도구 실행에 실패했습니다. ${context.iterations}회 반복, ${duration.toFixed(1)}초 소요`;
+      break;
+    case 'stopped':
+      summary = `⏹️ 사용자가 작업을 중단했습니다. ${context.iterations}회 반복, ${duration.toFixed(1)}초 소요`;
+      break;
+    case 'max_iterations':
+      summary = `⚠️ 최대 반복 횟수(${context.maxIterations})에 도달했습니다. 작업이 복잡하여 완료하지 못했을 수 있습니다. ${duration.toFixed(1)}초 소요`;
+      break;
+    case 'error':
+      summary = `❌ 작업 중 오류가 발생했습니다: ${context.errorMessage || '알 수 없는 오류'}. ${context.iterations}회 반복, ${duration.toFixed(1)}초 소요`;
+      break;
+  }
+
+  // 다음 단계 제안
+  const nextSteps: string[] = [];
+
+  if (status === 'max_iterations') {
+    nextSteps.push('작업을 더 작은 단위로 나누어 다시 시도해보세요');
+    nextSteps.push('maxIterations 설정을 늘려보세요');
+  }
+
+  if (status === 'partial_success' || status === 'error') {
+    const failedTools = Array.from(new Set(failedCalls.map((c) => c.toolName)));
+    if (failedTools.length > 0) {
+      nextSteps.push(`실패한 도구들을 개별적으로 재시도: ${failedTools.join(', ')}`);
+    }
+  }
+
+  if (visitedPages.length > 0) {
+    nextSteps.push('방문한 페이지들의 정보를 활용하여 추가 작업 수행');
+  }
+
+  return {
+    status,
+    summary,
+    details: {
+      totalIterations: context.iterations,
+      maxIterations: context.maxIterations,
+      duration,
+      toolStats,
+      visitedPages,
+      achievements,
+      issues,
+    },
+    nextSteps: nextSteps.length > 0 ? nextSteps : undefined,
+    errorMessage: context.errorMessage,
+  };
+}
+
+/**
+ * 보고서를 마크다운 형식으로 포맷팅
+ */
+function formatBrowserAgentReport(report: BrowserAgentReport): string {
+  let output = `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  output += `# 📊 Browser Agent 실행 보고서\n`;
+  output += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+  // 요약
+  output += `## 요약\n${report.summary}\n\n`;
+
+  // 실행 정보
+  output += `## 실행 정보\n`;
+  output += `- **총 반복 횟수:** ${report.details.totalIterations}/${report.details.maxIterations}\n`;
+  output += `- **실행 시간:** ${report.details.duration.toFixed(1)}초\n`;
+  output += `- **사용한 도구 수:** ${report.details.toolStats.length}개\n`;
+  output += `- **방문한 페이지 수:** ${report.details.visitedPages.length}개\n\n`;
+
+  // 주요 성과
+  if (report.details.achievements.length > 0) {
+    output += `## ✅ 주요 성과\n`;
+    for (const achievement of report.details.achievements) {
+      output += `- ${achievement}\n`;
+    }
+    output += `\n`;
+  }
+
+  // 방문한 페이지
+  if (report.details.visitedPages.length > 0) {
+    output += `## 🌐 방문한 페이지\n`;
+    const recentPages = report.details.visitedPages.slice(-5);
+    for (const page of recentPages) {
+      output += `- **${page.title || '제목 없음'}**\n`;
+      output += `  ${page.url}\n`;
+    }
+    if (report.details.visitedPages.length > 5) {
+      output += `  ... 외 ${report.details.visitedPages.length - 5}개\n`;
+    }
+    output += `\n`;
+  }
+
+  // Tool 사용 통계
+  if (report.details.toolStats.length > 0) {
+    output += `## 🛠️ Tool 사용 통계\n`;
+    const topTools = report.details.toolStats.slice(0, 10);
+    for (const stat of topTools) {
+      const successRate =
+        stat.callCount > 0 ? ((stat.successCount / stat.callCount) * 100).toFixed(0) : '0';
+      output += `- **${stat.toolName}**: ${stat.callCount}회 호출 (성공: ${stat.successCount}, 실패: ${stat.failureCount}, 성공률: ${successRate}%)\n`;
+    }
+    output += `\n`;
+  }
+
+  // 발생한 문제
+  if (report.details.issues.length > 0) {
+    output += `## ⚠️ 발생한 문제\n`;
+    for (const issue of report.details.issues) {
+      output += `- ${issue}\n`;
+    }
+    output += `\n`;
+  }
+
+  // 다음 단계
+  if (report.nextSteps && report.nextSteps.length > 0) {
+    output += `## 💡 다음 단계 제안\n`;
+    for (const step of report.nextSteps) {
+      output += `- ${step}\n`;
+    }
+    output += `\n`;
+  }
+
+  output += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+  return output;
+}
+
+/**
  * Browser Agent용 generate 노드 - Browser Control Tools 포함
  */
 async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<AgentState>> {
@@ -87,7 +370,7 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
       toolResultsCount: state.toolResults.length,
     });
 
-    // Browser Control Tools (18개 도구 - Vision 포함)
+    // Browser Control Tools (27개 도구 - Vision + Google Search 포함)
     const browserTools = [
       // Navigation
       browserNavigateTool, // URL 직접 이동 (최우선)
@@ -101,17 +384,28 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
       browserClickElementTool, // 개선: 가시성 및 상태 확인
       browserTypeTextTool, // 개선: 이벤트 트리거링
       browserScrollTool,
+      browserWaitForElementTool,
       // Tab management
       browserListTabsTool,
       browserCreateTabTool,
       browserSwitchTabTool,
       browserCloseTabTool,
-      // Vision-based tools (NEW)
+      // Vision-based tools
       browserCaptureAnnotatedScreenshotTool, // Set-of-Mark 스크린샷
       browserClickCoordinateTool, // 좌표 기반 클릭
       browserClickMarkerTool, // 마커 라벨로 클릭
       browserGetClickableCoordinateTool, // 요소의 클릭 가능 좌표
       browserAnalyzeWithVisionTool, // Vision 모델 분석 (향후)
+      // Google Search tools (NEW)
+      googleSearchTool, // 기본 웹 검색
+      googleSearchNewsTool, // 뉴스 검색
+      googleSearchScholarTool, // 학술 검색
+      googleSearchImagesTool, // 이미지 검색
+      googleSearchAdvancedTool, // 고급 검색
+      googleExtractResultsTool, // 검색 결과 추출
+      googleGetRelatedSearchesTool, // 관련 검색어
+      googleVisitResultTool, // 검색 결과 방문
+      googleNextPageTool, // 다음 페이지
     ];
 
     console.debug(
@@ -179,6 +473,7 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
 5. **VERIFY YOUR WORK** - After actions, check the page to confirm success.
 6. **USE SEMANTIC UNDERSTANDING** - Tools now provide semantic element analysis with roles, labels, and context.
 7. **SEARCH WHEN UNSURE** - If you can't find the right element, use browser_search_elements with natural language.
+8. **ALWAYS FETCH FRESH DATA** - NEVER rely on previous tool results or cached information. When asked about "현재 페이지" or "current page", ALWAYS call the browser tools again to get the LATEST page content, even if you analyzed it before. Pages can change at any time.
 
 # ENHANCED CAPABILITIES
 
@@ -194,7 +489,39 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
 
 # AVAILABLE TOOLS
 
-## Navigation (USE THIS FIRST for URLs!)
+## Google Search Tools (NEW - Perplexity-level search capabilities!)
+
+**Search Tools:**
+- **google_search**: 기본 웹 검색 (날짜, 사이트, 파일타입, 언어/지역 필터 지원)
+  - Example: google_search({ query: "최신 AI 뉴스", dateFilter: "week", language: "ko" })
+- **google_search_news**: 뉴스 검색 (최신 기사)
+- **google_search_scholar**: 학술 검색 (Google Scholar, 논문/연구 자료)
+- **google_search_images**: 이미지 검색
+- **google_search_advanced**: 고급 검색 (정확한 문구, 제외 단어, OR 연산)
+
+**Extraction Tools:**
+- **google_extract_results**: 검색 결과 추출 (제목, URL, 스니펫, 날짜, 출처)
+- **google_get_related_searches**: 관련 검색어 추출 (검색 쿼리 확장)
+
+**Navigation Tools:**
+- **google_visit_result**: 특정 순위의 검색 결과 방문 및 콘텐츠 추출
+  - Example: google_visit_result({ rank: 1, extractType: "summary" })
+- **google_next_page**: 다음 페이지 이동 (더 많은 결과 탐색)
+
+**Typical Google Search Workflow:**
+1. google_search({ query: "검색어", dateFilter: "week" }) // 검색 수행
+2. google_extract_results({ maxResults: 10 }) // 결과 추출
+3. google_visit_result({ rank: 1, extractType: "summary", maxWaitTime: 10 }) // 상위 결과 방문
+   - Use default maxWaitTime (10s) - do NOT increase it
+   - If timeout occurs, use browser_navigate instead immediately
+4. google_get_related_searches() // 관련 검색어 확인 (선택)
+
+**IMPORTANT: google_visit_result Parameters:**
+- maxWaitTime: Keep at default (10 seconds). Longer timeouts waste time.
+- If it fails, the page is too slow - use browser_navigate with the URL instead
+- Never retry google_visit_result with same rank after timeout
+
+## Browser Navigation (Direct URL navigation)
 - **browser_navigate**: Navigate to a URL directly
   - Use for ANY request to "go to", "visit", "open", or "접속" a website
   - Examples:
@@ -250,6 +577,10 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
 - **browser_scroll**: Scroll the page up or down
   - Directions: "up" or "down"
   - Example: browser_scroll({ direction: "down", amount: 500 })
+
+- **browser_wait_for_element** (NEW): Wait for a CSS selector to appear
+  - Use after navigation or dynamic actions
+  - Example: browser_wait_for_element({ selector: "input[type=search]", timeout_ms: 5000 })
 
 ## Tab Management
 - **browser_list_tabs**: List all open tabs with IDs, titles, and URLs
@@ -389,11 +720,33 @@ When a tool fails, DON'T GIVE UP! Try these recovery strategies:
    - Wait briefly and call browser_get_page_content again
    - Check browser_list_tabs to verify correct tab is active
 
+**Google Search Result Failures:**
+1. If google_visit_result times out or fails ONCE:
+   - DO NOT retry with same rank - it will fail again
+   - IMMEDIATELY use browser_navigate with the URL from google_extract_results
+   - Then use browser_get_page_content to extract content
+   - Workflow: google_extract_results → extract URL → browser_navigate → browser_get_page_content
+   - Example: If rank 5 fails, get URL from result[4] and use browser_navigate
+2. If you want to visit a specific URL:
+   - ALWAYS use browser_navigate (NOT "assistant" or any other tool)
+   - There is NO "assistant" tool - only browser_navigate for navigation
+   - After navigation, use browser_get_page_content, browser_get_interactive_elements, etc.
+
+**CRITICAL: DO NOT REPEAT FAILED ATTEMPTS**
+- NEVER call the same tool with the same arguments after it fails
+- If a tool fails, try a DIFFERENT approach immediately:
+  - google_visit_result fails → browser_navigate instead
+  - browser_navigate fails → try different URL or google_search again
+  - Timeout errors → use alternative tool, NOT longer timeout
+- Maximum 1 retry per unique tool+args combination
+- Repeating failures wastes iterations and frustrates users
+
 **General Strategy:**
 - Tool failures are TEMPORARY - always try an alternative approach
 - Combine tools creatively (screenshot + coordinate click, search + scroll, etc.)
 - Verify assumptions with additional tool calls
 - Report progress even when encountering obstacles
+- If a tool name doesn't exist, check the available tool list and use the correct one
 
 # SUCCESS CRITERIA
 
@@ -495,7 +848,6 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS and AUTOMATIC RETRY. Use
 
     return {
       messages: [assistantMessage],
-      toolResults: [], // 다음 iteration을 위해 초기화
     };
   } catch (error: any) {
     console.error('[BrowserAgent.Generate] Error:', error);
@@ -536,7 +888,7 @@ export class BrowserAgentGraph {
 
     // Browser Agent LLM 설정 가져오기
     const { browserAgentLLMConfig } = useChatStore.getState();
-    const actualMaxIterations = maxIterations ?? browserAgentLLMConfig.maxIterations;
+    const actualMaxIterations = maxIterations ?? Math.max(browserAgentLLMConfig.maxIterations, 50);
 
     while (iterations < actualMaxIterations) {
       // 1. generate 노드 실행 (Browser Tools 포함)
@@ -577,7 +929,7 @@ export class BrowserAgentGraph {
       setBrowserAgentIsRunning,
       clearBrowserAgentLogs,
     } = useChatStore.getState();
-    const actualMaxIterations = maxIterations ?? browserAgentLLMConfig.maxIterations;
+    const actualMaxIterations = maxIterations ?? Math.max(browserAgentLLMConfig.maxIterations, 50);
 
     console.debug('[BrowserAgent] Starting stream with initial state');
     console.debug(
@@ -587,6 +939,43 @@ export class BrowserAgentGraph {
 
     // Agent 로그 시작
     clearBrowserAgentLogs();
+
+    // 실행 컨텍스트 초기화 (보고서 생성용)
+    const executionContext: BrowserAgentExecutionContext = {
+      startTime: Date.now(),
+      iterations: 0,
+      maxIterations: actualMaxIterations,
+      wasStopped: false,
+      hasError: false,
+      toolCalls: [],
+      visitedUrls: [],
+    };
+
+    // BrowserView 존재 확인 (Electron에서만)
+    const activeViewAvailable = await hasActiveBrowserView();
+    if (!activeViewAvailable) {
+      addBrowserAgentLog({
+        level: 'error',
+        phase: 'error',
+        message: '활성화된 브라우저 탭을 찾지 못했습니다. Browser 탭을 먼저 열어주세요.',
+      });
+
+      yield {
+        reporter: {
+          messages: [
+            {
+              id: `msg-${Date.now()}`,
+              role: 'assistant',
+              content:
+                '❌ 브라우저 탭이 열려 있지 않습니다. Browser 탭을 먼저 연 다음 다시 시도해주세요.',
+              created_at: Date.now(),
+            },
+          ],
+        },
+      };
+      return;
+    }
+
     setBrowserAgentIsRunning(true);
 
     addBrowserAgentLog({
@@ -605,6 +994,13 @@ export class BrowserAgentGraph {
     const toolCallHistory: Array<{ name: string; args: string }> = [];
     const MAX_HISTORY = 5;
     const LOOP_THRESHOLD = 3; // 같은 호출이 3번 반복되면 루프로 간주
+    const failureCounts = new Map<string, number>();
+    let visionFallbackTriggered = false;
+    let postVerifyPending = false;
+    let lastPageFingerprint: string | null = null;
+    let unchangedCount = 0;
+    let scrollRecoveryPending = false;
+    let waitInjected = false;
 
     while (iterations < actualMaxIterations && !this.shouldStop) {
       console.debug(
@@ -622,7 +1018,12 @@ export class BrowserAgentGraph {
         },
       });
 
-      // Emit progress event
+      // Emit progress event with detailed logging
+      emitStreamingChunk(
+        `\n\n---\n🔄 **Iteration ${iterations + 1}/${actualMaxIterations}**\n💭 AI가 다음 작업을 계획하고 있습니다...\n`,
+        state.conversationId
+      );
+
       yield {
         progress: {
           iteration: iterations + 1,
@@ -643,7 +1044,7 @@ export class BrowserAgentGraph {
           message: 'LLM이 다음 동작을 계획하고 있습니다...',
           details: {
             iteration: iterations + 1,
-            maxIterations,
+            maxIterations: actualMaxIterations,
           },
         });
 
@@ -658,7 +1059,7 @@ export class BrowserAgentGraph {
           message: `생성 노드 오류: ${error.message}`,
           details: {
             iteration: iterations + 1,
-            maxIterations,
+            maxIterations: actualMaxIterations,
           },
         });
 
@@ -680,7 +1081,10 @@ export class BrowserAgentGraph {
         state = {
           ...state,
           messages: [...state.messages, newMessage],
-          toolResults: generateResult.toolResults || state.toolResults,
+          toolResults:
+            generateResult.toolResults !== undefined
+              ? generateResult.toolResults
+              : state.toolResults,
         };
 
         // Yield the message
@@ -689,6 +1093,25 @@ export class BrowserAgentGraph {
             messages: [newMessage],
           },
         };
+
+        // LLM이 아무 계획도 반환하지 않은 경우 즉시 종료
+        if (
+          (!newMessage.tool_calls || newMessage.tool_calls.length === 0) &&
+          (!newMessage.content || newMessage.content.trim() === '')
+        ) {
+          addBrowserAgentLog({
+            level: 'error',
+            phase: 'error',
+            message: '모델이 실행 계획을 반환하지 않았습니다. 다시 시도해주세요.',
+            details: {
+              iteration: iterations + 1,
+              maxIterations: actualMaxIterations,
+            },
+          });
+          hasError = true;
+          errorMessage = '모델 응답이 비어 있습니다.';
+          break;
+        }
       }
 
       // 2. 도구 사용 여부 판단
@@ -705,7 +1128,7 @@ export class BrowserAgentGraph {
           details: {
             decision: 'end',
             iteration: iterations + 1,
-            maxIterations,
+            maxIterations: actualMaxIterations,
           },
         });
 
@@ -714,10 +1137,13 @@ export class BrowserAgentGraph {
 
       // Get tool calls for progress message and loop detection
       const lastMessage = state.messages[state.messages.length - 1];
+      const toolSourceIndex = state.messages.length - 1;
       const toolCalls = lastMessage.tool_calls || [];
 
       // 로그: 도구 호출 계획
       if (toolCalls.length > 0) {
+        let logMessage = '\n';
+
         for (const toolCall of toolCalls) {
           addBrowserAgentLog({
             level: 'info',
@@ -727,10 +1153,24 @@ export class BrowserAgentGraph {
               toolName: toolCall.name,
               toolArgs: toolCall.arguments as Record<string, string | number | boolean | null>,
               iteration: iterations + 1,
-              maxIterations,
+              maxIterations: actualMaxIterations,
             },
           });
+
+          // Detailed tool call logging (like coding-agent)
+          logMessage += `🛠️ **Call:** \`${toolCall.name}\`\n`;
+          try {
+            const args =
+              typeof toolCall.arguments === 'string'
+                ? toolCall.arguments
+                : JSON.stringify(toolCall.arguments, null, 2);
+            logMessage += `📂 **Args:**\n\`\`\`json\n${args}\n\`\`\`\n`;
+          } catch {
+            logMessage += `📂 **Args:** (parsing failed)\n`;
+          }
         }
+
+        emitStreamingChunk(logMessage, state.conversationId);
       }
 
       // Emit tool execution progress
@@ -739,7 +1179,7 @@ export class BrowserAgentGraph {
         yield {
           progress: {
             iteration: iterations + 1,
-            maxIterations,
+            maxIterations: actualMaxIterations,
             status: 'executing',
             message: `브라우저 도구 실행 중: ${toolNames}`,
           },
@@ -773,8 +1213,52 @@ export class BrowserAgentGraph {
 
       // 로그: 도구 결과
       if (toolsResult.toolResults) {
+        const verificationHints: string[] = [];
+        const accumulatedFailures: string[] = [];
+        let annotatedGuidance: Message | null = null;
+        let resultsLogMessage = '\n<small>\n';
+
+        // Tool 호출 기록 (실행 컨텍스트에 추가)
+        for (const result of toolsResult.toolResults) {
+          executionContext.toolCalls.push({
+            toolName: result.toolName,
+            arguments:
+              lastMessage.tool_calls?.find((tc) => tc.id === result.toolCallId)?.arguments || {},
+            result: result.result,
+            error: result.error,
+            timestamp: Date.now(),
+          });
+
+          // URL 방문 추적 (browser_navigate 또는 google 검색)
+          if (result.toolName === 'browser_navigate' || result.toolName.startsWith('google_')) {
+            try {
+              const getActiveBrowserView = (
+                await import('../../../electron/ipc/handlers/browser-control')
+              ).getActiveBrowserView;
+              const browserView = getActiveBrowserView();
+              if (browserView) {
+                const url = browserView.webContents.getURL();
+                const title = browserView.webContents.getTitle();
+                if (url && !executionContext.visitedUrls.some((v) => v.url === url)) {
+                  executionContext.visitedUrls.push({
+                    url,
+                    title: title || undefined,
+                    timestamp: Date.now(),
+                  });
+                }
+              }
+            } catch {
+              // Ignore errors in URL tracking
+            }
+          }
+        }
+
         for (const result of toolsResult.toolResults) {
           if (result.error) {
+            const prev = failureCounts.get(result.toolName) ?? 0;
+            failureCounts.set(result.toolName, prev + 1);
+            accumulatedFailures.push(result.toolName);
+
             addBrowserAgentLog({
               level: 'error',
               phase: 'tool_result',
@@ -783,10 +1267,107 @@ export class BrowserAgentGraph {
                 toolName: result.toolName,
                 toolError: result.error,
                 iteration: iterations + 1,
-                maxIterations,
+                maxIterations: actualMaxIterations,
               },
             });
+
+            resultsLogMessage += `❌ Error: \`${result.toolName}\`\n`;
+
+            let errorOutput = result.error || '(no error message)';
+            if (errorOutput.length > 300) {
+              errorOutput = `${errorOutput.substring(0, 300)}\n... (error message truncated)`;
+            }
+
+            // Use inline code for short errors
+            if (errorOutput.length < 100 && !errorOutput.includes('\n')) {
+              resultsLogMessage += `📄 Output: \`${errorOutput}\`\n`;
+            } else {
+              resultsLogMessage += `📄 Output:\n\`\`\`\n${errorOutput}\n\`\`\`\n`;
+            }
           } else {
+            // Reset failure counter on success
+            failureCounts.delete(result.toolName);
+
+            // Verification hints for actions that alter the page
+            if (
+              [
+                'browser_click_element',
+                'browser_type_text',
+                'browser_navigate',
+                'browser_scroll',
+              ].includes(result.toolName)
+            ) {
+              verificationHints.push(result.toolName);
+              postVerifyPending = true;
+            }
+
+            // Annotated screenshot → marker guidance
+            if (result.toolName === 'browser_capture_annotated_screenshot' && result.result) {
+              try {
+                const parsed =
+                  typeof result.result === 'string' ? JSON.parse(result.result) : result.result;
+                const markers = Array.isArray(parsed?.markers) ? parsed.markers.slice(0, 5) : [];
+                if (markers.length > 0) {
+                  const lines = markers.map(
+                    (m: any) =>
+                      `- ${m.label}: ${m.elementLabel || m.role || 'unlabeled'} (${
+                        m.boundingBox?.x ?? '?'
+                      }, ${m.boundingBox?.y ?? '?'})`
+                  );
+                  annotatedGuidance = {
+                    id: `annotated-guidance-${Date.now()}`,
+                    role: 'assistant',
+                    content: `주석 스크린샷 확보. 상위 마커:\n${lines.join(
+                      '\n'
+                    )}\n필요하면 browser_click_marker로 해당 마커를 직접 클릭하세요.`,
+                    created_at: Date.now(),
+                  };
+                }
+              } catch (err) {
+                console.warn('[BrowserAgent] Failed to parse annotated screenshot result', err);
+              }
+            }
+
+            // Page fingerprint 추적 및 변화 감지
+            if (result.toolName === 'browser_get_page_content' && result.result) {
+              try {
+                const parsed =
+                  typeof result.result === 'string' ? JSON.parse(result.result) : result.result;
+                const fingerprint = [
+                  parsed?.url || '',
+                  parsed?.title || '',
+                  parsed?.summary || '',
+                  parsed?.main_content_preview?.length || parsed?.mainText?.length || 0,
+                ].join('|');
+
+                if (lastPageFingerprint && fingerprint === lastPageFingerprint) {
+                  addBrowserAgentLog({
+                    level: 'warning',
+                    phase: 'decision',
+                    message: '페이지 상태가 이전과 동일합니다. 다른 접근을 시도하세요.',
+                    details: {
+                      iteration: iterations + 1,
+                      maxIterations: actualMaxIterations,
+                    },
+                  });
+
+                  unchangedCount += 1;
+                  if (unchangedCount >= 1) {
+                    scrollRecoveryPending = true;
+                  }
+                }
+
+                if (!lastPageFingerprint || fingerprint !== lastPageFingerprint) {
+                  unchangedCount = 0;
+                  scrollRecoveryPending = false;
+                }
+
+                lastPageFingerprint = fingerprint;
+              } catch (err) {
+                console.warn('[BrowserAgent] Failed to parse page content for fingerprint', err);
+              }
+            }
+
             addBrowserAgentLog({
               level: 'success',
               phase: 'tool_result',
@@ -796,10 +1377,334 @@ export class BrowserAgentGraph {
                 toolResult:
                   typeof result.result === 'string' ? result.result : JSON.stringify(result.result),
                 iteration: iterations + 1,
-                maxIterations,
+                maxIterations: actualMaxIterations,
               },
             });
+
+            // Detailed success logging
+            resultsLogMessage += `✅ Result: \`${result.toolName}\`\n`;
+
+            let output = result.result || '(no output)';
+            if (typeof output !== 'string') {
+              output = JSON.stringify(output, null, 2);
+            }
+
+            // Shorten output for better UX (300 chars instead of 1000)
+            if (output.length > 300) {
+              output = `${output.substring(0, 300)}\n... (output truncated for readability)`;
+            }
+
+            // Use inline code instead of code block for shorter output
+            if (output.length < 100 && !output.includes('\n')) {
+              resultsLogMessage += `📄 Output: \`${output}\`\n`;
+            } else {
+              resultsLogMessage += `📄 Output:\n\`\`\`\n${output}\n\`\`\`\n`;
+            }
           }
+        }
+
+        // Emit all tool results at once
+        if (resultsLogMessage.length > 9) {
+          // Changed from 1 to 9 to account for "<small>\n"
+          emitStreamingChunk(`${resultsLogMessage}</small>\n---\n`, state.conversationId);
+        }
+
+        // Reflection: repeated failures -> guide to alternative strategy
+        const reflectionNotes: string[] = [];
+
+        const hasRepeatedFailure = Array.from(failureCounts.entries()).some(
+          ([_, count]) => count >= 2
+        );
+
+        if (hasRepeatedFailure || accumulatedFailures.length >= 2) {
+          reflectionNotes.push(
+            `이전 시도에서 도구 실패가 반복되었습니다 (${Array.from(failureCounts.entries())
+              .map(([name, count]) => `${name} x${count}`)
+              .join(', ')}). 다른 경로를 사용하세요:`
+          );
+          reflectionNotes.push(
+            '- DOM 검색을 다시 시도할 때 검색어를 바꾸거나 범위를 넓히기 (browser_search_elements → browser_get_interactive_elements)'
+          );
+          reflectionNotes.push(
+            '- Annotated 스크린샷을 찍고 마커로 클릭 (browser_capture_annotated_screenshot → browser_click_marker)'
+          );
+          reflectionNotes.push('- 필요하면 좌표 클릭(browser_click_coordinate)로 우회');
+        }
+
+        if (verificationHints.length > 0) {
+          reflectionNotes.push(
+            `검증 제안: ${verificationHints
+              .map((t) => t.replace('browser_', ''))
+              .join(
+                ', '
+              )} 실행 후 페이지 변화를 확인하려면 browser_get_page_content나 browser_search_elements로 결과를 확인하세요.`
+          );
+        }
+
+        if (reflectionNotes.length > 0) {
+          const reflectionMessage: Message = {
+            id: `reflection-${Date.now()}`,
+            role: 'assistant',
+            content: reflectionNotes.join('\n'),
+            created_at: Date.now(),
+          };
+
+          addBrowserAgentLog({
+            level: 'thinking',
+            phase: 'thinking',
+            message: '대체 경로/검증 안내 추가',
+            details: {
+              iteration: iterations + 1,
+              maxIterations: actualMaxIterations,
+            },
+          });
+
+          state = {
+            ...state,
+            messages: [...state.messages, reflectionMessage],
+          };
+        }
+
+        // Annotated screenshot에서 추출된 마커 힌트 추가
+        if (annotatedGuidance) {
+          addBrowserAgentLog({
+            level: 'info',
+            phase: 'thinking',
+            message: '주석 스크린샷 마커 힌트 제공',
+            details: {
+              iteration: iterations + 1,
+              maxIterations: actualMaxIterations,
+            },
+          });
+
+          state = {
+            ...state,
+            messages: [...state.messages, annotatedGuidance],
+          };
+        }
+
+        // 반복 실패 시 요소 등장 대기 자동 실행
+        if (hasRepeatedFailure && !waitInjected) {
+          const waitMessage: Message = {
+            id: `wait-${Date.now()}`,
+            role: 'assistant',
+            content: '동적 요소 로드를 기다립니다.',
+            created_at: Date.now(),
+            tool_calls: [
+              {
+                id: `tool-${Date.now()}-wait`,
+                name: 'browser_wait_for_element',
+                arguments: {
+                  selector: 'button, input, form, a[href]',
+                  timeout_ms: 5000,
+                },
+              },
+            ],
+          };
+
+          addBrowserAgentLog({
+            level: 'info',
+            phase: 'tool_call',
+            message: '동적 요소 대기 실행',
+            details: {
+              iteration: iterations + 1,
+              maxIterations: actualMaxIterations,
+            },
+          });
+
+          state = {
+            ...state,
+            messages: [...state.messages, waitMessage],
+          };
+
+          waitInjected = true;
+        }
+
+        // Annotated marker 기반 검색을 자동 준비 (간단한 OCR-free 하이브리드)
+        if (annotatedGuidance && visionFallbackTriggered) {
+          const markerSearchMessage: Message = {
+            id: `marker-search-${Date.now()}`,
+            role: 'assistant',
+            content: '마커 라벨 텍스트로 DOM 검색을 시도합니다.',
+            created_at: Date.now(),
+            tool_calls: [
+              {
+                id: `tool-${Date.now()}-marker-search`,
+                name: 'browser_search_elements',
+                arguments: {
+                  query: 'button link submit login 검색 search 확인',
+                },
+              },
+            ],
+          };
+
+          addBrowserAgentLog({
+            level: 'info',
+            phase: 'tool_call',
+            message: '마커 라벨 기반 검색 시도',
+            details: {
+              iteration: iterations + 1,
+              maxIterations: actualMaxIterations,
+            },
+          });
+
+          state = {
+            ...state,
+            messages: [...state.messages, markerSearchMessage],
+          };
+        }
+
+        // 동일 페이지 상태가 두 번 이상 유지될 때 추가 탐색/비전 플랜 삽입
+        if (unchangedCount >= 2 && !visionFallbackTriggered) {
+          const unchangedMessage: Message = {
+            id: `unchanged-${Date.now()}`,
+            role: 'assistant',
+            content: '페이지가 변하지 않아 비전 캡처와 요소 검색을 다시 시도합니다.',
+            created_at: Date.now(),
+            tool_calls: [
+              {
+                id: `tool-${Date.now()}-unchanged-capture`,
+                name: 'browser_capture_annotated_screenshot',
+                arguments: {
+                  maxMarkers: 25,
+                  includeOverlay: true,
+                },
+              },
+              {
+                id: `tool-${Date.now()}-unchanged-search`,
+                name: 'browser_search_elements',
+                arguments: {
+                  query: 'button link form input',
+                },
+              },
+            ],
+          };
+
+          addBrowserAgentLog({
+            level: 'warning',
+            phase: 'tool_call',
+            message: '페이지 변화 없음 → 비전 캡처 + 검색 재시도',
+            details: {
+              iteration: iterations + 1,
+              maxIterations: actualMaxIterations,
+            },
+          });
+
+          state = {
+            ...state,
+            messages: [...state.messages, unchangedMessage],
+          };
+
+          visionFallbackTriggered = true;
+          unchangedCount = 0;
+        }
+
+        // 페이지 변화 없음 → 스크롤 재시도
+        if (scrollRecoveryPending) {
+          const scrollMessage: Message = {
+            id: `scroll-recovery-${Date.now()}`,
+            role: 'assistant',
+            content: '페이지 변화를 위해 스크롤을 시도합니다.',
+            created_at: Date.now(),
+            tool_calls: [
+              {
+                id: `tool-${Date.now()}-scroll-recovery`,
+                name: 'browser_scroll',
+                arguments: {
+                  direction: 'down',
+                  amount: 600,
+                },
+              },
+            ],
+          };
+
+          addBrowserAgentLog({
+            level: 'info',
+            phase: 'tool_call',
+            message: '페이지 변화 없음 → 스크롤 실행',
+            details: {
+              iteration: iterations + 1,
+              maxIterations: actualMaxIterations,
+            },
+          });
+
+          state = {
+            ...state,
+            messages: [...state.messages, scrollMessage],
+          };
+
+          scrollRecoveryPending = false;
+        }
+
+        // 자동 비전 fallback: 실패 누적 시 Annotated screenshot 호출
+        if (hasRepeatedFailure && !visionFallbackTriggered) {
+          const visionToolMessage: Message = {
+            id: `vision-fallback-${Date.now()}`,
+            role: 'assistant',
+            content: '반복 실패로 비전 기반 캡처를 실행합니다.',
+            created_at: Date.now(),
+            tool_calls: [
+              {
+                id: `tool-${Date.now()}`,
+                name: 'browser_capture_annotated_screenshot',
+                arguments: {
+                  maxMarkers: 30,
+                  includeOverlay: true,
+                },
+              },
+            ],
+          };
+
+          addBrowserAgentLog({
+            level: 'warning',
+            phase: 'tool_call',
+            message: '비전 캡처 fallback 실행',
+            details: {
+              iteration: iterations + 1,
+              maxIterations: actualMaxIterations,
+            },
+          });
+
+          state = {
+            ...state,
+            messages: [...state.messages, visionToolMessage],
+          };
+
+          visionFallbackTriggered = true;
+        }
+
+        // 자동 검증: 최근 변화가 있을 때 간단한 페이지 요약 요청
+        if (postVerifyPending) {
+          const verifyToolMessage: Message = {
+            id: `verify-${Date.now()}`,
+            role: 'assistant',
+            content: '동작 검증을 위해 페이지 개요를 확인합니다.',
+            created_at: Date.now(),
+            tool_calls: [
+              {
+                id: `tool-${Date.now()}-verify`,
+                name: 'browser_get_page_content',
+                arguments: {},
+              },
+            ],
+          };
+
+          addBrowserAgentLog({
+            level: 'info',
+            phase: 'tool_call',
+            message: '자동 검증: page content 조회',
+            details: {
+              iteration: iterations + 1,
+              maxIterations: actualMaxIterations,
+            },
+          });
+
+          state = {
+            ...state,
+            messages: [...state.messages, verifyToolMessage],
+          };
+
+          postVerifyPending = false;
         }
       }
 
@@ -823,6 +1728,16 @@ export class BrowserAgentGraph {
             console.warn(
               '[BrowserAgent] Loop detected: same tool called multiple times with same arguments'
             );
+            addBrowserAgentLog({
+              level: 'warning',
+              phase: 'decision',
+              message: '동일한 도구 호출이 반복되어 실행을 중단합니다.',
+              details: {
+                iteration: iterations + 1,
+                maxIterations: actualMaxIterations,
+                toolName: toolCall.name,
+              },
+            });
             hasError = true;
             errorMessage = `같은 작업(${toolCall.name})이 반복되고 있습니다. 다른 방법을 시도해야 할 것 같습니다.`;
             break;
@@ -830,12 +1745,11 @@ export class BrowserAgentGraph {
         }
       }
 
-      // Remove tool_calls from the last message to prevent duplicate execution
+      // Remove tool_calls from the source message (방금 실행한 메시지만)
       const updatedMessages = [...state.messages];
-      const lastMessageIndex = updatedMessages.length - 1;
-      if (lastMessageIndex >= 0 && updatedMessages[lastMessageIndex].tool_calls) {
-        updatedMessages[lastMessageIndex] = {
-          ...updatedMessages[lastMessageIndex],
+      if (toolSourceIndex >= 0 && updatedMessages[toolSourceIndex]?.tool_calls) {
+        updatedMessages[toolSourceIndex] = {
+          ...updatedMessages[toolSourceIndex],
           tool_calls: undefined,
         };
       }
@@ -843,12 +1757,16 @@ export class BrowserAgentGraph {
       state = {
         ...state,
         messages: updatedMessages,
-        toolResults: toolsResult.toolResults || [],
+        toolResults: mergeToolResults(state.toolResults, toolsResult.toolResults),
       };
 
       console.debug('[BrowserAgent] Tool results:', toolsResult.toolResults);
 
       yield { tools: toolsResult };
+
+      if (hasError) {
+        break;
+      }
 
       iterations++;
     }
@@ -858,86 +1776,54 @@ export class BrowserAgentGraph {
     // Agent 로그 종료
     setBrowserAgentIsRunning(false);
 
-    // Final report message
-    const finalReportMessage: Message = (() => {
-      if (this.shouldStop) {
-        addBrowserAgentLog({
-          level: 'warning',
-          phase: 'completion',
-          message: '사용자가 작업을 중단했습니다',
-          details: {
-            iteration: iterations,
-            maxIterations,
-          },
-        });
+    // 실행 컨텍스트 완료 처리
+    executionContext.endTime = Date.now();
+    executionContext.iterations = iterations;
+    executionContext.wasStopped = this.shouldStop;
+    executionContext.hasError = hasError;
+    executionContext.errorMessage = errorMessage;
 
-        return {
-          id: `msg-${Date.now()}`,
-          role: 'assistant',
-          content: `⏹️ 사용자가 작업을 중단했습니다. (${iterations}회 반복 완료)`,
-          created_at: Date.now(),
-        };
-      } else if (hasError) {
-        addBrowserAgentLog({
-          level: 'error',
-          phase: 'error',
-          message: `브라우저 작업 오류: ${errorMessage}`,
-          details: {
-            iteration: iterations,
-            maxIterations,
-          },
-        });
+    // 최종 보고서 생성
+    const report = generateBrowserAgentReport(executionContext);
+    const formattedReport = formatBrowserAgentReport(report);
 
-        return {
-          id: `msg-${Date.now()}`,
-          role: 'assistant',
-          content: `❌ 브라우저 작업 중 오류가 발생했습니다: ${errorMessage}`,
-          created_at: Date.now(),
-        };
-      } else if (iterations >= actualMaxIterations) {
-        addBrowserAgentLog({
-          level: 'warning',
-          phase: 'completion',
-          message: '최대 반복 횟수에 도달했습니다',
-          details: {
-            iteration: iterations,
-            maxIterations,
-          },
-        });
+    // 로그에 완료 상태 기록
+    const logLevel =
+      report.status === 'success' ? 'success' : report.status === 'error' ? 'error' : 'warning';
+    addBrowserAgentLog({
+      level: logLevel,
+      phase: 'completion',
+      message: report.summary,
+      details: {
+        iteration: iterations,
+        maxIterations: actualMaxIterations,
+      },
+    });
 
-        return {
-          id: `msg-${Date.now()}`,
-          role: 'assistant',
-          content: `⚠️ 최대 반복 횟수(${maxIterations})에 도달했습니다. 작업이 복잡하여 완료하지 못했을 수 있습니다.`,
-          created_at: Date.now(),
-        };
-      } else {
-        addBrowserAgentLog({
-          level: 'success',
-          phase: 'completion',
-          message: 'Browser Agent 작업 완료',
-          details: {
-            iteration: iterations,
-            maxIterations,
-          },
-        });
+    // 보고서를 스트리밍으로 출력
+    emitStreamingChunk(formattedReport, state.conversationId);
 
-        // Normal completion - no additional message needed
-        return null as any;
-      }
-    })();
+    // 최종 메시지 생성
+    const finalReportMessage: Message = {
+      id: `msg-${Date.now()}`,
+      role: 'assistant',
+      content: formattedReport,
+      created_at: Date.now(),
+    };
 
-    if (finalReportMessage) {
-      console.debug(
-        '[BrowserAgent] Generating final report message:',
-        finalReportMessage.content.substring(0, 100)
-      );
-      yield {
-        reporter: {
-          messages: [finalReportMessage],
-        },
-      };
-    }
+    console.debug('[BrowserAgent] Final report generated:', {
+      status: report.status,
+      iterations: report.details.totalIterations,
+      toolsUsed: report.details.toolStats.length,
+      pagesVisited: report.details.visitedPages.length,
+    });
+
+    yield {
+      reporter: {
+        messages: [finalReportMessage],
+        report, // 구조화된 보고서 데이터도 함께 전달
+      },
+    };
   }
 }
 

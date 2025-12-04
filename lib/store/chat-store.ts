@@ -1,5 +1,11 @@
 import { create } from 'zustand';
-import { Conversation, Message, PendingToolApproval, ImageGenerationProgress } from '@/types';
+import {
+  Conversation,
+  Message,
+  PendingToolApproval,
+  ImageGenerationProgress,
+  ConversationChatSettings,
+} from '@/types';
 import { generateId } from '@/lib/utils';
 import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
 import { isElectron } from '@/lib/platform';
@@ -12,9 +18,14 @@ import type { Persona } from '@/types/persona';
 import { BUILTIN_PERSONAS } from '@/types/persona';
 import type { EditorAppearanceConfig, EditorLLMPromptsConfig } from '@/types/editor-settings';
 import { DEFAULT_EDITOR_APPEARANCE, DEFAULT_EDITOR_LLM_PROMPTS } from '@/types/editor-settings';
+import type {
+  PresentationSlide,
+  PresentationExportState,
+  PresentationAgentState,
+} from '@/types/presentation';
 
 // App mode types
-export type AppMode = 'chat' | 'editor' | 'browser';
+export type AppMode = 'chat' | 'editor' | 'browser' | 'presentation';
 
 // Open file tab interface
 export interface OpenFile {
@@ -113,13 +124,21 @@ interface ChatStore {
   activeFilePath: string | null;
   activeEditorTab: 'files' | 'search' | 'browser'; // Files, Search, or Browser tab in Editor mode
   showTerminalPanel: boolean; // Show/hide terminal panel in Editor mode
+  fileClipboard: { operation: 'copy' | 'cut'; paths: string[] } | null; // File clipboard for copy/cut/paste
 
   // New: Thinking Mode and Feature Toggles
   thinkingMode: ThinkingMode;
   enableRAG: boolean;
   enableTools: boolean;
+  enabledTools: Set<string>; // Individual tool enable/disable
   enableImageGeneration: boolean;
+  selectedImageGenProvider: 'comfyui' | 'nanobanana' | null; // User-selected provider for this session
   workingDirectory: string | null; // Coding Agent working directory
+
+  // Saved settings for image generation mode (restored when disabling image generation)
+  savedThinkingMode: ThinkingMode | null;
+  savedEnableRAG: boolean | null;
+  savedEnableTools: boolean | null;
 
   // Tool Approval (Human-in-the-loop)
   pendingToolApproval: PendingToolApproval | null;
@@ -130,11 +149,21 @@ interface ChatStore {
 
   // Browser Mode Chat (simple side chat)
   browserChatMessages: Message[];
-  browserViewMode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools';
+  browserViewMode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs';
+
+  // Presentation Designer
+  presentationChatMessages: Message[];
+  presentationChatStreaming: boolean;
+  presentationSlides: PresentationSlide[];
+  activePresentationSlideId: string | null;
+  presentationViewMode: 'chat' | 'outline' | 'assets' | 'settings';
+  presentationExportState: PresentationExportState | null;
+  presentationAgentState: PresentationAgentState | null; // Step-by-step workflow state
 
   // Browser Agent Logs (실행 과정 가시성)
   browserAgentLogs: BrowserAgentLogEntry[];
   browserAgentIsRunning: boolean;
+  browserAgentStreamCleanup: (() => void) | null; // Stream cleanup function
 
   // Browser Agent LLM 설정
   browserAgentLLMConfig: BrowserAgentLLMConfig;
@@ -145,13 +174,18 @@ interface ChatStore {
   // Editor Mode Chat (simple side chat for AI coding assistant)
   editorChatMessages: Message[];
   editorViewMode: 'files' | 'search' | 'chat' | 'settings'; // files, search, chat, or settings view in Editor sidebar
+  editorChatStreaming: boolean; // Editor chat streaming 상태 (백그라운드 스트리밍 지원)
+  fileTreeRefreshTrigger: number; // File tree refresh trigger (timestamp)
 
   // Editor Settings
   editorAppearanceConfig: EditorAppearanceConfig;
   editorLLMPromptsConfig: EditorLLMPromptsConfig;
+  editorUseRagInAutocomplete: boolean; // RAG 문서 사용 여부 (autocomplete)
+  editorUseToolsInAutocomplete: boolean; // MCP Tools 사용 여부 (autocomplete)
+  editorAgentMode: 'editor' | 'coding'; // Agent 모드 (editor-agent 또는 coding-agent)
 
   // Chat Mode View
-  chatViewMode: 'history' | 'documents' | 'chat'; // history, documents, or chat view in Chat sidebar
+  chatViewMode: 'history' | 'documents'; // history or documents view in Chat sidebar
 
   // Persona (AI Bot Role/System Prompt)
   personas: Persona[]; // 사용 가능한 페르소나 목록 (기본 + 사용자 생성)
@@ -165,9 +199,11 @@ interface ChatStore {
   // Actions - Conversations
   createConversation: () => Promise<string>;
   deleteConversation: (id: string) => Promise<void>;
+  duplicateConversation: (id: string) => Promise<string>;
   setActiveConversation: (id: string) => Promise<void>;
   updateConversationTitle: (id: string, title: string) => Promise<void>;
   updateConversationPersona: (id: string, personaId: string | null) => Promise<void>;
+  updateConversationSettings: (id: string, settings: ConversationChatSettings) => Promise<void>;
   loadConversations: () => Promise<void>;
   searchConversations: (
     query: string
@@ -181,6 +217,7 @@ interface ChatStore {
   updateMessage: (id: string, updates: Partial<Message>, conversationId?: string) => void;
   deleteMessage: (id: string) => Promise<void>;
   clearMessages: () => void;
+  clearMessagesCache: (conversationId: string) => void;
 
   // Actions - Streaming
   startStreaming: (conversationId: string, messageId: string) => void;
@@ -191,7 +228,11 @@ interface ChatStore {
   setThinkingMode: (mode: ThinkingMode) => void;
   setEnableRAG: (enable: boolean) => void;
   setEnableTools: (enable: boolean) => void;
+  toggleTool: (toolName: string) => void;
+  enableAllTools: (toolNames: string[]) => void;
+  disableAllTools: () => void;
   setEnableImageGeneration: (enable: boolean) => void;
+  setSelectedImageGenProvider: (provider: 'comfyui' | 'nanobanana' | null) => void;
   setWorkingDirectory: (directory: string | null) => void;
   getGraphConfig: () => GraphConfig;
 
@@ -213,11 +254,31 @@ interface ChatStore {
   addBrowserChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => void;
   updateBrowserChatMessage: (id: string, updates: Partial<Message>) => void;
   clearBrowserChat: () => void;
-  setBrowserViewMode: (mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools') => void;
+  setBrowserViewMode: (
+    mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs'
+  ) => void;
+
+  // Actions - Presentation
+  addPresentationChatMessage: (
+    message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>
+  ) => void;
+  updatePresentationChatMessage: (id: string, updates: Partial<Message>) => void;
+  clearPresentationChat: () => void;
+  setPresentationChatStreaming: (isStreaming: boolean) => void;
+  setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets' | 'settings') => void;
+  setPresentationSlides: (slides: PresentationSlide[]) => void;
+  addPresentationSlide: (slide: PresentationSlide) => void;
+  updatePresentationSlide: (id: string, updates: Partial<PresentationSlide>) => void;
+  removePresentationSlide: (id: string) => void;
+  setActivePresentationSlide: (id: string | null) => void;
+  setPresentationExportState: (state: PresentationExportState | null) => void;
+  setPresentationAgentState: (state: PresentationAgentState | null) => void;
+  clearPresentationSession: () => void;
 
   // Actions - Browser Agent Logs
   addBrowserAgentLog: (log: Omit<BrowserAgentLogEntry, 'id' | 'timestamp'>) => void;
   clearBrowserAgentLogs: () => void;
+  setBrowserAgentStreamCleanup: (cleanup: (() => void) | null) => void;
   setBrowserAgentIsRunning: (isRunning: boolean) => void;
 
   // Actions - Browser Agent LLM Config
@@ -233,15 +294,20 @@ interface ChatStore {
   updateEditorChatMessage: (id: string, updates: Partial<Message>) => void;
   clearEditorChat: () => void;
   setEditorViewMode: (mode: 'files' | 'search' | 'chat' | 'settings') => void;
+  setEditorChatStreaming: (isStreaming: boolean) => void;
+  refreshFileTree: () => void;
 
   // Actions - Editor Settings
   setEditorAppearanceConfig: (config: Partial<EditorAppearanceConfig>) => void;
   resetEditorAppearanceConfig: () => void;
   setEditorLLMPromptsConfig: (config: Partial<EditorLLMPromptsConfig>) => void;
   resetEditorLLMPromptsConfig: () => void;
+  setEditorUseRagInAutocomplete: (enable: boolean) => void;
+  setEditorUseToolsInAutocomplete: (enable: boolean) => void;
+  setEditorAgentMode: (mode: 'editor' | 'coding') => void;
 
   // Actions - Chat Mode View
-  setChatViewMode: (mode: 'history' | 'documents' | 'chat') => void;
+  setChatViewMode: (mode: 'history' | 'documents') => void;
 
   // Actions - Initialization
   loadWorkingDirectory: () => Promise<void>;
@@ -262,6 +328,12 @@ interface ChatStore {
   setAppMode: (mode: AppMode) => void;
   setActiveEditorTab: (tab: 'files' | 'search') => void;
   setShowTerminalPanel: (show: boolean) => void;
+
+  // Actions - File Clipboard
+  setFileClipboard: (clipboard: { operation: 'copy' | 'cut'; paths: string[] } | null) => void;
+  copyFiles: (paths: string[]) => void;
+  cutFiles: (paths: string[]) => void;
+  clearFileClipboard: () => void;
 
   // Actions - Editor
   openFile: (
@@ -295,13 +367,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   activeFilePath: null,
   activeEditorTab: 'files',
   showTerminalPanel: false,
+  fileClipboard: null,
 
   // New: Graph Configuration
   thinkingMode: 'instant',
   enableRAG: false,
   enableTools: false,
+  enabledTools: new Set<string>(),
   enableImageGeneration: false,
+  selectedImageGenProvider: null,
   workingDirectory: null,
+
+  // Saved settings for image generation mode
+  savedThinkingMode: null,
+  savedEnableRAG: null,
+  savedEnableTools: null,
 
   // Tool Approval (Human-in-the-loop)
   pendingToolApproval: null,
@@ -314,9 +394,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   browserChatMessages: [],
   browserViewMode: 'chat',
 
+  // Presentation Designer
+  presentationChatMessages: [],
+  presentationChatStreaming: false,
+  presentationSlides: [],
+  activePresentationSlideId: null,
+  presentationViewMode: 'chat',
+  presentationExportState: null,
+  presentationAgentState: null,
+
   // Browser Agent Logs
   browserAgentLogs: [],
   browserAgentIsRunning: false,
+  browserAgentStreamCleanup: null,
 
   // Browser Agent LLM Config (localStorage에서 로드 또는 기본값)
   browserAgentLLMConfig: (() => {
@@ -371,6 +461,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Editor Chat
   editorChatMessages: [],
   editorViewMode: 'files',
+  editorChatStreaming: false,
+  fileTreeRefreshTrigger: 0,
 
   // Editor Appearance Config
   editorAppearanceConfig: (() => {
@@ -404,6 +496,46 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       console.error('Failed to load Editor LLM Prompts config from localStorage:', error);
     }
     return DEFAULT_EDITOR_LLM_PROMPTS;
+  })(),
+
+  // Editor Autocomplete Settings
+  editorUseRagInAutocomplete: (() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    try {
+      const saved = localStorage.getItem('sepilot_editor_use_rag_in_autocomplete');
+      return saved === 'true';
+    } catch (error) {
+      console.error('Failed to load editor RAG setting from localStorage:', error);
+    }
+    return false;
+  })(),
+
+  editorUseToolsInAutocomplete: (() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    try {
+      const saved = localStorage.getItem('sepilot_editor_use_tools_in_autocomplete');
+      return saved === 'true';
+    } catch (error) {
+      console.error('Failed to load editor Tools setting from localStorage:', error);
+    }
+    return false;
+  })(),
+
+  editorAgentMode: (() => {
+    if (typeof window === 'undefined') {
+      return 'editor';
+    }
+    try {
+      const saved = localStorage.getItem('sepilot_editor_agent_mode');
+      return (saved === 'coding' ? 'coding' : 'editor') as 'editor' | 'coding';
+    } catch (error) {
+      console.error('Failed to load editor agent mode from localStorage:', error);
+    }
+    return 'editor';
   })(),
 
   // Chat Mode View
@@ -443,11 +575,24 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Conversations
   createConversation: async () => {
+    const state = get();
+
+    // Default settings for new conversation
+    const defaultChatSettings: ConversationChatSettings = {
+      thinkingMode: 'instant',
+      enableRAG: false,
+      enableTools: false,
+      enabledTools: [],
+      enableImageGeneration: false,
+      selectedImageGenProvider: state.selectedImageGenProvider,
+    };
+
     const newConversation: Conversation = {
       id: generateId(),
       title: '새 대화',
       created_at: Date.now(),
       updated_at: Date.now(),
+      chatSettings: defaultChatSettings,
     };
 
     // Save to database or localStorage
@@ -467,14 +612,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
 
     // Update state and fallback to localStorage if DB save failed
-    set((state) => {
-      const newConversations = [newConversation, ...state.conversations];
+    set((currentState) => {
+      const newConversations = [newConversation, ...currentState.conversations];
       // Web or Electron DB save failed: localStorage에 저장
       if (!saved) {
         saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, newConversations);
       }
       // Initialize empty cache for new conversation
-      const newCache = new Map(state.messagesCache);
+      const newCache = new Map(currentState.messagesCache);
       newCache.set(newConversation.id, []);
 
       return {
@@ -482,6 +627,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         activeConversationId: newConversation.id,
         messages: [],
         messagesCache: newCache,
+        // Apply default settings to global state
+        thinkingMode: 'instant',
+        enableRAG: false,
+        enableTools: false,
+        enabledTools: new Set(),
+        enableImageGeneration: false,
       };
     });
 
@@ -491,6 +642,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   deleteConversation: async (id: string) => {
     const state = get();
     const wasActive = state.activeConversationId === id;
+    const wasStreaming = state.streamingConversations.has(id);
+
+    // If the conversation was streaming, abort and cleanup
+    if (wasStreaming && isElectron() && window.electronAPI?.langgraph) {
+      try {
+        await window.electronAPI.langgraph.abort(id);
+        window.electronAPI.langgraph.removeAllStreamListeners();
+        console.warn(`[deleteConversation] Aborted streaming for conversation: ${id}`);
+      } catch (error) {
+        console.error('[deleteConversation] Failed to abort streaming:', error);
+      }
+    }
 
     // Immediately update UI state to prevent input blocking
     // This prevents the textarea from being disabled during async DB operation
@@ -567,10 +730,167 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
+  duplicateConversation: async (id: string) => {
+    const state = get();
+    const sourceConversation = state.conversations.find((c) => c.id === id);
+    if (!sourceConversation) {
+      throw new Error('Source conversation not found');
+    }
+
+    // Load messages from source conversation
+    let sourceMessages: Message[] = [];
+    if (isElectron() && window.electronAPI) {
+      try {
+        const result = await window.electronAPI.chat.loadMessages(id);
+        if (result.success && result.data) {
+          sourceMessages = result.data;
+        }
+      } catch (error) {
+        console.error('Error loading source messages:', error);
+      }
+    } else {
+      const allMessages = loadFromLocalStorage<Record<string, Message[]>>(
+        STORAGE_KEYS.MESSAGES,
+        {}
+      );
+      sourceMessages = allMessages[id] || [];
+    }
+
+    // Create new conversation with duplicated data
+    const newConversation: Conversation = {
+      ...sourceConversation,
+      id: generateId(),
+      title: `${sourceConversation.title} (복사본)`,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    };
+
+    // Duplicate messages with new IDs
+    const duplicatedMessages: Message[] = sourceMessages.map((msg) => ({
+      ...msg,
+      id: generateId(),
+      conversation_id: newConversation.id,
+      created_at: Date.now(),
+    }));
+
+    // Save new conversation
+    let saved = false;
+    if (isElectron() && window.electronAPI) {
+      try {
+        const result = await window.electronAPI.chat.saveConversation(newConversation);
+        if (result.success) {
+          saved = true;
+          // Save duplicated messages
+          for (const message of duplicatedMessages) {
+            await window.electronAPI.chat.saveMessage(message);
+          }
+        } else {
+          console.error('Failed to save duplicated conversation to DB:', result.error);
+        }
+      } catch (error) {
+        console.error('Error saving duplicated conversation to DB:', error);
+      }
+    }
+
+    // Update state and fallback to localStorage if DB save failed
+    set((currentState) => {
+      const newConversations = [newConversation, ...currentState.conversations];
+      if (!saved) {
+        saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, newConversations);
+        // Save messages to localStorage
+        const allMessages = loadFromLocalStorage<Record<string, Message[]>>(
+          STORAGE_KEYS.MESSAGES,
+          {}
+        );
+        allMessages[newConversation.id] = duplicatedMessages;
+        saveToLocalStorage(STORAGE_KEYS.MESSAGES, allMessages);
+      }
+
+      // Initialize cache for new conversation
+      const newCache = new Map(currentState.messagesCache);
+      newCache.set(newConversation.id, duplicatedMessages);
+
+      return {
+        conversations: newConversations,
+        messagesCache: newCache,
+      };
+    });
+
+    return newConversation.id;
+  },
+
   setActiveConversation: async (id: string) => {
     const state = get();
     const isCurrentlyStreaming = state.streamingConversations.has(id);
     const cachedMessages = state.messagesCache.get(id);
+
+    // Find the conversation to load its settings
+    const conversation = state.conversations.find((c) => c.id === id);
+    if (!conversation) {
+      console.error('Conversation not found:', id);
+      return;
+    }
+
+    // Restore conversation's chat settings to global state
+    const conversationSettings = conversation.chatSettings;
+    const settingsUpdate: Partial<ChatStore> = {};
+
+    console.log('[setActiveConversation] Restoring settings for conversation:', id);
+    console.log('[setActiveConversation] Conversation chatSettings:', conversationSettings);
+
+    if (conversationSettings) {
+      if (conversationSettings.thinkingMode !== undefined) {
+        settingsUpdate.thinkingMode = conversationSettings.thinkingMode;
+        console.log(
+          '[setActiveConversation] Restoring thinkingMode:',
+          conversationSettings.thinkingMode
+        );
+      }
+      if (conversationSettings.enableRAG !== undefined) {
+        settingsUpdate.enableRAG = conversationSettings.enableRAG;
+        console.log('[setActiveConversation] Restoring enableRAG:', conversationSettings.enableRAG);
+      }
+      if (conversationSettings.enableTools !== undefined) {
+        settingsUpdate.enableTools = conversationSettings.enableTools;
+        console.log(
+          '[setActiveConversation] Restoring enableTools:',
+          conversationSettings.enableTools
+        );
+      }
+      if (conversationSettings.enabledTools !== undefined) {
+        settingsUpdate.enabledTools = new Set(conversationSettings.enabledTools);
+        console.log(
+          '[setActiveConversation] Restoring enabledTools:',
+          conversationSettings.enabledTools
+        );
+      }
+      if (conversationSettings.enableImageGeneration !== undefined) {
+        settingsUpdate.enableImageGeneration = conversationSettings.enableImageGeneration;
+        console.log(
+          '[setActiveConversation] Restoring enableImageGeneration:',
+          conversationSettings.enableImageGeneration
+        );
+      }
+      if (conversationSettings.selectedImageGenProvider !== undefined) {
+        settingsUpdate.selectedImageGenProvider = conversationSettings.selectedImageGenProvider;
+        console.log(
+          '[setActiveConversation] Restoring selectedImageGenProvider:',
+          conversationSettings.selectedImageGenProvider
+        );
+      }
+
+      // CRITICAL: Enforce consistency - if image generation is enabled, tools must be enabled
+      if (settingsUpdate.enableImageGeneration === true) {
+        console.log(
+          '[setActiveConversation] Image generation is enabled, forcing enableTools=true and enableRAG=false'
+        );
+        settingsUpdate.enableTools = true;
+        settingsUpdate.enableRAG = false;
+        settingsUpdate.thinkingMode = 'instant';
+      }
+    } else {
+      console.log('[setActiveConversation] No chatSettings found, using defaults');
+    }
 
     // If we have cached messages (e.g., from background streaming), use them immediately
     if (cachedMessages && cachedMessages.length > 0) {
@@ -583,6 +903,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         streamingMessageId: isCurrentlyStreaming
           ? state.streamingConversations.get(id) || null
           : null,
+        ...settingsUpdate,
       });
       return;
     }
@@ -596,6 +917,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       streamingMessageId: isCurrentlyStreaming
         ? state.streamingConversations.get(id) || null
         : null,
+      ...settingsUpdate,
     });
 
     // Load messages from database or localStorage
@@ -676,6 +998,28 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       );
 
       // localStorage에 저장 (Electron DB는 personaId 필드를 아직 지원하지 않으므로)
+      saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, updatedConversations);
+
+      return { conversations: updatedConversations };
+    });
+  },
+
+  updateConversationSettings: async (id: string, settings: ConversationChatSettings) => {
+    // Note: Electron DB는 chatSettings 필드를 아직 완전히 지원하지 않으므로
+    // localStorage를 주로 사용합니다. 향후 DB 스키마 업데이트 시 개선 예정
+
+    set((state) => {
+      const updatedConversations = state.conversations.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              chatSettings: settings,
+              updated_at: Date.now(),
+            }
+          : c
+      );
+
+      // localStorage에 저장
       saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, updatedConversations);
 
       return { conversations: updatedConversations };
@@ -893,6 +1237,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ messages: [] });
   },
 
+  clearMessagesCache: (conversationId: string) => {
+    set((state) => {
+      const newCache = new Map(state.messagesCache);
+      newCache.delete(conversationId);
+      return { messagesCache: newCache };
+    });
+  },
+
   // Streaming actions (conversation-specific)
   startStreaming: (conversationId: string, messageId: string) => {
     set((state) => {
@@ -931,18 +1283,174 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Graph Configuration
   setThinkingMode: (mode: ThinkingMode) => {
     set({ thinkingMode: mode });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          thinkingMode: mode,
+        });
+      }
+    }
   },
 
   setEnableRAG: (enable: boolean) => {
     set({ enableRAG: enable });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          enableRAG: enable,
+        });
+      }
+    }
   },
 
   setEnableTools: (enable: boolean) => {
+    const state = get();
+
+    // CRITICAL: Cannot disable tools when image generation is active
+    if (!enable && state.enableImageGeneration) {
+      console.warn(
+        '[setEnableTools] Cannot disable tools while image generation is active. Ignoring.'
+      );
+      return;
+    }
+
     set({ enableTools: enable });
+
+    // Update active conversation's settings
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          enableTools: enable,
+        });
+      }
+    }
+  },
+
+  toggleTool: (toolName: string) => {
+    set((state) => {
+      const newEnabledTools = new Set(state.enabledTools);
+      if (newEnabledTools.has(toolName)) {
+        newEnabledTools.delete(toolName);
+      } else {
+        newEnabledTools.add(toolName);
+      }
+      return { enabledTools: newEnabledTools };
+    });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          enabledTools: Array.from(state.enabledTools),
+        });
+      }
+    }
+  },
+
+  enableAllTools: (toolNames: string[]) => {
+    set({ enabledTools: new Set(toolNames) });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          enabledTools: toolNames,
+        });
+      }
+    }
+  },
+
+  disableAllTools: () => {
+    set({ enabledTools: new Set<string>() });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          enabledTools: [],
+        });
+      }
+    }
   },
 
   setEnableImageGeneration: (enable: boolean) => {
-    set({ enableImageGeneration: enable });
+    const state = get();
+    if (enable) {
+      // Save current settings before enabling image generation mode
+      set({
+        savedThinkingMode: state.thinkingMode,
+        savedEnableRAG: state.enableRAG,
+        savedEnableTools: state.enableTools,
+        // Force settings for image generation mode
+        thinkingMode: 'instant',
+        enableRAG: false,
+        enableTools: true, // Keep tools enabled (only generate_image will be used)
+        enableImageGeneration: true,
+      });
+    } else {
+      // Restore previous settings when disabling image generation mode
+      set({
+        thinkingMode: state.savedThinkingMode || 'instant',
+        enableRAG: state.savedEnableRAG ?? false,
+        enableTools: state.savedEnableTools ?? false,
+        enableImageGeneration: false,
+        // Clear saved settings
+        savedThinkingMode: null,
+        savedEnableRAG: null,
+        savedEnableTools: null,
+      });
+    }
+
+    // Update active conversation's settings
+    const currentState = get();
+    if (currentState.activeConversationId) {
+      const conversation = currentState.conversations.find(
+        (c) => c.id === currentState.activeConversationId
+      );
+      if (conversation) {
+        get().updateConversationSettings(currentState.activeConversationId, {
+          ...conversation.chatSettings,
+          enableImageGeneration: enable,
+        });
+      }
+    }
+  },
+
+  setSelectedImageGenProvider: (provider: 'comfyui' | 'nanobanana' | null) => {
+    set({ selectedImageGenProvider: provider });
+
+    // Update active conversation's settings
+    const state = get();
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      if (conversation) {
+        get().updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          selectedImageGenProvider: provider,
+        });
+      }
+    }
   },
 
   setWorkingDirectory: (directory: string | null) => {
@@ -1042,6 +1550,23 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ showTerminalPanel: show });
   },
 
+  // File Clipboard Actions
+  setFileClipboard: (clipboard) => {
+    set({ fileClipboard: clipboard });
+  },
+
+  copyFiles: (paths) => {
+    set({ fileClipboard: { operation: 'copy', paths } });
+  },
+
+  cutFiles: (paths) => {
+    set({ fileClipboard: { operation: 'cut', paths } });
+  },
+
+  clearFileClipboard: () => {
+    set({ fileClipboard: null });
+  },
+
   // Browser Chat Actions
   addBrowserChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => {
     const newMessage: Message = {
@@ -1068,8 +1593,104 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ browserChatMessages: [] });
   },
 
-  setBrowserViewMode: (mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools') => {
+  setBrowserViewMode: (
+    mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs'
+  ) => {
     set({ browserViewMode: mode });
+  },
+
+  // Presentation Chat Actions
+  addPresentationChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => {
+    const newMessage: Message = {
+      ...message,
+      id: generateId(),
+      conversation_id: 'presentation-chat',
+      created_at: Date.now(),
+    };
+
+    set((state) => ({
+      presentationChatMessages: [...state.presentationChatMessages, newMessage],
+    }));
+  },
+
+  updatePresentationChatMessage: (id: string, updates: Partial<Message>) => {
+    set((state) => ({
+      presentationChatMessages: state.presentationChatMessages.map((m) =>
+        m.id === id ? { ...m, ...updates } : m
+      ),
+    }));
+  },
+
+  clearPresentationChat: () => {
+    set({ presentationChatMessages: [], presentationChatStreaming: false });
+  },
+
+  setPresentationChatStreaming: (isStreaming: boolean) => {
+    set({ presentationChatStreaming: isStreaming });
+  },
+
+  setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets' | 'settings') => {
+    set({ presentationViewMode: mode });
+  },
+
+  setPresentationSlides: (slides: PresentationSlide[]) => {
+    set({ presentationSlides: slides });
+  },
+
+  addPresentationSlide: (slide: PresentationSlide) => {
+    set((state) => {
+      const slides = [...state.presentationSlides, slide];
+      return {
+        presentationSlides: slides,
+        activePresentationSlideId: slide.id,
+      };
+    });
+  },
+
+  updatePresentationSlide: (id: string, updates: Partial<PresentationSlide>) => {
+    set((state) => ({
+      presentationSlides: state.presentationSlides.map((slide) =>
+        slide.id === id ? { ...slide, ...updates } : slide
+      ),
+    }));
+  },
+
+  removePresentationSlide: (id: string) => {
+    set((state) => {
+      const slides = state.presentationSlides.filter((slide) => slide.id !== id);
+      const activeId =
+        state.activePresentationSlideId === id
+          ? slides[0]?.id || null
+          : state.activePresentationSlideId;
+      return {
+        presentationSlides: slides,
+        activePresentationSlideId: activeId,
+      };
+    });
+  },
+
+  setActivePresentationSlide: (id: string | null) => {
+    set({ activePresentationSlideId: id });
+  },
+
+  setPresentationExportState: (stateValue: PresentationExportState | null) => {
+    set({ presentationExportState: stateValue });
+  },
+
+  setPresentationAgentState: (stateValue: PresentationAgentState | null) => {
+    set({ presentationAgentState: stateValue });
+  },
+
+  clearPresentationSession: () => {
+    set({
+      presentationChatMessages: [],
+      presentationSlides: [],
+      activePresentationSlideId: null,
+      presentationChatStreaming: false,
+      presentationExportState: null,
+      presentationAgentState: null,
+      presentationViewMode: 'chat',
+    });
   },
 
   // Browser Agent Logs Actions
@@ -1090,6 +1711,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setBrowserAgentIsRunning: (isRunning: boolean) => {
     set({ browserAgentIsRunning: isRunning });
+  },
+
+  setBrowserAgentStreamCleanup: (cleanup: (() => void) | null) => {
+    set({ browserAgentStreamCleanup: cleanup });
   },
 
   // Browser Agent LLM Config Actions
@@ -1165,11 +1790,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   clearEditorChat: () => {
-    set({ editorChatMessages: [] });
+    set({ editorChatMessages: [], editorChatStreaming: false });
   },
 
   setEditorViewMode: (mode: 'files' | 'search' | 'chat' | 'settings') => {
     set({ editorViewMode: mode });
+  },
+
+  setEditorChatStreaming: (isStreaming: boolean) => {
+    set({ editorChatStreaming: isStreaming });
+  },
+
+  refreshFileTree: () => {
+    set({ fileTreeRefreshTrigger: Date.now() });
   },
 
   // Editor Settings
@@ -1207,8 +1840,29 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
+  setEditorUseRagInAutocomplete: (enable: boolean) => {
+    set({ editorUseRagInAutocomplete: enable });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sepilot_editor_use_rag_in_autocomplete', enable.toString());
+    }
+  },
+
+  setEditorUseToolsInAutocomplete: (enable: boolean) => {
+    set({ editorUseToolsInAutocomplete: enable });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sepilot_editor_use_tools_in_autocomplete', enable.toString());
+    }
+  },
+
+  setEditorAgentMode: (mode: 'editor' | 'coding') => {
+    set({ editorAgentMode: mode });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sepilot_editor_agent_mode', mode);
+    }
+  },
+
   // Chat Mode View Actions
-  setChatViewMode: (mode: 'history' | 'documents' | 'chat') => {
+  setChatViewMode: (mode: 'history' | 'documents') => {
     set({ chatViewMode: mode });
   },
 

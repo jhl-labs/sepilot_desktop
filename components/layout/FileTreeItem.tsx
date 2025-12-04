@@ -12,16 +12,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Folder, FolderOpen, File, ChevronRight, ChevronDown, Edit3, Trash2 } from 'lucide-react';
+import { Folder, FolderOpen, File, ChevronRight, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 import { useFileSystem } from '@/hooks/use-file-system';
+import { useFileClipboard } from '@/hooks/use-file-clipboard';
+import { useChatStore } from '@/lib/store/chat-store';
+import { FileTreeContextMenu } from './FileTreeContextMenu';
 import path from 'path-browserify';
 
 export interface FileNode {
@@ -38,14 +36,26 @@ interface FileTreeItemProps {
   onFileClick: (path: string, filename: string) => void;
   onRefresh: () => void;
   parentPath: string;
+  onNewFile: (parentPath: string) => void;
+  onNewFolder: (parentPath: string) => void;
 }
 
-export function FileTreeItem({ node, level, isActive, onFileClick, onRefresh }: FileTreeItemProps) {
+export function FileTreeItem({
+  node,
+  level,
+  isActive,
+  onFileClick,
+  onRefresh,
+  onNewFile,
+  onNewFolder,
+}: FileTreeItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(node.name);
   const [children, setChildren] = useState(node.children);
   const { deleteItem, renameItem, readDirectory, isAvailable } = useFileSystem();
+  const { copyFiles, cutFiles, pasteFiles } = useFileClipboard();
+  const { workingDirectory } = useChatStore();
 
   const handleClick = async () => {
     if (node.isDirectory) {
@@ -116,66 +126,170 @@ export function FileTreeItem({ node, level, isActive, onFileClick, onRefresh }: 
     }
   };
 
+  const handleCopy = () => {
+    copyFiles([node.path]);
+    console.log('[FileTreeItem] Copied to clipboard:', node.path);
+  };
+
+  const handleCut = () => {
+    cutFiles([node.path]);
+    console.log('[FileTreeItem] Cut to clipboard:', node.path);
+  };
+
+  const handlePaste = async () => {
+    if (!node.isDirectory) {
+      console.warn('[FileTreeItem] Cannot paste into a file');
+      return;
+    }
+
+    console.log('[FileTreeItem] Pasting into:', node.path);
+    await pasteFiles(node.path, onRefresh);
+  };
+
+  const handleCopyPath = async () => {
+    if (!isAvailable || !window.electronAPI) {
+      console.warn('[FileTreeItem] API unavailable');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.fs.getAbsolutePath(node.path);
+      if (result.success && result.data) {
+        const success = await copyToClipboard(result.data);
+        if (success) {
+          console.log('[FileTreeItem] Absolute path copied:', result.data);
+        }
+      }
+    } catch (error) {
+      console.error('[FileTreeItem] Error copying path:', error);
+    }
+  };
+
+  const handleCopyRelativePath = async () => {
+    if (!isAvailable || !window.electronAPI || !workingDirectory) {
+      console.warn('[FileTreeItem] API unavailable or no working directory');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.fs.getRelativePath(workingDirectory, node.path);
+      if (result.success && result.data) {
+        const success = await copyToClipboard(result.data);
+        if (success) {
+          console.log('[FileTreeItem] Relative path copied:', result.data);
+        }
+      }
+    } catch (error) {
+      console.error('[FileTreeItem] Error copying relative path:', error);
+    }
+  };
+
+  const handleShowInFolder = async () => {
+    if (!isAvailable || !window.electronAPI) {
+      console.warn('[FileTreeItem] API unavailable');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.fs.showInFolder(node.path);
+      if (result.success) {
+        console.log('[FileTreeItem] Showed in folder:', node.path);
+      }
+    } catch (error) {
+      console.error('[FileTreeItem] Error showing in folder:', error);
+    }
+  };
+
+  const handleOpenInTerminal = () => {
+    // Get the directory path (if file, use parent directory)
+    const dirPath = node.isDirectory ? node.path : path.dirname(node.path);
+
+    // Set working directory and show terminal panel
+    useChatStore.getState().setWorkingDirectory(dirPath);
+    useChatStore.getState().setShowTerminalPanel(true);
+
+    console.log('[FileTreeItem] Opening terminal in:', dirPath);
+  };
+
+  const handleDuplicate = async () => {
+    if (!isAvailable || !window.electronAPI) {
+      console.warn('[FileTreeItem] API unavailable');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.fs.duplicate(node.path);
+      if (result.success && result.data) {
+        console.log('[FileTreeItem] Duplicated:', node.path, '->', result.data);
+        onRefresh();
+      }
+    } catch (error) {
+      console.error('[FileTreeItem] Error duplicating:', error);
+      window.alert('복제 실패');
+    }
+  };
+
   return (
     <div>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          {isRenaming ? (
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onBlur={handleRename}
-              onKeyDown={handleKeyDown}
-              className="h-auto px-2 py-1 text-sm"
-              style={{ marginLeft: `${level * 12 + 8}px` }}
-              autoFocus
-            />
-          ) : (
-            <button
-              onClick={handleClick}
-              className={cn(
-                'flex w-full items-center gap-1 px-2 py-1 text-sm hover:bg-accent rounded transition-colors text-left',
-                isActive && 'bg-accent text-accent-foreground font-medium'
-              )}
-              style={{ paddingLeft: `${level * 12 + 8}px` }}
-            >
-              {node.isDirectory ? (
-                <>
-                  {isExpanded ? (
-                    <ChevronDown className="h-3 w-3 shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3 shrink-0" />
-                  )}
-                  {isExpanded ? (
-                    <FolderOpen className="h-4 w-4 shrink-0 text-blue-500" />
-                  ) : (
-                    <Folder className="h-4 w-4 shrink-0 text-blue-500" />
-                  )}
-                </>
-              ) : (
-                <>
-                  <span className="w-3 shrink-0" />
-                  <File className="h-4 w-4 shrink-0 text-muted-foreground" />
-                </>
-              )}
-              <span className="truncate">{node.name}</span>
-            </button>
-          )}
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem onClick={() => setIsRenaming(true)}>
-            <Edit3 className="mr-2 h-4 w-4" />
-            이름 변경
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={handleDelete}
-            className="text-destructive focus:text-destructive"
+      <FileTreeContextMenu
+        filePath={node.path}
+        isDirectory={node.isDirectory}
+        onCopy={handleCopy}
+        onCut={handleCut}
+        onPaste={node.isDirectory ? handlePaste : undefined}
+        onRename={() => setIsRenaming(true)}
+        onDelete={handleDelete}
+        onNewFile={node.isDirectory ? () => onNewFile(node.path) : undefined}
+        onNewFolder={node.isDirectory ? () => onNewFolder(node.path) : undefined}
+        onCopyPath={handleCopyPath}
+        onCopyRelativePath={handleCopyRelativePath}
+        onShowInFolder={handleShowInFolder}
+        onOpenInTerminal={handleOpenInTerminal}
+        onDuplicate={handleDuplicate}
+        onRefresh={onRefresh}
+      >
+        {isRenaming ? (
+          <Input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onBlur={handleRename}
+            onKeyDown={handleKeyDown}
+            className="h-auto px-2 py-1 text-sm"
+            style={{ marginLeft: `${level * 12 + 8}px` }}
+            autoFocus
+          />
+        ) : (
+          <button
+            onClick={handleClick}
+            className={cn(
+              'flex w-full items-center gap-1 px-2 py-1 text-sm hover:bg-accent rounded transition-colors text-left',
+              isActive && 'bg-accent text-accent-foreground font-medium'
+            )}
+            style={{ paddingLeft: `${level * 12 + 8}px` }}
           >
-            <Trash2 className="mr-2 h-4 w-4" />
-            삭제
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+            {node.isDirectory ? (
+              <>
+                {isExpanded ? (
+                  <ChevronDown className="h-3 w-3 shrink-0" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 shrink-0" />
+                )}
+                {isExpanded ? (
+                  <FolderOpen className="h-4 w-4 shrink-0 text-blue-500" />
+                ) : (
+                  <Folder className="h-4 w-4 shrink-0 text-blue-500" />
+                )}
+              </>
+            ) : (
+              <>
+                <span className="w-3 shrink-0" />
+                <File className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </>
+            )}
+            <span className="truncate">{node.name}</span>
+          </button>
+        )}
+      </FileTreeContextMenu>
 
       {node.isDirectory && isExpanded && children && (
         <div>
@@ -188,6 +302,8 @@ export function FileTreeItem({ node, level, isActive, onFileClick, onRefresh }: 
               onFileClick={onFileClick}
               onRefresh={onRefresh}
               parentPath={node.path}
+              onNewFile={onNewFile}
+              onNewFolder={onNewFolder}
             />
           ))}
         </div>

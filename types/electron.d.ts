@@ -7,7 +7,7 @@ import type {
   MCPServerConfig,
   NetworkConfig,
   ImageAttachment,
-  ComfyUIConfig,
+  ImageGenConfig,
 } from './index';
 import type { Persona } from './persona';
 
@@ -26,6 +26,11 @@ interface ChatAPI {
   saveMessage: (message: Message) => Promise<IPCResponse>;
   loadMessages: (conversationId: string) => Promise<IPCResponse<Message[]>>;
   deleteMessage: (id: string) => Promise<IPCResponse>;
+  deleteConversationMessages: (conversationId: string) => Promise<IPCResponse>;
+  replaceConversationMessages: (
+    conversationId: string,
+    newMessages: Message[]
+  ) => Promise<IPCResponse>;
 }
 
 interface ActivityAPI {
@@ -164,6 +169,16 @@ interface LLMAPI {
     code: string;
     cursorPosition: number;
     language?: string;
+    useRag?: boolean;
+    useTools?: boolean;
+    metadata?: {
+      currentLine: string;
+      previousLine: string;
+      nextLine: string;
+      lineNumber: number;
+      hasContextBefore: boolean;
+      hasContextAfter: boolean;
+    };
   }) => Promise<IPCResponse<{ completion: string }>>;
   editorAction: (params: {
     action:
@@ -186,6 +201,14 @@ interface LLMAPI {
     text: string;
     language?: string;
     targetLanguage?: string;
+    context?: {
+      before: string;
+      after: string;
+      fullCode?: string;
+      filePath?: string;
+      lineStart: number;
+      lineEnd: number;
+    };
   }) => Promise<IPCResponse<{ result: string }>>;
 }
 
@@ -198,7 +221,8 @@ interface GraphConfig {
     | 'deep'
     | 'coding'
     | 'browser-agent'
-    | 'editor-agent';
+    | 'editor-agent'
+    | 'deep-web-research';
   enableRAG: boolean;
   enableTools: boolean;
 }
@@ -255,13 +279,19 @@ interface LangGraphErrorEvent extends LangGraphStreamEventBase {
   error: string;
 }
 
+interface LangGraphCompletionEvent extends LangGraphStreamEventBase {
+  type: 'completion';
+  iterations?: number;
+}
+
 type LangGraphStreamEvent =
   | LangGraphStreamingEvent
   | LangGraphImageProgressEvent
   | LangGraphToolApprovalRequestEvent
   | LangGraphToolApprovalResultEvent
   | LangGraphNodeEvent
-  | LangGraphErrorEvent;
+  | LangGraphErrorEvent
+  | LangGraphCompletionEvent;
 
 // Tool approval request data type
 interface LangGraphToolApprovalRequest {
@@ -284,7 +314,7 @@ interface LangGraphAPI {
     graphConfig: GraphConfig,
     messages: Message[],
     conversationId?: string,
-    comfyUIConfig?: ComfyUIConfig,
+    imageGenConfig?: ImageGenConfig,
     networkConfig?: NetworkConfig,
     workingDirectory?: string
   ) => Promise<IPCResponse<{ conversationId?: string }>>;
@@ -324,20 +354,72 @@ interface VectorSearchResult {
   metadata?: Record<string, unknown>;
 }
 
+// VectorDB 검색 옵션 타입
+interface VectorSearchOptions {
+  // 필터링 옵션
+  folderPath?: string;
+  tags?: string[];
+  category?: string;
+  source?: string;
+
+  // 부스팅 옵션
+  folderPathBoost?: number;
+  titleBoost?: number;
+  tagBoost?: number;
+
+  // 하이브리드 검색
+  useHybridSearch?: boolean;
+  hybridAlpha?: number;
+
+  // 기타
+  includeAllMetadata?: boolean;
+  recentBoost?: boolean;
+  recentBoostDecay?: number;
+}
+
+// Export 데이터 타입
+interface ExportData {
+  version: string;
+  exportedAt: string;
+  documents: VectorDocument[];
+  totalCount: number;
+}
+
+// Import 결과 타입
+interface ImportResult {
+  imported: number;
+  overwritten: number;
+  skipped: number;
+}
+
 interface VectorDBAPI {
   initialize: (config: { indexName: string; dimension: number }) => Promise<IPCResponse>;
   createIndex: (name: string, dimension: number) => Promise<IPCResponse>;
   deleteIndex: (name: string) => Promise<IPCResponse>;
   indexExists: (name: string) => Promise<IPCResponse<boolean>>;
   insert: (documents: VectorDocument[]) => Promise<IPCResponse>;
-  search: (queryEmbedding: number[], k: number) => Promise<IPCResponse<VectorSearchResult[]>>;
+  search: (
+    queryEmbedding: number[],
+    k: number,
+    options?: VectorSearchOptions,
+    queryText?: string
+  ) => Promise<IPCResponse<VectorSearchResult[]>>;
   delete: (ids: string[]) => Promise<IPCResponse>;
+  updateMetadata: (id: string, metadata: Record<string, any>) => Promise<IPCResponse>;
   count: () => Promise<IPCResponse<number>>;
   getAll: () => Promise<IPCResponse<VectorDocument[]>>;
   indexDocuments: (
     documents: Array<{ id: string; content: string; metadata: Record<string, any> }>,
     options: { chunkSize: number; chunkOverlap: number; batchSize: number }
   ) => Promise<IPCResponse>;
+  export: () => Promise<IPCResponse<ExportData>>;
+  import: (
+    exportData: ExportData,
+    options?: { overwrite?: boolean }
+  ) => Promise<IPCResponse<ImportResult>>;
+  createEmptyFolder: (folderPath: string) => Promise<IPCResponse>;
+  deleteEmptyFolder: (folderPath: string) => Promise<IPCResponse>;
+  getAllEmptyFolders: () => Promise<IPCResponse<string[]>>;
 }
 
 // GitHub 저장소 타입
@@ -418,11 +500,21 @@ interface FileSystemAPI {
   createDirectory: (dirPath: string) => Promise<IPCResponse>;
   delete: (targetPath: string) => Promise<IPCResponse>;
   rename: (oldPath: string, newPath: string) => Promise<IPCResponse>;
+  copy: (sourcePath: string, destPath: string) => Promise<IPCResponse>;
+  move: (sourcePath: string, destPath: string) => Promise<IPCResponse>;
+  getAbsolutePath: (filePath: string) => Promise<IPCResponse<string>>;
+  getRelativePath: (from: string, to: string) => Promise<IPCResponse<string>>;
+  showInFolder: (itemPath: string) => Promise<IPCResponse>;
+  duplicate: (sourcePath: string) => Promise<IPCResponse<string>>;
   searchFiles: (
     query: string,
     dirPath: string,
     options?: SearchOptions
   ) => Promise<IPCResponse<SearchResponse>>;
+  saveClipboardImage: (destDir: string) => Promise<IPCResponse<{ filename: string; path: string }>>;
+  getFileStat: (
+    filePath: string
+  ) => Promise<IPCResponse<{ mtime: number; size: number; isFile: boolean; isDirectory: boolean }>>;
 }
 
 interface GitHubAPI {
@@ -449,6 +541,106 @@ interface GitHubAPI {
     masterPassword: string,
     networkConfig: NetworkConfig | null
   ) => Promise<IPCResponse>;
+}
+
+// GitHub Sync Result 타입
+interface GitHubSyncResult {
+  success: boolean;
+  message: string;
+  sha?: string;
+  error?: string;
+}
+
+// GitHub Sync API (Token 기반)
+interface GitHubSyncAPI {
+  getMasterKey: () => Promise<IPCResponse<string>>;
+  testConnection: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncSettings: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncDocuments: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncImages: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncConversations: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncPersonas: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  syncAll: (config: import('./index').GitHubSyncConfig) => Promise<
+    IPCResponse<{
+      settings: GitHubSyncResult;
+      documents: GitHubSyncResult;
+      images: GitHubSyncResult;
+      conversations: GitHubSyncResult;
+      personas: GitHubSyncResult;
+    }>
+  >;
+  pullDocuments: (config: import('./index').GitHubSyncConfig) => Promise<{
+    success: boolean;
+    documents: Array<{ title: string; content: string; metadata: Record<string, any> }>;
+    message?: string;
+    error?: string;
+  }>;
+}
+
+// Team Docs API (여러 GitHub Repo 동기화)
+interface TeamDocsAPI {
+  testConnection: (config: import('./index').TeamDocsConfig) => Promise<GitHubSyncResult>;
+  syncDocuments: (config: import('./index').TeamDocsConfig) => Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      totalDocuments: number;
+      indexedDocuments?: number;
+      addedDocuments: number;
+      updatedDocuments: number;
+      deletedDocuments: number;
+    };
+    error?: string;
+  }>;
+  pushDocuments: (config: import('./index').TeamDocsConfig) => Promise<{
+    success: boolean;
+    message: string;
+    error?: string;
+  }>;
+  syncAll: () => Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      totalSynced: number;
+      results: Array<{
+        teamName: string;
+        success: boolean;
+        message: string;
+      }>;
+    };
+    error?: string;
+  }>;
+  pushDocument: (params: {
+    teamDocsId: string;
+    githubPath: string;
+    title: string;
+    content: string;
+    metadata?: Record<string, any>;
+    sha?: string;
+    commitMessage?: string;
+  }) => Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      sha: string;
+    };
+    error?: string;
+  }>;
+}
+
+// Error Reporting API
+interface ErrorReportingAPI {
+  send: (
+    errorData: import('./index').ErrorReportData
+  ) => Promise<IPCResponse<{ issueUrl?: string; skipped?: boolean }>>;
+  isEnabled: () => Promise<{ enabled: boolean }>;
+  getContext: () => Promise<IPCResponse<{ version: string; platform: string; timestamp: number }>>;
+  sendConversation: (data: {
+    issue: string;
+    messages: import('./index').Message[];
+    conversationId?: string;
+    additionalInfo?: string;
+  }) => Promise<IPCResponse<{ issueUrl?: string }>>;
 }
 
 // Embeddings 설정 타입
@@ -716,6 +908,70 @@ interface TerminalAPI {
   removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
 }
 
+// Test Runner 관련 타입
+export interface HealthStatus {
+  status: 'pass' | 'fail' | 'warn';
+  message?: string;
+  details?: Record<string, unknown>;
+  latency?: number;
+}
+
+export interface HealthCheckResult {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  checks: {
+    database: HealthStatus;
+    vectordb: HealthStatus;
+    mcpTools: HealthStatus;
+    llmProviders: HealthStatus;
+  };
+  timestamp: number;
+  message?: string;
+}
+
+export interface TestResult {
+  id: string;
+  name: string;
+  status: 'pass' | 'fail' | 'skip';
+  duration: number;
+  message?: string;
+  error?: string;
+  timestamp: number;
+}
+
+export interface TestSuiteResult {
+  id: string;
+  name: string;
+  tests: TestResult[];
+  summary: {
+    total: number;
+    passed: number;
+    failed: number;
+    skipped: number;
+    duration: number;
+  };
+  timestamp: number;
+}
+
+interface TestRunnerAPI {
+  // Health Check
+  healthCheck: () => Promise<HealthCheckResult>;
+  getLastHealthCheck: () => Promise<HealthCheckResult | null>;
+  startPeriodicHealthCheck: (intervalMs?: number) => Promise<void>;
+  stopPeriodicHealthCheck: () => Promise<void>;
+  // Test Suites
+  runAll: () => Promise<TestSuiteResult>;
+  runLLM: () => Promise<TestSuiteResult>;
+  runDatabase: () => Promise<TestSuiteResult>;
+  runMCP: () => Promise<TestSuiteResult>;
+}
+
+interface PresentationAPI {
+  exportSlides: (
+    slides: import('./presentation').PresentationSlide[],
+    format: import('./presentation').PresentationExportFormat
+  ) => Promise<string>;
+}
+
 interface ElectronAPI {
   platform: string;
   chat: ChatAPI;
@@ -730,6 +986,9 @@ interface ElectronAPI {
   file: FileAPI;
   fs: FileSystemAPI;
   github: GitHubAPI;
+  githubSync: GitHubSyncAPI; // 새로운 Token 기반 Sync API
+  teamDocs: TeamDocsAPI; // Team Docs 동기화 API (여러 GitHub Repo)
+  errorReporting: ErrorReportingAPI; // 에러 자동 리포팅 API
   shell: ShellAPI;
   embeddings: EmbeddingsAPI;
   comfyui: ComfyUIAPI;
@@ -738,6 +997,8 @@ interface ElectronAPI {
   browserView: BrowserViewAPI;
   browserControl: BrowserControlAPI;
   terminal: TerminalAPI;
+  testRunner: TestRunnerAPI; // 테스트 러너 API
+  presentation: PresentationAPI;
   on: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => void;
 }
@@ -773,6 +1034,7 @@ export type {
   VectorDBAPI,
   VectorDocument,
   VectorSearchResult,
+  VectorSearchOptions,
   FileAPI,
   FileNode,
   FileSystemAPI,
@@ -780,6 +1042,10 @@ export type {
   FetchedUrl,
   GitHubAPI,
   GitHubRepository,
+  GitHubSyncAPI,
+  GitHubSyncResult,
+  TeamDocsAPI,
+  ErrorReportingAPI,
   ShellAPI,
   EmbeddingsAPI,
   EmbeddingsConfig,

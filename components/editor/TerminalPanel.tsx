@@ -359,13 +359,13 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       style={{ backgroundColor: getTerminalTheme().background }}
     >
       {/* 탭 바 */}
-      <div className="flex items-center border-b border-border bg-background/50">
+      <div className="flex items-end border-b border-border bg-muted/30 px-2 pt-1">
         {/* 좌측 스크롤 버튼 */}
         {canScrollLeft && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="mb-1 h-7 w-7 shrink-0 rounded-md hover:bg-accent/50"
             onClick={() => scrollTabs('left')}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -373,23 +373,31 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
         )}
 
         {/* 탭 목록 */}
-        <div ref={tabListRef} className="scrollbar-hide flex flex-1 items-center overflow-x-auto">
+        <div
+          ref={tabListRef}
+          className="scrollbar-hide flex flex-1 items-end gap-1 overflow-x-auto"
+        >
           {tabs.map((tab) => (
             <div
               key={tab.id}
               onClick={() => handleSwitchTab(tab.id)}
-              className={`group relative flex cursor-pointer items-center gap-2 border-r border-border px-3 py-2 text-sm transition-colors ${
+              className={`group relative flex cursor-pointer items-center gap-2 rounded-t-lg px-4 py-2 text-sm transition-all duration-200 ${
                 tab.isActive
-                  ? 'bg-background text-foreground'
-                  : 'bg-background/30 text-muted-foreground hover:bg-background/50'
+                  ? 'bg-background text-foreground shadow-sm border-t border-x border-border -mb-[1px]'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground mb-0.5'
               }`}
             >
-              <span className="whitespace-nowrap">{tab.title}</span>
+              <span className="whitespace-nowrap font-medium">{tab.title}</span>
               <button
                 onClick={(e) => handleCloseTab(tab.id, e)}
-                className="opacity-0 transition-opacity group-hover:opacity-100"
+                className={`flex h-5 w-5 items-center justify-center rounded-md transition-all ${
+                  tab.isActive
+                    ? 'opacity-0 hover:bg-accent hover:text-accent-foreground group-hover:opacity-100'
+                    : 'opacity-0 hover:bg-accent/80 hover:text-accent-foreground group-hover:opacity-100'
+                }`}
+                title="닫기"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
@@ -400,7 +408,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="mb-1 h-7 w-7 shrink-0 rounded-md hover:bg-accent/50"
             onClick={() => scrollTabs('right')}
           >
             <ChevronRight className="h-4 w-4" />
@@ -411,9 +419,9 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0 border-l border-border"
+          className="mb-1 h-7 w-7 shrink-0 rounded-md hover:bg-accent/50 ml-1"
           onClick={handleNewTab}
-          title="새 터미널"
+          title="새 터미널 (Ctrl+Shift+`)"
         >
           <Plus className="h-4 w-4" />
         </Button>

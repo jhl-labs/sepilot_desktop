@@ -1,25 +1,52 @@
 'use client';
 
-import { Plus, Settings, Camera, Album, Bookmark, Wrench } from 'lucide-react';
+import {
+  Plus,
+  Settings,
+  Camera,
+  Album,
+  Bookmark,
+  Wrench,
+  ScrollText,
+  Presentation,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
-import { SimpleChatArea } from '@/components/browser/SimpleChatArea';
-import { SimpleChatInput } from '@/components/browser/SimpleChatInput';
+import { BrowserChat } from '@/components/browser/BrowserChat';
 import { SnapshotsList } from '@/components/browser/SnapshotsList';
 import { BookmarksList } from '@/components/browser/BookmarksList';
 import { BrowserSettings } from '@/components/browser/BrowserSettings';
 import { BrowserToolsList } from '@/components/browser/BrowserToolsList';
+import { BrowserAgentLogsView } from '@/components/browser/BrowserAgentLogsView';
 import { isElectron } from '@/lib/platform';
 
 export function SidebarBrowser() {
-  const { clearBrowserChat, browserViewMode, setBrowserViewMode } = useChatStore();
+  const {
+    clearBrowserChat,
+    browserViewMode,
+    setBrowserViewMode,
+    browserAgentIsRunning,
+    setAppMode,
+  } = useChatStore();
 
   return (
     <div className="flex h-full w-full flex-col">
       {/* Header - chat 모드에서만 표시 */}
-      {browserViewMode === 'chat' && (
+      {(browserViewMode === 'chat' || browserViewMode === 'logs') && (
         <div className="border-b p-2 bg-muted/20">
           <div className="flex gap-1 justify-end">
+            <Button
+              variant={browserViewMode === 'logs' ? 'secondary' : 'ghost'}
+              size="icon"
+              onClick={() => setBrowserViewMode('logs')}
+              title="Agent 실행 로그"
+              className="h-8 w-8 relative"
+            >
+              <ScrollText className="h-4 w-4" />
+              {browserAgentIsRunning && (
+                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              )}
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -36,10 +63,7 @@ export function SidebarBrowser() {
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto flex flex-col">
         {browserViewMode === 'chat' ? (
-          <>
-            <SimpleChatArea />
-            <SimpleChatInput />
-          </>
+          <BrowserChat />
         ) : browserViewMode === 'snapshots' ? (
           <SnapshotsList />
         ) : browserViewMode === 'bookmarks' ? (
@@ -48,6 +72,8 @@ export function SidebarBrowser() {
           <BrowserSettings />
         ) : browserViewMode === 'tools' ? (
           <BrowserToolsList />
+        ) : browserViewMode === 'logs' ? (
+          <BrowserAgentLogsView />
         ) : null}
       </div>
 
@@ -114,6 +140,15 @@ export function SidebarBrowser() {
               className="flex-1"
             >
               <Bookmark className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setAppMode('presentation')}
+              title="AI Presentation Lab"
+              className="flex-1"
+            >
+              <Presentation className="h-5 w-5" />
             </Button>
             <Button
               variant="ghost"

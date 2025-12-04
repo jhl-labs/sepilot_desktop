@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import type monaco from 'monaco-editor';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
-import { X, Save, FileText, Loader2, Eye, Code } from 'lucide-react';
+import { X, Save, FileText, Loader2, Eye, Code, RefreshCw, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isElectron } from '@/lib/platform';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
+import path from 'path-browserify';
 
 // Load Editor component without SSR
 // For now, we'll allow Monaco to use CDN in development
@@ -28,14 +29,22 @@ export function CodeEditor() {
     markFileDirty,
     clearInitialPosition,
     editorAppearanceConfig,
+    workingDirectory,
+    editorUseRagInAutocomplete,
+    editorUseToolsInAutocomplete,
   } = useChatStore();
 
   const [isSaving, setIsSaving] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAutocompleting, setIsAutocompleting] = useState(false);
+  const [processingAction, setProcessingAction] = useState<string>('');
   const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null);
   const [previewMode, setPreviewMode] = useState<'editor' | 'preview' | 'split'>('editor');
+  const [fileChangedExternally, setFileChangedExternally] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath);
+  const lastMtimeRef = useRef<Map<string, number>>(new Map());
 
   // Markdown 파일인지 확인 (language가 'markdown'이거나 확장자가 .md, .mdx인 경우)
   const isMarkdownFile =
@@ -61,6 +70,15 @@ export function CodeEditor() {
       if (result.success) {
         markFileDirty(activeFile.path, false);
         console.log('File saved successfully:', activeFile.path);
+
+        // 저장 후 mtime 업데이트
+        const statResult = await window.electronAPI.fs.getFileStat(activeFile.path);
+        if (statResult.success && statResult.data) {
+          lastMtimeRef.current.set(activeFile.path, statResult.data.mtime);
+        }
+
+        // 저장 후 변경 경고 숨김
+        setFileChangedExternally(false);
       } else {
         console.error('Failed to save file:', result.error);
       }
@@ -68,6 +86,38 @@ export function CodeEditor() {
       console.error('Failed to save file:', error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleRefreshFile = async () => {
+    if (!activeFile || !isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    setIsRefreshing(true);
+    try {
+      const result = await window.electronAPI.fs.readFile(activeFile.path);
+      if (result.success && result.data !== undefined) {
+        updateFileContent(activeFile.path, result.data);
+        markFileDirty(activeFile.path, false);
+
+        // mtime 업데이트
+        const statResult = await window.electronAPI.fs.getFileStat(activeFile.path);
+        if (statResult.success && statResult.data) {
+          lastMtimeRef.current.set(activeFile.path, statResult.data.mtime);
+        }
+
+        setFileChangedExternally(false);
+        console.log('File refreshed successfully:', activeFile.path);
+      } else {
+        console.error('Failed to refresh file:', result.error);
+        window.alert(`파일을 새로고침할 수 없습니다: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to refresh file:', error);
+      window.alert('파일을 새로고침하는 중 오류가 발생했습니다.');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -99,32 +149,93 @@ export function CodeEditor() {
         return;
       }
 
+      if (!editor) {
+        console.error('Editor instance is not available.');
+        return;
+      }
+
+      // 액션 이름을 한글로 변환
+      const actionNames: Record<string, string> = {
+        summarize: '요약',
+        translate: '번역',
+        complete: '코드 완성',
+        explain: '코드 설명',
+        fix: '코드 수정',
+        improve: '코드 개선',
+        continue: '계속 작성',
+        'make-shorter': '짧게 만들기',
+        'make-longer': '길게 만들기',
+        simplify: '단순화',
+        'fix-grammar': '문법 수정',
+        'change-tone-professional': '전문적 어조로 변경',
+        'change-tone-casual': '캐주얼 어조로 변경',
+        'change-tone-friendly': '친근한 어조로 변경',
+        'find-action-items': '액션 아이템 찾기',
+        'create-outline': '개요 작성',
+      };
+
       setIsProcessing(true);
+      setProcessingAction(actionNames[action] || action);
       try {
+        const model = editor.getModel();
+        const selection = editor.getSelection();
+
+        if (!model || !selection) {
+          console.error('No model or selection available');
+          return;
+        }
+
+        // 전체 코드와 선택 영역의 위치 정보 수집
+        const fullCode = model.getValue();
+        const selectionStartOffset = model.getOffsetAt(selection.getStartPosition());
+        const selectionEndOffset = model.getOffsetAt(selection.getEndPosition());
+
+        // 선택 영역 앞뒤 컨텍스트 수집 (각각 최대 2000자)
+        const textBefore = fullCode.substring(
+          Math.max(0, selectionStartOffset - 2000),
+          selectionStartOffset
+        );
+        const textAfter = fullCode.substring(
+          selectionEndOffset,
+          Math.min(fullCode.length, selectionEndOffset + 2000)
+        );
+
+        console.log('[EditorAction] Context collected:', {
+          action,
+          selectedTextLength: selectedText.length,
+          contextBeforeLength: textBefore.length,
+          contextAfterLength: textAfter.length,
+          selectionStart: selection.getStartPosition(),
+          selectionEnd: selection.getEndPosition(),
+        });
+
+        // 향상된 컨텍스트와 함께 액션 실행
         const result = await window.electronAPI.llm.editorAction({
           action,
           text: selectedText,
           language: activeFile?.language,
           targetLanguage,
+          // 추가 컨텍스트 정보
+          context: {
+            before: textBefore,
+            after: textAfter,
+            fullCode: fullCode.length < 10000 ? fullCode : undefined, // 전체 코드가 작으면 포함
+            filePath: activeFile?.path,
+            lineStart: selection.startLineNumber,
+            lineEnd: selection.endLineNumber,
+          },
         });
 
         if (result.success && result.data) {
           // Insert or replace result in editor
-          if (editor) {
-            const selection = editor.getSelection();
-            if (selection) {
-              editor.executeEdits('', [
-                {
-                  range: selection,
-                  text: result.data.result,
-                  forceMoveMarkers: true,
-                },
-              ]);
-              console.log(
-                `${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully`
-              );
-            }
-          }
+          editor.executeEdits('', [
+            {
+              range: selection,
+              text: result.data.result,
+              forceMoveMarkers: true,
+            },
+          ]);
+          console.log(`${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully`);
         } else {
           console.error('Editor action failed:', result.error);
           window.alert(`Failed: ${result.error || 'Unknown error'}`);
@@ -136,9 +247,10 @@ export function CodeEditor() {
         );
       } finally {
         setIsProcessing(false);
+        setProcessingAction('');
       }
     },
-    [editor, activeFile?.language]
+    [editor, activeFile?.language, activeFile?.path]
   );
 
   const handleCloseFile = (path: string, e: React.MouseEvent) => {
@@ -169,26 +281,52 @@ export function CodeEditor() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeFile]);
 
-  // Register inline completion provider for autocomplete
+  // Register inline completion provider for autocomplete (triggered by Ctrl+.)
   useEffect(() => {
     if (!editor) {
+      console.log('[Autocomplete] Editor not ready');
       return;
     }
 
     // Get monaco instance from the editor
     const monacoInstance = (window as any).monaco;
     if (!monacoInstance) {
-      console.warn('Monaco instance not available');
+      console.warn('[Autocomplete] Monaco instance not available');
       return;
     }
 
-    let debounceTimer: NodeJS.Timeout | null = null;
-    const DEBOUNCE_MS = 300;
+    let currentAbortController: AbortController | null = null;
+    let lastRequestId = 0;
+    let isRequestInProgress = false;
+    let manualTriggerTime = 0; // 수동 트리거 시간 기록
+
+    const REQUEST_TIMEOUT_MS = 10000; // 10초 타임아웃 (더 긴 컨텍스트 처리)
+    const MANUAL_TRIGGER_TIMEOUT_MS = 500; // 수동 트리거 유효 시간
+
+    // Ctrl+. 키보드 단축키로 수동 트리거
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === '.') {
+        e.preventDefault();
+        console.log('[Autocomplete] Manual trigger requested (Ctrl+.)');
+        manualTriggerTime = Date.now();
+        // Monaco의 inline suggestions를 수동으로 트리거
+        editor.trigger('keyboard', 'editor.action.inlineSuggest.trigger', {});
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
 
     // Create the provider object with all required methods
     const providerObject = {
-      provideInlineCompletions: async (model: any, position: any, _context: any, _token: any) => {
-        console.log('[Autocomplete] provideInlineCompletions called');
+      provideInlineCompletions: async (model: any, position: any, context: any, token: any) => {
+        const now = Date.now();
+        const isManualTrigger = now - manualTriggerTime < MANUAL_TRIGGER_TIMEOUT_MS;
+
+        console.log('[Autocomplete] provideInlineCompletions called', {
+          triggerKind: context?.triggerKind,
+          isManualTrigger,
+          timeSinceManualTrigger: now - manualTriggerTime,
+        });
 
         // Return empty if autocomplete is not available
         if (!window.electronAPI?.llm?.editorAutocomplete) {
@@ -196,96 +334,168 @@ export function CodeEditor() {
           return { items: [] };
         }
 
-        // Debounce to avoid too many requests
-        return new Promise((resolve) => {
-          if (debounceTimer) {
-            clearTimeout(debounceTimer);
+        // Ctrl+.로 수동 트리거한 경우가 아니면 자동 완성 제공 안함
+        if (!isManualTrigger) {
+          return { items: [] };
+        }
+
+        // Monaco의 CancellationToken 체크
+        if (token?.isCancellationRequested) {
+          console.log('[Autocomplete] Token already cancelled');
+          return { items: [] };
+        }
+
+        // 이전 요청 취소
+        if (currentAbortController) {
+          console.log('[Autocomplete] Aborting previous request');
+          currentAbortController.abort();
+          currentAbortController = null;
+        }
+
+        // 새로운 AbortController 생성
+        const abortController = new AbortController();
+        currentAbortController = abortController;
+        const requestId = ++lastRequestId;
+
+        // 이미 요청이 진행 중이면 이전 요청을 취소했으므로 계속 진행
+        if (isRequestInProgress) {
+          console.log('[Autocomplete] Previous request cancelled, starting new request');
+        }
+
+        try {
+          const code = model.getValue();
+          const offset = model.getOffsetAt(position);
+          const language = model.getLanguageId();
+
+          // Get enhanced context (Notion-style: before + after cursor)
+          const textBeforeCursor = code.substring(0, offset);
+          const textAfterCursor = code.substring(offset);
+
+          // 앞쪽 컨텍스트: 최대 3000자 또는 50줄
+          const linesBefore = textBeforeCursor.split('\n');
+          const contextLinesBefore = linesBefore.slice(-50);
+          const contextBefore = contextLinesBefore.join('\n').slice(-3000);
+
+          // 뒤쪽 컨텍스트: 최대 1000자 또는 20줄
+          const linesAfter = textAfterCursor.split('\n');
+          const contextLinesAfter = linesAfter.slice(0, 20);
+          const contextAfter = contextLinesAfter.join('\n').slice(0, 1000);
+
+          // 현재 줄과 주변 줄 분석
+          const currentLineNumber = position.lineNumber;
+          const currentLine = linesBefore[linesBefore.length - 1];
+          const previousLine = linesBefore.length > 1 ? linesBefore[linesBefore.length - 2] : '';
+          const nextLine = linesAfter.length > 0 ? linesAfter[0] : '';
+
+          console.log('[Autocomplete] Enhanced context:', {
+            language,
+            currentLine: currentLine.substring(0, 50),
+            previousLine: previousLine.substring(0, 50),
+            nextLine: nextLine.substring(0, 50),
+            contextBeforeLength: contextBefore.length,
+            contextAfterLength: contextAfter.length,
+            lineNumber: currentLineNumber,
+            column: position.column,
+          });
+
+          // 다시 한번 취소 체크
+          if (token?.isCancellationRequested || abortController.signal.aborted) {
+            console.log('[Autocomplete] Cancelled before API call');
+            return { items: [] };
           }
 
-          debounceTimer = setTimeout(async () => {
-            try {
-              const code = model.getValue();
-              const offset = model.getOffsetAt(position);
-              const language = model.getLanguageId();
+          isRequestInProgress = true;
+          setIsAutocompleting(true);
+          console.log('[Autocomplete] Starting API request with enhanced context...');
 
-              // Get text before cursor for context
-              const textBeforeCursor = code.substring(0, offset);
-              const lines = textBeforeCursor.split('\n');
-              const currentLine = lines[lines.length - 1];
-              const previousLine = lines.length > 1 ? lines[lines.length - 2] : '';
+          // 타임아웃과 함께 요청
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout')), REQUEST_TIMEOUT_MS);
+          });
 
-              console.log('[Autocomplete] Context:', {
-                language,
-                offset,
-                currentLine,
-                previousLine,
-                lineNumber: position.lineNumber,
-                column: position.column,
-              });
+          // 향상된 컨텍스트와 함께 autocomplete 요청
+          const requestPromise = window.electronAPI.llm.editorAutocomplete({
+            code: `${contextBefore}<!CURSOR!>${contextAfter}`, // 커서 위치 표시
+            cursorPosition: contextBefore.length,
+            language,
+            useRag: editorUseRagInAutocomplete,
+            useTools: editorUseToolsInAutocomplete,
+            // 추가 메타데이터
+            metadata: {
+              currentLine,
+              previousLine,
+              nextLine,
+              lineNumber: currentLineNumber,
+              hasContextBefore: contextBefore.length > 0,
+              hasContextAfter: contextAfter.length > 0,
+            },
+          });
 
-              // Don't autocomplete only if there are 2+ consecutive empty lines
-              // (current line is empty AND previous line is also empty)
-              if (!currentLine.trim() && !previousLine.trim()) {
-                console.log('[Autocomplete] Skipping - 2+ consecutive empty lines');
-                resolve({ items: [] });
-                return;
-              }
+          const result = await Promise.race([requestPromise, timeoutPromise]);
 
-              console.log('[Autocomplete] Requesting autocomplete...');
+          console.log('[Autocomplete] API response received:', {
+            success: result.success,
+            hasCompletion: !!result.data?.completion,
+            error: result.error,
+          });
 
-              const result = await window.electronAPI.llm.editorAutocomplete({
-                code,
-                cursorPosition: offset,
-                language,
-              });
+          // 요청 완료 후 취소 체크
+          if (
+            token?.isCancellationRequested ||
+            abortController.signal.aborted ||
+            requestId !== lastRequestId
+          ) {
+            console.log('[Autocomplete] Cancelled after API call');
+            return { items: [] };
+          }
 
-              console.log('[Autocomplete] Response received:', result);
+          if (result.success && result.data?.completion) {
+            const completion = result.data.completion.trim();
 
-              if (result.success && result.data?.completion) {
-                const completion = result.data.completion.trim();
+            console.log('[Autocomplete] Completion text:', {
+              length: completion.length,
+              preview: completion.substring(0, 100),
+            });
 
-                console.log('[Autocomplete] Completion text:', {
-                  original: result.data.completion,
-                  trimmed: completion,
-                  length: completion.length,
-                });
-
-                if (completion) {
-                  console.log('[Autocomplete] Showing suggestion:', completion);
-
-                  resolve({
-                    items: [
-                      {
-                        insertText: completion,
-                        range: new monacoInstance.Range(
-                          position.lineNumber,
-                          position.column,
-                          position.lineNumber,
-                          position.column
-                        ),
-                        command: undefined,
-                      },
-                    ],
-                  });
-                  return;
-                } else {
-                  console.log('[Autocomplete] Completion is empty after trim');
-                }
-              } else {
-                console.log('[Autocomplete] Failed:', {
-                  success: result.success,
-                  hasData: !!result.data,
-                  hasCompletion: !!result.data?.completion,
-                  error: result.error,
-                });
-              }
-            } catch (error) {
-              console.error('[Autocomplete] Exception caught:', error);
+            if (completion) {
+              console.log('[Autocomplete] Showing suggestion to user');
+              return {
+                items: [
+                  {
+                    insertText: completion,
+                    range: new monacoInstance.Range(
+                      position.lineNumber,
+                      position.column,
+                      position.lineNumber,
+                      position.column
+                    ),
+                    command: undefined,
+                  },
+                ],
+              };
+            } else {
+              console.log('[Autocomplete] Completion is empty after trim');
             }
+          } else {
+            console.warn('[Autocomplete] API call failed or no completion:', result.error);
+          }
+        } catch (error) {
+          // 에러는 조용히 처리 (사용자 경험 방해 X)
+          if (error instanceof Error && error.message !== 'Timeout') {
+            console.error('[Autocomplete] Error:', error.message);
+          } else if (error instanceof Error) {
+            console.warn('[Autocomplete] Request timed out');
+          }
+        } finally {
+          isRequestInProgress = false;
+          setIsAutocompleting(false);
+          if (currentAbortController === abortController) {
+            currentAbortController = null;
+          }
+        }
 
-            resolve({ items: [] });
-          }, DEBOUNCE_MS);
-        });
+        console.log('[Autocomplete] Returning empty result');
+        return { items: [] };
       },
       freeInlineCompletions: (_completions: any) => {
         // Clean up resources if needed
@@ -293,7 +503,6 @@ export function CodeEditor() {
       handleItemDidShow: (_completions: any, _item: any) => {
         // Optional: Called when an item is shown
       },
-      // Add the missing disposeInlineCompletions method
       disposeInlineCompletions: (_completions: any) => {
         // Dispose inline completions
       },
@@ -305,16 +514,21 @@ export function CodeEditor() {
       providerObject
     );
 
-    console.log('Inline completion provider registered for all languages');
+    console.log('[Autocomplete] Provider registered for all languages (Ctrl+. to trigger)');
+    console.log('[Autocomplete] Settings:', {
+      useRag: editorUseRagInAutocomplete,
+      useTools: editorUseToolsInAutocomplete,
+    });
 
     return () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
+      window.removeEventListener('keydown', handleKeyDown);
+      if (currentAbortController) {
+        currentAbortController.abort();
       }
       provider.dispose();
-      console.log('Inline completion provider disposed');
+      console.log('[Autocomplete] Provider disposed');
     };
-  }, [editor]);
+  }, [editor, editorUseRagInAutocomplete, editorUseToolsInAutocomplete]);
 
   // Register Monaco context menu actions
   useEffect(() => {
@@ -602,6 +816,128 @@ export function CodeEditor() {
     };
   }, [editor, handleEditorAction]);
 
+  // Handle clipboard image paste (Ctrl+V)
+  useEffect(() => {
+    if (!editor || !isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    const handlePaste = async (e: ClipboardEvent) => {
+      // Markdown 파일에서만 이미지 붙여넣기 지원
+      if (!isMarkdownFile || !activeFile || !workingDirectory) {
+        return;
+      }
+
+      try {
+        // Electron 클립보드에 이미지가 있는지 먼저 확인
+        // (웹 ClipboardEvent는 Electron 네이티브 클립보드와 다를 수 있음)
+        const result = await window.electronAPI.fs.saveClipboardImage(workingDirectory);
+
+        if (result.success && result.data) {
+          // 클립보드에 이미지가 있었음 - 기본 paste 동작 방지
+          e.preventDefault();
+          e.stopPropagation();
+
+          const { filename } = result.data;
+
+          // 파일이 위치한 디렉토리 기준으로 이미지의 상대 경로 계산
+          const fileDir = path.dirname(activeFile.path);
+          const relativePath = path.relative(fileDir, path.join(workingDirectory, filename));
+
+          // Markdown 이미지 문법으로 삽입
+          const imageMarkdown = `![${filename}](${relativePath})`;
+
+          // 현재 커서 위치에 삽입
+          const position = editor.getPosition();
+          if (position) {
+            editor.executeEdits('paste-image', [
+              {
+                range: new (window as any).monaco.Range(
+                  position.lineNumber,
+                  position.column,
+                  position.lineNumber,
+                  position.column
+                ),
+                text: imageMarkdown,
+                forceMoveMarkers: true,
+              },
+            ]);
+
+            // 커서를 삽입된 텍스트 끝으로 이동
+            const newPosition = {
+              lineNumber: position.lineNumber,
+              column: position.column + imageMarkdown.length,
+            };
+            editor.setPosition(newPosition);
+            editor.focus();
+          }
+        }
+      } catch (error) {
+        console.error('[Editor] Error handling clipboard image:', error);
+        // 에러 발생 시에도 기본 paste 동작 허용
+      }
+    };
+
+    // DOM 요소에 이벤트 리스너 추가
+    const editorDomNode = editor.getDomNode();
+    if (editorDomNode) {
+      // capture phase에서 이벤트를 먼저 잡음
+      editorDomNode.addEventListener('paste', handlePaste, true);
+
+      return () => {
+        editorDomNode.removeEventListener('paste', handlePaste, true);
+      };
+    }
+
+    return undefined;
+  }, [editor, isMarkdownFile, activeFile, workingDirectory]);
+
+  // 파일 변경 감지 (5초마다 체크)
+  useEffect(() => {
+    if (!activeFile || !isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    // 초기 mtime 저장
+    const initMtime = async () => {
+      try {
+        const statResult = await window.electronAPI.fs.getFileStat(activeFile.path);
+        if (statResult.success && statResult.data) {
+          lastMtimeRef.current.set(activeFile.path, statResult.data.mtime);
+        }
+      } catch (error) {
+        console.error('[Editor] Error getting initial file stat:', error);
+      }
+    };
+
+    if (!lastMtimeRef.current.has(activeFile.path)) {
+      initMtime();
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const statResult = await window.electronAPI.fs.getFileStat(activeFile.path);
+        if (statResult.success && statResult.data) {
+          const lastMtime = lastMtimeRef.current.get(activeFile.path);
+          const currentMtime = statResult.data.mtime;
+
+          // mtime이 변경되었고, 파일이 dirty하지 않은 경우에만 알림
+          // (dirty인 경우는 사용자가 편집 중이므로 알리지 않음)
+          if (lastMtime && currentMtime > lastMtime && !activeFile.isDirty) {
+            console.log('[Editor] File changed externally:', activeFile.path);
+            setFileChangedExternally(true);
+            lastMtimeRef.current.set(activeFile.path, currentMtime);
+          }
+        }
+      } catch (error) {
+        // 파일이 삭제된 경우 등, 조용히 무시
+        console.warn('[Editor] Error checking file stat:', error);
+      }
+    }, 5000); // 5초마다 체크
+
+    return () => clearInterval(interval);
+  }, [activeFile?.path, activeFile?.isDirty]);
+
   // Navigate to initialPosition when file is opened
   useEffect(() => {
     if (editor && activeFile?.initialPosition && activeFilePath) {
@@ -687,10 +1023,17 @@ export function CodeEditor() {
             {activeFile.path}
           </div>
           <div className="flex items-center gap-2">
-            {isProcessing && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            {/* AI 작업 진행 상태 표시 */}
+            {isProcessing && processingAction && (
+              <div className="flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                <span>Processing...</span>
+                <span className="font-medium">{processingAction} 중...</span>
+              </div>
+            )}
+            {isAutocompleting && (
+              <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-950 px-2 py-1 rounded">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span className="font-medium">AI 자동완성 중...</span>
               </div>
             )}
             {activeFile.isDirty && <span className="text-xs text-orange-500">Unsaved changes</span>}
@@ -728,6 +1071,17 @@ export function CodeEditor() {
               </div>
             )}
             <Button
+              onClick={handleRefreshFile}
+              variant="ghost"
+              size="sm"
+              disabled={isRefreshing}
+              className="h-7"
+              title="새로고침 (Refresh)"
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5 mr-1', isRefreshing && 'animate-spin')} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <Button
               onClick={handleSaveFile}
               variant="ghost"
               size="sm"
@@ -736,6 +1090,38 @@ export function CodeEditor() {
             >
               <Save className="h-3.5 w-3.5 mr-1" />
               {isSaving ? 'Saving...' : 'Save (Ctrl+S)'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 파일 변경 경고 배너 */}
+      {fileChangedExternally && (
+        <div className="flex items-center justify-between bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2">
+          <div className="flex items-center gap-2 text-sm">
+            <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            <span className="text-yellow-800 dark:text-yellow-200">
+              이 파일이 외부에서 수정되었습니다. 새로고침하시겠습니까?
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleRefreshFile}
+              variant="default"
+              size="sm"
+              disabled={isRefreshing}
+              className="h-7 bg-yellow-600 hover:bg-yellow-700 text-white"
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5 mr-1', isRefreshing && 'animate-spin')} />
+              새로고침
+            </Button>
+            <Button
+              onClick={() => setFileChangedExternally(false)}
+              variant="ghost"
+              size="sm"
+              className="h-7"
+            >
+              무시
             </Button>
           </div>
         </div>

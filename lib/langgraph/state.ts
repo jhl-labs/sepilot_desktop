@@ -73,6 +73,27 @@ export const AgentStateAnnotation = Annotation.Root({
     reducer: (_existing: string, update: string) => update || _existing,
     default: () => '',
   }),
+  // Generated images from tools (e.g., generate_image)
+  generatedImages: Annotation<
+    Array<{
+      id: string;
+      base64: string;
+      filename: string;
+      mimeType: string;
+      provider?: 'comfyui' | 'nanobanana';
+    }>
+  >({
+    reducer: (existing, updates) => [...(existing || []), ...(updates || [])],
+    default: () => [],
+  }),
+  // Deep Web Research용 planning notes (iteration, forceSynthesize 등)
+  planningNotes: Annotation<Record<string, any>>({
+    reducer: (_existing: Record<string, any>, update: Record<string, any>) => ({
+      ..._existing,
+      ...update,
+    }),
+    default: () => ({}),
+  }),
 });
 
 /**
@@ -98,6 +119,19 @@ export const CodingAgentStateAnnotation = Annotation.Root({
   conversationId: Annotation<string>({
     reducer: (_existing: string, update: string) => update || _existing,
     default: () => '',
+  }),
+  // Generated images from tools (e.g., generate_image)
+  generatedImages: Annotation<
+    Array<{
+      id: string;
+      base64: string;
+      filename: string;
+      mimeType: string;
+      provider?: 'comfyui' | 'nanobanana';
+    }>
+  >({
+    reducer: (existing, updates) => [...(existing || []), ...(updates || [])],
+    default: () => [],
   }),
   // Planning & Verification
   planningNotes: Annotation<string[]>({
@@ -133,6 +167,10 @@ export const CodingAgentStateAnnotation = Annotation.Root({
     reducer: (existing: string[], updates: string[]) => [...existing, ...updates],
     default: () => [],
   }),
+  deletedFiles: Annotation<string[]>({
+    reducer: (existing: string[], updates: string[]) => [...existing, ...updates],
+    default: () => [],
+  }),
   // Iteration Control
   iterationCount: Annotation<number>({
     reducer: (existing: number, update: number) => existing + update,
@@ -146,6 +184,10 @@ export const CodingAgentStateAnnotation = Annotation.Root({
     reducer: (_existing: boolean, update: boolean) => update,
     default: () => false,
   }),
+  alwaysApproveTools: Annotation<boolean>({
+    reducer: (_existing: boolean, update: boolean) => update,
+    default: () => false,
+  }),
   // Decision Flow
   triageDecision: Annotation<string>({
     reducer: (_existing: string, update: string) => update,
@@ -154,6 +196,10 @@ export const CodingAgentStateAnnotation = Annotation.Root({
   triageReason: Annotation<string>({
     reducer: (_existing: string, update: string) => update,
     default: () => '',
+  }),
+  approvalHistory: Annotation<string[]>({
+    reducer: (existing: string[], updates: string[]) => [...existing, ...updates],
+    default: () => [],
   }),
   lastApprovalStatus: Annotation<string>({
     reducer: (_existing: string, update: string) => update,
@@ -228,6 +274,8 @@ export function createInitialAgentState(
     toolCalls: [],
     toolResults: [],
     conversationId,
+    generatedImages: [],
+    planningNotes: {},
   };
 }
 
@@ -245,6 +293,9 @@ export function createInitialCodingAgentState(
     toolCalls: [],
     toolResults: [],
     conversationId,
+    generatedImages: [],
+    alwaysApproveTools: false,
+    approvalHistory: [],
     planningNotes: [],
     verificationNotes: [],
     planCreated: false,
@@ -253,6 +304,7 @@ export function createInitialCodingAgentState(
     requiredFiles: [],
     fileChangesCount: 0,
     modifiedFiles: [],
+    deletedFiles: [],
     iterationCount: 0,
     maxIterations,
     forceTermination: false,

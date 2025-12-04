@@ -9,6 +9,7 @@ import { getLLMClient, initializeLLMClient } from '../../../lib/llm/client';
 import { hasImages, createVisionProvider } from '../../../lib/llm/vision-utils';
 import { logger } from '../../services/logger';
 import { databaseService } from '../../services/database';
+import { isLLMConfigV2, convertV2ToV1 } from '../../../lib/config/llm-config-migration';
 
 /**
  * Get vision provider from database config (Electron main process)
@@ -23,11 +24,17 @@ function getVisionProviderFromDB() {
       return null;
     }
 
-    const config = JSON.parse(configStr) as AppConfig;
+    let config = JSON.parse(configStr) as AppConfig;
 
     if (!config?.llm) {
       logger.info('[LLM IPC] No LLM config found in app_config');
       return null;
+    }
+
+    // Convert V2 to V1 if needed
+    if (isLLMConfigV2(config.llm)) {
+      logger.info('[LLM IPC] Converting V2 config to V1 for vision provider');
+      config.llm = convertV2ToV1(config.llm);
     }
 
     logger.info('[LLM IPC] Vision provider config:', {
@@ -488,6 +495,16 @@ Return ONLY the title, without quotes or additional text.`,
         cursorPosition: number;
         language?: string;
         filePath?: string;
+        useRag?: boolean;
+        useTools?: boolean;
+        metadata?: {
+          currentLine: string;
+          previousLine: string;
+          nextLine: string;
+          lineNumber: number;
+          hasContextBefore: boolean;
+          hasContextAfter: boolean;
+        };
       }
     ) => {
       try {
@@ -496,6 +513,9 @@ Return ONLY the title, without quotes or additional text.`,
           cursorPosition: context.cursorPosition,
           language: context.language,
           filePath: context.filePath,
+          useRag: context.useRag,
+          useTools: context.useTools,
+          hasMetadata: !!context.metadata,
         });
 
         // Get autocomplete config from database
@@ -505,7 +525,14 @@ Return ONLY the title, without quotes or additional text.`,
           throw new Error('App config not found');
         }
 
-        const config = JSON.parse(configStr) as AppConfig;
+        let config = JSON.parse(configStr) as AppConfig;
+
+        // Convert V2 to V1 if needed
+        if (config.llm && isLLMConfigV2(config.llm)) {
+          logger.info('[EditorAgent/Autocomplete] Converting V2 config to V1');
+          config.llm = convertV2ToV1(config.llm);
+        }
+
         logger.info('[EditorAgent/Autocomplete] Autocomplete config:', {
           enabled: config.llm?.autocomplete?.enabled,
           provider: config.llm?.autocomplete?.provider,
@@ -541,12 +568,15 @@ Return ONLY the title, without quotes or additional text.`,
           maxTokens: providerConfig.maxTokens,
         });
 
-        // Initialize LLM client
+        // Initialize LLM client with autocomplete config
         const { initializeLLMClient } = await import('../../../lib/llm/client');
         initializeLLMClient(providerConfig);
 
-        // Use Editor Agent for autocomplete
+        // IMPORTANT: Clear EditorAgent graph cache to use new LLM client
+        // EditorAgent graph는 getLLMClient()를 통해 현재 LLM client를 가져오므로
+        // initializeLLMClient() 호출 후 캐시를 클리어해야 새 설정이 반영됨
         const { GraphFactory } = await import('../../../lib/langgraph');
+        (GraphFactory as any)._editorAgentGraph = null;
 
         // Extract context for autocomplete
         const textBeforeCursor = context.code.substring(0, context.cursorPosition);
@@ -563,6 +593,8 @@ Return ONLY the title, without quotes or additional text.`,
         const linesAfter = textAfterCursor.split('\n').slice(0, 2).join('\n');
 
         // Prepare initial state for Editor Agent
+        // TODO: RAG와 Tools 기능을 Editor Agent 그래프에 통합하여 실제로 사용하도록 구현
+        // 현재는 설정만 전달하고 있으며, 실제 구현은 추후 진행 필요
         const initialState = {
           messages: [
             {
@@ -575,7 +607,7 @@ CRITICAL RULES:
 - Write ONLY what comes AFTER █
 - Return raw text without quotes, markdown, or explanations
 - Keep completion concise (1-3 lines max)
-- Match the writing style and context`,
+- Match the writing style and context${context.useRag ? '\n- You can reference uploaded documents if needed' : ''}${context.useTools ? '\n- You can use available tools if needed' : ''}`,
               created_at: Date.now(),
             },
             {
@@ -591,6 +623,8 @@ CRITICAL RULES:
             language: context.language,
             cursorPosition: context.cursorPosition,
             action: 'autocomplete' as const,
+            useRag: context.useRag,
+            useTools: context.useTools,
           },
         };
 
@@ -662,6 +696,30 @@ CRITICAL RULES:
           success: false,
           error: error.message || 'Failed to generate autocomplete',
         };
+      } finally {
+        // Restore default LLM client for other operations
+        // Autocomplete 완료 후 기본 LLM 설정으로 복원
+        try {
+          const configStr = databaseService.getSetting('app_config');
+          if (configStr) {
+            let config = JSON.parse(configStr) as AppConfig;
+            if (config.llm && isLLMConfigV2(config.llm)) {
+              config.llm = convertV2ToV1(config.llm);
+            }
+            if (config.llm) {
+              const { initializeLLMClient } = await import('../../../lib/llm/client');
+              initializeLLMClient(config.llm);
+
+              // Clear graph cache again to use default LLM
+              const { GraphFactory } = await import('../../../lib/langgraph');
+              (GraphFactory as any)._editorAgentGraph = null;
+
+              logger.info('[EditorAgent/Autocomplete] Restored default LLM client');
+            }
+          }
+        } catch (restoreError) {
+          logger.error('[EditorAgent/Autocomplete] Failed to restore default LLM:', restoreError);
+        }
       }
     }
   );
@@ -695,9 +753,24 @@ CRITICAL RULES:
         text: string;
         language?: string;
         targetLanguage?: string; // for translate
+        context?: {
+          before: string;
+          after: string;
+          fullCode?: string;
+          filePath?: string;
+          lineStart: number;
+          lineEnd: number;
+        };
       }
     ) => {
       try {
+        logger.info('[EditorAgent/Action] Handler called:', {
+          action: params.action,
+          textLength: params.text.length,
+          language: params.language,
+          hasContext: !!params.context,
+        });
+
         // Get config from database
         const configStr = databaseService.getSetting('app_config');
         if (!configStr) {
@@ -705,7 +778,13 @@ CRITICAL RULES:
           throw new Error('App config not found');
         }
 
-        const config = JSON.parse(configStr) as AppConfig;
+        let config = JSON.parse(configStr) as AppConfig;
+
+        // Convert V2 to V1 if needed
+        if (config.llm && isLLMConfigV2(config.llm)) {
+          logger.info('[EditorAgent/Action] Converting V2 config to V1');
+          config.llm = convertV2ToV1(config.llm);
+        }
 
         // Initialize LLM client with main config (not autocomplete)
         const { initializeLLMClient } = await import('../../../lib/llm/client');
@@ -721,6 +800,27 @@ CRITICAL RULES:
         let userPrompt = '';
         let returnCodeOnly = false;
 
+        // Prepare context information if available
+        const contextInfo = params.context
+          ? `
+
+CONTEXT INFORMATION:
+- File: ${params.context.filePath || 'unknown'}
+- Lines: ${params.context.lineStart}-${params.context.lineEnd}
+
+Text before selection:
+\`\`\`
+${params.context.before.slice(-500)}
+\`\`\`
+
+Text after selection:
+\`\`\`
+${params.context.after.slice(0, 500)}
+\`\`\`
+${params.context.fullCode ? '\n(Full code context available)' : ''}
+`
+          : '';
+
         switch (params.action) {
           case 'summarize':
             systemPrompt = `You are a text summarization expert.
@@ -729,9 +829,9 @@ Rules:
 - Summarize in 2-4 concise sentences
 - Focus on the main points and key takeaways
 - Use plain text, NO markdown formatting
-- Be clear and direct`;
+- Be clear and direct${params.context ? '\n- Consider the surrounding context when summarizing' : ''}`;
 
-            userPrompt = `Summarize this text:\n\n${params.text}`;
+            userPrompt = `Summarize this text:${contextInfo}\n\nSelected text:\n${params.text}`;
             break;
 
           case 'translate':
@@ -753,9 +853,9 @@ Rules:
 - Complete the code naturally and logically
 - Match the existing code style and patterns
 - Return ONLY the completed code, NO explanations or markdown
-- Keep it concise and relevant`;
+- Keep it concise and relevant${params.context ? '\n- Use surrounding context to understand the code structure and purpose' : ''}`;
 
-            userPrompt = `Complete this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
+            userPrompt = `Complete this ${params.language || 'code'}:${contextInfo}\n\nSelected code:\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
             returnCodeOnly = true;
             break;
 
@@ -767,9 +867,9 @@ Rules:
 - Focus on WHAT it does, not line-by-line details
 - Mention key patterns, algorithms, or potential issues
 - Use plain text, NO code blocks or markdown
-- Be technical but understandable`;
+- Be technical but understandable${params.context ? '\n- Consider the surrounding code context to provide a comprehensive explanation' : ''}`;
 
-            userPrompt = `Explain this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
+            userPrompt = `Explain this ${params.language || 'code'}:${contextInfo}\n\nSelected code:\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
             break;
 
           case 'fix':
@@ -779,9 +879,9 @@ Rules:
 - Fix syntax errors, type errors, logical bugs, and potential issues
 - Return ONLY the corrected code, NO explanations
 - Preserve variable names, structure, and style
-- Add brief inline comments ONLY for significant fixes`;
+- Add brief inline comments ONLY for significant fixes${params.context ? '\n- Use surrounding context to understand dependencies and requirements' : ''}`;
 
-            userPrompt = `Fix this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
+            userPrompt = `Fix this ${params.language || 'code'}:${contextInfo}\n\nSelected code:\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
             returnCodeOnly = true;
             break;
 
@@ -793,9 +893,9 @@ Rules:
 - Return ONLY the improved code, NO explanations
 - Preserve functionality and behavior
 - Add brief comments for significant changes
-- Follow modern ${params.language || 'code'} conventions`;
+- Follow modern ${params.language || 'code'} conventions${params.context ? '\n- Consider the surrounding code to maintain consistency' : ''}`;
 
-            userPrompt = `Improve this ${params.language || 'code'}:\n\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
+            userPrompt = `Improve this ${params.language || 'code'}:${contextInfo}\n\nSelected code:\n\`\`\`${params.language || ''}\n${params.text}\n\`\`\``;
             returnCodeOnly = true;
             break;
 

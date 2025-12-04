@@ -4,10 +4,11 @@ import { MCPServerManager } from '@/lib/mcp/server-manager';
 import { executeBuiltinTool } from '@/lib/mcp/tools/builtin-tools';
 import {
   emitImageProgress,
-  getCurrentComfyUIConfig,
   getCurrentNetworkConfig,
+  getCurrentImageGenConfig,
 } from '@/lib/llm/streaming-callback';
 import type { ComfyUIConfig, NetworkConfig } from '@/types';
+import { generateWithNanoBanana } from '@/lib/imagegen/nanobanana-client';
 import WebSocket from 'ws';
 
 /**
@@ -291,27 +292,28 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
           console.log(`[Tools] Calling tool: ${call.name} with args:`, call.arguments);
 
           // 이미지 생성 tool 처리 (내장 도구) - MCP로 전달하지 않음
-          // Main Process에서 직접 ComfyUI 호출 (Renderer Process의 singleton 사용 불가)
+          // Main Process에서 직접 ImageGen provider 호출 (Renderer Process의 singleton 사용 불가)
           if (call.name === 'generate_image') {
-            const comfyConfig = getCurrentComfyUIConfig();
+            const imageGenConfig = getCurrentImageGenConfig();
             const networkConfig = getCurrentNetworkConfig();
 
-            if (!comfyConfig || !comfyConfig.enabled) {
-              console.error('[Tools] ComfyUI config not available or not enabled');
+            if (!imageGenConfig) {
+              console.error('[Tools] ImageGen config not available');
               return {
                 toolCallId: call.id,
                 toolName: call.name,
                 result: null,
-                error: 'ComfyUI is not configured or enabled',
+                error: 'ImageGen is not configured',
               };
             }
 
-            console.log('[Tools] Generating image with ComfyUI (Main Process):', call.arguments);
             const args = call.arguments as {
               prompt: string;
               negativePrompt?: string;
               width?: number;
               height?: number;
+              aspectRatio?: string;
+              numberOfImages?: number;
             };
 
             // Emit initial progress (conversationId로 격리)
@@ -324,29 +326,155 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
               state.conversationId
             );
 
-            const imageResult = await generateImageInMainProcess(
-              comfyConfig,
-              networkConfig,
-              args,
-              state.conversationId
-            );
+            // Provider에 따라 분기
+            if (imageGenConfig.provider === 'comfyui') {
+              const comfyConfig = imageGenConfig.comfyui;
 
-            if (imageResult.success && imageResult.imageBase64) {
-              return {
-                toolCallId: call.id,
-                toolName: call.name,
-                result: JSON.stringify({
-                  success: true,
-                  imageBase64: imageResult.imageBase64,
+              if (!comfyConfig || !comfyConfig.enabled) {
+                console.error('[Tools] ComfyUI is not enabled');
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: null,
+                  error: 'ComfyUI is not enabled',
+                };
+              }
+
+              console.log('[Tools] Generating image with ComfyUI (Main Process):', call.arguments);
+
+              const imageResult = await generateImageInMainProcess(
+                comfyConfig,
+                networkConfig,
+                args,
+                state.conversationId
+              );
+
+              if (imageResult.success && imageResult.imageBase64) {
+                const imageObject = {
+                  id: `comfyui-${Date.now()}`,
+                  base64: imageResult.imageBase64,
+                  filename: `comfyui-${Date.now()}.png`,
+                  mimeType: 'image/png',
+                  provider: 'comfyui' as const,
+                };
+
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: JSON.stringify({
+                    success: true,
+                    imageCount: 1,
+                  }),
+                  generatedImages: [imageObject],
+                };
+              } else {
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: null,
+                  error: imageResult.error || 'Image generation failed',
+                };
+              }
+            } else if (imageGenConfig.provider === 'nanobanana') {
+              const nanobananaConfig = imageGenConfig.nanobanana;
+
+              if (!nanobananaConfig || !nanobananaConfig.enabled) {
+                console.error('[Tools] NanoBanana is not enabled');
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: null,
+                  error: 'NanoBanana is not enabled',
+                };
+              }
+
+              console.log(
+                '[Tools] Generating image with NanoBanana (Main Process):',
+                call.arguments
+              );
+
+              // Emit progress
+              emitImageProgress(
+                {
+                  status: 'executing',
+                  message: '🌟 Google Imagen으로 이미지 생성 중...',
+                  progress: 50,
+                },
+                state.conversationId
+              );
+
+              const nanobananaResult = await generateWithNanoBanana(
+                nanobananaConfig,
+                networkConfig,
+                {
                   prompt: args.prompt,
-                }),
-              };
+                  negativePrompt: args.negativePrompt,
+                  aspectRatio: args.aspectRatio,
+                  numberOfImages: args.numberOfImages,
+                }
+              );
+
+              if (nanobananaResult.success && nanobananaResult.images) {
+                // Emit completion progress
+                emitImageProgress(
+                  {
+                    status: 'completed',
+                    message: '✅ 이미지 생성 완료!',
+                    progress: 100,
+                  },
+                  state.conversationId
+                );
+
+                // Add images to state for later attachment to assistant message
+                const imageObjects = nanobananaResult.images.map((img, idx) => ({
+                  id: `nanobanana-${Date.now()}-${idx}`,
+                  base64: img,
+                  filename: `nanobanana-${Date.now()}-${idx}.png`,
+                  mimeType: 'image/png',
+                  provider: 'nanobanana' as const,
+                }));
+
+                console.log('[Tools] Created image objects:', {
+                  count: imageObjects.length,
+                  firstImageBase64Length: imageObjects[0]?.base64?.length || 0,
+                  firstImageBase64Prefix: imageObjects[0]?.base64?.substring(0, 50),
+                });
+
+                // Update state with generated images
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: JSON.stringify({
+                    success: true,
+                    imageCount: nanobananaResult.images.length,
+                    usage: nanobananaResult.usage,
+                  }),
+                  generatedImages: imageObjects,
+                };
+              } else {
+                // Emit error progress
+                emitImageProgress(
+                  {
+                    status: 'error',
+                    message: `❌ 이미지 생성 실패: ${nanobananaResult.error}`,
+                  },
+                  state.conversationId
+                );
+
+                return {
+                  toolCallId: call.id,
+                  toolName: call.name,
+                  result: null,
+                  error: nanobananaResult.error || 'NanoBanana image generation failed',
+                };
+              }
             } else {
+              console.error('[Tools] Unknown ImageGen provider:', imageGenConfig.provider);
               return {
                 toolCallId: call.id,
                 toolName: call.name,
                 result: null,
-                error: imageResult.error || 'Image generation failed',
+                error: `Unknown ImageGen provider: ${imageGenConfig.provider}`,
               };
             }
           }
@@ -361,9 +489,23 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
               toolName: call.name,
               result: builtinResult,
             };
-          } catch {
-            // Built-in tool이 아니면 에러 발생 - MCP tool 확인으로 넘어감
-            console.log(`[Tools] Not a built-in tool (${call.name}), checking MCP tools...`);
+          } catch (error) {
+            // "Unknown builtin tool" 에러면 MCP tool로 넘어감
+            // 그 외 에러는 builtin tool 실행 중 발생한 에러이므로 바로 반환
+            const errorMessage = error instanceof Error ? error.message : String(error);
+
+            if (errorMessage.includes('Unknown builtin tool')) {
+              console.log(`[Tools] Not a built-in tool (${call.name}), checking MCP tools...`);
+            } else {
+              // Builtin tool 실행 중 에러 발생
+              console.error(`[Tools] Built-in tool error (${call.name}):`, error);
+              return {
+                toolCallId: call.id,
+                toolName: call.name,
+                result: null,
+                error: errorMessage,
+              };
+            }
           }
 
           // Main Process에서 직접 MCP 도구 실행
@@ -383,11 +525,44 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
 
           console.log(`[Tools] Found tool on server: ${tool.serverName}`);
 
+          // Parameter filtering for tavily_search
+          let toolArguments: any = call.arguments;
+          if (call.name === 'tavily_search') {
+            const params: any = call.arguments || {};
+
+            // Extract and validate query
+            let query: string = params.query || params.search_query || '';
+            if (typeof query !== 'string') {
+              query = String(query);
+            }
+            query = query.trim();
+
+            // Extract and validate max_results (support multiple field names)
+            let maxResults: number =
+              params.max_results || params.maxResults || params.top_n || params.topn || 5;
+            if (typeof maxResults === 'string') {
+              maxResults = parseInt(maxResults, 10) || 5;
+            }
+            maxResults = Math.max(1, Math.min(maxResults, 10)); // Clamp to 1-10
+
+            // Create cleaned parameters (only query and max_results)
+            toolArguments = {};
+            if (query) {
+              toolArguments.query = query;
+            }
+            if (maxResults) {
+              toolArguments.max_results = maxResults;
+            }
+
+            console.log('[Tools] Tavily search - Original params:', params);
+            console.log('[Tools] Tavily search - Cleaned params:', toolArguments);
+          }
+
           // Main Process에서 직접 MCP 클라이언트를 통해 도구 실행
           const mcpResult = await MCPServerManager.callToolInMainProcess(
             tool.serverName,
             call.name,
-            call.arguments
+            toolArguments
           );
 
           console.log(`[Tools] MCP Tool result:`, mcpResult);
@@ -441,8 +616,26 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
 
     console.log('[Tools] All tool results:', results);
 
+    // Collect generated images from results
+    const generatedImages: Array<{
+      id: string;
+      base64: string;
+      filename: string;
+      mimeType: string;
+      provider?: 'comfyui' | 'nanobanana';
+    }> = [];
+
+    for (const result of results) {
+      if ((result as any).generatedImages) {
+        generatedImages.push(...(result as any).generatedImages);
+      }
+    }
+
+    console.log('[Tools] Generated images count:', generatedImages.length);
+
     return {
       toolResults: results,
+      generatedImages: generatedImages.length > 0 ? generatedImages : undefined,
     };
   } catch (error: any) {
     console.error('Tools node error:', error);

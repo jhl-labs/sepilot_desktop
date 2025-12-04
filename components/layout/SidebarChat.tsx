@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Image, Settings, User, FileText } from 'lucide-react';
+import { Image, Settings, User, FileText, Presentation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ChatHistory } from './ChatHistory';
-import { ChatChatArea } from '@/components/chat/ChatChatArea';
 import { PersonaDialog } from '@/components/persona/PersonaDialog';
-import { isElectron } from '@/lib/platform';
 import { useChatStore } from '@/lib/store/chat-store';
+import { isElectron } from '@/lib/platform';
 
 interface SidebarChatProps {
   onGalleryClick?: () => void;
@@ -23,18 +22,14 @@ export function SidebarChat({
   onSettingsClick,
   onDocumentsClick,
 }: SidebarChatProps) {
-  const { chatViewMode } = useChatStore();
   const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
+  const { setAppMode } = useChatStore();
 
   return (
     <div className="flex h-full w-full flex-col">
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto">
-        {chatViewMode === 'history' ? (
-          <ChatHistory onConversationClick={onConversationClick} />
-        ) : (
-          <ChatChatArea />
-        )}
+        <ChatHistory onConversationClick={onConversationClick} />
       </div>
 
       {/* Footer */}
@@ -77,6 +72,15 @@ export function SidebarChat({
             className="flex-1"
           >
             <Image className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setAppMode('presentation')}
+            title="AI Presentation Lab"
+            className="flex-1"
+          >
+            <Presentation className="h-5 w-5" />
           </Button>
           <Button
             variant="ghost"

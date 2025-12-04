@@ -9,10 +9,11 @@ export interface ReferencedDocument {
 
 export interface ImageAttachment {
   id: string;
-  path: string;
+  path?: string; // Optional for generated images (only uploaded images have path)
   filename: string;
   mimeType: string;
-  base64?: string; // For display
+  base64?: string; // For display (required for generated images)
+  provider?: 'comfyui' | 'nanobanana'; // Image generation provider
 }
 
 export interface FileChange {
@@ -51,12 +52,34 @@ export interface PendingToolApproval {
   timestamp: number;
 }
 
+/**
+ * Chat Settings: 각 대화마다 저장되는 UnifiedChatInput 설정
+ * ThinkingMode는 lib/langgraph/types.ts에서 import해서 사용
+ */
+export interface ConversationChatSettings {
+  thinkingMode?:
+    | 'instant'
+    | 'sequential'
+    | 'tree-of-thought'
+    | 'deep'
+    | 'deep-web-research'
+    | 'coding'
+    | 'browser-agent'
+    | 'editor-agent';
+  enableRAG?: boolean;
+  enableTools?: boolean;
+  enabledTools?: string[]; // Individual tool names
+  enableImageGeneration?: boolean;
+  selectedImageGenProvider?: 'comfyui' | 'nanobanana' | null;
+}
+
 export interface Conversation {
   id: string;
   title: string;
   created_at: number;
   updated_at: number;
   personaId?: string; // 대화에 지정된 페르소나 ID
+  chatSettings?: ConversationChatSettings; // 대화별 채팅 설정
 }
 
 export interface VisionModelConfig {
@@ -209,6 +232,41 @@ export interface ComfyUIConfig {
   seed?: number;
 }
 
+/**
+ * NanoBanana (Google Imagen) Configuration
+ */
+export interface NanoBananaConfig {
+  enabled: boolean;
+  provider?: 'nanobananaapi' | 'vertex-ai'; // API provider: nanobananaapi.ai (default) or Google Vertex AI
+  apiKey: string; // API Key (nanobananaapi.ai) or Google Cloud API Key (Vertex AI)
+  projectId?: string; // Google Cloud Project ID (only for Vertex AI)
+  location?: string; // Default: 'us-central1' (only for Vertex AI)
+  model?: string; // 'imagen-3.0-fast-generate-001' or 'imagen-3.0-generate-001' (only for Vertex AI)
+
+  // Generation parameters (defaults - can be overridden per request)
+  negativePrompt?: string;
+  aspectRatio?: string; // '1:1', '16:9', '9:16', '4:3', '3:4'
+  numberOfImages?: number; // Fast: 1-4, Standard: 1-8
+  seed?: number;
+
+  // Standard model additional options
+  outputMimeType?: 'image/png' | 'image/jpeg'; // Default: image/png
+  compressionQuality?: number; // JPEG quality: 0-100 (only for image/jpeg)
+
+  // Interactive mode - ask user for options when generating
+  askOptionsOnGenerate?: boolean; // If true, prompt user for aspect ratio, size, etc.
+}
+
+/**
+ * Image Generation Configuration (Unified)
+ * Supports multiple providers: ComfyUI, NanoBanana (Google Imagen)
+ */
+export interface ImageGenConfig {
+  provider: 'comfyui' | 'nanobanana'; // Selected provider
+  comfyui?: ComfyUIConfig;
+  nanobanana?: NanoBananaConfig;
+}
+
 export interface ImageGenerationProgress {
   conversationId: string;
   messageId: string;
@@ -234,6 +292,84 @@ export interface MCPServerConfig {
   headers?: Record<string, string>; // Custom headers (e.g., Authorization, API keys)
 }
 
+/**
+ * GitHub Sync Configuration: GitHub Token 기반 동기화 설정
+ */
+export interface GitHubSyncConfig {
+  // GitHub 연결 정보
+  serverType?: 'github.com' | 'ghes'; // 기본값: 'github.com'
+  ghesUrl?: string; // GHES URL (예: https://github.company.com)
+  token: string; // GitHub Personal Access Token (encrypted)
+  owner: string; // Organization 또는 User name
+  repo: string; // Repository name
+  branch?: string; // 기본값: 'main'
+
+  // 동기화 옵션
+  syncSettings: boolean; // 설정 동기화 여부
+  syncDocuments: boolean; // RAG 문서 동기화 여부
+  syncImages: boolean; // 생성 이미지 동기화 여부
+  syncConversations: boolean; // 대화 내역 동기화 여부
+  syncPersonas: boolean; // AI 페르소나 동기화 여부
+
+  // 에러 리포팅 옵션
+  errorReporting?: boolean; // 에러 자동 리포팅 여부
+
+  // 네트워크 설정 (프록시, SSL 검증)
+  networkConfig?: NetworkConfig;
+
+  // 암호화 설정
+  encryptionKey?: string; // 민감 정보 암호화 키 (자동 생성)
+
+  // 마지막 동기화 정보
+  lastSyncAt?: number; // 마지막 동기화 시간 (timestamp)
+  lastSyncStatus?: 'success' | 'error'; // 마지막 동기화 상태
+  lastSyncError?: string; // 마지막 동기화 에러 메시지
+}
+
+/**
+ * Team Docs Configuration: 여러 GitHub Repo에서 문서를 동기화
+ */
+export interface TeamDocsConfig {
+  id: string; // 고유 ID
+  name: string; // 팀 이름 (예: "Frontend Team", "Backend Team")
+  description?: string; // 설명
+  serverType?: 'github.com' | 'ghes'; // 기본값: 'github.com'
+  ghesUrl?: string; // GHES URL
+  token: string; // GitHub Personal Access Token
+  owner: string; // Organization 또는 User name
+  repo: string; // Repository name
+  branch?: string; // 기본값: 'main'
+  docsPath?: string; // 문서 경로 (기본값: 'sepilot/documents')
+  enabled: boolean; // 활성화 여부
+  autoSync?: boolean; // 자동 동기화 여부
+  syncInterval?: number; // 자동 동기화 간격 (분 단위)
+  lastSyncAt?: number; // 마지막 동기화 시간
+  lastSyncStatus?: 'success' | 'error'; // 마지막 동기화 상태
+  lastSyncError?: string; // 마지막 동기화 에러
+  networkConfig?: NetworkConfig; // 네트워크 설정
+}
+
+/**
+ * Error Report Data: GitHub Issue로 전송될 에러 정보
+ */
+export interface ErrorReportData {
+  title: string; // 에러 제목
+  error: {
+    message: string; // 에러 메시지
+    stack?: string; // 스택 트레이스
+    type: 'frontend' | 'backend' | 'ipc'; // 에러 발생 위치
+  };
+  context: {
+    version: string; // 앱 버전
+    platform: string; // OS 플랫폼
+    timestamp: number; // 에러 발생 시간
+    userAgent?: string; // 브라우저 정보 (프론트엔드만)
+  };
+  reproduction?: string; // 재현 방법 (선택)
+  additionalInfo?: Record<string, unknown>; // 추가 정보
+}
+
+// 이전 GitHub OAuth 설정 (하위 호환성 유지)
 export interface GitHubOAuthConfig {
   serverType: 'github.com' | 'ghes'; // GitHub.com or GitHub Enterprise Server
   ghesUrl?: string; // GHES URL (e.g., https://github.company.com)
@@ -266,9 +402,13 @@ export interface AppConfig {
   vectorDB?: VectorDBConfig;
   embedding?: EmbeddingConfig;
   mcp: MCPServerConfig[];
-  comfyUI?: ComfyUIConfig;
-  github?: GitHubOAuthConfig;
+  imageGen?: ImageGenConfig; // Image generation (ComfyUI, NanoBanana)
+  comfyUI?: ComfyUIConfig; // @deprecated - use imageGen instead (for backward compatibility)
+  github?: GitHubOAuthConfig; // 이전 버전 호환성
+  githubSync?: GitHubSyncConfig; // 새로운 Token 기반 동기화 (Personal Docs)
+  teamDocs?: TeamDocsConfig[]; // Team Docs 설정 (여러 GitHub Repo)
   quickInput?: QuickInputConfig;
+  theme?: 'light' | 'dark' | 'system';
 }
 
 /**

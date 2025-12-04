@@ -4,7 +4,7 @@
  */
 
 import type { GraphConfig } from '@/lib/langgraph/types';
-import type { ComfyUIConfig, NetworkConfig } from '@/types';
+import type { ComfyUIConfig, NetworkConfig, ImageGenConfig } from '@/types';
 
 type StreamingCallback = (chunk: string) => void;
 type ImageProgressCallback = (progress: ImageGenerationProgress) => void;
@@ -30,9 +30,12 @@ let currentConversationId: string | null = null;
 // Current graph config (for nodes that need access to config settings)
 let currentGraphConfig: GraphConfig | null = null;
 
-// Current ComfyUI config (for image generation in Main Process)
+// Current ComfyUI config (for image generation in Main Process) - deprecated, use imageGenConfig
 let currentComfyUIConfig: ComfyUIConfig | null = null;
 let currentNetworkConfig: NetworkConfig | null = null;
+
+// Current ImageGen config (unified image generation config)
+let currentImageGenConfig: ImageGenConfig | null = null;
 
 // Current working directory (for Coding Agent file operations)
 let currentWorkingDirectory: string | null = null;
@@ -105,6 +108,20 @@ export function setCurrentWorkingDirectory(directory: string | null): void {
  */
 export function getCurrentWorkingDirectory(): string | null {
   return currentWorkingDirectory;
+}
+
+/**
+ * Set the current ImageGen config for image generation
+ */
+export function setCurrentImageGenConfig(config: ImageGenConfig | null): void {
+  currentImageGenConfig = config;
+}
+
+/**
+ * Get the current ImageGen config
+ */
+export function getCurrentImageGenConfig(): ImageGenConfig | null {
+  return currentImageGenConfig;
 }
 
 /**

@@ -5,6 +5,7 @@
  */
 
 import * as fs from 'fs/promises';
+import { existsSync } from 'fs';
 import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -25,8 +26,72 @@ import {
   analyzeWithVision,
   getClickableCoordinate,
 } from './browser-handlers-vision';
+import {
+  googleSearchTool,
+  googleSearchNewsTool,
+  googleSearchScholarTool,
+  googleSearchImagesTool,
+  googleSearchAdvancedTool,
+  googleExtractResultsTool,
+  googleGetRelatedSearchesTool,
+  googleVisitResultTool,
+  googleNextPageTool,
+} from './google-search-tools';
+import {
+  handleGoogleSearch,
+  handleGoogleExtractResults,
+  handleGoogleGetRelatedSearches,
+  handleGoogleVisitResult,
+  handleGoogleNextPage,
+} from './google-search-handlers';
 
 const execPromise = promisify(exec);
+
+/**
+ * Resolve a usable shell for command execution.
+ * - On Windows: prefer ComSpec/cmd, fall back to PowerShell if unavailable.
+ * - On POSIX: prefer $SHELL, otherwise common shells with /bin/sh as a final fallback.
+ */
+function resolveShellForExec(): string {
+  if (process.platform === 'win32') {
+    const candidates = [
+      process.env.ComSpec,
+      'C:\\Windows\\System32\\cmd.exe',
+      'cmd.exe',
+      'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      'powershell.exe',
+    ];
+
+    for (const candidate of candidates) {
+      if (!candidate) {
+        continue;
+      }
+
+      // Absolute paths must exist; relative ones may be resolved via PATH
+      if (path.isAbsolute(candidate) && !existsSync(candidate)) {
+        continue;
+      }
+
+      return candidate;
+    }
+
+    return 'cmd.exe';
+  }
+
+  const envShell = process.env.SHELL;
+  if (envShell && existsSync(envShell)) {
+    return envShell;
+  }
+
+  const posixCandidates = ['/bin/bash', '/bin/zsh', '/bin/sh'];
+  for (const candidate of posixCandidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return '/bin/sh';
+}
 
 /**
  * Resolve path relative to working directory
@@ -241,6 +306,11 @@ export async function executeBuiltinTool(
       return await handleBrowserSearchElements((args as { query: string }).query);
     case 'browser_scroll':
       return await handleBrowserScroll(args as { direction: 'up' | 'down'; amount?: number });
+    case 'browser_wait_for_element':
+      return await handleBrowserWaitForElement(
+        (args as { selector: string; timeout_ms?: number }).selector,
+        (args as { selector: string; timeout_ms?: number }).timeout_ms
+      );
     case 'browser_navigate':
       return await handleBrowserNavigate(args as { url: string });
     case 'browser_create_tab':
@@ -271,6 +341,25 @@ export async function executeBuiltinTool(
       return await getClickableCoordinate((args as { element_id: string }).element_id);
     case 'browser_analyze_with_vision':
       return await analyzeWithVision((args as { user_query?: string }).user_query);
+    // Google Search tools
+    case 'google_search':
+      return await handleGoogleSearch(args as any);
+    case 'google_search_news':
+      return await handleGoogleSearch({ ...args, type: 'news' } as any);
+    case 'google_search_scholar':
+      return await handleGoogleSearch({ ...args, type: 'scholar' } as any);
+    case 'google_search_images':
+      return await handleGoogleSearch({ ...args, type: 'images' } as any);
+    case 'google_search_advanced':
+      return await handleGoogleSearch(args as any);
+    case 'google_extract_results':
+      return await handleGoogleExtractResults(args as any);
+    case 'google_get_related_searches':
+      return await handleGoogleGetRelatedSearches();
+    case 'google_visit_result':
+      return await handleGoogleVisitResult(args as any);
+    case 'google_next_page':
+      return await handleGoogleNextPage();
     default:
       throw new Error(`Unknown builtin tool: ${toolName}`);
   }
@@ -412,13 +501,19 @@ async function handleCommandExecute(args: { command: string; cwd?: string }): Pr
     // Treat empty string as null/undefined
     const cwdArg = args.cwd && args.cwd.trim() !== '' ? args.cwd : null;
     const workingDir = cwdArg || getCurrentWorkingDirectory() || process.cwd();
-    console.log(`[Builtin Tools] Executing command: ${args.command} in ${workingDir}`);
+    const shell = resolveShellForExec();
+    console.log(
+      `[Builtin Tools] Executing command: ${args.command} in ${workingDir} using shell ${shell}`
+    );
 
-    const { stdout, stderr } = await execPromise(args.command, {
+    const execOptions = {
       cwd: workingDir,
       maxBuffer: 1024 * 1024 * 10, // 10MB buffer
       timeout: 300000, // 5 minutes timeout
-    });
+      shell,
+    };
+
+    const { stdout, stderr } = await execPromise(args.command, execOptions);
 
     let result = '';
     if (stdout) {
@@ -603,6 +698,30 @@ export const browserScrollTool: MCPTool = {
       },
     },
     required: ['direction'],
+  },
+};
+
+/**
+ * Browser Wait for Element Tool
+ */
+export const browserWaitForElementTool: MCPTool = {
+  name: 'browser_wait_for_element',
+  description:
+    'Wait until a DOM element matching the selector appears. Use this after navigation or dynamic loads.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      selector: {
+        type: 'string',
+        description: 'CSS selector to wait for (e.g., "input[name=email]", "button[type=submit]")',
+      },
+      timeout_ms: {
+        type: 'number',
+        description: 'Timeout in milliseconds (default: 5000)',
+      },
+    },
+    required: ['selector'],
   },
 };
 
@@ -936,7 +1055,7 @@ async function _handleBrowserGetPageContent(): Promise<string> {
 /**
  * Handle browser_click_element
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 async function _handleBrowserClickElement(args: { element_id: string }): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
@@ -977,7 +1096,7 @@ async function _handleBrowserClickElement(args: { element_id: string }): Promise
 /**
  * Handle browser_type_text
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 async function _handleBrowserTypeText(args: { element_id: string; text: string }): Promise<string> {
   const browserView = getActiveBrowserView();
   if (!browserView) {
@@ -1033,6 +1152,54 @@ async function handleBrowserScroll(args: {
 }
 
 /**
+ * Handle browser_wait_for_element
+ */
+async function handleBrowserWaitForElement(selector: string, timeout_ms?: number): Promise<string> {
+  const browserView = getActiveBrowserView();
+  if (!browserView) {
+    throw new Error('No active browser tab. Please switch to Browser mode first.');
+  }
+
+  const timeout = typeof timeout_ms === 'number' ? timeout_ms : 5000;
+
+  try {
+    const result = await browserView.webContents.executeJavaScript(`
+      (function() {
+        const selector = ${JSON.stringify(selector)};
+        const timeoutMs = ${timeout};
+        return new Promise((resolve) => {
+          const start = Date.now();
+          const check = () => {
+            const el = document.querySelector(selector);
+            if (el) {
+              const rect = el.getBoundingClientRect();
+              resolve({
+                success: true,
+                found: true,
+                position: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+              });
+            } else if (Date.now() - start > timeoutMs) {
+              resolve({ success: false, error: 'Timeout waiting for element' });
+            } else {
+              setTimeout(check, 100);
+            }
+          };
+          check();
+        });
+      })();
+    `);
+
+    if (!result?.success) {
+      throw new Error(result?.error || 'Timeout waiting for element');
+    }
+
+    return `Element "${selector}" appeared. Position: ${JSON.stringify(result.position)}`;
+  } catch (error: any) {
+    throw new Error(`Failed to wait for element: ${error.message}`);
+  }
+}
+
+/**
  * Handle browser_navigate
  */
 async function handleBrowserNavigate(args: { url: string }): Promise<string> {
@@ -1049,6 +1216,23 @@ async function handleBrowserNavigate(args: { url: string }): Promise<string> {
     }
 
     await browserView.webContents.loadURL(validUrl);
+
+    // Wait for load completion/readyState
+    const start = Date.now();
+    const timeoutMs = 8000;
+    while (true) {
+      const isLoading = browserView.webContents.isLoading();
+      const readyState: string =
+        await browserView.webContents.executeJavaScript('document.readyState');
+      if (!isLoading && readyState === 'complete') {
+        break;
+      }
+      if (Date.now() - start > timeoutMs) {
+        console.warn('[BrowserNavigate] Load wait timeout, continuing');
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
 
     return `Successfully navigated to: ${validUrl}`;
   } catch (error: any) {
@@ -1205,6 +1389,7 @@ export function getBuiltinTools(): MCPTool[] {
     browserClickElementTool,
     browserTypeTextTool,
     browserScrollTool,
+    browserWaitForElementTool,
     browserSearchElementsTool,
     // Browser tab management
     browserCreateTabTool,
@@ -1220,5 +1405,15 @@ export function getBuiltinTools(): MCPTool[] {
     browserClickMarkerTool,
     browserGetClickableCoordinateTool,
     browserAnalyzeWithVisionTool,
+    // Google Search (NEW)
+    googleSearchTool,
+    googleSearchNewsTool,
+    googleSearchScholarTool,
+    googleSearchImagesTool,
+    googleSearchAdvancedTool,
+    googleExtractResultsTool,
+    googleGetRelatedSearchesTool,
+    googleVisitResultTool,
+    googleNextPageTool,
   ];
 }

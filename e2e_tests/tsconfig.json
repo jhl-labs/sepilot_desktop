@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    // 기본 컴파일러 옵션
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+
+    // 모듈 해석
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    // 타입 체크
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+
+    // 추가 체크
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // 출력
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Path mapping (프로젝트 루트 기준)
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["./*"]
+    },
+
+    // 타입 정의 파일
+    "types": ["node", "@playwright/test"]
+  },
+
+  "include": ["**/*.ts"],
+
+  "exclude": ["node_modules", "test-results", "screenshots", "videos"]
+}

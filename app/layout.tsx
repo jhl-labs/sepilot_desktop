@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { ThemePersistenceProvider } from '@/components/providers/theme-persistence-provider';
 
 export const metadata: Metadata = {
   title: 'SEPilot Desktop',
@@ -27,8 +28,9 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
+          storageKey="sepilot-theme"
         >
-          {children}
+          <ThemePersistenceProvider>{children}</ThemePersistenceProvider>
         </ThemeProvider>
       </body>
     </html>

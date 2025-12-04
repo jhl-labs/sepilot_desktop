@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { LLMConfig, Message } from '@/types';
+import { calculateContextUsage, formatTokens } from '@/lib/utils/token-counter';
 
 export interface ToolInfo {
   name: string;
@@ -49,28 +50,22 @@ export function LLMStatusBar({
     return groups;
   }, [tools]);
 
-  // Estimate token count for context usage display
-  // Rough estimation: ~4 chars per token for English, ~2-3 for Korean
+  // Calculate accurate token count using tiktoken
+  // 모델별 최대 컨텍스트 토큰 수 (필요시 모델별로 다르게 설정 가능)
   const MAX_CONTEXT_TOKENS = 128000; // Default max context (can be model-specific)
-  const contextUsage = useMemo(() => {
-    const totalChars = messages.reduce((sum, msg) => sum + (msg.content?.length || 0), 0);
-    const inputChars = input.length;
-    // Use ~3 chars per token as a rough estimate for mixed content
-    const estimatedTokens = Math.ceil((totalChars + inputChars) / 3);
-    return {
-      used: estimatedTokens,
-      max: MAX_CONTEXT_TOKENS,
-      percentage: Math.min(100, (estimatedTokens / MAX_CONTEXT_TOKENS) * 100),
-    };
-  }, [messages, input]);
 
-  // Format token count for display (e.g., 1.2K, 45K)
-  const formatTokens = (tokens: number) => {
-    if (tokens >= 1000) {
-      return `${(tokens / 1000).toFixed(1)}K`;
+  const contextUsage = useMemo(() => {
+    if (!llmConfig) {
+      return {
+        used: 0,
+        max: MAX_CONTEXT_TOKENS,
+        percentage: 0,
+      };
     }
-    return tokens.toString();
-  };
+
+    // tiktoken을 사용하여 정확한 토큰 수 계산
+    return calculateContextUsage(messages, input, llmConfig.model, MAX_CONTEXT_TOKENS);
+  }, [messages, input, llmConfig]);
 
   // Start editing a field
   const startEditing = (field: 'maxTokens' | 'temperature') => {

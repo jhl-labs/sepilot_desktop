@@ -7,11 +7,13 @@
 _Claude Desktop과 같은 수준의 LLM 데스크톱 애플리케이션_
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-black)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.0-black)](https://nextjs.org/)
 [![Electron](https://img.shields.io/badge/Electron-31.0-47848F)](https://www.electronjs.org/)
-[![codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graph/badge.svg)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
 [![CI](https://github.com/jhl-labs/sepilot_desktop/workflows/CI/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions)
+[![codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graph/badge.svg?token=RTDC27F34B)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
 [![License](https://img.shields.io/badge/license-Custom-green)](./LICENSE)
+
+![Codecov Tree Graph](https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/tree.svg?token=RTDC27F34B)
 
 [English](#english) | [한국어](#korean)
 
@@ -44,6 +46,30 @@ SEPilot Desktop is a professional LLM desktop application that provides Claude D
 - 💻 **Cross-Platform**: Windows, macOS, Linux
 - ✨ **Real-time Streaming**: Live LLM response rendering
 - 📝 **Markdown & Mermaid**: Rich content rendering with diagrams
+
+### 📊 Code Quality & Testing
+
+This project maintains high code quality standards with comprehensive testing and continuous integration:
+
+- **Test Coverage**:
+  - Frontend: `app/`, `components/` - React components and UI logic
+  - Backend: `lib/`, `electron/` - Business logic and Electron integrations
+  - View detailed coverage reports on [Codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop)
+
+- **Continuous Integration**:
+  - ✅ ESLint - Code quality and consistency
+  - ✅ Prettier - Code formatting
+  - ✅ TypeScript - Type checking (strict mode)
+  - ✅ Jest - Unit and integration tests
+  - ✅ Codecov - Coverage tracking and analysis
+  - ✅ Bundle Analysis - Performance optimization
+  - ✅ Dependency Check - Circular dependency detection
+
+- **Quality Gates**:
+  - Minimum coverage: 55% overall
+  - All tests must pass
+  - No TypeScript errors
+  - ESLint compliance
 
 ### 🏗️ Tech Stack
 
@@ -277,6 +303,30 @@ SEPilot Desktop은 Claude Desktop 수준의 기능을 제공하는 전문 LLM �
 - 💻 **크로스 플랫폼**: Windows, macOS, Linux
 - ✨ **실시간 스트리밍**: LLM 응답 실시간 표시
 - 📝 **Markdown & Mermaid**: 다이어그램을 포함한 풍부한 콘텐츠 렌더링
+
+### 📊 코드 품질 & 테스트
+
+이 프로젝트는 포괄적인 테스트와 지속적 통합을 통해 높은 코드 품질 기준을 유지합니다:
+
+- **테스트 커버리지**:
+  - Frontend: `app/`, `components/` - React 컴포넌트 및 UI 로직
+  - Backend: `lib/`, `electron/` - 비즈니스 로직 및 Electron 통합
+  - 자세한 커버리지 리포트는 [Codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop)에서 확인
+
+- **지속적 통합**:
+  - ✅ ESLint - 코드 품질 및 일관성
+  - ✅ Prettier - 코드 포매팅
+  - ✅ TypeScript - 타입 체크 (strict mode)
+  - ✅ Jest - 유닛 및 통합 테스트
+  - ✅ Codecov - 커버리지 추적 및 분석
+  - ✅ Bundle Analysis - 성능 최적화
+  - ✅ Dependency Check - 순환 의존성 검사
+
+- **품질 게이트**:
+  - 최소 커버리지: 전체 55%
+  - 모든 테스트 통과 필수
+  - TypeScript 에러 없음
+  - ESLint 규칙 준수
 
 ### 🏗️ 기술 스택
 

@@ -10,13 +10,14 @@ import { GalleryView } from '@/components/gallery/GalleryView';
 import { initializeVectorDB } from '@/lib/vectordb/client';
 import { initializeEmbedding } from '@/lib/vectordb/embeddings/client';
 import { isElectron } from '@/lib/platform';
+import { copyToClipboard } from '@/lib/utils/clipboard';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 const MIN_SIDEBAR_WIDTH = 200;
-const MAX_SIDEBAR_WIDTH = 500;
+const MAX_SIDEBAR_WIDTH = 1200; // 브라우저 사이드바를 넓게 볼 수 있도록 제한 완화
 const DEFAULT_SIDEBAR_WIDTH = 260;
 
 type ViewMode = 'chat' | 'documents' | 'gallery';
@@ -26,10 +27,11 @@ const SIDEBAR_WIDTH_KEYS = {
   chat: 'sepilot_sidebar_width_chat',
   editor: 'sepilot_sidebar_width_editor',
   browser: 'sepilot_sidebar_width_browser',
+  presentation: 'sepilot_sidebar_width_presentation',
 };
 
 // Load sidebar width from localStorage
-function loadSidebarWidth(mode: 'chat' | 'editor' | 'browser'): number {
+function loadSidebarWidth(mode: 'chat' | 'editor' | 'browser' | 'presentation'): number {
   if (typeof window === 'undefined') {
     return DEFAULT_SIDEBAR_WIDTH;
   }
@@ -48,7 +50,7 @@ function loadSidebarWidth(mode: 'chat' | 'editor' | 'browser'): number {
 }
 
 // Save sidebar width to localStorage
-function saveSidebarWidth(mode: 'chat' | 'editor' | 'browser', width: number) {
+function saveSidebarWidth(mode: 'chat' | 'editor' | 'browser' | 'presentation', width: number) {
   if (typeof window === 'undefined') {
     return;
   }
@@ -77,12 +79,14 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [chatSidebarWidth, setChatSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [editorSidebarWidth, setEditorSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [browserSidebarWidth, setBrowserSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const [presentationSidebarWidth, setPresentationSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
 
   // Load saved widths on client side only
   useEffect(() => {
     setChatSidebarWidth(loadSidebarWidth('chat'));
     setEditorSidebarWidth(loadSidebarWidth('editor'));
     setBrowserSidebarWidth(loadSidebarWidth('browser'));
+    setPresentationSidebarWidth(loadSidebarWidth('presentation'));
   }, []);
 
   // Get current sidebar width based on app mode
@@ -91,7 +95,9 @@ export function MainLayout({ children }: MainLayoutProps) {
       ? chatSidebarWidth
       : appMode === 'editor'
         ? editorSidebarWidth
-        : browserSidebarWidth;
+        : appMode === 'presentation'
+          ? presentationSidebarWidth
+          : browserSidebarWidth;
 
   // Set sidebar width based on app mode
   const setSidebarWidth = (width: number) => {
@@ -101,6 +107,9 @@ export function MainLayout({ children }: MainLayoutProps) {
     } else if (appMode === 'editor') {
       setEditorSidebarWidth(width);
       saveSidebarWidth('editor', width);
+    } else if (appMode === 'presentation') {
+      setPresentationSidebarWidth(width);
+      saveSidebarWidth('presentation', width);
     } else {
       setBrowserSidebarWidth(width);
       saveSidebarWidth('browser', width);
@@ -155,8 +164,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         const lastAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant');
 
         if (lastAssistantMessage) {
-          await navigator.clipboard.writeText(lastAssistantMessage.content);
-          // Successfully copied to clipboard
+          await copyToClipboard(lastAssistantMessage.content);
         }
       },
       description: 'Copy last response',
@@ -197,7 +205,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       );
       setSidebarWidth(newWidth);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/preserve-manual-memoization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isResizing]
   );
 
@@ -392,30 +400,6 @@ export function MainLayout({ children }: MainLayoutProps) {
       return;
     }
 
-    // Browser 모드에서 browserViewMode가 'chat'이 아니면 숨김
-    // 단, 'settings'와 'tools'는 Sidebar 내부에서만 표시되므로 BrowserView를 숨기지 않음
-    if (
-      appMode === 'browser' &&
-      browserViewMode !== 'chat' &&
-      browserViewMode !== 'settings' &&
-      browserViewMode !== 'tools'
-    ) {
-      console.log(
-        '[MainLayout] Hiding BrowserView for browser overlay (browserViewMode:',
-        browserViewMode,
-        ')'
-      );
-      window.electronAPI.browserView
-        .hideAll()
-        .then(() => {
-          console.log('[MainLayout] BrowserView hidden successfully');
-        })
-        .catch((err) => {
-          console.error('[MainLayout] Failed to hide BrowserView for browser overlay:', err);
-        });
-      return;
-    }
-
     // Editor 모드이고 Browser 탭이 활성화되어 있으면 표시
     if (appMode === 'editor' && activeEditorTab === 'browser') {
       console.log(
@@ -434,8 +418,9 @@ export function MainLayout({ children }: MainLayoutProps) {
           console.error('[MainLayout] Failed to show BrowserView:', err);
         });
     }
-    // Browser 모드 (standalone)일 때도 표시
-    else if (appMode === 'browser' && viewMode === 'chat' && browserViewMode === 'chat') {
+    // Browser 모드에서는 항상 BrowserView 표시
+    // Sidebar의 browserViewMode (chat, snapshots, bookmarks, settings, tools, logs)와 무관하게 표시
+    else if (appMode === 'browser' && viewMode === 'chat') {
       console.log(
         '[MainLayout] Showing BrowserView (appMode:',
         appMode,

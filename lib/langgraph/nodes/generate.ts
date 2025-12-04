@@ -2,7 +2,11 @@ import { ChatState, RAGState, AgentState } from '../state';
 import { LLMService } from '@/lib/llm/service';
 import { Message } from '@/types';
 import { MCPServerManager } from '@/lib/mcp/server-manager';
-import { getCurrentGraphConfig, emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import {
+  getCurrentGraphConfig,
+  emitStreamingChunk,
+  getCurrentImageGenConfig,
+} from '@/lib/llm/streaming-callback';
 
 /**
  * LLM 생성 노드 - 기본 Chat용 (스트리밍)
@@ -150,10 +154,16 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       toolResultsCount: state.toolResults.length,
     });
 
+    // GraphConfig에서 enableTools 설정 확인
+    const graphConfig = getCurrentGraphConfig();
+    const toolsEnabled = graphConfig?.enableTools ?? true; // Default to true for backward compatibility
+
+    console.log(`[Agent] Tools enabled in config: ${toolsEnabled}`);
+
     // MCP 도구 가져오기 (Built-in tools는 Coding Agent에서만 사용)
     // Note: generateWithToolsNode는 Electron Main Process에서 실행되므로
     // IPC가 아닌 직접 메서드를 사용해야 함
-    const availableTools = MCPServerManager.getAllToolsInMainProcess();
+    const availableTools = toolsEnabled ? MCPServerManager.getAllToolsInMainProcess() : [];
     console.log(`[Agent] Available MCP tools: ${availableTools.length}`);
 
     if (availableTools.length > 0) {
@@ -168,29 +178,32 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
     }
 
     // MCP 도구를 OpenAI compatible tools 형식으로 변환
-    const toolsForLLM = availableTools.map((tool) => ({
-      type: 'function' as const,
-      function: {
-        name: tool.name,
-        description: tool.description || `Tool: ${tool.name}`,
-        parameters: tool.inputSchema || {
-          type: 'object',
-          properties: {},
-        },
-      },
-    }));
+    // Note: Image generation mode일 때는 MCP tools를 포함하지 않음 (generate_image만 사용)
+    const isImageGenerationMode = graphConfig?.enableImageGeneration === true;
+    const toolsForLLM = isImageGenerationMode
+      ? []
+      : availableTools.map((tool) => ({
+          type: 'function' as const,
+          function: {
+            name: tool.name,
+            description: tool.description || `Tool: ${tool.name}`,
+            parameters: tool.inputSchema || {
+              type: 'object',
+              properties: {},
+            },
+          },
+        }));
 
-    // GraphConfig를 통해 이미지 생성이 활성화되어 있으면 도구 추가
+    // 이미지 생성 도구 추가 (GraphConfig 설정 확인)
     // Note: isComfyUIEnabled()는 Renderer Process에서만 동작하므로,
     // Main Process에서는 GraphConfig를 통해 전달된 값을 사용
-    const graphConfig = getCurrentGraphConfig();
-    if (graphConfig?.enableImageGeneration) {
+    if (toolsEnabled && graphConfig?.enableImageGeneration) {
       toolsForLLM.push({
         type: 'function' as const,
         function: {
           name: 'generate_image',
           description:
-            'Generate a high-quality image using AI image generation (ComfyUI/Stable Diffusion). ALWAYS use this tool when the user asks to: create/generate/make/draw/paint an image, picture, or artwork. This generates actual photorealistic or artistic images, NOT text-based representations like SVG or ASCII art. Use detailed English prompts for best results.',
+            'Generate a high-quality image using AI image generation (ComfyUI/Stable Diffusion/Google Imagen). ALWAYS use this tool when the user asks to: create/generate/make/draw/paint an image, picture, or artwork. This generates actual photorealistic or artistic images, NOT text-based representations like SVG or ASCII art. Use detailed English prompts for best results.',
           parameters: {
             type: 'object',
             properties: {
@@ -206,20 +219,35 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
               },
               width: {
                 type: 'number',
-                description: 'Image width in pixels (must be multiple of 8)',
+                description:
+                  'Image width in pixels (must be multiple of 8). Only used for ComfyUI.',
                 default: 1328,
               },
               height: {
                 type: 'number',
-                description: 'Image height in pixels (must be multiple of 8)',
+                description:
+                  'Image height in pixels (must be multiple of 8). Only used for ComfyUI.',
                 default: 1328,
+              },
+              aspectRatio: {
+                type: 'string',
+                description:
+                  'Aspect ratio for the image. Only used for NanoBanana (Google Imagen). Options: "1:1" (square), "16:9" (landscape), "9:16" (portrait), "4:3", "3:4". Default: "1:1"',
+                enum: ['1:1', '16:9', '9:16', '4:3', '3:4'],
+              },
+              numberOfImages: {
+                type: 'number',
+                description:
+                  'Number of images to generate. Only used for NanoBanana (Google Imagen). Fast model: 1-4, Standard model: 1-8. Default: 1',
+                minimum: 1,
+                maximum: 8,
               },
             },
             required: ['prompt'],
           },
         },
       });
-      console.log('[Agent] Added generate_image tool (ComfyUI enabled)');
+      console.log('[Agent] Added generate_image tool (ImageGen enabled)');
     }
 
     if (toolsForLLM.length > 0) {
@@ -241,11 +269,25 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
 
             if (resultData.success) {
               // LLM에게는 이미지가 성공적으로 생성되었다는 정보만 전달
-              content = JSON.stringify({
+              const summary: any = {
                 success: true,
                 message: `Image generated successfully for prompt: "${resultData.prompt?.substring(0, 50)}..."`,
                 // base64는 제외 - UI에만 필요하고 LLM에게는 불필요
-              });
+              };
+
+              // Include usage/credit information if available
+              if (resultData.usage) {
+                summary.usage = resultData.usage;
+                // Add human-readable usage message
+                if (resultData.usage.imageCount) {
+                  summary.message += ` (${resultData.usage.imageCount} image${resultData.usage.imageCount > 1 ? 's' : ''} generated)`;
+                }
+                if (resultData.usage.totalTokenCount) {
+                  summary.message += ` [Token usage: ${resultData.usage.totalTokenCount}]`;
+                }
+              }
+
+              content = JSON.stringify(summary);
             } else {
               content = JSON.stringify({ success: false, error: resultData.error });
             }
@@ -259,6 +301,15 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
         }
       } else {
         content = 'No result';
+      }
+
+      // 긴 결과 제한 (Truncation) - 50000자로 증가하여 더 많은 컨텍스트 제공
+      const MAX_TOOL_RESULT_LENGTH = 50000;
+      if (content.length > MAX_TOOL_RESULT_LENGTH) {
+        content = `${content.substring(
+          0,
+          MAX_TOOL_RESULT_LENGTH
+        )}\n\n... (Result truncated. Total length: ${content.length} chars. The available ${MAX_TOOL_RESULT_LENGTH} characters should be sufficient for analysis. Please work with this information rather than requesting additional searches.)`;
       }
 
       console.log('[Agent] Creating tool result message:', {
@@ -289,7 +340,47 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       name: toolMsg.name, // OpenAI API 호환성을 위해 추가
     }));
 
-    const messages = [...state.messages, ...convertedToolMessages];
+    // Add system prompt to guide LLM behavior with tools
+    // Check if NanoBanana askOptionsOnGenerate is enabled
+    const imageGenConfig = getCurrentImageGenConfig();
+    const nanobananaAskOptions =
+      imageGenConfig?.provider === 'nanobanana' &&
+      imageGenConfig?.nanobanana?.askOptionsOnGenerate === true;
+
+    let systemContent = `You are a helpful assistant with access to tools. Follow these guidelines:
+1. Use tools when necessary to answer user questions accurately
+2. Avoid redundant or repeated tool calls - one tool call per task is usually sufficient
+3. After receiving a tool result, analyze it thoroughly and provide a complete answer
+4. Don't call the same tool multiple times with similar parameters unless explicitly needed
+5. For search queries, one comprehensive search is typically enough
+6. If a tool result is truncated, work with the available information rather than searching again
+7. Always prioritize providing a final answer over making additional tool calls`;
+
+    // Add NanoBanana interactive options guidance
+    if (nanobananaAskOptions) {
+      systemContent += `
+
+**IMPORTANT - Image Generation with NanoBanana (Google Imagen):**
+Before calling the generate_image tool, you MUST ask the user for the following options:
+- Aspect ratio: "1:1" (square), "16:9" (landscape), "9:16" (portrait), "4:3", or "3:4"
+- Number of images: 1-4 for Fast model, 1-8 for Standard model (default: 1)
+
+Present these options clearly and wait for the user's response before generating the image.
+Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세요:
+1. 화면 비율 (aspect ratio): 1:1 (정사각형), 16:9 (가로형), 9:16 (세로형), 4:3, 3:4
+2. 생성할 이미지 개수: 1-4개 (Fast 모델) 또는 1-8개 (Standard 모델)
+
+선택해주세요!"`;
+    }
+
+    const systemMessage: Message = {
+      id: 'system-tool-guidance',
+      role: 'system',
+      content: systemContent,
+      created_at: Date.now(),
+    };
+
+    const messages = [systemMessage, ...state.messages, ...convertedToolMessages];
 
     console.log(
       '[Agent] Messages to LLM:',
@@ -346,23 +437,44 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       };
     });
 
+    console.log('[Agent] State generatedImages before creating assistant message:', {
+      count: state.generatedImages?.length || 0,
+      images: state.generatedImages?.map((img) => ({
+        id: img.id,
+        base64Length: img.base64?.length || 0,
+        base64Prefix: img.base64?.substring(0, 50),
+      })),
+    });
+
     const assistantMessage: Message = {
       id: `msg-${Date.now()}`,
       role: 'assistant',
       content: accumulatedContent || '',
       created_at: Date.now(),
       tool_calls: toolCalls,
+      // Attach generated images if any
+      images:
+        state.generatedImages && state.generatedImages.length > 0
+          ? state.generatedImages
+          : undefined,
     };
 
     console.log('[Agent] Assistant message created:', {
       hasContent: !!assistantMessage.content,
       hasToolCalls: !!assistantMessage.tool_calls,
       toolCallsCount: assistantMessage.tool_calls?.length,
+      hasImages: !!assistantMessage.images,
+      imageCount: assistantMessage.images?.length || 0,
+      imagesDetail: assistantMessage.images?.map((img) => ({
+        id: img.id,
+        base64Length: img.base64?.length || 0,
+      })),
     });
 
     return {
       messages: [assistantMessage],
       toolResults: [], // 다음 iteration을 위해 초기화
+      generatedImages: [], // Clear generated images after attaching to message
     };
   } catch (error: any) {
     console.error('Generate with tools node error:', error);

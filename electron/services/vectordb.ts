@@ -7,6 +7,7 @@ import {
   SearchResult,
   RawDocument,
   IndexingOptions,
+  SearchOptions,
 } from '../../lib/vectordb/types';
 import { chunkDocuments } from '../../lib/vectordb/indexing';
 import { getEmbeddingProvider } from '../../lib/vectordb/embeddings/client';
@@ -21,7 +22,26 @@ class VectorDBService {
   private dbPath: string = '';
   private config: VectorDBServiceConfig | null = null;
 
+  /**
+   * 인덱스/테이블 이름 검증 (SQL Injection 방지)
+   */
+  private validateIndexName(name: string): void {
+    // 영문자, 숫자, 언더스코어만 허용 (첫 글자는 영문자 또는 언더스코어)
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+      throw new Error(
+        `Invalid index name: "${name}". Only alphanumeric characters and underscores are allowed.`
+      );
+    }
+    // 예약어 체크
+    const reservedWords = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'TABLE'];
+    if (reservedWords.includes(name.toUpperCase())) {
+      throw new Error(`Index name cannot be a SQL reserved word: "${name}"`);
+    }
+  }
+
   async initialize(config: VectorDBServiceConfig) {
+    // 인덱스 이름 검증
+    this.validateIndexName(config.indexName);
     this.config = config;
 
     const userDataPath = app.getPath('userData');
@@ -105,6 +125,9 @@ class VectorDBService {
   async createIndex(name: string, dimension: number): Promise<void> {
     if (!this.db) throw new Error('Database not connected');
 
+    // 인덱스 이름 검증 (SQL Injection 방지)
+    this.validateIndexName(name);
+
     // 테이블 생성
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS ${name} (
@@ -127,6 +150,9 @@ class VectorDBService {
 
   async deleteIndex(name: string): Promise<void> {
     if (!this.db) throw new Error('Database not connected');
+
+    // 인덱스 이름 검증 (SQL Injection 방지)
+    this.validateIndexName(name);
 
     this.db.exec(`DROP TABLE IF EXISTS ${name}`);
     this.saveDatabase();
@@ -175,34 +201,299 @@ class VectorDBService {
     console.log(`[VectorDB] Inserted ${documents.length} documents into ${indexName}`);
   }
 
-  async searchByVector(queryEmbedding: number[], k: number): Promise<SearchResult[]> {
+  async searchByVector(
+    queryEmbedding: number[],
+    k: number,
+    options?: SearchOptions,
+    queryText?: string
+  ): Promise<SearchResult[]> {
     if (!this.db || !this.config) throw new Error('Database not initialized');
 
     const indexName = this.config.indexName;
 
+    // 옵션 기본값 설정
+    const opts: Required<SearchOptions> = {
+      folderPath: options?.folderPath || '',
+      tags: options?.tags || [],
+      category: options?.category || '',
+      source: options?.source || '',
+      folderPathBoost: options?.folderPathBoost ?? 0.2,
+      titleBoost: options?.titleBoost ?? 0.3,
+      tagBoost: options?.tagBoost ?? 0.15,
+      useHybridSearch: options?.useHybridSearch ?? true,
+      hybridAlpha: options?.hybridAlpha ?? 0.7,
+      includeAllMetadata: options?.includeAllMetadata ?? true,
+      recentBoost: options?.recentBoost ?? false,
+      recentBoostDecay: options?.recentBoostDecay ?? 30,
+    };
+
     // 모든 문서 가져오기
-    const result = this.db.exec(`SELECT id, content, metadata, embedding FROM ${indexName}`);
+    const result = this.db.exec(
+      `SELECT id, content, metadata, embedding, created_at FROM ${indexName}`
+    );
 
     if (result.length === 0) return [];
 
-    // 코사인 유사도 계산
-    const results: SearchResult[] = [];
-    for (const row of result[0].values) {
-      const embedding = JSON.parse(row[3] as string);
-      const similarity = this.cosineSimilarity(queryEmbedding, embedding);
+    const rows = result[0].values;
 
-      results.push({
-        id: row[0] as string,
-        content: row[1] as string,
-        metadata: JSON.parse(row[2] as string),
-        score: similarity,
+    // 1단계: 메타데이터 기반 필터링 (Parent 문서와 폴더 제외)
+    const filteredRows = rows.filter((row) => {
+      const metadata = JSON.parse(row[2] as string);
+
+      // Parent 문서는 검색에서 제외 (참조용으로만 사용)
+      if (metadata.isParentDoc) {
+        return false;
+      }
+
+      // 폴더 경로 필터
+      if (opts.folderPath && metadata.folderPath !== opts.folderPath) {
+        // 하위 폴더도 포함
+        if (!metadata.folderPath?.startsWith(opts.folderPath + '/')) {
+          return false;
+        }
+      }
+
+      // 태그 필터
+      if (opts.tags.length > 0) {
+        const docTags = metadata.tags || [];
+        if (!opts.tags.some((tag) => docTags.includes(tag))) {
+          return false;
+        }
+      }
+
+      // 카테고리 필터
+      if (opts.category && metadata.category !== opts.category) {
+        return false;
+      }
+
+      // 출처 필터
+      if (opts.source && metadata.source !== opts.source) {
+        return false;
+      }
+
+      // 특수 문서 제외 (폴더 등)
+      if (metadata._docType === 'folder') {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (filteredRows.length === 0) return [];
+
+    // 2단계: 벡터 유사도 + 하이브리드 검색 계산
+    const chunkResults: Array<{
+      id: string;
+      content: string;
+      metadata: any;
+      score: number;
+      parentDocId?: string;
+    }> = [];
+
+    for (const row of filteredRows) {
+      const id = row[0] as string;
+      const content = row[1] as string;
+      const metadata = JSON.parse(row[2] as string);
+      const embedding = JSON.parse(row[3] as string);
+      const createdAt = row[4] as number;
+
+      // 벡터 유사도 (코사인 유사도)
+      const vectorScore = this.cosineSimilarity(queryEmbedding, embedding);
+
+      // BM25 유사도 (키워드 기반)
+      const bm25Score =
+        opts.useHybridSearch && queryText
+          ? this.calculateBM25Score(queryText, content, metadata)
+          : 0;
+
+      // 하이브리드 점수 계산
+      let hybridScore = opts.useHybridSearch
+        ? opts.hybridAlpha * vectorScore + (1 - opts.hybridAlpha) * bm25Score
+        : vectorScore;
+
+      // 3단계: 메타데이터 기반 점수 부스팅
+      let boostMultiplier = 1.0;
+
+      // 제목 키워드 매칭 (쿼리 텍스트로 키워드 체크)
+      if (queryText && metadata.title && this.containsKeywords(metadata.title, queryText)) {
+        boostMultiplier += opts.titleBoost;
+      }
+
+      // 폴더 경로 매칭
+      if (
+        metadata.folderPath &&
+        opts.folderPath &&
+        metadata.folderPath.startsWith(opts.folderPath)
+      ) {
+        boostMultiplier += opts.folderPathBoost;
+      }
+
+      // 태그 매칭
+      if (opts.tags.length > 0 && metadata.tags) {
+        const matchingTags = opts.tags.filter((tag) => metadata.tags.includes(tag));
+        if (matchingTags.length > 0) {
+          boostMultiplier += opts.tagBoost * (matchingTags.length / opts.tags.length);
+        }
+      }
+
+      // 최신성 부스팅 (옵션)
+      if (opts.recentBoost && createdAt) {
+        const ageInDays = (Date.now() - createdAt) / (1000 * 60 * 60 * 24);
+        const recencyFactor = Math.exp(-ageInDays / opts.recentBoostDecay);
+        boostMultiplier += 0.1 * recencyFactor; // 최대 10% 부스팅
+      }
+
+      // 최종 점수 계산
+      const finalScore = hybridScore * boostMultiplier;
+
+      chunkResults.push({
+        id,
+        content,
+        metadata,
+        score: finalScore,
+        parentDocId: metadata.parentDocId,
       });
     }
 
-    // 유사도 순으로 정렬하고 상위 k개 반환
-    results.sort((a, b) => b.score - a.score);
+    // 4단계: Top-K 추출 (점수 기준 정렬)
+    chunkResults.sort((a, b) => b.score - a.score);
+    const topChunks = chunkResults.slice(0, k);
 
-    return results.slice(0, k);
+    // 5단계: Parent Document Retrieval - 청크 대신 원본 문서 반환
+    const finalResults: SearchResult[] = [];
+
+    for (const chunk of topChunks) {
+      // Parent 문서가 있으면 가져오기
+      if (chunk.parentDocId) {
+        const parentDoc = await this.getById(chunk.parentDocId);
+
+        if (parentDoc) {
+          // 원본 문서 전체 내용 반환 (청크 대신)
+          finalResults.push({
+            id: chunk.id, // 원래 청크 ID 유지 (중복 제거용)
+            content: parentDoc.content, // 원본 전체 내용
+            metadata: {
+              ...chunk.metadata,
+              retrievedFrom: 'parent', // 원본 문서에서 가져왔음을 표시
+              chunkScore: chunk.score, // 매칭된 청크의 점수
+              matchedChunkIndex: chunk.metadata.chunkIndex, // 매칭된 청크 위치
+            },
+            score: chunk.score,
+          });
+          continue;
+        }
+      }
+
+      // Parent가 없거나 찾지 못한 경우 청크 그대로 반환
+      finalResults.push({
+        id: chunk.id,
+        content: chunk.content,
+        metadata: opts.includeAllMetadata ? chunk.metadata : { title: chunk.metadata.title },
+        score: chunk.score,
+      });
+    }
+
+    return finalResults;
+  }
+
+  /**
+   * 간단한 BM25 유사도 계산 (키워드 기반)
+   * 실제 BM25는 복잡하지만, 여기서는 단순화된 버전 사용
+   */
+  private simpleBM25Score(
+    content: string,
+    metadata: Record<string, any>,
+    _queryEmbedding: number[]
+  ): number {
+    // 임베딩에서 쿼리 텍스트를 추출할 수 없으므로,
+    // 메타데이터와 컨텐츠의 길이 기반으로 간단한 점수 계산
+    // 실제로는 쿼리 텍스트가 필요하므로, 향후 개선 필요
+
+    // 제목과 컨텐츠 길이 기반 점수 (0.0 ~ 1.0)
+    const titleLength = (metadata.title as string)?.length || 0;
+    const contentLength = content.length;
+
+    // 짧고 간결한 문서에 약간 더 높은 점수 (정보 밀도가 높을 가능성)
+    const lengthScore = 1.0 / (1.0 + Math.log(contentLength + 1) / 10);
+
+    return Math.min(lengthScore, 1.0);
+  }
+
+  /**
+   * BM25 점수 계산 (키워드 기반 검색)
+   * @param queryText 검색 쿼리 텍스트
+   * @param content 문서 내용
+   * @param metadata 문서 메타데이터
+   * @returns BM25 점수 (0~1 정규화)
+   */
+  private calculateBM25Score(
+    queryText: string,
+    content: string,
+    metadata: Record<string, any>
+  ): number {
+    const k1 = 1.5; // Term frequency saturation parameter
+    const b = 0.75; // Length normalization parameter
+
+    // 쿼리와 문서를 토큰화
+    const queryTerms = this.tokenize(queryText);
+    const docText = `${metadata.title || ''} ${content}`.toLowerCase();
+    const docTerms = this.tokenize(docText);
+
+    if (queryTerms.length === 0 || docTerms.length === 0) {
+      return 0;
+    }
+
+    const docLength = docTerms.length;
+    const avgDocLength = 100; // 평균 문서 길이 추정값
+
+    let score = 0;
+
+    // 각 쿼리 term에 대해 BM25 점수 계산
+    for (const term of queryTerms) {
+      // Term frequency (TF)
+      const tf = docTerms.filter((t) => t === term).length;
+
+      if (tf === 0) {
+        continue;
+      }
+
+      // IDF는 단순화 (전체 문서 수를 모르므로 1.0으로 고정)
+      const idf = 1.0;
+
+      // BM25 공식
+      const numerator = tf * (k1 + 1);
+      const denominator = tf + k1 * (1 - b + b * (docLength / avgDocLength));
+
+      score += (idf * numerator) / denominator;
+    }
+
+    // 쿼리 term 수로 정규화하여 0~1 범위로 변환
+    return Math.min(score / queryTerms.length, 1.0);
+  }
+
+  /**
+   * 텍스트를 토큰으로 분할 (한글 지원)
+   * @param text 토큰화할 텍스트
+   * @returns 토큰 배열
+   */
+  private tokenize(text: string): string[] {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\sㄱ-ㅎ가-힣]/g, ' ') // 영문, 숫자, 한글만 유지
+      .split(/\s+/)
+      .filter((token) => token.length > 1); // 1글자 토큰 제거
+  }
+
+  /**
+   * 키워드 포함 여부 체크
+   * @param text 검사할 텍스트
+   * @param queryText 쿼리 텍스트
+   * @returns 키워드 포함 여부
+   */
+  private containsKeywords(text: string, queryText: string): boolean {
+    const textLower = text.toLowerCase();
+    const queryTerms = this.tokenize(queryText);
+    return queryTerms.some((term) => textLower.includes(term));
   }
 
   async delete(ids: string[]): Promise<void> {
@@ -216,6 +507,42 @@ class VectorDBService {
 
     this.saveDatabase();
     console.log(`[VectorDB] Deleted ${ids.length} documents from ${indexName}`);
+  }
+
+  async getById(id: string): Promise<VectorDocument | null> {
+    if (!this.db || !this.config) throw new Error('Database not initialized');
+
+    const indexName = this.config.indexName;
+
+    const result = this.db.exec(
+      `SELECT id, content, metadata, embedding FROM ${indexName} WHERE id = ?`,
+      [id]
+    );
+
+    if (result.length === 0 || result[0].values.length === 0) return null;
+
+    const row = result[0].values[0];
+
+    return {
+      id: row[0] as string,
+      content: row[1] as string,
+      metadata: JSON.parse(row[2] as string),
+      embedding: JSON.parse(row[3] as string),
+    };
+  }
+
+  async updateMetadata(id: string, metadata: Record<string, any>): Promise<void> {
+    if (!this.db || !this.config) throw new Error('Database not initialized');
+
+    const indexName = this.config.indexName;
+
+    this.db.run(`UPDATE ${indexName} SET metadata = ? WHERE id = ?`, [
+      JSON.stringify(metadata),
+      id,
+    ]);
+
+    this.saveDatabase();
+    console.log(`[VectorDB] Updated metadata for document ${id}`);
   }
 
   async count(): Promise<number> {
@@ -327,6 +654,36 @@ class VectorDBService {
     }
 
     return dotProduct / denominator;
+  }
+
+  /**
+   * List all collections/indices in the database
+   */
+  async listCollections(): Promise<string[]> {
+    if (!this.db) {
+      throw new Error('VectorDB not initialized');
+    }
+
+    try {
+      const result = this.db.exec(`SELECT name FROM sqlite_master WHERE type='table'`);
+
+      if (result.length === 0) return [];
+
+      const tables = result[0].values.map((row) => row[0] as string);
+
+      // Filter out internal SQLite tables and return unique collection names
+      const collections = new Set<string>();
+      tables.forEach((table) => {
+        if (!table.startsWith('sqlite_')) {
+          collections.add(table);
+        }
+      });
+
+      return Array.from(collections);
+    } catch (error) {
+      console.error('[VectorDB] Failed to list collections:', error);
+      return [];
+    }
   }
 
   close() {

@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron';
+import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { exec, spawn } from 'child_process';
@@ -533,6 +533,237 @@ export function registerFileHandlers() {
       return {
         success: false,
         error: error.message || 'Failed to rename',
+      };
+    }
+  });
+
+  // 파일/폴더 복사 (Editor용 - 클립보드 기능)
+  ipcMain.handle('fs:copy', async (_event, sourcePath: string, destPath: string) => {
+    try {
+      const stats = await fs.stat(sourcePath);
+
+      if (stats.isDirectory()) {
+        // 디렉토리 복사 (재귀적으로)
+        await fs.cp(sourcePath, destPath, { recursive: true });
+        console.log('[File] Directory copied successfully:', sourcePath, '->', destPath);
+      } else {
+        // 파일 복사
+        await fs.copyFile(sourcePath, destPath);
+        console.log('[File] File copied successfully:', sourcePath, '->', destPath);
+      }
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error copying:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to copy',
+      };
+    }
+  });
+
+  // 파일/폴더 이동 (Editor용 - 클립보드 잘라내기)
+  ipcMain.handle('fs:move', async (_event, sourcePath: string, destPath: string) => {
+    try {
+      await fs.rename(sourcePath, destPath);
+      console.log('[File] Moved successfully:', sourcePath, '->', destPath);
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error moving:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to move',
+      };
+    }
+  });
+
+  // 파일/폴더 경로 복사를 위한 절대 경로 가져오기
+  ipcMain.handle('fs:get-absolute-path', async (_event, filePath: string) => {
+    try {
+      const absolutePath = path.resolve(filePath);
+      return {
+        success: true,
+        data: absolutePath,
+      };
+    } catch (error: any) {
+      console.error('[File] Error getting absolute path:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get absolute path',
+      };
+    }
+  });
+
+  // 상대 경로 계산 (working directory 기준)
+  ipcMain.handle('fs:get-relative-path', async (_event, from: string, to: string) => {
+    try {
+      const relativePath = path.relative(from, to);
+      return {
+        success: true,
+        data: relativePath,
+      };
+    } catch (error: any) {
+      console.error('[File] Error getting relative path:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get relative path',
+      };
+    }
+  });
+
+  // 시스템 탐색기에서 파일/폴더 열기
+  ipcMain.handle('fs:show-in-folder', async (_event, itemPath: string) => {
+    try {
+      // Check if path exists
+      await fs.access(itemPath);
+
+      // Show item in folder (works for both files and directories)
+      shell.showItemInFolder(itemPath);
+      console.log('[File] Showed in folder:', itemPath);
+
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error showing in folder:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to show in folder',
+      };
+    }
+  });
+
+  // 파일 stat 정보 가져오기 (수정 시간 등)
+  ipcMain.handle('fs:get-file-stat', async (_event, filePath: string) => {
+    try {
+      const stats = await fs.stat(filePath);
+
+      return {
+        success: true,
+        data: {
+          mtime: stats.mtimeMs, // 수정 시간 (milliseconds)
+          size: stats.size,
+          isFile: stats.isFile(),
+          isDirectory: stats.isDirectory(),
+        },
+      };
+    } catch (error: any) {
+      console.error('[File] Error getting file stat:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get file stat',
+      };
+    }
+  });
+
+  // 파일 복제 (같은 폴더에 복사본 생성)
+  ipcMain.handle('fs:duplicate', async (_event, sourcePath: string) => {
+    try {
+      const dir = path.dirname(sourcePath);
+      const ext = path.extname(sourcePath);
+      const basename = path.basename(sourcePath, ext);
+
+      // Generate unique name for duplicate
+      let counter = 1;
+      let destPath = path.join(dir, `${basename} copy${ext}`);
+
+      // Check if file exists and increment counter
+      while (true) {
+        try {
+          await fs.access(destPath);
+          // File exists, try next number
+          destPath = path.join(dir, `${basename} copy ${counter}${ext}`);
+          counter++;
+        } catch {
+          // File doesn't exist, we can use this name
+          break;
+        }
+      }
+
+      // Copy the file or directory
+      const stats = await fs.stat(sourcePath);
+      if (stats.isDirectory()) {
+        await fs.cp(sourcePath, destPath, { recursive: true });
+        console.log('[File] Directory duplicated:', sourcePath, '->', destPath);
+      } else {
+        await fs.copyFile(sourcePath, destPath);
+        console.log('[File] File duplicated:', sourcePath, '->', destPath);
+      }
+
+      return {
+        success: true,
+        data: destPath,
+      };
+    } catch (error: any) {
+      console.error('[File] Error duplicating:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to duplicate',
+      };
+    }
+  });
+
+  // 클립보드 이미지를 파일로 저장 (Markdown editor용)
+  ipcMain.handle('fs:save-clipboard-image', async (_event, destDir: string) => {
+    try {
+      const { clipboard, nativeImage } = require('electron');
+
+      // 클립보드에서 이미지 가져오기
+      const image = clipboard.readImage();
+
+      if (image.isEmpty()) {
+        console.log('[File] No image in clipboard');
+        return {
+          success: false,
+          error: 'No image in clipboard',
+        };
+      }
+
+      console.log('[File] Image found in clipboard');
+
+      // 고유한 파일명 생성 (타임스탬프 기반)
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      let filename = `image-${timestamp}.png`;
+      let destPath = path.join(destDir, filename);
+      let counter = 1;
+
+      // 파일명 중복 확인 및 처리
+      while (true) {
+        try {
+          await fs.access(destPath);
+          // 파일이 존재하면 카운터 추가
+          filename = `image-${timestamp}-${counter}.png`;
+          destPath = path.join(destDir, filename);
+          counter++;
+        } catch {
+          // 파일이 없으면 사용 가능
+          break;
+        }
+      }
+
+      // 이미지를 PNG 버퍼로 변환하여 저장
+      const buffer = image.toPNG();
+      await fs.writeFile(destPath, buffer);
+
+      console.log('[File] Clipboard image saved:', destPath);
+
+      return {
+        success: true,
+        data: {
+          filename,
+          path: destPath,
+        },
+      };
+    } catch (error: any) {
+      console.error('[File] Error saving clipboard image:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to save clipboard image',
       };
     }
   });

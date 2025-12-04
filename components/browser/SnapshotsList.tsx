@@ -2,9 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Trash, ChevronLeft } from 'lucide-react';
+import { Trash, ChevronLeft, ExternalLink } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
 import { useChatStore } from '@/lib/store/chat-store';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 
 interface Snapshot {
   id: string;
@@ -123,36 +129,52 @@ export function SnapshotsList() {
         ) : (
           <div className="space-y-3">
             {snapshots.map((snapshot) => (
-              <div
-                key={snapshot.id}
-                className="group relative cursor-pointer rounded-lg border bg-card p-2 transition-colors hover:bg-accent"
-                onClick={() => handleOpen(snapshot)}
-              >
-                <div className="mb-2 aspect-video overflow-hidden rounded bg-muted">
-                  <img
-                    src={snapshot.thumbnail}
-                    alt={snapshot.title}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <h3 className="text-xs font-medium truncate">{snapshot.title}</h3>
-                <p className="mt-1 text-xs text-muted-foreground truncate">{snapshot.url}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {new Date(snapshot.createdAt).toLocaleString('ko-KR')}
-                </p>
+              <ContextMenu key={snapshot.id}>
+                <ContextMenuTrigger asChild>
+                  <div
+                    className="group relative cursor-pointer rounded-lg border bg-card p-2 transition-colors hover:bg-accent"
+                    onClick={() => handleOpen(snapshot)}
+                  >
+                    <div className="mb-2 aspect-video overflow-hidden rounded bg-muted">
+                      <img
+                        src={snapshot.thumbnail}
+                        alt={snapshot.title}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <h3 className="text-xs font-medium truncate">{snapshot.title}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground truncate">{snapshot.url}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {new Date(snapshot.createdAt).toLocaleString('ko-KR')}
+                    </p>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(snapshot.id);
-                  }}
-                >
-                  <Trash className="h-3 w-3" />
-                </Button>
-              </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(snapshot.id);
+                      }}
+                    >
+                      <Trash className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-56">
+                  <ContextMenuItem onClick={() => handleOpen(snapshot)}>
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    <span>스냅샷 열기</span>
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() => handleDelete(snapshot.id)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash className="mr-2 h-4 w-4" />
+                    <span>삭제</span>
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             ))}
           </div>
         )}

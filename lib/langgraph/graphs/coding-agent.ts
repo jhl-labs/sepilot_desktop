@@ -3,11 +3,23 @@ import { CodingAgentStateAnnotation, CodingAgentState } from '../state';
 import { shouldUseTool } from '../nodes/tools';
 import { LLMService } from '@/lib/llm/service';
 import { Message, Activity } from '@/types';
-import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-callback';
 import { executeBuiltinTool, getBuiltinTools } from '@/lib/mcp/tools/builtin-tools';
+import { MCPServerManager } from '@/lib/mcp/server-manager';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { ContextManager } from '../utils/context-manager';
+import { VerificationPipeline } from '../utils/verification-pipeline';
+import { ErrorRecovery } from '../utils/error-recovery';
+import { ToolSelector } from '../utils/tool-selector';
+import { FileTracker } from '../utils/file-tracker';
+import { CodebaseAnalyzer } from '../utils/codebase-analyzer';
+import {
+  getCodingAgentSystemPrompt,
+  getExecutionSpecialistPrompt,
+  getPlanStepPrompt,
+} from '../prompts/coding-agent-system';
 
 /**
  * Coding Agent Graph
@@ -76,6 +88,7 @@ async function getWorkspaceFiles(workspacePath: string = '.'): Promise<Record<st
  */
 async function getAllFiles(dir: string): Promise<string[]> {
   const results: string[] = [];
+  const MAX_FILES = 8000;
 
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -85,13 +98,24 @@ async function getAllFiles(dir: string): Promise<string[]> {
 
       // Skip common directories to ignore
       if (entry.isDirectory()) {
-        if (['.git', 'node_modules', '.next', 'dist', 'build'].includes(entry.name)) {
+        if (
+          ['.git', 'node_modules', '.next', 'dist', 'build', 'coverage', 'out', 'release'].includes(
+            entry.name
+          )
+        ) {
+          continue;
+        }
+        if (results.length >= MAX_FILES) {
           continue;
         }
         const subFiles = await getAllFiles(fullPath);
         results.push(...subFiles);
       } else {
         results.push(fullPath);
+      }
+
+      if (results.length >= MAX_FILES) {
+        break;
       }
     }
   } catch {
@@ -221,6 +245,52 @@ function pathMatchesRequirement(changedPath: string, requirement: string): boole
   );
 }
 
+/**
+ * RAG 검색 헬퍼 함수
+ */
+async function retrieveContextIfEnabled(query: string): Promise<string> {
+  const config = getCurrentGraphConfig();
+  if (!config?.enableRAG) {
+    return '';
+  }
+
+  try {
+    // Main Process 전용 로직
+    if (typeof window !== 'undefined') {
+      return '';
+    }
+
+    console.log('[CodingAgent] RAG enabled, retrieving documents...');
+    const { vectorDBService } = await import('../../../electron/services/vectordb');
+    const { databaseService } = await import('../../../electron/services/database');
+    const { initializeEmbedding, getEmbeddingProvider } =
+      await import('@/lib/vectordb/embeddings/client');
+
+    const configStr = databaseService.getSetting('app_config');
+    if (!configStr) {
+      return '';
+    }
+    const appConfig = JSON.parse(configStr);
+    if (!appConfig.embedding) {
+      return '';
+    }
+
+    initializeEmbedding(appConfig.embedding);
+    const embedder = getEmbeddingProvider();
+    const queryEmbedding = await embedder.embed(query);
+    const results = await vectorDBService.searchByVector(queryEmbedding, 5);
+
+    if (results.length > 0) {
+      console.log(`[CodingAgent] Found ${results.length} documents`);
+      return results.map((doc, i) => `[참고 문서 ${i + 1}]\n${doc.content}`).join('\n\n');
+    }
+  } catch (error) {
+    console.error('[CodingAgent] RAG retrieval failed:', error);
+    return '[RAG retrieval failed: context unavailable]';
+  }
+  return '';
+}
+
 // ===========================
 // Node Functions
 // ===========================
@@ -240,10 +310,36 @@ async function triageNode(state: CodingAgentState): Promise<Partial<CodingAgentS
     }
   }
 
-  // Simple heuristic: if prompt is short and looks like a question, respond directly
+  const lowerPrompt = userPrompt.toLowerCase();
+  const modificationKeywords = [
+    'make',
+    'create',
+    'build',
+    'fix',
+    'implement',
+    'generate',
+    'run ',
+    'install',
+    'edit',
+    'update',
+    // Korean action cues
+    '만들',
+    '생성',
+    '작성',
+    '수정',
+    '변경',
+    '편집',
+    '설치',
+    '실행',
+    '빌드',
+  ];
+  const isLikelyModification = modificationKeywords.some((k) => lowerPrompt.includes(k));
+
+  // Simple heuristic: keep direct responses to short, clear questions without action verbs
   const isSimpleQuestion =
     userPrompt.length < 200 &&
-    (userPrompt.includes('?') || userPrompt.includes('what') || userPrompt.includes('how'));
+    (userPrompt.includes('?') || userPrompt.includes('what') || userPrompt.includes('how')) &&
+    !isLikelyModification;
 
   const decision = isSimpleQuestion ? 'direct_response' : 'graph';
   const reason = isSimpleQuestion ? 'Simple question detected' : 'Complex task requiring tools';
@@ -398,6 +494,29 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
     const planSteps = parsePlanSteps(planContent);
     const requiredFiles = extractRequiredFiles(userPrompt);
 
+    // Use CodebaseAnalyzer to recommend relevant files
+    const workspacePath = process.cwd();
+    let recommendedFiles: string[] = [];
+    try {
+      const structure = await CodingAgentGraph.codebaseAnalyzer.analyzeStructure(
+        workspacePath,
+        3 // Max depth 3 for performance
+      );
+      recommendedFiles = CodingAgentGraph.codebaseAnalyzer.recommendFiles(
+        userPrompt,
+        structure,
+        5 // Top 5 recommendations
+      );
+      if (recommendedFiles.length > 0) {
+        console.log(`[Planning] Recommended files:`, recommendedFiles);
+      }
+    } catch (error) {
+      console.warn('[Planning] Failed to analyze codebase:', error);
+    }
+
+    // Combine manually extracted files with recommended files
+    const allRequiredFiles = [...new Set([...requiredFiles, ...recommendedFiles])];
+
     console.log(`[Planning] Plan created with ${planSteps.length} steps`);
 
     return {
@@ -406,7 +525,7 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
       planCreated: true,
       planSteps,
       currentPlanStep: 0,
-      requiredFiles: requiredFiles.length > 0 ? requiredFiles : undefined,
+      requiredFiles: allRequiredFiles.length > 0 ? allRequiredFiles : undefined,
     };
   } catch (error: any) {
     console.error('[Planning] Error:', error);
@@ -445,9 +564,40 @@ async function iterationGuardNode(state: CodingAgentState): Promise<Partial<Codi
  * Agent Node: Call LLM with Built-in tools (file operations)
  */
 async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
-  console.log('[CodingAgent.Agent] Calling LLM with Built-in tools');
+  console.log('[CodingAgent.Agent] Calling LLM with Tools');
 
   const messages = state.messages || [];
+
+  // RAG 검색
+  let ragContext = '';
+  try {
+    // 마지막 사용자 메시지를 쿼리로 사용
+    const lastUserMessage = messages
+      .slice()
+      .reverse()
+      .find((m) => m.role === 'user');
+    if (lastUserMessage && lastUserMessage.content) {
+      ragContext = await retrieveContextIfEnabled(lastUserMessage.content);
+      if (ragContext) {
+        if (ragContext.startsWith('[RAG retrieval failed')) {
+          emitStreamingChunk(
+            '⚠️ RAG 컨텍스트를 불러오지 못했습니다. 자체 지식으로 진행합니다.\n',
+            state.conversationId
+          );
+        }
+        emitStreamingChunk(
+          `\n📚 **관련 문서 ${ragContext.split('[참고 문서').length - 1}개를 참조합니다.**\n\n`,
+          state.conversationId
+        );
+      }
+    }
+  } catch (e) {
+    console.error('[CodingAgent.Agent] RAG error:', e);
+    emitStreamingChunk(
+      '⚠️ RAG 컨텍스트 조회 중 오류가 발생했습니다. 자체 지식으로 진행합니다.\n',
+      state.conversationId
+    );
+  }
 
   // Debug: Log message count and sizes
   console.log('[CodingAgent.Agent] Message summary:', {
@@ -478,25 +628,14 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     removed: messages.length - filteredMessages.length,
   });
 
-  // Limit context length to prevent 500 errors from server
-  // Keep only the most recent messages to avoid context overflow
-  const MAX_CONTEXT_MESSAGES = 20;
-  const limitedMessages =
-    filteredMessages.length > MAX_CONTEXT_MESSAGES
-      ? filteredMessages.slice(-MAX_CONTEXT_MESSAGES)
-      : filteredMessages;
-
-  if (filteredMessages.length > MAX_CONTEXT_MESSAGES) {
-    console.log('[CodingAgent.Agent] Context limited:', {
-      original: filteredMessages.length,
-      limited: limitedMessages.length,
-      dropped: filteredMessages.length - limitedMessages.length,
-    });
-  }
-
-  // Get Built-in tools and convert to OpenAI format
+  // Get Built-in tools
   const builtinTools = getBuiltinTools();
-  const toolsForLLM = builtinTools.map((tool) => ({
+  // Get MCP tools
+  const mcpTools = MCPServerManager.getAllToolsInMainProcess();
+
+  const allTools = [...builtinTools, ...mcpTools];
+
+  const toolsForLLM = allTools.map((tool) => ({
     type: 'function' as const,
     function: {
       name: tool.name,
@@ -508,129 +647,75 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     },
   }));
 
-  console.log(`[CodingAgent.Agent] Available Built-in tools: ${builtinTools.length}`);
+  console.log(
+    `[CodingAgent.Agent] Available tools: ${builtinTools.length} builtin + ${mcpTools.length} MCP`
+  );
   console.log(
     '[CodingAgent.Agent] Tool details:',
-    builtinTools.map((t) => t.name)
+    allTools.map((t) => t.name)
   );
 
-  // Add system prompts
+  // Add system prompts (verified best practices from Cursor/Cline/Claude Code)
   const codingSystemMsg: Message = {
     id: 'system-coding',
     role: 'system',
-    content: `You are an expert coding assistant with FULL file system access and command execution capabilities.
-
-# CRITICAL RULES
-
-1. **You HAVE REAL ACCESS** - This is NOT a simulation. You have actual file system access and can execute commands.
-2. **ALWAYS USE TOOLS** - Never say you cannot access files. Use tools immediately for ALL file operations.
-3. **ACTION OVER EXPLANATION** - Don't just explain what needs to be done. DO IT using tools.
-4. **READ BEFORE WRITE** - Always read files before editing to understand context and avoid mistakes.
-5. **VERIFY YOUR WORK** - After making changes, use file_read or command_execute to verify results.
-
-# AVAILABLE TOOLS
-
-## File Operations
-- **file_read**: Read file contents from disk
-- **file_write**: Create or completely overwrite files
-- **file_edit**: Modify existing files with precise string replacement
-- **file_list**: List directory contents (supports recursive listing)
-
-## Search & Discovery
-- **grep_search**: Fast code search using ripgrep (supports regex, file type filtering, case sensitivity)
-  - Use this to find patterns, function definitions, imports, or any code across the codebase
-  - Example: grep_search with pattern "function.*handleSubmit" to find all handleSubmit functions
-
-## Command Execution
-- **command_execute**: Execute shell commands (npm, git, build tools, etc.)
-  - npm install/run, git status/diff/add/commit, build commands, test runners
-  - Returns both stdout and stderr
-  - Example: command_execute with "npm install lodash" or "git status"
-
-# WORKFLOW BEST PRACTICES
-
-## 1. Understand First
-- Use file_list to explore directory structure
-- Use grep_search to find relevant code patterns
-- Use file_read to understand existing code before modifying
-
-## 2. Make Changes Carefully
-- For small changes: Use file_edit (safer, preserves file structure)
-- For new files or complete rewrites: Use file_write
-- Always include proper context in file_edit (enough surrounding code to make replacement unique)
-
-## 3. Execute & Verify
-- After code changes, run relevant commands:
-  - command_execute "npm run lint" or "npm run type-check"
-  - command_execute "npm test" for tests
-  - command_execute "git diff" to see changes
-- Verify file changes with file_read
-
-## 4. Handle Dependencies
-- When adding new imports/packages: command_execute "npm install <package>"
-- Check package.json: file_read "package.json"
-- Run build/type check: command_execute "npm run build"
-
-# COMMON PATTERNS
-
-❌ WRONG: "I cannot access your files..."
-✅ CORRECT: Immediately use file_read or file_list
-
-❌ WRONG: "Here's the code you should add: \`\`\`typescript..."
-✅ CORRECT: Use file_write or file_edit to add it now
-
-❌ WRONG: "You need to run npm install"
-✅ CORRECT: Use command_execute "npm install" right now
-
-❌ WRONG: "Let me search for..." then not using grep_search
-✅ CORRECT: Use grep_search immediately to find code
-
-❌ WRONG: Editing files without reading them first
-✅ CORRECT: file_read → understand → file_edit
-
-# ERROR HANDLING
-
-- If a tool fails, read the error message and try alternative approaches
-- If file_edit fails due to non-unique string, include more context or use file_write
-- If command_execute fails, check stderr output and fix the underlying issue
-- If grep_search finds no results, try different patterns or broader search
-
-# COMMUNICATION
-
-- Explain WHAT you're doing as you use each tool
-- After tool execution, explain the RESULT and next steps
-- Keep the user informed of progress through complex multi-step tasks
-- If you discover issues or need clarification, ask before proceeding with destructive changes
-
-Remember: You are a capable autonomous agent. Use your tools to complete tasks fully, not just describe how they could be done.`,
+    content: getCodingAgentSystemPrompt(),
     created_at: Date.now(),
   };
 
   const executionSpecialistMsg: Message = {
     id: 'system-exec',
     role: 'system',
-    content: `You are an EXECUTION SPECIALIST in a ReAct (Reasoning + Acting) loop.
-
-WORKFLOW:
-1. Think: Reason about what needs to be done next
-2. Act: Use tools to make progress toward the goal
-3. Observe: Analyze tool results
-4. Repeat: Continue until task is complete
-
-PRIORITIES:
-- Focus on IMPLEMENTATION, not planning
-- Use tools IMMEDIATELY when they can help
-- Make CONCRETE PROGRESS in each iteration
-- Don't overthink - take action and adjust based on results
-
-ITERATION BUDGET:
-- You have up to 50 iterations to complete complex tasks
-- Use them wisely: batch related operations, verify as you go
-- If stuck after several iterations, try a different approach or ask for guidance`,
+    content: getExecutionSpecialistPrompt(),
     created_at: Date.now(),
   };
 
-  const messagesWithContext = [codingSystemMsg, executionSpecialistMsg, ...limitedMessages];
+  const messagesWithContext = [codingSystemMsg, executionSpecialistMsg];
+
+  if (ragContext) {
+    messagesWithContext.push({
+      id: 'system-rag',
+      role: 'system',
+      content: `참고 문서:\n${ragContext}\n\n위 참고 문서를 작업에 활용하세요.`,
+      created_at: Date.now(),
+    });
+  }
+
+  // Add plan step awareness if plan exists
+  if (state.planSteps && state.planSteps.length > 0) {
+    const currentStep = state.currentPlanStep || 0;
+    if (currentStep < state.planSteps.length) {
+      const stepMessage: Message = {
+        id: `step-${Date.now()}`,
+        role: 'system',
+        content: getPlanStepPrompt(
+          currentStep,
+          state.planSteps.length,
+          state.planSteps[currentStep]
+        ),
+        created_at: Date.now(),
+      };
+      messagesWithContext.push(stepMessage);
+    }
+  }
+
+  // Use ContextManager for intelligent context management
+  const optimizedMessages = CodingAgentGraph.contextManager.getOptimizedContext(
+    filteredMessages,
+    messagesWithContext
+  );
+
+  // Log token statistics
+  const tokenStats = CodingAgentGraph.contextManager.getTokenStats(optimizedMessages);
+  console.log('[CodingAgent.Agent] Token usage:', {
+    total: tokenStats.totalTokens,
+    utilization: `${tokenStats.utilization}%`,
+    remaining: tokenStats.remaining,
+  });
+
+  // Replace messages with optimized set (system messages already included)
+  messagesWithContext.length = 0;
+  messagesWithContext.push(...optimizedMessages);
 
   try {
     // Call LLM with tools (streaming)
@@ -663,17 +748,26 @@ ITERATION BUDGET:
     // Parse tool calls
     const toolCalls = finalToolCalls?.map((tc: any, index: number) => {
       const toolCallId = tc.id || `call_${Date.now()}_${index}`;
-
+      let parsedArgs: any;
+      try {
+        parsedArgs =
+          typeof tc.function.arguments === 'string'
+            ? JSON.parse(tc.function.arguments)
+            : tc.function.arguments || {};
+      } catch (err) {
+        console.warn('[CodingAgent.Agent] Failed to parse tool args, using raw value', err);
+        parsedArgs = tc.function.arguments || {};
+      }
       console.log('[CodingAgent.Agent] Tool call:', {
         id: toolCallId,
         name: tc.function.name,
-        arguments: tc.function.arguments,
+        arguments: parsedArgs,
       });
 
       return {
         id: toolCallId,
         name: tc.function.name,
-        arguments: JSON.parse(tc.function.arguments),
+        arguments: parsedArgs,
       };
     });
 
@@ -722,15 +816,121 @@ async function approvalNode(state: CodingAgentState): Promise<Partial<CodingAgen
   if (toolCalls.length === 0) {
     return {
       lastApprovalStatus: 'approved',
+      approvalHistory: [
+        ...(state.approvalHistory || []),
+        `[${new Date().toISOString()}] no tools -> auto-approved`,
+      ],
     };
   }
 
-  // For now, auto-approve all tools
-  // TODO: Implement interrupt() for manual approval of sensitive tools
+  // Detect user intent for approvals
+  const lastUserMessage = [...(state.messages || [])].reverse().find((m) => m.role === 'user');
+  const userText = lastUserMessage?.content || '';
+  const wantsAlwaysApprove = /항상\s*승인/.test(userText);
+  const oneTimeApprove = /(^|\s)(승인|허용)(\s|$)/.test(userText);
+
+  const alwaysApprove = state.alwaysApproveTools || wantsAlwaysApprove;
+
+  // Safety checks for shell execution
+  const dangerousPatterns = [
+    /rm\s+-rf/i,
+    /del\s+\/s/i,
+    /rd\s+\/s/i,
+    /format\s+/i,
+    /mkfs/i,
+    /shutdown/i,
+    /poweroff/i,
+    /dd\s+if=/i,
+  ];
+
+  const networkInstallPatterns = [
+    /\bnpm\s+(install|i)\b/i,
+    /\byarn\s+add\b/i,
+    /\bpnpm\s+(add|install)\b/i,
+    /\bpip\s+install\b/i,
+    /\bapt(-get)?\s+install\b/i,
+    /\bbrew\s+install\b/i,
+    /\bcurl\b.*https?:\/\//i,
+    /\bwget\b.*https?:\/\//i,
+  ];
+
+  const blocked = toolCalls.find((call: any) => {
+    if (call.name !== 'command_execute' || typeof call.arguments?.command !== 'string') {
+      return false;
+    }
+    const cmd = call.arguments.command;
+    return dangerousPatterns.some((p) => p.test(cmd));
+  });
+
+  const needsApproval = toolCalls.find((call: any) => {
+    if (call.name !== 'command_execute' || typeof call.arguments?.command !== 'string') {
+      return false;
+    }
+    const cmd = call.arguments.command;
+    return networkInstallPatterns.some((p) => p.test(cmd));
+  });
+
+  if (blocked) {
+    const warning = `⚠️ 위험 명령이 감지되어 실행을 차단했습니다: ${blocked.arguments.command}`;
+    emitStreamingChunk(warning, state.conversationId);
+    console.warn('[Approval] Blocking dangerous command:', blocked.arguments.command);
+    return {
+      lastApprovalStatus: 'denied',
+      alwaysApproveTools: alwaysApprove,
+      approvalHistory: [
+        ...(state.approvalHistory || []),
+        `[${new Date().toISOString()}] denied dangerous: ${blocked.arguments.command}`,
+      ],
+      messages: [
+        {
+          id: `approval-${Date.now()}`,
+          role: 'assistant',
+          content: warning,
+          created_at: Date.now(),
+        },
+      ],
+    };
+  }
+
+  if (needsApproval && !alwaysApprove && !oneTimeApprove) {
+    const note = `⚠️ 네트워크/패키지 설치 명령은 승인 후 실행됩니다. 승인하려면 "승인", 항상 승인하려면 "항상 승인"이라고 답변해주세요. 명령: ${
+      needsApproval.arguments.command
+    }`;
+    emitStreamingChunk(note, state.conversationId);
+    console.log('[Approval] Network/install command requires explicit approval');
+    return {
+      lastApprovalStatus: 'feedback',
+      alwaysApproveTools: alwaysApprove,
+      approvalHistory: [
+        ...(state.approvalHistory || []),
+        `[${new Date().toISOString()}] pending approval (network/install): ${needsApproval.arguments.command}`,
+      ],
+      messages: [
+        {
+          id: `approval-${Date.now()}`,
+          role: 'assistant',
+          content: note,
+          created_at: Date.now(),
+        },
+      ],
+    };
+  }
+
+  if (oneTimeApprove && needsApproval) {
+    console.log('[Approval] One-time approval granted by user message');
+  }
+
+  // For now, auto-approve remaining tools (non-sensitive or user-approved).
+  // interrupt() 연동 시 여기서 UI 승인 흐름을 붙일 수 있습니다.
   console.log(`[Approval] Auto-approving ${toolCalls.length} tool(s)`);
 
   return {
     lastApprovalStatus: 'approved',
+    alwaysApproveTools: alwaysApprove,
+    approvalHistory: [
+      ...(state.approvalHistory || []),
+      `[${new Date().toISOString()}] approved${alwaysApprove ? ' (always)' : ''}`,
+    ],
   };
 }
 
@@ -760,6 +960,28 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
   );
   console.log('[CodingAgent.Tools] Built-in tools available:', Array.from(builtinToolNames));
 
+  // Check for redundant calls and optimization opportunities
+  const redundancyCheck = CodingAgentGraph.toolSelector.detectRedundantCalls(
+    lastMessage.tool_calls
+  );
+  if (redundancyCheck.isRedundant) {
+    console.warn(
+      '[CodingAgent.Tools] Redundant tool calls detected:',
+      redundancyCheck.redundantCalls.length
+    );
+    emitStreamingChunk(`\n⚠️ ${redundancyCheck.suggestion}\n`, state.conversationId);
+  }
+
+  const optimizationSuggestions = CodingAgentGraph.toolSelector.suggestOptimization(
+    lastMessage.tool_calls
+  );
+  if (optimizationSuggestions.length > 0) {
+    console.log('[CodingAgent.Tools] Optimization suggestions:', optimizationSuggestions);
+    for (const suggestion of optimizationSuggestions) {
+      emitStreamingChunk(`\n${suggestion}\n`, state.conversationId);
+    }
+  }
+
   // Execute tools
   type ToolExecutionResult = {
     toolCallId: string;
@@ -768,16 +990,83 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
     error?: string;
   };
 
+  // Log tool execution start (Detailed)
+  if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+    const currentIter = (state.iterationCount || 0) + 1;
+    const maxIter = state.maxIterations || 10;
+    let logMessage = `\n\n---\n🔄 **Iteration ${currentIter}/${maxIter}**\n`;
+
+    for (const toolCall of lastMessage.tool_calls) {
+      logMessage += `\n🛠️ **Call:** \`${toolCall.name}\`\n`;
+      try {
+        const args =
+          typeof toolCall.arguments === 'string'
+            ? toolCall.arguments
+            : JSON.stringify(toolCall.arguments, null, 2);
+        logMessage += `📂 **Args:**\n\`\`\`json\n${args}\n\`\`\`\n`;
+      } catch {
+        logMessage += `📂 **Args:** (parsing failed)\n`;
+      }
+    }
+    emitStreamingChunk(logMessage, state.conversationId);
+  }
+
   const results: ToolExecutionResult[] = await Promise.all(
     lastMessage.tool_calls.map(async (call): Promise<ToolExecutionResult> => {
       const startTime = Date.now();
 
       try {
+        // Track file before modification (for file write/edit operations)
+        let beforeSnapshot = null;
+        const isFileModifyOp = call.name === 'file_write' || call.name === 'file_edit';
+        if (
+          isFileModifyOp &&
+          typeof call.arguments === 'object' &&
+          call.arguments !== null &&
+          'file_path' in call.arguments &&
+          typeof call.arguments.file_path === 'string'
+        ) {
+          beforeSnapshot = await CodingAgentGraph.fileTracker.trackBeforeModify(
+            call.arguments.file_path
+          );
+        }
+
         // Check if it's a built-in tool
         if (builtinToolNames.has(call.name)) {
           console.log(`[CodingAgent.Tools] Executing builtin tool: ${call.name}`);
-          const result = await executeBuiltinTool(call.name, call.arguments);
-          const duration = Date.now() - startTime;
+
+          // Execute with retry and timeout
+          const TOOL_EXECUTION_TIMEOUT = 360000; // 6 minutes
+          const retryResult = await ErrorRecovery.withTimeoutAndRetry(
+            () => executeBuiltinTool(call.name, call.arguments),
+            TOOL_EXECUTION_TIMEOUT,
+            { maxRetries: 2, initialDelayMs: 2000 }, // Retry twice with 2s initial delay
+            `builtin tool '${call.name}'`
+          );
+
+          if (!retryResult.success) {
+            throw retryResult.error;
+          }
+
+          const result = retryResult.result!;
+          const duration = retryResult.totalDurationMs;
+
+          // Record tool usage in ToolSelector
+          CodingAgentGraph.toolSelector.recordUsage(call.name, true, duration);
+
+          // Track file after modification
+          if (
+            isFileModifyOp &&
+            typeof call.arguments === 'object' &&
+            call.arguments !== null &&
+            'file_path' in call.arguments &&
+            typeof call.arguments.file_path === 'string'
+          ) {
+            await CodingAgentGraph.fileTracker.trackAfterModify(
+              call.arguments.file_path,
+              beforeSnapshot
+            );
+          }
 
           // Save activity to database (non-blocking)
           if (
@@ -807,11 +1096,90 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
             result: result,
           };
         } else {
-          // Not a built-in tool, should not happen in Coding Agent
-          // But if it does, log a warning
-          console.warn(`[CodingAgent.Tools] Non-builtin tool called: ${call.name}`);
+          // Try to execute as MCP tool
+          console.log(`[CodingAgent.Tools] Checking MCP tools for: ${call.name}`);
 
-          const errorMsg = `Tool '${call.name}' is not a built-in tool for Coding Agent`;
+          const mcpTools = MCPServerManager.getAllToolsInMainProcess();
+          const targetTool = mcpTools.find((t) => t.name === call.name);
+
+          if (targetTool) {
+            console.log(
+              `[CodingAgent.Tools] Executing MCP tool: ${call.name} on server ${targetTool.serverName}`
+            );
+
+            // Execute with retry and timeout
+            const TOOL_EXECUTION_TIMEOUT = 360000; // 6 minutes
+            const retryResult = await ErrorRecovery.withTimeoutAndRetry(
+              () =>
+                MCPServerManager.callToolInMainProcess(
+                  targetTool.serverName,
+                  call.name,
+                  call.arguments
+                ),
+              TOOL_EXECUTION_TIMEOUT,
+              { maxRetries: 2, initialDelayMs: 2000 },
+              `MCP tool '${call.name}'`
+            );
+
+            if (!retryResult.success) {
+              throw retryResult.error;
+            }
+
+            const mcpResult = retryResult.result!;
+
+            // Extract text result
+            let resultText = '';
+            if (!mcpResult) {
+              resultText = 'Tool returned no result';
+            } else if (mcpResult.content && Array.isArray(mcpResult.content)) {
+              resultText = mcpResult.content
+                .map((item: any) => item.text || '')
+                .filter((t: string) => t)
+                .join('\n');
+            } else if (typeof mcpResult === 'string') {
+              resultText = mcpResult;
+            } else {
+              resultText = JSON.stringify(mcpResult);
+            }
+
+            const duration = retryResult.totalDurationMs;
+
+            // Record tool usage in ToolSelector
+            CodingAgentGraph.toolSelector.recordUsage(call.name, true, duration);
+
+            // Save activity
+            if (
+              state.conversationId &&
+              typeof window !== 'undefined' &&
+              window.electronAPI?.activity
+            ) {
+              const activity: Activity = {
+                id: uuidv4(),
+                conversation_id: state.conversationId,
+                tool_name: call.name,
+                tool_args: call.arguments as Record<string, unknown>,
+                result: resultText,
+                status: 'success',
+                created_at: Date.now(),
+                duration_ms: duration,
+              };
+
+              window.electronAPI.activity.saveActivity(activity).catch((error) => {
+                console.error('[CodingAgent.Tools] Failed to save activity:', error);
+              });
+            }
+
+            return {
+              toolCallId: call.id,
+              toolName: call.name,
+              result: resultText,
+            };
+          }
+
+          // Not a built-in tool AND not an MCP tool
+          console.warn(`[CodingAgent.Tools] Unknown tool called: ${call.name}`);
+
+          const errorMsg = `Tool '${call.name}' not found (neither built-in nor MCP)`;
           const duration = Date.now() - startTime;
 
           // Save error activity
@@ -846,7 +1214,14 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
       } catch (error: any) {
         console.error(`[CodingAgent.Tools] Error executing ${call.name}:`, error);
         const duration = Date.now() - startTime;
-        const errorMsg = error.message || 'Tool execution failed';
+
+        // Record tool failure in ToolSelector
+        CodingAgentGraph.toolSelector.recordUsage(call.name, false, duration, error.message);
+
+        // Format error message with recovery suggestion
+        const formattedError = ErrorRecovery.formatErrorMessage(error, 1);
+        const suggestion = ErrorRecovery.getRecoverySuggestion(error);
+        const errorMsg = `${formattedError}\n\n${suggestion}`;
 
         // Save error activity
         if (state.conversationId && typeof window !== 'undefined' && window.electronAPI?.activity) {
@@ -875,6 +1250,44 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
       }
     })
   );
+
+  // Log tool execution end (Detailed)
+  if (results.length > 0) {
+    let logMessage = `\n<small>\n`;
+
+    for (const result of results) {
+      const status = result.error ? '❌ Error' : '✅ Result';
+      logMessage += `${status}: \`${result.toolName}\`\n\n`;
+
+      let output = result.error || result.result || '(no output)';
+      if (typeof output !== 'string') {
+        output = JSON.stringify(output, null, 2);
+      }
+
+      // Shorten output for better UX (300 chars instead of 1000)
+      if (output.length > 300) {
+        output = `${output.substring(0, 300)}\n... (output truncated for readability)`;
+      }
+
+      // Use inline code instead of code block for shorter output
+      if (output.length < 100 && !output.includes('\n')) {
+        logMessage += `📄 Output: \`${output}\`\n\n`;
+      } else {
+        logMessage += `📄 Output:\n\`\`\`\n${output}\n\`\`\`\n\n`;
+      }
+    }
+    logMessage += `</small>`;
+    emitStreamingChunk(`${logMessage}---\n\n`, state.conversationId);
+  }
+
+  // Create rollback point after successful file modifications
+  const hasFileModifications = results.some(
+    (r) => !r.error && (r.toolName === 'file_write' || r.toolName === 'file_edit')
+  );
+  if (hasFileModifications) {
+    const currentIter = (state.iterationCount || 0) + 1;
+    CodingAgentGraph.fileTracker.createRollbackPoint(`After iteration ${currentIter}`);
+  }
 
   // Get file snapshot after tool execution
   const filesAfter = await getWorkspaceFiles(workspacePath);
@@ -911,14 +1324,17 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 
   const updates: Partial<CodingAgentState> = {
     toolResults: results,
-    messages: toolMessages, // Add tool result messages
+    messages: [...(state.messages || []), ...toolMessages], // Append tool result messages
   };
 
   // Track file changes if any
   if (fileChanges.added.length > 0 || fileChanges.modified.length > 0) {
     const totalChanges = fileChanges.added.length + fileChanges.modified.length;
-    updates.fileChangesCount = totalChanges;
+    updates.fileChangesCount = totalChanges + fileChanges.deleted.length;
     updates.modifiedFiles = [...fileChanges.added, ...fileChanges.modified];
+    if (fileChanges.deleted.length > 0) {
+      updates.deletedFiles = fileChanges.deleted;
+    }
 
     console.log(`[CodingAgent.Tools] File changes detected: ${totalChanges} files`);
   }
@@ -927,7 +1343,7 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 }
 
 /**
- * Verification Node: Validate execution results
+ * Verification Node: Validate execution results with automated checks
  */
 async function verificationNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
   console.log('[Verification] Validating execution results');
@@ -952,6 +1368,45 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
       verificationNotes: ['⚠️ Plan ready, awaiting execution'],
       needsAdditionalIteration: true,
     };
+  }
+
+  // Run automated verification pipeline if files were modified
+  if (state.modifiedFiles && state.modifiedFiles.length > 0) {
+    console.log('[Verification] Running automated verification pipeline...');
+    const pipeline = new VerificationPipeline();
+
+    try {
+      const verificationResult = await pipeline.verify(state);
+
+      if (!verificationResult.allPassed) {
+        console.log('[Verification] Verification failed:', verificationResult);
+
+        const failedChecks = verificationResult.checks.filter((c) => !c.passed);
+        const failureMessage: Message = {
+          id: `verification-${Date.now()}`,
+          role: 'user',
+          content: `⚠️ 코드 검증 실패:
+${failedChecks.map((c) => `- ${c.message}: ${c.details?.substring(0, 200)}`).join('\n')}
+
+${verificationResult.suggestions.join('\n')}
+
+위 문제를 수정한 후 계속 진행하세요.`,
+          created_at: Date.now(),
+        };
+
+        return {
+          messages: [failureMessage],
+          verificationNotes: failedChecks.map((c) => `❌ ${c.name}: ${c.message}`),
+          needsAdditionalIteration: true,
+        };
+      } else {
+        console.log('[Verification] All automated checks passed');
+        emitStreamingChunk('\n✅ **자동 검증 통과** (타입 체크, 린트)\n\n', state.conversationId);
+      }
+    } catch (error: any) {
+      console.error('[Verification] Verification pipeline error:', error);
+      // Continue anyway - don't block on verification errors
+    }
   }
 
   // Check required files (for MODIFICATION tasks)
@@ -986,6 +1441,13 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
     console.log(
       `[Verification] Advancing to next plan step (${currentStep + 1}/${planSteps.length})`
     );
+
+    emitStreamingChunk(
+      `\n📋 **Step ${currentStep + 1}/${planSteps.length} 완료** ✅\n` +
+        `➡️ 다음 단계: ${planSteps[currentStep + 1]}\n\n`,
+      state.conversationId
+    );
+
     return {
       currentPlanStep: currentStep + 1,
       verificationNotes: ['✅ Step completed, moving to next'],
@@ -1002,19 +1464,20 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
 }
 
 /**
- * Reporter Node: Generate final summary (only for errors or max iterations)
+ * Reporter Node: Generate final summary for all completions
  */
 async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
-  console.log('[Reporter] Checking if final report is needed');
+  console.log('[Reporter] Generating final summary');
 
   const hasToolError = state.toolResults?.some((r) => r.error);
   const hasAgentError = state.agentError && state.agentError.length > 0;
-  const maxIterations = state.maxIterations || 10;
+  const maxIterations = state.maxIterations || 50;
   const iterationCount = state.iterationCount || 0;
+  const modifiedFilesCount = state.modifiedFiles?.length || 0;
+  const deletedFilesCount = state.deletedFiles?.length || 0;
 
-  // Only generate a report message for errors or max iterations reached
+  // Error cases
   if (hasAgentError) {
-    // Agent error already has user-friendly message, no need for additional report
     console.log('[Reporter] Agent error already reported in messages');
     return {};
   } else if (hasToolError) {
@@ -1043,9 +1506,49 @@ async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgen
     };
   }
 
-  // Normal completion - no additional message needed
-  console.log('[Reporter] Normal completion, no report message generated');
-  return {};
+  // Success case - generate summary
+  console.log('[Reporter] Normal completion, generating summary');
+
+  const summaryParts: string[] = [];
+  summaryParts.push('✅ **작업 완료**\n');
+
+  // File changes
+  if (modifiedFilesCount > 0 || deletedFilesCount > 0) {
+    summaryParts.push(
+      `📁 **변경된 파일**: ${modifiedFilesCount}개 수정${deletedFilesCount > 0 ? `, ${deletedFilesCount}개 삭제` : ''}`
+    );
+    if (state.modifiedFiles && state.modifiedFiles.length > 0) {
+      const fileList = state.modifiedFiles
+        .slice(0, 10)
+        .map((f) => `  - ${f}`)
+        .join('\n');
+      summaryParts.push(fileList);
+      if (state.modifiedFiles.length > 10) {
+        summaryParts.push(`  ... 및 ${state.modifiedFiles.length - 10}개 파일 더`);
+      }
+    }
+  }
+
+  // Iteration count
+  summaryParts.push(`\n🔁 **Iterations**: ${iterationCount}회`);
+
+  // Plan completion
+  if (state.planSteps && state.planSteps.length > 0) {
+    summaryParts.push(
+      `📋 **Plan Steps**: ${state.currentPlanStep + 1}/${state.planSteps.length} 완료`
+    );
+  }
+
+  const summaryMessage: Message = {
+    id: `report-${Date.now()}`,
+    role: 'assistant',
+    content: summaryParts.join('\n'),
+    created_at: Date.now(),
+  };
+
+  return {
+    messages: [summaryMessage],
+  };
 }
 
 // ===========================
@@ -1144,6 +1647,14 @@ export function createCodingAgentGraph() {
 
 export class CodingAgentGraph {
   private toolApprovalCallback?: (toolCalls: any[]) => Promise<boolean>;
+  public static toolSelector: ToolSelector = new ToolSelector();
+  public static fileTracker: FileTracker = new FileTracker();
+  public static codebaseAnalyzer: CodebaseAnalyzer = new CodebaseAnalyzer();
+  public static contextManager: ContextManager = new ContextManager(100000); // 100k tokens
+
+  constructor() {
+    // 유틸리티는 static으로 공유 (세션 간 통계 유지)
+  }
 
   async *stream(
     initialState: CodingAgentState,
@@ -1152,14 +1663,47 @@ export class CodingAgentGraph {
     this.toolApprovalCallback = toolApprovalCallback;
     let state = { ...initialState };
 
-    console.log('[CodingAgentGraph] Starting stream (simplified Claude Code style)');
+    console.log('[CodingAgentGraph] Starting stream with full planning pipeline');
 
     try {
-      const maxIterations = state.maxIterations || 10;
+      // === PHASE 1: Triage ===
+      console.log('[CodingAgentGraph] Phase 1: Triage');
+      yield { type: 'node', node: 'triage', data: { status: 'starting' } };
+      const triageResult = await triageNode(state);
+      state = { ...state, ...triageResult };
+      yield { type: 'node', node: 'triage', data: triageResult };
+
+      // If simple question, use direct response
+      if (state.triageDecision === 'direct_response') {
+        console.log('[CodingAgentGraph] Simple question detected, using direct response');
+        yield { type: 'node', node: 'direct_response', data: { status: 'starting' } };
+        const directResult = await directResponseNode(state);
+        state = { ...state, messages: [...state.messages, ...(directResult.messages || [])] };
+        yield {
+          type: 'node',
+          node: 'direct_response',
+          data: { ...directResult, messages: state.messages },
+        };
+        return;
+      }
+
+      // === PHASE 2: Planning ===
+      console.log('[CodingAgentGraph] Phase 2: Planning');
+      yield { type: 'node', node: 'planner', data: { status: 'starting' } };
+      const planResult = await planningNode(state);
+      state = {
+        ...state,
+        ...planResult,
+        messages: [...state.messages, ...(planResult.messages || [])],
+      };
+      yield { type: 'node', node: 'planner', data: { ...planResult, messages: state.messages } };
+
+      const maxIterations = state.maxIterations || 50;
       let iterations = 0;
       let hasError = false;
 
-      // Main ReAct loop (simplified - no triage, no planner)
+      // === PHASE 3: Main ReAct loop with plan awareness ===
+      console.log('[CodingAgentGraph] Phase 3: Execution (max iterations:', maxIterations, ')');
       while (iterations < maxIterations) {
         // Agent (LLM with tools)
         yield { type: 'node', node: 'agent', data: { status: 'starting' } };
@@ -1184,6 +1728,62 @@ export class CodingAgentGraph {
         if (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) {
           // No tools - normal completion
           console.log('[CodingAgentGraph] No tool calls, ending loop');
+          break;
+        }
+
+        const sensitiveToolCalls = (lastMessage.tool_calls || []).filter((call: any) => {
+          if (call.name !== 'command_execute' || typeof call.arguments?.command !== 'string') {
+            return false;
+          }
+          const cmd = call.arguments.command;
+          const danger = [
+            /rm\s+-rf/i,
+            /del\s+\/s/i,
+            /rd\s+\/s/i,
+            /format\s+/i,
+            /mkfs/i,
+            /dd\s+if=/i,
+          ];
+          const installs = [
+            /\bnpm\s+(install|i)\b/i,
+            /\byarn\s+add\b/i,
+            /\bpnpm\s+(add|install)\b/i,
+            /\bpip\s+install\b/i,
+            /\bapt(-get)?\s+install\b/i,
+            /\bbrew\s+install\b/i,
+            /\bcurl\b.*https?:\/\//i,
+            /\bwget\b.*https?:\/\//i,
+          ];
+          return danger.some((p) => p.test(cmd)) || installs.some((p) => p.test(cmd));
+        });
+
+        if (
+          !state.alwaysApproveTools &&
+          sensitiveToolCalls.length > 0 &&
+          !this.toolApprovalCallback
+        ) {
+          const approvalNote =
+            '⚠️ 민감한 명령이 포함되어 실행 전 승인이 필요합니다. "승인" 또는 "항상 승인" 여부를 알려주세요.';
+          yield {
+            type: 'tool_approval_request',
+            messageId: lastMessage.id,
+            toolCalls: sensitiveToolCalls,
+            note: approvalNote,
+          };
+          state = {
+            ...state,
+            messages: [
+              ...state.messages,
+              {
+                id: `approval-${Date.now()}`,
+                role: 'assistant',
+                content: approvalNote,
+                created_at: Date.now(),
+              },
+            ],
+            lastApprovalStatus: 'feedback',
+          };
+          console.log('[CodingAgentGraph] Sensitive commands detected; awaiting user approval');
           break;
         }
 
@@ -1250,9 +1850,31 @@ export class CodingAgentGraph {
           messages: [...state.messages, ...(toolsResult.messages || [])],
           toolResults: toolsResult.toolResults || state.toolResults,
           modifiedFiles: toolsResult.modifiedFiles || state.modifiedFiles,
+          deletedFiles: toolsResult.deletedFiles || state.deletedFiles,
           fileChangesCount: (state.fileChangesCount || 0) + (toolsResult.fileChangesCount || 0),
         };
         yield { type: 'node', node: 'tools', data: { ...toolsResult, messages: state.messages } };
+
+        // Run verification after tools
+        yield { type: 'node', node: 'verifier', data: { status: 'starting' } };
+        const verificationResult = await verificationNode(state);
+        state = {
+          ...state,
+          ...verificationResult,
+          messages: [...state.messages, ...(verificationResult.messages || [])],
+          iterationCount: iterations + 1, // Update iteration count
+        };
+        yield {
+          type: 'node',
+          node: 'verifier',
+          data: { ...verificationResult, messages: state.messages },
+        };
+
+        // Check if we need to continue (based on verification)
+        if (!verificationResult.needsAdditionalIteration) {
+          console.log('[CodingAgentGraph] Verification indicates completion, ending loop');
+          break;
+        }
 
         iterations++;
       }

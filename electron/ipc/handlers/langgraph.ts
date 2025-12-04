@@ -4,7 +4,7 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
-import { Message, ToolCall, ComfyUIConfig, NetworkConfig } from '../../../types';
+import { Message, ToolCall, ImageGenConfig, NetworkConfig } from '../../../types';
 import { GraphFactory } from '../../../lib/langgraph';
 import type { GraphConfig } from '../../../lib/langgraph/types';
 import { logger } from '../../services/logger';
@@ -14,6 +14,7 @@ import {
   setCurrentConversationId,
   setCurrentGraphConfig,
   setCurrentComfyUIConfig,
+  setCurrentImageGenConfig,
   setCurrentNetworkConfig,
   setCurrentWorkingDirectory,
   clearConversationCallbacks,
@@ -48,12 +49,26 @@ export function requestToolApproval(
     // Store the promise callbacks
     pendingToolApprovals.set(conversationId, { resolve, reject });
 
-    // Send approval request to renderer
-    sender.send('langgraph-tool-approval-request', {
+    const event = {
+      type: 'tool_approval_request',
       conversationId,
       messageId,
       toolCalls,
+    };
+
+    // DEBUG: Log the event being sent
+    logger.info(`[LangGraph IPC] DEBUG: Sending tool_approval_request event`, {
+      conversationId,
+      messageId,
+      toolCallsCount: toolCalls.length,
+      toolNames: toolCalls.map((tc) => tc.name),
+      event,
     });
+
+    // Send approval request to renderer via stream event (consistent with other events)
+    sender.send('langgraph-stream-event', event);
+
+    logger.info(`[LangGraph IPC] Tool approval request sent for ${conversationId}`);
 
     // Set a timeout (5 minutes) to prevent hanging indefinitely
     setTimeout(
@@ -79,7 +94,7 @@ export function setupLangGraphHandlers() {
    */
   ipcMain.handle(
     'langgraph-tool-approval-response',
-    async (_event, conversationId: string, approved: boolean) => {
+    async (event, conversationId: string, approved: boolean) => {
       const pending = pendingToolApprovals.get(conversationId);
       if (pending) {
         pendingToolApprovals.delete(conversationId);
@@ -87,6 +102,14 @@ export function setupLangGraphHandlers() {
         logger.info(
           `[LangGraph IPC] Tool approval response: ${approved ? 'approved' : 'rejected'} for ${conversationId}`
         );
+
+        // Send approval result via stream event for consistent event handling
+        event.sender.send('langgraph-stream-event', {
+          type: 'tool_approval_result',
+          conversationId,
+          approved,
+        });
+
         return { success: true };
       } else {
         logger.warn(`[LangGraph IPC] No pending approval for ${conversationId}`);
@@ -106,7 +129,7 @@ export function setupLangGraphHandlers() {
       graphConfig: GraphConfig,
       messages: Message[],
       conversationId?: string,
-      comfyUIConfig?: ComfyUIConfig,
+      imageGenConfig?: ImageGenConfig,
       networkConfig?: NetworkConfig,
       workingDirectory?: string
     ) => {
@@ -137,12 +160,14 @@ export function setupLangGraphHandlers() {
         // This allows generateWithToolsNode to check enableImageGeneration
         setCurrentGraphConfig(graphConfig);
 
-        // Set ComfyUI config for image generation in Main Process
-        if (comfyUIConfig) {
-          setCurrentComfyUIConfig(comfyUIConfig);
-          logger.info(
-            `[LangGraph IPC] ComfyUI config set: enabled=${comfyUIConfig.enabled}, url=${comfyUIConfig.httpUrl}`
-          );
+        // Set ImageGen config for image generation in Main Process
+        if (imageGenConfig) {
+          setCurrentImageGenConfig(imageGenConfig);
+          // Also set legacy ComfyUI config for backward compatibility
+          if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui) {
+            setCurrentComfyUIConfig(imageGenConfig.comfyui);
+          }
+          logger.info(`[LangGraph IPC] ImageGen config set: provider=${imageGenConfig.provider}`);
         }
         if (networkConfig) {
           setCurrentNetworkConfig(networkConfig);

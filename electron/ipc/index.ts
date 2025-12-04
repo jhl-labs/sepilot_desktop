@@ -14,6 +14,8 @@ import { setupLangGraphHandlers } from './handlers/langgraph';
 import { setupVectorDBHandlers } from './handlers/vectordb';
 import { registerFileHandlers } from './handlers/file';
 import { setupGitHubHandlers } from './handlers/github';
+import { setupGitHubSyncHandlers } from './handlers/github-sync';
+import { setupTeamDocsHandlers } from './handlers/team-docs';
 import { setupEmbeddingsHandlers } from './handlers/embeddings';
 import { setupComfyUIHandlers } from './handlers/comfyui';
 import { setupUpdateHandlers } from './handlers/update';
@@ -22,7 +24,10 @@ import { setupBrowserViewHandlers } from './handlers/browser-view';
 import { setupBrowserControlHandlers } from './handlers/browser-control';
 import { setupTerminalHandlers } from './handlers/terminal';
 import { setupPersonaHandlers } from './handlers/persona';
+import { setupErrorReportingHandlers } from './handlers/error-reporting';
+import { setupTestRunnerHandlers } from './handlers/test-runner';
 import { logger } from '../services/logger';
+import { setupPresentationExportHandlers } from './handlers/presentation-export';
 
 /**
  * Register all IPC handlers
@@ -40,6 +45,8 @@ export function setupIpcHandlers(mainWindow?: BrowserWindow) {
   setupVectorDBHandlers();
   registerFileHandlers();
   setupGitHubHandlers();
+  setupGitHubSyncHandlers();
+  setupTeamDocsHandlers();
   setupEmbeddingsHandlers();
   setupComfyUIHandlers();
   setupUpdateHandlers();
@@ -48,6 +55,9 @@ export function setupIpcHandlers(mainWindow?: BrowserWindow) {
   setupBrowserControlHandlers();
   setupTerminalHandlers(mainWindow);
   setupPersonaHandlers();
+  setupErrorReportingHandlers();
+  setupTestRunnerHandlers();
+  setupPresentationExportHandlers();
 
   logger.info('IPC handlers setup complete');
 }

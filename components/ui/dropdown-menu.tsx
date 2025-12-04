@@ -67,7 +67,7 @@ export const DropdownMenuTrigger = React.forwardRef<HTMLDivElement, DropdownMenu
     };
 
     // Merge refs using a ref callback
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     const mergedRef = React.useCallback(
       (node: HTMLDivElement | null) => {
         // Update context ref
@@ -85,7 +85,7 @@ export const DropdownMenuTrigger = React.forwardRef<HTMLDivElement, DropdownMenu
     );
 
     if (asChild && React.isValidElement(children)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, react-hooks/refs
       return React.cloneElement(children as React.ReactElement<any>, {
         onClick: handleClick,
         ref: mergedRef,
@@ -126,15 +126,32 @@ export function DropdownMenuContent({
     const updatePosition = () => {
       const triggerRect = triggerRef.current!.getBoundingClientRect();
       const contentRect = contentRef.current?.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const contentHeight = contentRect?.height || 200; // fallback height
 
       let top = 0;
       let left = 0;
 
+      // Auto-detect collision: check if there's enough space below
+      const spaceBelow = viewportHeight - triggerRect.bottom;
+      const spaceAbove = triggerRect.top;
+      const needSpaceBelow = contentHeight + 8; // 8px padding
+      const needSpaceAbove = contentHeight + 8;
+
+      let effectiveSide = side;
+
+      // Auto-adjust side based on available space
+      if (side === 'bottom' && spaceBelow < needSpaceBelow && spaceAbove > needSpaceAbove) {
+        effectiveSide = 'top';
+      } else if (side === 'top' && spaceAbove < needSpaceAbove && spaceBelow > needSpaceBelow) {
+        effectiveSide = 'bottom';
+      }
+
       // Calculate vertical position
-      if (side === 'bottom') {
+      if (effectiveSide === 'bottom') {
         top = triggerRect.bottom + 4; // 4px offset
       } else {
-        top = triggerRect.top - (contentRect?.height || 0) - 4;
+        top = triggerRect.top - contentHeight - 4;
       }
 
       // Calculate horizontal position
@@ -145,6 +162,11 @@ export function DropdownMenuContent({
       } else {
         left = triggerRect.left + triggerRect.width / 2 - (contentRect?.width || 0) / 2;
       }
+
+      // Ensure menu doesn't go off-screen horizontally
+      const maxLeft = window.innerWidth - (contentRect?.width || 0) - 8;
+      const minLeft = 8;
+      left = Math.max(minLeft, Math.min(left, maxLeft));
 
       setPosition({ top, left });
     };

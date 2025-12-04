@@ -28,6 +28,7 @@ import { vectorDBService } from './services/vectordb';
 import { AppConfig } from '../types';
 import { initializeBuiltinTools } from '../lib/mcp/tools/executor';
 import { getPTYManager } from './services/pty-manager';
+import { isLLMConfigV2, convertV2ToV1 } from '../lib/config/llm-config-migration';
 
 let mainWindow: BrowserWindow | null = null;
 let quickInputWindow: BrowserWindow | null = null;
@@ -48,8 +49,10 @@ function toggleMenuVisibility() {
   if (!mainWindow) return;
 
   isMenuVisible = !isMenuVisible;
+  logger.info(`[Main] Menu visibility toggled: ${isMenuVisible}`);
 
   if (isMenuVisible) {
+    logger.info('[Main] Setting application menu...');
     // Show default menu
     Menu.setApplicationMenu(
       Menu.buildFromTemplate([
@@ -90,6 +93,65 @@ function toggleMenuVisibility() {
             { role: 'zoom' },
             { type: 'separator' },
             { role: 'close' },
+          ],
+        },
+        {
+          label: 'Test',
+          submenu: [
+            {
+              label: 'Run All Tests',
+              click: async () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('test:run-all-from-menu');
+                }
+              },
+            },
+            {
+              label: 'Health Check',
+              click: async () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('test:health-check-from-menu');
+                }
+              },
+            },
+            { type: 'separator' },
+            {
+              label: 'LLM Interaction Tests',
+              click: async () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('test:run-llm-from-menu');
+                }
+              },
+            },
+            {
+              label: 'Database Tests',
+              click: async () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('test:run-database-from-menu');
+                }
+              },
+            },
+            {
+              label: 'MCP Tool Tests',
+              click: async () => {
+                if (mainWindow) {
+                  mainWindow.webContents.send('test:run-mcp-from-menu');
+                }
+              },
+            },
+            { type: 'separator' },
+            {
+              label: 'Open Test Dashboard',
+              click: async () => {
+                logger.info('[Main] Open Test Dashboard menu clicked');
+                if (mainWindow) {
+                  logger.info('[Main] Sending test:open-dashboard event');
+                  mainWindow.webContents.send('test:open-dashboard');
+                } else {
+                  logger.error('[Main] mainWindow is null');
+                }
+              },
+            },
           ],
         },
         {
@@ -156,6 +218,7 @@ function createWindow() {
   // Register F10 key to toggle menu
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.type === 'keyDown' && input.key === 'F10') {
+      logger.info('[Main] F10 key pressed, toggling menu');
       event.preventDefault();
       toggleMenuVisibility();
     }
@@ -164,7 +227,8 @@ function createWindow() {
   if (isDev) {
     // 개발 환경: Next.js dev 서버
     mainWindow.loadURL('http://localhost:3000');
-    mainWindow.webContents.openDevTools();
+    // DevTools는 필요시 F12 또는 메뉴에서 수동으로 열 수 있습니다
+    // mainWindow.webContents.openDevTools();
     logger.info('Loaded development server');
   } else {
     // 프로덕션: electron-serve를 통해 app:// 프로토콜로 로드
@@ -494,11 +558,30 @@ app.whenReady().then(async () => {
       const configStr = databaseService.getSetting('app_config');
       if (configStr) {
         const config: AppConfig = JSON.parse(configStr);
-        if (config.llm && config.llm.apiKey) {
-          initializeLLMClient(config.llm);
-          logger.info('LLM client initialized from saved config');
+
+        if (config.llm) {
+          // Convert V2 config to V1 if needed
+          let llmConfig = config.llm;
+          if (isLLMConfigV2(llmConfig)) {
+            logger.info('Converting LLM config V2 to V1 for initialization');
+            try {
+              llmConfig = convertV2ToV1(llmConfig);
+            } catch (error) {
+              logger.error('Failed to convert LLM config V2 to V1:', error);
+              logger.info('No LLM config initialized - conversion failed');
+              throw error;
+            }
+          }
+
+          // Check if we have a valid API key
+          if (llmConfig.apiKey) {
+            initializeLLMClient(llmConfig);
+            logger.info('LLM client initialized from saved config');
+          } else {
+            logger.info('No LLM config found or API key missing');
+          }
         } else {
-          logger.info('No LLM config found or API key missing');
+          logger.info('No LLM config found in app_config');
         }
 
         // Initialize VectorDB from saved config

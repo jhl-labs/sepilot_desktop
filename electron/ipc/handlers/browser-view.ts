@@ -81,10 +81,94 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
     },
   });
 
-  // Set User-Agent to standard Chrome
+  // Set User-Agent to latest Chrome (January 2025)
   view.webContents.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
   );
+
+  // Inject stealth script on every page load to bypass bot detection
+  view.webContents.on('did-start-loading', () => {
+    view.webContents
+      .executeJavaScript(
+        `
+      // Wrap in IIFE to avoid variable redeclaration errors
+      (function() {
+        // Skip if already injected
+        if (window.__stealthInjected) return;
+        window.__stealthInjected = true;
+
+        // Remove webdriver flag
+        Object.defineProperty(navigator, 'webdriver', {
+          get: () => false,
+          configurable: true,
+        });
+
+        // Add chrome object
+        if (!window.chrome) {
+          window.chrome = {
+            runtime: {},
+            loadTimes: function () {},
+            csi: function () {},
+            app: {},
+          };
+        }
+
+        // Improve permissions API (save original before overriding)
+        if (!window.__originalPermissionsQuery) {
+          window.__originalPermissionsQuery = window.navigator.permissions.query;
+          window.navigator.permissions.query = (parameters) => {
+            return parameters.name === 'notifications'
+              ? Promise.resolve({ state: 'denied' })
+              : window.__originalPermissionsQuery(parameters);
+          };
+        }
+
+        // Add plugins
+        Object.defineProperty(navigator, 'plugins', {
+          get: () => [
+            {
+              0: { type: 'application/x-google-chrome-pdf', suffixes: 'pdf', description: 'Portable Document Format' },
+              description: 'Portable Document Format',
+              filename: 'internal-pdf-viewer',
+              length: 1,
+              name: 'Chrome PDF Plugin',
+            },
+            {
+              0: { type: 'application/pdf', suffixes: 'pdf', description: '' },
+              description: '',
+              filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
+              length: 1,
+              name: 'Chrome PDF Viewer',
+            },
+          ],
+          configurable: true,
+        });
+
+        // Set natural languages
+        Object.defineProperty(navigator, 'languages', {
+          get: () => ['ko-KR', 'ko', 'en-US', 'en'],
+          configurable: true,
+        });
+
+        // Override WebGL parameters
+        try {
+          if (!window.__webglPatched) {
+            window.__webglPatched = true;
+            const getParameter = WebGLRenderingContext.prototype.getParameter;
+            WebGLRenderingContext.prototype.getParameter = function (parameter) {
+              if (parameter === 37445) return 'Intel Inc.';
+              if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+              return getParameter.apply(this, [parameter]);
+            };
+          }
+        } catch (err) {}
+      })();
+    `
+      )
+      .catch(() => {
+        // Ignore errors - script may not execute on some pages
+      });
+  });
 
   // Handle new window/popup requests - open in new tab
   view.webContents.setWindowOpenHandler(({ url, frameName, features }) => {
@@ -139,7 +223,27 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
 
   // Handle console messages for debugging
   view.webContents.on('console-message', (_, level, message) => {
-    logger.info(`[BrowserView Console] ${message}`);
+    // level: 0=verbose, 1=info, 2=warning, 3=error
+
+    // 무시할 패턴들 (외부 페이지의 harmless errors)
+    const ignoredPatterns = [
+      'TypeError',
+      'postMessage',
+      'The target origin provided',
+      "does not match the recipient window's origin",
+    ];
+
+    const shouldIgnore = ignoredPatterns.some((pattern) => message.includes(pattern));
+
+    if (shouldIgnore) {
+      // External page errors/warnings - log as debug only
+      logger.debug(`[BrowserView Console] ${message}`);
+    } else if (level >= 2) {
+      logger.warn(`[BrowserView Console] ${message}`);
+    } else if (level === 1) {
+      logger.info(`[BrowserView Console] ${message}`);
+    }
+    // verbose(0)는 로깅하지 않음
   });
 
   // Handle navigation errors
@@ -234,12 +338,18 @@ export function setupBrowserViewHandlers() {
 
       tabs.set(tabId, tab);
 
-      // If this is the first tab, make it active
-      if (!activeTabId) {
-        activeTabId = tabId;
-        mainWindow.addBrowserView(view);
-        setActiveBrowserView(view); // For browser control
+      // Hide current active tab if exists
+      if (activeTabId) {
+        const currentTab = tabs.get(activeTabId);
+        if (currentTab) {
+          mainWindow.removeBrowserView(currentTab.view);
+        }
       }
+
+      // Make new tab active
+      activeTabId = tabId;
+      mainWindow.addBrowserView(view);
+      setActiveBrowserView(view); // For browser control
 
       // Load URL
       await view.webContents.loadURL(defaultUrl);
@@ -1124,12 +1234,18 @@ export async function browserCreateTab(url?: string) {
 
     tabs.set(tabId, tab);
 
-    // If this is the first tab, make it active
-    if (!activeTabId) {
-      activeTabId = tabId;
-      mainWindowRef.addBrowserView(view);
-      setActiveBrowserView(view); // For browser control
+    // Hide current active tab if exists
+    if (activeTabId) {
+      const currentTab = tabs.get(activeTabId);
+      if (currentTab) {
+        mainWindowRef.removeBrowserView(currentTab.view);
+      }
     }
+
+    // Make new tab active
+    activeTabId = tabId;
+    mainWindowRef.addBrowserView(view);
+    setActiveBrowserView(view); // For browser control
 
     // Load URL
     await view.webContents.loadURL(defaultUrl);

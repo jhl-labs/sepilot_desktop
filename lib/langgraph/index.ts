@@ -36,6 +36,7 @@ export class GraphFactory {
   private static _codingAgentGraph: any = null;
   private static _browserAgentGraph: any = null;
   private static _editorAgentGraph: any = null;
+  private static _deepWebResearchGraph: any = null; // New static member
 
   // Lazy getters with dynamic imports
   private static async getChatGraph() {
@@ -110,6 +111,14 @@ export class GraphFactory {
     return this._editorAgentGraph;
   }
 
+  private static async getDeepWebResearchGraph() {
+    if (!this._deepWebResearchGraph) {
+      const { createDeepWebResearchGraph } = await import('./graphs/deep-web-research');
+      this._deepWebResearchGraph = createDeepWebResearchGraph();
+    }
+    return this._deepWebResearchGraph;
+  }
+
   /**
    * GraphConfig에 따라 적절한 그래프 선택
    */
@@ -153,6 +162,11 @@ export class GraphFactory {
       case 'deep':
         baseGraph = await this.getDeepThinkingGraph();
         baseState = 'deep';
+        break;
+
+      case 'deep-web-research':
+        baseGraph = await this.getDeepWebResearchGraph();
+        baseState = 'agent'; // Deep Web Research uses AgentState
         break;
 
       case 'coding':
@@ -225,7 +239,9 @@ export class GraphFactory {
       case 'tree-of-thought':
         return createInitialChatState(messages, conversationId); // Tree of Thought는 자체 상태 사용
       case 'deep':
-        return createInitialChatState(messages, conversationId); // Deep Thinking은 자체 상태 사용
+        return createInitialChatState(messages, conversationId);
+      case 'deep-web-research': // New case
+        return createInitialAgentState(messages, conversationId);
       case 'coding':
       case 'coding-agent':
         return createInitialCodingAgentState(messages, conversationId);
@@ -277,6 +293,12 @@ export class GraphFactory {
     // Coding Agent의 경우 CodingAgentGraph 인스턴스를 직접 사용 (Human-in-the-loop 지원)
     if (config.thinkingMode === 'coding') {
       yield* this.streamCodingAgentGraph(config, messages, options);
+      return;
+    }
+
+    // Deep Web Research의 경우 먼저 처리 (enableTools와 무관하게 자체 도구 관리)
+    if (config.thinkingMode === 'deep-web-research') {
+      yield* this.streamDeepWebResearchGraph(config, messages, options);
       return;
     }
 
@@ -496,7 +518,7 @@ export class GraphFactory {
       // Use the AgentGraph's stream method with tool approval callback
       for await (const event of agentGraph.stream(
         initialState,
-        options?.maxIterations || 10,
+        options?.maxIterations || 50, // Default to 50 iterations
         options?.toolApprovalCallback
       )) {
         // Handle tool_approval_request and tool_approval_result events
@@ -539,6 +561,63 @@ export class GraphFactory {
       yield {
         type: 'error',
         error: error.message || 'Agent graph execution failed',
+      };
+    }
+  }
+
+  /**
+   * Deep Web Research 그래프 스트리밍
+   * Completion 이벤트를 emit하여 UI 로딩 상태 정리
+   */
+  private static async *streamDeepWebResearchGraph(
+    config: GraphConfig,
+    messages: Message[],
+    options?: GraphOptions
+  ): AsyncGenerator<StreamEvent> {
+    const conversationId = options?.conversationId || '';
+
+    try {
+      console.log('[GraphFactory] Starting Deep Web Research stream');
+
+      const graph = await this.getDeepWebResearchGraph();
+      const { createInitialAgentState } = await import('./state');
+
+      const initialState = createInitialAgentState(messages, conversationId);
+
+      const stream = await graph.stream(initialState, {
+        recursionLimit: 100,
+      });
+
+      for await (const event of stream) {
+        const entries = Object.entries(event);
+
+        if (entries.length > 0) {
+          const [nodeName, stateUpdate] = entries[0];
+
+          yield {
+            type: 'node',
+            node: nodeName,
+            data: stateUpdate,
+          };
+        }
+      }
+
+      // Emit completion event to clear UI loading state
+      const completionEvent: StreamEvent = {
+        type: 'completion',
+      };
+      yield completionEvent;
+
+      const endEvent: StreamEvent = {
+        type: 'end',
+      };
+      yield endEvent;
+    } catch (error: any) {
+      console.error('[GraphFactory] Deep Web Research stream error:', error);
+
+      yield {
+        type: 'error',
+        error: error.message || 'Deep Web Research execution failed',
       };
     }
   }
