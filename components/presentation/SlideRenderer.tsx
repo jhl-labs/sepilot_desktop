@@ -21,8 +21,8 @@ export function SlideRenderer({
   className = '',
   isEditable = false,
   onSlideChange,
-  onAddBullet,
-  onRemoveBullet,
+  onAddBullet: onAddBullet,
+  onRemoveBullet: onRemoveBullet,
 }: SlideRendererProps) {
   // Early return if slide is undefined
   if (!slide) {
@@ -67,8 +67,8 @@ export function SlideRenderer({
       slide,
       isEditable,
       onSlideChange,
-      onAddBullet,
-      onRemoveBullet,
+      onAddBullet: onAddBullet,
+      onRemoveBullet: onRemoveBullet,
     };
 
     switch (slide.layout) {
@@ -219,8 +219,8 @@ function TitleBodyLayout({
   slide,
   isEditable,
   onSlideChange,
-  onAddBullet,
-  onRemoveBullet,
+  onAddBullet: onAddBullet,
+  onRemoveBullet: onRemoveBullet,
 }: {
   slide: PresentationSlide;
   isEditable?: boolean;
@@ -414,8 +414,8 @@ function TitleBodyLayout({
 // Two-Column Layout: Split content design
 function TwoColumnLayout({
   slide,
-  isEditable: _isEditable,
-  onSlideChange: _onSlideChange,
+  isEditable,
+  onSlideChange,
   onAddBullet: _onAddBullet,
   onRemoveBullet: _onRemoveBullet,
 }: {
@@ -425,7 +425,7 @@ function TwoColumnLayout({
   onAddBullet?: () => void;
   onRemoveBullet?: (index: number) => void;
 }) {
-  const [_editingField, _setEditingField] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<string | null>(null);
   const textColor = slide.textColor || (slide.vibe?.includes('dark') ? '#f8fafc' : '#1e293b');
   const accentColor = slide.accentColor || '#0ea5e9';
   const imageSource = slide.imageData || slide.imageUrl;
@@ -434,18 +434,82 @@ function TwoColumnLayout({
     <div className="flex h-full flex-col px-12 py-10">
       {/* Title */}
       <div className="mb-6 text-center">
-        <h2 className="text-3xl font-bold" style={{ color: textColor }}>
-          {slide.title}
-        </h2>
-        {slide.subtitle && (
-          <p className="mt-2 text-base font-medium opacity-70" style={{ color: textColor }}>
-            {slide.subtitle}
-          </p>
+        {isEditable && editingField === 'title' ? (
+          <Input
+            value={slide.title}
+            onChange={(e) => onSlideChange?.({ ...slide, title: e.target.value })}
+            onBlur={() => setEditingField(null)}
+            autoFocus
+            className="text-3xl font-bold text-center border-2 border-primary bg-white/20 h-auto py-1 px-2 shadow-sm"
+            style={{ color: textColor }}
+            placeholder="제목을 입력하세요"
+          />
+        ) : (
+          <h2
+            className={`text-3xl font-bold ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
+            style={{ color: textColor }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isEditable) setEditingField('title');
+            }}
+          >
+            {slide.title || (isEditable ? '제목을 입력하세요' : '')}
+          </h2>
         )}
-        {slide.description && (
-          <p className="mt-2 text-sm opacity-60" style={{ color: textColor }}>
-            {slide.description}
-          </p>
+
+        {(slide.subtitle || isEditable) && (
+          <>
+            {isEditable && editingField === 'subtitle' ? (
+              <Input
+                value={slide.subtitle || ''}
+                onChange={(e) => onSlideChange?.({ ...slide, subtitle: e.target.value })}
+                onBlur={() => setEditingField(null)}
+                autoFocus
+                className="mt-2 text-base font-medium opacity-70 text-center border-2 border-primary bg-white/20 h-auto py-1 px-2 shadow-sm"
+                style={{ color: textColor }}
+                placeholder="부제목 (선택사항)"
+              />
+            ) : (
+              <p
+                className={`mt-2 text-base font-medium opacity-70 ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
+                style={{ color: textColor }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isEditable) setEditingField('subtitle');
+                }}
+              >
+                {slide.subtitle || (isEditable ? '부제목 (선택사항)' : '')}
+              </p>
+            )}
+          </>
+        )}
+
+        {(slide.description || isEditable) && (
+          <>
+            {isEditable && editingField === 'description' ? (
+              <Textarea
+                value={slide.description || ''}
+                onChange={(e) => onSlideChange?.({ ...slide, description: e.target.value })}
+                onBlur={() => setEditingField(null)}
+                autoFocus
+                className="mt-2 text-sm opacity-60 text-center border-2 border-primary bg-white/20 py-1 px-2 resize-none shadow-sm"
+                style={{ color: textColor }}
+                placeholder="설명 (선택사항)"
+                rows={2}
+              />
+            ) : (
+              <p
+                className={`mt-2 text-sm opacity-60 ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
+                style={{ color: textColor }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isEditable) setEditingField('description');
+                }}
+              >
+                {slide.description || (isEditable ? '설명 (선택사항)' : '')}
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -499,7 +563,16 @@ function TwoColumnLayout({
 }
 
 // Timeline Layout: Process or roadmap visualization
-function TimelineLayout({ slide }: { slide: PresentationSlide }) {
+function TimelineLayout({
+  slide,
+  isEditable: _isEditable,
+  onSlideChange: _onSlideChange,
+}: {
+  slide: PresentationSlide;
+  isEditable?: boolean;
+  onSlideChange?: (slide: PresentationSlide) => void;
+}) {
+  const [_editingField, _setEditingField] = useState<string | null>(null);
   const textColor = slide.textColor || (slide.vibe?.includes('dark') ? '#f8fafc' : '#1e293b');
   const accentColor = slide.accentColor || '#0ea5e9';
   const steps = slide.bullets || [];
@@ -582,7 +655,16 @@ function TimelineLayout({ slide }: { slide: PresentationSlide }) {
 }
 
 // Grid Layout: Data or feature showcase
-function GridLayout({ slide }: { slide: PresentationSlide }) {
+function GridLayout({
+  slide,
+  isEditable: _isEditable,
+  onSlideChange: _onSlideChange,
+}: {
+  slide: PresentationSlide;
+  isEditable?: boolean;
+  onSlideChange?: (slide: PresentationSlide) => void;
+}) {
+  const [_editingField, _setEditingField] = useState<string | null>(null);
   const textColor = slide.textColor || (slide.vibe?.includes('dark') ? '#f8fafc' : '#1e293b');
   const accentColor = slide.accentColor || '#0ea5e9';
   const items = slide.bullets || [];
