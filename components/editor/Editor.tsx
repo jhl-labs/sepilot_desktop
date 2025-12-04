@@ -816,57 +816,48 @@ export function CodeEditor() {
     };
   }, [editor, handleEditorAction]);
 
-  // Handle clipboard image paste (Ctrl+V)
+  // Handle clipboard image paste (Ctrl+V) - Monaco editor command approach
   useEffect(() => {
     if (!editor || !isElectron() || !window.electronAPI) {
       return;
     }
 
-    const handlePaste = async (e: ClipboardEvent) => {
-      // Markdown 파일에서만 이미지 붙여넣기 지원
-      if (!isMarkdownFile || !activeFile || !workingDirectory) {
-        return;
-      }
+    console.log('[Editor] Setting up paste handler');
 
-      console.log('[Editor] Paste event detected in Markdown file');
+    // Override Monaco's Ctrl+V command
+    editor.addCommand(
+      (window as any).monaco.KeyMod.CtrlCmd | (window as any).monaco.KeyCode.KeyV,
+      async () => {
+        console.log('[Editor] Paste command triggered (Ctrl+V)');
 
-      try {
-        // 웹 Clipboard API로 먼저 이미지 존재 여부 확인
-        const clipboardItems = e.clipboardData?.items;
-        let hasImage = false;
+        // Markdown 파일에서만 이미지 붙여넣기 시도
+        const currentFile = openFiles.find((f) => f.path === activeFilePath);
+        const currentIsMarkdown =
+          currentFile &&
+          (currentFile.language === 'markdown' ||
+            currentFile.path.toLowerCase().endsWith('.md') ||
+            currentFile.path.toLowerCase().endsWith('.mdx'));
 
-        if (clipboardItems) {
-          for (let i = 0; i < clipboardItems.length; i++) {
-            if (clipboardItems[i].type.startsWith('image/')) {
-              hasImage = true;
-              break;
-            }
-          }
+        if (!currentIsMarkdown || !currentFile || !workingDirectory) {
+          console.log('[Editor] Not a markdown file, using default paste');
+          // Markdown이 아니면 기본 paste 실행
+          editor.trigger('keyboard', 'editor.action.clipboardPasteAction', null);
+          return;
         }
 
-        console.log('[Editor] Has image in clipboard:', hasImage);
-
-        // 이미지가 있으면 즉시 기본 동작 방지 (Monaco가 처리하기 전에)
-        if (hasImage) {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('[Editor] Prevented default paste behavior');
-
-          // Electron 클립보드에서 이미지 저장
+        try {
+          // Electron 클립보드에서 이미지 확인 및 저장 시도
           const result = await window.electronAPI.fs.saveClipboardImage(workingDirectory);
 
           if (result.success && result.data) {
+            // 이미지가 있었음 - Markdown 문법으로 삽입
             const { filename } = result.data;
             console.log('[Editor] Image saved:', filename);
 
-            // 파일이 위치한 디렉토리 기준으로 이미지의 상대 경로 계산
-            const fileDir = path.dirname(activeFile.path);
+            const fileDir = path.dirname(currentFile.path);
             const relativePath = path.relative(fileDir, path.join(workingDirectory, filename));
-
-            // Markdown 이미지 문법으로 삽입
             const imageMarkdown = `![${filename}](${relativePath})`;
 
-            // 현재 커서 위치에 삽입
             const position = editor.getPosition();
             if (position) {
               editor.executeEdits('paste-image', [
@@ -882,7 +873,6 @@ export function CodeEditor() {
                 },
               ]);
 
-              // 커서를 삽입된 텍스트 끝으로 이동
               const newPosition = {
                 lineNumber: position.lineNumber,
                 column: position.column + imageMarkdown.length,
@@ -892,30 +882,20 @@ export function CodeEditor() {
               console.log('[Editor] Image markdown inserted');
             }
           } else {
-            console.warn('[Editor] Failed to save clipboard image:', result.error);
+            // 이미지가 없음 - 기본 paste 실행
+            console.log('[Editor] No image in clipboard, using default paste');
+            editor.trigger('keyboard', 'editor.action.clipboardPasteAction', null);
           }
+        } catch (error) {
+          console.error('[Editor] Error handling paste:', error);
+          // 에러 발생 시 기본 paste 실행
+          editor.trigger('keyboard', 'editor.action.clipboardPasteAction', null);
         }
-      } catch (error) {
-        console.error('[Editor] Error handling clipboard image:', error);
-        // 에러 발생 시에도 기본 paste 동작 허용
       }
-    };
+    );
 
-    // DOM 요소에 이벤트 리스너 추가
-    const editorDomNode = editor.getDomNode();
-    if (editorDomNode) {
-      // capture phase에서 이벤트를 먼저 잡음
-      editorDomNode.addEventListener('paste', handlePaste, true);
-      console.log('[Editor] Paste event listener added');
-
-      return () => {
-        editorDomNode.removeEventListener('paste', handlePaste, true);
-        console.log('[Editor] Paste event listener removed');
-      };
-    }
-
-    return undefined;
-  }, [editor, isMarkdownFile, activeFile, workingDirectory]);
+    console.log('[Editor] Paste handler registered');
+  }, [editor, openFiles, activeFilePath, workingDirectory]);
 
   // 파일 변경 감지 (5초마다 체크)
   useEffect(() => {
