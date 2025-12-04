@@ -1356,15 +1356,34 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           {searchQuery ? (
             <div className="text-sm text-muted-foreground">검색 결과가 없습니다.</div>
           ) : activeTab === 'team' ? (
-            <div className="space-y-4">
-              <Users className="h-12 w-12 mx-auto opacity-20" />
-              <div>
-                <p className="text-sm text-muted-foreground">등록된 Team Docs가 없습니다.</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Settings → System → Team Docs에서 팀 레포지토리를 추가하고 동기화하세요.
-                </p>
+            teamDocs.length === 0 ? (
+              <div className="space-y-4">
+                <Users className="h-12 w-12 mx-auto opacity-20" />
+                <div>
+                  <p className="text-sm text-muted-foreground">등록된 Team Docs가 없습니다.</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Settings → System → Team Docs에서 팀 레포지토리를 추가하고 동기화하세요.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                <Users className="h-12 w-12 mx-auto opacity-20" />
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    선택한 Repository
+                    {(() => {
+                      const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
+                      return currentTeam ? ` (${currentTeam.name})` : '';
+                    })()}
+                    에 문서가 없습니다.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Pull을 통해 동기화하거나 새 문서를 업로드하세요.
+                  </p>
+                </div>
+              </div>
+            )
           ) : (
             <div className="space-y-4">
               <User className="h-12 w-12 mx-auto opacity-20" />

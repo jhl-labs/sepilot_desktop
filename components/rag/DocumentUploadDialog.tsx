@@ -634,7 +634,10 @@ export function DocumentUploadDialog({ open, onOpenChange, onUpload }: DocumentU
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUploading}>
             취소
           </Button>
-          <Button onClick={handleUpload} disabled={isUploading}>
+          <Button
+            onClick={handleUpload}
+            disabled={isUploading || (docGroup === 'team' && teamDocs.length === 0)}
+          >
             {isUploading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
