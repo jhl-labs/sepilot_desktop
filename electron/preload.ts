@@ -337,6 +337,7 @@ const electronAPI = {
   teamDocs: {
     testConnection: (config: any) => ipcRenderer.invoke('team-docs-test-connection', config),
     syncDocuments: (config: any) => ipcRenderer.invoke('team-docs-sync-documents', config),
+    pushDocuments: (config: any) => ipcRenderer.invoke('team-docs-push-documents', config),
     syncAll: () => ipcRenderer.invoke('team-docs-sync-all'),
     pushDocument: (params: {
       teamDocsId: string;

@@ -391,14 +391,14 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
   };
 
   const handleSyncTeamDoc = async (config: TeamDocsConfig) => {
-    setIsSyncing(`team-${config.id}`);
+    setIsSyncing(`team-pull-${config.id}`);
     setMessage(null);
 
     try {
       const result = await window.electronAPI.teamDocs.syncDocuments(config);
 
       if (result.success) {
-        setMessage({ type: 'success', text: result.message || `${config.name} 동기화 완료!` });
+        setMessage({ type: 'success', text: result.message || `${config.name} Pull 완료!` });
         if (onRefresh) {
           await onRefresh();
         }
@@ -411,6 +411,26 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
     } catch (error: any) {
       console.error('Failed to sync team doc:', error);
       setMessage({ type: 'error', text: error.message || '동기화 실패' });
+    } finally {
+      setIsSyncing(null);
+    }
+  };
+
+  const handlePushTeamDoc = async (config: TeamDocsConfig) => {
+    setIsSyncing(`team-push-${config.id}`);
+    setMessage(null);
+
+    try {
+      const result = await window.electronAPI.teamDocs.pushDocuments(config);
+
+      if (result.success) {
+        setMessage({ type: 'success', text: result.message || `${config.name} Push 완료!` });
+      } else {
+        throw new Error(result.error || 'Push 실패');
+      }
+    } catch (error: any) {
+      console.error('Failed to push team doc:', error);
+      setMessage({ type: 'error', text: error.message || 'Push 실패' });
     } finally {
       setIsSyncing(null);
     }
@@ -822,12 +842,25 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
                               size="sm"
                               onClick={() => handleSyncTeamDoc(config)}
                               disabled={!config.enabled || isSyncing !== null}
-                              title="동기화"
+                              title="Pull (GitHub → Local)"
                             >
-                              {isSyncing === `team-${config.id}` ? (
+                              {isSyncing === `team-pull-${config.id}` ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
                                 <Download className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePushTeamDoc(config)}
+                              disabled={!config.enabled || isSyncing !== null}
+                              title="Push (Local → GitHub)"
+                            >
+                              {isSyncing === `team-push-${config.id}` ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Upload className="h-4 w-4" />
                               )}
                             </Button>
                             <Button

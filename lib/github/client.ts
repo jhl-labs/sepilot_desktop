@@ -434,14 +434,14 @@ export class GitHubSyncClient {
   /**
    * GitHub에서 문서 가져오기 (Pull)
    */
-  async pullDocuments(): Promise<{
+  async pullDocuments(docsPath: string = 'sepilot/documents'): Promise<{
     success: boolean;
     documents: Array<{ title: string; content: string; metadata: Record<string, any> }>;
     message?: string;
     error?: string;
   }> {
     try {
-      // sepilot/documents 디렉토리의 모든 파일 가져오기
+      // 지정된 디렉토리의 모든 파일 가져오기
       const { data: tree } = await this.octokit.git.getTree({
         owner: this.owner,
         repo: this.repo,
@@ -449,13 +449,14 @@ export class GitHubSyncClient {
         recursive: 'true',
       });
 
-      // .md 파일만 필터링
+      // .md 파일만 필터링 (docsPath 사용)
+      const normalizedDocsPath = docsPath.endsWith('/') ? docsPath.slice(0, -1) : docsPath;
       const markdownFiles = tree.tree.filter(
         (item) =>
           item.type === 'blob' &&
-          item.path?.startsWith('sepilot/documents/') &&
+          item.path?.startsWith(`${normalizedDocsPath}/`) &&
           item.path.endsWith('.md') &&
-          item.path !== 'sepilot/documents/README.md' // 인덱스 파일 제외
+          item.path !== `${normalizedDocsPath}/README.md` // 인덱스 파일 제외
       );
 
       const documents: Array<{ title: string; content: string; metadata: Record<string, any> }> =
@@ -478,7 +479,7 @@ export class GitHubSyncClient {
           const content = Buffer.from(blob.content, 'base64').toString('utf-8');
 
           // Markdown 파싱 (메타데이터 추출)
-          const parsed = this.parseMarkdownDocument(content, file.path);
+          const parsed = this.parseMarkdownDocument(content, file.path, normalizedDocsPath);
 
           // GitHub 동기화 메타데이터 추가
           parsed.metadata.githubSha = file.sha;
@@ -617,7 +618,8 @@ export class GitHubSyncClient {
    */
   private parseMarkdownDocument(
     content: string,
-    filepath: string
+    filepath: string,
+    docsPath: string = 'sepilot/documents'
   ): { title: string; content: string; metadata: Record<string, any> } {
     const lines = content.split('\n');
 
@@ -625,8 +627,10 @@ export class GitHubSyncClient {
     let mainContent = content;
     const metadata: Record<string, any> = {};
 
-    // 폴더 경로 추출 (sepilot/documents/ 이후 경로)
-    const pathMatch = filepath.match(/sepilot\/documents\/(.+)\.md$/);
+    // 폴더 경로 추출 (docsPath 이후 경로)
+    const normalizedDocsPath = docsPath.endsWith('/') ? docsPath.slice(0, -1) : docsPath;
+    const pathRegex = new RegExp(`${normalizedDocsPath.replace(/\//g, '/')}/(.+)\\.md$`);
+    const pathMatch = filepath.match(pathRegex);
     if (pathMatch) {
       const fullPath = pathMatch[1];
       const parts = fullPath.split('/');

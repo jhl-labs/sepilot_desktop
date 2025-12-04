@@ -589,6 +589,11 @@ interface TeamDocsAPI {
     };
     error?: string;
   }>;
+  pushDocuments: (config: import('./index').TeamDocsConfig) => Promise<{
+    success: boolean;
+    message: string;
+    error?: string;
+  }>;
   syncAll: () => Promise<{
     success: boolean;
     message: string;

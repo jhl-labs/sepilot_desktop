@@ -125,14 +125,19 @@ export function setupGitHubSyncHandlers() {
   });
 
   /**
-   * 문서 동기화
+   * 문서 동기화 (Personal Docs만)
    */
   ipcMain.handle('github-sync-documents', async (_event, config: GitHubSyncConfig) => {
     try {
       config = applyNetworkConfig(config);
 
-      // VectorDB에서 모든 문서 가져오기 (Main Process에서 직접 접근)
-      const documents = await vectorDBService.getAllDocuments();
+      // VectorDB에서 Personal Docs만 가져오기
+      const allDocuments = await vectorDBService.getAllDocuments();
+      const documents = allDocuments.filter((doc) => doc.metadata?.docGroup === 'personal');
+
+      console.log(
+        `[GitHubSync] Syncing ${documents.length} personal documents (filtered from ${allDocuments.length} total)`
+      );
 
       // GitHub Sync 클라이언트 생성
       const client = new GitHubSyncClient(config);
