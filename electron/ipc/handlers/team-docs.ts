@@ -62,19 +62,34 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
   error?: string;
 }> {
   try {
+    console.log('[team-docs-sync] Starting sync for:', config.name, config.id);
+    console.log('[team-docs-sync] Config:', {
+      owner: config.owner,
+      repo: config.repo,
+      branch: config.branch,
+      docsPath: config.docsPath,
+    });
+
     const syncConfig = toGitHubSyncConfig(applyNetworkConfig(config));
     const client = new GitHubSyncClient(syncConfig);
 
     // GitHub에서 문서 가져오기 (docsPath 전달)
-    const result = await client.pullDocuments(config.docsPath || 'sepilot/documents');
+    const docsPath = config.docsPath || 'sepilot/documents';
+    console.log('[team-docs-sync] Pulling documents from:', docsPath);
+    const result = await client.pullDocuments(docsPath);
 
     if (!result.success) {
+      console.error('[team-docs-sync] Pull failed:', result.error);
       throw new Error(result.error || '문서 가져오기 실패');
     }
 
+    console.log('[team-docs-sync] Pulled documents:', result.documents.length);
+
     // 증분 동기화: 기존 문서와 비교하여 처리
     const existingDocs = await vectorDBService.getAllDocuments();
+    console.log('[team-docs-sync] Total existing documents:', existingDocs.length);
     const existingTeamDocs = existingDocs.filter((doc) => doc.metadata?.teamDocsId === config.id);
+    console.log('[team-docs-sync] Existing team docs for this team:', existingTeamDocs.length);
 
     // githubPath 또는 title로 매핑
     const existingDocsMap = new Map<string, any>();
@@ -84,6 +99,7 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
         existingDocsMap.set(key, doc);
       }
     }
+    console.log('[team-docs-sync] Existing docs map size:', existingDocsMap.size);
 
     const documentsToIndex: any[] = [];
     const documentsToUpdate: any[] = [];
@@ -222,6 +238,13 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
     const updatedCount = documentsToUpdate.length;
     const deletedCount = documentsToDelete.length;
 
+    console.log('[team-docs-sync] Sync summary:', {
+      added: addedCount,
+      updated: updatedCount,
+      deleted: deletedCount,
+      total: result.documents.length,
+    });
+
     const messageParts: string[] = [];
     if (addedCount > 0) messageParts.push(`추가 ${addedCount}개`);
     if (updatedCount > 0) messageParts.push(`업데이트 ${updatedCount}개`);
@@ -231,6 +254,8 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
       messageParts.length > 0
         ? `동기화 완료: ${messageParts.join(', ')}`
         : '변경 사항 없음 (모든 문서가 최신 상태)';
+
+    console.log('[team-docs-sync] Sync completed successfully:', message);
 
     return {
       success: true,

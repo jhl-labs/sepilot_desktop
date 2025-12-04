@@ -958,8 +958,12 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     setSyncingTeamId(`pull-${config.id}`);
     setMessage(null);
 
+    console.log('[DocumentList] Starting pull for:', config.name, config.id);
+    console.log('[DocumentList] Config:', config);
+
     try {
       const result = await window.electronAPI.teamDocs.syncDocuments(config);
+      console.log('[DocumentList] Pull result:', result);
 
       if (result.success) {
         setMessage({ type: 'success', text: result.message || `${config.name} Pull 완료!` });
