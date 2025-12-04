@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { generateId } from '@/lib/utils';
 import { SlideRenderer } from './SlideRenderer';
+import { SlideMasterPreview } from './SlideMasterPreview';
 import { ChevronLeft, ChevronRight, LayoutTemplate, Maximize2, Minimize2 } from 'lucide-react';
 
 const ACCENT_COLORS = ['#7c3aed', '#0ea5e9', '#22c55e', '#f97316', '#06b6d4', '#ef4444'];
@@ -15,6 +16,7 @@ export function SlidePreview() {
     activePresentationSlideId,
     setActivePresentationSlide,
     addPresentationSlide,
+    presentationAgentState,
   } = useChatStore();
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -110,6 +112,30 @@ export function SlidePreview() {
       vibe: 'modern tech',
     });
   };
+
+  // 구조 단계에서 디자인 마스터 미리보기 표시
+  if (
+    presentationSlides.length === 0 &&
+    presentationAgentState?.currentStep === 'structure' &&
+    presentationAgentState?.designMaster
+  ) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">디자인 템플릿 미리보기</p>
+            <p className="text-xs text-muted-foreground">
+              선택한 디자인으로 슬라이드가 생성됩니다.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <SlideMasterPreview designMaster={presentationAgentState.designMaster} />
+        </div>
+      </div>
+    );
+  }
 
   if (presentationSlides.length === 0) {
     return (
