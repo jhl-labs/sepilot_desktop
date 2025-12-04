@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { PresentationSlide } from '@/types/presentation';
 import { CheckCircle2, TrendingUp, Calendar, Grid3x3, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -147,6 +148,7 @@ function TitleBodyLayout({
   onAddBullet?: () => void;
   onRemoveBullet?: (index: number) => void;
 }) {
+  const [editingField, setEditingField] = useState<string | null>(null);
   const textColor = slide.textColor || (slide.vibe?.includes('dark') ? '#f8fafc' : '#1e293b');
   const accentColor = slide.accentColor || '#0ea5e9';
   const imageSource = slide.imageData || slide.imageUrl;
@@ -155,44 +157,73 @@ function TitleBodyLayout({
     <div className="flex h-full flex-col px-12 py-10">
       {/* Title Section */}
       <div className="mb-6 border-l-4 pl-4" style={{ borderColor: accentColor }}>
-        {isEditable ? (
-          <>
-            <Input
-              value={slide.title}
-              onChange={(e) => onSlideChange?.({ ...slide, title: e.target.value })}
-              className="text-3xl font-bold border-2 border-dashed border-gray-300 bg-white/10 p-2 focus-visible:ring-2 focus-visible:ring-primary hover:bg-white/20 transition-colors"
-              style={{ color: textColor }}
-              placeholder="제목"
-            />
-            <Input
-              value={slide.subtitle || ''}
-              onChange={(e) => onSlideChange?.({ ...slide, subtitle: e.target.value })}
-              className="mt-2 text-base font-medium border-2 border-dashed border-gray-300 bg-white/10 p-2 focus-visible:ring-2 focus-visible:ring-primary hover:bg-white/20 transition-colors"
-              style={{ color: textColor, opacity: 0.7 }}
-              placeholder="부제목 (선택사항)"
-            />
-            <Textarea
-              value={slide.description || ''}
-              onChange={(e) => onSlideChange?.({ ...slide, description: e.target.value })}
-              className="mt-2 text-sm border-2 border-dashed border-gray-300 bg-white/10 p-2 resize-none focus-visible:ring-2 focus-visible:ring-primary hover:bg-white/20 transition-colors"
-              style={{ color: textColor, opacity: 0.6 }}
-              placeholder="설명 (선택사항)"
-              rows={1}
-            />
-          </>
+        {/* Title */}
+        {isEditable && editingField === 'title' ? (
+          <Input
+            value={slide.title}
+            onChange={(e) => onSlideChange?.({ ...slide, title: e.target.value })}
+            onBlur={() => setEditingField(null)}
+            autoFocus
+            className="text-3xl font-bold border-2 border-primary bg-white/20 p-2"
+            style={{ color: textColor }}
+            placeholder="제목을 입력하세요"
+          />
         ) : (
+          <h2
+            className={`text-3xl font-bold ${isEditable ? 'cursor-text hover:bg-white/10 rounded px-2 py-1 transition-colors' : ''}`}
+            style={{ color: textColor }}
+            onClick={() => isEditable && setEditingField('title')}
+          >
+            {slide.title || (isEditable ? '제목을 입력하세요' : '')}
+          </h2>
+        )}
+
+        {/* Subtitle */}
+        {(slide.subtitle || isEditable) && (
           <>
-            <h2 className="text-3xl font-bold" style={{ color: textColor }}>
-              {slide.title}
-            </h2>
-            {slide.subtitle && (
-              <p className="mt-2 text-base font-medium opacity-70" style={{ color: textColor }}>
-                {slide.subtitle}
+            {isEditable && editingField === 'subtitle' ? (
+              <Input
+                value={slide.subtitle || ''}
+                onChange={(e) => onSlideChange?.({ ...slide, subtitle: e.target.value })}
+                onBlur={() => setEditingField(null)}
+                autoFocus
+                className="mt-2 text-base font-medium opacity-70 border-2 border-primary bg-white/20 p-2"
+                style={{ color: textColor }}
+                placeholder="부제목 (선택사항)"
+              />
+            ) : (
+              <p
+                className={`mt-2 text-base font-medium opacity-70 ${isEditable ? 'cursor-text hover:bg-white/10 rounded px-2 py-1 transition-colors' : ''}`}
+                style={{ color: textColor }}
+                onClick={() => isEditable && setEditingField('subtitle')}
+              >
+                {slide.subtitle || (isEditable ? '부제목 (선택사항)' : '')}
               </p>
             )}
-            {slide.description && (
-              <p className="mt-2 text-sm opacity-60" style={{ color: textColor }}>
-                {slide.description}
+          </>
+        )}
+
+        {/* Description */}
+        {(slide.description || isEditable) && (
+          <>
+            {isEditable && editingField === 'description' ? (
+              <Textarea
+                value={slide.description || ''}
+                onChange={(e) => onSlideChange?.({ ...slide, description: e.target.value })}
+                onBlur={() => setEditingField(null)}
+                autoFocus
+                className="mt-2 text-sm opacity-60 border-2 border-primary bg-white/20 p-2 resize-none"
+                style={{ color: textColor }}
+                placeholder="설명 (선택사항)"
+                rows={2}
+              />
+            ) : (
+              <p
+                className={`mt-2 text-sm opacity-60 ${isEditable ? 'cursor-text hover:bg-white/10 rounded px-2 py-1 transition-colors' : ''}`}
+                style={{ color: textColor }}
+                onClick={() => isEditable && setEditingField('description')}
+              >
+                {slide.description || (isEditable ? '설명 (선택사항)' : '')}
               </p>
             )}
           </>
@@ -204,41 +235,52 @@ function TitleBodyLayout({
         <div className="flex-1">
           {slide.bullets && slide.bullets.length > 0 && (
             <ul className="space-y-3">
-              {slide.bullets.map((bullet, idx) => (
-                <li key={idx} className="flex items-start gap-3">
-                  <CheckCircle2
-                    className="mt-0.5 h-5 w-5 flex-shrink-0"
-                    style={{ color: accentColor }}
-                  />
-                  {isEditable ? (
-                    <div className="flex-1 flex items-center gap-2">
-                      <Input
-                        value={bullet}
-                        onChange={(e) => {
-                          const newBullets = [...(slide.bullets || [])];
-                          newBullets[idx] = e.target.value;
-                          onSlideChange?.({ ...slide, bullets: newBullets });
-                        }}
-                        className="text-sm border-2 border-dashed border-gray-300 bg-white/10 p-2 focus-visible:ring-2 focus-visible:ring-primary hover:bg-white/20 transition-colors"
+              {slide.bullets.map((bullet, idx) => {
+                const bulletField = `bullet-${idx}`;
+                const isEditingBullet = isEditable && editingField === bulletField;
+
+                return (
+                  <li key={idx} className="flex items-start gap-3">
+                    <CheckCircle2
+                      className="mt-0.5 h-5 w-5 flex-shrink-0"
+                      style={{ color: accentColor }}
+                    />
+                    {isEditingBullet ? (
+                      <div className="flex-1 flex items-center gap-2">
+                        <Input
+                          value={bullet}
+                          onChange={(e) => {
+                            const newBullets = [...(slide.bullets || [])];
+                            newBullets[idx] = e.target.value;
+                            onSlideChange?.({ ...slide, bullets: newBullets });
+                          }}
+                          onBlur={() => setEditingField(null)}
+                          autoFocus
+                          className="text-sm border-2 border-primary bg-white/20 p-2"
+                          style={{ color: textColor }}
+                          placeholder={`불릿 포인트 ${idx + 1}`}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 opacity-50 hover:opacity-100"
+                          onClick={() => onRemoveBullet?.(idx)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span
+                        className={`text-sm leading-relaxed flex-1 ${isEditable ? 'cursor-text hover:bg-white/10 rounded px-2 py-1 transition-colors' : ''}`}
                         style={{ color: textColor }}
-                        placeholder={`불릿 포인트 ${idx + 1}`}
-                      />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6 opacity-50 hover:opacity-100"
-                        onClick={() => onRemoveBullet?.(idx)}
+                        onClick={() => isEditable && setEditingField(bulletField)}
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-sm leading-relaxed" style={{ color: textColor }}>
-                      {bullet}
-                    </span>
-                  )}
-                </li>
-              ))}
+                        {bullet || (isEditable ? '불릿 포인트를 입력하세요' : '')}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
           {isEditable && (
