@@ -495,10 +495,7 @@ export function PresentationChat() {
                           '<span class="text-green-600 dark:text-green-400">✅</span>'
                         )
                         .replace(/❌/g, '<span class="text-red-600 dark:text-red-400">❌</span>')
-                        .replace(
-                          /```json[\s\S]*?```/g,
-                          '<div class="my-2 p-2 bg-muted/50 rounded border border-dashed text-xs font-mono opacity-50">[JSON 데이터 처리됨]</div>'
-                        ),
+                        .replace(/```json[\s\S]*?```/g, ''),
                     }}
                   />
                 ) : isStreaming ? (
