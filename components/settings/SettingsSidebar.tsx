@@ -107,6 +107,18 @@ const settingsCategories: SettingsCategory[] = [
     ],
   },
   {
+    id: 'documents',
+    label: 'Documents',
+    items: [
+      {
+        id: 'team-docs',
+        label: 'Team Docs',
+        icon: Users,
+        description: '팀 문서 동기화 (다중 Repo)',
+      },
+    ],
+  },
+  {
     id: 'system',
     label: 'System',
     items: [
@@ -115,12 +127,6 @@ const settingsCategories: SettingsCategory[] = [
         label: 'GitHub Sync',
         icon: Github,
         description: 'Personal Docs 동기화',
-      },
-      {
-        id: 'team-docs',
-        label: 'Team Docs',
-        icon: Users,
-        description: '팀 문서 동기화 (다중 Repo)',
       },
       {
         id: 'backup',
