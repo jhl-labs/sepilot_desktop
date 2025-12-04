@@ -1031,21 +1031,131 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       </Tabs>
 
       {/* Team Docs Repository 선택 */}
-      {activeTab === 'team' && teamDocs.length > 0 && (
+      {activeTab === 'team' &&
+        teamDocs.length > 0 &&
+        (() => {
+          const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
+          const teamDocCount = currentTeam ? filteredDocuments.length : 0;
+          const hasModifiedDocs = currentTeam
+            ? filteredDocuments.some((doc) => doc.metadata?.modifiedLocally)
+            : false;
+
+          return (
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 flex items-center gap-2">
+                  <Github className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <select
+                    className="flex-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm font-medium"
+                    value={selectedTeamDocsId}
+                    onChange={(e) => setSelectedTeamDocsId(e.target.value)}
+                  >
+                    {teamDocs.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name} ({team.owner}/{team.repo})
+                      </option>
+                    ))}
+                  </select>
+                  {currentTeam && (
+                    <>
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
+                        {teamDocCount}개
+                      </span>
+                      {hasModifiedDocs && (
+                        <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-2 py-1 rounded whitespace-nowrap">
+                          수정됨
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (currentTeam) {
+                        handlePullTeamDoc(currentTeam);
+                      }
+                    }}
+                    disabled={!currentTeam || syncingTeamId !== null || isLoading}
+                  >
+                    {syncingTeamId === `pull-${selectedTeamDocsId}` ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Pull...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Pull
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (currentTeam) {
+                        handlePushTeamDoc(currentTeam);
+                      }
+                    }}
+                    disabled={!currentTeam || syncingTeamId !== null || isLoading}
+                  >
+                    {syncingTeamId === `push-${selectedTeamDocsId}` ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Push...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Push
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSyncDialogOpen(true)}
+                    disabled={isLoading || disabled}
+                    title="GitHub Sync 설정"
+                  >
+                    <Github className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              {currentTeam && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {currentTeam.description || 'Team Documents Repository'}
+                  {currentTeam.lastSyncAt && (
+                    <span className="ml-2">
+                      • 마지막 동기화: {new Date(currentTeam.lastSyncAt).toLocaleString('ko-KR')}
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          );
+        })()}
+
+      {/* Personal Docs에서도 GitHub Sync 버튼 표시 */}
+      {activeTab === 'personal' && !personalRepo && (
         <div className="rounded-lg border bg-card p-3">
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium whitespace-nowrap">Repository:</label>
-            <select
-              className="flex-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-              value={selectedTeamDocsId}
-              onChange={(e) => setSelectedTeamDocsId(e.target.value)}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              GitHub Repository를 연결하여 문서를 동기화하세요
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSyncDialogOpen(true)}
+              disabled={isLoading || disabled}
+              title="GitHub Sync 설정"
             >
-              {teamDocs.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name} ({team.owner}/{team.repo})
-                </option>
-              ))}
-            </select>
+              <Github className="mr-2 h-4 w-4" />
+              설정
+            </Button>
           </div>
         </div>
       )}
@@ -1290,16 +1400,6 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
             title="문서 Import (JSON)"
           >
             <Upload className="h-4 w-4" />
-          </Button>
-          <div className="h-6 w-px bg-border" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSyncDialogOpen(true)}
-            disabled={isLoading || disabled}
-            title="GitHub Sync"
-          >
-            <Github className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
