@@ -696,11 +696,23 @@ export async function runPresentationAgent(
     }
   } catch (error) {
     console.error('[ppt-agent] Stream error:', error);
-    throw error;
+    // 에러 발생 시에도 현재 상태 유지 및 에러 메시지 반환
+    const errorMessage =
+      error instanceof Error
+        ? `오류가 발생했습니다: ${error.message}`
+        : '알 수 없는 오류가 발생했습니다.';
+    return { response: errorMessage, state: currentState };
   }
 
   if (callbacks.signal?.aborted) {
-    return { response: fullResponse, state: currentState };
+    // Abort 시 현재까지의 응답과 상태 반환
+    return { response: fullResponse || '응답이 중단되었습니다.', state: currentState };
+  }
+
+  // 응답이 비어있는 경우 처리
+  if (!fullResponse.trim()) {
+    console.warn('[ppt-agent] Empty response from LLM');
+    return { response: '응답을 생성할 수 없습니다. 다시 시도해주세요.', state: currentState };
   }
 
   // LLM 응답에서 Action 추출

@@ -75,6 +75,7 @@ export function SlideRenderer({ slide, className = '' }: SlideRendererProps) {
 // Hero Layout: Full-screen title with large typography
 function HeroLayout({ slide }: { slide: PresentationSlide }) {
   const textColor = slide.vibe?.includes('dark') ? 'text-white' : 'text-gray-900';
+  const imageSource = slide.imageData || slide.imageUrl;
 
   return (
     <div className="flex h-full flex-col items-center justify-center px-16 text-center">
@@ -89,9 +90,9 @@ function HeroLayout({ slide }: { slide: PresentationSlide }) {
           {slide.description}
         </p>
       )}
-      {slide.imageUrl && (
+      {imageSource && (
         <div className="mt-8 max-w-2xl">
-          <img src={slide.imageUrl} alt={slide.title} className="rounded-lg shadow-lg" />
+          <img src={imageSource} alt={slide.title} className="rounded-lg shadow-lg" />
         </div>
       )}
     </div>
@@ -102,6 +103,7 @@ function HeroLayout({ slide }: { slide: PresentationSlide }) {
 function TitleBodyLayout({ slide }: { slide: PresentationSlide }) {
   const textColor = slide.vibe?.includes('dark') ? 'text-white' : 'text-gray-900';
   const accentColor = slide.accentColor || '#0ea5e9';
+  const imageSource = slide.imageData || slide.imageUrl;
 
   return (
     <div className="flex h-full flex-col px-16 py-12">
@@ -132,10 +134,10 @@ function TitleBodyLayout({ slide }: { slide: PresentationSlide }) {
         </div>
 
         {/* Image Section */}
-        {slide.imageUrl && (
+        {imageSource && (
           <div className="w-96 flex-shrink-0">
             <img
-              src={slide.imageUrl}
+              src={imageSource}
               alt={slide.title}
               className="h-full w-full rounded-lg object-cover shadow-lg"
             />
@@ -150,6 +152,7 @@ function TitleBodyLayout({ slide }: { slide: PresentationSlide }) {
 function TwoColumnLayout({ slide }: { slide: PresentationSlide }) {
   const textColor = slide.vibe?.includes('dark') ? 'text-white' : 'text-gray-900';
   const accentColor = slide.accentColor || '#0ea5e9';
+  const imageSource = slide.imageData || slide.imageUrl;
 
   return (
     <div className="flex h-full flex-col px-16 py-12">
@@ -191,6 +194,17 @@ function TwoColumnLayout({ slide }: { slide: PresentationSlide }) {
             ))}
         </div>
       </div>
+
+      {/* Image Section (if exists) */}
+      {imageSource && (
+        <div className="mt-6">
+          <img
+            src={imageSource}
+            alt={slide.title}
+            className="mx-auto max-h-48 rounded-lg object-cover shadow-lg"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -200,6 +214,7 @@ function TimelineLayout({ slide }: { slide: PresentationSlide }) {
   const textColor = slide.vibe?.includes('dark') ? 'text-white' : 'text-gray-900';
   const accentColor = slide.accentColor || '#0ea5e9';
   const steps = slide.bullets || [];
+  const imageSource = slide.imageData || slide.imageUrl;
 
   return (
     <div className="flex h-full flex-col px-16 py-12">
@@ -245,10 +260,23 @@ function TimelineLayout({ slide }: { slide: PresentationSlide }) {
         </div>
       </div>
 
+      {/* Image Section (if exists) */}
+      {imageSource && (
+        <div className="mt-6">
+          <img
+            src={imageSource}
+            alt={slide.title}
+            className="mx-auto max-h-48 rounded-lg object-cover shadow-lg"
+          />
+        </div>
+      )}
+
       {/* Calendar Icon */}
-      <div className="mt-6 flex justify-center">
-        <Calendar className="h-8 w-8 opacity-30" style={{ color: accentColor }} />
-      </div>
+      {!imageSource && (
+        <div className="mt-6 flex justify-center">
+          <Calendar className="h-8 w-8 opacity-30" style={{ color: accentColor }} />
+        </div>
+      )}
     </div>
   );
 }
@@ -258,6 +286,7 @@ function GridLayout({ slide }: { slide: PresentationSlide }) {
   const textColor = slide.vibe?.includes('dark') ? 'text-white' : 'text-gray-900';
   const accentColor = slide.accentColor || '#0ea5e9';
   const items = slide.bullets || [];
+  const imageSource = slide.imageData || slide.imageUrl;
 
   return (
     <div className="flex h-full flex-col px-16 py-12">
@@ -287,10 +316,23 @@ function GridLayout({ slide }: { slide: PresentationSlide }) {
         ))}
       </div>
 
+      {/* Image Section (if exists) */}
+      {imageSource && (
+        <div className="mt-6">
+          <img
+            src={imageSource}
+            alt={slide.title}
+            className="mx-auto max-h-48 rounded-lg object-cover shadow-lg"
+          />
+        </div>
+      )}
+
       {/* Grid Icon */}
-      <div className="mt-6 flex justify-center">
-        <Grid3x3 className="h-8 w-8 opacity-30" style={{ color: accentColor }} />
-      </div>
+      {!imageSource && (
+        <div className="mt-6 flex justify-center">
+          <Grid3x3 className="h-8 w-8 opacity-30" style={{ color: accentColor }} />
+        </div>
+      )}
     </div>
   );
 }

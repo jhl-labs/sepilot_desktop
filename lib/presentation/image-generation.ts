@@ -113,7 +113,14 @@ export async function generateImagesForSlides(
   const updated: PresentationSlide[] = [];
 
   for (const slide of slides) {
-    if ((slide.imageUrl && slide.imageUrl.length > 0) || !slide.imagePrompt) {
+    // 이미 imageData나 imageUrl이 있으면 스킵 (재생성 방지)
+    if (slide.imageData || (slide.imageUrl && slide.imageUrl.length > 0)) {
+      updated.push(slide);
+      continue;
+    }
+
+    // imagePrompt가 없으면 이미지 생성 불가
+    if (!slide.imagePrompt || slide.imagePrompt.trim().length === 0) {
       updated.push(slide);
       continue;
     }

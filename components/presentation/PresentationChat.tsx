@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useChatStore } from '@/lib/store/chat-store';
 import { runPresentationAgent, createInitialState } from '@/lib/presentation/ppt-agent';
 import type { PresentationWorkflowStep } from '@/types/presentation';
+import { generateId } from '@/lib/utils';
 import {
   Loader2,
   Send,
@@ -119,6 +120,8 @@ export function PresentationChat() {
     presentationChatMessages,
     presentationChatStreaming,
     presentationAgentState,
+    presentationSlides,
+    activePresentationSlideId,
     addPresentationChatMessage,
     updatePresentationChatMessage,
     setPresentationChatStreaming,
@@ -151,14 +154,27 @@ export function PresentationChat() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    // 사용자 메시지 추가
+    // 사용자 메시지를 히스토리에 포함시키기 위해 배열로 구성
+    const newUserMessage = {
+      id: generateId(),
+      role: 'user' as const,
+      content: userMessage,
+      conversation_id: 'presentation-chat',
+      created_at: Date.now(),
+    };
+
+    // UI에 사용자 메시지 추가
     addPresentationChatMessage({ role: 'user', content: userMessage });
+    // 빈 assistant 메시지 미리 추가 (스트리밍용)
     addPresentationChatMessage({ role: 'assistant', content: '' });
+
+    // 최신 메시지를 포함한 히스토리 구성 (store 상태 업데이트 전에 직접 구성)
+    const messagesWithNewUser = [...presentationChatMessages, newUserMessage];
 
     let buffer = '';
     try {
       const { response, state } = await runPresentationAgent(
-        presentationChatMessages,
+        messagesWithNewUser, // 최신 사용자 메시지 포함
         presentationAgentState,
         {
           signal: controller.signal,
@@ -190,13 +206,25 @@ export function PresentationChat() {
 
       // 상태 업데이트
       setPresentationAgentState(state);
+
+      // onSlides 콜백이 호출되지 않았다면 state의 slides로 동기화
+      if (state.slides.length > 0 && presentationSlides.length !== state.slides.length) {
+        setPresentationSlides(state.slides);
+        if (state.slides.length > 0 && !activePresentationSlideId) {
+          setActivePresentationSlide(state.slides[0].id);
+        }
+      }
     } catch (error) {
       console.error('[PresentationChat] agent error', error);
       const messages = useChatStore.getState().presentationChatMessages;
       const last = messages[messages.length - 1];
       if (last?.role === 'assistant') {
+        const errorMessage =
+          error instanceof Error
+            ? `오류가 발생했습니다: ${error.message}. 다시 시도해주세요.`
+            : '알 수 없는 오류가 발생했습니다. 다시 시도해주세요.';
         updatePresentationChatMessage(last.id, {
-          content: '오류가 발생했습니다. 다시 시도해주세요.',
+          content: errorMessage,
         });
       }
     } finally {
