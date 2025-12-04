@@ -329,21 +329,39 @@ export function PresentationChat() {
           {STEP_ORDER.map((step, idx) => {
             const isActive = step === currentStep;
             const isCompleted = idx < currentStepIndex;
+            const isAccessible = isActive || isCompleted;
 
             return (
-              <div
+              <button
                 key={step}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                onClick={() => {
+                  if (isAccessible && presentationAgentState) {
+                    // 이전 단계로 돌아갈 수 있음
+                    setPresentationAgentState({
+                      ...presentationAgentState,
+                      currentStep: step,
+                    });
+                  }
+                }}
+                disabled={!isAccessible || presentationChatStreaming}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-all ${
                   isActive
                     ? 'bg-primary text-primary-foreground font-medium'
                     : isCompleted
-                      ? 'bg-green-500/20 text-green-700 dark:text-green-400'
-                      : 'bg-muted/40 text-muted-foreground'
-                }`}
+                      ? 'bg-green-500/20 text-green-700 dark:text-green-400 hover:bg-green-500/30 cursor-pointer'
+                      : 'bg-muted/40 text-muted-foreground cursor-not-allowed'
+                } ${isAccessible && !presentationChatStreaming ? 'hover:opacity-80' : ''}`}
+                title={
+                  isAccessible
+                    ? isActive
+                      ? '현재 단계'
+                      : '이 단계로 돌아가기'
+                    : '아직 진행하지 않은 단계'
+                }
               >
                 {STEP_ICONS[step]}
                 <span>{STEP_DESCRIPTIONS[step].title}</span>
-              </div>
+              </button>
             );
           })}
         </div>
