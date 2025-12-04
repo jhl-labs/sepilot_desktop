@@ -14,11 +14,11 @@ import {
   Maximize2,
   Minimize2,
   Edit3,
+  Check,
+  X,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import type { PresentationSlide } from '@/types/presentation';
 
 const ACCENT_COLORS = ['#7c3aed', '#0ea5e9', '#22c55e', '#f97316', '#06b6d4', '#ef4444'];
@@ -35,7 +35,7 @@ export function SlidePreview() {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [editingSlide, setEditingSlide] = useState<PresentationSlide | null>(null);
   const isInternalUpdate = useRef(false);
 
@@ -133,16 +133,21 @@ export function SlidePreview() {
     const slide = presentationSlides[currentIndex];
     if (slide) {
       setEditingSlide({ ...slide });
-      setIsEditDialogOpen(true);
+      setIsEditMode(true);
     }
   };
 
   const handleSaveEdit = () => {
     if (editingSlide) {
       updatePresentationSlide(editingSlide.id, editingSlide);
-      setIsEditDialogOpen(false);
+      setIsEditMode(false);
       setEditingSlide(null);
     }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditingSlide(null);
   };
 
   const handleBulletChange = (index: number, value: string) => {
@@ -256,17 +261,36 @@ export function SlidePreview() {
             <p className="text-xs text-muted-foreground">화살표 키로 이동 · F키로 전체화면</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={toggleFullscreen}>
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleEditSlide}>
-              <Edit3 className="mr-2 h-4 w-4" />
-              편집
-            </Button>
-            <Button size="sm" variant="secondary" onClick={handleAddSlide}>
-              <LayoutTemplate className="mr-2 h-4 w-4" />
-              추가
-            </Button>
+            {!isEditMode ? (
+              <>
+                <Button size="sm" variant="ghost" onClick={toggleFullscreen}>
+                  {isFullscreen ? (
+                    <Minimize2 className="h-4 w-4" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleEditSlide}>
+                  <Edit3 className="mr-2 h-4 w-4" />
+                  편집
+                </Button>
+                <Button size="sm" variant="secondary" onClick={handleAddSlide}>
+                  <LayoutTemplate className="mr-2 h-4 w-4" />
+                  추가
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                  <X className="mr-2 h-4 w-4" />
+                  취소
+                </Button>
+                <Button size="sm" variant="default" onClick={handleSaveEdit}>
+                  <Check className="mr-2 h-4 w-4" />
+                  저장
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -274,30 +298,112 @@ export function SlidePreview() {
       {/* Main Slide Display */}
       <div className="relative flex flex-1 items-center justify-center p-8">
         {/* Navigation Buttons */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
-          onClick={goToPrevious}
-          disabled={currentIndex === 0}
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Button>
+        {!isEditMode && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
+              onClick={goToPrevious}
+              disabled={currentIndex === 0}
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
 
-        {/* Current Slide */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
+              onClick={goToNext}
+              disabled={currentIndex === presentationSlides.length - 1}
+            >
+              <ChevronRight className="h-6 w-6" />
+            </Button>
+          </>
+        )}
+
+        {/* Current Slide or Edit Mode */}
         <div className="max-w-7xl flex-1">
-          <SlideRenderer slide={currentSlide} />
-        </div>
+          {isEditMode && editingSlide ? (
+            <div
+              className="aspect-video w-full overflow-hidden rounded-lg shadow-2xl"
+              style={{ background: editingSlide.backgroundColor || '#ffffff' }}
+            >
+              <div className="flex h-full flex-col px-12 py-10 space-y-4">
+                {/* Title Input */}
+                <Input
+                  value={editingSlide.title}
+                  onChange={(e) => setEditingSlide({ ...editingSlide, title: e.target.value })}
+                  placeholder="제목"
+                  className="text-3xl font-bold border-2 border-dashed bg-white/80"
+                  style={{ color: editingSlide.textColor || '#1e293b' }}
+                />
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
-          onClick={goToNext}
-          disabled={currentIndex === presentationSlides.length - 1}
-        >
-          <ChevronRight className="h-6 w-6" />
-        </Button>
+                {/* Subtitle Input */}
+                <Input
+                  value={editingSlide.subtitle || ''}
+                  onChange={(e) => setEditingSlide({ ...editingSlide, subtitle: e.target.value })}
+                  placeholder="부제목 (선택사항)"
+                  className="text-base font-medium border-2 border-dashed bg-white/80"
+                  style={{ color: editingSlide.textColor || '#1e293b', opacity: 0.7 }}
+                />
+
+                {/* Description Input */}
+                <Textarea
+                  value={editingSlide.description || ''}
+                  onChange={(e) =>
+                    setEditingSlide({ ...editingSlide, description: e.target.value })
+                  }
+                  placeholder="설명 (선택사항)"
+                  className="text-sm border-2 border-dashed bg-white/80 resize-none"
+                  rows={2}
+                  style={{ color: editingSlide.textColor || '#1e293b', opacity: 0.6 }}
+                />
+
+                {/* Bullets */}
+                <div className="flex-1 space-y-2 overflow-auto">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">불릿 포인트</span>
+                    <Button size="sm" variant="outline" onClick={handleAddBullet}>
+                      + 추가
+                    </Button>
+                  </div>
+                  {editingSlide.bullets && editingSlide.bullets.length > 0 ? (
+                    editingSlide.bullets.map((bullet, index) => (
+                      <div key={index} className="flex gap-2 items-center">
+                        <div
+                          className="h-2 w-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: editingSlide.accentColor }}
+                        />
+                        <Input
+                          value={bullet}
+                          onChange={(e) => handleBulletChange(index, e.target.value)}
+                          placeholder={`불릿 포인트 ${index + 1}`}
+                          className="text-sm border-2 border-dashed bg-white/80"
+                          style={{ color: editingSlide.textColor || '#1e293b' }}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleRemoveBullet(index)}
+                          className="h-8 w-8"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      불릿 포인트가 없습니다. 추가 버튼을 클릭하세요.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <SlideRenderer slide={currentSlide} />
+          )}
+        </div>
       </div>
 
       {/* Thumbnail Navigation */}
@@ -345,109 +451,6 @@ export function SlidePreview() {
           ESC 또는 F키로 전체화면 종료
         </div>
       )}
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>슬라이드 편집</DialogTitle>
-          </DialogHeader>
-
-          {editingSlide && (
-            <div className="space-y-4">
-              {/* Title */}
-              <div className="space-y-2">
-                <Label htmlFor="title">제목</Label>
-                <Input
-                  id="title"
-                  value={editingSlide.title}
-                  onChange={(e) => setEditingSlide({ ...editingSlide, title: e.target.value })}
-                  placeholder="슬라이드 제목"
-                />
-              </div>
-
-              {/* Subtitle */}
-              <div className="space-y-2">
-                <Label htmlFor="subtitle">부제목 (선택사항)</Label>
-                <Input
-                  id="subtitle"
-                  value={editingSlide.subtitle || ''}
-                  onChange={(e) => setEditingSlide({ ...editingSlide, subtitle: e.target.value })}
-                  placeholder="부제목"
-                />
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="description">설명 (선택사항)</Label>
-                <Textarea
-                  id="description"
-                  value={editingSlide.description || ''}
-                  onChange={(e) =>
-                    setEditingSlide({ ...editingSlide, description: e.target.value })
-                  }
-                  placeholder="슬라이드 설명"
-                  rows={2}
-                />
-              </div>
-
-              {/* Bullets */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>불릿 포인트</Label>
-                  <Button size="sm" variant="outline" onClick={handleAddBullet}>
-                    + 추가
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {editingSlide.bullets && editingSlide.bullets.length > 0 ? (
-                    editingSlide.bullets.map((bullet, index) => (
-                      <div key={index} className="flex gap-2">
-                        <Input
-                          value={bullet}
-                          onChange={(e) => handleBulletChange(index, e.target.value)}
-                          placeholder={`불릿 포인트 ${index + 1}`}
-                        />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleRemoveBullet(index)}
-                        >
-                          ✕
-                        </Button>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      불릿 포인트가 없습니다. 추가 버튼을 클릭하세요.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div className="space-y-2">
-                <Label htmlFor="notes">발표자 노트 (선택사항)</Label>
-                <Textarea
-                  id="notes"
-                  value={editingSlide.notes || ''}
-                  onChange={(e) => setEditingSlide({ ...editingSlide, notes: e.target.value })}
-                  placeholder="발표자를 위한 메모"
-                  rows={3}
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  취소
-                </Button>
-                <Button onClick={handleSaveEdit}>저장</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
