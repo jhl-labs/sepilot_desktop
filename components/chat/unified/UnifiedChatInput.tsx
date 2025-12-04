@@ -283,13 +283,13 @@ export function UnifiedChatInput({
   useEffect(() => {
     const handleAutoSendMessage = async (e: Event) => {
       const customEvent = e as CustomEvent<{
-        message: string;
+        userMessage: string;
         systemMessage?: string;
       }>;
-      const { message, systemMessage } = customEvent.detail;
+      const { userMessage, systemMessage } = customEvent.detail;
 
-      if (message.trim()) {
-        setInput(message);
+      if (userMessage && userMessage.trim()) {
+        setInput(userMessage);
         // Store system message in sessionStorage for streaming hook to pick up
         if (systemMessage) {
           sessionStorage.setItem('sepilot_quick_system_message', systemMessage);
