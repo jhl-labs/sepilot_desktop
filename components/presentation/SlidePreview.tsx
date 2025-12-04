@@ -17,6 +17,8 @@ export function SlidePreview() {
     addPresentationSlide,
   } = useChatStore();
 
+  console.log('[SlidePreview] Rendering with', presentationSlides.length, 'slides');
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isInternalUpdate = useRef(false);

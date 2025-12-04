@@ -1634,6 +1634,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setPresentationSlides: (slides: PresentationSlide[]) => {
+    console.log('[ChatStore] setPresentationSlides called with', slides.length, 'slides');
+    console.log('[ChatStore] First slide:', slides[0]);
     set({ presentationSlides: slides });
   },
 

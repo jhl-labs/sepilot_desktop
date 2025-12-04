@@ -789,13 +789,21 @@ export async function runPresentationAgent(
 
       case 'create_slide': {
         const slideData = action.slide;
+        console.log('[ppt-agent] Creating slide with data:', slideData);
         const newSlide: PresentationSlide = {
           id: generateId(),
           ...slideData,
         };
+        console.log('[ppt-agent] Generated slide with ID:', newSlide.id);
 
         const newSlides = [...newState.slides];
         const slideIndex = action.slideIndex ?? newState.currentSlideIndex ?? 0;
+        console.log(
+          '[ppt-agent] Inserting at index:',
+          slideIndex,
+          'Current slides array length:',
+          newSlides.length
+        );
         newSlides[slideIndex] = newSlide;
 
         const completed = [...newState.completedSlideIndices];
