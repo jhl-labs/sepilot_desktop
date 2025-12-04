@@ -665,14 +665,18 @@ function TwoColumnLayout({
 // Timeline Layout: Process or roadmap visualization
 function TimelineLayout({
   slide,
-  isEditable: _isEditable,
-  onSlideChange: _onSlideChange,
+  isEditable,
+  onSlideChange,
+  onAddBullet,
+  onRemoveBullet,
 }: {
   slide: PresentationSlide;
   isEditable?: boolean;
   onSlideChange?: (slide: PresentationSlide) => void;
+  onAddBullet?: () => void;
+  onRemoveBullet?: (index: number) => void;
 }) {
-  const [_editingField, _setEditingField] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<string | null>(null);
   const textColor = slide.textColor || (slide.vibe?.includes('dark') ? '#f8fafc' : '#1e293b');
   const accentColor = slide.accentColor || '#0ea5e9';
   const steps = slide.bullets || [];
@@ -682,56 +686,180 @@ function TimelineLayout({
     <div className="flex h-full flex-col px-12 py-10">
       {/* Title */}
       <div className="mb-6 text-center">
-        <h2 className="text-3xl font-bold" style={{ color: textColor }}>
-          {slide.title}
-        </h2>
-        {slide.subtitle && (
-          <p className="mt-2 text-base font-medium opacity-70" style={{ color: textColor }}>
-            {slide.subtitle}
-          </p>
+        {isEditable && editingField === 'title' ? (
+          <Input
+            value={slide.title}
+            onChange={(e) => onSlideChange?.({ ...slide, title: e.target.value })}
+            onBlur={() => setEditingField(null)}
+            autoFocus
+            className="text-3xl font-bold text-center border-2 border-primary bg-white/20 h-auto py-1 px-2 shadow-sm"
+            style={{ color: textColor }}
+            placeholder="제목을 입력하세요"
+          />
+        ) : (
+          <h2
+            className={`text-3xl font-bold ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
+            style={{ color: textColor }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isEditable) {
+                setEditingField('title');
+              }
+            }}
+          >
+            {slide.title || (isEditable ? '제목을 입력하세요' : '')}
+          </h2>
         )}
-        {slide.description && (
-          <p className="mt-2 text-sm opacity-60" style={{ color: textColor }}>
-            {slide.description}
-          </p>
+
+        {(slide.subtitle || isEditable) && (
+          <>
+            {isEditable && editingField === 'subtitle' ? (
+              <Input
+                value={slide.subtitle || ''}
+                onChange={(e) => onSlideChange?.({ ...slide, subtitle: e.target.value })}
+                onBlur={() => setEditingField(null)}
+                autoFocus
+                className="mt-2 text-base font-medium opacity-70 text-center border-2 border-primary bg-white/20 h-auto py-1 px-2 shadow-sm"
+                style={{ color: textColor }}
+                placeholder="부제목 (선택사항)"
+              />
+            ) : (
+              <p
+                className={`mt-2 text-base font-medium opacity-70 ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
+                style={{ color: textColor }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isEditable) {
+                    setEditingField('subtitle');
+                  }
+                }}
+              >
+                {slide.subtitle || (isEditable ? '부제목 (선택사항)' : '')}
+              </p>
+            )}
+          </>
+        )}
+
+        {(slide.description || isEditable) && (
+          <>
+            {isEditable && editingField === 'description' ? (
+              <Textarea
+                value={slide.description || ''}
+                onChange={(e) => onSlideChange?.({ ...slide, description: e.target.value })}
+                onBlur={() => setEditingField(null)}
+                autoFocus
+                className="mt-2 text-sm opacity-60 text-center border-2 border-primary bg-white/20 py-1 px-2 resize-none shadow-sm"
+                style={{ color: textColor }}
+                placeholder="설명 (선택사항)"
+                rows={2}
+              />
+            ) : (
+              <p
+                className={`mt-2 text-sm opacity-60 ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
+                style={{ color: textColor }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isEditable) {
+                    setEditingField('description');
+                  }
+                }}
+              >
+                {slide.description || (isEditable ? '설명 (선택사항)' : '')}
+              </p>
+            )}
+          </>
         )}
       </div>
 
       {/* Timeline Steps */}
       <div className="relative flex flex-1 items-center justify-center">
         <div className="flex w-full items-start justify-between gap-3">
-          {steps.map((step, idx) => (
-            <div key={idx} className="flex flex-1 flex-col items-center">
-              {/* Step Number */}
-              <div
-                className="mb-3 flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white shadow-lg"
-                style={{ backgroundColor: accentColor }}
-              >
-                {idx + 1}
-              </div>
+          {steps.map((step, idx) => {
+            const stepField = `step-${idx}`;
+            const isEditingStep = isEditable && editingField === stepField;
 
-              {/* Step Content */}
-              <div className="text-center">
-                <p className="text-sm font-semibold" style={{ color: textColor }}>
-                  {step}
-                </p>
-              </div>
-
-              {/* Connector Line */}
-              {idx < steps.length - 1 && (
+            return (
+              <div key={idx} className="flex flex-1 flex-col items-center">
+                {/* Step Number */}
                 <div
-                  className="absolute top-6 h-0.5"
-                  style={{
-                    left: `${(idx + 0.5) * (100 / steps.length)}%`,
-                    width: `${100 / steps.length}%`,
-                    backgroundColor: `${accentColor}40`,
-                  }}
-                />
-              )}
-            </div>
-          ))}
+                  className="mb-3 flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white shadow-lg relative"
+                  style={{ backgroundColor: accentColor }}
+                >
+                  {idx + 1}
+                  {isEditable && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white hover:bg-red-600 p-0"
+                      onClick={() => onRemoveBullet?.(idx)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+
+                {/* Step Content */}
+                <div className="text-center w-full">
+                  {isEditingStep ? (
+                    <Input
+                      value={step}
+                      onChange={(e) => {
+                        const newSteps = [...steps];
+                        newSteps[idx] = e.target.value;
+                        onSlideChange?.({ ...slide, bullets: newSteps });
+                      }}
+                      onBlur={() => setEditingField(null)}
+                      autoFocus
+                      className="text-sm font-semibold text-center border-2 border-primary bg-white/20 h-auto py-1 px-2 shadow-sm"
+                      style={{ color: textColor }}
+                      placeholder={`스텝 ${idx + 1}`}
+                    />
+                  ) : (
+                    <p
+                      className={`text-sm font-semibold ${isEditable ? 'cursor-pointer hover:bg-yellow-100/30 rounded px-2 py-1 transition-colors border-2 border-dashed border-transparent hover:border-yellow-400' : ''}`}
+                      style={{ color: textColor }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isEditable) {
+                          setEditingField(stepField);
+                        }
+                      }}
+                    >
+                      {step}
+                    </p>
+                  )}
+                </div>
+
+                {/* Connector Line */}
+                {idx < steps.length - 1 && (
+                  <div
+                    className="absolute top-6 h-0.5"
+                    style={{
+                      left: `${(idx + 0.5) * (100 / steps.length)}%`,
+                      width: `${100 / steps.length}%`,
+                      backgroundColor: `${accentColor}40`,
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
+
+      {/* Add Step Button */}
+      {isEditable && (
+        <div className="mt-4 text-center">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onAddBullet}
+            style={{ borderColor: accentColor, color: accentColor }}
+          >
+            + 스텝 추가
+          </Button>
+        </div>
+      )}
 
       {/* Image Section (if exists) */}
       {imageSource && (
