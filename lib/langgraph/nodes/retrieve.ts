@@ -59,6 +59,7 @@ export async function retrieveNode(state: RAGState): Promise<Partial<RAGState>> 
           folderPathBoost: 0.2, // 폴더 경로 매칭 시 20% 부스팅
           tagBoost: 0.15, // 태그 매칭 시 15% 부스팅
           includeAllMetadata: true,
+          docGroup: 'all', // personal + team 문서 모두 검색
           // 필터링은 기본적으로 비활성화 (모든 문서 검색)
           // 필요 시 folderPath, tags, category, source로 필터링 가능
         });

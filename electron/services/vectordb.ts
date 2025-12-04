@@ -217,6 +217,7 @@ class VectorDBService {
       tags: options?.tags || [],
       category: options?.category || '',
       source: options?.source || '',
+      docGroup: options?.docGroup || 'all',
       folderPathBoost: options?.folderPathBoost ?? 0.2,
       titleBoost: options?.titleBoost ?? 0.3,
       tagBoost: options?.tagBoost ?? 0.15,
@@ -269,6 +270,14 @@ class VectorDBService {
       // 출처 필터
       if (opts.source && metadata.source !== opts.source) {
         return false;
+      }
+
+      // docGroup 필터 (personal, team, all)
+      if (opts.docGroup && opts.docGroup !== 'all') {
+        const docGroup = metadata.docGroup || 'personal'; // 기본값: personal
+        if (opts.docGroup !== docGroup) {
+          return false;
+        }
       }
 
       // 특수 문서 제외 (폴더 등)

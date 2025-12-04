@@ -83,6 +83,7 @@ export interface SearchOptions {
   tags?: string[]; // 특정 태그를 가진 문서만 검색
   category?: string; // 특정 카테고리만 검색
   source?: string; // 특정 출처만 검색
+  docGroup?: 'personal' | 'team' | 'all'; // 문서 그룹 필터 (기본: 'all')
 
   // 부스팅 옵션 (가중치, 0.0 ~ 1.0)
   folderPathBoost?: number; // 폴더 경로 매칭 시 점수 부스팅 (기본: 0.2)
