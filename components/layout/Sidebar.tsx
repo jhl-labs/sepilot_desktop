@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { BetaConfig } from '@/types';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import {
   AlertDialog,
@@ -66,6 +67,38 @@ export function Sidebar({
   } = useChatStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [clearPresentationDialogOpen, setClearPresentationDialogOpen] = useState(false);
+  const [betaConfig, setBetaConfig] = useState<BetaConfig>({ enablePresentationMode: false });
+
+  // Load beta config
+  useEffect(() => {
+    const loadBetaConfig = () => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      try {
+        const savedBetaConfig = localStorage.getItem('sepilot_beta_config');
+        if (savedBetaConfig) {
+          setBetaConfig(JSON.parse(savedBetaConfig));
+        }
+      } catch (error) {
+        console.error('Failed to load beta config:', error);
+      }
+    };
+
+    loadBetaConfig();
+
+    // Listen for config updates
+    const handleConfigUpdate = (event: CustomEvent) => {
+      if (event.detail?.beta) {
+        setBetaConfig(event.detail.beta);
+      }
+    };
+
+    window.addEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
+    return () => {
+      window.removeEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
+    };
+  }, []);
 
   const modeLabel =
     appMode === 'chat'
@@ -118,10 +151,12 @@ export function Sidebar({
               <Code className="mr-2 h-4 w-4" />
               Editor
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setAppMode('presentation')}>
-              <Presentation className="mr-2 h-4 w-4" />
-              Presentation
-            </DropdownMenuItem>
+            {betaConfig.enablePresentationMode && (
+              <DropdownMenuItem onClick={() => setAppMode('presentation')}>
+                <Presentation className="mr-2 h-4 w-4" />
+                Presentation
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => setAppMode('browser')}>
               <Globe className="mr-2 h-4 w-4" />
               Browser
