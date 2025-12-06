@@ -181,21 +181,12 @@ export function FileTreeItem({
   };
 
   const handleCopyPath = async () => {
-    if (!isAvailable || !window.electronAPI) {
-      console.warn('[FileTreeItem] API unavailable');
-      return;
-    }
-
-    try {
-      const result = await window.electronAPI.fs.getAbsolutePath(node.path);
-      if (result.success && result.data) {
-        const success = await copyToClipboard(result.data);
-        if (success) {
-          console.log('[FileTreeItem] Absolute path copied:', result.data);
-        }
-      }
-    } catch (error) {
-      console.error('[FileTreeItem] Error copying path:', error);
+    // node.path is already an absolute path from the file system
+    const success = await copyToClipboard(node.path);
+    if (success) {
+      console.log('[FileTreeItem] Absolute path copied:', node.path);
+    } else {
+      console.error('[FileTreeItem] Failed to copy path to clipboard');
     }
   };
 
