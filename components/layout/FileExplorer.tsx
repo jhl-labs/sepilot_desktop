@@ -30,7 +30,6 @@ import { getLanguageFromFilename } from '@/lib/utils/file-language';
 import { FileTreeItem, type FileNode } from './FileTreeItem';
 import { FileTreeContextMenu } from './FileTreeContextMenu';
 import { isElectron } from '@/lib/platform';
-import path from 'path-browserify';
 
 export function FileExplorer() {
   const {
@@ -132,12 +131,28 @@ export function FileExplorer() {
   };
 
   const handleCreateItem = async () => {
-    if (!newItemName || !newItemParentPath) {
+    if (!newItemName || !newItemName.trim() || !newItemParentPath) {
       console.warn('[FileExplorer] Cannot create item - missing name or parent path');
       return;
     }
 
-    const itemPath = path.join(newItemParentPath, newItemName);
+    if (!isElectron() || !window.electronAPI) {
+      console.warn('[FileExplorer] API unavailable');
+      return;
+    }
+
+    // Use IPC to resolve the item path correctly (handles Windows/POSIX paths)
+    const itemPathResult = await window.electronAPI.fs.resolvePath(
+      newItemParentPath,
+      newItemName.trim()
+    );
+    if (!itemPathResult.success || !itemPathResult.data) {
+      console.error('[FileExplorer] Failed to resolve item path:', itemPathResult.error);
+      window.alert(`${newItemType === 'file' ? '파일' : '폴더'} 생성 실패: 경로 생성 오류`);
+      return;
+    }
+
+    const itemPath = itemPathResult.data;
     console.log(`[FileExplorer] Creating ${newItemType}: ${itemPath}`);
 
     const success =
