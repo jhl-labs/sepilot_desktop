@@ -13,6 +13,7 @@ import {
   Zap,
   FileCode,
   Globe,
+  FlaskConical,
 } from 'lucide-react';
 
 export type SettingSection =
@@ -26,7 +27,8 @@ export type SettingSection =
   | 'backup'
   | 'quickinput'
   | 'editor'
-  | 'browser';
+  | 'browser'
+  | 'beta';
 
 interface SettingsCategory {
   id: string;
@@ -133,6 +135,12 @@ const settingsCategories: SettingsCategory[] = [
         label: '백업/복구',
         icon: HardDrive,
         description: '데이터 백업 및 복원',
+      },
+      {
+        id: 'beta',
+        label: 'Beta',
+        icon: FlaskConical,
+        description: '실험적 기능 (개발 중)',
       },
     ],
   },

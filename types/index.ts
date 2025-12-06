@@ -396,6 +396,14 @@ export interface QuickInputMessageData {
   userMessage: string; // 사용자 입력 또는 클립보드 내용 (사용자 메시지로 전송)
 }
 
+/**
+ * Beta Features Configuration
+ * 개발 중인 실험적 기능들의 활성화 여부를 관리
+ */
+export interface BetaConfig {
+  enablePresentationMode?: boolean; // Presentation 모드 활성화 (기본값: false)
+}
+
 export interface AppConfig {
   llm: LLMConfig;
   network?: NetworkConfig;
@@ -408,6 +416,7 @@ export interface AppConfig {
   githubSync?: GitHubSyncConfig; // 새로운 Token 기반 동기화 (Personal Docs)
   teamDocs?: TeamDocsConfig[]; // Team Docs 설정 (여러 GitHub Repo)
   quickInput?: QuickInputConfig;
+  beta?: BetaConfig; // Beta 기능 설정
   theme?: 'light' | 'dark' | 'system';
 }
 

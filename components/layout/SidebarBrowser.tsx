@@ -1,6 +1,16 @@
 'use client';
 
-import { Plus, Settings, Camera, Album, Bookmark, Wrench, ScrollText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+  Plus,
+  Settings,
+  Camera,
+  Album,
+  Bookmark,
+  Wrench,
+  ScrollText,
+  Presentation,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { BrowserChat } from '@/components/browser/BrowserChat';
@@ -10,10 +20,48 @@ import { BrowserSettings } from '@/components/browser/BrowserSettings';
 import { BrowserToolsList } from '@/components/browser/BrowserToolsList';
 import { BrowserAgentLogsView } from '@/components/browser/BrowserAgentLogsView';
 import { isElectron } from '@/lib/platform';
+import { BetaConfig } from '@/types';
 
 export function SidebarBrowser() {
-  const { clearBrowserChat, browserViewMode, setBrowserViewMode, browserAgentIsRunning } =
-    useChatStore();
+  const {
+    clearBrowserChat,
+    browserViewMode,
+    setBrowserViewMode,
+    browserAgentIsRunning,
+    setAppMode,
+  } = useChatStore();
+  const [betaConfig, setBetaConfig] = useState<BetaConfig>({ enablePresentationMode: false });
+
+  // Load beta config
+  useEffect(() => {
+    const loadBetaConfig = () => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      try {
+        const savedBetaConfig = localStorage.getItem('sepilot_beta_config');
+        if (savedBetaConfig) {
+          setBetaConfig(JSON.parse(savedBetaConfig));
+        }
+      } catch (error) {
+        console.error('Failed to load beta config:', error);
+      }
+    };
+
+    loadBetaConfig();
+
+    // Listen for config updates
+    const handleConfigUpdate = (event: CustomEvent) => {
+      if (event.detail?.beta) {
+        setBetaConfig(event.detail.beta);
+      }
+    };
+
+    window.addEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
+    return () => {
+      window.removeEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
+    };
+  }, []);
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -127,6 +175,17 @@ export function SidebarBrowser() {
             >
               <Bookmark className="h-5 w-5" />
             </Button>
+            {betaConfig.enablePresentationMode && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setAppMode('presentation')}
+                title="Presentation 모드 (Beta - 개발 중)"
+                className="flex-1"
+              >
+                <Presentation className="h-5 w-5" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"

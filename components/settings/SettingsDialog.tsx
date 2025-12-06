@@ -18,6 +18,7 @@ import {
   GitHubOAuthConfig,
   GitHubSyncConfig,
   TeamDocsConfig,
+  BetaConfig,
 } from '@/types';
 import { initializeLLMClient } from '@/lib/llm/client';
 import { VectorDBSettings } from '@/components/rag/VectorDBSettings';
@@ -35,6 +36,7 @@ import { ImageGenSettingsTab } from './ImageGenSettingsTab';
 import { MCPSettingsTab } from './MCPSettingsTab';
 import { QuickInputSettingsTab } from './QuickInputSettingsTab';
 import { SettingsSidebar, SettingSection } from './SettingsSidebar';
+import { BetaSettingsTab } from './BetaSettingsTab';
 import {
   createDefaultLLMConfig,
   createDefaultNetworkConfig,
@@ -60,6 +62,10 @@ const createDefaultQuickInputConfig = (): QuickInputConfig => ({
   quickQuestions: [],
 });
 
+const createDefaultBetaConfig = (): BetaConfig => ({
+  enablePresentationMode: false,
+});
+
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<SettingSection>('llm');
   const [viewMode, setViewMode] = useState<'ui' | 'json'>('ui');
@@ -73,6 +79,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [quickInputConfig, setQuickInputConfig] = useState<QuickInputConfig>(
     createDefaultQuickInputConfig()
   );
+  const [betaConfig, setBetaConfig] = useState<BetaConfig>(createDefaultBetaConfig());
 
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -141,6 +148,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               githubSync: result.data.githubSync,
               teamDocs: result.data.teamDocs ?? [],
               quickInput: result.data.quickInput ?? createDefaultQuickInputConfig(),
+              beta: result.data.beta ?? createDefaultBetaConfig(),
             };
             setAppConfigSnapshot(normalizedConfig);
             setConfig(llmConfig);
@@ -151,6 +159,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             setGithubSyncConfig(normalizedConfig.githubSync ?? null);
             setTeamDocsConfigs(normalizedConfig.teamDocs ?? []);
             setQuickInputConfig(normalizedConfig.quickInput ?? createDefaultQuickInputConfig());
+            setBetaConfig(normalizedConfig.beta ?? createDefaultBetaConfig());
 
             // VectorDB 설정 로드 (DB에서)
             if (result.data.vectorDB) {
@@ -216,6 +225,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             setQuickInputConfig(createDefaultQuickInputConfig());
           }
 
+          const savedBetaConfig = localStorage.getItem('sepilot_beta_config');
+          if (savedBetaConfig) {
+            setBetaConfig(JSON.parse(savedBetaConfig));
+          } else {
+            setBetaConfig(createDefaultBetaConfig());
+          }
+
           // VectorDB 설정 로드 및 초기화 (Web 환경에서만, Electron은 위에서 DB에서 로드함)
           const savedVectorDBConfig = localStorage.getItem('sepilot_vectordb_config');
           if (savedVectorDBConfig) {
@@ -279,6 +295,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       github: partial.github ?? appConfigSnapshot?.github,
       githubSync: partial.githubSync ?? appConfigSnapshot?.githubSync,
       quickInput: partial.quickInput ?? appConfigSnapshot?.quickInput,
+      beta: partial.beta ?? appConfigSnapshot?.beta,
     };
 
     const result = await window.electronAPI.config.save(merged);
@@ -582,6 +599,43 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     }
   };
 
+  const handleBetaSave = async () => {
+    setIsSaving(true);
+    setMessage(null);
+
+    try {
+      let savedConfig: AppConfig | null = null;
+      if (isElectron() && window.electronAPI) {
+        try {
+          savedConfig = await persistAppConfig({ beta: betaConfig });
+        } catch (error) {
+          console.error('Error saving Beta config to DB:', error);
+        }
+      }
+
+      if (!savedConfig) {
+        localStorage.setItem('sepilot_beta_config', JSON.stringify(betaConfig));
+      }
+
+      // Notify other components about Beta config update
+      window.dispatchEvent(
+        new CustomEvent('sepilot:config-updated', {
+          detail: { beta: betaConfig },
+        })
+      );
+
+      setMessage({ type: 'success', text: 'Beta 설정이 저장되었습니다!' });
+    } catch (error: any) {
+      console.error('Failed to save Beta config:', error);
+      setMessage({
+        type: 'error',
+        text: error.message || 'Beta 설정 저장에 실패했습니다.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleVectorDBSave = async (
     vectorDBConfig: VectorDBConfig,
     embeddingConfig: EmbeddingConfig
@@ -702,6 +756,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         if (newConfig.imageGen) {
           localStorage.setItem('sepilot_imagegen_config', JSON.stringify(newConfig.imageGen));
         }
+        if (newConfig.beta) {
+          localStorage.setItem('sepilot_beta_config', JSON.stringify(newConfig.beta));
+        }
       }
 
       // Update state
@@ -712,6 +769,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       setGithubConfig(newConfig.github ?? null);
       setGithubSyncConfig(newConfig.githubSync ?? null);
       setQuickInputConfig(newConfig.quickInput ?? createDefaultQuickInputConfig());
+      setBetaConfig(newConfig.beta ?? createDefaultBetaConfig());
       setVectorDBConfig(newConfig.vectorDB ?? null);
       setEmbeddingConfig(newConfig.embedding ?? null);
       setAppConfigSnapshot(newConfig);
@@ -763,6 +821,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       github: githubConfig ?? undefined,
       githubSync: githubSyncConfig ?? undefined,
       quickInput: quickInputConfig,
+      beta: betaConfig,
     };
   };
 
@@ -948,6 +1007,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     onSave={() =>
                       setMessage({ type: 'success', text: 'Browser 설정이 저장되었습니다!' })
                     }
+                    isSaving={isSaving}
+                    message={message}
+                  />
+                )}
+
+                {activeTab === 'beta' && (
+                  <BetaSettingsTab
+                    config={betaConfig}
+                    setConfig={setBetaConfig}
+                    onSave={handleBetaSave}
                     isSaving={isSaving}
                     message={message}
                   />
