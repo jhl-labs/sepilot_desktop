@@ -233,9 +233,10 @@ export function FileTreeItem({
   // Drag & Drop Handlers
   const handleDragStart = (e: React.DragEvent) => {
     e.stopPropagation();
-    // Store the dragged item's path and type in the dataTransfer
+    // Store the dragged item's path, name, and type in the dataTransfer
     e.dataTransfer.setData('text/plain', node.path);
     e.dataTransfer.setData('application/sepilot-path', node.path);
+    e.dataTransfer.setData('application/sepilot-name', node.name);
     e.dataTransfer.setData('application/sepilot-isdir', String(node.isDirectory));
     e.dataTransfer.effectAllowed = 'copyMove';
     console.log('[FileTreeItem] Drag started:', node.path);
@@ -258,7 +259,10 @@ export function FileTreeItem({
     }
 
     // Don't allow dropping a parent folder into its child
-    if (node.path.startsWith(draggedPath + path.sep)) {
+    // Normalize paths and check if node.path is inside draggedPath
+    const normalizedNodePath = node.path.replace(/\\/g, '/');
+    const normalizedDraggedPath = draggedPath.replace(/\\/g, '/');
+    if (normalizedNodePath.startsWith(`${normalizedDraggedPath}/`)) {
       return;
     }
 
@@ -285,9 +289,10 @@ export function FileTreeItem({
     }
 
     const draggedPath = e.dataTransfer.getData('application/sepilot-path');
+    const draggedName = e.dataTransfer.getData('application/sepilot-name');
 
-    if (!draggedPath) {
-      console.warn('[FileTreeItem] No dragged path found');
+    if (!draggedPath || !draggedName) {
+      console.warn('[FileTreeItem] No dragged path or name found');
       return;
     }
 
@@ -298,13 +303,23 @@ export function FileTreeItem({
     }
 
     // Don't allow dropping a parent folder into its child
-    if (node.path.startsWith(draggedPath + path.sep)) {
+    // Normalize paths and check if node.path is inside draggedPath
+    const normalizedNodePath = node.path.replace(/\\/g, '/');
+    const normalizedDraggedPath = draggedPath.replace(/\\/g, '/');
+    if (normalizedNodePath.startsWith(`${normalizedDraggedPath}/`)) {
       console.warn('[FileTreeItem] Cannot drop parent into child');
       return;
     }
 
-    const draggedName = path.basename(draggedPath);
-    const targetPath = path.join(node.path, draggedName);
+    // Use IPC to resolve the target path correctly (handles Windows/POSIX paths)
+    const targetPathResult = await window.electronAPI.fs.resolvePath(node.path, draggedName);
+    if (!targetPathResult.success || !targetPathResult.data) {
+      console.error('[FileTreeItem] Failed to resolve target path:', targetPathResult.error);
+      window.alert('대상 경로 생성 실패');
+      return;
+    }
+
+    const targetPath = targetPathResult.data;
     const isCopy = e.ctrlKey || e.metaKey;
     console.log(
       `[FileTreeItem] Dropping: ${draggedPath} -> ${targetPath} (${isCopy ? 'copy' : 'move'})`
