@@ -176,6 +176,7 @@ interface ChatStore {
   editorViewMode: 'files' | 'search' | 'chat' | 'settings'; // files, search, chat, or settings view in Editor sidebar
   editorChatStreaming: boolean; // Editor chat streaming 상태 (백그라운드 스트리밍 지원)
   fileTreeRefreshTrigger: number; // File tree refresh trigger (timestamp)
+  expandedFolderPaths: Set<string>; // Expanded folder paths in file tree
 
   // Editor Settings
   editorAppearanceConfig: EditorAppearanceConfig;
@@ -296,6 +297,8 @@ interface ChatStore {
   setEditorViewMode: (mode: 'files' | 'search' | 'chat' | 'settings') => void;
   setEditorChatStreaming: (isStreaming: boolean) => void;
   refreshFileTree: () => void;
+  toggleExpandedFolder: (path: string) => void;
+  clearExpandedFolders: () => void;
 
   // Actions - Editor Settings
   setEditorAppearanceConfig: (config: Partial<EditorAppearanceConfig>) => void;
@@ -463,6 +466,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   editorViewMode: 'files',
   editorChatStreaming: false,
   fileTreeRefreshTrigger: 0,
+  expandedFolderPaths: new Set<string>(),
 
   // Editor Appearance Config
   editorAppearanceConfig: (() => {
@@ -1454,7 +1458,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setWorkingDirectory: (directory: string | null) => {
-    set({ workingDirectory: directory });
+    set({ workingDirectory: directory, expandedFolderPaths: new Set<string>() });
     // Save to localStorage for persistence
     if (directory) {
       localStorage.setItem('sepilot_working_directory', directory);
@@ -1805,6 +1809,22 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   refreshFileTree: () => {
     set({ fileTreeRefreshTrigger: Date.now() });
+  },
+
+  toggleExpandedFolder: (path: string) => {
+    set((state) => {
+      const newExpanded = new Set(state.expandedFolderPaths);
+      if (newExpanded.has(path)) {
+        newExpanded.delete(path);
+      } else {
+        newExpanded.add(path);
+      }
+      return { expandedFolderPaths: newExpanded };
+    });
+  },
+
+  clearExpandedFolders: () => {
+    set({ expandedFolderPaths: new Set<string>() });
   },
 
   // Editor Settings

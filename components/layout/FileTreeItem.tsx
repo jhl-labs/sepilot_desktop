@@ -49,14 +49,16 @@ export function FileTreeItem({
   onNewFile,
   onNewFolder,
 }: FileTreeItemProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(node.name);
   const [children, setChildren] = useState(node.children);
   const [isDragOver, setIsDragOver] = useState(false);
   const { deleteItem, renameItem, readDirectory, isAvailable } = useFileSystem();
   const { copyFiles, cutFiles, pasteFiles } = useFileClipboard();
-  const { workingDirectory } = useChatStore();
+  const { workingDirectory, expandedFolderPaths, toggleExpandedFolder } = useChatStore();
+
+  // Get expanded state from store
+  const isExpanded = expandedFolderPaths.has(node.path);
 
   const handleClick = async () => {
     if (node.isDirectory) {
@@ -66,11 +68,11 @@ export function FileTreeItem({
         const loadedChildren = await readDirectory(node.path);
         if (loadedChildren) {
           setChildren(loadedChildren);
-          setIsExpanded(true);
+          toggleExpandedFolder(node.path);
         }
       } else {
         // Toggle if children already loaded
-        setIsExpanded(!isExpanded);
+        toggleExpandedFolder(node.path);
       }
     } else {
       onFileClick(node.path, node.name);
