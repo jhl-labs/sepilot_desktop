@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
+import type monaco from 'monaco-editor';
 import {
   Dialog,
   DialogContent,
@@ -13,30 +15,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { VectorDocument } from '@/lib/vectordb/types';
-import {
-  Loader2,
-  Sparkles,
-  Languages,
-  Maximize2,
-  Minimize2,
-  Wand2,
-  CheckCircle2,
-  ShieldCheck,
-  MessageSquare,
-  AlertCircle,
-} from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+
+// Load Monaco Editor component without SSR
+const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <Loader2 className="h-6 w-6 animate-spin" />
+    </div>
+  ),
+});
 
 interface DocumentEditDialogProps {
   open: boolean;
@@ -70,10 +61,10 @@ export function DocumentEditDialog({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [selectedText, setSelectedText] = useState('');
   const [customPromptOpen, setCustomPromptOpen] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const [processingAction, setProcessingAction] = useState<string>('');
 
   useEffect(() => {
     if (document) {
@@ -83,18 +74,6 @@ export function DocumentEditDialog({
       setContent(document.content || '');
     }
   }, [document]);
-
-  const handleTextSelect = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      return;
-    }
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = content.substring(start, end);
-    setSelectedText(selected);
-  };
 
   const getAIPrompt = (action: AIAction, text: string, customPromptText?: string): string => {
     const prompts: Record<AIAction, string> = {
@@ -126,61 +105,183 @@ export function DocumentEditDialog({
     return labels[action];
   };
 
-  const executeAIAction = async (action: AIAction, customPromptText?: string) => {
-    const targetText = selectedText || content;
-    if (!targetText.trim()) {
-      setMessage({ type: 'error', text: '처리할 텍스트가 없습니다.' });
+  const executeAIAction = useCallback(
+    async (action: AIAction, customPromptText?: string) => {
+      if (!editor) {
+        setMessage({ type: 'error', text: 'Editor가 준비되지 않았습니다.' });
+        return;
+      }
+
+      const model = editor.getModel();
+      const selection = editor.getSelection();
+
+      if (!model) {
+        setMessage({ type: 'error', text: 'Editor model이 없습니다.' });
+        return;
+      }
+
+      // 선택된 텍스트가 있으면 선택 영역, 없으면 전체 문서
+      const targetText =
+        selection && !selection.isEmpty() ? model.getValueInRange(selection) : model.getValue();
+
+      if (!targetText.trim()) {
+        setMessage({ type: 'error', text: '처리할 텍스트가 없습니다.' });
+        return;
+      }
+
+      setIsProcessing(true);
+      setProcessingAction(getActionLabel(action));
+      setMessage(null);
+
+      try {
+        const result = await window.electronAPI.llm.chat([
+          {
+            id: 'system',
+            role: 'system',
+            content: '당신은 문서 편집과 개선을 돕는 전문 AI 어시스턴트입니다.',
+            created_at: Date.now(),
+          },
+          {
+            id: 'user',
+            role: 'user',
+            content: getAIPrompt(action, targetText, customPromptText),
+            created_at: Date.now(),
+          },
+        ]);
+
+        if (!result.success || !result.data) {
+          throw new Error(result.error || 'AI 작업에 실패했습니다.');
+        }
+
+        const processedText = result.data.content;
+
+        // Monaco Editor에서 텍스트 교체
+        if (selection && !selection.isEmpty()) {
+          // 선택 영역만 교체
+          editor.executeEdits('ai-action', [
+            {
+              range: selection,
+              text: processedText,
+              forceMoveMarkers: true,
+            },
+          ]);
+        } else {
+          // 전체 문서 교체
+          const fullRange = model.getFullModelRange();
+          editor.executeEdits('ai-action', [
+            {
+              range: fullRange,
+              text: processedText,
+              forceMoveMarkers: true,
+            },
+          ]);
+        }
+
+        setMessage({
+          type: 'success',
+          text: `${getActionLabel(action)} 작업이 완료되었습니다!`,
+        });
+      } catch (error: any) {
+        console.error('AI action error:', error);
+        setMessage({ type: 'error', text: error.message || 'AI 작업에 실패했습니다.' });
+      } finally {
+        setIsProcessing(false);
+        setProcessingAction('');
+      }
+    },
+    [editor]
+  );
+
+  // Register Monaco context menu actions
+  useEffect(() => {
+    if (!editor) {
       return;
     }
 
-    setIsProcessing(true);
-    setMessage(null);
+    const refineAction = editor.addAction({
+      id: 'doc-refine',
+      label: 'AI: 내용 정제',
+      contextMenuGroupId: 'ai-docs',
+      contextMenuOrder: 1,
+      run: () => executeAIAction('refine'),
+    });
 
-    try {
-      const result = await window.electronAPI.llm.chat([
-        {
-          id: 'system',
-          role: 'system',
-          content: '당신은 문서 편집과 개선을 돕는 전문 AI 어시스턴트입니다.',
-          created_at: Date.now(),
-        },
-        {
-          id: 'user',
-          role: 'user',
-          content: getAIPrompt(action, targetText, customPromptText),
-          created_at: Date.now(),
-        },
-      ]);
+    const expandAction = editor.addAction({
+      id: 'doc-expand',
+      label: 'AI: 내용 확장',
+      contextMenuGroupId: 'ai-docs',
+      contextMenuOrder: 2,
+      run: () => executeAIAction('expand'),
+    });
 
-      if (!result.success || !result.data) {
-        throw new Error(result.error || 'AI 작업에 실패했습니다.');
-      }
+    const shortenAction = editor.addAction({
+      id: 'doc-shorten',
+      label: 'AI: 내용 축약',
+      contextMenuGroupId: 'ai-docs',
+      contextMenuOrder: 3,
+      run: () => executeAIAction('shorten'),
+    });
 
-      const processedText = result.data.content;
+    const verifyAction = editor.addAction({
+      id: 'doc-verify',
+      label: 'AI: 내용 검증',
+      contextMenuGroupId: 'ai-docs',
+      contextMenuOrder: 4,
+      run: () => executeAIAction('verify'),
+    });
 
-      // 선택된 텍스트가 있으면 선택 영역만 교체, 없으면 전체 교체
-      if (selectedText && textareaRef.current) {
-        const textarea = textareaRef.current;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const newContent = content.substring(0, start) + processedText + content.substring(end);
-        setContent(newContent);
-      } else {
-        setContent(processedText);
-      }
+    const improveAction = editor.addAction({
+      id: 'doc-improve',
+      label: 'AI: 품질 개선',
+      contextMenuGroupId: 'ai-docs',
+      contextMenuOrder: 5,
+      run: () => executeAIAction('improve'),
+    });
 
-      setMessage({
-        type: 'success',
-        text: `${getActionLabel(action)} 작업이 완료되었습니다!`,
-      });
-      setSelectedText('');
-    } catch (error: any) {
-      console.error('AI action error:', error);
-      setMessage({ type: 'error', text: error.message || 'AI 작업에 실패했습니다.' });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+    const translateKoAction = editor.addAction({
+      id: 'doc-translate-ko',
+      label: 'AI: 한국어로 번역',
+      contextMenuGroupId: 'ai-docs',
+      contextMenuOrder: 6,
+      run: () => executeAIAction('translate-ko'),
+    });
+
+    const translateEnAction = editor.addAction({
+      id: 'doc-translate-en',
+      label: 'AI: 영어로 번역',
+      contextMenuGroupId: 'ai-docs',
+      contextMenuOrder: 7,
+      run: () => executeAIAction('translate-en'),
+    });
+
+    const translateJaAction = editor.addAction({
+      id: 'doc-translate-ja',
+      label: 'AI: 일본어로 번역',
+      contextMenuGroupId: 'ai-docs',
+      contextMenuOrder: 8,
+      run: () => executeAIAction('translate-ja'),
+    });
+
+    const customAction = editor.addAction({
+      id: 'doc-custom',
+      label: 'AI: 커스텀 프롬프트',
+      contextMenuGroupId: 'ai-docs',
+      contextMenuOrder: 9,
+      run: () => setCustomPromptOpen(true),
+    });
+
+    return () => {
+      refineAction.dispose();
+      expandAction.dispose();
+      shortenAction.dispose();
+      verifyAction.dispose();
+      improveAction.dispose();
+      translateKoAction.dispose();
+      translateEnAction.dispose();
+      translateJaAction.dispose();
+      customAction.dispose();
+    };
+  }, [editor, executeAIAction]);
 
   const handleSave = async (pushToGitHub: boolean = false) => {
     if (!content.trim()) {
@@ -343,102 +444,41 @@ export function DocumentEditDialog({
           <div className="space-y-2 flex-1 flex flex-col">
             <div className="flex items-center justify-between">
               <Label htmlFor="edit-content">문서 내용</Label>
-              {selectedText && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {selectedText.length}자 선택됨
+              {isProcessing && processingAction && (
+                <div className="flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span className="font-medium">{processingAction} 중...</span>
                 </div>
               )}
             </div>
-            <ContextMenu>
-              <ContextMenuTrigger asChild>
-                <Textarea
-                  ref={textareaRef}
-                  id="edit-content"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  onSelect={handleTextSelect}
-                  placeholder="문서 내용을 입력하세요... (우클릭하여 AI 작업 실행)"
-                  className="flex-1 min-h-[400px] font-mono text-sm resize-none"
-                  disabled={isSaving || isProcessing}
-                />
-              </ContextMenuTrigger>
-              <ContextMenuContent className="w-64">
-                <ContextMenuItem onClick={() => executeAIAction('refine')} disabled={isProcessing}>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  <div className="flex-1">
-                    <div className="font-medium">내용 정제</div>
-                    <div className="text-xs text-muted-foreground">핵심 내용만 추출</div>
-                  </div>
-                </ContextMenuItem>
-                <ContextMenuItem onClick={() => executeAIAction('expand')} disabled={isProcessing}>
-                  <Maximize2 className="mr-2 h-4 w-4" />
-                  <div className="flex-1">
-                    <div className="font-medium">내용 확장</div>
-                    <div className="text-xs text-muted-foreground">더 자세하게 작성</div>
-                  </div>
-                </ContextMenuItem>
-                <ContextMenuItem onClick={() => executeAIAction('shorten')} disabled={isProcessing}>
-                  <Minimize2 className="mr-2 h-4 w-4" />
-                  <div className="flex-1">
-                    <div className="font-medium">내용 축약</div>
-                    <div className="text-xs text-muted-foreground">간결하게 요약</div>
-                  </div>
-                </ContextMenuItem>
-                <ContextMenuItem onClick={() => executeAIAction('verify')} disabled={isProcessing}>
-                  <ShieldCheck className="mr-2 h-4 w-4" />
-                  <div className="flex-1">
-                    <div className="font-medium">내용 검증</div>
-                    <div className="text-xs text-muted-foreground">사실 관계 확인</div>
-                  </div>
-                </ContextMenuItem>
-                <ContextMenuItem onClick={() => setCustomPromptOpen(true)} disabled={isProcessing}>
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  <div className="flex-1">
-                    <div className="font-medium">프롬프트를 통한 요청</div>
-                    <div className="text-xs text-muted-foreground">커스텀 명령 입력</div>
-                  </div>
-                </ContextMenuItem>
-                <ContextMenuSeparator />
-                <ContextMenuItem onClick={() => executeAIAction('improve')} disabled={isProcessing}>
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  <div className="flex-1">
-                    <div className="font-medium">품질 개선</div>
-                    <div className="text-xs text-muted-foreground">가독성과 문법 개선</div>
-                  </div>
-                </ContextMenuItem>
-                <ContextMenuSeparator />
-                <ContextMenuSub>
-                  <ContextMenuSubTrigger disabled={isProcessing}>
-                    <Languages className="mr-2 h-4 w-4" />
-                    번역
-                  </ContextMenuSubTrigger>
-                  <ContextMenuSubContent>
-                    <ContextMenuItem
-                      onClick={() => executeAIAction('translate-ko')}
-                      disabled={isProcessing}
-                    >
-                      한국어로
-                    </ContextMenuItem>
-                    <ContextMenuItem
-                      onClick={() => executeAIAction('translate-en')}
-                      disabled={isProcessing}
-                    >
-                      영어로
-                    </ContextMenuItem>
-                    <ContextMenuItem
-                      onClick={() => executeAIAction('translate-ja')}
-                      disabled={isProcessing}
-                    >
-                      일본어로
-                    </ContextMenuItem>
-                  </ContextMenuSubContent>
-                </ContextMenuSub>
-              </ContextMenuContent>
-            </ContextMenu>
+            <div className="flex-1 min-h-[400px] border rounded-md overflow-hidden">
+              <MonacoEditor
+                height="100%"
+                language="markdown"
+                value={content}
+                onChange={(value) => setContent(value || '')}
+                onMount={(editorInstance) => {
+                  setEditor(editorInstance);
+                  // Store monaco instance globally if needed
+                  if (!(window as any).monaco) {
+                    (window as any).monaco = (window as any).monaco || {};
+                  }
+                }}
+                theme="vs-dark"
+                options={{
+                  fontSize: 14,
+                  fontFamily: 'monospace',
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  automaticLayout: true,
+                  lineNumbers: 'on',
+                  readOnly: isSaving || isProcessing,
+                }}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">
-              텍스트를 선택하고 우클릭하여 선택 영역에만 AI 작업 적용, 선택 없이 우클릭하면 전체
-              문서에 적용
+              텍스트를 선택하고 우클릭하여 AI 작업 실행 (선택 없이 우클릭하면 전체 문서에 적용)
             </p>
           </div>
 
@@ -565,11 +605,14 @@ export function DocumentEditDialog({
                 className="min-h-[150px] resize-none"
               />
             </div>
-            {selectedText && (
+            {editor && editor.getSelection() && !editor.getSelection()!.isEmpty() && (
               <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-3 text-sm text-blue-600 dark:text-blue-400">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />
-                  <span>{selectedText.length}자의 선택된 텍스트에 적용됩니다</span>
+                  <span>
+                    {editor.getModel()?.getValueInRange(editor.getSelection()!).length || 0}자의
+                    선택된 텍스트에 적용됩니다
+                  </span>
                 </div>
               </div>
             )}
