@@ -43,7 +43,7 @@ import { LLMStatusBar } from '../LLMStatusBar';
 import { ImageGenerationProgressBar } from '../ImageGenerationProgressBar';
 import { useChatStore } from '@/lib/store/chat-store';
 import { isElectron } from '@/lib/platform';
-import type { ImageAttachment } from '@/types';
+import type { ImageAttachment, LLMConfig } from '@/types';
 import type { ChatConfig } from './types';
 
 interface ToolInfo {
@@ -141,6 +141,7 @@ export function UnifiedChatInput({
   const [personaAutocompleteIndex, setPersonaAutocompleteIndex] = useState(0);
   const [tools, _setTools] = useState<ToolInfo[]>([]);
   const [imageGenConfig, setImageGenConfig] = useState<any>(null);
+  const [llmConfig, setLLMConfig] = useState<LLMConfig | null>(null);
   const { selectedImageGenProvider, setSelectedImageGenProvider } = useChatStore();
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -200,6 +201,26 @@ export function UnifiedChatInput({
 
     loadImageGenConfig();
   }, [mode, selectedImageGenProvider, setSelectedImageGenProvider]);
+
+  // Load LLM config from IPC (Main mode only)
+  useEffect(() => {
+    if (mode !== 'main' || !isElectron() || !window.electronAPI?.config) {
+      return;
+    }
+
+    const loadLLMConfig = async () => {
+      try {
+        const result = await window.electronAPI.config.load();
+        if (result.success && result.data?.llm) {
+          setLLMConfig(result.data.llm);
+        }
+      } catch (error) {
+        console.error('[UnifiedChatInput] Failed to load LLM config:', error);
+      }
+    };
+
+    loadLLMConfig();
+  }, [mode]);
 
   // Load tools from IPC (all modes, but filtered by mode)
   useEffect(() => {
@@ -1107,7 +1128,7 @@ export function UnifiedChatInput({
         <div className="mt-2">
           <LLMStatusBar
             isStreaming={isStreaming}
-            llmConfig={null}
+            llmConfig={llmConfig}
             messages={messages}
             input={input}
             mounted={mounted}
