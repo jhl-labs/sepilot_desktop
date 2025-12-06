@@ -53,6 +53,7 @@ export function FileTreeItem({
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(node.name);
   const [children, setChildren] = useState(node.children);
+  const [isDragOver, setIsDragOver] = useState(false);
   const { deleteItem, renameItem, readDirectory, isAvailable } = useFileSystem();
   const { copyFiles, cutFiles, pasteFiles } = useFileClipboard();
   const { workingDirectory } = useChatStore();
@@ -229,6 +230,120 @@ export function FileTreeItem({
     }
   };
 
+  // Drag & Drop Handlers
+  const handleDragStart = (e: React.DragEvent) => {
+    e.stopPropagation();
+    // Store the dragged item's path and type in the dataTransfer
+    e.dataTransfer.setData('text/plain', node.path);
+    e.dataTransfer.setData('application/sepilot-path', node.path);
+    e.dataTransfer.setData('application/sepilot-isdir', String(node.isDirectory));
+    e.dataTransfer.effectAllowed = 'copyMove';
+    console.log('[FileTreeItem] Drag started:', node.path);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    // Only allow drop on directories
+    if (!node.isDirectory) {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const draggedPath = e.dataTransfer.getData('application/sepilot-path');
+
+    // Don't allow dropping on itself
+    if (draggedPath === node.path) {
+      return;
+    }
+
+    // Don't allow dropping a parent folder into its child
+    if (node.path.startsWith(draggedPath + path.sep)) {
+      return;
+    }
+
+    // Determine operation based on modifier keys (Ctrl/Cmd for copy, default is move)
+    const isCopy = e.ctrlKey || e.metaKey;
+    e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
+
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    if (!node.isDirectory || !isAvailable || !window.electronAPI) {
+      console.warn('[FileTreeItem] Drop not allowed');
+      return;
+    }
+
+    const draggedPath = e.dataTransfer.getData('application/sepilot-path');
+
+    if (!draggedPath) {
+      console.warn('[FileTreeItem] No dragged path found');
+      return;
+    }
+
+    // Don't allow dropping on itself
+    if (draggedPath === node.path) {
+      console.warn('[FileTreeItem] Cannot drop on itself');
+      return;
+    }
+
+    // Don't allow dropping a parent folder into its child
+    if (node.path.startsWith(draggedPath + path.sep)) {
+      console.warn('[FileTreeItem] Cannot drop parent into child');
+      return;
+    }
+
+    const draggedName = path.basename(draggedPath);
+    const targetPath = path.join(node.path, draggedName);
+    const isCopy = e.ctrlKey || e.metaKey;
+    console.log(
+      `[FileTreeItem] Dropping: ${draggedPath} -> ${targetPath} (${isCopy ? 'copy' : 'move'})`
+    );
+
+    try {
+      if (isCopy) {
+        // Copy operation using duplicate then rename
+        const duplicateResult = await window.electronAPI.fs.duplicate(draggedPath);
+        if (duplicateResult.success && duplicateResult.data) {
+          // Move the duplicated file to target location
+          const success = await renameItem(duplicateResult.data, targetPath);
+          if (success) {
+            console.log('[FileTreeItem] Copied successfully');
+            onRefresh();
+          } else {
+            // Clean up the duplicate if move failed
+            await deleteItem(duplicateResult.data);
+            window.alert('복사 실패');
+          }
+        } else {
+          window.alert('복사 실패');
+        }
+      } else {
+        // Move operation
+        const success = await renameItem(draggedPath, targetPath);
+        if (success) {
+          console.log('[FileTreeItem] Moved successfully');
+          onRefresh();
+        } else {
+          window.alert('이동 실패');
+        }
+      }
+    } catch (error) {
+      console.error('[FileTreeItem] Error during drop:', error);
+      window.alert(isCopy ? '복사 실패' : '이동 실패');
+    }
+  };
+
   return (
     <div>
       <FileTreeContextMenu
@@ -261,9 +376,15 @@ export function FileTreeItem({
         ) : (
           <button
             onClick={handleClick}
+            draggable
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             className={cn(
               'flex w-full items-center gap-1 px-2 py-1 text-sm hover:bg-accent rounded transition-colors text-left',
-              isActive && 'bg-accent text-accent-foreground font-medium'
+              isActive && 'bg-accent text-accent-foreground font-medium',
+              isDragOver && node.isDirectory && 'bg-primary/20 ring-2 ring-primary'
             )}
             style={{ paddingLeft: `${level * 12 + 8}px` }}
           >
