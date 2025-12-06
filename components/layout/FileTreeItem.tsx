@@ -20,7 +20,6 @@ import { useFileSystem } from '@/hooks/use-file-system';
 import { useFileClipboard } from '@/hooks/use-file-clipboard';
 import { useChatStore } from '@/lib/store/chat-store';
 import { FileTreeContextMenu } from './FileTreeContextMenu';
-import path from 'path-browserify';
 
 export interface FileNode {
   name: string;
@@ -46,6 +45,7 @@ export function FileTreeItem({
   isActive,
   onFileClick,
   onRefresh,
+  parentPath,
   onNewFile,
   onNewFolder,
 }: FileTreeItemProps) {
@@ -114,18 +114,32 @@ export function FileTreeItem({
   };
 
   const handleRename = async () => {
-    if (!newName || newName === node.name) {
+    if (!newName || newName.trim() === '' || newName === node.name) {
       console.log('[FileTreeItem] Rename cancelled - no change or empty name');
       setIsRenaming(false);
       setNewName(node.name);
       return;
     }
 
-    // 현재 파일/폴더의 부모 디렉토리 경로를 추출
-    const currentDir = path.dirname(node.path);
-    const newPath = path.join(currentDir, newName);
+    if (!isAvailable || !window.electronAPI) {
+      console.warn('[FileTreeItem] API unavailable');
+      setIsRenaming(false);
+      setNewName(node.name);
+      return;
+    }
+
+    // Use IPC to resolve the new path correctly (handles Windows/POSIX paths)
+    const newPathResult = await window.electronAPI.fs.resolvePath(parentPath, newName.trim());
+    if (!newPathResult.success || !newPathResult.data) {
+      console.error('[FileTreeItem] Failed to resolve new path:', newPathResult.error);
+      window.alert(`이름 변경 실패: 새 경로 생성 실패`);
+      setIsRenaming(false);
+      setNewName(node.name);
+      return;
+    }
+
+    const newPath = newPathResult.data;
     console.log(`[FileTreeItem] Renaming: ${node.path} -> ${newPath}`);
-    console.log(`[FileTreeItem] Current dir: ${currentDir}, New name: ${newName}`);
     const success = await renameItem(node.path, newPath);
 
     if (success) {
@@ -222,7 +236,7 @@ export function FileTreeItem({
 
   const handleOpenInTerminal = () => {
     // Get the directory path (if file, use parent directory)
-    const dirPath = node.isDirectory ? node.path : path.dirname(node.path);
+    const dirPath = node.isDirectory ? node.path : parentPath;
 
     // Set working directory and show terminal panel
     useChatStore.getState().setWorkingDirectory(dirPath);
