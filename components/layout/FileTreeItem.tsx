@@ -380,34 +380,34 @@ export function FileTreeItem({
 
   return (
     <div>
-      <FileTreeContextMenu
-        filePath={node.path}
-        isDirectory={node.isDirectory}
-        onCopy={handleCopy}
-        onCut={handleCut}
-        onPaste={node.isDirectory ? handlePaste : undefined}
-        onRename={() => setIsRenaming(true)}
-        onDelete={handleDelete}
-        onNewFile={node.isDirectory ? () => onNewFile(node.path) : undefined}
-        onNewFolder={node.isDirectory ? () => onNewFolder(node.path) : undefined}
-        onCopyPath={handleCopyPath}
-        onCopyRelativePath={handleCopyRelativePath}
-        onShowInFolder={handleShowInFolder}
-        onOpenInTerminal={handleOpenInTerminal}
-        onDuplicate={handleDuplicate}
-        onRefresh={onRefresh}
-      >
-        {isRenaming ? (
-          <Input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onBlur={handleRename}
-            onKeyDown={handleKeyDown}
-            className="h-auto px-2 py-1 text-sm"
-            style={{ marginLeft: `${level * 12 + 8}px` }}
-            autoFocus
-          />
-        ) : (
+      {isRenaming ? (
+        <Input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onBlur={handleRename}
+          onKeyDown={handleKeyDown}
+          className="h-auto px-2 py-1 text-sm"
+          style={{ marginLeft: `${level * 12 + 8}px` }}
+          autoFocus
+        />
+      ) : (
+        <FileTreeContextMenu
+          filePath={node.path}
+          isDirectory={node.isDirectory}
+          onCopy={handleCopy}
+          onCut={handleCut}
+          onPaste={node.isDirectory ? handlePaste : undefined}
+          onRename={() => setIsRenaming(true)}
+          onDelete={handleDelete}
+          onNewFile={node.isDirectory ? () => onNewFile(node.path) : undefined}
+          onNewFolder={node.isDirectory ? () => onNewFolder(node.path) : undefined}
+          onCopyPath={handleCopyPath}
+          onCopyRelativePath={handleCopyRelativePath}
+          onShowInFolder={handleShowInFolder}
+          onOpenInTerminal={handleOpenInTerminal}
+          onDuplicate={handleDuplicate}
+          onRefresh={onRefresh}
+        >
           <button
             onClick={handleClick}
             draggable
@@ -443,8 +443,8 @@ export function FileTreeItem({
             )}
             <span className="truncate">{node.name}</span>
           </button>
-        )}
-      </FileTreeContextMenu>
+        </FileTreeContextMenu>
+      )}
 
       {node.isDirectory && isExpanded && children && (
         <div>
