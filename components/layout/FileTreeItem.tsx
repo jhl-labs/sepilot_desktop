@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Folder, FolderOpen, File, ChevronRight, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -59,6 +59,23 @@ export function FileTreeItem({
 
   // Get expanded state from store
   const isExpanded = expandedFolderPaths.has(node.path);
+
+  // Sync children state with node.children when it changes
+  useEffect(() => {
+    setChildren(node.children);
+  }, [node.children]);
+
+  // Auto-load children if folder is expanded but children not loaded yet
+  useEffect(() => {
+    if (node.isDirectory && isExpanded && !children && isAvailable) {
+      console.log(`[FileTreeItem] Auto-loading expanded directory: ${node.path}`);
+      readDirectory(node.path).then((loadedChildren) => {
+        if (loadedChildren) {
+          setChildren(loadedChildren);
+        }
+      });
+    }
+  }, [isExpanded, node.isDirectory, node.path, children, isAvailable, readDirectory]);
 
   const handleClick = async () => {
     if (node.isDirectory) {
