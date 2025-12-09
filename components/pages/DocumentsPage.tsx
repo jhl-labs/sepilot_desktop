@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { DocumentList } from '@/components/rag/DocumentList';
-import { DocumentUploadDialog } from '@/components/rag/DocumentUploadDialog';
-import { DocumentEditDialog } from '@/components/rag/DocumentEditDialog';
+import { DocumentDialog } from '@/components/rag/DocumentDialog';
 import {
   VectorDBConfig,
   EmbeddingConfig,
@@ -416,14 +415,16 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
       </div>
 
       {/* Upload Dialog */}
-      <DocumentUploadDialog
+      <DocumentDialog
+        mode="create"
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
         onUpload={handleDocumentUpload}
       />
 
       {/* Edit Dialog */}
-      <DocumentEditDialog
+      <DocumentDialog
+        mode="edit"
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         document={editingDocument}
