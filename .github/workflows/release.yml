@@ -77,7 +77,7 @@ jobs:
         run: pnpm build:icon
 
       - name: Build for Windows
-        uses: nick-fields/retry-action@v3
+        uses: nick-invision/retry@v3
         with:
           timeout_minutes: 30
           max_attempts: 3
