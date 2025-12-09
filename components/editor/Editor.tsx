@@ -816,7 +816,7 @@ export function CodeEditor() {
     };
   }, [editor, handleEditorAction]);
 
-  // Handle clipboard image paste (Ctrl+V) - Monaco editor command approach
+  // Handle clipboard image paste (Ctrl+V) - Only for Markdown files
   useEffect(() => {
     if (!editor || !isElectron() || !window.electronAPI) {
       return;
@@ -824,113 +824,125 @@ export function CodeEditor() {
 
     console.log('[Editor] Setting up paste handler');
 
-    // Override Monaco's Ctrl+V command
-    editor.addCommand(
-      (window as any).monaco.KeyMod.CtrlCmd | (window as any).monaco.KeyCode.KeyV,
-      async () => {
-        console.log('[Editor] Paste command triggered (Ctrl+V)');
+    // Ctrl+V DOM 이벤트 리스너 사용 (Monaco 키 바인딩 대신)
+    const handlePaste = async (e: ClipboardEvent) => {
+      // Markdown 파일인지 확인
+      const currentFile = openFiles.find((f) => f.path === activeFilePath);
+      const currentIsMarkdown =
+        currentFile &&
+        (currentFile.language === 'markdown' ||
+          currentFile.path.toLowerCase().endsWith('.md') ||
+          currentFile.path.toLowerCase().endsWith('.mdx'));
 
-        // Markdown 파일에서만 이미지 붙여넣기 시도
-        const currentFile = openFiles.find((f) => f.path === activeFilePath);
-        const currentIsMarkdown =
-          currentFile &&
-          (currentFile.language === 'markdown' ||
-            currentFile.path.toLowerCase().endsWith('.md') ||
-            currentFile.path.toLowerCase().endsWith('.mdx'));
-
-        if (!currentIsMarkdown || !currentFile || !workingDirectory) {
-          console.log('[Editor] Not a markdown file, using default paste');
-          // Markdown이 아니면 기본 paste 실행
-          editor.trigger('keyboard', 'editor.action.clipboardPasteAction', null);
-          return;
-        }
-
-        try {
-          // Electron 클립보드에서 이미지 확인 및 저장 시도
-          const result = await window.electronAPI.fs.saveClipboardImage(workingDirectory);
-
-          if (result.success && result.data) {
-            // 이미지가 있었음 - Markdown 문법으로 삽입
-            const { filename } = result.data;
-            console.log('[Editor] Image saved:', filename);
-
-            // 상대 경로 계산 - working directory 기준
-            // 이미지는 항상 working directory에 저장되므로,
-            // working directory 기준 상대 경로를 사용 (파일 이식성 향상)
-            const imagePath = path.join(workingDirectory, filename);
-
-            console.log('[Editor] Path info:', {
-              currentFile: currentFile.path,
-              imagePath,
-              workingDirectory,
-            });
-
-            // IPC로 working directory 기준 상대 경로 계산
-            const relativePathResult = await window.electronAPI.fs.getRelativePath(
-              workingDirectory,
-              imagePath
-            );
-
-            let relativePath: string;
-            if (relativePathResult.success && relativePathResult.data) {
-              relativePath = relativePathResult.data;
-              // Windows 백슬래시를 forward slash로 변환 (Markdown 표준)
-              relativePath = relativePath.replace(/\\/g, '/');
-
-              // working directory와 같은 위치면 단순히 파일명만 사용
-              // 그렇지 않으면 ./ 접두사 추가
-              if (relativePath === filename || relativePath === `./${filename}`) {
-                relativePath = `./${filename}`;
-              } else if (!relativePath.startsWith('./') && !relativePath.startsWith('../')) {
-                relativePath = `./${relativePath}`;
-              }
-
-              console.log('[Editor] Relative path (working dir based):', relativePath);
-            } else {
-              // Fallback: working directory에 있다고 가정
-              relativePath = `./${filename}`;
-              console.warn('[Editor] Failed to get relative path, using fallback:', relativePath);
-            }
-
-            const imageMarkdown = `![${filename}](${relativePath})`;
-
-            const position = editor.getPosition();
-            if (position) {
-              editor.executeEdits('paste-image', [
-                {
-                  range: new (window as any).monaco.Range(
-                    position.lineNumber,
-                    position.column,
-                    position.lineNumber,
-                    position.column
-                  ),
-                  text: imageMarkdown,
-                  forceMoveMarkers: true,
-                },
-              ]);
-
-              const newPosition = {
-                lineNumber: position.lineNumber,
-                column: position.column + imageMarkdown.length,
-              };
-              editor.setPosition(newPosition);
-              editor.focus();
-              console.log('[Editor] Image markdown inserted');
-            }
-          } else {
-            // 이미지가 없음 - 기본 paste 실행
-            console.log('[Editor] No image in clipboard, using default paste');
-            editor.trigger('keyboard', 'editor.action.clipboardPasteAction', null);
-          }
-        } catch (error) {
-          console.error('[Editor] Error handling paste:', error);
-          // 에러 발생 시 기본 paste 실행
-          editor.trigger('keyboard', 'editor.action.clipboardPasteAction', null);
-        }
+      // Markdown이 아니거나 필요한 정보가 없으면 기본 동작
+      if (!currentIsMarkdown || !currentFile || !workingDirectory) {
+        return; // 기본 paste 동작 허용
       }
-    );
 
-    console.log('[Editor] Paste handler registered');
+      // 에디터에 포커스가 없으면 무시
+      if (!editor.hasTextFocus()) {
+        return;
+      }
+
+      console.log('[Editor] Paste event in Markdown file');
+
+      try {
+        // Electron 클립보드에서 이미지 확인 및 저장 시도
+        const result = await window.electronAPI.fs.saveClipboardImage(workingDirectory);
+
+        if (result.success && result.data) {
+          // 이미지가 있었음 - 기본 paste 동작 막고 이미지 삽입
+          e.preventDefault();
+          e.stopPropagation();
+
+          const { filename } = result.data;
+          console.log('[Editor] Image saved:', filename);
+
+          // 상대 경로 계산 - working directory 기준
+          const imagePath = path.join(workingDirectory, filename);
+
+          console.log('[Editor] Path info:', {
+            currentFile: currentFile.path,
+            imagePath,
+            workingDirectory,
+          });
+
+          // IPC로 working directory 기준 상대 경로 계산
+          const relativePathResult = await window.electronAPI.fs.getRelativePath(
+            workingDirectory,
+            imagePath
+          );
+
+          let relativePath: string;
+          if (relativePathResult.success && relativePathResult.data) {
+            relativePath = relativePathResult.data;
+            // Windows 백슬래시를 forward slash로 변환 (Markdown 표준)
+            relativePath = relativePath.replace(/\\/g, '/');
+
+            // working directory와 같은 위치면 단순히 파일명만 사용
+            // 그렇지 않으면 ./ 접두사 추가
+            if (relativePath === filename || relativePath === `./${filename}`) {
+              relativePath = `./${filename}`;
+            } else if (!relativePath.startsWith('./') && !relativePath.startsWith('../')) {
+              relativePath = `./${relativePath}`;
+            }
+
+            console.log('[Editor] Relative path (working dir based):', relativePath);
+          } else {
+            // Fallback: working directory에 있다고 가정
+            relativePath = `./${filename}`;
+            console.warn('[Editor] Failed to get relative path, using fallback:', relativePath);
+          }
+
+          const imageMarkdown = `![${filename}](${relativePath})`;
+
+          const position = editor.getPosition();
+          if (position) {
+            editor.executeEdits('paste-image', [
+              {
+                range: new (window as any).monaco.Range(
+                  position.lineNumber,
+                  position.column,
+                  position.lineNumber,
+                  position.column
+                ),
+                text: imageMarkdown,
+                forceMoveMarkers: true,
+              },
+            ]);
+
+            const newPosition = {
+              lineNumber: position.lineNumber,
+              column: position.column + imageMarkdown.length,
+            };
+            editor.setPosition(newPosition);
+            editor.focus();
+            console.log('[Editor] Image markdown inserted');
+          }
+        } else {
+          // 이미지가 없음 - 기본 paste 동작 허용
+          console.log('[Editor] No image in clipboard, using default paste');
+        }
+      } catch (error) {
+        console.error('[Editor] Error handling paste:', error);
+        // 에러 발생 시 기본 paste 동작 허용
+      }
+    };
+
+    // DOM 이벤트 리스너 등록
+    const editorDomNode = editor.getDomNode();
+    if (editorDomNode) {
+      editorDomNode.addEventListener('paste', handlePaste);
+      console.log('[Editor] Paste handler registered');
+    }
+
+    // 정리
+    return () => {
+      if (editorDomNode) {
+        editorDomNode.removeEventListener('paste', handlePaste);
+        console.log('[Editor] Paste handler removed');
+      }
+    };
   }, [editor, openFiles, activeFilePath, workingDirectory]);
 
   // 파일 변경 감지 (5초마다 체크)
