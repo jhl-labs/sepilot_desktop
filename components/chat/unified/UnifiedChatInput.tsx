@@ -36,6 +36,7 @@ import { useChatInput } from './hooks/useChatInput';
 import { useImageUpload } from './hooks/useImageUpload';
 import { useFileUpload } from './hooks/useFileUpload';
 import { useToolApproval } from './hooks/useToolApproval';
+import { useConfigLoader } from './hooks/useConfigLoader';
 import { ImageAttachmentPlugin } from './plugins/ImageAttachmentPlugin';
 import { PersonaPlugin } from './plugins/PersonaPlugin';
 import { ToolApprovalPlugin } from './plugins/ToolApprovalPlugin';
@@ -94,6 +95,9 @@ export function UnifiedChatInput({
   const { mode, features, style } = config;
   const containerRef = useRef<HTMLDivElement>(null);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('full');
+
+  // Load LLM config
+  const { llmConfig } = useConfigLoader();
 
   // Store state (Main Chat only)
   const {
@@ -1107,7 +1111,7 @@ export function UnifiedChatInput({
         <div className="mt-2">
           <LLMStatusBar
             isStreaming={isStreaming}
-            llmConfig={null}
+            llmConfig={llmConfig}
             messages={messages}
             input={input}
             mounted={mounted}
