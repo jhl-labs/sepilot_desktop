@@ -384,9 +384,29 @@ export function setupGitHubHandlers() {
 
   /**
    * 외부 URL 열기
+   * 보안: 허용된 프로토콜만 열 수 있도록 검증
    */
   ipcMain.handle('shell-open-external', async (_event, url: string) => {
     try {
+      // URL 검증 - 허용된 프로토콜만 허용 (보안 강화)
+      const allowedProtocols = ['http:', 'https:', 'mailto:'];
+      let parsedUrl: URL;
+
+      try {
+        parsedUrl = new URL(url);
+      } catch {
+        console.error('Invalid URL format:', url);
+        return { success: false, error: '유효하지 않은 URL 형식입니다.' };
+      }
+
+      if (!allowedProtocols.includes(parsedUrl.protocol)) {
+        console.error('Blocked URL with disallowed protocol:', parsedUrl.protocol);
+        return {
+          success: false,
+          error: `허용되지 않은 프로토콜입니다: ${parsedUrl.protocol}`,
+        };
+      }
+
       await shell.openExternal(url);
       return { success: true };
     } catch (error: any) {

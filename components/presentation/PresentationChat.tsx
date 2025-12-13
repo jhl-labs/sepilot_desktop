@@ -23,6 +23,41 @@ import {
   Globe,
   BookOpen,
 } from 'lucide-react';
+import React from 'react';
+
+/**
+ * 안전한 메시지 콘텐츠 렌더링 컴포넌트
+ * dangerouslySetInnerHTML 대신 React 컴포넌트로 XSS 공격 방지
+ */
+function SafeMessageContent({ content }: { content: string }) {
+  // JSON 코드 블록 제거
+  const cleanedContent = content.replace(/```json[\s\S]*?```/g, '');
+
+  // 이모지와 텍스트를 분리하여 안전하게 렌더링
+  const parts = cleanedContent.split(/(✅|❌)/);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part === '✅') {
+          return (
+            <span key={index} className="text-green-600 dark:text-green-400">
+              ✅
+            </span>
+          );
+        }
+        if (part === '❌') {
+          return (
+            <span key={index} className="text-red-600 dark:text-red-400">
+              ❌
+            </span>
+          );
+        }
+        return <React.Fragment key={index}>{part}</React.Fragment>;
+      })}
+    </>
+  );
+}
 
 // Quick Prompt 아이템 타입
 type QuickPromptItem =
@@ -579,17 +614,7 @@ export function PresentationChat() {
               </div>
               <div className="whitespace-pre-wrap text-sm leading-relaxed">
                 {msg.content ? (
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: msg.content
-                        .replace(
-                          /✅/g,
-                          '<span class="text-green-600 dark:text-green-400">✅</span>'
-                        )
-                        .replace(/❌/g, '<span class="text-red-600 dark:text-red-400">❌</span>')
-                        .replace(/```json[\s\S]*?```/g, ''),
-                    }}
-                  />
+                  <SafeMessageContent content={msg.content} />
                 ) : isStreaming ? (
                   '생성 중...'
                 ) : (

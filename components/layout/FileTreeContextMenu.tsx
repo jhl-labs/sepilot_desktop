@@ -5,6 +5,8 @@
  * - File/folder operations (copy, cut, paste, rename, delete)
  * - Path operations (copy path, copy relative path)
  * - File creation (new file, new folder)
+ * - Search in folder
+ * - Collapse all children
  * - Keyboard shortcut display
  */
 
@@ -24,6 +26,10 @@ import {
   Terminal,
   Files,
   RefreshCw,
+  Search,
+  FolderMinus,
+  FileCode,
+  ExternalLink,
 } from 'lucide-react';
 import {
   ContextMenu,
@@ -32,6 +38,9 @@ import {
   ContextMenuSeparator,
   ContextMenuShortcut,
   ContextMenuTrigger,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
 } from '@/components/ui/context-menu';
 import { useFileClipboard } from '@/hooks/use-file-clipboard';
 
@@ -53,11 +62,15 @@ interface FileTreeContextMenuProps {
   onOpenInTerminal?: () => void;
   onDuplicate?: () => void;
   onRefresh?: () => void;
+  onFindInFolder?: () => void;
+  onCollapseAll?: () => void;
+  onOpenWith?: () => void;
+  onCopyFileName?: () => void;
 }
 
 export function FileTreeContextMenu({
   children,
-  filePath: _filePath, // Prefix with _ to indicate intentionally unused
+  filePath: _filePath,
   isDirectory = false,
   isRootContext = false,
   onCopy,
@@ -73,6 +86,10 @@ export function FileTreeContextMenu({
   onOpenInTerminal,
   onDuplicate,
   onRefresh,
+  onFindInFolder,
+  onCollapseAll,
+  onOpenWith,
+  onCopyFileName,
 }: FileTreeContextMenuProps) {
   const { canPaste } = useFileClipboard();
 
@@ -129,6 +146,19 @@ export function FileTreeContextMenu({
                     <FolderPlus className="mr-2 h-4 w-4" />새 폴더
                   </ContextMenuItem>
                 )}
+                {onFindInFolder && (
+                  <ContextMenuItem onClick={onFindInFolder}>
+                    <Search className="mr-2 h-4 w-4" />
+                    폴더에서 검색
+                    <ContextMenuShortcut>Ctrl+Shift+F</ContextMenuShortcut>
+                  </ContextMenuItem>
+                )}
+                {onCollapseAll && (
+                  <ContextMenuItem onClick={onCollapseAll}>
+                    <FolderMinus className="mr-2 h-4 w-4" />
+                    하위 폴더 모두 접기
+                  </ContextMenuItem>
+                )}
                 <ContextMenuSeparator />
               </>
             )}
@@ -157,27 +187,41 @@ export function FileTreeContextMenu({
             )}
 
             {/* Path operations */}
-            {(onCopyPath || onCopyRelativePath) && (
+            {(onCopyPath || onCopyRelativePath || onCopyFileName) && (
               <>
                 <ContextMenuSeparator />
-                {onCopyPath && (
-                  <ContextMenuItem onClick={onCopyPath}>
+                <ContextMenuSub>
+                  <ContextMenuSubTrigger>
                     <FileText className="mr-2 h-4 w-4" />
                     경로 복사
-                    <ContextMenuShortcut>Shift+Alt+C</ContextMenuShortcut>
-                  </ContextMenuItem>
-                )}
-                {onCopyRelativePath && (
-                  <ContextMenuItem onClick={onCopyRelativePath}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    상대 경로 복사
-                  </ContextMenuItem>
-                )}
+                  </ContextMenuSubTrigger>
+                  <ContextMenuSubContent>
+                    {onCopyPath && (
+                      <ContextMenuItem onClick={onCopyPath}>
+                        <FileCode className="mr-2 h-4 w-4" />
+                        절대 경로 복사
+                        <ContextMenuShortcut>Shift+Alt+C</ContextMenuShortcut>
+                      </ContextMenuItem>
+                    )}
+                    {onCopyRelativePath && (
+                      <ContextMenuItem onClick={onCopyRelativePath}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        상대 경로 복사
+                      </ContextMenuItem>
+                    )}
+                    {onCopyFileName && (
+                      <ContextMenuItem onClick={onCopyFileName}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        파일 이름 복사
+                      </ContextMenuItem>
+                    )}
+                  </ContextMenuSubContent>
+                </ContextMenuSub>
               </>
             )}
 
             {/* System integration */}
-            {(onShowInFolder || onOpenInTerminal || onDuplicate) && (
+            {(onShowInFolder || onOpenInTerminal || onDuplicate || onOpenWith) && (
               <>
                 <ContextMenuSeparator />
                 {onShowInFolder && (
@@ -190,6 +234,12 @@ export function FileTreeContextMenu({
                   <ContextMenuItem onClick={onOpenInTerminal}>
                     <Terminal className="mr-2 h-4 w-4" />
                     터미널에서 열기
+                  </ContextMenuItem>
+                )}
+                {onOpenWith && !isDirectory && (
+                  <ContextMenuItem onClick={onOpenWith}>
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    기본 앱으로 열기
                   </ContextMenuItem>
                 )}
                 {onDuplicate && (

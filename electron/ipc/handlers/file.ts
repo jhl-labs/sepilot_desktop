@@ -675,6 +675,37 @@ export function registerFileHandlers() {
     }
   });
 
+  // 기본 앱으로 파일 열기
+  ipcMain.handle('fs:open-with-default-app', async (_event, itemPath: string) => {
+    try {
+      // Check if path exists
+      await fs.access(itemPath);
+
+      // Open file with default application
+      const result = await shell.openPath(itemPath);
+
+      if (result) {
+        // openPath returns an error string if failed, empty string on success
+        console.error('[File] Failed to open with default app:', result);
+        return {
+          success: false,
+          error: result,
+        };
+      }
+
+      console.log('[File] Opened with default app:', itemPath);
+      return {
+        success: true,
+      };
+    } catch (error: any) {
+      console.error('[File] Error opening with default app:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to open with default app',
+      };
+    }
+  });
+
   // 파일 stat 정보 가져오기 (수정 시간 등)
   ipcMain.handle('fs:get-file-stat', async (_event, filePath: string) => {
     try {

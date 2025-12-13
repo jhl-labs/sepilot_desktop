@@ -32,7 +32,19 @@ export interface EditorAgentState extends AgentState {
       id: string;
       title: string;
     }>;
+    useRag?: boolean;
+    useTools?: boolean;
+    action?: 'autocomplete' | 'code-action' | 'writing-tool';
+    actionType?: string;
+    selectedText?: string;
   };
+  // RAG 관련 상태
+  ragDocuments?: Array<{
+    id: string;
+    content: string;
+    metadata: Record<string, any>;
+    score?: number;
+  }>;
 }
 
 export class AdvancedEditorAgentGraph {
@@ -56,13 +68,43 @@ export class AdvancedEditorAgentGraph {
       openFiles: state.editorContext?.openFiles?.length,
       activeFile: state.editorContext?.activeFilePath,
       workingDir: state.editorContext?.workingDirectory,
+      useRag: state.editorContext?.useRag,
+      useTools: state.editorContext?.useTools,
     });
+
+    // RAG: useRag가 활성화된 경우 문서 검색 수행
+    if (state.editorContext?.useRag) {
+      console.log('[AdvancedEditorAgent] RAG enabled - retrieving relevant documents');
+      try {
+        const ragDocuments = await this.retrieveDocuments(state);
+        state = {
+          ...state,
+          ragDocuments,
+        };
+        console.log(`[AdvancedEditorAgent] Retrieved ${ragDocuments.length} RAG documents`);
+
+        // RAG 문서 검색 결과를 yield
+        yield {
+          type: 'rag_documents',
+          documents: ragDocuments,
+        };
+      } catch (error: any) {
+        console.error('[AdvancedEditorAgent] RAG retrieval error:', error);
+        // RAG 실패 시에도 계속 진행 (문서 없이)
+        state = {
+          ...state,
+          ragDocuments: [],
+        };
+      }
+    } else {
+      console.log('[AdvancedEditorAgent] RAG disabled or not requested');
+    }
 
     // Add system message with editor context
     const systemMessage: Message = {
       id: `system-${Date.now()}`,
       role: 'system',
-      content: this.buildSystemPrompt(state.editorContext),
+      content: this.buildSystemPrompt(state.editorContext, state.ragDocuments),
       created_at: Date.now(),
     };
 
@@ -233,7 +275,10 @@ export class AdvancedEditorAgentGraph {
   /**
    * Build system prompt with editor context
    */
-  private buildSystemPrompt(context?: EditorAgentState['editorContext']): string {
+  private buildSystemPrompt(
+    context?: EditorAgentState['editorContext'],
+    ragDocuments?: EditorAgentState['ragDocuments']
+  ): string {
     const parts = [
       'You are an advanced AI coding assistant integrated into the editor.',
       'You can read, write, and modify files, execute terminal commands, and help with coding tasks.',
@@ -296,8 +341,122 @@ export class AdvancedEditorAgentGraph {
     parts.push('- Test changes with terminal commands when appropriate');
     parts.push("- Explain what you're doing before making changes");
     parts.push('- Be careful with file operations - they require user approval');
+    parts.push('- Respond in Korean and using markdown.');
+
+    // RAG Documents Context
+    if (ragDocuments && ragDocuments.length > 0) {
+      parts.push('');
+      parts.push('# Relevant Documents (RAG):');
+      parts.push(
+        'The following documents were retrieved from the project knowledge base to help you contextually:'
+      );
+      parts.push('');
+
+      ragDocuments.forEach((doc, i) => {
+        parts.push(`## Document ${i + 1} (Score: ${(doc.score || 0).toFixed(2)})`);
+        if (doc.metadata?.title) {
+          parts.push(`Title: ${doc.metadata.title}`);
+        }
+        if (doc.metadata?.folderPath) {
+          parts.push(`Path: ${doc.metadata.folderPath}`);
+        }
+        parts.push('Content:');
+        parts.push('```');
+        parts.push(doc.content.substring(0, 2000)); // Limit content length per doc
+        parts.push('```');
+        parts.push('');
+      });
+
+      parts.push(
+        'Use these documents to understand the project context, conventions, and implementation details.'
+      );
+    }
 
     return parts.join('\n');
+  }
+
+  /**
+   * RAG: 벡터 DB에서 관련 문서 검색
+   */
+  private async retrieveDocuments(
+    state: EditorAgentState
+  ): Promise<
+    Array<{ id: string; content: string; metadata: Record<string, any>; score?: number }>
+  > {
+    try {
+      // Main Process 환경 확인
+      if (typeof window !== 'undefined') {
+        console.error('[AdvancedEditorAgent] retrieveDocuments should only run in Main Process');
+        return [];
+      }
+
+      // 검색 쿼리 생성: 마지막 사용자 메시지 + 에디터 컨텍스트
+      // 사용자의 마지막 메시지 찾기
+      const userMessages = state.messages.filter((m) => m.role === 'user');
+      const lastUserMessage =
+        userMessages.length > 0 ? userMessages[userMessages.length - 1] : null;
+      let query = lastUserMessage?.content || '';
+
+      // 에디터 컨텍스트를 쿼리에 추가
+      if (state.editorContext) {
+        const { selectedText, actionType } = state.editorContext;
+        const contextParts = [];
+
+        if (actionType) {
+          contextParts.push(`Action: ${actionType}`);
+        }
+        if (selectedText && selectedText.length < 200) {
+          contextParts.push(`Code: ${selectedText}`);
+        }
+
+        if (contextParts.length > 0) {
+          query = `${contextParts.join(' | ')} | ${query}`;
+        }
+      }
+
+      console.log('[AdvancedEditorAgent] RAG query:', query);
+
+      // Dynamic import services
+      const { vectorDBService } = await import('../../../electron/services/vectordb');
+      const { databaseService } = await import('../../../electron/services/database');
+      const { initializeEmbedding, getEmbeddingProvider } =
+        await import('@/lib/vectordb/embeddings/client');
+
+      // Embedding config 로드
+      const configStr = databaseService.getSetting('app_config');
+      if (!configStr) {
+        console.warn('[AdvancedEditorAgent] App config not found, RAG disabled');
+        return [];
+      }
+
+      const appConfig = JSON.parse(configStr);
+      if (!appConfig.embedding) {
+        console.warn('[AdvancedEditorAgent] Embedding config not found, RAG disabled');
+        return [];
+      }
+
+      // Embedding 초기화
+      initializeEmbedding(appConfig.embedding);
+
+      // 쿼리 임베딩
+      const embedder = getEmbeddingProvider();
+      const queryEmbedding = await embedder.embed(query);
+
+      // 벡터 검색 (상위 3개)
+      const results = await vectorDBService.searchByVector(queryEmbedding, 3);
+
+      console.log(`[AdvancedEditorAgent] RAG retrieved ${results.length} documents`);
+
+      return results.map((result) => ({
+        id: result.id,
+        content: result.content,
+        metadata: result.metadata,
+        score: result.score,
+      }));
+    } catch (error: any) {
+      console.error('[AdvancedEditorAgent] RAG retrieval error:', error);
+      return [];
+    }
   }
 
   /**

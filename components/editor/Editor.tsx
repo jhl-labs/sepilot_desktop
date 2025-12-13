@@ -5,10 +5,22 @@ import dynamic from 'next/dynamic';
 import type monaco from 'monaco-editor';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
-import { X, Save, FileText, Loader2, Eye, Code, RefreshCw, AlertCircle } from 'lucide-react';
+import {
+  X,
+  Save,
+  FileText,
+  Loader2,
+  Eye,
+  Code,
+  RefreshCw,
+  AlertCircle,
+  GripVertical,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isElectron } from '@/lib/platform';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
+import { EditorTabContextMenu } from './EditorTabContextMenu';
+import { useFileSystem } from '@/hooks/use-file-system';
 import path from 'path-browserify';
 
 // Load Editor component without SSR
@@ -25,6 +37,11 @@ export function CodeEditor() {
     activeFilePath,
     setActiveFile,
     closeFile,
+    closeOtherFiles,
+    closeFilesToRight,
+    closeSavedFiles,
+    closeAllFiles,
+    reorderFiles,
     updateFileContent,
     markFileDirty,
     clearInitialPosition,
@@ -43,6 +60,13 @@ export function CodeEditor() {
   const [fileChangedExternally, setFileChangedExternally] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Tab drag and drop state
+  const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
+  const [dragOverTabIndex, setDragOverTabIndex] = useState<number | null>(null);
+
+  // File drop from file explorer state
+  const [isFileDragOver, setIsFileDragOver] = useState(false);
+
   const activeFile = openFiles.find((f) => f.path === activeFilePath);
   const lastMtimeRef = useRef<Map<string, number>>(new Map());
 
@@ -52,6 +76,43 @@ export function CodeEditor() {
     (activeFile.language === 'markdown' ||
       activeFile.path.toLowerCase().endsWith('.md') ||
       activeFile.path.toLowerCase().endsWith('.mdx'));
+
+  // 이미지 파일인지 확인
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico'];
+  const isImageFile =
+    activeFile && imageExtensions.some((ext) => activeFile.path.toLowerCase().endsWith(ext));
+
+  // 이미지 미리보기 상태
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
+
+  // 이미지 파일 로드
+  useEffect(() => {
+    if (!isImageFile || !activeFile || !isElectron() || !window.electronAPI) {
+      setImageDataUrl(null);
+      return;
+    }
+
+    const loadImage = async () => {
+      setIsLoadingImage(true);
+      try {
+        const result = await window.electronAPI.fs.readImageAsBase64(activeFile.path);
+        if (result.success && result.data) {
+          setImageDataUrl(result.data);
+        } else {
+          console.error('[Editor] Failed to load image:', result.error);
+          setImageDataUrl(null);
+        }
+      } catch (error) {
+        console.error('[Editor] Error loading image:', error);
+        setImageDataUrl(null);
+      } finally {
+        setIsLoadingImage(false);
+      }
+    };
+
+    loadImage();
+  }, [isImageFile, activeFile?.path]);
 
   const handleEditorChange = (value: string | undefined) => {
     if (activeFilePath && value !== undefined) {
@@ -123,23 +184,21 @@ export function CodeEditor() {
 
   const handleEditorAction = useCallback(
     async (
-      action:
-        | 'summarize'
-        | 'translate'
-        | 'complete'
+      action: // 코드용 AI 액션
         | 'explain'
         | 'fix'
         | 'improve'
+        | 'complete'
+        | 'add-comments'
+        | 'generate-tests'
+        // 문서용 AI 액션
         | 'continue'
         | 'make-shorter'
         | 'make-longer'
         | 'simplify'
         | 'fix-grammar'
-        | 'change-tone-professional'
-        | 'change-tone-casual'
-        | 'change-tone-friendly'
-        | 'find-action-items'
-        | 'create-outline',
+        | 'summarize'
+        | 'translate',
       selectedText: string,
       targetLanguage?: string
     ) => {
@@ -156,22 +215,21 @@ export function CodeEditor() {
 
       // 액션 이름을 한글로 변환
       const actionNames: Record<string, string> = {
-        summarize: '요약',
-        translate: '번역',
-        complete: '코드 완성',
+        // 코드용 AI
         explain: '코드 설명',
         fix: '코드 수정',
         improve: '코드 개선',
+        complete: '코드 완성',
+        'add-comments': '주석 추가',
+        'generate-tests': '테스트 생성',
+        // 문서용 AI
         continue: '계속 작성',
         'make-shorter': '짧게 만들기',
         'make-longer': '길게 만들기',
         simplify: '단순화',
         'fix-grammar': '문법 수정',
-        'change-tone-professional': '전문적 어조로 변경',
-        'change-tone-casual': '캐주얼 어조로 변경',
-        'change-tone-friendly': '친근한 어조로 변경',
-        'find-action-items': '액션 아이템 찾기',
-        'create-outline': '개요 작성',
+        summarize: '요약',
+        translate: '번역',
       };
 
       setIsProcessing(true);
@@ -223,6 +281,8 @@ export function CodeEditor() {
             filePath: activeFile?.path,
             lineStart: selection.startLineNumber,
             lineEnd: selection.endLineNumber,
+            useRag: editorUseRagInAutocomplete,
+            useTools: editorUseToolsInAutocomplete,
           },
         });
 
@@ -536,11 +596,443 @@ export function CodeEditor() {
       return;
     }
 
-    // === Writing Tools (Notion style) ===
+    // === Basic Editing Actions (VSCode style) ===
+    const formatDocumentAction = editor.addAction({
+      id: 'format-document',
+      label: 'Edit: Format Document',
+      keybindings: [
+        (window as any).monaco?.KeyMod.Shift |
+          (window as any).monaco?.KeyMod.Alt |
+          (window as any).monaco?.KeyCode.KeyF,
+      ],
+      contextMenuGroupId: 'editing',
+      contextMenuOrder: 1,
+      run: (ed) => {
+        ed.getAction('editor.action.formatDocument')?.run();
+      },
+    });
+
+    const formatSelectionAction = editor.addAction({
+      id: 'format-selection',
+      label: 'Edit: Format Selection',
+      contextMenuGroupId: 'editing',
+      contextMenuOrder: 2,
+      run: (ed) => {
+        ed.getAction('editor.action.formatSelection')?.run();
+      },
+    });
+
+    const commentLineAction = editor.addAction({
+      id: 'comment-line',
+      label: 'Edit: Toggle Line Comment',
+      keybindings: [(window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.Slash],
+      contextMenuGroupId: 'editing',
+      contextMenuOrder: 3,
+      run: (ed) => {
+        ed.getAction('editor.action.commentLine')?.run();
+      },
+    });
+
+    const blockCommentAction = editor.addAction({
+      id: 'block-comment',
+      label: 'Edit: Toggle Block Comment',
+      keybindings: [
+        (window as any).monaco?.KeyMod.Shift |
+          (window as any).monaco?.KeyMod.Alt |
+          (window as any).monaco?.KeyCode.KeyA,
+      ],
+      contextMenuGroupId: 'editing',
+      contextMenuOrder: 4,
+      run: (ed) => {
+        ed.getAction('editor.action.blockComment')?.run();
+      },
+    });
+
+    const duplicateLineAction = editor.addAction({
+      id: 'duplicate-line',
+      label: 'Edit: Duplicate Line',
+      keybindings: [
+        (window as any).monaco?.KeyMod.Shift |
+          (window as any).monaco?.KeyMod.Alt |
+          (window as any).monaco?.KeyCode.DownArrow,
+      ],
+      contextMenuGroupId: 'editing',
+      contextMenuOrder: 5,
+      run: (ed) => {
+        ed.getAction('editor.action.copyLinesDownAction')?.run();
+      },
+    });
+
+    const deleteLineAction = editor.addAction({
+      id: 'delete-line',
+      label: 'Edit: Delete Line',
+      keybindings: [
+        (window as any).monaco?.KeyMod.CtrlCmd |
+          (window as any).monaco?.KeyMod.Shift |
+          (window as any).monaco?.KeyCode.KeyK,
+      ],
+      contextMenuGroupId: 'editing',
+      contextMenuOrder: 6,
+      run: (ed) => {
+        ed.getAction('editor.action.deleteLines')?.run();
+      },
+    });
+
+    const moveLineUpAction = editor.addAction({
+      id: 'move-line-up',
+      label: 'Edit: Move Line Up',
+      keybindings: [(window as any).monaco?.KeyMod.Alt | (window as any).monaco?.KeyCode.UpArrow],
+      contextMenuGroupId: 'editing',
+      contextMenuOrder: 7,
+      run: (ed) => {
+        ed.getAction('editor.action.moveLinesUpAction')?.run();
+      },
+    });
+
+    const moveLineDownAction = editor.addAction({
+      id: 'move-line-down',
+      label: 'Edit: Move Line Down',
+      keybindings: [(window as any).monaco?.KeyMod.Alt | (window as any).monaco?.KeyCode.DownArrow],
+      contextMenuGroupId: 'editing',
+      contextMenuOrder: 8,
+      run: (ed) => {
+        ed.getAction('editor.action.moveLinesDownAction')?.run();
+      },
+    });
+
+    // === Transform Actions ===
+    const uppercaseAction = editor.addAction({
+      id: 'transform-uppercase',
+      label: 'Transform: UPPERCASE',
+      contextMenuGroupId: 'transform',
+      contextMenuOrder: 1,
+      run: (ed) => {
+        ed.getAction('editor.action.transformToUppercase')?.run();
+      },
+    });
+
+    const lowercaseAction = editor.addAction({
+      id: 'transform-lowercase',
+      label: 'Transform: lowercase',
+      contextMenuGroupId: 'transform',
+      contextMenuOrder: 2,
+      run: (ed) => {
+        ed.getAction('editor.action.transformToLowercase')?.run();
+      },
+    });
+
+    const titleCaseAction = editor.addAction({
+      id: 'transform-titlecase',
+      label: 'Transform: Title Case',
+      contextMenuGroupId: 'transform',
+      contextMenuOrder: 3,
+      run: (ed) => {
+        ed.getAction('editor.action.transformToTitlecase')?.run();
+      },
+    });
+
+    const sortLinesAscAction = editor.addAction({
+      id: 'sort-lines-asc',
+      label: 'Transform: Sort Lines Ascending',
+      contextMenuGroupId: 'transform',
+      contextMenuOrder: 4,
+      run: (ed) => {
+        ed.getAction('editor.action.sortLinesAscending')?.run();
+      },
+    });
+
+    const sortLinesDescAction = editor.addAction({
+      id: 'sort-lines-desc',
+      label: 'Transform: Sort Lines Descending',
+      contextMenuGroupId: 'transform',
+      contextMenuOrder: 5,
+      run: (ed) => {
+        ed.getAction('editor.action.sortLinesDescending')?.run();
+      },
+    });
+
+    // === Folding Actions ===
+    const foldAction = editor.addAction({
+      id: 'fold',
+      label: 'Fold: Fold Region',
+      keybindings: [
+        (window as any).monaco?.KeyMod.CtrlCmd |
+          (window as any).monaco?.KeyMod.Shift |
+          (window as any).monaco?.KeyCode.BracketLeft,
+      ],
+      contextMenuGroupId: 'folding',
+      contextMenuOrder: 1,
+      run: (ed) => {
+        ed.getAction('editor.fold')?.run();
+      },
+    });
+
+    const unfoldAction = editor.addAction({
+      id: 'unfold',
+      label: 'Fold: Unfold Region',
+      keybindings: [
+        (window as any).monaco?.KeyMod.CtrlCmd |
+          (window as any).monaco?.KeyMod.Shift |
+          (window as any).monaco?.KeyCode.BracketRight,
+      ],
+      contextMenuGroupId: 'folding',
+      contextMenuOrder: 2,
+      run: (ed) => {
+        ed.getAction('editor.unfold')?.run();
+      },
+    });
+
+    const foldAllAction = editor.addAction({
+      id: 'fold-all',
+      label: 'Fold: Fold All',
+      keybindings: [
+        (window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.KeyK,
+        (window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.Digit0,
+      ],
+      contextMenuGroupId: 'folding',
+      contextMenuOrder: 3,
+      run: (ed) => {
+        ed.getAction('editor.foldAll')?.run();
+      },
+    });
+
+    const unfoldAllAction = editor.addAction({
+      id: 'unfold-all',
+      label: 'Fold: Unfold All',
+      keybindings: [
+        (window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.KeyK,
+        (window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.KeyJ,
+      ],
+      contextMenuGroupId: 'folding',
+      contextMenuOrder: 4,
+      run: (ed) => {
+        ed.getAction('editor.unfoldAll')?.run();
+      },
+    });
+
+    // === Navigation Actions ===
+    const goToLineAction = editor.addAction({
+      id: 'go-to-line',
+      label: 'Navigate: Go to Line...',
+      keybindings: [(window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.KeyG],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1,
+      run: (ed) => {
+        ed.getAction('editor.action.gotoLine')?.run();
+      },
+    });
+
+    const goToDefinitionAction = editor.addAction({
+      id: 'go-to-definition',
+      label: 'Navigate: Go to Definition',
+      keybindings: [(window as any).monaco?.KeyCode.F12],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 2,
+      run: (ed) => {
+        ed.getAction('editor.action.revealDefinition')?.run();
+      },
+    });
+
+    const peekDefinitionAction = editor.addAction({
+      id: 'peek-definition',
+      label: 'Navigate: Peek Definition',
+      keybindings: [(window as any).monaco?.KeyMod.Alt | (window as any).monaco?.KeyCode.F12],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 3,
+      run: (ed) => {
+        ed.getAction('editor.action.peekDefinition')?.run();
+      },
+    });
+
+    const findReferencesAction = editor.addAction({
+      id: 'find-references',
+      label: 'Navigate: Find All References',
+      keybindings: [(window as any).monaco?.KeyMod.Shift | (window as any).monaco?.KeyCode.F12],
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 4,
+      run: (ed) => {
+        ed.getAction('editor.action.goToReferences')?.run();
+      },
+    });
+
+    // === Selection Actions ===
+    const selectAllOccurrencesAction = editor.addAction({
+      id: 'select-all-occurrences',
+      label: 'Selection: Select All Occurrences',
+      keybindings: [
+        (window as any).monaco?.KeyMod.CtrlCmd |
+          (window as any).monaco?.KeyMod.Shift |
+          (window as any).monaco?.KeyCode.KeyL,
+      ],
+      contextMenuGroupId: 'selection',
+      contextMenuOrder: 1,
+      run: (ed) => {
+        ed.getAction('editor.action.selectHighlights')?.run();
+      },
+    });
+
+    const addCursorAboveAction = editor.addAction({
+      id: 'add-cursor-above',
+      label: 'Selection: Add Cursor Above',
+      keybindings: [
+        (window as any).monaco?.KeyMod.CtrlCmd |
+          (window as any).monaco?.KeyMod.Alt |
+          (window as any).monaco?.KeyCode.UpArrow,
+      ],
+      contextMenuGroupId: 'selection',
+      contextMenuOrder: 2,
+      run: (ed) => {
+        ed.getAction('editor.action.insertCursorAbove')?.run();
+      },
+    });
+
+    const addCursorBelowAction = editor.addAction({
+      id: 'add-cursor-below',
+      label: 'Selection: Add Cursor Below',
+      keybindings: [
+        (window as any).monaco?.KeyMod.CtrlCmd |
+          (window as any).monaco?.KeyMod.Alt |
+          (window as any).monaco?.KeyCode.DownArrow,
+      ],
+      contextMenuGroupId: 'selection',
+      contextMenuOrder: 3,
+      run: (ed) => {
+        ed.getAction('editor.action.insertCursorBelow')?.run();
+      },
+    });
+
+    const expandSelectionAction = editor.addAction({
+      id: 'expand-selection',
+      label: 'Selection: Expand Selection',
+      keybindings: [
+        (window as any).monaco?.KeyMod.Shift |
+          (window as any).monaco?.KeyMod.Alt |
+          (window as any).monaco?.KeyCode.RightArrow,
+      ],
+      contextMenuGroupId: 'selection',
+      contextMenuOrder: 4,
+      run: (ed) => {
+        ed.getAction('editor.action.smartSelect.expand')?.run();
+      },
+    });
+
+    const shrinkSelectionAction = editor.addAction({
+      id: 'shrink-selection',
+      label: 'Selection: Shrink Selection',
+      keybindings: [
+        (window as any).monaco?.KeyMod.Shift |
+          (window as any).monaco?.KeyMod.Alt |
+          (window as any).monaco?.KeyCode.LeftArrow,
+      ],
+      contextMenuGroupId: 'selection',
+      contextMenuOrder: 5,
+      run: (ed) => {
+        ed.getAction('editor.action.smartSelect.shrink')?.run();
+      },
+    });
+
+    // === Code AI Actions (코드용 AI) ===
+    const explainAction = editor.addAction({
+      id: 'code-ai-explain',
+      label: 'Code AI: 코드 설명',
+      contextMenuGroupId: 'code-ai',
+      contextMenuOrder: 1,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('explain', selectedText);
+          }
+        }
+      },
+    });
+
+    const fixAction = editor.addAction({
+      id: 'code-ai-fix',
+      label: 'Code AI: 버그 수정',
+      contextMenuGroupId: 'code-ai',
+      contextMenuOrder: 2,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('fix', selectedText);
+          }
+        }
+      },
+    });
+
+    const improveAction = editor.addAction({
+      id: 'code-ai-improve',
+      label: 'Code AI: 코드 개선',
+      contextMenuGroupId: 'code-ai',
+      contextMenuOrder: 3,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('improve', selectedText);
+          }
+        }
+      },
+    });
+
+    const completeAction = editor.addAction({
+      id: 'code-ai-complete',
+      label: 'Code AI: 코드 완성',
+      contextMenuGroupId: 'code-ai',
+      contextMenuOrder: 4,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('complete', selectedText);
+          }
+        }
+      },
+    });
+
+    const addCommentsAction = editor.addAction({
+      id: 'code-ai-add-comments',
+      label: 'Code AI: 주석 추가',
+      contextMenuGroupId: 'code-ai',
+      contextMenuOrder: 5,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('add-comments', selectedText);
+          }
+        }
+      },
+    });
+
+    const generateTestsAction = editor.addAction({
+      id: 'code-ai-generate-tests',
+      label: 'Code AI: 테스트 생성',
+      contextMenuGroupId: 'code-ai',
+      contextMenuOrder: 6,
+      run: async (ed) => {
+        const selection = ed.getSelection();
+        if (selection && !selection.isEmpty()) {
+          const selectedText = ed.getModel()?.getValueInRange(selection);
+          if (selectedText) {
+            await handleEditorAction('generate-tests', selectedText);
+          }
+        }
+      },
+    });
+
+    // === Writing AI Actions (문서용 AI) ===
     const continueAction = editor.addAction({
-      id: 'llm-continue',
-      label: 'Writing: Continue writing',
-      contextMenuGroupId: 'writing',
+      id: 'writing-ai-continue',
+      label: 'Writing AI: 계속 작성',
+      contextMenuGroupId: 'writing-ai',
       contextMenuOrder: 1,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -554,9 +1046,9 @@ export function CodeEditor() {
     });
 
     const makeShorterAction = editor.addAction({
-      id: 'llm-make-shorter',
-      label: 'Writing: Make shorter',
-      contextMenuGroupId: 'writing',
+      id: 'writing-ai-make-shorter',
+      label: 'Writing AI: 짧게 만들기',
+      contextMenuGroupId: 'writing-ai',
       contextMenuOrder: 2,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -570,9 +1062,9 @@ export function CodeEditor() {
     });
 
     const makeLongerAction = editor.addAction({
-      id: 'llm-make-longer',
-      label: 'Writing: Make longer',
-      contextMenuGroupId: 'writing',
+      id: 'writing-ai-make-longer',
+      label: 'Writing AI: 길게 만들기',
+      contextMenuGroupId: 'writing-ai',
       contextMenuOrder: 3,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -586,9 +1078,9 @@ export function CodeEditor() {
     });
 
     const simplifyAction = editor.addAction({
-      id: 'llm-simplify',
-      label: 'Writing: Simplify',
-      contextMenuGroupId: 'writing',
+      id: 'writing-ai-simplify',
+      label: 'Writing AI: 단순화',
+      contextMenuGroupId: 'writing-ai',
       contextMenuOrder: 4,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -602,9 +1094,9 @@ export function CodeEditor() {
     });
 
     const fixGrammarAction = editor.addAction({
-      id: 'llm-fix-grammar',
-      label: 'Writing: Fix spelling & grammar',
-      contextMenuGroupId: 'writing',
+      id: 'writing-ai-fix-grammar',
+      label: 'Writing AI: 문법/맞춤법 수정',
+      contextMenuGroupId: 'writing-ai',
       contextMenuOrder: 5,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -617,92 +1109,11 @@ export function CodeEditor() {
       },
     });
 
-    const toneProfessionalAction = editor.addAction({
-      id: 'llm-tone-professional',
-      label: 'Writing: Change tone → Professional',
-      contextMenuGroupId: 'writing',
-      contextMenuOrder: 6,
-      run: async (ed) => {
-        const selection = ed.getSelection();
-        if (selection && !selection.isEmpty()) {
-          const selectedText = ed.getModel()?.getValueInRange(selection);
-          if (selectedText) {
-            await handleEditorAction('change-tone-professional', selectedText);
-          }
-        }
-      },
-    });
-
-    const toneCasualAction = editor.addAction({
-      id: 'llm-tone-casual',
-      label: 'Writing: Change tone → Casual',
-      contextMenuGroupId: 'writing',
-      contextMenuOrder: 7,
-      run: async (ed) => {
-        const selection = ed.getSelection();
-        if (selection && !selection.isEmpty()) {
-          const selectedText = ed.getModel()?.getValueInRange(selection);
-          if (selectedText) {
-            await handleEditorAction('change-tone-casual', selectedText);
-          }
-        }
-      },
-    });
-
-    const toneFriendlyAction = editor.addAction({
-      id: 'llm-tone-friendly',
-      label: 'Writing: Change tone → Friendly',
-      contextMenuGroupId: 'writing',
-      contextMenuOrder: 8,
-      run: async (ed) => {
-        const selection = ed.getSelection();
-        if (selection && !selection.isEmpty()) {
-          const selectedText = ed.getModel()?.getValueInRange(selection);
-          if (selectedText) {
-            await handleEditorAction('change-tone-friendly', selectedText);
-          }
-        }
-      },
-    });
-
-    const findActionItemsAction = editor.addAction({
-      id: 'llm-find-action-items',
-      label: 'Writing: Find action items',
-      contextMenuGroupId: 'writing',
-      contextMenuOrder: 9,
-      run: async (ed) => {
-        const selection = ed.getSelection();
-        if (selection && !selection.isEmpty()) {
-          const selectedText = ed.getModel()?.getValueInRange(selection);
-          if (selectedText) {
-            await handleEditorAction('find-action-items', selectedText);
-          }
-        }
-      },
-    });
-
-    const createOutlineAction = editor.addAction({
-      id: 'llm-create-outline',
-      label: 'Writing: Create outline',
-      contextMenuGroupId: 'writing',
-      contextMenuOrder: 10,
-      run: async (ed) => {
-        const selection = ed.getSelection();
-        if (selection && !selection.isEmpty()) {
-          const selectedText = ed.getModel()?.getValueInRange(selection);
-          if (selectedText) {
-            await handleEditorAction('create-outline', selectedText);
-          }
-        }
-      },
-    });
-
-    // === AI Actions ===
     const summarizeAction = editor.addAction({
-      id: 'llm-summarize',
-      label: 'AI: Summarize',
-      contextMenuGroupId: 'ai',
-      contextMenuOrder: 1,
+      id: 'writing-ai-summarize',
+      label: 'Writing AI: 요약',
+      contextMenuGroupId: 'writing-ai',
+      contextMenuOrder: 6,
       run: async (ed) => {
         const selection = ed.getSelection();
         if (selection && !selection.isEmpty()) {
@@ -715,10 +1126,10 @@ export function CodeEditor() {
     });
 
     const translateAction = editor.addAction({
-      id: 'llm-translate',
-      label: 'AI: Translate to Korean',
-      contextMenuGroupId: 'ai',
-      contextMenuOrder: 2,
+      id: 'writing-ai-translate',
+      label: 'Writing AI: 한국어로 번역',
+      contextMenuGroupId: 'writing-ai',
+      contextMenuOrder: 7,
       run: async (ed) => {
         const selection = ed.getSelection();
         if (selection && !selection.isEmpty()) {
@@ -730,89 +1141,53 @@ export function CodeEditor() {
       },
     });
 
-    const explainAction = editor.addAction({
-      id: 'llm-explain',
-      label: 'AI: Explain Code',
-      contextMenuGroupId: 'ai',
-      contextMenuOrder: 3,
-      run: async (ed) => {
-        const selection = ed.getSelection();
-        if (selection && !selection.isEmpty()) {
-          const selectedText = ed.getModel()?.getValueInRange(selection);
-          if (selectedText) {
-            await handleEditorAction('explain', selectedText);
-          }
-        }
-      },
-    });
-
-    const fixAction = editor.addAction({
-      id: 'llm-fix',
-      label: 'AI: Fix Code',
-      contextMenuGroupId: 'ai',
-      contextMenuOrder: 4,
-      run: async (ed) => {
-        const selection = ed.getSelection();
-        if (selection && !selection.isEmpty()) {
-          const selectedText = ed.getModel()?.getValueInRange(selection);
-          if (selectedText) {
-            await handleEditorAction('fix', selectedText);
-          }
-        }
-      },
-    });
-
-    const improveAction = editor.addAction({
-      id: 'llm-improve',
-      label: 'AI: Improve Code',
-      contextMenuGroupId: 'ai',
-      contextMenuOrder: 5,
-      run: async (ed) => {
-        const selection = ed.getSelection();
-        if (selection && !selection.isEmpty()) {
-          const selectedText = ed.getModel()?.getValueInRange(selection);
-          if (selectedText) {
-            await handleEditorAction('improve', selectedText);
-          }
-        }
-      },
-    });
-
-    const completeAction = editor.addAction({
-      id: 'llm-complete',
-      label: 'AI: Complete Code',
-      contextMenuGroupId: 'ai',
-      contextMenuOrder: 6,
-      run: async (ed) => {
-        const selection = ed.getSelection();
-        if (selection && !selection.isEmpty()) {
-          const selectedText = ed.getModel()?.getValueInRange(selection);
-          if (selectedText) {
-            await handleEditorAction('complete', selectedText);
-          }
-        }
-      },
-    });
-
     return () => {
-      // Writing Tools
+      // Basic Editing Actions
+      formatDocumentAction.dispose();
+      formatSelectionAction.dispose();
+      commentLineAction.dispose();
+      blockCommentAction.dispose();
+      duplicateLineAction.dispose();
+      deleteLineAction.dispose();
+      moveLineUpAction.dispose();
+      moveLineDownAction.dispose();
+      // Transform Actions
+      uppercaseAction.dispose();
+      lowercaseAction.dispose();
+      titleCaseAction.dispose();
+      sortLinesAscAction.dispose();
+      sortLinesDescAction.dispose();
+      // Folding Actions
+      foldAction.dispose();
+      unfoldAction.dispose();
+      foldAllAction.dispose();
+      unfoldAllAction.dispose();
+      // Navigation Actions
+      goToLineAction.dispose();
+      goToDefinitionAction.dispose();
+      peekDefinitionAction.dispose();
+      findReferencesAction.dispose();
+      // Selection Actions
+      selectAllOccurrencesAction.dispose();
+      addCursorAboveAction.dispose();
+      addCursorBelowAction.dispose();
+      expandSelectionAction.dispose();
+      shrinkSelectionAction.dispose();
+      // Code AI Actions
+      explainAction.dispose();
+      fixAction.dispose();
+      improveAction.dispose();
+      completeAction.dispose();
+      addCommentsAction.dispose();
+      generateTestsAction.dispose();
+      // Writing AI Actions
       continueAction.dispose();
       makeShorterAction.dispose();
       makeLongerAction.dispose();
       simplifyAction.dispose();
       fixGrammarAction.dispose();
-      toneProfessionalAction.dispose();
-      toneCasualAction.dispose();
-      toneFriendlyAction.dispose();
-      findActionItemsAction.dispose();
-      createOutlineAction.dispose();
-      // AI Actions
       summarizeAction.dispose();
       translateAction.dispose();
-      explainAction.dispose();
-      fixAction.dispose();
-      improveAction.dispose();
-      completeAction.dispose();
     };
   }, [editor, handleEditorAction]);
 
@@ -1031,41 +1406,224 @@ export function CodeEditor() {
     });
   }, [editor, editorAppearanceConfig, previewMode]);
 
+  // File drop from file explorer - must be defined before early return
+  const { openFile } = useChatStore();
+  const { readFile } = useFileSystem();
+
+  const handleEditorDragOver = useCallback((e: React.DragEvent) => {
+    // Check if it's a file from file explorer (not a tab)
+    const isFromFileExplorer = e.dataTransfer.types.includes('application/sepilot-path');
+
+    if (isFromFileExplorer) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      setIsFileDragOver(true);
+    }
+  }, []);
+
+  const handleEditorDragLeave = useCallback((e: React.DragEvent) => {
+    // Only hide if leaving the entire editor area
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsFileDragOver(false);
+    }
+  }, []);
+
+  const handleEditorDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsFileDragOver(false);
+
+      const filePath = e.dataTransfer.getData('application/sepilot-path');
+      const fileName = e.dataTransfer.getData('application/sepilot-name');
+      const isDirectory = e.dataTransfer.getData('application/sepilot-isdir') === 'true';
+
+      if (!filePath || !fileName || isDirectory) {
+        console.log('[Editor] Drop ignored: no path, no name, or is directory');
+        return;
+      }
+
+      // Check if file is already open
+      const existingFile = openFiles.find((f) => f.path === filePath);
+      if (existingFile) {
+        setActiveFile(filePath);
+        console.log('[Editor] File already open, switching to it:', filePath);
+        return;
+      }
+
+      const { getLanguageFromFilename } = await import('@/lib/utils/file-language');
+      const language = getLanguageFromFilename(fileName);
+
+      // Check if it's an image file (images are loaded separately in the viewer)
+      const imgExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico'];
+      const isImage = imgExtensions.some((ext) => filePath.toLowerCase().endsWith(ext));
+
+      if (isImage) {
+        // Image files don't need content - they're loaded as base64 in the viewer
+        console.log('[Editor] Opening dropped image file:', filePath);
+        openFile({
+          path: filePath,
+          filename: fileName,
+          content: '',
+          language,
+        });
+        return;
+      }
+
+      // Read and open the file
+      console.log('[Editor] Opening dropped file:', filePath);
+      const content = await readFile(filePath);
+      if (content !== null) {
+        openFile({
+          path: filePath,
+          filename: fileName,
+          content,
+          language,
+        });
+      }
+    },
+    [openFiles, setActiveFile, readFile, openFile]
+  );
+
+  // Tab drag handlers - must be defined before early return
+  const handleTabDragStart = useCallback((e: React.DragEvent, index: number) => {
+    setDraggedTabIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  }, []);
+
+  const handleTabDragOver = useCallback(
+    (e: React.DragEvent, index: number) => {
+      e.preventDefault();
+      if (draggedTabIndex !== null && draggedTabIndex !== index) {
+        setDragOverTabIndex(index);
+      }
+    },
+    [draggedTabIndex]
+  );
+
+  const handleTabDragLeave = useCallback(() => {
+    setDragOverTabIndex(null);
+  }, []);
+
+  const handleTabDrop = useCallback(
+    (e: React.DragEvent, toIndex: number) => {
+      e.preventDefault();
+      if (draggedTabIndex !== null && draggedTabIndex !== toIndex) {
+        reorderFiles(draggedTabIndex, toIndex);
+      }
+      setDraggedTabIndex(null);
+      setDragOverTabIndex(null);
+    },
+    [draggedTabIndex, reorderFiles]
+  );
+
+  const handleTabDragEnd = useCallback(() => {
+    setDraggedTabIndex(null);
+    setDragOverTabIndex(null);
+  }, []);
+
+  // Early return for empty state - all hooks must be defined above this point
   if (openFiles.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-        <FileText className="mb-4 h-16 w-16 opacity-20" />
-        <h2 className="mb-2 text-xl font-semibold">SEPilot Editor</h2>
-        <p className="text-center text-sm">파일 탐색기에서 파일을 선택하세요</p>
+      <div
+        className={cn(
+          'flex h-full flex-col items-center justify-center text-muted-foreground relative',
+          isFileDragOver && 'ring-2 ring-primary ring-inset bg-primary/5'
+        )}
+        onDragOver={handleEditorDragOver}
+        onDragLeave={handleEditorDragLeave}
+        onDrop={handleEditorDrop}
+      >
+        {isFileDragOver ? (
+          <div className="text-center">
+            <FileText className="mb-4 h-16 w-16 text-primary mx-auto" />
+            <h2 className="mb-2 text-xl font-semibold text-primary">파일을 여기에 드롭</h2>
+            <p className="text-center text-sm text-primary/80">드래그한 파일을 에디터에서 엽니다</p>
+          </div>
+        ) : (
+          <>
+            <FileText className="mb-4 h-16 w-16 opacity-20" />
+            <h2 className="mb-2 text-xl font-semibold">SEPilot Editor</h2>
+            <p className="text-center text-sm">파일 탐색기에서 파일을 선택하거나 드래그하세요</p>
+          </>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col">
-      {/* File Tabs */}
+    <div
+      className={cn(
+        'flex h-full flex-col relative',
+        isFileDragOver && 'ring-2 ring-primary ring-inset'
+      )}
+      onDragOver={handleEditorDragOver}
+      onDragLeave={handleEditorDragLeave}
+      onDrop={handleEditorDrop}
+    >
+      {/* File drop overlay */}
+      {isFileDragOver && (
+        <div className="absolute inset-0 bg-primary/10 z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-background border-2 border-dashed border-primary rounded-lg p-8 text-center">
+            <FileText className="h-12 w-12 mx-auto mb-2 text-primary" />
+            <p className="text-lg font-medium text-primary">파일을 여기에 드롭하여 열기</p>
+          </div>
+        </div>
+      )}
+      {/* File Tabs with Drag & Drop and Context Menu */}
       <div className="flex items-center border-b bg-muted/30 overflow-x-auto">
-        {openFiles.map((file) => (
-          <button
+        {openFiles.map((file, index) => (
+          <EditorTabContextMenu
             key={file.path}
-            onClick={() => setActiveFile(file.path)}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm border-r hover:bg-accent transition-colors shrink-0',
-              activeFilePath === file.path && 'bg-background font-medium'
-            )}
+            filePath={file.path}
+            filename={file.filename}
+            isDirty={file.isDirty}
+            onClose={() => {
+              if (file.isDirty) {
+                if (window.confirm('파일에 저장되지 않은 변경사항이 있습니다. 닫으시겠습니까?')) {
+                  closeFile(file.path);
+                }
+              } else {
+                closeFile(file.path);
+              }
+            }}
+            onCloseOthers={openFiles.length > 1 ? () => closeOtherFiles(file.path) : undefined}
+            onCloseToRight={
+              index < openFiles.length - 1 ? () => closeFilesToRight(file.path) : undefined
+            }
+            onCloseSaved={openFiles.some((f) => !f.isDirty) ? closeSavedFiles : undefined}
+            onCloseAll={openFiles.length > 0 ? closeAllFiles : undefined}
           >
-            <span className="truncate max-w-[150px]" title={file.filename}>
-              {file.filename}
-            </span>
-            {file.isDirty && <span className="text-xs text-orange-500">●</span>}
-            <span
-              onClick={(e) => handleCloseFile(file.path, e)}
-              className="ml-1 hover:bg-muted rounded p-0.5 cursor-pointer"
-              title="닫기"
+            <div
+              draggable
+              onDragStart={(e) => handleTabDragStart(e, index)}
+              onDragOver={(e) => handleTabDragOver(e, index)}
+              onDragLeave={handleTabDragLeave}
+              onDrop={(e) => handleTabDrop(e, index)}
+              onDragEnd={handleTabDragEnd}
+              onClick={() => setActiveFile(file.path)}
+              className={cn(
+                'group flex items-center gap-1 px-3 py-2 text-sm border-r hover:bg-accent transition-colors shrink-0 cursor-pointer select-none',
+                activeFilePath === file.path && 'bg-background font-medium',
+                draggedTabIndex === index && 'opacity-50',
+                dragOverTabIndex === index && 'border-l-2 border-l-primary'
+              )}
             >
-              <X className="h-3 w-3" />
-            </span>
-          </button>
+              {/* Drag handle - visible on hover */}
+              <GripVertical className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-50 cursor-grab shrink-0" />
+              <span className="truncate max-w-[130px]" title={file.filename}>
+                {file.filename}
+              </span>
+              {file.isDirty && <span className="text-xs text-orange-500">●</span>}
+              <span
+                onClick={(e) => handleCloseFile(file.path, e)}
+                className="ml-1 hover:bg-muted rounded p-0.5 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                title="닫기"
+              >
+                <X className="h-3 w-3" />
+              </span>
+            </div>
+          </EditorTabContextMenu>
         ))}
       </div>
 
@@ -1180,81 +1738,114 @@ export function CodeEditor() {
         </div>
       )}
 
-      {/* Monaco Editor and/or Markdown Preview */}
+      {/* Monaco Editor, Markdown Preview, or Image Viewer */}
       {activeFile && (
         <div className="flex-1 overflow-hidden flex">
-          {/* Monaco Editor */}
-          {(previewMode === 'editor' || previewMode === 'split') && (
-            <div className={cn('overflow-hidden', previewMode === 'split' ? 'flex-1' : 'w-full')}>
-              <MonacoEditor
-                height="100%"
-                language={activeFile.language || 'plaintext'}
-                value={activeFile.content}
-                onChange={handleEditorChange}
-                onMount={(editor, monaco) => {
-                  setEditor(editor);
-                  // Store monaco instance globally for InlineCompletionProvider
-                  if (!(window as any).monaco) {
-                    (window as any).monaco = monaco;
-                    console.log('Monaco instance stored globally');
-                  }
-                }}
-                theme={editorAppearanceConfig.theme}
-                options={{
-                  fontSize: editorAppearanceConfig.fontSize,
-                  fontFamily: editorAppearanceConfig.fontFamily,
-                  minimap: {
-                    enabled: previewMode === 'split' ? false : editorAppearanceConfig.minimap,
-                  },
-                  scrollBeyondLastLine: false,
-                  wordWrap: editorAppearanceConfig.wordWrap,
-                  automaticLayout: true,
-                  tabSize: editorAppearanceConfig.tabSize,
-                  insertSpaces: true,
-                  lineNumbers: editorAppearanceConfig.lineNumbers,
-                  // Enable inline suggestions (like GitHub Copilot)
-                  inlineSuggest: {
-                    enabled: true,
-                    mode: 'prefix',
-                  },
-                  // Quick suggestions configuration
-                  quickSuggestions: {
-                    other: true,
-                    comments: false,
-                    strings: false,
-                  },
-                  // Suggest configuration
-                  suggest: {
-                    preview: true,
-                    showInlineDetails: true,
-                  },
-                  // Accept suggestion on commit character
-                  acceptSuggestionOnCommitCharacter: true,
-                  // Accept suggestion on enter
-                  acceptSuggestionOnEnter: 'on',
-                  // Show suggestion delay
-                  quickSuggestionsDelay: 100,
-                }}
-              />
-            </div>
-          )}
-
-          {/* Markdown Preview */}
-          {isMarkdownFile && (previewMode === 'preview' || previewMode === 'split') && (
-            <div
-              className={cn(
-                'overflow-auto border-l',
-                previewMode === 'split' ? 'flex-1' : 'w-full'
+          {/* Image Viewer */}
+          {isImageFile ? (
+            <div className="w-full h-full flex items-center justify-center bg-muted/20 overflow-auto p-4">
+              {isLoadingImage ? (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <span>이미지 로딩 중...</span>
+                </div>
+              ) : imageDataUrl ? (
+                <div className="flex flex-col items-center gap-4 max-w-full max-h-full">
+                  <img
+                    src={imageDataUrl}
+                    alt={activeFile.filename}
+                    className="max-w-full max-h-[calc(100vh-200px)] object-contain rounded shadow-lg"
+                    style={{ imageRendering: 'auto' }}
+                  />
+                  <div className="text-xs text-muted-foreground text-center">
+                    {activeFile.filename}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <FileText className="h-16 w-16 opacity-20" />
+                  <span>이미지를 불러올 수 없습니다</span>
+                </div>
               )}
-            >
-              <div className="p-6">
-                <MarkdownRenderer
-                  content={activeFile.content}
-                  currentFilePath={activeFile.path}
-                  workingDirectory={workingDirectory || undefined}
-                />
-              </div>
             </div>
+          ) : (
+            <>
+              {/* Monaco Editor */}
+              {(previewMode === 'editor' || previewMode === 'split') && (
+                <div
+                  className={cn('overflow-hidden', previewMode === 'split' ? 'flex-1' : 'w-full')}
+                >
+                  <MonacoEditor
+                    height="100%"
+                    language={activeFile.language || 'plaintext'}
+                    value={activeFile.content}
+                    onChange={handleEditorChange}
+                    onMount={(editor, monaco) => {
+                      setEditor(editor);
+                      // Store monaco instance globally for InlineCompletionProvider
+                      if (!(window as any).monaco) {
+                        (window as any).monaco = monaco;
+                        console.log('Monaco instance stored globally');
+                      }
+                    }}
+                    theme={editorAppearanceConfig.theme}
+                    options={{
+                      fontSize: editorAppearanceConfig.fontSize,
+                      fontFamily: editorAppearanceConfig.fontFamily,
+                      minimap: {
+                        enabled: previewMode === 'split' ? false : editorAppearanceConfig.minimap,
+                      },
+                      scrollBeyondLastLine: false,
+                      wordWrap: editorAppearanceConfig.wordWrap,
+                      automaticLayout: true,
+                      tabSize: editorAppearanceConfig.tabSize,
+                      insertSpaces: true,
+                      lineNumbers: editorAppearanceConfig.lineNumbers,
+                      // Enable inline suggestions (like GitHub Copilot)
+                      inlineSuggest: {
+                        enabled: true,
+                        mode: 'prefix',
+                      },
+                      // Quick suggestions configuration
+                      quickSuggestions: {
+                        other: true,
+                        comments: false,
+                        strings: false,
+                      },
+                      // Suggest configuration
+                      suggest: {
+                        preview: true,
+                        showInlineDetails: true,
+                      },
+                      // Accept suggestion on commit character
+                      acceptSuggestionOnCommitCharacter: true,
+                      // Accept suggestion on enter
+                      acceptSuggestionOnEnter: 'on',
+                      // Show suggestion delay
+                      quickSuggestionsDelay: 100,
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Markdown Preview */}
+              {isMarkdownFile && (previewMode === 'preview' || previewMode === 'split') && (
+                <div
+                  className={cn(
+                    'overflow-auto border-l',
+                    previewMode === 'split' ? 'flex-1' : 'w-full'
+                  )}
+                >
+                  <div className="p-6">
+                    <MarkdownRenderer
+                      content={activeFile.content}
+                      currentFilePath={activeFile.path}
+                      workingDirectory={workingDirectory || undefined}
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

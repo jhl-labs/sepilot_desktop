@@ -140,10 +140,32 @@ const electronAPI = {
       useTools?: boolean;
     }) => ipcRenderer.invoke('llm-editor-autocomplete', context),
     editorAction: (params: {
-      action: 'summarize' | 'translate' | 'complete' | 'explain' | 'fix' | 'improve';
+      action: // 코드용 AI 액션
+        | 'explain'
+        | 'fix'
+        | 'improve'
+        | 'complete'
+        | 'add-comments'
+        | 'generate-tests'
+        // 문서용 AI 액션
+        | 'continue'
+        | 'make-shorter'
+        | 'make-longer'
+        | 'simplify'
+        | 'fix-grammar'
+        | 'summarize'
+        | 'translate';
       text: string;
       language?: string;
       targetLanguage?: string;
+      context?: {
+        before: string;
+        after: string;
+        fullCode?: string;
+        filePath?: string;
+        lineStart: number;
+        lineEnd: number;
+      };
     }) => ipcRenderer.invoke('llm-editor-action', params),
   },
 
@@ -275,6 +297,8 @@ const electronAPI = {
     resolvePath: (basePath: string, relativePath: string) =>
       ipcRenderer.invoke('fs:resolve-path', basePath, relativePath),
     showInFolder: (itemPath: string) => ipcRenderer.invoke('fs:show-in-folder', itemPath),
+    openWithDefaultApp: (itemPath: string) =>
+      ipcRenderer.invoke('fs:open-with-default-app', itemPath),
     duplicate: (sourcePath: string) => ipcRenderer.invoke('fs:duplicate', sourcePath),
     searchFiles: (query: string, dirPath: string, options?: any) =>
       ipcRenderer.invoke('fs:search-files', query, dirPath, options),

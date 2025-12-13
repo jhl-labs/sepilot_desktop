@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -258,14 +258,19 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     }
   };
 
-  useEffect(() => {
-    loadDocuments();
-    loadEmptyFolders();
-    loadTeamDocsConfigs();
-    if (onRefresh) {
-      onRefresh(loadDocuments);
-    }
+  // 전체 새로고침 함수 (문서 + Team Docs 설정)
+  const handleFullRefresh = useCallback(async () => {
+    await loadDocuments();
+    await loadEmptyFolders();
+    await loadTeamDocsConfigs();
   }, []);
+
+  useEffect(() => {
+    handleFullRefresh();
+    if (onRefresh) {
+      onRefresh(handleFullRefresh);
+    }
+  }, [handleFullRefresh, onRefresh]);
 
   // teamDocs 변경 감지
   useEffect(() => {
@@ -1031,20 +1036,13 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       </Tabs>
 
       {/* Team Docs Repository 선택 */}
-      {activeTab === 'team' &&
-        teamDocs.length > 0 &&
-        (() => {
-          const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
-          const teamDocCount = currentTeam ? filteredDocuments.length : 0;
-          const hasModifiedDocs = currentTeam
-            ? filteredDocuments.some((doc) => doc.metadata?.modifiedLocally)
-            : false;
-
-          return (
-            <div className="rounded-lg border bg-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex-1 flex items-center gap-2">
-                  <Github className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      {activeTab === 'team' && (
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 flex items-center gap-2">
+              <Github className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              {teamDocs.length > 0 ? (
+                <>
                   <select
                     className="flex-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm font-medium"
                     value={selectedTeamDocsId}
@@ -1056,29 +1054,49 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                       </option>
                     ))}
                   </select>
-                  {currentTeam && (
-                    <>
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
-                        {teamDocCount}개
-                      </span>
-                      {hasModifiedDocs && (
-                        <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-2 py-1 rounded whitespace-nowrap">
-                          수정됨
-                        </span>
-                      )}
-                    </>
-                  )}
+                  {(() => {
+                    const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
+                    const teamDocCount = currentTeam ? filteredDocuments.length : 0;
+                    const hasModifiedDocs = currentTeam
+                      ? filteredDocuments.some((doc) => doc.metadata?.modifiedLocally)
+                      : false;
+                    return (
+                      <>
+                        {currentTeam && (
+                          <>
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
+                              {teamDocCount}개
+                            </span>
+                            {hasModifiedDocs && (
+                              <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-2 py-1 rounded whitespace-nowrap">
+                                수정됨
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
+                </>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  Team Docs Repository를 추가하여 팀 문서를 동기화하세요
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
+              )}
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              {teamDocs.length > 0 && (
+                <>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
                       if (currentTeam) {
                         handlePullTeamDoc(currentTeam);
                       }
                     }}
-                    disabled={!currentTeam || syncingTeamId !== null || isLoading}
+                    disabled={syncingTeamId !== null || isLoading}
                   >
                     {syncingTeamId === `pull-${selectedTeamDocsId}` ? (
                       <>
@@ -1096,11 +1114,12 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
                       if (currentTeam) {
                         handlePushTeamDoc(currentTeam);
                       }
                     }}
-                    disabled={!currentTeam || syncingTeamId !== null || isLoading}
+                    disabled={syncingTeamId !== null || isLoading}
                   >
                     {syncingTeamId === `push-${selectedTeamDocsId}` ? (
                       <>
@@ -1114,30 +1133,37 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                       </>
                     )}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSyncDialogOpen(true)}
-                    disabled={isLoading || disabled}
-                    title="GitHub Sync 설정"
-                  >
-                    <Github className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              {currentTeam && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {currentTeam.description || 'Team Documents Repository'}
-                  {currentTeam.lastSyncAt && (
-                    <span className="ml-2">
-                      • 마지막 동기화: {new Date(currentTeam.lastSyncAt).toLocaleString('ko-KR')}
-                    </span>
-                  )}
-                </p>
+                </>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSyncDialogOpen(true)}
+                disabled={isLoading || disabled}
+                title="GitHub Sync 설정"
+              >
+                <Github className="h-4 w-4" />
+              </Button>
             </div>
-          );
-        })()}
+          </div>
+          {teamDocs.length > 0 &&
+            (() => {
+              const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
+              return (
+                currentTeam && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {currentTeam.description || 'Team Documents Repository'}
+                    {currentTeam.lastSyncAt && (
+                      <span className="ml-2">
+                        • 마지막 동기화: {new Date(currentTeam.lastSyncAt).toLocaleString('ko-KR')}
+                      </span>
+                    )}
+                  </p>
+                )
+              );
+            })()}
+        </div>
+      )}
 
       {/* Personal Docs Sync Controls */}
       {activeTab === 'personal' && (
@@ -1416,7 +1442,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       <DocsSyncDialog
         open={syncDialogOpen}
         onOpenChange={setSyncDialogOpen}
-        onRefresh={loadDocuments}
+        onRefresh={handleFullRefresh}
       />
     </div>
   );

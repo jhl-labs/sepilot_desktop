@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowLeft, RotateCcw } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Code, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -37,23 +37,36 @@ export function EditorSettings() {
   const [minimap, setMinimap] = useState(editorAppearanceConfig.minimap);
   const [lineNumbers, setLineNumbers] = useState(editorAppearanceConfig.lineNumbers);
 
-  // LLM 프롬프트 로컬 상태
-  const [autoCompletePrompt, setAutoCompletePrompt] = useState(
-    editorLLMPromptsConfig.autoCompletePrompt
-  );
+  // 코드용 AI 프롬프트 로컬 상태
   const [explainCodePrompt, setExplainCodePrompt] = useState(
     editorLLMPromptsConfig.explainCodePrompt
   );
-  const [refactorCodePrompt, setRefactorCodePrompt] = useState(
-    editorLLMPromptsConfig.refactorCodePrompt
+  const [fixCodePrompt, setFixCodePrompt] = useState(editorLLMPromptsConfig.fixCodePrompt);
+  const [improveCodePrompt, setImproveCodePrompt] = useState(
+    editorLLMPromptsConfig.improveCodePrompt
   );
-  const [fixBugPrompt, setFixBugPrompt] = useState(editorLLMPromptsConfig.fixBugPrompt);
+  const [completeCodePrompt, setCompleteCodePrompt] = useState(
+    editorLLMPromptsConfig.completeCodePrompt
+  );
   const [addCommentsPrompt, setAddCommentsPrompt] = useState(
     editorLLMPromptsConfig.addCommentsPrompt
   );
   const [generateTestPrompt, setGenerateTestPrompt] = useState(
     editorLLMPromptsConfig.generateTestPrompt
   );
+
+  // 문서용 AI 프롬프트 로컬 상태
+  const [continueWritingPrompt, setContinueWritingPrompt] = useState(
+    editorLLMPromptsConfig.continueWritingPrompt
+  );
+  const [makeShorterPrompt, setMakeShorterPrompt] = useState(
+    editorLLMPromptsConfig.makeShorterPrompt
+  );
+  const [makeLongerPrompt, setMakeLongerPrompt] = useState(editorLLMPromptsConfig.makeLongerPrompt);
+  const [simplifyPrompt, setSimplifyPrompt] = useState(editorLLMPromptsConfig.simplifyPrompt);
+  const [fixGrammarPrompt, setFixGrammarPrompt] = useState(editorLLMPromptsConfig.fixGrammarPrompt);
+  const [summarizePrompt, setSummarizePrompt] = useState(editorLLMPromptsConfig.summarizePrompt);
+  const [translatePrompt, setTranslatePrompt] = useState(editorLLMPromptsConfig.translatePrompt);
 
   // 외형 설정 저장
   const handleSaveAppearance = () => {
@@ -90,12 +103,21 @@ export function EditorSettings() {
   // LLM 프롬프트 저장
   const handleSavePrompts = () => {
     setEditorLLMPromptsConfig({
-      autoCompletePrompt,
+      // 코드용 AI
       explainCodePrompt,
-      refactorCodePrompt,
-      fixBugPrompt,
+      fixCodePrompt,
+      improveCodePrompt,
+      completeCodePrompt,
       addCommentsPrompt,
       generateTestPrompt,
+      // 문서용 AI
+      continueWritingPrompt,
+      makeShorterPrompt,
+      makeLongerPrompt,
+      simplifyPrompt,
+      fixGrammarPrompt,
+      summarizePrompt,
+      translatePrompt,
     });
     // 저장 후 자동으로 Files 뷰로 전환
     setEditorViewMode('files');
@@ -106,12 +128,21 @@ export function EditorSettings() {
     if (window.confirm('LLM 프롬프트 설정을 기본값으로 초기화하시겠습니까?')) {
       resetEditorLLMPromptsConfig();
       const config = useChatStore.getState().editorLLMPromptsConfig;
-      setAutoCompletePrompt(config.autoCompletePrompt);
+      // 코드용 AI
       setExplainCodePrompt(config.explainCodePrompt);
-      setRefactorCodePrompt(config.refactorCodePrompt);
-      setFixBugPrompt(config.fixBugPrompt);
+      setFixCodePrompt(config.fixCodePrompt);
+      setImproveCodePrompt(config.improveCodePrompt);
+      setCompleteCodePrompt(config.completeCodePrompt);
       setAddCommentsPrompt(config.addCommentsPrompt);
       setGenerateTestPrompt(config.generateTestPrompt);
+      // 문서용 AI
+      setContinueWritingPrompt(config.continueWritingPrompt);
+      setMakeShorterPrompt(config.makeShorterPrompt);
+      setMakeLongerPrompt(config.makeLongerPrompt);
+      setSimplifyPrompt(config.simplifyPrompt);
+      setFixGrammarPrompt(config.fixGrammarPrompt);
+      setSummarizePrompt(config.summarizePrompt);
+      setTranslatePrompt(config.translatePrompt);
       window.alert('LLM 프롬프트 설정이 초기화되었습니다.');
     }
   };
@@ -293,7 +324,7 @@ export function EditorSettings() {
         {/* LLM 프롬프트 설정 */}
         <div className="border-t pt-4 space-y-4">
           <div className="flex items-center justify-between">
-            <Label className="text-xs font-semibold">LLM 프롬프트 설정</Label>
+            <Label className="text-xs font-semibold">AI 프롬프트 설정</Label>
             <Button
               variant="outline"
               size="sm"
@@ -306,78 +337,158 @@ export function EditorSettings() {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            자동 완성 및 컨텍스트 메뉴에서 사용되는 LLM 프롬프트를 커스터마이징할 수 있습니다.
+            컨텍스트 메뉴(우클릭)에서 사용되는 AI 프롬프트를 커스터마이징할 수 있습니다.
           </p>
 
-          {/* Auto Complete Prompt */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">자동 완성 프롬프트</Label>
-            <Textarea
-              value={autoCompletePrompt}
-              onChange={(e) => setAutoCompletePrompt(e.target.value)}
-              className="min-h-[60px] text-xs font-mono"
-              placeholder="자동 완성에 사용될 프롬프트..."
-            />
+          {/* 코드용 AI 프롬프트 */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-primary">
+              <Code className="h-3.5 w-3.5" />
+              코드용 AI (Code AI)
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">코드 설명 프롬프트</Label>
+              <Textarea
+                value={explainCodePrompt}
+                onChange={(e) => setExplainCodePrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="코드 설명에 사용될 프롬프트..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">버그 수정 프롬프트</Label>
+              <Textarea
+                value={fixCodePrompt}
+                onChange={(e) => setFixCodePrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="버그 수정에 사용될 프롬프트..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">코드 개선 프롬프트</Label>
+              <Textarea
+                value={improveCodePrompt}
+                onChange={(e) => setImproveCodePrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="코드 개선/리팩토링에 사용될 프롬프트..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">코드 완성 프롬프트</Label>
+              <Textarea
+                value={completeCodePrompt}
+                onChange={(e) => setCompleteCodePrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="코드 완성에 사용될 프롬프트..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">주석 추가 프롬프트</Label>
+              <Textarea
+                value={addCommentsPrompt}
+                onChange={(e) => setAddCommentsPrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="주석 추가에 사용될 프롬프트..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">테스트 생성 프롬프트</Label>
+              <Textarea
+                value={generateTestPrompt}
+                onChange={(e) => setGenerateTestPrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="테스트 생성에 사용될 프롬프트..."
+              />
+            </div>
           </div>
 
-          {/* Explain Code Prompt */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">코드 설명 프롬프트</Label>
-            <Textarea
-              value={explainCodePrompt}
-              onChange={(e) => setExplainCodePrompt(e.target.value)}
-              className="min-h-[60px] text-xs font-mono"
-              placeholder="코드 설명에 사용될 프롬프트..."
-            />
-          </div>
+          {/* 문서용 AI 프롬프트 */}
+          <div className="space-y-3 border-t pt-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-primary">
+              <FileText className="h-3.5 w-3.5" />
+              문서용 AI (Writing AI)
+            </div>
 
-          {/* Refactor Code Prompt */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">리팩토링 프롬프트</Label>
-            <Textarea
-              value={refactorCodePrompt}
-              onChange={(e) => setRefactorCodePrompt(e.target.value)}
-              className="min-h-[60px] text-xs font-mono"
-              placeholder="리팩토링에 사용될 프롬프트..."
-            />
-          </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">계속 작성 프롬프트</Label>
+              <Textarea
+                value={continueWritingPrompt}
+                onChange={(e) => setContinueWritingPrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="계속 작성에 사용될 프롬프트..."
+              />
+            </div>
 
-          {/* Fix Bug Prompt */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">버그 수정 프롬프트</Label>
-            <Textarea
-              value={fixBugPrompt}
-              onChange={(e) => setFixBugPrompt(e.target.value)}
-              className="min-h-[60px] text-xs font-mono"
-              placeholder="버그 수정에 사용될 프롬프트..."
-            />
-          </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">짧게 만들기 프롬프트</Label>
+              <Textarea
+                value={makeShorterPrompt}
+                onChange={(e) => setMakeShorterPrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="짧게 만들기에 사용될 프롬프트..."
+              />
+            </div>
 
-          {/* Add Comments Prompt */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">주석 추가 프롬프트</Label>
-            <Textarea
-              value={addCommentsPrompt}
-              onChange={(e) => setAddCommentsPrompt(e.target.value)}
-              className="min-h-[60px] text-xs font-mono"
-              placeholder="주석 추가에 사용될 프롬프트..."
-            />
-          </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">길게 만들기 프롬프트</Label>
+              <Textarea
+                value={makeLongerPrompt}
+                onChange={(e) => setMakeLongerPrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="길게 만들기에 사용될 프롬프트..."
+              />
+            </div>
 
-          {/* Generate Test Prompt */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">테스트 생성 프롬프트</Label>
-            <Textarea
-              value={generateTestPrompt}
-              onChange={(e) => setGenerateTestPrompt(e.target.value)}
-              className="min-h-[60px] text-xs font-mono"
-              placeholder="테스트 생성에 사용될 프롬프트..."
-            />
+            <div className="space-y-1.5">
+              <Label className="text-xs">단순화 프롬프트</Label>
+              <Textarea
+                value={simplifyPrompt}
+                onChange={(e) => setSimplifyPrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="단순화에 사용될 프롬프트..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">문법/맞춤법 수정 프롬프트</Label>
+              <Textarea
+                value={fixGrammarPrompt}
+                onChange={(e) => setFixGrammarPrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="문법/맞춤법 수정에 사용될 프롬프트..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">요약 프롬프트</Label>
+              <Textarea
+                value={summarizePrompt}
+                onChange={(e) => setSummarizePrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="요약에 사용될 프롬프트..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">번역 프롬프트</Label>
+              <Textarea
+                value={translatePrompt}
+                onChange={(e) => setTranslatePrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder="번역에 사용될 프롬프트... ({targetLanguage} 변수 사용 가능)"
+              />
+            </div>
           </div>
 
           {/* 저장 버튼 */}
           <Button onClick={handleSavePrompts} className="w-full h-8 text-xs">
-            LLM 프롬프트 저장
+            AI 프롬프트 저장
           </Button>
         </div>
       </div>

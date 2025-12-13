@@ -34,7 +34,7 @@ interface DocsSyncDialogProps {
   onRefresh?: () => Promise<void>;
 }
 
-export function DocsSyncDialog({ open, onOpenChange, onRefresh: _onRefresh }: DocsSyncDialogProps) {
+export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialogProps) {
   // Personal Docs Repo state
   const [_personalRepo, setPersonalRepo] = useState<GitHubSyncConfig | null>(null);
   const [personalForm, setPersonalForm] = useState({
@@ -148,6 +148,10 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh: _onRefresh }: Do
         if (saveResult.success) {
           setPersonalRepo(config);
           setMessage({ type: 'success', text: 'Personal Docs 설정이 저장되었습니다!' });
+          // Refresh document list
+          if (onRefresh) {
+            await onRefresh();
+          }
         } else {
           throw new Error(saveResult.error || '설정 저장 실패');
         }
@@ -233,6 +237,10 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh: _onRefresh }: Do
           setTeamDocs(updatedTeamDocs);
           setEditingTeamId(null);
           setMessage({ type: 'success', text: 'Team Docs 설정이 저장되었습니다!' });
+          // Refresh document list
+          if (onRefresh) {
+            await onRefresh();
+          }
         } else {
           throw new Error(saveResult.error || '설정 저장 실패');
         }
@@ -264,6 +272,10 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh: _onRefresh }: Do
         if (saveResult.success) {
           setTeamDocs(updatedTeamDocs);
           setMessage({ type: 'success', text: 'Team Docs 설정이 삭제되었습니다.' });
+          // Refresh document list
+          if (onRefresh) {
+            await onRefresh();
+          }
         } else {
           throw new Error(saveResult.error || '설정 저장 실패');
         }

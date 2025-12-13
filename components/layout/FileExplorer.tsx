@@ -11,10 +11,11 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Folder } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Folder, FolderMinus, FolderOpen, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import {
   Dialog,
   DialogContent,
@@ -40,6 +41,8 @@ export function FileExplorer() {
     loadWorkingDirectory,
     fileTreeRefreshTrigger,
     refreshFileTree,
+    expandedFolderPaths,
+    clearExpandedFolders,
   } = useChatStore();
   const [fileTree, setFileTree] = useState<FileNode[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -114,9 +117,27 @@ export function FileExplorer() {
 
   const handleFileClick = async (filePath: string, filename: string) => {
     console.log(`[FileExplorer] Opening file: ${filePath}`);
+
+    // 이미지 파일인지 확인 (이미지는 별도 뷰어로 표시되므로 content 불필요)
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico'];
+    const isImageFile = imageExtensions.some((ext) => filePath.toLowerCase().endsWith(ext));
+
+    const language = getLanguageFromFilename(filename);
+
+    if (isImageFile) {
+      // 이미지 파일은 content를 읽지 않음 (Editor에서 별도로 이미지로 로드)
+      console.log(`[FileExplorer] Opening image file: ${filePath}`);
+      openFile({
+        path: filePath,
+        filename,
+        content: '', // 이미지는 content 불필요
+        language,
+      });
+      return;
+    }
+
     const content = await readFile(filePath);
     if (content !== null) {
-      const language = getLanguageFromFilename(filename);
       console.log(`[FileExplorer] File loaded with language: ${language}`);
 
       openFile({
@@ -186,6 +207,30 @@ export function FileExplorer() {
     await pasteFiles(workingDirectory, () => loadFileTree(workingDirectory));
   };
 
+  // Collapse all expanded folders
+  const handleCollapseAll = useCallback(() => {
+    clearExpandedFolders();
+    console.log('[FileExplorer] Collapsed all folders');
+  }, [clearExpandedFolders]);
+
+  // Expand all folders recursively (first level only for performance)
+  const handleExpandFirstLevel = useCallback(async () => {
+    if (!workingDirectory || !fileTree) {
+      return;
+    }
+
+    const store = useChatStore.getState();
+
+    // Expand first level folders only (to avoid performance issues with deep trees)
+    for (const node of fileTree) {
+      if (node.isDirectory && !store.expandedFolderPaths.has(node.path)) {
+        store.toggleExpandedFolder(node.path);
+      }
+    }
+
+    console.log('[FileExplorer] Expanded first level folders');
+  }, [workingDirectory, fileTree]);
+
   return (
     <div className="flex h-full flex-col">
       {/* Working Directory Selection */}
@@ -195,15 +240,75 @@ export function FileExplorer() {
             <span className="text-xs font-semibold text-muted-foreground uppercase">
               Working Directory
             </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSelectDirectory}
-              title="디렉토리 선택"
-              className="h-7 w-7"
-            >
-              <Folder className="h-4 w-4" />
-            </Button>
+            <TooltipProvider delayDuration={200}>
+              <div className="flex items-center gap-0.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleSelectDirectory}
+                      className="h-7 w-7"
+                    >
+                      <Folder className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>디렉토리 선택</p>
+                  </TooltipContent>
+                </Tooltip>
+                {workingDirectory && (
+                  <>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleExpandFirstLevel}
+                          className="h-7 w-7"
+                        >
+                          <FolderOpen className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>첫 번째 레벨 폴더 펼치기</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleCollapseAll}
+                          disabled={expandedFolderPaths.size === 0}
+                          className="h-7 w-7"
+                        >
+                          <FolderMinus className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>모두 접기</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={refreshFileTree}
+                          className="h-7 w-7"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>새로고침 (F5)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </>
+                )}
+              </div>
+            </TooltipProvider>
           </div>
           {workingDirectory ? (
             <div className="text-xs text-muted-foreground break-all bg-muted/50 rounded px-2 py-1.5">

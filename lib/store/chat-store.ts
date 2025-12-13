@@ -343,11 +343,15 @@ interface ChatStore {
     file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }
   ) => void;
   closeFile: (path: string) => void;
+  closeOtherFiles: (path: string) => void;
+  closeFilesToRight: (path: string) => void;
+  closeSavedFiles: () => void;
   setActiveFile: (path: string | null) => void;
   updateFileContent: (path: string, content: string) => void;
   markFileDirty: (path: string, isDirty: boolean) => void;
   clearInitialPosition: (path: string) => void;
   closeAllFiles: () => void;
+  reorderFiles: (fromIndex: number, toIndex: number) => void;
 
   // Deprecated: kept for backward compatibility
   setGraphType: (type: GraphType) => void;
@@ -1942,6 +1946,49 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     });
   },
 
+  closeOtherFiles: (path: string) => {
+    set((state) => {
+      const fileToKeep = state.openFiles.find((f) => f.path === path);
+      if (!fileToKeep) {
+        return state;
+      }
+      return {
+        openFiles: [fileToKeep],
+        activeFilePath: path,
+      };
+    });
+  },
+
+  closeFilesToRight: (path: string) => {
+    set((state) => {
+      const index = state.openFiles.findIndex((f) => f.path === path);
+      if (index === -1) {
+        return state;
+      }
+      const filesToKeep = state.openFiles.slice(0, index + 1);
+      const newActiveFilePath = filesToKeep.some((f) => f.path === state.activeFilePath)
+        ? state.activeFilePath
+        : filesToKeep[filesToKeep.length - 1]?.path || null;
+      return {
+        openFiles: filesToKeep,
+        activeFilePath: newActiveFilePath,
+      };
+    });
+  },
+
+  closeSavedFiles: () => {
+    set((state) => {
+      const dirtyFiles = state.openFiles.filter((f) => f.isDirty);
+      const newActiveFilePath = dirtyFiles.some((f) => f.path === state.activeFilePath)
+        ? state.activeFilePath
+        : dirtyFiles[0]?.path || null;
+      return {
+        openFiles: dirtyFiles,
+        activeFilePath: newActiveFilePath,
+      };
+    });
+  },
+
   setActiveFile: (path: string | null) => {
     set({ activeFilePath: path });
   },
@@ -1978,6 +2025,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   closeAllFiles: () => {
     set({ openFiles: [], activeFilePath: null });
+  },
+
+  reorderFiles: (fromIndex: number, toIndex: number) => {
+    set((state) => {
+      const newFiles = [...state.openFiles];
+      const [movedFile] = newFiles.splice(fromIndex, 1);
+      newFiles.splice(toIndex, 0, movedFile);
+      return { openFiles: newFiles };
+    });
   },
 
   // Persona Actions

@@ -135,11 +135,47 @@ export function countMessagesTokens(messages: Message[], modelName: string = 'gp
  * @param maxContextTokens - 모델의 최대 컨텍스트 토큰 수 (기본값: 128000)
  * @returns 사용된 토큰 수, 최대 토큰 수, 사용률(%)
  */
+
+/**
+ * Common model context limits
+ */
+export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
+  // OpenAI
+  'gpt-4o': 128000,
+  'gpt-4o-mini': 128000,
+  'gpt-4': 8192,
+  'gpt-4-turbo': 128000,
+  'gpt-4-32k': 32768,
+  'gpt-3.5-turbo': 16385,
+  'gpt-3.5-turbo-16k': 16385,
+
+  // Anthropic
+  'claude-3-opus-20240229': 200000,
+  'claude-3-sonnet-20240229': 200000,
+  'claude-3-haiku-20240307': 200000,
+  'claude-3-5-sonnet-20240620': 200000,
+  'claude-2.1': 200000,
+  'claude-2.0': 100000,
+
+  // Google
+  'gemini-1.5-pro': 2000000, // Up to 2M
+  'gemini-1.5-flash': 1000000,
+};
+
+/**
+ * 컨텍스트 사용률을 계산합니다.
+ *
+ * @param messages - 메시지 배열
+ * @param input - 현재 입력 텍스트
+ * @param modelName - LLM 모델 이름 (기본값: 'gpt-4')
+ * @param customMaxTokens - (선택) 명시적인 최대 토큰 수. 지정하지 않으면 모델별 기본값 사용
+ * @returns 사용된 토큰 수, 최대 토큰 수, 사용률(%)
+ */
 export function calculateContextUsage(
   messages: Message[],
   input: string = '',
   modelName: string = 'gpt-4',
-  maxContextTokens: number = 128000
+  customMaxTokens?: number
 ): {
   used: number;
   max: number;
@@ -149,10 +185,26 @@ export function calculateContextUsage(
   const inputTokens = countTokens(input, modelName);
   const usedTokens = messagesTokens + inputTokens;
 
+  // 모델별 컨텍스트 제한 가져오기 (기본값: GPT-4o 수준인 128k)
+  // 정확히 일치하는 모델명이 없으면 가장 근접한 모델(접두사 일치)을 찾거나 기본값 사용
+  let maxContext = customMaxTokens;
+
+  if (!maxContext) {
+    if (MODEL_CONTEXT_LIMITS[modelName]) {
+      maxContext = MODEL_CONTEXT_LIMITS[modelName];
+    } else {
+      // 접두사 매칭 시도 (e.g. "gpt-4-0613" -> "gpt-4")
+      const knownModelKey = Object.keys(MODEL_CONTEXT_LIMITS).find((key) =>
+        modelName.startsWith(key)
+      );
+      maxContext = knownModelKey ? MODEL_CONTEXT_LIMITS[knownModelKey] : 128000;
+    }
+  }
+
   return {
     used: usedTokens,
-    max: maxContextTokens,
-    percentage: Math.min(100, (usedTokens / maxContextTokens) * 100),
+    max: maxContext,
+    percentage: Math.min(100, (usedTokens / maxContext) * 100),
   };
 }
 

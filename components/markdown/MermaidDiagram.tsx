@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import mermaid from 'mermaid';
+import DOMPurify from 'isomorphic-dompurify';
 import { Button } from '@/components/ui/button';
 import { Check, Copy, RefreshCw, Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -189,7 +190,8 @@ Corrected Mermaid code:`;
       mermaid.initialize({
         startOnLoad: false,
         theme: isDark ? 'dark' : 'default',
-        securityLevel: 'loose',
+        // 보안 강화: strict 모드로 XSS 공격 방지
+        securityLevel: 'strict',
         fontFamily: 'inherit',
       });
       mermaidInitialized = true;
@@ -198,7 +200,8 @@ Corrected Mermaid code:`;
       mermaid.initialize({
         startOnLoad: false,
         theme: isDark ? 'dark' : 'default',
-        securityLevel: 'loose',
+        // 보안 강화: strict 모드로 XSS 공격 방지
+        securityLevel: 'strict',
         fontFamily: 'inherit',
       });
     }
@@ -212,7 +215,12 @@ Corrected Mermaid code:`;
 
       try {
         const { svg: renderedSvg } = await mermaid.render(id, currentChart);
-        setSvg(renderedSvg);
+        // DOMPurify로 SVG 살균하여 XSS 공격 방지
+        const sanitizedSvg = DOMPurify.sanitize(renderedSvg, {
+          USE_PROFILES: { svg: true, svgFilters: true },
+          ADD_TAGS: ['foreignObject'],
+        });
+        setSvg(sanitizedSvg);
         setError('');
 
         // 렌더링 성공 시 - 이전에 수정이 있었다면 콜백 호출

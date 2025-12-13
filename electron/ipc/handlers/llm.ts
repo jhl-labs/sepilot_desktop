@@ -760,6 +760,8 @@ CRITICAL RULES:
           filePath?: string;
           lineStart: number;
           lineEnd: number;
+          useRag?: boolean;
+          useTools?: boolean;
         };
       }
     ) => {
@@ -1065,6 +1067,8 @@ Rules:
             selectedText: params.text,
             action: actionCategory as 'code-action' | 'writing-tool',
             actionType: params.action,
+            useRag: params.context?.useRag,
+            useTools: params.context?.useTools,
           },
         };
 

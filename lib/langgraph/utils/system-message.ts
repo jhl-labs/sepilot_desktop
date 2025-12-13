@@ -15,7 +15,12 @@ graph TD
 
 지원하는 Mermaid 타입: flowchart, sequenceDiagram, classDiagram, stateDiagram, erDiagram, gantt, pie 등
 
-## Plotly 차트
+## Plotly 차트 (중요: JSON 형식만 사용!)
+
+**⚠️ 절대 Python 코드(import plotly, px.pie() 등)를 사용하지 마세요!**
+**반드시 아래와 같이 JSON 데이터 형식으로 작성해야 차트가 렌더링됩니다.**
+
+### 예제 1: 선 차트 (Scatter)
 \`\`\`plotly
 {
   "data": [{
@@ -33,10 +38,50 @@ graph TD
 }
 \`\`\`
 
+### 예제 2: 파이 차트 (Pie)
+\`\`\`plotly
+{
+  "data": [{
+    "labels": ["사과", "바나나", "오렌지", "포도"],
+    "values": [45, 30, 15, 10],
+    "type": "pie",
+    "hole": 0.4,
+    "textinfo": "percent+label"
+  }],
+  "layout": {
+    "title": "과일 판매 비율"
+  }
+}
+\`\`\`
+
+### 예제 3: 막대 차트 (Bar)
+\`\`\`plotly
+{
+  "data": [{
+    "x": ["A", "B", "C", "D"],
+    "y": [20, 35, 30, 25],
+    "type": "bar"
+  }],
+  "layout": {
+    "title": "막대 차트"
+  }
+}
+\`\`\`
+
 지원하는 Plotly 타입: scatter, bar, pie, line, heatmap, histogram, box, violin, scatter3d 등
 
-데이터 분석, 통계, 수치 비교가 필요한 질문에는 적극적으로 Plotly 차트를 활용하세요.
-프로세스나 구조 설명이 필요하면 Mermaid 다이어그램을 사용하세요.`;
+**핵심 규칙:**
+- \`\`\`plotly 블록 안에는 **순수 JSON 데이터만** 작성
+- Python import문, px.pie(), fig.show() 등의 **코드는 절대 사용 금지**
+- JSON 데이터는 자동으로 인터랙티브 차트로 렌더링됨
+
+시각화 도구는 **사용자의 이해를 돕거나 데이터의 패턴을 파악하는 데 필수적인 경우에만** 사용하세요.
+
+가이드라인:
+- **데이터가 복잡할 때만 사용**: 단순한 수치 나열이나 간단한 비교는 텍스트나 표(Markdown Table)를 사용하는 것이 더 명확하고 빠릅니다.
+- **억지로 사용하지 않기**: 모든 답변에 시각화를 포함할 필요는 없습니다. 텍스트로 충분히 설명 가능한 경우 시각화를 생략하세요.
+- **Mermaid**: 복잡한 워크플로우, 시스템 아키텍처, 클래스 관계 등 구조적인 설명이 필요할 때 선택적으로 사용하세요.
+- **Plotly**: 5개 이상의 데이터 포인트가 있거나, 추세/분포/상관관계를 보여주는 것이 중요한 경우에만 사용하세요.`;
 
 /**
  * 기본 시스템 메시지 생성

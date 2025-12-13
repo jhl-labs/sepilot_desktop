@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Settings, Terminal, FileText, Database, Wrench, Presentation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { useChatStore } from '@/lib/store/chat-store';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { FileExplorer } from './FileExplorer';
@@ -12,6 +13,7 @@ import { EditorSettings } from '@/components/editor/EditorSettings';
 import { ToolApprovalDialog } from '@/components/chat/ToolApprovalDialog';
 import { isElectron } from '@/lib/platform';
 import { BetaConfig } from '@/types';
+import { cn } from '@/lib/utils';
 
 interface SidebarEditorProps {
   onDocumentsClick?: () => void;
@@ -120,86 +122,136 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer - Quick Actions */}
         <div className="shrink-0 border-t p-2">
-          <div className="flex gap-1">
-            <ThemeToggle />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setEditorUseToolsInAutocomplete(!editorUseToolsInAutocomplete)}
-              title={
-                editorUseToolsInAutocomplete
-                  ? 'Autocomplete에서 Tools 사용 중 (클릭하여 비활성화)'
-                  : 'Autocomplete에서 Tools 사용 안함 (클릭하여 활성화)'
-              }
-              className={`flex-1 ${editorUseToolsInAutocomplete ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
-            >
-              <Wrench className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setEditorUseRagInAutocomplete(!editorUseRagInAutocomplete)}
-              title={
-                editorUseRagInAutocomplete
-                  ? 'Autocomplete에서 RAG 문서 사용 중 (클릭하여 비활성화)'
-                  : 'Autocomplete에서 RAG 문서 사용 안함 (클릭하여 활성화)'
-              }
-              className={`flex-1 ${editorUseRagInAutocomplete ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
-            >
-              <Database className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onDocumentsClick}
-              title="문서 관리 (RAG)"
-              className="flex-1"
-            >
-              <FileText className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                if (workingDirectory) {
-                  setShowTerminalPanel(!showTerminalPanel);
-                }
-              }}
-              title={
-                !workingDirectory
-                  ? 'Working Directory를 먼저 설정해주세요'
-                  : showTerminalPanel
-                    ? '터미널 숨기기'
-                    : '터미널 열기'
-              }
-              disabled={!workingDirectory}
-              className={`flex-1 ${showTerminalPanel ? 'bg-accent' : ''}`}
-            >
-              <Terminal className="h-5 w-5" />
-            </Button>
-            {betaConfig.enablePresentationMode && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setAppMode('presentation')}
-                title="Presentation 모드 (Beta - 개발 중)"
-                className="flex-1"
-              >
-                <Presentation className="h-5 w-5" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setEditorViewMode('settings')}
-              title="설정"
-              className="flex-1"
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
-          </div>
+          <TooltipProvider delayDuration={300}>
+            <div className="flex gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex-shrink-0">
+                    <ThemeToggle />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>테마 전환</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditorUseToolsInAutocomplete(!editorUseToolsInAutocomplete)}
+                    className={cn(
+                      'flex-1',
+                      editorUseToolsInAutocomplete
+                        ? 'bg-accent text-accent-foreground'
+                        : 'text-muted-foreground'
+                    )}
+                  >
+                    <Wrench className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Autocomplete Tools {editorUseToolsInAutocomplete ? '(켜짐)' : '(꺼짐)'}</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditorUseRagInAutocomplete(!editorUseRagInAutocomplete)}
+                    className={cn(
+                      'flex-1',
+                      editorUseRagInAutocomplete
+                        ? 'bg-accent text-accent-foreground'
+                        : 'text-muted-foreground'
+                    )}
+                  >
+                    <Database className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Autocomplete RAG {editorUseRagInAutocomplete ? '(켜짐)' : '(꺼짐)'}</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={onDocumentsClick} className="flex-1">
+                    <FileText className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>문서 관리 (RAG)</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (workingDirectory) {
+                        setShowTerminalPanel(!showTerminalPanel);
+                      }
+                    }}
+                    disabled={!workingDirectory}
+                    className={cn('flex-1', showTerminalPanel && 'bg-accent')}
+                  >
+                    <Terminal className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>
+                    {!workingDirectory
+                      ? 'Working Directory 설정 필요'
+                      : showTerminalPanel
+                        ? '터미널 숨기기'
+                        : '터미널 열기'}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setEditorViewMode('settings')}
+                    className={cn('flex-1', editorViewMode === 'settings' && 'bg-accent')}
+                  >
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>에디터 설정</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {betaConfig.enablePresentationMode && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setAppMode('presentation')}
+                      className="flex-1"
+                    >
+                      <Presentation className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>Presentation 모드 (Beta)</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          </TooltipProvider>
         </div>
       </div>
 

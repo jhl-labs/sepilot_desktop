@@ -7,6 +7,12 @@ import {
   emitStreamingChunk,
   getCurrentImageGenConfig,
 } from '@/lib/llm/streaming-callback';
+import { createBaseSystemMessage } from '../utils/system-message';
+
+// Cache for MCP tools to reduce overhead
+let cachedTools: any[] | null = null;
+let lastCacheTime = 0;
+const TOOLS_CACHE_TTL = 10000; // 10 seconds
 
 /**
  * LLM 생성 노드 - 기본 Chat용 (스트리밍)
@@ -162,9 +168,20 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
 
     // MCP 도구 가져오기 (Built-in tools는 Coding Agent에서만 사용)
     // Note: generateWithToolsNode는 Electron Main Process에서 실행되므로
-    // IPC가 아닌 직접 메서드를 사용해야 함
-    const availableTools = toolsEnabled ? MCPServerManager.getAllToolsInMainProcess() : [];
-    console.log(`[Agent] Available MCP tools: ${availableTools.length}`);
+    // IPC가 아닌 직접 메서드를 사용해야 함.
+
+    // Caching logic to prevent excessive calls
+    let availableTools: any[] = [];
+    if (toolsEnabled) {
+      const now = Date.now();
+      if (cachedTools && now - lastCacheTime < TOOLS_CACHE_TTL) {
+        availableTools = cachedTools;
+      } else {
+        availableTools = MCPServerManager.getAllToolsInMainProcess();
+        cachedTools = availableTools;
+        lastCacheTime = now;
+      }
+    }
 
     if (availableTools.length > 0) {
       console.log(
@@ -347,7 +364,10 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       imageGenConfig?.provider === 'nanobanana' &&
       imageGenConfig?.nanobanana?.askOptionsOnGenerate === true;
 
-    let systemContent = `You are a helpful assistant with access to tools. Follow these guidelines:
+    // 기본 시스템 메시지 (시각화 지침 포함)를 기반으로 도구 가이드라인 추가
+    const toolGuidelines = `
+
+# Tool Usage Guidelines
 1. Use tools when necessary to answer user questions accurately
 2. Avoid redundant or repeated tool calls - one tool call per task is usually sufficient
 3. After receiving a tool result, analyze it thoroughly and provide a complete answer
@@ -355,6 +375,8 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
 5. For search queries, one comprehensive search is typically enough
 6. If a tool result is truncated, work with the available information rather than searching again
 7. Always prioritize providing a final answer over making additional tool calls`;
+
+    let systemContent = createBaseSystemMessage(toolGuidelines);
 
     // Add NanoBanana interactive options guidance
     if (nanobananaAskOptions) {

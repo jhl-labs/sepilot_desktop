@@ -50,21 +50,18 @@ export function LLMStatusBar({
     return groups;
   }, [tools]);
 
-  // Calculate accurate token count using tiktoken
-  // 모델별 최대 컨텍스트 토큰 수 (필요시 모델별로 다르게 설정 가능)
-  const MAX_CONTEXT_TOKENS = 128000; // Default max context (can be model-specific)
-
   const contextUsage = useMemo(() => {
     if (!llmConfig) {
       return {
         used: 0,
-        max: MAX_CONTEXT_TOKENS,
+        max: 0,
         percentage: 0,
       };
     }
 
     // tiktoken을 사용하여 정확한 토큰 수 계산
-    return calculateContextUsage(messages, input, llmConfig.model, MAX_CONTEXT_TOKENS);
+    // calculateContextUsage 내부에서 모델명을 통해 자동으로 모델별 컨텍스트 제한을 적용함
+    return calculateContextUsage(messages, input, llmConfig.model);
   }, [messages, input, llmConfig]);
 
   // Start editing a field

@@ -165,14 +165,14 @@ export class DatabaseTestSuite {
       const testKey = `test_${Date.now()}`;
       const testValue = JSON.stringify({ test: true, timestamp: Date.now() });
 
-      // Write
-      db.exec(`INSERT OR REPLACE INTO settings (key, value) VALUES ('${testKey}', '${testValue}')`);
+      // Write - 파라미터화된 쿼리 사용으로 SQL 인젝션 방지
+      db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [testKey, testValue]);
 
-      // Verify
-      const result = db.exec(`SELECT value FROM settings WHERE key = '${testKey}'`);
+      // Verify - 파라미터화된 쿼리 사용
+      const result = db.exec('SELECT value FROM settings WHERE key = ?', [testKey]);
 
-      // Cleanup
-      db.exec(`DELETE FROM settings WHERE key = '${testKey}'`);
+      // Cleanup - 파라미터화된 쿼리 사용
+      db.run('DELETE FROM settings WHERE key = ?', [testKey]);
 
       if (
         !result ||

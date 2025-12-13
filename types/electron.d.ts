@@ -181,23 +181,21 @@ interface LLMAPI {
     };
   }) => Promise<IPCResponse<{ completion: string }>>;
   editorAction: (params: {
-    action:
-      | 'summarize'
-      | 'translate'
-      | 'complete'
+    action: // 코드용 AI 액션
       | 'explain'
       | 'fix'
       | 'improve'
+      | 'complete'
+      | 'add-comments'
+      | 'generate-tests'
+      // 문서용 AI 액션
       | 'continue'
       | 'make-shorter'
       | 'make-longer'
       | 'simplify'
       | 'fix-grammar'
-      | 'change-tone-professional'
-      | 'change-tone-casual'
-      | 'change-tone-friendly'
-      | 'find-action-items'
-      | 'create-outline';
+      | 'summarize'
+      | 'translate';
     text: string;
     language?: string;
     targetLanguage?: string;
@@ -208,6 +206,8 @@ interface LLMAPI {
       filePath?: string;
       lineStart: number;
       lineEnd: number;
+      useRag?: boolean;
+      useTools?: boolean;
     };
   }) => Promise<IPCResponse<{ result: string }>>;
 }
@@ -506,6 +506,7 @@ interface FileSystemAPI {
   getRelativePath: (from: string, to: string) => Promise<IPCResponse<string>>;
   resolvePath: (basePath: string, relativePath: string) => Promise<IPCResponse<string>>;
   showInFolder: (itemPath: string) => Promise<IPCResponse>;
+  openWithDefaultApp: (itemPath: string) => Promise<IPCResponse>;
   duplicate: (sourcePath: string) => Promise<IPCResponse<string>>;
   searchFiles: (
     query: string,

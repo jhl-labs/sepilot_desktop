@@ -72,6 +72,7 @@
     "electron-serve": "^3.0.0",
     "eventsource": "^4.1.0",
     "https-proxy-agent": "^7.0.6",
+    "isomorphic-dompurify": "^2.34.0",
     "lucide-react": "^0.555.0",
     "mammoth": "^1.11.0",
     "markdown-to-jsx": "9.3.5",
@@ -163,7 +164,8 @@
   },
   "pnpm": {
     "overrides": {
-      "app-builder-bin": "5.0.0-alpha.6"
+      "app-builder-bin": "5.0.0-alpha.6",
+      "tmp": "^0.2.4"
     }
   },
   "lint-staged": {
