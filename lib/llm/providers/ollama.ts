@@ -2,6 +2,7 @@ import { BaseLLMProvider, LLMOptions, LLMResponse, StreamChunk } from '../base';
 import { Message } from '@/types';
 import { fetchWithConfig } from '../http-utils';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Ollama Native API Provider
  * Supports vision models with base64 images
@@ -149,7 +150,7 @@ export class OllamaProvider extends BaseLLMProvider {
           return base64.includes('base64,') ? base64.split('base64,')[1] : base64;
         });
 
-        console.log('[Ollama] Formatting message with images:', {
+        logger.info('[Ollama] Formatting message with images:', {
           role: msg.role,
           content: msg.content.substring(0, 50),
           imageCount: imageBase64Strings.length,

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Git Tools for Editor Agent
  *
@@ -353,5 +354,5 @@ export const gitTools: EditorTool[] = [gitStatusTool, gitDiffTool, gitLogTool, g
  */
 export function registerGitTools(registry: any): void {
   gitTools.forEach((tool) => registry.register(tool));
-  console.log(`[GitTools] Registered ${gitTools.length} git tools`);
+  logger.info(`[GitTools] Registered ${gitTools.length} git tools`);
 }

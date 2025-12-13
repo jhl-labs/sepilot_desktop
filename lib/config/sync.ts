@@ -32,7 +32,7 @@ export class ConfigSync {
     const { data } = await this.octokit.users.getAuthenticated();
     this.username = data.login;
 
-    // console.log(`Config sync initialized for user: ${this.username}`);
+    // logger.info(`Config sync initialized for user: ${this.username}`);
   }
 
   /**
@@ -69,7 +69,7 @@ export class ConfigSync {
       auto_init: true,
     });
 
-    // console.log(`Created config repository: ${this.repoName}`);
+    // logger.info(`Created config repository: ${this.repoName}`);
   }
 
   /**
@@ -170,7 +170,7 @@ export class ConfigSync {
       }
     }
 
-    // console.log('Config synced to GitHub');
+    // logger.info('Config synced to GitHub');
   }
 
   /**
@@ -198,7 +198,7 @@ export class ConfigSync {
         });
       }
 
-      // console.log('Config deleted from GitHub');
+      // logger.info('Config deleted from GitHub');
     } catch (error: any) {
       if (error.status !== 404) {
         throw error;

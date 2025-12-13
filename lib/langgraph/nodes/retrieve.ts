@@ -1,6 +1,7 @@
 import { RAGState } from '../state';
 import { Document } from '../types';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Main Process 환경인지 확인
  */
@@ -17,7 +18,7 @@ export async function retrieveNode(state: RAGState): Promise<Partial<RAGState>> 
     const lastMessage = state.messages[state.messages.length - 1];
     const query = lastMessage?.content || '';
 
-    console.log('[RetrieveNode] Retrieving documents for query:', query);
+    logger.info('[RetrieveNode] Retrieving documents for query:', query);
 
     let documents: Document[] = [];
 
@@ -30,7 +31,7 @@ export async function retrieveNode(state: RAGState): Promise<Partial<RAGState>> 
         const { initializeEmbedding, getEmbeddingProvider } =
           await import('@/lib/vectordb/embeddings/client');
 
-        console.log('[RetrieveNode] Using vectorDBService in Main Process');
+        logger.info('[RetrieveNode] Using vectorDBService in Main Process');
 
         // Embedding config 로드 및 초기화
         const configStr = databaseService.getSetting('app_config');
@@ -72,8 +73,8 @@ export async function retrieveNode(state: RAGState): Promise<Partial<RAGState>> 
           score: result.score,
         }));
 
-        console.log(`[RetrieveNode] Found ${documents.length} documents in Main Process`);
-        console.log(
+        logger.info(`[RetrieveNode] Found ${documents.length} documents in Main Process`);
+        logger.info(
           '[RetrieveNode] Document sources:',
           documents.map((d) => ({
             title: d.metadata?.title,
@@ -190,8 +191,8 @@ export async function rerankNode(state: RAGState): Promise<Partial<RAGState>> {
     // 2단계: 점수 기준 정렬
     rerankedDocuments.sort((a, b) => (b.score || 0) - (a.score || 0));
 
-    console.log(`[RerankNode] Reranked ${rerankedDocuments.length} documents, returning top 3`);
-    console.log(
+    logger.info(`[RerankNode] Reranked ${rerankedDocuments.length} documents, returning top 3`);
+    logger.info(
       '[RerankNode] Top 3 scores:',
       rerankedDocuments.slice(0, 3).map((d) => ({
         title: d.metadata?.title,

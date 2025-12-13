@@ -46,6 +46,7 @@ import {
   googleNextPageTool,
 } from '@/lib/mcp/tools/google-search-tools';
 
+import { logger } from '@/lib/utils/logger';
 const TOOL_RESULT_HISTORY_LIMIT = 12;
 
 /**
@@ -92,7 +93,7 @@ async function retryWithBackoff<T>(
 
       if (attempt < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, attempt);
-        console.debug(
+        logger.debug(
           `[BrowserAgent.Retry] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -111,7 +112,7 @@ function pruneContextIfNeeded(messages: Message[], maxMessages: number = 50): Me
     return messages;
   }
 
-  console.debug(
+  logger.debug(
     `[BrowserAgent.Context] Pruning context from ${messages.length} to ${maxMessages} messages`
   );
 
@@ -363,8 +364,8 @@ function formatBrowserAgentReport(report: BrowserAgentReport): string {
  */
 async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<AgentState>> {
   try {
-    console.debug('[BrowserAgent.Generate] ===== generateWithBrowserToolsNode called =====');
-    console.debug('[BrowserAgent.Generate] Current state:', {
+    logger.debug('[BrowserAgent.Generate] ===== generateWithBrowserToolsNode called =====');
+    logger.debug('[BrowserAgent.Generate] Current state:', {
       messageCount: state.messages.length,
       lastMessageRole: state.messages[state.messages.length - 1]?.role,
       toolResultsCount: state.toolResults.length,
@@ -408,10 +409,8 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
       googleNextPageTool, // 다음 페이지
     ];
 
-    console.debug(
-      `[BrowserAgent.Generate] Available Browser Control tools: ${browserTools.length}`
-    );
-    console.debug(
+    logger.debug(`[BrowserAgent.Generate] Available Browser Control tools: ${browserTools.length}`);
+    logger.debug(
       '[BrowserAgent.Generate] Tool details:',
       browserTools.map((t) => t.name)
     );
@@ -441,7 +440,7 @@ async function generateWithBrowserToolsNode(state: AgentState): Promise<Partial<
         content = 'No result';
       }
 
-      console.debug('[BrowserAgent.Generate] Creating tool result message:', {
+      logger.debug('[BrowserAgent.Generate] Creating tool result message:', {
         toolCallId: result.toolCallId,
         toolName: result.toolName,
         hasError: !!result.error,
@@ -766,7 +765,7 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS and AUTOMATIC RETRY. Use
     // 컨텍스트 pruning 적용
     const messages = pruneContextIfNeeded(allMessages);
 
-    console.debug(
+    logger.debug(
       '[BrowserAgent.Generate] Messages to LLM:',
       messages.map((m) => ({
         role: m.role,
@@ -781,16 +780,16 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS and AUTOMATIC RETRY. Use
     // Browser Agent LLM 설정 가져오기
     const { browserAgentLLMConfig } = useChatStore.getState();
 
-    console.debug('[BrowserAgent.Generate] Starting streaming with browser tools...');
-    console.debug('[BrowserAgent.Generate] LLM Config:', browserAgentLLMConfig);
+    logger.debug('[BrowserAgent.Generate] Starting streaming with browser tools...');
+    logger.debug('[BrowserAgent.Generate] LLM Config:', browserAgentLLMConfig);
 
     // LLM 호출 (재시도 로직 포함)
     try {
       for await (const chunk of LLMService.streamChatWithChunks(messages, {
         tools: toolsForLLM,
-        max_tokens: browserAgentLLMConfig.maxTokens,
+        maxTokens: browserAgentLLMConfig.maxTokens,
         temperature: browserAgentLLMConfig.temperature,
-        top_p: browserAgentLLMConfig.topP,
+        topP: browserAgentLLMConfig.topP,
       })) {
         // Accumulate content and emit to renderer
         if (!chunk.done && chunk.content) {
@@ -801,7 +800,7 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS and AUTOMATIC RETRY. Use
         // Last chunk contains tool calls (if any)
         if (chunk.done && chunk.toolCalls) {
           finalToolCalls = chunk.toolCalls;
-          console.debug('[BrowserAgent.Generate] Received tool calls from stream:', finalToolCalls);
+          logger.debug('[BrowserAgent.Generate] Received tool calls from stream:', finalToolCalls);
         }
       }
     } catch (llmError) {
@@ -809,7 +808,7 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS and AUTOMATIC RETRY. Use
       throw llmError;
     }
 
-    console.debug(
+    logger.debug(
       '[BrowserAgent.Generate] Streaming complete. Content length:',
       accumulatedContent.length
     );
@@ -818,7 +817,7 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS and AUTOMATIC RETRY. Use
     const toolCalls = finalToolCalls?.map((tc: any, index: number) => {
       const toolCallId = tc.id || `call_${Date.now()}_${index}`;
 
-      console.debug('[BrowserAgent.Generate] Tool call:', {
+      logger.debug('[BrowserAgent.Generate] Tool call:', {
         id: toolCallId,
         name: tc.function.name,
         arguments: tc.function.arguments,
@@ -840,7 +839,7 @@ Remember: This is a REAL browser with SEMANTIC ANALYSIS and AUTOMATIC RETRY. Use
       tool_calls: toolCalls,
     };
 
-    console.debug('[BrowserAgent.Generate] Assistant message created:', {
+    logger.debug('[BrowserAgent.Generate] Assistant message created:', {
       hasContent: !!assistantMessage.content,
       hasToolCalls: !!assistantMessage.tool_calls,
       toolCallsCount: assistantMessage.tool_calls?.length,
@@ -931,11 +930,11 @@ export class BrowserAgentGraph {
     } = useChatStore.getState();
     const actualMaxIterations = maxIterations ?? Math.max(browserAgentLLMConfig.maxIterations, 50);
 
-    console.debug('[BrowserAgent] Starting stream with initial state');
-    console.debug(
+    logger.debug('[BrowserAgent] Starting stream with initial state');
+    logger.debug(
       '[BrowserAgent] Available browser tools: get_page_content, get_interactive_elements, click_element, type_text, scroll'
     );
-    console.debug('[BrowserAgent] Max iterations:', actualMaxIterations);
+    logger.debug('[BrowserAgent] Max iterations:', actualMaxIterations);
 
     // Agent 로그 시작
     clearBrowserAgentLogs();
@@ -1003,9 +1002,7 @@ export class BrowserAgentGraph {
     let waitInjected = false;
 
     while (iterations < actualMaxIterations && !this.shouldStop) {
-      console.debug(
-        `[BrowserAgent] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`
-      );
+      logger.debug(`[BrowserAgent] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`);
 
       // 로그: 반복 시작
       addBrowserAgentLog({
@@ -1036,7 +1033,7 @@ export class BrowserAgentGraph {
       // 1. generate with Browser Control Tools
       let generateResult;
       try {
-        console.debug('[BrowserAgent] Calling generateWithBrowserToolsNode...');
+        logger.debug('[BrowserAgent] Calling generateWithBrowserToolsNode...');
 
         addBrowserAgentLog({
           level: 'thinking',
@@ -1049,7 +1046,7 @@ export class BrowserAgentGraph {
         });
 
         generateResult = await generateWithBrowserToolsNode(state);
-        console.debug('[BrowserAgent] generateWithBrowserToolsNode completed');
+        logger.debug('[BrowserAgent] generateWithBrowserToolsNode completed');
       } catch (error: any) {
         console.error('[BrowserAgent] Generate node error:', error);
 
@@ -1071,7 +1068,7 @@ export class BrowserAgentGraph {
       if (generateResult.messages && generateResult.messages.length > 0) {
         const newMessage = generateResult.messages[0];
 
-        console.debug('[BrowserAgent] Generated message:', {
+        logger.debug('[BrowserAgent] Generated message:', {
           content: newMessage.content?.substring(0, 100),
           hasToolCalls: !!newMessage.tool_calls,
           toolCallsCount: newMessage.tool_calls?.length,
@@ -1116,10 +1113,10 @@ export class BrowserAgentGraph {
 
       // 2. 도구 사용 여부 판단
       const decision = shouldUseTool(state);
-      console.debug('[BrowserAgent] Decision:', decision);
+      logger.debug('[BrowserAgent] Decision:', decision);
 
       if (decision === 'end') {
-        console.debug('[BrowserAgent] Ending - no more tools to call');
+        logger.debug('[BrowserAgent] Ending - no more tools to call');
 
         addBrowserAgentLog({
           level: 'success',
@@ -1187,7 +1184,7 @@ export class BrowserAgentGraph {
       }
 
       // 3. tools 노드 실행 (자동 실행, 승인 불필요, 재시도 포함)
-      console.debug('[BrowserAgent] Executing browser tools node');
+      logger.debug('[BrowserAgent] Executing browser tools node');
       let toolsResult;
 
       try {
@@ -1760,7 +1757,7 @@ export class BrowserAgentGraph {
         toolResults: mergeToolResults(state.toolResults, toolsResult.toolResults),
       };
 
-      console.debug('[BrowserAgent] Tool results:', toolsResult.toolResults);
+      logger.debug('[BrowserAgent] Tool results:', toolsResult.toolResults);
 
       yield { tools: toolsResult };
 
@@ -1771,7 +1768,7 @@ export class BrowserAgentGraph {
       iterations++;
     }
 
-    console.debug('[BrowserAgent] Stream completed, total iterations:', iterations);
+    logger.debug('[BrowserAgent] Stream completed, total iterations:', iterations);
 
     // Agent 로그 종료
     setBrowserAgentIsRunning(false);
@@ -1811,7 +1808,7 @@ export class BrowserAgentGraph {
       created_at: Date.now(),
     };
 
-    console.debug('[BrowserAgent] Final report generated:', {
+    logger.debug('[BrowserAgent] Final report generated:', {
       status: report.status,
       iterations: report.details.totalIterations,
       toolsUsed: report.details.toolStats.length,

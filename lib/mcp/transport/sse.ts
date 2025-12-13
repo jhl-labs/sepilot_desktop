@@ -1,13 +1,15 @@
+import { EventSource } from 'eventsource';
+
+import { getErrorMessage } from '@/lib/utils/error-handler';
+import { logger } from '@/lib/utils/logger';
+
 import { MCPClient } from '../client';
 import { JSONRPCRequest, JSONRPCResponse } from '../types';
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { EventSource } = require('eventsource');
 
 // EventSource 인터페이스 정의
 interface IEventSource {
   onmessage: ((event: any) => void) | null;
-  onopen: (() => void) | null;
+  onopen: ((event: any) => void) | null;
   onerror: ((error: any) => void) | null;
   close(): void;
 }
@@ -31,14 +33,15 @@ export class SSEMCPClient extends MCPClient {
   > = new Map();
 
   async connect(): Promise<void> {
-    if (!this.config.url) {
+    const baseUrl = this.config.url;
+    if (!baseUrl) {
       throw new Error('SSE transport requires url');
     }
 
     return new Promise((resolve, reject) => {
       try {
         // SSE 연결 시작
-        const url = new URL(this.config.url!);
+        const url = new URL(baseUrl);
 
         // Node.js eventsource는 커스텀 헤더를 지원합니다
         // 선택적으로 세션 초기화 가능 (stateful 서버용)
@@ -50,32 +53,29 @@ export class SSEMCPClient extends MCPClient {
             }
 
             // 헤더 디버깅
-            console.log(
-              '[SSE MCP] Connecting with headers:',
-              JSON.stringify(this.config.headers, null, 2)
-            );
-            console.log('[SSE MCP] URL:', url.toString());
+            logger.debug('[SSE MCP] Connecting with headers', this.config.headers ?? {});
+            logger.info('[SSE MCP] Connecting via SSE', { url: url.toString() });
 
             const eventSource = new EventSource(url.toString(), {
               headers: this.config.headers || {},
-            });
+            } as any);
             this.eventSource = eventSource;
 
             // 메시지 수신
-            eventSource.onmessage = (event: MessageEvent) => {
+            eventSource.onmessage = (event: any) => {
               this.handleMessage(event.data);
             };
 
             // 연결 성공
             eventSource.onopen = () => {
-              console.log(`[SSE MCP] Connected to ${this.config.name}`);
+              logger.info('[SSE MCP] Connected', { server: this.config.name });
               this.isConnected = true;
               resolve();
             };
 
             // 에러 처리
             eventSource.onerror = (error: Event) => {
-              console.error(`[SSE MCP] Connection error for ${this.config.name}:`, error);
+              logger.error('[SSE MCP] Connection error', { server: this.config.name, error });
               if (!this.isConnected) {
                 reject(new Error('Failed to connect to SSE endpoint'));
               } else {
@@ -109,7 +109,8 @@ export class SSEMCPClient extends MCPClient {
   }
 
   async sendRequest(request: JSONRPCRequest): Promise<JSONRPCResponse> {
-    if (!this.config.url) {
+    const baseUrl = this.config.url;
+    if (!baseUrl) {
       throw new Error('SSE transport requires url');
     }
 
@@ -139,21 +140,22 @@ export class SSEMCPClient extends MCPClient {
    * 세션 초기화 (선택사항)
    */
   private async initializeSession(): Promise<void> {
-    if (!this.config.url) {
+    const baseUrl = this.config.url;
+    if (!baseUrl) {
       return;
     }
 
     try {
       // POST /session endpoint로 세션 생성 (표준은 아니지만 일부 서버에서 사용)
-      const sessionUrl = new URL('/session', this.config.url);
+      const sessionUrl = new URL('/session', baseUrl);
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...this.config.headers,
       };
 
-      console.log('[SSE MCP] initializeSession headers:', JSON.stringify(headers, null, 2));
-      console.log('[SSE MCP] Session URL:', sessionUrl.toString());
+      logger.debug('[SSE MCP] initializeSession headers', headers);
+      logger.info('[SSE MCP] Session URL', { url: sessionUrl.toString() });
 
       const response = await fetch(sessionUrl.toString(), {
         method: 'POST',
@@ -169,15 +171,15 @@ export class SSEMCPClient extends MCPClient {
       if (response.ok) {
         const data = await response.json();
         this.sessionId = data.sessionId;
-        console.log(`[SSE MCP] Session created: ${this.sessionId}`);
+        logger.info('[SSE MCP] Session created', { sessionId: this.sessionId });
       } else {
-        console.warn(
-          `[SSE MCP] Session creation failed (${response.status}), continuing without session`
-        );
+        logger.warn('[SSE MCP] Session creation failed, continuing without session', {
+          status: response.status,
+        });
       }
     } catch (error) {
       // 세션 생성 실패는 치명적이지 않음 (일부 서버는 세션이 필요 없음)
-      console.warn('[SSE MCP] Session initialization failed:', error);
+      logger.warn('[SSE MCP] Session initialization failed', { error });
     }
   }
 
@@ -185,7 +187,8 @@ export class SSEMCPClient extends MCPClient {
    * HTTP POST로 JSON-RPC 요청 전송
    */
   private async sendHTTPRequest(request: JSONRPCRequest): Promise<void> {
-    if (!this.config.url) {
+    const baseUrl = this.config.url;
+    if (!baseUrl) {
       throw new Error('SSE transport requires url');
     }
 
@@ -199,7 +202,7 @@ export class SSEMCPClient extends MCPClient {
       headers['X-Session-ID'] = this.sessionId;
     }
 
-    const response = await fetch(this.config.url, {
+    const response = await fetch(baseUrl, {
       method: 'POST',
       headers,
       body: JSON.stringify(request),
@@ -233,7 +236,7 @@ export class SSEMCPClient extends MCPClient {
 
       if (response.id === undefined) {
         // 알림 메시지 (응답이 아님)
-        console.log('[SSE MCP] Notification:', response);
+        logger.debug('[SSE MCP] Notification received', response);
         return;
       }
 
@@ -243,10 +246,13 @@ export class SSEMCPClient extends MCPClient {
         this.pendingRequests.delete(response.id);
         pending.resolve(response);
       } else {
-        console.warn('[SSE MCP] Received response for unknown request:', response.id);
+        logger.warn('[SSE MCP] Received response for unknown request', { id: response.id });
       }
     } catch (error) {
-      console.error('[SSE MCP] Failed to parse message:', error, data);
+      logger.error('[SSE MCP] Failed to parse message', {
+        error: getErrorMessage(error),
+        raw: data,
+      });
     }
   }
 }

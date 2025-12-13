@@ -52,6 +52,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditorSettingsTab } from './EditorSettingsTab';
 import { BrowserSettingsTab } from './BrowserSettingsTab';
 
+import { logger } from '@/lib/utils/logger';
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -168,7 +169,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               // VectorDB 자동 초기화
               try {
                 await initializeVectorDB(result.data.vectorDB);
-                console.log('VectorDB auto-initialized from DB');
+                logger.info('VectorDB auto-initialized from DB');
               } catch (error) {
                 console.error('Failed to auto-initialize VectorDB:', error);
               }
@@ -181,7 +182,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               // Embedding 자동 초기화
               try {
                 initializeEmbedding(result.data.embedding);
-                console.log('Embedding auto-initialized from DB');
+                logger.info('Embedding auto-initialized from DB');
               } catch (error) {
                 console.error('Failed to auto-initialize Embedding:', error);
               }
@@ -240,12 +241,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
             // SQLite-vec는 브라우저에서 건너뛰기
             if (parsedVectorDBConfig.type === 'sqlite-vec') {
-              console.log('Skipping SQLite-vec in browser environment');
+              logger.info('Skipping SQLite-vec in browser environment');
             } else {
               // VectorDB 자동 초기화
               try {
                 await initializeVectorDB(parsedVectorDBConfig);
-                console.log('VectorDB auto-initialized from localStorage');
+                logger.info('VectorDB auto-initialized from localStorage');
               } catch (error) {
                 console.error('Failed to auto-initialize VectorDB:', error);
               }
@@ -261,7 +262,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             // Embedding 자동 초기화
             try {
               initializeEmbedding(parsedEmbeddingConfig);
-              console.log('Embedding auto-initialized from localStorage');
+              logger.info('Embedding auto-initialized from localStorage');
             } catch (error) {
               console.error('Failed to auto-initialize Embedding:', error);
             }
@@ -581,7 +582,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       if (isElectron() && window.electronAPI) {
         try {
           await window.electronAPI.quickInput.reloadShortcuts();
-          console.log('[QuickInputSettings] Shortcuts reloaded');
+          logger.info('[QuickInputSettings] Shortcuts reloaded');
         } catch (error) {
           console.error('[QuickInputSettings] Failed to reload shortcuts:', error);
         }
@@ -648,7 +649,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         networkConfig: networkConfigWithoutCustomHeaders,
       };
 
-      console.log(
+      logger.info(
         '[SettingsDialog] Saving embedding config with model:',
         embeddingConfig.model,
         'networkConfig:',
@@ -662,14 +663,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             vectorDB: vectorDBConfig,
             embedding: embeddingConfigWithNetwork,
           });
-          console.log('[SettingsDialog] Saved to DB successfully');
+          logger.info('[SettingsDialog] Saved to DB successfully');
         } catch (error) {
           console.error('Error saving vectorDB config to DB:', error);
         }
       }
 
       // Always save to localStorage (for DocumentsPage and other components)
-      console.log('[SettingsDialog] Saving to localStorage:', {
+      logger.info('[SettingsDialog] Saving to localStorage:', {
         vectorDB: vectorDBConfig,
         embedding: embeddingConfigWithNetwork,
       });
@@ -689,10 +690,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         if (isElectron() && typeof window !== 'undefined' && window.electronAPI) {
           // Electron 환경: VectorDB 초기화
           await initializeVectorDB(vectorDBConfig);
-          console.log('SQLite-vec initialized in Electron environment');
+          logger.info('SQLite-vec initialized in Electron environment');
         } else {
           // 브라우저 환경: 설정만 저장, 초기화는 건너뛰기
-          console.log('브라우저 환경에서는 SQLite-vec를 사용할 수 없습니다. 설정만 저장됩니다.');
+          logger.info('브라우저 환경에서는 SQLite-vec를 사용할 수 없습니다. 설정만 저장됩니다.');
         }
       } else {
         // OpenSearch, Elasticsearch, pgvector 등은 브라우저에서도 초기화 가능
@@ -706,7 +707,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         })
       );
 
-      console.log('VectorDB and Embedding configuration saved and initialized successfully');
+      logger.info('VectorDB and Embedding configuration saved and initialized successfully');
     } catch (error: any) {
       console.error('Failed to save VectorDB config:', error);
       throw error;

@@ -1,11 +1,13 @@
 import { Message, AppConfig } from '@/types';
 import { getLLMClient } from './client';
-import { BaseLLMProvider, StreamChunk } from './base';
+import { BaseLLMProvider, StreamChunk, LLMOptions, LLMResponse } from './base';
 import { hasImages, getVisionProviderFromConfig, createVisionProvider } from './vision-utils';
 import { isAborted, getCurrentConversationId } from './streaming-callback';
 
 // Main Process에서 databaseService 사용 (동적 import로 브라우저 호환성 유지)
-let databaseServiceModule: any = null;
+import { logger } from '@/lib/utils/logger';
+type DatabaseServiceModule = typeof import('../../electron/services/database');
+let databaseServiceModule: DatabaseServiceModule | null = null;
 async function getDatabaseService() {
   if (!databaseServiceModule && typeof window === 'undefined') {
     try {
@@ -38,10 +40,10 @@ async function getVisionProviderForMainProcess(): Promise<BaseLLMProvider | null
       return null;
     }
 
-    console.log('[LLMService] Main Process - Creating vision provider');
+    logger.info('[LLMService] Main Process - Creating vision provider');
     return createVisionProvider(config.llm);
   } catch (error) {
-    console.error('[LLMService] Error getting vision provider in Main Process:', error);
+    logger.error('[LLMService] Error getting vision provider in Main Process:', error);
     return null;
   }
 }
@@ -50,15 +52,15 @@ export class LLMService {
   /**
    * Send messages and get a streaming response
    */
-  static async *streamChat(messages: Message[], options?: any): AsyncGenerator<string> {
+  static async *streamChat(messages: Message[], options?: LLMOptions): AsyncGenerator<string> {
     // Electron 환경: IPC를 통해 메인 프로세스에서 API 호출 (CORS 문제 해결)
     if (typeof window !== 'undefined' && window.electronAPI?.llm) {
       const hasVisionContent = hasImages(messages);
-      console.log('[LLMService] Starting Electron IPC stream, hasImages:', hasVisionContent);
+      logger.info('[LLMService] Starting Electron IPC stream', { hasVisionContent });
 
       // 이전 스트리밍 세션의 리스너를 모두 제거 (macOS 호환성)
       if (window.electronAPI.llm.removeAllStreamListeners) {
-        console.log('[LLMService] Cleaning up previous stream listeners');
+        logger.debug('[LLMService] Cleaning up previous stream listeners');
         window.electronAPI.llm.removeAllStreamListeners();
       }
 
@@ -70,7 +72,7 @@ export class LLMService {
       // 스트리밍 이벤트 핸들러 등록
       const chunkHandler = window.electronAPI.llm.onStreamChunk((chunk: string) => {
         if (!isActive) {
-          console.log('[LLMService] Ignoring chunk from inactive stream');
+          logger.debug('[LLMService] Ignoring chunk from inactive stream');
           return;
         }
         // 로그 제거: 매 청크마다 찍으면 렉 발생
@@ -83,10 +85,10 @@ export class LLMService {
 
       const doneHandler = window.electronAPI.llm.onStreamDone(() => {
         if (!isActive) {
-          console.log('[LLMService] Ignoring done signal from inactive stream');
+          logger.debug('[LLMService] Ignoring done signal from inactive stream');
           return;
         }
-        console.log('[LLMService] Stream done');
+        logger.info('[LLMService] Stream done');
         eventQueue.push({ type: 'done' });
         if (resolveNext) {
           resolveNext();
@@ -96,10 +98,10 @@ export class LLMService {
 
       const errorHandler = window.electronAPI.llm.onStreamError((error: string) => {
         if (!isActive) {
-          console.log('[LLMService] Ignoring error from inactive stream');
+          logger.debug('[LLMService] Ignoring error from inactive stream');
           return;
         }
-        console.error('[LLMService] Stream error:', error);
+        logger.error('[LLMService] Stream error:', error);
         eventQueue.push({ type: 'error', data: error });
         if (resolveNext) {
           resolveNext();
@@ -117,7 +119,7 @@ export class LLMService {
           // Check if streaming was aborted
           const conversationId = getCurrentConversationId();
           if (conversationId && isAborted(conversationId)) {
-            console.log('[LLMService] Streaming aborted in IPC mode, breaking loop');
+            logger.warn('[LLMService] Streaming aborted in IPC mode, breaking loop');
             throw new Error('Streaming aborted by user');
           }
 
@@ -153,7 +155,7 @@ export class LLMService {
         isActive = false;
 
         // 이벤트 리스너 제거
-        console.log('[LLMService] Removing stream listeners');
+        logger.debug('[LLMService] Removing stream listeners');
         window.electronAPI.llm.removeStreamListener('llm-stream-chunk', chunkHandler);
         window.electronAPI.llm.removeStreamListener('llm-stream-done', doneHandler);
         window.electronAPI.llm.removeStreamListener('llm-stream-error', errorHandler);
@@ -180,7 +182,7 @@ export class LLMService {
     const containsImages = hasImages(messages);
 
     if (containsImages) {
-      console.log('[LLMService] Images detected in stream, attempting to use vision model');
+      logger.info('[LLMService] Images detected in stream, attempting to use vision model');
 
       // Main Process에서는 databaseService에서 직접 설정 로드
       const visionProvider = isMainProcess
@@ -188,10 +190,10 @@ export class LLMService {
         : await getVisionProviderFromConfig();
 
       if (visionProvider) {
-        console.log('[LLMService] Using vision model for streaming image analysis');
+        logger.info('[LLMService] Using vision model for streaming image analysis');
         provider = visionProvider;
       } else {
-        console.warn('[LLMService] Images present but vision model not configured');
+        logger.warn('[LLMService] Images present but vision model not configured');
         // Vision 모델이 설정되지 않았으면 에러 발생 (이미지는 일반 모델로 처리 불가)
         throw new Error(
           'Vision model is not configured. Please enable and configure a vision model in Settings > LLM > Vision Model to analyze images.'
@@ -204,7 +206,7 @@ export class LLMService {
         // Check if streaming was aborted
         const conversationId = getCurrentConversationId();
         if (conversationId && isAborted(conversationId)) {
-          console.log('[LLMService] Streaming aborted, breaking loop');
+          logger.warn('[LLMService] Streaming aborted, breaking loop');
           throw new Error('Streaming aborted by user');
         }
 
@@ -213,7 +215,7 @@ export class LLMService {
         }
       }
     } catch (error) {
-      console.error('Stream chat error:', error);
+      logger.error('Stream chat error:', error);
       throw error;
     }
   }
@@ -223,7 +225,7 @@ export class LLMService {
    */
   static async *streamChatWithChunks(
     messages: Message[],
-    options?: any
+    options?: LLMOptions
   ): AsyncGenerator<StreamChunk> {
     // Main Process 또는 웹 환경: 직접 LLM 호출
     const client = getLLMClient();
@@ -240,7 +242,7 @@ export class LLMService {
     const hasTools = options?.tools && options.tools.length > 0;
 
     if (containsImages && !hasTools) {
-      console.log('[LLMService] Images detected in stream, attempting to use vision model');
+      logger.info('[LLMService] Images detected in stream, attempting to use vision model');
 
       // Main Process에서는 databaseService에서 직접 설정 로드
       const visionProvider = isMainProcess
@@ -248,16 +250,16 @@ export class LLMService {
         : await getVisionProviderFromConfig();
 
       if (visionProvider) {
-        console.log('[LLMService] Using vision model for streaming image analysis');
+        logger.info('[LLMService] Using vision model for streaming image analysis');
         provider = visionProvider;
       } else {
-        console.warn('[LLMService] Images present but vision model not configured');
+        logger.warn('[LLMService] Images present but vision model not configured');
         throw new Error(
           'Vision model is not configured. Please enable and configure a vision model in Settings > LLM > Vision Model to analyze images.'
         );
       }
     } else if (containsImages && hasTools) {
-      console.log(
+      logger.info(
         '[LLMService] Images detected but tools are provided - using regular LLM for tool calling (Vision models typically do not support tool calling)'
       );
     }
@@ -267,14 +269,14 @@ export class LLMService {
         // Check if streaming was aborted
         const conversationId = getCurrentConversationId();
         if (conversationId && isAborted(conversationId)) {
-          console.log('[LLMService] Streaming aborted, breaking loop');
+          logger.warn('[LLMService] Streaming aborted, breaking loop');
           throw new Error('Streaming aborted by user');
         }
 
         yield chunk;
       }
     } catch (error) {
-      console.error('Stream chat with chunks error:', error);
+      logger.error('Stream chat with chunks error:', error);
       throw error;
     }
   }
@@ -282,11 +284,11 @@ export class LLMService {
   /**
    * Send messages and get a complete response
    */
-  static async chat(messages: Message[], options?: any): Promise<any> {
+  static async chat(messages: Message[], options?: LLMOptions): Promise<LLMResponse> {
     const isMainProcess = typeof window === 'undefined';
     const containsImages = hasImages(messages);
 
-    console.log('[LLMService] chat() called:', {
+    logger.info('[LLMService] chat() called:', {
       isMainProcess,
       containsImages,
       messageCount: messages.length,
@@ -294,10 +296,10 @@ export class LLMService {
 
     // Electron Renderer 환경: IPC를 통해 메인 프로세스에서 API 호출 (CORS 문제 해결)
     if (!isMainProcess && window.electronAPI?.llm) {
-      console.log('[LLMService] Using Electron IPC for chat');
+      logger.info('[LLMService] Using Electron IPC for chat');
       const result = await window.electronAPI.llm.chat(messages, options);
 
-      console.log('[LLMService] IPC result:', {
+      logger.info('[LLMService] IPC result:', {
         success: result.success,
         hasData: !!result.data,
         error: result.error,
@@ -312,7 +314,7 @@ export class LLMService {
         throw new Error('IPC returned success but no data');
       }
 
-      return result.data;
+      return result.data as LLMResponse;
     }
 
     // Main Process 또는 웹 환경: 직접 LLM 호출
@@ -328,7 +330,7 @@ export class LLMService {
     const hasTools = options?.tools && options.tools.length > 0;
 
     if (containsImages && !hasTools) {
-      console.log('[LLMService] Images detected, attempting to use vision model');
+      logger.info('[LLMService] Images detected, attempting to use vision model');
 
       // Main Process에서는 databaseService에서 직접 설정 로드
       const visionProvider = isMainProcess
@@ -336,10 +338,10 @@ export class LLMService {
         : await getVisionProviderFromConfig();
 
       if (visionProvider) {
-        console.log('[LLMService] Using vision model for image analysis');
+        logger.info('[LLMService] Using vision model for image analysis');
         provider = visionProvider;
       } else {
-        console.warn(
+        logger.warn(
           '[LLMService] Images present but vision model not configured, using regular model'
         );
         // Vision 모델이 설정되지 않았으면 에러 발생 (이미지는 일반 모델로 처리 불가)
@@ -348,7 +350,7 @@ export class LLMService {
         );
       }
     } else if (containsImages && hasTools) {
-      console.log(
+      logger.info(
         '[LLMService] Images detected but tools are provided - using regular LLM for tool calling (Vision models typically do not support tool calling)'
       );
     }
@@ -357,7 +359,7 @@ export class LLMService {
       const response = await provider.chat(messages, options);
       return response;
     } catch (error) {
-      console.error('Chat error:', error);
+      logger.error('Chat error:', error);
       throw error;
     }
   }

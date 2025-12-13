@@ -78,7 +78,6 @@ export function SlidePreview() {
       }
     }
     // currentIndex를 의존성에서 제거하여 무한 루프 방지
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePresentationSlideId, presentationSlides]);
 
   // Update active slide when currentIndex changes (내부에서 변경된 경우만)

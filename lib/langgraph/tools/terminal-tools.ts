@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Terminal Tools for Editor Agent
  *
@@ -64,7 +65,7 @@ const runCommandTool: EditorTool = {
           ? path.dirname(state.editorContext.filePath)
           : process.cwd());
 
-      console.log('[run_command] Executing:', command, 'in', workingDir);
+      logger.info('[run_command] Executing:', command, 'in', workingDir);
 
       // 명령 실행
       const { stdout, stderr } = await execAsync(command, {
@@ -105,5 +106,5 @@ export const terminalTools: EditorTool[] = [runCommandTool];
  */
 export function registerTerminalTools(registry: any): void {
   terminalTools.forEach((tool) => registry.register(tool));
-  console.log(`[TerminalTools] Registered ${terminalTools.length} terminal tools`);
+  logger.info(`[TerminalTools] Registered ${terminalTools.length} terminal tools`);
 }

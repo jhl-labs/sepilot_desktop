@@ -1,7 +1,8 @@
 import { VectorDB } from './interface';
 import { EmbeddingProvider } from './embeddings/interface';
-import { RawDocument, VectorDocument, IndexingOptions, ChunkStrategy } from './types';
+import { RawDocument, VectorDocument, IndexingOptions, ChunkStrategy, SearchResult } from './types';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Character-based 청킹 (기존 방식 - 컨텍스트 손실 가능)
  */
@@ -155,8 +156,12 @@ function chunkTextStructure(text: string, chunkSize: number, chunkOverlap: numbe
 function chunkTextToken(text: string, chunkSize: number, chunkOverlap: number): string[] {
   // TODO: tiktoken 또는 LLM tokenizer 통합
   // 현재는 sentence-based로 폴백 (character보다 나음)
-  console.warn(
-    '[Chunking] Token-based chunking not yet implemented. Falling back to sentence-based.'
+  logger.warn(
+    '[Chunking] Token-based chunking not yet implemented. Falling back to sentence-based.',
+    {
+      chunkSize,
+      chunkOverlap,
+    }
   );
   return chunkTextSentence(text, chunkSize, chunkOverlap);
 }
@@ -180,7 +185,7 @@ export function chunkText(
     case 'token':
       return chunkTextToken(text, chunkSize, chunkOverlap);
     default:
-      console.warn(`[Chunking] Unknown strategy: ${strategy}. Falling back to sentence.`);
+      logger.warn('[Chunking] Unknown strategy. Falling back to sentence.', { strategy });
       return chunkTextSentence(text, chunkSize, chunkOverlap);
   }
 }
@@ -252,11 +257,11 @@ export async function indexDocuments(
   documents: RawDocument[],
   options: IndexingOptions
 ): Promise<void> {
-  console.log(`Indexing ${documents.length} documents...`);
+  logger.info('Indexing documents', { documentCount: documents.length });
 
   // 1. 문서 청킹
   const chunkedDocs = chunkDocuments(documents, options);
-  console.log(`Created ${chunkedDocs.length} chunks`);
+  logger.info('Chunking complete', { chunkCount: chunkedDocs.length });
 
   // 2. 배치 처리
   const batches: RawDocument[][] = [];
@@ -264,13 +269,13 @@ export async function indexDocuments(
     batches.push(chunkedDocs.slice(i, i + options.batchSize));
   }
 
-  console.log(`Processing ${batches.length} batches...`);
+  logger.info('Processing batches', { batchCount: batches.length });
 
   // 3. 각 배치 임베딩 및 삽입
   for (let i = 0; i < batches.length; i++) {
     const batch = batches[i];
 
-    console.log(`Processing batch ${i + 1}/${batches.length} (${batch.length} chunks)...`);
+    logger.debug(`Processing batch ${i + 1}/${batches.length}`, { chunkCount: batch.length });
 
     // 임베딩 생성
     const texts = batch.map((doc) => doc.content);
@@ -288,7 +293,7 @@ export async function indexDocuments(
     await vectorDB.insert(vectorDocs);
   }
 
-  console.log('Indexing complete!');
+  logger.info('Indexing complete');
 }
 
 /**
@@ -299,7 +304,7 @@ export async function searchDocuments(
   embedder: EmbeddingProvider,
   query: string,
   k: number = 5
-) {
+): Promise<SearchResult[]> {
   // 쿼리 임베딩
   const queryEmbedding = await embedder.embed(query);
 

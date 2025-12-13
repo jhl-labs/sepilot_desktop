@@ -548,6 +548,7 @@ export function UnifiedChatInput({
                   size="sm"
                   className="h-7 px-2"
                   onClick={() => setThinkingMode('instant')}
+                  data-testid="thinking-mode-trigger-compact"
                 >
                   <Zap className="h-3.5 w-3.5" />
                 </Button>
@@ -564,6 +565,7 @@ export function UnifiedChatInput({
                   size="sm"
                   className="h-7 px-2"
                   onClick={() => setEnableRAG(!enableRAG)}
+                  data-testid="rag-toggle-compact"
                 >
                   <BookText className="h-3.5 w-3.5" />
                 </Button>
@@ -615,6 +617,7 @@ export function UnifiedChatInput({
                     size="icon"
                     className="h-9 w-9 rounded-xl shrink-0 border-2 border-muted-foreground/30"
                     disabled={isStreaming || enableImageGeneration}
+                    data-testid="thinking-mode-trigger"
                   >
                     {thinkingModeIcon[thinkingMode as keyof typeof thinkingModeIcon] || (
                       <Brain className="h-4 w-4" />
@@ -701,6 +704,7 @@ export function UnifiedChatInput({
                 className="h-9 w-9 rounded-xl shrink-0"
                 onClick={() => setEnableRAG(!enableRAG)}
                 disabled={isStreaming || enableImageGeneration}
+                data-testid="rag-toggle"
               >
                 <BookText className="h-4 w-4" />
               </Button>

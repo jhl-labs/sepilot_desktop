@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Search, X, ChevronRight, ChevronDown, FileText } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
 
+import { logger } from '@/lib/utils/logger';
 interface SearchMatch {
   line: number;
   column: number;
@@ -105,7 +106,7 @@ export function SearchPanel() {
           },
         });
 
-        console.log(`[SearchPanel] Opened file at line ${match.line}, column ${match.column}`);
+        logger.info(`[SearchPanel] Opened file at line ${match.line}, column ${match.column}`);
       }
     } catch (error) {
       console.error('[SearchPanel] Error opening file:', error);

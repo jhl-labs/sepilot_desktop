@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * LLM HTTP 요청을 위한 유틸리티
  * 프록시, SSL 검증, 커스텀 헤더를 지원
@@ -95,7 +96,7 @@ export async function fetchWithConfig(
       } else if (config.network.proxy.mode === 'system') {
         // 시스템 프록시는 환경변수 HTTP_PROXY, HTTPS_PROXY 사용
         // Node.js fetch는 자동으로 환경변수를 읽음
-        console.log('Using system proxy from environment variables');
+        logger.info('Using system proxy from environment variables');
       }
     }
 

@@ -1,6 +1,8 @@
+import { getErrorMessage } from '@/lib/utils/error-handler';
 import { EmbeddingProvider } from './interface';
 import { LLMConfig } from '@/types';
 
+import { logger } from '@/lib/utils/logger';
 export interface OpenAIEmbeddingConfig {
   apiKey: string;
   model?: string;
@@ -19,6 +21,12 @@ function isElectron(): boolean {
  * OpenAI Embeddings Provider
  * CORS-safe: Uses Electron IPC in Electron environment
  */
+interface OpenAIEmbeddingApiResponse {
+  data: Array<{
+    embedding: number[];
+  }>;
+}
+
 export class OpenAIEmbeddings extends EmbeddingProvider {
   private apiKey: string;
   private model: string;
@@ -35,12 +43,10 @@ export class OpenAIEmbeddings extends EmbeddingProvider {
       config.baseURL && config.baseURL.trim() ? config.baseURL : 'https://api.openai.com/v1';
     this.networkConfig = config.networkConfig;
 
-    console.log(
-      '[OpenAIEmbeddings] Constructor called with model:',
-      this.model,
-      'from config.model:',
-      config.model
-    );
+    logger.info('[OpenAIEmbeddings] Constructor called', {
+      model: this.model,
+      configuredModel: config.model,
+    });
 
     // 모델별 차원 설정
     this.dimension = this.model === 'text-embedding-3-large' ? 3072 : 1536;
@@ -65,7 +71,7 @@ export class OpenAIEmbeddings extends EmbeddingProvider {
       }
 
       // 브라우저 환경: 직접 fetch (CORS 주의 필요)
-      console.warn('[OpenAI Embeddings] Running in browser mode - CORS may occur');
+      logger.warn('[OpenAI Embeddings] Running in browser mode - CORS may occur');
       const response = await fetch(`${this.baseURL}/embeddings`, {
         method: 'POST',
         headers: {
@@ -82,11 +88,16 @@ export class OpenAIEmbeddings extends EmbeddingProvider {
         throw new Error(`OpenAI API error: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      return data.data[0].embedding;
-    } catch (error: any) {
-      console.error('Embedding error:', error);
-      throw new Error(`Failed to generate embedding: ${error.message}`);
+      const data = (await response.json()) as OpenAIEmbeddingApiResponse;
+      const embedding = data.data[0]?.embedding;
+      if (!embedding) {
+        throw new Error('Embedding data is missing in API response');
+      }
+      return embedding;
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      logger.error('Embedding error', { message, error });
+      throw new Error(`Failed to generate embedding: ${message}`);
     }
   }
 
@@ -109,7 +120,7 @@ export class OpenAIEmbeddings extends EmbeddingProvider {
       }
 
       // 브라우저 환경: 직접 fetch (CORS 주의 필요)
-      console.warn('[OpenAI Embeddings] Running in browser mode - CORS may occur');
+      logger.warn('[OpenAI Embeddings] Running in browser mode - CORS may occur');
       const response = await fetch(`${this.baseURL}/embeddings`, {
         method: 'POST',
         headers: {
@@ -126,11 +137,12 @@ export class OpenAIEmbeddings extends EmbeddingProvider {
         throw new Error(`OpenAI API error: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      return data.data.map((item: any) => item.embedding);
-    } catch (error: any) {
-      console.error('Batch embedding error:', error);
-      throw new Error(`Failed to generate embeddings: ${error.message}`);
+      const data = (await response.json()) as OpenAIEmbeddingApiResponse;
+      return data.data.map((item) => item.embedding);
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      logger.error('Batch embedding error', { message, error });
+      throw new Error(`Failed to generate embeddings: ${message}`);
     }
   }
 

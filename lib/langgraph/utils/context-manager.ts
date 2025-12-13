@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Context Manager for Coding Agent
  *
@@ -134,7 +135,7 @@ export class ContextManager {
     // Sort by timestamp to maintain conversation order
     context.sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
 
-    console.log('[ContextManager] Optimized context:', {
+    logger.info('[ContextManager] Optimized context:', {
       original: messages.length,
       optimized: context.length,
       estimatedTokens: tokens,

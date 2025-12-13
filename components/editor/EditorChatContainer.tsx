@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * EditorChatContainer
  *
@@ -276,11 +277,11 @@ Execute tasks step by step and use tools proactively.`;
 
               // Handle tool approval request (Human-in-the-loop)
               if (evt.type === 'tool_approval_request') {
-                console.log('[EditorChatContainer] Tool approval request received:', evt.toolCalls);
+                logger.info('[EditorChatContainer] Tool approval request received:', evt.toolCalls);
 
                 // Auto-approve if session-wide approval is enabled
                 if (alwaysApproveToolsForSession) {
-                  console.log(
+                  logger.info(
                     '[EditorChatContainer] Auto-approving tools (session-wide approval enabled)'
                   );
                   (async () => {
@@ -323,7 +324,7 @@ Execute tasks step by step and use tools proactively.`;
 
               // Handle tool approval result
               if (evt.type === 'tool_approval_result') {
-                console.log('[EditorChatContainer] Tool approval result:', evt.approved);
+                logger.info('[EditorChatContainer] Tool approval result:', evt.approved);
                 clearPendingToolApproval();
                 if (!evt.approved) {
                   accumulatedContent += '\n\n❌ 도구 실행이 거부되었습니다.';

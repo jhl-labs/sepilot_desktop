@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Codebase Analyzer for Coding Agent
  *
@@ -70,7 +71,7 @@ export class CodebaseAnalyzer {
    * Analyze project structure
    */
   async analyzeStructure(rootPath: string, maxDepth: number = 5): Promise<ProjectStructure> {
-    console.log(`[CodebaseAnalyzer] Analyzing project structure: ${rootPath}`);
+    logger.info(`[CodebaseAnalyzer] Analyzing project structure: ${rootPath}`);
 
     const tree = await this.buildDirectoryTree(rootPath, maxDepth);
     const stats = this.calculateStats(tree);
@@ -231,7 +232,7 @@ export class CodebaseAnalyzer {
    * Build dependency graph
    */
   async buildDependencyGraph(rootPath: string): Promise<DependencyGraph> {
-    console.log(`[CodebaseAnalyzer] Building dependency graph: ${rootPath}`);
+    logger.info(`[CodebaseAnalyzer] Building dependency graph: ${rootPath}`);
 
     const graph: DependencyGraph = {
       nodes: new Map(),
@@ -265,7 +266,7 @@ export class CodebaseAnalyzer {
       }
     }
 
-    console.log(`[CodebaseAnalyzer] Built dependency graph with ${graph.nodes.size} nodes`);
+    logger.info(`[CodebaseAnalyzer] Built dependency graph with ${graph.nodes.size} nodes`);
 
     return graph;
   }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Google Search Handlers
  *
@@ -169,14 +170,14 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
     // Google 홈페이지가 아니면 먼저 방문 (쿠키 및 세션 설정)
     // 단, 타임아웃을 짧게 설정하여 빠르게 실패하도록 함
     if (!currentURL.includes('google.com')) {
-      console.warn('[GoogleSearch] Visiting Google homepage first to establish session...');
+      logger.warn('[GoogleSearch] Visiting Google homepage first to establish session...');
 
       try {
         await browserView.webContents.loadURL('https://www.google.com');
 
         await new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
-            console.warn(
+            logger.warn(
               '[GoogleSearch] Homepage load timeout (5s) - skipping and going directly to search'
             );
             reject(new Error('Homepage load timeout (5s)'));
@@ -189,13 +190,13 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
           };
 
           const onFinish = () => {
-            console.log('[GoogleSearch] Homepage loaded successfully');
+            logger.info('[GoogleSearch] Homepage loaded successfully');
             cleanup();
             resolve();
           };
 
-          const onFail = (_event: any, errorCode: number, errorDescription: string) => {
-            console.warn(
+          const onFail = (_event: unknown, errorCode: number, errorDescription: string) => {
+            logger.warn(
               `[GoogleSearch] Homepage load failed (${errorCode}): ${errorDescription} - proceeding to search`
             );
             cleanup();
@@ -211,17 +212,17 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
         await naturalDelay(500, 1000);
       } catch {
         // 홈페이지 로드 실패 시에도 검색은 시도 (에러 로그만 출력)
-        console.warn('[GoogleSearch] Homepage load timed out, continuing with direct search');
+        logger.warn('[GoogleSearch] Homepage load timed out, continuing with direct search');
         // 타임아웃 시 대기 없이 바로 진행
       }
     } else {
-      console.log('[GoogleSearch] Already on Google, skipping homepage visit');
+      logger.info('[GoogleSearch] Already on Google, skipping homepage visit');
     }
 
     // 자연스러운 지연 추가 (bot 감지 방지)
     await naturalDelay(500, 1000);
 
-    console.warn('[GoogleSearch] Navigating to search URL:', searchURL);
+    logger.warn('[GoogleSearch] Navigating to search URL:', searchURL);
 
     // 검색 페이지로 이동 (추가 헤더 포함)
     await browserView.webContents.loadURL(searchURL, {
@@ -240,7 +241,7 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
     try {
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
-          console.warn('[GoogleSearch] Page load timeout (30s) - attempting to continue anyway');
+          logger.warn('[GoogleSearch] Page load timeout (30s) - attempting to continue anyway');
           // 타임아웃이지만 페이지가 부분적으로 로드되었을 수 있으므로 계속 진행
           reject(new Error('Page load timeout (30s)'));
         }, 30000);
@@ -257,12 +258,12 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
         };
 
         const onFail = (
-          _event: any,
+          _event: unknown,
           errorCode: number,
           errorDescription: string,
           _validatedURL: string
         ) => {
-          console.warn(`[GoogleSearch] Page load failed (${errorCode}): ${errorDescription}`);
+          logger.warn(`[GoogleSearch] Page load failed (${errorCode}): ${errorDescription}`);
           cleanup();
           reject(
             new Error(
@@ -276,7 +277,7 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
       });
     } catch (loadError) {
       // 타임아웃 또는 로드 실패 시
-      console.warn('[GoogleSearch] Load error, checking page state:', loadError);
+      logger.warn('[GoogleSearch] Load error, checking page state:', loadError);
 
       // 페이지가 부분적으로라도 로드되었는지 확인
       try {
@@ -285,7 +286,7 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
 
         // Google 페이지에 있고 제목이 있으면 부분 성공으로 간주
         if (currentURL.includes('google.com') && title) {
-          console.warn(
+          logger.warn(
             '[GoogleSearch] Partial page load detected, continuing with available content'
           );
           // 부분 로드 성공 - 계속 진행
@@ -318,7 +319,7 @@ URL: ${searchURL}
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[GoogleSearch] Error:', error);
+    logger.error('[GoogleSearch] Error:', error);
     throw new Error(`Google 검색 실패: ${message}`);
   }
 }
@@ -446,7 +447,7 @@ export async function handleGoogleExtractResults(
     return output;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[GoogleExtractResults] Error:', error);
+    logger.error('[GoogleExtractResults] Error:', error);
     throw new Error(`검색 결과 추출 실패: ${message}`);
   }
 }
@@ -494,7 +495,7 @@ export async function handleGoogleGetRelatedSearches(): Promise<string> {
     return output;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[GoogleGetRelatedSearches] Error:', error);
+    logger.error('[GoogleGetRelatedSearches] Error:', error);
     throw new Error(`관련 검색어 추출 실패: ${message}`);
   }
 }
@@ -687,7 +688,7 @@ export async function handleGoogleVisitResult(options: GoogleVisitResultOptions)
     return output;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[GoogleVisitResult] Error:', error);
+    logger.error('[GoogleVisitResult] Error:', error);
     throw new Error(`검색 결과 방문 실패: ${message}`);
   }
 }
@@ -733,7 +734,7 @@ export async function handleGoogleNextPage(): Promise<string> {
 이제 google_extract_results를 사용하여 새로운 검색 결과를 확인하세요.`;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[GoogleNextPage] Error:', error);
+    logger.error('[GoogleNextPage] Error:', error);
     throw new Error(`다음 페이지 이동 실패: ${message}`);
   }
 }

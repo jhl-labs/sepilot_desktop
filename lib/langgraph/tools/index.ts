@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Editor Tools Entry Point
  *
@@ -15,7 +16,7 @@ import { registerCodeTools } from './code-tools';
  * 모든 Tool 등록
  */
 export function registerAllEditorTools(): void {
-  console.log('[EditorTools] Registering all tools...');
+  logger.info('[EditorTools] Registering all tools...');
 
   // Phase 2: 파일 관리 Tools 등록
   registerFileTools(editorToolsRegistry);
@@ -56,7 +57,7 @@ export function registerAllEditorTools(): void {
     },
   });
 
-  console.log(`[EditorTools] Registered ${editorToolsRegistry.getAll().length} tools`);
+  logger.info(`[EditorTools] Registered ${editorToolsRegistry.getAll().length} tools`);
 }
 
 // Export registry

@@ -21,9 +21,15 @@ import { isElectron } from '@/lib/platform';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus } from 'lucide-react';
 
+import { logger } from '@/lib/utils/logger';
 interface DocumentsPageProps {
   onBack?: () => void;
 }
+
+type DocumentWithMetadata = {
+  content: string;
+  metadata: Record<string, unknown>;
+};
 
 export function DocumentsPage({ onBack }: DocumentsPageProps) {
   const [vectorDBConfig, setVectorDBConfig] = useState<VectorDBConfig | null>(null);
@@ -35,49 +41,49 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
 
   // VectorDB 설정 로드 함수
   const loadConfigs = async () => {
-    console.log('[DocumentsPage] Loading VectorDB and Embedding configs...');
-    console.log('[DocumentsPage] isElectron:', isElectron());
+    logger.info('[DocumentsPage] Loading VectorDB and Embedding configs...');
+    logger.debug('[DocumentsPage] Environment info', { isElectron: isElectron() });
 
     // Electron 환경에서는 DB에서 먼저 시도
     if (isElectron() && window.electronAPI) {
       try {
         const result = await window.electronAPI.config.load();
-        console.log('[DocumentsPage] Loaded from DB:', result);
+        logger.debug('[DocumentsPage] Loaded config from DB', result);
         if (result.success && result.data) {
           if (result.data.vectorDB) {
-            console.log('[DocumentsPage] VectorDB config from DB:', result.data.vectorDB);
+            logger.info('[DocumentsPage] VectorDB config loaded from DB');
             setVectorDBConfig(result.data.vectorDB);
           }
           if (result.data.embedding) {
-            console.log('[DocumentsPage] Embedding config from DB:', result.data.embedding);
+            logger.info('[DocumentsPage] Embedding config loaded from DB');
             setEmbeddingConfig(result.data.embedding);
           }
           return; // DB에서 로드 성공하면 종료
         }
       } catch (error) {
-        console.error('[DocumentsPage] Failed to load from DB:', error);
+        logger.error('[DocumentsPage] Failed to load configs from DB', error);
       }
     }
 
     // Web 환경 또는 DB 로드 실패 시 localStorage에서 로드
     const savedVectorDBConfig = localStorage.getItem('sepilot_vectordb_config');
-    console.log('[DocumentsPage] savedVectorDBConfig from localStorage:', savedVectorDBConfig);
+    logger.debug('[DocumentsPage] savedVectorDBConfig from localStorage:', savedVectorDBConfig);
     if (savedVectorDBConfig) {
       const parsed = JSON.parse(savedVectorDBConfig);
-      console.log('[DocumentsPage] Parsed VectorDB config:', parsed);
+      logger.info('[DocumentsPage] VectorDB config loaded from localStorage');
       setVectorDBConfig(parsed);
     } else {
-      console.log('[DocumentsPage] No VectorDB config found in localStorage');
+      logger.warn('[DocumentsPage] No VectorDB config found in localStorage');
     }
 
     const savedEmbeddingConfig = localStorage.getItem('sepilot_embedding_config');
-    console.log('[DocumentsPage] savedEmbeddingConfig from localStorage:', savedEmbeddingConfig);
+    logger.debug('[DocumentsPage] savedEmbeddingConfig from localStorage:', savedEmbeddingConfig);
     if (savedEmbeddingConfig) {
       const parsed = JSON.parse(savedEmbeddingConfig);
-      console.log('[DocumentsPage] Parsed Embedding config:', parsed);
+      logger.info('[DocumentsPage] Embedding config loaded from localStorage');
       setEmbeddingConfig(parsed);
     } else {
-      console.log('[DocumentsPage] No Embedding config found in localStorage');
+      logger.warn('[DocumentsPage] No Embedding config found in localStorage');
     }
   };
 
@@ -89,13 +95,13 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
 
     // 설정 업데이트 이벤트 리스너
     const handleConfigUpdate = (event: CustomEvent) => {
-      console.log('[DocumentsPage] Config updated event received:', event.detail);
+      logger.info('[DocumentsPage] Config updated event received:', event.detail);
       if (event.detail.vectorDB) {
-        console.log('[DocumentsPage] Updating VectorDB config from event:', event.detail.vectorDB);
+        logger.debug('[DocumentsPage] Updating VectorDB config from event:', event.detail.vectorDB);
         setVectorDBConfig(event.detail.vectorDB);
       }
       if (event.detail.embedding) {
-        console.log(
+        logger.debug(
           '[DocumentsPage] Updating Embedding config from event:',
           event.detail.embedding
         );
@@ -115,7 +121,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
 
   // 디버깅을 위한 로그
   useEffect(() => {
-    console.log('[DocumentsPage] Configuration status:', {
+    logger.debug('[DocumentsPage] Configuration status:', {
       vectorDBConfig,
       embeddingConfig,
       isConfigured,
@@ -125,11 +131,11 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
   }, [vectorDBConfig, embeddingConfig, isConfigured, isDisabled]);
 
   const handleDocumentUpload = async (
-    documents: { content: string; metadata: Record<string, any> }[],
+    documents: DocumentWithMetadata[],
     chunkStrategy?: ChunkStrategy
   ) => {
     try {
-      console.log('[DocumentsPage] Starting document upload...', {
+      logger.info('[DocumentsPage] Starting document upload', {
         count: documents.length,
         isElectronEnv: isElectron(),
         vectorDBType: vectorDBConfig?.type,
@@ -159,17 +165,17 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
 
       // Electron 환경에서는 IPC를 통해 Main Process에서 인덱싱
       if (isElectron() && window.electronAPI?.vectorDB) {
-        console.log('[DocumentsPage] Using IPC for indexing in Electron');
+        logger.info('[DocumentsPage] Using IPC for indexing in Electron');
         const result = await window.electronAPI.vectorDB.indexDocuments(rawDocs, indexingOptions);
 
         if (!result.success) {
           throw new Error(result.error || '문서 인덱싱 실패');
         }
 
-        console.log('[DocumentsPage] Documents indexed successfully via IPC');
+        logger.info('[DocumentsPage] Documents indexed successfully via IPC');
       } else {
         // Web 환경에서는 직접 인덱싱
-        console.log('[DocumentsPage] Using direct indexing in Web');
+        logger.info('[DocumentsPage] Using direct indexing in Web');
 
         // Embedding이 초기화되었는지 확인
         let embedder;
@@ -197,24 +203,20 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
 
         // 인덱싱
         await indexDocuments(vectorDB, embedder, rawDocs, indexingOptions);
-        console.log('[DocumentsPage] Documents indexed successfully');
+        logger.info('[DocumentsPage] Documents indexed successfully');
       }
 
       // 리스트 새로고침
       if (refreshDocuments) {
         await refreshDocuments();
       }
-    } catch (error: any) {
-      console.error('[DocumentsPage] Failed to upload documents:', error);
+    } catch (error: unknown) {
+      logger.error('[DocumentsPage] Failed to upload documents', error);
       throw error;
     }
   };
 
-  const handleDocumentEdit = async (doc: {
-    id: string;
-    content: string;
-    metadata: Record<string, any>;
-  }) => {
+  const handleDocumentEdit = async (doc: DocumentWithMetadata & { id: string }) => {
     try {
       // 브라우저 환경에서 SQLite-vec 사용 시 경고
       if (!isElectron() && vectorDBConfig?.type === 'sqlite-vec') {
@@ -280,8 +282,8 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
       if (refreshDocuments) {
         await refreshDocuments();
       }
-    } catch (error: any) {
-      console.error('Failed to edit document:', error);
+    } catch (error: unknown) {
+      logger.error('[DocumentsPage] Failed to edit document', error);
       throw error;
     }
   };

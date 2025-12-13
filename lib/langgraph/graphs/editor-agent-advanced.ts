@@ -4,6 +4,7 @@ import type { ToolApprovalCallback } from '../types';
 import { getLLMClient } from '@/lib/llm/client';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Advanced Editor Agent Graph
  *
@@ -64,7 +65,7 @@ export class AdvancedEditorAgentGraph {
     let state = { ...initialState };
     let iterations = 0;
 
-    console.log('[AdvancedEditorAgent] Starting with context:', {
+    logger.info('[AdvancedEditorAgent] Starting with context:', {
       openFiles: state.editorContext?.openFiles?.length,
       activeFile: state.editorContext?.activeFilePath,
       workingDir: state.editorContext?.workingDirectory,
@@ -74,14 +75,14 @@ export class AdvancedEditorAgentGraph {
 
     // RAG: useRag가 활성화된 경우 문서 검색 수행
     if (state.editorContext?.useRag) {
-      console.log('[AdvancedEditorAgent] RAG enabled - retrieving relevant documents');
+      logger.info('[AdvancedEditorAgent] RAG enabled - retrieving relevant documents');
       try {
         const ragDocuments = await this.retrieveDocuments(state);
         state = {
           ...state,
           ragDocuments,
         };
-        console.log(`[AdvancedEditorAgent] Retrieved ${ragDocuments.length} RAG documents`);
+        logger.info(`[AdvancedEditorAgent] Retrieved ${ragDocuments.length} RAG documents`);
 
         // RAG 문서 검색 결과를 yield
         yield {
@@ -97,7 +98,7 @@ export class AdvancedEditorAgentGraph {
         };
       }
     } else {
-      console.log('[AdvancedEditorAgent] RAG disabled or not requested');
+      logger.info('[AdvancedEditorAgent] RAG disabled or not requested');
     }
 
     // Add system message with editor context
@@ -117,7 +118,7 @@ export class AdvancedEditorAgentGraph {
     let errorMessage = '';
 
     while (iterations < this.maxIterations) {
-      console.log(
+      logger.info(
         `[AdvancedEditorAgent] ===== Iteration ${iterations + 1}/${this.maxIterations} =====`
       );
 
@@ -151,7 +152,7 @@ export class AdvancedEditorAgentGraph {
       const decision = this.shouldUseTool(state);
 
       if (decision === 'end') {
-        console.log('[AdvancedEditorAgent] No more tools to call, ending');
+        logger.info('[AdvancedEditorAgent] No more tools to call, ending');
         break;
       }
 
@@ -187,7 +188,7 @@ export class AdvancedEditorAgentGraph {
           };
 
           if (!approved) {
-            console.log('[AdvancedEditorAgent] Tools rejected by user');
+            logger.info('[AdvancedEditorAgent] Tools rejected by user');
             const rejectionMessage: Message = {
               id: `msg-${Date.now()}`,
               role: 'assistant',
@@ -414,7 +415,7 @@ export class AdvancedEditorAgentGraph {
         }
       }
 
-      console.log('[AdvancedEditorAgent] RAG query:', query);
+      logger.info('[AdvancedEditorAgent] RAG query:', query);
 
       // Dynamic import services
       const { vectorDBService } = await import('../../../electron/services/vectordb');
@@ -445,7 +446,7 @@ export class AdvancedEditorAgentGraph {
       // 벡터 검색 (상위 3개)
       const results = await vectorDBService.searchByVector(queryEmbedding, 3);
 
-      console.log(`[AdvancedEditorAgent] RAG retrieved ${results.length} documents`);
+      logger.info(`[AdvancedEditorAgent] RAG retrieved ${results.length} documents`);
 
       return results.map((result) => ({
         id: result.id,
@@ -513,7 +514,7 @@ export class AdvancedEditorAgentGraph {
     const results = [];
 
     for (const toolCall of lastMessage.tool_calls) {
-      console.log('[AdvancedEditorAgent] Executing tool:', toolCall.name);
+      logger.info('[AdvancedEditorAgent] Executing tool:', toolCall.name);
 
       try {
         const result = await this.executeTool(toolCall, state);

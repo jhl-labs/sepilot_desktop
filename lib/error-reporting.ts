@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Error Reporting Utility
  * 프론트엔드/백엔드 에러를 자동으로 GitHub Issue로 리포트
@@ -76,7 +77,7 @@ export async function reportError(
     // 에러 리포팅이 활성화되어 있는지 확인
     const enabled = await isErrorReportingEnabled();
     if (!enabled) {
-      console.log('[ErrorReporting] Error reporting is disabled, skipping report');
+      logger.info('[ErrorReporting] Error reporting is disabled, skipping report');
       return {
         success: false,
         message: '에러 리포팅이 비활성화되어 있습니다.',
@@ -108,14 +109,14 @@ export async function reportError(
 
       if (result.success) {
         if (result.data?.skipped) {
-          console.log('[ErrorReporting] Error report skipped (duplicate issue exists)');
+          logger.info('[ErrorReporting] Error report skipped (duplicate issue exists)');
           return {
             success: true,
             message: '동일한 에러가 이미 리포트되어 있습니다.',
           };
         }
 
-        console.log('[ErrorReporting] Error reported successfully:', result.data?.issueUrl);
+        logger.info('[ErrorReporting] Error reported successfully:', result.data?.issueUrl);
         return {
           success: true,
           issueUrl: result.data?.issueUrl,
@@ -195,5 +196,5 @@ export function setupGlobalErrorHandler() {
     }
   });
 
-  console.log('[ErrorReporting] Global error handlers registered');
+  logger.info('[ErrorReporting] Global error handlers registered');
 }

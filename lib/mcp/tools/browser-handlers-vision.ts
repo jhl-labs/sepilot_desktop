@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Vision-Enhanced Browser Tool Handlers
  *
@@ -20,6 +21,35 @@ import {
   generateScreenshotContext,
 } from '../../langgraph/utils/screenshot-analyzer';
 import { analyzePage } from './browser-handlers-enhanced';
+import { generateId } from '@/lib/utils';
+import { LLMService } from '@/lib/llm/service';
+import { Message } from '@/types';
+
+interface AnnotatedMarker {
+  label: string;
+  id: string;
+  role: string;
+  elementLabel: string;
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+interface AnnotatedScreenshotData {
+  screenshot: {
+    base64: string;
+    mimeType: string;
+    width: number;
+    height: number;
+  };
+  markers: AnnotatedMarker[];
+  context: string;
+  totalElements: number;
+  markedElements: number;
+}
 
 /**
  * 주석이 달린 스크린샷 캡처 (Set-of-Mark 오버레이 포함)
@@ -37,7 +67,7 @@ export async function handleBrowserCaptureAnnotatedScreenshot(
 
   const { maxMarkers = 30, includeOverlay = true } = options;
 
-  console.warn('[BrowserVision] Capturing annotated screenshot...');
+  logger.warn('[BrowserVision] Capturing annotated screenshot...');
 
   // 1. DOM 분석 (기존 accessibility tree 기반)
   const analysis = await analyzePage(browserView);
@@ -49,7 +79,7 @@ export async function handleBrowserCaptureAnnotatedScreenshot(
     minPriority: 5, // 낮은 우선순위 요소 제외
   });
 
-  console.warn(`[BrowserVision] Created ${markers.length} visual markers`);
+  logger.info('[BrowserVision] Created visual markers', { count: markers.length });
 
   // 3. 마커 오버레이 그리기 (선택적)
   if (includeOverlay) {
@@ -110,7 +140,7 @@ export async function handleBrowserClickCoordinate(x: number, y: number): Promis
     throw new Error('No active browser tab.');
   }
 
-  console.log(`[BrowserVision] Clicking at coordinate (${x}, ${y})`);
+  logger.info('[BrowserVision] Clicking at coordinate', { x, y });
 
   // 1. DOM 분석으로 해당 좌표의 요소 찾기
   const analysis = await analyzePage(browserView);
@@ -118,7 +148,7 @@ export async function handleBrowserClickCoordinate(x: number, y: number): Promis
 
   if (!targetElement) {
     // 요소를 찾지 못했어도 좌표 클릭 시도
-    console.warn(`[BrowserVision] No element found at (${x}, ${y}), attempting blind click`);
+    logger.warn('[BrowserVision] No element found at coordinate; attempting blind click', { x, y });
   }
 
   // 2. 좌표 클릭 실행
@@ -177,7 +207,7 @@ export async function handleBrowserClickMarker(markerLabel: string): Promise<str
     throw new Error('No active browser tab.');
   }
 
-  console.log(`[BrowserVision] Clicking marker: ${markerLabel}`);
+  logger.info('[BrowserVision] Clicking marker', { markerLabel });
 
   // 1. DOM 분석 및 마커 생성
   const analysis = await analyzePage(browserView);
@@ -218,7 +248,7 @@ export async function handleBrowserAnalyzeWithVision(userQuery?: string): Promis
     throw new Error('No active browser tab.');
   }
 
-  console.warn('[BrowserVision] Analyzing page with vision model...');
+  logger.warn('[BrowserVision] Analyzing page with vision model...');
 
   // 1. 주석이 달린 스크린샷 캡처
   const annotatedResult = await handleBrowserCaptureAnnotatedScreenshot({
@@ -226,16 +256,18 @@ export async function handleBrowserAnalyzeWithVision(userQuery?: string): Promis
     includeOverlay: true,
   });
 
-  const annotated = JSON.parse(annotatedResult);
+  const annotated = JSON.parse(annotatedResult) as AnnotatedScreenshotData;
 
   // 2. Vision 프롬프트 생성
   const visionPrompt = generateVisionPrompt(
-    annotated.markers.map((m: any) => ({
-      label: m.label,
+    annotated.markers.map((marker) => ({
+      id: marker.id,
+      label: marker.label,
+      boundingBox: marker.boundingBox,
       element: {
-        id: m.id,
-        role: m.role,
-        label: m.elementLabel,
+        id: marker.id,
+        role: marker.role,
+        label: marker.elementLabel,
         placeholder: '',
         tag: '',
         isInteractive: true,
@@ -243,31 +275,47 @@ export async function handleBrowserAnalyzeWithVision(userQuery?: string): Promis
         context: '',
         xpath: '',
         selectors: [],
-        boundingBox: m.boundingBox,
       },
     })),
     userQuery
   );
 
-  // 3. TODO: 실제 LLM Vision API 호출
-  // const visionResult = await LLMService.analyzeImage({
-  //   image: annotated.screenshot.base64,
-  //   prompt: visionPrompt,
-  // });
+  // 3. LLM Vision API 호출
+  const message: Message = {
+    id: generateId(),
+    role: 'user',
+    content: visionPrompt,
+    created_at: Date.now(),
+    images: [
+      {
+        id: generateId(),
+        filename: 'screenshot.png',
+        mimeType: 'image/png',
+        base64: annotated.screenshot.base64,
+      },
+    ],
+  };
 
-  // 임시: 프롬프트와 컨텍스트만 반환
-  return JSON.stringify(
-    {
-      message: 'Vision analysis not yet implemented. Will use LLM vision API.',
-      screenshot_captured: true,
-      markers_count: annotated.markers.length,
-      vision_prompt: visionPrompt,
-      context: annotated.context,
-      // future: visionResult
-    },
-    null,
-    2
-  );
+  try {
+    logger.info('[BrowserVision] Sending request to LLM Service');
+    const response = await LLMService.chat([message]);
+
+    return JSON.stringify(
+      {
+        analysis: response.content,
+        screenshot_captured: true,
+        markers_count: annotated.markers.length,
+        context: annotated.context,
+      },
+      null,
+      2
+    );
+  } catch (error) {
+    logger.error('[BrowserVision] LLM analysis failed:', error);
+    throw new Error(
+      `Vision analysis failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 }
 
 /**
@@ -279,7 +327,7 @@ export async function handleBrowserGetClickableCoordinate(elementId: string): Pr
     throw new Error('No active browser tab.');
   }
 
-  console.log(`[BrowserVision] Getting clickable coordinate for: ${elementId}`);
+  logger.info('[BrowserVision] Getting clickable coordinate', { elementId });
 
   const result = await browserView.webContents.executeJavaScript(`
     (function() {
@@ -324,7 +372,7 @@ export async function handleBrowserGetClickableCoordinate(elementId: string): Pr
   }
 
   if (!result.coordinates.isClickable) {
-    console.warn(`[BrowserVision] Warning: Element ${elementId} center point may be obscured`);
+    logger.warn('[BrowserVision] Element center point may be obscured', { elementId });
   }
 
   return JSON.stringify(result, null, 2);

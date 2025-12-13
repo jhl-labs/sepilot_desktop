@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * useMessageStreaming Hook
  *
@@ -490,7 +491,7 @@ export function useMessageStreaming() {
                     ...imageGenConfig,
                     provider: selectedProvider,
                   };
-                  console.log(
+                  logger.info(
                     '[useMessageStreaming] Overriding imageGen provider:',
                     selectedProvider
                   );

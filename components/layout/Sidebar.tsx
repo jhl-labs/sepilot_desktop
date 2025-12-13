@@ -137,27 +137,33 @@ export function Sidebar({
       <div className="flex items-center justify-between border-b px-4 py-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-1 text-lg font-semibold hover:text-primary transition-colors">
+            <button
+              className="flex items-center gap-1 text-lg font-semibold hover:text-primary transition-colors"
+              data-testid="mode-selector"
+            >
               {modeLabel}
               <ChevronDown className="h-4 w-4 opacity-50" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => setAppMode('chat')}>
+            <DropdownMenuItem onClick={() => setAppMode('chat')} data-testid="mode-chat">
               <MessageSquare className="mr-2 h-4 w-4" />
               Chat
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setAppMode('editor')}>
+            <DropdownMenuItem onClick={() => setAppMode('editor')} data-testid="mode-editor">
               <Code className="mr-2 h-4 w-4" />
               Editor
             </DropdownMenuItem>
             {betaConfig.enablePresentationMode && (
-              <DropdownMenuItem onClick={() => setAppMode('presentation')}>
+              <DropdownMenuItem
+                onClick={() => setAppMode('presentation')}
+                data-testid="mode-presentation"
+              >
                 <Presentation className="mr-2 h-4 w-4" />
                 Presentation
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={() => setAppMode('browser')}>
+            <DropdownMenuItem onClick={() => setAppMode('browser')} data-testid="mode-browser">
               <Globe className="mr-2 h-4 w-4" />
               Browser
             </DropdownMenuItem>

@@ -12,6 +12,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 
+import { logger } from '@/lib/utils/logger';
 interface Snapshot {
   id: string;
   url: string;
@@ -84,7 +85,7 @@ export function SnapshotsList() {
     try {
       const result = await window.electronAPI.browserView.openSnapshot(snapshot.id);
       if (result.success) {
-        console.debug('[SnapshotsList] Snapshot opened:', snapshot.id);
+        logger.debug('[SnapshotsList] Snapshot opened:', snapshot.id);
         setBrowserViewMode('chat');
       } else {
         console.error('[SnapshotsList] Failed to open snapshot:', result.error);

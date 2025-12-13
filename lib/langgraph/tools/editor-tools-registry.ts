@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Editor Tools Registry
  *
@@ -68,7 +69,7 @@ class EditorToolsRegistry {
       console.warn(`[ToolRegistry] Tool already exists: ${tool.name}, overwriting...`);
     }
     this.tools.set(tool.name, tool);
-    console.log(`[ToolRegistry] Registered tool: ${tool.name} (${tool.category})`);
+    logger.info(`[ToolRegistry] Registered tool: ${tool.name} (${tool.category})`);
   }
 
   /**
@@ -130,7 +131,7 @@ class EditorToolsRegistry {
       throw new Error(`Tool not found: ${name}`);
     }
 
-    console.log(`[ToolRegistry] Executing tool: ${name}`);
+    logger.info(`[ToolRegistry] Executing tool: ${name}`);
     return tool.execute(args, state);
   }
 

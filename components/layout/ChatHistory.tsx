@@ -44,6 +44,7 @@ import { SaveKnowledgeDialog } from '@/components/chat/SaveKnowledgeDialog';
 import { CompressConversationDialog } from '@/components/chat/CompressConversationDialog';
 import { isElectron } from '@/lib/platform';
 
+import { logger } from '@/lib/utils/logger';
 interface ChatHistoryProps {
   onConversationClick?: () => void;
 }
@@ -261,7 +262,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
         throw new Error('VectorDB가 초기화되지 않았습니다.');
       }
 
-      console.log('Knowledge saved successfully:', doc.title);
+      logger.info('Knowledge saved successfully:', doc.title);
     } catch (error: any) {
       console.error('Failed to save knowledge:', error);
       throw new Error(error.message || '지식 저장에 실패했습니다.');
@@ -297,7 +298,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
         await setActiveConversation(compressConversation.id);
       }
 
-      console.log('Conversation compressed successfully');
+      logger.info('Conversation compressed successfully');
     } catch (error: any) {
       console.error('Failed to compress conversation:', error);
       throw new Error(error.message || '대화 압축에 실패했습니다.');

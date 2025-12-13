@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Tab Management Tools for Editor Agent
  *
@@ -348,5 +349,5 @@ export const tabTools: EditorTool[] = [
  */
 export function registerTabTools(registry: any): void {
   tabTools.forEach((tool) => registry.register(tool));
-  console.log(`[TabTools] Registered ${tabTools.length} tab management tools`);
+  logger.info(`[TabTools] Registered ${tabTools.length} tab management tools`);
 }

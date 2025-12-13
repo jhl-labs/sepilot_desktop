@@ -2,6 +2,7 @@ import { EmbeddingProvider } from './interface';
 import { OpenAIEmbeddings } from './openai';
 import { EmbeddingConfig } from '../types';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Embedding Client Singleton
  */
@@ -12,7 +13,7 @@ class EmbeddingClientClass {
   initialize(config: EmbeddingConfig) {
     this.config = config;
 
-    console.log('[EmbeddingClient] Initializing with config:', {
+    logger.info('[EmbeddingClient] Initializing with config:', {
       provider: config.provider,
       model: config.model,
       baseURL: config.baseURL,

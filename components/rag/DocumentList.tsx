@@ -40,6 +40,7 @@ import { TeamDocsConfig, GitHubSyncConfig } from '@/types';
 import { FolderManageDialog } from './FolderManageDialog';
 import { DocsSyncDialog } from './DocsSyncDialog';
 
+import { logger } from '@/lib/utils/logger';
 type ViewMode = 'grid' | 'list' | 'tree';
 
 interface DocumentListProps {
@@ -212,10 +213,10 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       });
 
       setDocuments(mergedDocs);
-      console.log(
+      logger.info(
         `[DocumentList] Loaded ${docs.length} chunks, grouped into ${mergedDocs.length} documents`
       );
-      console.log(
+      logger.info(
         '[DocumentList] Documents with folderPath:',
         mergedDocs.map((d) => ({
           id: d.id,
@@ -236,17 +237,17 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     try {
       if (typeof window !== 'undefined' && window.electronAPI?.config) {
         const result = await window.electronAPI.config.load();
-        console.log('[DocumentList] Config load result:', result);
+        logger.info('[DocumentList] Config load result:', result);
         if (result.success && result.data) {
           if (result.data.teamDocs) {
-            console.log('[DocumentList] Team Docs loaded:', result.data.teamDocs);
+            logger.info('[DocumentList] Team Docs loaded:', result.data.teamDocs);
             setTeamDocs(result.data.teamDocs);
             // 첫 번째 Team Docs를 기본 선택
             if (result.data.teamDocs.length > 0) {
               setSelectedTeamDocsId(result.data.teamDocs[0].id);
             }
           } else {
-            console.log('[DocumentList] No teamDocs in config');
+            logger.info('[DocumentList] No teamDocs in config');
           }
           if (result.data.githubSync) {
             setPersonalRepo(result.data.githubSync);
@@ -274,9 +275,9 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
   // teamDocs 변경 감지
   useEffect(() => {
-    console.log('[DocumentList] teamDocs state updated:', teamDocs.length, 'teams');
+    logger.info('[DocumentList] teamDocs state updated:', teamDocs.length, 'teams');
     teamDocs.forEach((team) => {
-      console.log(`  - ${team.name} (${team.id})`);
+      logger.info(`  - ${team.name} (${team.id})`);
     });
   }, [teamDocs]);
 
@@ -688,16 +689,16 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               {doc.metadata?.docGroup === 'team' ? (
                 <>
                   <Users className="h-3 w-3 inline mr-1" />
-                  팀: {doc.metadata?.teamName || 'Unknown'}
+                  팀: {(doc.metadata?.teamName as string) || 'Unknown'}
                   {' • '}
-                  출처: {doc.metadata?.source || 'manual'}
+                  출처: {(doc.metadata?.source as string) || 'manual'}
                 </>
               ) : (
                 <>
                   <User className="h-3 w-3 inline mr-1" />
                   개인 문서
-                  {doc.metadata?.source && doc.metadata.source !== 'manual' && (
-                    <> • 출처: {doc.metadata.source}</>
+                  {doc.metadata?.source && (doc.metadata.source as string) !== 'manual' && (
+                    <> • 출처: {doc.metadata.source as string}</>
                   )}
                 </>
               )}
@@ -706,7 +707,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                   LLM 정제됨
                 </span>
               )}
-              {doc.metadata?.docGroup === 'team' && doc.metadata?.modifiedLocally && (
+              {doc.metadata?.docGroup === 'team' && !!doc.metadata?.modifiedLocally && (
                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                   로컬 수정됨 (Push 필요)
                 </span>
@@ -963,12 +964,12 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     setSyncingTeamId(`pull-${config.id}`);
     setMessage(null);
 
-    console.log('[DocumentList] Starting pull for:', config.name, config.id);
-    console.log('[DocumentList] Config:', config);
+    logger.info('[DocumentList] Starting pull for:', config.name, config.id);
+    logger.info('[DocumentList] Config:', config);
 
     try {
       const result = await window.electronAPI.teamDocs.syncDocuments(config);
-      console.log('[DocumentList] Pull result:', result);
+      logger.info('[DocumentList] Pull result:', result);
 
       if (result.success) {
         setMessage({ type: 'success', text: result.message || `${config.name} Pull 완료!` });
@@ -990,13 +991,13 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     setSyncingTeamId(`push-${config.id}`);
     setMessage(null);
 
-    console.log('[DocumentList] Pushing to team docs:', config.id, config.name);
-    console.log('[DocumentList] Current documents:', documents.length);
-    console.log(
+    logger.info('[DocumentList] Pushing to team docs:', config.id, config.name);
+    logger.info('[DocumentList] Current documents:', documents.length);
+    logger.info(
       '[DocumentList] Documents with this teamDocsId:',
       documents.filter((doc) => doc.metadata?.teamDocsId === config.id).length
     );
-    console.log('[DocumentList] All teamDocsIds:', [
+    logger.info('[DocumentList] All teamDocsIds:', [
       ...new Set(documents.map((doc) => doc.metadata?.teamDocsId).filter(Boolean)),
     ]);
 

@@ -1,3 +1,6 @@
+'use client';
+
+import { logger } from '@/lib/utils/logger';
 /**
  * Editor Tab Context Menu Component
  *
@@ -7,8 +10,6 @@
  * - System integration (reveal in explorer)
  * - Split view options (future)
  */
-
-'use client';
 
 import { ReactNode, useCallback } from 'react';
 import {
@@ -73,7 +74,7 @@ export function EditorTabContextMenu({
   const handleCopyPath = useCallback(async () => {
     const success = await copyToClipboard(filePath);
     if (success) {
-      console.log('[EditorTabContextMenu] Absolute path copied:', filePath);
+      logger.info('[EditorTabContextMenu] Absolute path copied:', filePath);
     }
   }, [filePath]);
 
@@ -90,7 +91,7 @@ export function EditorTabContextMenu({
       if (result.success && result.data) {
         const success = await copyToClipboard(result.data);
         if (success) {
-          console.log('[EditorTabContextMenu] Relative path copied:', result.data);
+          logger.info('[EditorTabContextMenu] Relative path copied:', result.data);
         }
       }
     } catch (error) {
@@ -102,7 +103,7 @@ export function EditorTabContextMenu({
   const handleCopyFilename = useCallback(async () => {
     const success = await copyToClipboard(filename);
     if (success) {
-      console.log('[EditorTabContextMenu] Filename copied:', filename);
+      logger.info('[EditorTabContextMenu] Filename copied:', filename);
     }
   }, [filename]);
 
@@ -116,7 +117,7 @@ export function EditorTabContextMenu({
     try {
       const result = await window.electronAPI.fs.showInFolder(filePath);
       if (result.success) {
-        console.log('[EditorTabContextMenu] Revealed in explorer:', filePath);
+        logger.info('[EditorTabContextMenu] Revealed in explorer:', filePath);
       }
     } catch (error) {
       console.error('[EditorTabContextMenu] Error revealing in explorer:', error);

@@ -7,6 +7,7 @@ import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-c
 import { generateWithToolsNode } from '../nodes/generate';
 import { toolsNode } from '../nodes/tools';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Deep Thinking Graph
  *
@@ -35,7 +36,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
       return '';
     }
 
-    console.log('[Deep] RAG enabled, retrieving documents...');
+    logger.info('[Deep] RAG enabled, retrieving documents...');
     const { vectorDBService } = await import('../../../electron/services/vectordb');
     const { databaseService } = await import('../../../electron/services/database');
     const { initializeEmbedding, getEmbeddingProvider } =
@@ -56,7 +57,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
     const results = await vectorDBService.searchByVector(queryEmbedding, 5);
 
     if (results.length > 0) {
-      console.log(`[Deep] Found ${results.length} documents`);
+      logger.info(`[Deep] Found ${results.length} documents`);
       return results.map((doc, i) => `[참고 문서 ${i + 1}]\n${doc.content}`).join('\n\n');
     }
   } catch (error) {
@@ -69,7 +70,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
  * 0단계: 정보 수집 (Research)
  */
 async function researchNode(state: DeepThinkingState) {
-  console.log('[Deep] Step 0: Researching...');
+  logger.info('[Deep] Step 0: Researching...');
   emitStreamingChunk('\n\n## 🔎 0단계: 정보 수집 (Research)\n\n', state.conversationId);
 
   // RAG 검색
@@ -149,7 +150,7 @@ async function researchNode(state: DeepThinkingState) {
     emitStreamingChunk(`✅ **수집 완료**\n`, state.conversationId);
   }
 
-  console.log('[Deep] Research complete');
+  logger.info('[Deep] Research complete');
 
   return {
     researchContext: gatheredInfo,
@@ -196,7 +197,7 @@ export type DeepThinkingState = typeof DeepThinkingStateAnnotation.State;
  * 1단계: 초기 분석
  */
 async function initialAnalysisNode(state: DeepThinkingState) {
-  console.log('[Deep] Step 1/5: Initial comprehensive analysis...');
+  logger.info('[Deep] Step 1/5: Initial comprehensive analysis...');
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n## 🧠 1단계: 초기 심층 분석 (1/5)\n\n', state.conversationId);
@@ -245,7 +246,7 @@ async function initialAnalysisNode(state: DeepThinkingState) {
     emitStreamingChunk(chunk, state.conversationId);
   }
 
-  console.log('[Deep] Initial analysis complete');
+  logger.info('[Deep] Initial analysis complete');
 
   return {
     initialAnalysis: analysis,
@@ -256,7 +257,7 @@ async function initialAnalysisNode(state: DeepThinkingState) {
  * 2단계: 다중 관점 탐색
  */
 async function explorePerspectivesNode(state: DeepThinkingState) {
-  console.log('[Deep] Step 2/5: Exploring multiple perspectives...');
+  logger.info('[Deep] Step 2/5: Exploring multiple perspectives...');
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## 🔭 2단계: 다중 관점 탐색 (2/5)\n\n', state.conversationId);
@@ -307,7 +308,7 @@ async function explorePerspectivesNode(state: DeepThinkingState) {
       emitStreamingChunk(chunk, state.conversationId);
     }
 
-    console.log(`[Deep] ${type.name} perspective explored`);
+    logger.info(`[Deep] ${type.name} perspective explored`);
 
     perspectives.push({
       id: type.name.toLowerCase(),
@@ -326,7 +327,7 @@ async function explorePerspectivesNode(state: DeepThinkingState) {
  * 3단계: 각 관점에 대한 심화 분석
  */
 async function deepAnalysisNode(state: DeepThinkingState) {
-  console.log('[Deep] Step 3/5: Performing deep analysis on each perspective...');
+  logger.info('[Deep] Step 3/5: Performing deep analysis on each perspective...');
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## 🔬 3단계: 관점별 심화 분석 (3/5)\n\n', state.conversationId);
@@ -378,7 +379,7 @@ async function deepAnalysisNode(state: DeepThinkingState) {
       emitStreamingChunk(chunk, state.conversationId);
     }
 
-    console.log(`[Deep] ${perspective.name} perspective deeply analyzed`);
+    logger.info(`[Deep] ${perspective.name} perspective deeply analyzed`);
 
     deepAnalyzedPerspectives.push({
       ...perspective,
@@ -395,7 +396,7 @@ async function deepAnalysisNode(state: DeepThinkingState) {
  * 4단계: 통합 및 검증
  */
 async function integrateAndVerifyNode(state: DeepThinkingState) {
-  console.log('[Deep] Step 4/5: Integrating perspectives and verifying...');
+  logger.info('[Deep] Step 4/5: Integrating perspectives and verifying...');
 
   // 통합 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## 🔗 4단계: 통합 및 검증 (4/5)\n\n', state.conversationId);
@@ -441,7 +442,7 @@ async function integrateAndVerifyNode(state: DeepThinkingState) {
     emitStreamingChunk(chunk, state.conversationId);
   }
 
-  console.log('[Deep] Integration complete, now verifying...');
+  logger.info('[Deep] Integration complete, now verifying...');
 
   // 검증 단계 알림
   emitStreamingChunk('\n\n### ✅ 검증 단계\n\n', state.conversationId);
@@ -478,7 +479,7 @@ async function integrateAndVerifyNode(state: DeepThinkingState) {
     emitStreamingChunk(chunk, state.conversationId);
   }
 
-  console.log('[Deep] Verification complete');
+  logger.info('[Deep] Verification complete');
 
   return {
     integration,
@@ -490,7 +491,7 @@ async function integrateAndVerifyNode(state: DeepThinkingState) {
  * 5단계: 최종 답변 생성
  */
 async function finalSynthesisNode(state: DeepThinkingState) {
-  console.log('[Deep] Step 5/5: Generating final comprehensive answer...');
+  logger.info('[Deep] Step 5/5: Generating final comprehensive answer...');
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## ✨ 5단계: 최종 답변 (5/5)\n\n', state.conversationId);
@@ -549,7 +550,7 @@ ${state.verification}
     created_at: Date.now(),
   };
 
-  console.log('[Deep] Final comprehensive answer generated');
+  logger.info('[Deep] Final comprehensive answer generated');
 
   return {
     messages: [assistantMessage],

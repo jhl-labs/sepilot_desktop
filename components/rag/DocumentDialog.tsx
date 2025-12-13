@@ -395,25 +395,25 @@ export function DocumentDialog({
         try {
           const newTitle = title.trim() || '제목 없음';
           const newFolderPath = folderPath.trim();
-          let githubPath = document.metadata.githubPath;
+          let githubPath = document.metadata.githubPath as string;
 
-          const oldTitle = document.metadata.title;
-          const oldFolderPath = document.metadata.folderPath;
+          const oldTitle = document.metadata.title as string;
+          const oldFolderPath = document.metadata.folderPath as string;
           if (newTitle !== oldTitle || newFolderPath !== oldFolderPath) {
             githubPath = newFolderPath ? `${newFolderPath}/${newTitle}.md` : `${newTitle}.md`;
           }
 
           const result = await window.electronAPI.teamDocs.pushDocument({
-            teamDocsId: document.metadata.teamDocsId,
+            teamDocsId: document.metadata.teamDocsId as string,
             githubPath: githubPath,
-            oldGithubPath: document.metadata.githubPath,
+            oldGithubPath: document.metadata.githubPath as string,
             title: newTitle,
             content: content.trim(),
             metadata: {
               folderPath: newFolderPath || undefined,
               source: source.trim() || 'manual',
             },
-            sha: document.metadata.githubSha,
+            sha: document.metadata.githubSha as string,
             commitMessage: `Update ${newTitle} from SEPilot`,
           });
 

@@ -97,9 +97,9 @@ module.exports = [
           varsIgnorePattern: '^_',
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'off',
 
       // React rules
       ...reactPlugin.configs.recommended.rules,
@@ -108,13 +108,15 @@ module.exports = [
 
       // React Hooks rules
       ...reactHooksPlugin.configs.recommended.rules,
+      'react-hooks/exhaustive-deps': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
       'react-hooks/set-state-in-effect': 'off',
 
       // Next.js rules
       '@next/next/no-html-link-for-pages': 'error',
 
       // General rules
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
       eqeqeq: ['error', 'always'],

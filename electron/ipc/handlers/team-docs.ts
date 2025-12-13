@@ -94,7 +94,7 @@ async function syncTeamDocsInternal(config: TeamDocsConfig): Promise<{
     // githubPath 또는 title로 매핑
     const existingDocsMap = new Map<string, any>();
     for (const doc of existingTeamDocs) {
-      const key = doc.metadata?.githubPath || doc.metadata?.title;
+      const key = (doc.metadata?.githubPath as string) || (doc.metadata?.title as string);
       if (key) {
         existingDocsMap.set(key, doc);
       }
@@ -538,8 +538,11 @@ export function setupTeamDocsHandlers() {
       for (const doc of teamDocs) {
         try {
           // githubPath 생성: metadata.githubPath 우선, 없으면 folderPath + title 조합
-          let githubPath = doc.metadata?.githubPath;
-          if (!githubPath) {
+          const metadataGithubPath = doc.metadata?.githubPath;
+          let githubPath: string;
+          if (typeof metadataGithubPath === 'string' && metadataGithubPath.trim().length > 0) {
+            githubPath = metadataGithubPath;
+          } else {
             const folder = doc.metadata?.folderPath || config.docsPath || 'documents';
             const filename = doc.metadata?.title || doc.id;
             githubPath = `${folder}/${filename}.md`;
@@ -555,12 +558,12 @@ export function setupTeamDocsHandlers() {
           const result = await client.pushDocument(
             {
               githubPath,
-              title: doc.metadata?.title || 'Untitled',
+              title: (doc.metadata?.title as string) || 'Untitled',
               content: doc.content,
               metadata: doc.metadata,
-              sha: doc.metadata?.githubSha,
+              sha: doc.metadata?.githubSha as string | undefined,
             },
-            `Update ${doc.metadata?.title || 'document'} from SEPilot`
+            `Update ${(doc.metadata?.title as string) || 'document'} from SEPilot`
           );
 
           if (result.success) {

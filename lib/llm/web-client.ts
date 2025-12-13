@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * 웹 브라우저 환경에서 사용할 LLM 클라이언트
  * OpenAI Compatible API를 직접 호출
@@ -83,7 +84,7 @@ export class WebLLMClient {
     // Custom headers - Moved to NetworkConfig
     // customHeaders is now managed in NetworkConfig, not LLMConfig
 
-    const body: any = {
+    const body: Record<string, unknown> = {
       model: this.config.model,
       messages,
       temperature: this.config.temperature ?? 0.7,
@@ -145,13 +146,13 @@ export class WebLLMClient {
                 }
               }
             } catch (error) {
-              console.error('Failed to parse SSE data:', error, line);
+              logger.error('Failed to parse SSE data:', error, line);
             }
           }
         }
       }
     } catch (error) {
-      console.error('Stream error:', error);
+      logger.error('Stream error:', error);
       throw error;
     }
   }

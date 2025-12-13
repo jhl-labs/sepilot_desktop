@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Built-in Tools for Coding Agent
  *
@@ -44,6 +45,11 @@ import {
   handleGoogleVisitResult,
   handleGoogleNextPage,
 } from './google-search-handlers';
+import type {
+  GoogleSearchOptions,
+  GoogleExtractResultsOptions,
+  GoogleVisitResultOptions,
+} from '@/types/browser-agent';
 
 const execPromise = promisify(exec);
 
@@ -112,6 +118,35 @@ function resolvePath(filePath: string): string {
 
   // Otherwise resolve relative to current process directory
   return path.resolve(process.cwd(), filePath);
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+interface ExecError {
+  stdout?: string;
+  stderr?: string;
+  code?: number;
+  message?: string;
+}
+
+function isExecError(error: unknown): error is ExecError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    ('stdout' in error || 'stderr' in error || 'code' in error)
+  );
 }
 
 /**
@@ -269,7 +304,7 @@ export const grepSearchTool: MCPTool = {
  */
 export async function executeBuiltinTool(
   toolName: string,
-  args: Record<string, any>
+  args: Record<string, unknown>
 ): Promise<string> {
   switch (toolName) {
     case 'file_read':
@@ -343,21 +378,30 @@ export async function executeBuiltinTool(
       return await analyzeWithVision((args as { user_query?: string }).user_query);
     // Google Search tools
     case 'google_search':
-      return await handleGoogleSearch(args as any);
+      return await handleGoogleSearch(args as unknown as GoogleSearchOptions);
     case 'google_search_news':
-      return await handleGoogleSearch({ ...args, type: 'news' } as any);
+      return await handleGoogleSearch({
+        ...(args as unknown as GoogleSearchOptions),
+        type: 'news',
+      });
     case 'google_search_scholar':
-      return await handleGoogleSearch({ ...args, type: 'scholar' } as any);
+      return await handleGoogleSearch({
+        ...(args as unknown as GoogleSearchOptions),
+        type: 'scholar',
+      });
     case 'google_search_images':
-      return await handleGoogleSearch({ ...args, type: 'images' } as any);
+      return await handleGoogleSearch({
+        ...(args as unknown as GoogleSearchOptions),
+        type: 'images',
+      });
     case 'google_search_advanced':
-      return await handleGoogleSearch(args as any);
+      return await handleGoogleSearch(args as unknown as GoogleSearchOptions);
     case 'google_extract_results':
-      return await handleGoogleExtractResults(args as any);
+      return await handleGoogleExtractResults(args as unknown as GoogleExtractResultsOptions);
     case 'google_get_related_searches':
       return await handleGoogleGetRelatedSearches();
     case 'google_visit_result':
-      return await handleGoogleVisitResult(args as any);
+      return await handleGoogleVisitResult(args as unknown as GoogleVisitResultOptions);
     case 'google_next_page':
       return await handleGoogleNextPage();
     default:
@@ -371,11 +415,12 @@ export async function executeBuiltinTool(
 async function handleFileRead(args: { path: string }): Promise<string> {
   try {
     const absolutePath = resolvePath(args.path);
-    console.log(`[Builtin Tools] Reading file: ${args.path} -> ${absolutePath}`);
+    logger.info('[Builtin Tools] Reading file', { requestedPath: args.path, absolutePath });
     const content = await fs.readFile(absolutePath, 'utf-8');
     return content;
-  } catch (error: any) {
-    throw new Error(`Failed to read file: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to read file', error);
+    throw new Error(`Failed to read file: ${getErrorMessage(error)}`);
   }
 }
 
@@ -385,7 +430,7 @@ async function handleFileRead(args: { path: string }): Promise<string> {
 async function handleFileWrite(args: { path: string; content: string }): Promise<string> {
   try {
     const absolutePath = resolvePath(args.path);
-    console.log(`[Builtin Tools] Writing file: ${args.path} -> ${absolutePath}`);
+    logger.info('[Builtin Tools] Writing file', { requestedPath: args.path, absolutePath });
 
     // Create directory if it doesn't exist
     const dir = path.dirname(absolutePath);
@@ -395,8 +440,9 @@ async function handleFileWrite(args: { path: string; content: string }): Promise
     await fs.writeFile(absolutePath, args.content, 'utf-8');
 
     return `Successfully wrote ${args.content.length} bytes to ${absolutePath}`;
-  } catch (error: any) {
-    throw new Error(`Failed to write file: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to write file', error);
+    throw new Error(`Failed to write file: ${getErrorMessage(error)}`);
   }
 }
 
@@ -410,7 +456,7 @@ async function handleFileEdit(args: {
 }): Promise<string> {
   try {
     const absolutePath = resolvePath(args.path);
-    console.log(`[Builtin Tools] Editing file: ${args.path} -> ${absolutePath}`);
+    logger.info('[Builtin Tools] Editing file', { requestedPath: args.path, absolutePath });
 
     // Read file
     const content = await fs.readFile(absolutePath, 'utf-8');
@@ -436,8 +482,9 @@ async function handleFileEdit(args: {
 
     const linesChanged = args.new_str.split('\n').length;
     return `Successfully edited ${absolutePath} (${linesChanged} lines changed)`;
-  } catch (error: any) {
-    throw new Error(`Failed to edit file: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to edit file', error);
+    throw new Error(`Failed to edit file: ${getErrorMessage(error)}`);
   }
 }
 
@@ -450,11 +497,12 @@ async function handleFileList(args: { path?: string; recursive?: boolean }): Pro
 
   try {
     const absolutePath = resolvePath(dirPath);
-    console.log(`[Builtin Tools] Listing files: ${dirPath} -> ${absolutePath}`);
+    logger.info('[Builtin Tools] Listing files', { requestedPath: dirPath, absolutePath });
     const files = await listFiles(absolutePath, recursive);
     return files.join('\n');
-  } catch (error: any) {
-    throw new Error(`Failed to list files: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to list files', error);
+    throw new Error(`Failed to list files: ${getErrorMessage(error)}`);
   }
 }
 
@@ -502,9 +550,7 @@ async function handleCommandExecute(args: { command: string; cwd?: string }): Pr
     const cwdArg = args.cwd && args.cwd.trim() !== '' ? args.cwd : null;
     const workingDir = cwdArg || getCurrentWorkingDirectory() || process.cwd();
     const shell = resolveShellForExec();
-    console.log(
-      `[Builtin Tools] Executing command: ${args.command} in ${workingDir} using shell ${shell}`
-    );
+    logger.info('[Builtin Tools] Executing command', { command: args.command, workingDir, shell });
 
     const execOptions = {
       cwd: workingDir,
@@ -524,14 +570,15 @@ async function handleCommandExecute(args: { command: string; cwd?: string }): Pr
     }
 
     return result || 'Command executed successfully (no output)';
-  } catch (error: any) {
-    // Include both error message and stderr/stdout if available
-    let errorMsg = `Failed to execute command: ${error.message}`;
-    if (error.stdout) {
-      errorMsg += `\n\nstdout:\n${error.stdout}`;
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Command execution failed', error);
+    const execError = isExecError(error) ? error : undefined;
+    let errorMsg = `Failed to execute command: ${getErrorMessage(error)}`;
+    if (execError?.stdout) {
+      errorMsg += `\n\nstdout:\n${execError.stdout}`;
     }
-    if (error.stderr) {
-      errorMsg += `\n\nstderr:\n${error.stderr}`;
+    if (execError?.stderr) {
+      errorMsg += `\n\nstderr:\n${execError.stderr}`;
     }
     throw new Error(errorMsg);
   }
@@ -551,9 +598,11 @@ async function handleGrepSearch(args: {
     const absolutePath = resolvePath(searchPath);
     const caseSensitive = args.case_sensitive !== false; // default true
 
-    console.log(
-      `[Builtin Tools] Searching pattern: ${args.pattern} in ${searchPath} -> ${absolutePath}`
-    );
+    logger.info('[Builtin Tools] Searching pattern', {
+      pattern: args.pattern,
+      requestedPath: searchPath,
+      absolutePath,
+    });
 
     // Build rg command
     let rgCommand = 'rg';
@@ -588,20 +637,23 @@ async function handleGrepSearch(args: {
     }
 
     return stdout || stderr;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] grep_search failed', error);
+    const execError = isExecError(error) ? error : undefined;
     // rg returns exit code 1 when no matches found
-    if (error.code === 1 && !error.stdout && !error.stderr) {
+    if (execError?.code === 1 && !execError.stdout && !execError.stderr) {
       return 'No matches found';
     }
 
     // If rg is not installed, provide helpful message
-    if (error.message.includes('rg') && error.code === 127) {
+    const message = getErrorMessage(error);
+    if (message.includes('rg') && execError?.code === 127) {
       throw new Error(
         'ripgrep (rg) is not installed. Please install it: https://github.com/BurntSushi/ripgrep#installation'
       );
     }
 
-    throw new Error(`Search failed: ${error.message}`);
+    throw new Error(`Search failed: ${message}`);
   }
 }
 
@@ -1021,8 +1073,9 @@ async function _handleBrowserGetInteractiveElements(): Promise<string> {
     `);
 
     return JSON.stringify(elements, null, 2);
-  } catch (error: any) {
-    throw new Error(`Failed to get interactive elements: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to get interactive elements', error);
+    throw new Error(`Failed to get interactive elements: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1047,8 +1100,9 @@ async function _handleBrowserGetPageContent(): Promise<string> {
     `);
 
     return JSON.stringify(content, null, 2);
-  } catch (error: any) {
-    throw new Error(`Failed to get page content: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to get page content', error);
+    throw new Error(`Failed to get page content: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1088,8 +1142,9 @@ async function _handleBrowserClickElement(args: { element_id: string }): Promise
     }
 
     return `Successfully clicked element: ${args.element_id} (${result.element.tag}: ${result.element.text})`;
-  } catch (error: any) {
-    throw new Error(`Failed to click element: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to click element', error);
+    throw new Error(`Failed to click element: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1120,8 +1175,9 @@ async function _handleBrowserTypeText(args: { element_id: string; text: string }
     `);
 
     return `Successfully typed "${args.text}" into element: ${args.element_id}`;
-  } catch (error: any) {
-    throw new Error(`Failed to type text: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to type text', error);
+    throw new Error(`Failed to type text: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1146,8 +1202,9 @@ async function handleBrowserScroll(args: {
     `);
 
     return `Successfully scrolled ${args.direction} by ${scrollAmount}px`;
-  } catch (error: any) {
-    throw new Error(`Failed to scroll: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to scroll', error);
+    throw new Error(`Failed to scroll: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1194,8 +1251,9 @@ async function handleBrowserWaitForElement(selector: string, timeout_ms?: number
     }
 
     return `Element "${selector}" appeared. Position: ${JSON.stringify(result.position)}`;
-  } catch (error: any) {
-    throw new Error(`Failed to wait for element: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to wait for element', error);
+    throw new Error(`Failed to wait for element: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1228,15 +1286,16 @@ async function handleBrowserNavigate(args: { url: string }): Promise<string> {
         break;
       }
       if (Date.now() - start > timeoutMs) {
-        console.warn('[BrowserNavigate] Load wait timeout, continuing');
+        logger.warn('[BrowserNavigate] Load wait timeout, continuing');
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
 
     return `Successfully navigated to: ${validUrl}`;
-  } catch (error: any) {
-    throw new Error(`Failed to navigate: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to navigate', error);
+    throw new Error(`Failed to navigate: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1254,8 +1313,9 @@ async function handleBrowserCreateTab(args: { url?: string }): Promise<string> {
     } else {
       throw new Error(result.error || 'Failed to create tab');
     }
-  } catch (error: any) {
-    throw new Error(`Failed to create tab: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to create tab', error);
+    throw new Error(`Failed to create tab: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1272,8 +1332,9 @@ async function handleBrowserSwitchTab(args: { tabId: string }): Promise<string> 
     } else {
       throw new Error(result.error || 'Failed to switch tab');
     }
-  } catch (error: any) {
-    throw new Error(`Failed to switch tab: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to switch tab', error);
+    throw new Error(`Failed to switch tab: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1290,8 +1351,9 @@ async function handleBrowserCloseTab(args: { tabId: string }): Promise<string> {
     } else {
       throw new Error(result.error || 'Failed to close tab');
     }
-  } catch (error: any) {
-    throw new Error(`Failed to close tab: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to close tab', error);
+    throw new Error(`Failed to close tab: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1315,8 +1377,9 @@ async function handleBrowserListTabs(): Promise<string> {
     } else {
       throw new Error(result.error || 'Failed to get tabs');
     }
-  } catch (error: any) {
-    throw new Error(`Failed to list tabs: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to list tabs', error);
+    throw new Error(`Failed to list tabs: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1340,8 +1403,9 @@ async function handleBrowserTakeScreenshot(_args: { fullPage?: boolean }): Promi
     `);
 
     return `Screenshot captured successfully!\n\nVisible text preview:\n${textResult}\n\nScreenshot: ${base64.substring(0, 100)}... (base64 data)`;
-  } catch (error: any) {
-    throw new Error(`Failed to take screenshot: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to take screenshot', error);
+    throw new Error(`Failed to take screenshot: ${getErrorMessage(error)}`);
   }
 }
 
@@ -1364,8 +1428,9 @@ async function handleBrowserGetSelectedText(): Promise<string> {
     }
 
     return `Selected text (${selectedText.length} characters):\n\n${selectedText}`;
-  } catch (error: any) {
-    throw new Error(`Failed to get selected text: ${error.message}`);
+  } catch (error: unknown) {
+    logger.error('[Builtin Tools] Failed to get selected text', error);
+    throw new Error(`Failed to get selected text: ${getErrorMessage(error)}`);
   }
 }
 

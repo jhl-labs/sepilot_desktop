@@ -10,6 +10,7 @@ import {
 import { createBaseSystemMessage } from '../utils/system-message';
 
 // Cache for MCP tools to reduce overhead
+import { logger } from '@/lib/utils/logger';
 let cachedTools: any[] | null = null;
 let lastCacheTime = 0;
 const TOOLS_CACHE_TTL = 10000; // 10 seconds
@@ -152,8 +153,8 @@ export async function* generateWithContextNode(state: RAGState): AsyncGenerator<
  */
 export async function generateWithToolsNode(state: AgentState): Promise<Partial<AgentState>> {
   try {
-    console.log('[Agent] ===== generateWithToolsNode called =====');
-    console.log('[Agent] Current state:', {
+    logger.info('[Agent] ===== generateWithToolsNode called =====');
+    logger.info('[Agent] Current state:', {
       messageCount: state.messages.length,
       lastMessageRole: state.messages[state.messages.length - 1]?.role,
       lastMessageHasToolCalls: !!state.messages[state.messages.length - 1]?.tool_calls,
@@ -164,7 +165,7 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
     const graphConfig = getCurrentGraphConfig();
     const toolsEnabled = graphConfig?.enableTools ?? true; // Default to true for backward compatibility
 
-    console.log(`[Agent] Tools enabled in config: ${toolsEnabled}`);
+    logger.info(`[Agent] Tools enabled in config: ${toolsEnabled}`);
 
     // MCP 도구 가져오기 (Built-in tools는 Coding Agent에서만 사용)
     // Note: generateWithToolsNode는 Electron Main Process에서 실행되므로
@@ -184,7 +185,7 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
     }
 
     if (availableTools.length > 0) {
-      console.log(
+      logger.info(
         '[Agent] Tool details:',
         availableTools.map((t) => ({
           name: t.name,
@@ -264,11 +265,11 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
           },
         },
       });
-      console.log('[Agent] Added generate_image tool (ImageGen enabled)');
+      logger.info('[Agent] Added generate_image tool (ImageGen enabled)');
     }
 
     if (toolsForLLM.length > 0) {
-      console.log('[Agent] Sending tools to LLM:', JSON.stringify(toolsForLLM, null, 2));
+      logger.info('[Agent] Sending tools to LLM:', JSON.stringify(toolsForLLM, null, 2));
     }
 
     // Tool 결과가 있으면 메시지에 추가 (LangChain ToolMessage 형식 사용)
@@ -329,7 +330,7 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
         )}\n\n... (Result truncated. Total length: ${content.length} chars. The available ${MAX_TOOL_RESULT_LENGTH} characters should be sufficient for analysis. Please work with this information rather than requesting additional searches.)`;
       }
 
-      console.log('[Agent] Creating tool result message:', {
+      logger.info('[Agent] Creating tool result message:', {
         toolCallId: result.toolCallId,
         toolName: result.toolName,
         hasError: !!result.error,
@@ -404,7 +405,7 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
 
     const messages = [systemMessage, ...state.messages, ...convertedToolMessages];
 
-    console.log(
+    logger.info(
       '[Agent] Messages to LLM:',
       messages.map((m) => ({
         role: m.role,
@@ -418,7 +419,7 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
     let accumulatedContent = '';
     let finalToolCalls: any[] | undefined = undefined;
 
-    console.log('[Agent] Starting streaming with tools...');
+    logger.info('[Agent] Starting streaming with tools...');
 
     for await (const chunk of LLMService.streamChatWithChunks(messages, {
       tools: toolsForLLM.length > 0 ? toolsForLLM : undefined,
@@ -433,18 +434,18 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
       // Last chunk contains tool calls (if any)
       if (chunk.done && chunk.toolCalls) {
         finalToolCalls = chunk.toolCalls;
-        console.log('[Agent] Received tool calls from stream:', finalToolCalls);
+        logger.info('[Agent] Received tool calls from stream:', finalToolCalls);
       }
     }
 
-    console.log('[Agent] Streaming complete. Content length:', accumulatedContent.length);
+    logger.info('[Agent] Streaming complete. Content length:', accumulatedContent.length);
 
     // Tool calls 파싱
     const toolCalls = finalToolCalls?.map((tc: any, index: number) => {
       // LLM이 id를 제공하지 않을 경우 자동 생성
       const toolCallId = tc.id || `call_${Date.now()}_${index}`;
 
-      console.log('[Agent] Tool call:', {
+      logger.info('[Agent] Tool call:', {
         id: toolCallId,
         originalId: tc.id,
         name: tc.function.name,
@@ -459,7 +460,7 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
       };
     });
 
-    console.log('[Agent] State generatedImages before creating assistant message:', {
+    logger.info('[Agent] State generatedImages before creating assistant message:', {
       count: state.generatedImages?.length || 0,
       images: state.generatedImages?.map((img) => ({
         id: img.id,
@@ -481,7 +482,7 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
           : undefined,
     };
 
-    console.log('[Agent] Assistant message created:', {
+    logger.info('[Agent] Assistant message created:', {
       hasContent: !!assistantMessage.content,
       hasToolCalls: !!assistantMessage.tool_calls,
       toolCallsCount: assistantMessage.tool_calls?.length,

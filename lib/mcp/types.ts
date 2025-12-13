@@ -18,7 +18,7 @@ export interface MCPTool {
   description: string;
   inputSchema: {
     type: 'object';
-    properties: Record<string, any>;
+    properties: Record<string, unknown>;
     required?: string[];
   };
   serverName: string;
@@ -41,7 +41,7 @@ export interface JSONRPCRequest {
   jsonrpc: '2.0';
   id?: string | number;
   method: string;
-  params?: any;
+  params?: unknown;
 }
 
 /**
@@ -50,11 +50,11 @@ export interface JSONRPCRequest {
 export interface JSONRPCResponse {
   jsonrpc: '2.0';
   id?: string | number;
-  result?: any;
+  result?: unknown;
   error?: {
     code: number;
     message: string;
-    data?: any;
+    data?: unknown;
   };
 }
 

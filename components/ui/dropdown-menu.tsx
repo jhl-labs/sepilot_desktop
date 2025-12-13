@@ -85,7 +85,7 @@ export const DropdownMenuTrigger = React.forwardRef<HTMLDivElement, DropdownMenu
     );
 
     if (asChild && React.isValidElement(children)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, react-hooks/refs
+      // eslint-disable-next-line react-hooks/refs
       return React.cloneElement(children as React.ReactElement<any>, {
         onClick: handleClick,
         ref: mergedRef,

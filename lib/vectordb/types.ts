@@ -2,6 +2,8 @@
  * Vector DB 타입 정의
  */
 
+import type { LLMConfig } from '@/types';
+
 /**
  * 지원하는 벡터 DB 타입
  */
@@ -13,7 +15,7 @@ export type VectorDBType = 'sqlite-vec' | 'opensearch' | 'elasticsearch' | 'pgve
 export interface VectorDocument {
   id: string;
   content: string;
-  metadata: Record<string, any>;
+  metadata: DocumentMetadata;
   embedding?: number[];
 }
 
@@ -28,7 +30,7 @@ export type SpecialDocumentType = 'folder' | 'normal';
 export interface DocumentMetadata {
   title?: string;
   source?: string;
-  uploadedAt?: string;
+  uploadedAt?: string | number;
   cleaned?: boolean;
   originalId?: string;
   chunkIndex?: number;
@@ -49,6 +51,8 @@ export interface DocumentMetadata {
 
   // 특수 문서 타입 (빈 폴더 등)
   _docType?: SpecialDocumentType; // 'folder' | 'normal' (기본값: 'normal')
+
+  [key: string]: unknown;
 }
 
 /**
@@ -70,7 +74,7 @@ export interface DocumentTreeNode {
 export interface SearchResult {
   id: string;
   content: string;
-  metadata: Record<string, any>;
+  metadata: DocumentMetadata;
   score: number;
 }
 
@@ -132,7 +136,7 @@ export interface EmbeddingConfig {
   baseURL?: string;
   model?: string;
   dimension: number;
-  networkConfig?: any; // LLMConfig['network'] 타입, 순환 참조 방지를 위해 any 사용
+  networkConfig?: LLMConfig['network'];
 }
 
 /**
@@ -158,7 +162,7 @@ export interface IndexingOptions {
 export interface RawDocument {
   id: string;
   content: string;
-  metadata: Record<string, any>;
+  metadata: DocumentMetadata;
 }
 
 /**
@@ -167,7 +171,7 @@ export interface RawDocument {
 export interface ExportedDocument {
   id: string;
   content: string;
-  metadata: Record<string, any>;
+  metadata: DocumentMetadata;
   embedding?: number[];
 }
 

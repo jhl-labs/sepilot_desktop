@@ -86,6 +86,7 @@ export function SidebarChat({
             onClick={onDocumentsClick}
             title="문서 관리"
             className="flex-1"
+            data-testid="sidebar-documents-btn"
           >
             <FileText className="h-5 w-5" />
           </Button>

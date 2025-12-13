@@ -7,6 +7,7 @@ import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-c
 import { generateWithToolsNode } from '../nodes/generate';
 import { toolsNode } from '../nodes/tools';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Tree of Thought Graph
  *
@@ -32,7 +33,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
       return '';
     }
 
-    console.log('[ToT] RAG enabled, retrieving documents...');
+    logger.info('[ToT] RAG enabled, retrieving documents...');
     const { vectorDBService } = await import('../../../electron/services/vectordb');
     const { databaseService } = await import('../../../electron/services/database');
     const { initializeEmbedding, getEmbeddingProvider } =
@@ -53,7 +54,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
     const results = await vectorDBService.searchByVector(queryEmbedding, 5);
 
     if (results.length > 0) {
-      console.log(`[ToT] Found ${results.length} documents`);
+      logger.info(`[ToT] Found ${results.length} documents`);
       return results.map((doc, i) => `[참고 문서 ${i + 1}]\n${doc.content}`).join('\n\n');
     }
   } catch (error) {
@@ -66,7 +67,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
  * 0단계: 정보 수집 (Research)
  */
 async function researchNode(state: TreeOfThoughtState) {
-  console.log('[ToT] Step 0: Researching...');
+  logger.info('[ToT] Step 0: Researching...');
   emitStreamingChunk('\n\n## 🔎 0단계: 정보 수집 (Research)\n\n', state.conversationId);
 
   // RAG 검색
@@ -147,7 +148,7 @@ async function researchNode(state: TreeOfThoughtState) {
     emitStreamingChunk(`✅ **수집 완료**\n`, state.conversationId);
   }
 
-  console.log('[ToT] Research complete');
+  logger.info('[ToT] Research complete');
 
   return {
     context: gatheredInfo,
@@ -187,7 +188,7 @@ export type TreeOfThoughtState = typeof TreeOfThoughtStateAnnotation.State;
  * 1단계: 문제 분해
  */
 async function decomposeNode(state: TreeOfThoughtState) {
-  console.log('[ToT] Step 1: Decomposing problem...');
+  logger.info('[ToT] Step 1: Decomposing problem...');
 
   // 단계 시작 알림
 
@@ -256,7 +257,7 @@ async function decomposeNode(state: TreeOfThoughtState) {
     emitStreamingChunk(chunk, state.conversationId);
   }
 
-  console.log('[ToT] Decomposition complete');
+  logger.info('[ToT] Decomposition complete');
 
   return {
     context: decomposition,
@@ -267,7 +268,7 @@ async function decomposeNode(state: TreeOfThoughtState) {
  * 2단계: 다중 경로 생성 (3개의 다른 접근 방식)
  */
 async function generateBranchesNode(state: TreeOfThoughtState) {
-  console.log('[ToT] Step 2: Generating multiple thought branches...');
+  logger.info('[ToT] Step 2: Generating multiple thought branches...');
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## 🌿 2단계: 다중 사고 경로 생성\n\n', state.conversationId);
@@ -323,7 +324,7 @@ ${approaches[i].desc}
       score: 0, // Will be evaluated in next step
     });
 
-    console.log(`[ToT] Branch ${i + 1} generated`);
+    logger.info(`[ToT] Branch ${i + 1} generated`);
   }
 
   return {
@@ -335,7 +336,7 @@ ${approaches[i].desc}
  * 3단계: 각 경로 평가
  */
 async function evaluateBranchesNode(state: TreeOfThoughtState) {
-  console.log('[ToT] Step 3: Evaluating branches...');
+  logger.info('[ToT] Step 3: Evaluating branches...');
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## ⚖️ 3단계: 경로 평가\n\n', state.conversationId);
@@ -387,7 +388,7 @@ async function evaluateBranchesNode(state: TreeOfThoughtState) {
     const match = scoreText.match(/(\d+)/);
     const score = match ? parseInt(match[1]) : 20; // Default to middle score if parsing fails
 
-    console.log(`[ToT] Branch ${idx + 1} score: ${score}`);
+    logger.info(`[ToT] Branch ${idx + 1} score: ${score}`);
 
     evaluatedBranches.push({
       ...branch,
@@ -404,7 +405,7 @@ async function evaluateBranchesNode(state: TreeOfThoughtState) {
     state.conversationId
   );
 
-  console.log('[ToT] Best branch selected');
+  logger.info('[ToT] Best branch selected');
 
   return {
     branches: evaluatedBranches,
@@ -416,7 +417,7 @@ async function evaluateBranchesNode(state: TreeOfThoughtState) {
  * 4단계: 최종 답변 생성
  */
 async function synthesizeNode(state: TreeOfThoughtState) {
-  console.log('[ToT] Step 4: Synthesizing final answer...');
+  logger.info('[ToT] Step 4: Synthesizing final answer...');
 
   // 단계 시작 알림
   emitStreamingChunk('\n\n---\n\n## ✨ 4단계: 최종 답변 통합\n\n', state.conversationId);
@@ -473,7 +474,7 @@ ${topBranches}
     created_at: Date.now(),
   };
 
-  console.log('[ToT] Final answer synthesized');
+  logger.info('[ToT] Final answer synthesized');
 
   return {
     messages: [assistantMessage],

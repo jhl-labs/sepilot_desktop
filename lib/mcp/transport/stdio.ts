@@ -1,5 +1,16 @@
+import type { ChildProcessWithoutNullStreams, SpawnOptionsWithStdioTuple } from 'child_process';
+
+import { getErrorMessage } from '@/lib/utils/error-handler';
+
 import { MCPClient } from '../client';
 import { JSONRPCRequest, JSONRPCResponse } from '../types';
+
+import { logger } from '@/lib/utils/logger';
+type SpawnFunction = (
+  command: string,
+  args?: readonly string[],
+  options?: SpawnOptionsWithStdioTuple<'pipe', 'pipe', 'pipe'>
+) => ChildProcessWithoutNullStreams;
 
 /**
  * Stdio MCP Client
@@ -8,10 +19,14 @@ import { JSONRPCRequest, JSONRPCResponse } from '../types';
  * Renderer Process에서는 IPC를 통해 Main Process에 요청합니다.
  */
 export class StdioMCPClient extends MCPClient {
-  private process: any = null; // ChildProcess
+  private process: ChildProcessWithoutNullStreams | null = null;
   private pendingRequests: Map<
     string | number,
-    { resolve: (value: JSONRPCResponse) => void; reject: (error: Error) => void }
+    {
+      resolve: (value: JSONRPCResponse) => void;
+      reject: (error: Error) => void;
+      timeout: NodeJS.Timeout;
+    }
   > = new Map();
   private buffer = '';
 
@@ -29,6 +44,12 @@ export class StdioMCPClient extends MCPClient {
       this.process = null;
       this.isConnected = false;
     }
+
+    for (const pending of this.pendingRequests.values()) {
+      clearTimeout(pending.timeout);
+      pending.reject(new Error('Connection closed'));
+    }
+    this.pendingRequests.clear();
   }
 
   async sendRequest(request: JSONRPCRequest): Promise<JSONRPCResponse> {
@@ -39,10 +60,13 @@ export class StdioMCPClient extends MCPClient {
   /**
    * Main Process용 - 실제 프로세스 생성 및 통신
    */
-  async connectInMainProcess(spawn: any): Promise<void> {
+  async connectInMainProcess(spawn: SpawnFunction): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
         const command = this.config.command;
+        if (!command) {
+          throw new Error('Command is required for stdio transport');
+        }
         const args = this.config.args || [];
 
         // Windows에서는 shell: true를 사용하여 .cmd 파일을 올바르게 실행
@@ -65,18 +89,21 @@ export class StdioMCPClient extends MCPClient {
 
         // stderr 처리
         this.process.stderr.on('data', (data: Buffer) => {
-          console.error(`MCP Server [${this.config.name}] stderr:`, data.toString());
+          logger.error('MCP server stderr', {
+            server: this.config.name,
+            output: data.toString(),
+          });
         });
 
         // 프로세스 종료
-        this.process.on('exit', (code: number) => {
-          console.log(`MCP Server [${this.config.name}] exited with code ${code}`);
+        this.process.on('exit', (code: number | null) => {
+          logger.warn('MCP server exited', { server: this.config.name, code });
           this.isConnected = false;
         });
 
         // 프로세스 에러
         this.process.on('error', (error: Error) => {
-          console.error(`MCP Server [${this.config.name}] error:`, error);
+          logger.error('MCP server process error', { server: this.config.name, error });
           reject(error);
         });
 
@@ -101,19 +128,18 @@ export class StdioMCPClient extends MCPClient {
       const requestWithId = { ...request, id };
 
       // 응답 대기
-      this.pendingRequests.set(id, { resolve, reject });
-
-      // 요청 전송
-      const message = `${JSON.stringify(requestWithId)}\n`;
-      this.process.stdin.write(message);
-
-      // 타임아웃 설정 (10분)
-      setTimeout(() => {
+      const timeout = setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id);
           reject(new Error('Request timeout (10m)'));
         }
       }, 600000); // 10분 = 600초 = 600000ms
+
+      this.pendingRequests.set(id, { resolve, reject, timeout });
+
+      // 요청 전송
+      const message = `${JSON.stringify(requestWithId)}\n`;
+      this.process.stdin.write(message);
     });
   }
 
@@ -133,7 +159,10 @@ export class StdioMCPClient extends MCPClient {
           const response: JSONRPCResponse = JSON.parse(line);
           this.handleResponse(response);
         } catch (error) {
-          console.error('Failed to parse MCP response:', line, error);
+          logger.error('Failed to parse MCP response', {
+            line,
+            error: getErrorMessage(error),
+          });
         }
       }
     }
@@ -146,12 +175,13 @@ export class StdioMCPClient extends MCPClient {
     if (response.id !== undefined) {
       const pending = this.pendingRequests.get(response.id);
       if (pending) {
+        clearTimeout(pending.timeout);
         this.pendingRequests.delete(response.id);
         pending.resolve(response);
       }
     } else {
       // 알림 메시지 (id 없음)
-      console.log('MCP notification:', response);
+      logger.debug('MCP notification', response);
     }
   }
 }

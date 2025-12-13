@@ -1,11 +1,12 @@
+'use client';
+
+import { logger } from '@/lib/utils/logger';
 /**
  * Editor with Terminal Panel
  *
  * CodeEditor와 TerminalPanel을 조건부로 표시하는 컨테이너 컴포넌트
  * 드래그 가능한 리사이저로 Editor와 Terminal 크기 조절 지원
  */
-
-'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
@@ -29,7 +30,7 @@ const MIN_TERMINAL_HEIGHT = 100; // 최소 터미널 높이 (px)
 const DEFAULT_TERMINAL_HEIGHT = 320; // 기본 터미널 높이 (px)
 
 export function EditorWithTerminal() {
-  console.log('[EditorWithTerminal] Component rendering');
+  logger.info('[EditorWithTerminal] Component rendering');
   const { showTerminalPanel, workingDirectory } = useChatStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const [terminalHeight, setTerminalHeight] = useState(DEFAULT_TERMINAL_HEIGHT);
@@ -38,9 +39,9 @@ export function EditorWithTerminal() {
   const dragStartHeight = useRef(0);
 
   useEffect(() => {
-    console.log('[EditorWithTerminal] Component mounted');
+    logger.info('[EditorWithTerminal] Component mounted');
     return () => {
-      console.log('[EditorWithTerminal] Component unmounting');
+      logger.info('[EditorWithTerminal] Component unmounting');
     };
   }, []);
 

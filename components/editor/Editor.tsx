@@ -26,6 +26,7 @@ import path from 'path-browserify';
 // Load Editor component without SSR
 // For now, we'll allow Monaco to use CDN in development
 // In production, files are served via app:// protocol
+import { logger } from '@/lib/utils/logger';
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
   loading: () => <div className="flex items-center justify-center h-full">Loading editor...</div>,
@@ -130,7 +131,7 @@ export function CodeEditor() {
       const result = await window.electronAPI.fs.writeFile(activeFile.path, activeFile.content);
       if (result.success) {
         markFileDirty(activeFile.path, false);
-        console.log('File saved successfully:', activeFile.path);
+        logger.info('File saved successfully:', activeFile.path);
 
         // 저장 후 mtime 업데이트
         const statResult = await window.electronAPI.fs.getFileStat(activeFile.path);
@@ -169,7 +170,7 @@ export function CodeEditor() {
         }
 
         setFileChangedExternally(false);
-        console.log('File refreshed successfully:', activeFile.path);
+        logger.info('File refreshed successfully:', activeFile.path);
       } else {
         console.error('Failed to refresh file:', result.error);
         window.alert(`파일을 새로고침할 수 없습니다: ${result.error}`);
@@ -258,7 +259,7 @@ export function CodeEditor() {
           Math.min(fullCode.length, selectionEndOffset + 2000)
         );
 
-        console.log('[EditorAction] Context collected:', {
+        logger.info('[EditorAction] Context collected:', {
           action,
           selectedTextLength: selectedText.length,
           contextBeforeLength: textBefore.length,
@@ -295,7 +296,7 @@ export function CodeEditor() {
               forceMoveMarkers: true,
             },
           ]);
-          console.log(`${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully`);
+          logger.info(`${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully`);
         } else {
           console.error('Editor action failed:', result.error);
           window.alert(`Failed: ${result.error || 'Unknown error'}`);
@@ -344,7 +345,7 @@ export function CodeEditor() {
   // Register inline completion provider for autocomplete (triggered by Ctrl+.)
   useEffect(() => {
     if (!editor) {
-      console.log('[Autocomplete] Editor not ready');
+      logger.info('[Autocomplete] Editor not ready');
       return;
     }
 
@@ -367,7 +368,7 @@ export function CodeEditor() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === '.') {
         e.preventDefault();
-        console.log('[Autocomplete] Manual trigger requested (Ctrl+.)');
+        logger.info('[Autocomplete] Manual trigger requested (Ctrl+.)');
         manualTriggerTime = Date.now();
         // Monaco의 inline suggestions를 수동으로 트리거
         editor.trigger('keyboard', 'editor.action.inlineSuggest.trigger', {});
@@ -382,7 +383,7 @@ export function CodeEditor() {
         const now = Date.now();
         const isManualTrigger = now - manualTriggerTime < MANUAL_TRIGGER_TIMEOUT_MS;
 
-        console.log('[Autocomplete] provideInlineCompletions called', {
+        logger.info('[Autocomplete] provideInlineCompletions called', {
           triggerKind: context?.triggerKind,
           isManualTrigger,
           timeSinceManualTrigger: now - manualTriggerTime,
@@ -401,13 +402,13 @@ export function CodeEditor() {
 
         // Monaco의 CancellationToken 체크
         if (token?.isCancellationRequested) {
-          console.log('[Autocomplete] Token already cancelled');
+          logger.info('[Autocomplete] Token already cancelled');
           return { items: [] };
         }
 
         // 이전 요청 취소
         if (currentAbortController) {
-          console.log('[Autocomplete] Aborting previous request');
+          logger.info('[Autocomplete] Aborting previous request');
           currentAbortController.abort();
           currentAbortController = null;
         }
@@ -419,7 +420,7 @@ export function CodeEditor() {
 
         // 이미 요청이 진행 중이면 이전 요청을 취소했으므로 계속 진행
         if (isRequestInProgress) {
-          console.log('[Autocomplete] Previous request cancelled, starting new request');
+          logger.info('[Autocomplete] Previous request cancelled, starting new request');
         }
 
         try {
@@ -447,7 +448,7 @@ export function CodeEditor() {
           const previousLine = linesBefore.length > 1 ? linesBefore[linesBefore.length - 2] : '';
           const nextLine = linesAfter.length > 0 ? linesAfter[0] : '';
 
-          console.log('[Autocomplete] Enhanced context:', {
+          logger.info('[Autocomplete] Enhanced context:', {
             language,
             currentLine: currentLine.substring(0, 50),
             previousLine: previousLine.substring(0, 50),
@@ -460,13 +461,13 @@ export function CodeEditor() {
 
           // 다시 한번 취소 체크
           if (token?.isCancellationRequested || abortController.signal.aborted) {
-            console.log('[Autocomplete] Cancelled before API call');
+            logger.info('[Autocomplete] Cancelled before API call');
             return { items: [] };
           }
 
           isRequestInProgress = true;
           setIsAutocompleting(true);
-          console.log('[Autocomplete] Starting API request with enhanced context...');
+          logger.info('[Autocomplete] Starting API request with enhanced context...');
 
           // 타임아웃과 함께 요청
           const timeoutPromise = new Promise<never>((_, reject) => {
@@ -493,7 +494,7 @@ export function CodeEditor() {
 
           const result = await Promise.race([requestPromise, timeoutPromise]);
 
-          console.log('[Autocomplete] API response received:', {
+          logger.info('[Autocomplete] API response received:', {
             success: result.success,
             hasCompletion: !!result.data?.completion,
             error: result.error,
@@ -505,20 +506,20 @@ export function CodeEditor() {
             abortController.signal.aborted ||
             requestId !== lastRequestId
           ) {
-            console.log('[Autocomplete] Cancelled after API call');
+            logger.info('[Autocomplete] Cancelled after API call');
             return { items: [] };
           }
 
           if (result.success && result.data?.completion) {
             const completion = result.data.completion.trim();
 
-            console.log('[Autocomplete] Completion text:', {
+            logger.info('[Autocomplete] Completion text:', {
               length: completion.length,
               preview: completion.substring(0, 100),
             });
 
             if (completion) {
-              console.log('[Autocomplete] Showing suggestion to user');
+              logger.info('[Autocomplete] Showing suggestion to user');
               return {
                 items: [
                   {
@@ -534,7 +535,7 @@ export function CodeEditor() {
                 ],
               };
             } else {
-              console.log('[Autocomplete] Completion is empty after trim');
+              logger.info('[Autocomplete] Completion is empty after trim');
             }
           } else {
             console.warn('[Autocomplete] API call failed or no completion:', result.error);
@@ -554,7 +555,7 @@ export function CodeEditor() {
           }
         }
 
-        console.log('[Autocomplete] Returning empty result');
+        logger.info('[Autocomplete] Returning empty result');
         return { items: [] };
       },
       freeInlineCompletions: (_completions: any) => {
@@ -574,8 +575,8 @@ export function CodeEditor() {
       providerObject
     );
 
-    console.log('[Autocomplete] Provider registered for all languages (Ctrl+. to trigger)');
-    console.log('[Autocomplete] Settings:', {
+    logger.info('[Autocomplete] Provider registered for all languages (Ctrl+. to trigger)');
+    logger.info('[Autocomplete] Settings:', {
       useRag: editorUseRagInAutocomplete,
       useTools: editorUseToolsInAutocomplete,
     });
@@ -586,7 +587,7 @@ export function CodeEditor() {
         currentAbortController.abort();
       }
       provider.dispose();
-      console.log('[Autocomplete] Provider disposed');
+      logger.info('[Autocomplete] Provider disposed');
     };
   }, [editor, editorUseRagInAutocomplete, editorUseToolsInAutocomplete]);
 
@@ -1197,7 +1198,7 @@ export function CodeEditor() {
       return;
     }
 
-    console.log('[Editor] Setting up paste handler');
+    logger.info('[Editor] Setting up paste handler');
 
     // Ctrl+V DOM 이벤트 리스너 사용 (Monaco 키 바인딩 대신)
     const handlePaste = async (e: ClipboardEvent) => {
@@ -1219,7 +1220,7 @@ export function CodeEditor() {
         return;
       }
 
-      console.log('[Editor] Paste event in Markdown file');
+      logger.info('[Editor] Paste event in Markdown file');
 
       try {
         // Electron 클립보드에서 이미지 확인 및 저장 시도
@@ -1231,12 +1232,12 @@ export function CodeEditor() {
           e.stopPropagation();
 
           const { filename } = result.data;
-          console.log('[Editor] Image saved:', filename);
+          logger.info('[Editor] Image saved:', filename);
 
           // 상대 경로 계산 - working directory 기준
           const imagePath = path.join(workingDirectory, filename);
 
-          console.log('[Editor] Path info:', {
+          logger.info('[Editor] Path info:', {
             currentFile: currentFile.path,
             imagePath,
             workingDirectory,
@@ -1262,7 +1263,7 @@ export function CodeEditor() {
               relativePath = `./${relativePath}`;
             }
 
-            console.log('[Editor] Relative path (working dir based):', relativePath);
+            logger.info('[Editor] Relative path (working dir based):', relativePath);
           } else {
             // Fallback: working directory에 있다고 가정
             relativePath = `./${filename}`;
@@ -1292,11 +1293,11 @@ export function CodeEditor() {
             };
             editor.setPosition(newPosition);
             editor.focus();
-            console.log('[Editor] Image markdown inserted');
+            logger.info('[Editor] Image markdown inserted');
           }
         } else {
           // 이미지가 없음 - 기본 paste 동작 허용
-          console.log('[Editor] No image in clipboard, using default paste');
+          logger.info('[Editor] No image in clipboard, using default paste');
         }
       } catch (error) {
         console.error('[Editor] Error handling paste:', error);
@@ -1308,14 +1309,14 @@ export function CodeEditor() {
     const editorDomNode = editor.getDomNode();
     if (editorDomNode) {
       editorDomNode.addEventListener('paste', handlePaste);
-      console.log('[Editor] Paste handler registered');
+      logger.info('[Editor] Paste handler registered');
     }
 
     // 정리
     return () => {
       if (editorDomNode) {
         editorDomNode.removeEventListener('paste', handlePaste);
-        console.log('[Editor] Paste handler removed');
+        logger.info('[Editor] Paste handler removed');
       }
     };
   }, [editor, openFiles, activeFilePath, workingDirectory]);
@@ -1352,7 +1353,7 @@ export function CodeEditor() {
           // mtime이 변경되었고, 파일이 dirty하지 않은 경우에만 알림
           // (dirty인 경우는 사용자가 편집 중이므로 알리지 않음)
           if (lastMtime && currentMtime > lastMtime && !activeFile.isDirty) {
-            console.log('[Editor] File changed externally:', activeFile.path);
+            logger.info('[Editor] File changed externally:', activeFile.path);
             setFileChangedExternally(true);
             lastMtimeRef.current.set(activeFile.path, currentMtime);
           }
@@ -1438,7 +1439,7 @@ export function CodeEditor() {
       const isDirectory = e.dataTransfer.getData('application/sepilot-isdir') === 'true';
 
       if (!filePath || !fileName || isDirectory) {
-        console.log('[Editor] Drop ignored: no path, no name, or is directory');
+        logger.info('[Editor] Drop ignored: no path, no name, or is directory');
         return;
       }
 
@@ -1446,7 +1447,7 @@ export function CodeEditor() {
       const existingFile = openFiles.find((f) => f.path === filePath);
       if (existingFile) {
         setActiveFile(filePath);
-        console.log('[Editor] File already open, switching to it:', filePath);
+        logger.info('[Editor] File already open, switching to it:', filePath);
         return;
       }
 
@@ -1459,7 +1460,7 @@ export function CodeEditor() {
 
       if (isImage) {
         // Image files don't need content - they're loaded as base64 in the viewer
-        console.log('[Editor] Opening dropped image file:', filePath);
+        logger.info('[Editor] Opening dropped image file:', filePath);
         openFile({
           path: filePath,
           filename: fileName,
@@ -1470,7 +1471,7 @@ export function CodeEditor() {
       }
 
       // Read and open the file
-      console.log('[Editor] Opening dropped file:', filePath);
+      logger.info('[Editor] Opening dropped file:', filePath);
       const content = await readFile(filePath);
       if (content !== null) {
         openFile({
@@ -1785,7 +1786,7 @@ export function CodeEditor() {
                       // Store monaco instance globally for InlineCompletionProvider
                       if (!(window as any).monaco) {
                         (window as any).monaco = monaco;
-                        console.log('Monaco instance stored globally');
+                        logger.info('Monaco instance stored globally');
                       }
                     }}
                     theme={editorAppearanceConfig.theme}

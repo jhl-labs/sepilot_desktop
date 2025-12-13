@@ -6,6 +6,7 @@ import type { Message } from '@/types';
 import type { ToolApprovalCallback } from '../types';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Chat Agent 그래프 - MCP Tools와 이미지 생성 도구 지원
  *
@@ -96,7 +97,7 @@ export class ChatAgentGraph {
     let state = { ...initialState };
     let iterations = 0;
 
-    console.log(
+    logger.info(
       `[AgentGraph] Starting stream with initial state (Max iterations: ${actualMaxIterations})`
     );
 
@@ -109,7 +110,7 @@ export class ChatAgentGraph {
     let _imageGenerationCompleted = false;
 
     while (iterations < actualMaxIterations) {
-      console.log(`[AgentGraph] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`);
+      logger.info(`[AgentGraph] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`);
 
       // 1. Generate Node
       let generateResult;
@@ -395,7 +396,7 @@ export class ChatAgentGraph {
   }
 
   private async *yieldMaxIterationsReport(state: AgentState, maxIterations: number) {
-    console.log('[AgentGraph] Max iterations reached');
+    logger.info('[AgentGraph] Max iterations reached');
     const summaryMsg: Message = {
       id: `system-summary-${Date.now()}`,
       role: 'system',

@@ -12,6 +12,7 @@ import type { ComfyUIConfig, NetworkConfig } from '@/types';
 import { generateWithNanoBanana } from '@/lib/imagegen/nanobanana-client';
 import WebSocket from 'ws';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Main Process에서 ComfyUI를 통한 이미지 생성
  * Renderer Process의 ComfyUIClient와 유사하지만 Main Process에서 직접 실행
@@ -291,7 +292,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
   try {
     // Check if aborted at the start
     if (isAborted(state.conversationId)) {
-      console.log('[Tools] Aborted before executing tools');
+      logger.info('[Tools] Aborted before executing tools');
       throw new Error('Operation aborted by user');
     }
 
@@ -301,7 +302,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
       return {};
     }
 
-    console.log(
+    logger.info(
       '[Tools] Executing tools:',
       lastMessage.tool_calls.map((c) => c.name)
     );
@@ -312,7 +313,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
         try {
           // Check if aborted before each tool call
           if (isAborted(state.conversationId)) {
-            console.log(`[Tools] Aborted before executing ${call.name}`);
+            logger.info(`[Tools] Aborted before executing ${call.name}`);
             return {
               toolCallId: call.id,
               toolName: call.name,
@@ -321,7 +322,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
             };
           }
 
-          console.log(`[Tools] Calling tool: ${call.name} with args:`, call.arguments);
+          logger.info(`[Tools] Calling tool: ${call.name} with args:`, call.arguments);
 
           // 이미지 생성 tool 처리 (내장 도구) - MCP로 전달하지 않음
           // Main Process에서 직접 ImageGen provider 호출 (Renderer Process의 singleton 사용 불가)
@@ -372,7 +373,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
                 };
               }
 
-              console.log('[Tools] Generating image with ComfyUI (Main Process):', call.arguments);
+              logger.info('[Tools] Generating image with ComfyUI (Main Process):', call.arguments);
 
               const imageResult = await generateImageInMainProcess(
                 comfyConfig,
@@ -420,7 +421,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
                 };
               }
 
-              console.log(
+              logger.info(
                 '[Tools] Generating image with NanoBanana (Main Process):',
                 call.arguments
               );
@@ -466,7 +467,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
                   provider: 'nanobanana' as const,
                 }));
 
-                console.log('[Tools] Created image objects:', {
+                logger.info('[Tools] Created image objects:', {
                   count: imageObjects.length,
                   firstImageBase64Length: imageObjects[0]?.base64?.length || 0,
                   firstImageBase64Prefix: imageObjects[0]?.base64?.substring(0, 50),
@@ -514,7 +515,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
           // Built-in tools 먼저 확인 (파일 작업, 브라우저 제어 등)
           try {
             const builtinResult = await executeBuiltinTool(call.name, call.arguments);
-            console.log(`[Tools] Built-in tool result:`, builtinResult);
+            logger.info(`[Tools] Built-in tool result:`, builtinResult);
 
             return {
               toolCallId: call.id,
@@ -527,7 +528,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
             const errorMessage = error instanceof Error ? error.message : String(error);
 
             if (errorMessage.includes('Unknown builtin tool')) {
-              console.log(`[Tools] Not a built-in tool (${call.name}), checking MCP tools...`);
+              logger.info(`[Tools] Not a built-in tool (${call.name}), checking MCP tools...`);
             } else {
               // Builtin tool 실행 중 에러 발생
               console.error(`[Tools] Built-in tool error (${call.name}):`, error);
@@ -555,7 +556,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
             };
           }
 
-          console.log(`[Tools] Found tool on server: ${tool.serverName}`);
+          logger.info(`[Tools] Found tool on server: ${tool.serverName}`);
 
           // Parameter filtering for tavily_search
           let toolArguments: any = call.arguments;
@@ -586,8 +587,8 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
               toolArguments.max_results = maxResults;
             }
 
-            console.log('[Tools] Tavily search - Original params:', params);
-            console.log('[Tools] Tavily search - Cleaned params:', toolArguments);
+            logger.info('[Tools] Tavily search - Original params:', params);
+            logger.info('[Tools] Tavily search - Cleaned params:', toolArguments);
           }
 
           // Main Process에서 직접 MCP 클라이언트를 통해 도구 실행
@@ -597,7 +598,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
             toolArguments
           );
 
-          console.log(`[Tools] MCP Tool result:`, mcpResult);
+          logger.info(`[Tools] MCP Tool result:`, mcpResult);
 
           // MCP ToolCallResult 형식에서 텍스트 추출
           let resultText = '';
@@ -624,7 +625,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
             resultText = String(mcpResult);
           }
 
-          console.log(
+          logger.info(
             `[Tools] Extracted result text (${resultText.length} chars):`,
             resultText.substring(0, 200)
           );
@@ -646,7 +647,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
       })
     );
 
-    console.log('[Tools] All tool results:', results);
+    logger.info('[Tools] All tool results:', results);
 
     // Collect generated images from results
     const generatedImages: Array<{
@@ -663,7 +664,7 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
       }
     }
 
-    console.log('[Tools] Generated images count:', generatedImages.length);
+    logger.info('[Tools] Generated images count:', generatedImages.length);
 
     return {
       toolResults: results,

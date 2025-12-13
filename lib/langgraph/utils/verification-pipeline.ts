@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Verification Pipeline for Coding Agent
  *
@@ -28,11 +29,11 @@ export class VerificationPipeline {
     const checks: CheckResult[] = [];
     const suggestions: string[] = [];
 
-    console.log('[VerificationPipeline] Starting verification...');
+    logger.info('[VerificationPipeline] Starting verification...');
 
     // Only run checks if files were modified
     if (!state.modifiedFiles || state.modifiedFiles.length === 0) {
-      console.log('[VerificationPipeline] No modified files, skipping verification');
+      logger.info('[VerificationPipeline] No modified files, skipping verification');
       return {
         checks: [],
         allPassed: true,
@@ -69,7 +70,7 @@ export class VerificationPipeline {
 
     const allPassed = checks.every((c) => c.passed);
 
-    console.log('[VerificationPipeline] Verification complete:', {
+    logger.info('[VerificationPipeline] Verification complete:', {
       totalChecks: checks.length,
       passed: checks.filter((c) => c.passed).length,
       failed: checks.filter((c) => !c.passed).length,
@@ -88,7 +89,7 @@ export class VerificationPipeline {
    */
   private async checkTypes(): Promise<CheckResult> {
     try {
-      console.log('[VerificationPipeline] Running type check...');
+      logger.info('[VerificationPipeline] Running type check...');
       const result = await executeBuiltinTool('command_execute', {
         command: 'npm run type-check',
       });
@@ -116,7 +117,7 @@ export class VerificationPipeline {
    */
   private async runLint(modifiedFiles: string[]): Promise<CheckResult> {
     try {
-      console.log('[VerificationPipeline] Running lint...');
+      logger.info('[VerificationPipeline] Running lint...');
 
       // Lint only modified files to speed up
       const filesArg = modifiedFiles.slice(0, 10).join(' '); // Limit to 10 files
@@ -153,7 +154,7 @@ export class VerificationPipeline {
    */
   private async checkBuild(): Promise<CheckResult> {
     try {
-      console.log('[VerificationPipeline] Running build check...');
+      logger.info('[VerificationPipeline] Running build check...');
       const result = await executeBuiltinTool('command_execute', {
         command: 'npm run build',
       });
@@ -182,7 +183,7 @@ export class VerificationPipeline {
    */
   private async runTests(): Promise<CheckResult> {
     try {
-      console.log('[VerificationPipeline] Running tests...');
+      logger.info('[VerificationPipeline] Running tests...');
       const result = await executeBuiltinTool('command_execute', {
         command: 'npm test',
       });

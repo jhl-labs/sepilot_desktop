@@ -7,6 +7,7 @@ import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-c
 import { generateWithToolsNode } from '../nodes/generate';
 import { toolsNode } from '../nodes/tools';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Sequential Thinking Graph
  *
@@ -32,7 +33,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
       return '';
     }
 
-    console.log('[Sequential] RAG enabled, retrieving documents...');
+    logger.info('[Sequential] RAG enabled, retrieving documents...');
     const { vectorDBService } = await import('../../../electron/services/vectordb');
     const { databaseService } = await import('../../../electron/services/database');
     const { initializeEmbedding, getEmbeddingProvider } =
@@ -53,7 +54,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
     const results = await vectorDBService.searchByVector(queryEmbedding, 5);
 
     if (results.length > 0) {
-      console.log(`[Sequential] Found ${results.length} documents`);
+      logger.info(`[Sequential] Found ${results.length} documents`);
       return results.map((doc, i) => `[참고 문서 ${i + 1}]\n${doc.content}`).join('\n\n');
     }
   } catch (error) {
@@ -66,7 +67,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
  * 0단계: 정보 수집 (Research)
  */
 async function researchNode(state: ChatState) {
-  console.log('[Sequential] Step 0: Researching...');
+  logger.info('[Sequential] Step 0: Researching...');
   emitStreamingChunk('\n\n## 🔎 0단계: 정보 수집 (Research)\n\n', state.conversationId);
 
   // RAG 검색
@@ -146,7 +147,7 @@ async function researchNode(state: ChatState) {
     emitStreamingChunk(`✅ **수집 완료**\n`, state.conversationId);
   }
 
-  console.log('[Sequential] Research complete');
+  logger.info('[Sequential] Research complete');
 
   return {
     context: gatheredInfo,
@@ -157,7 +158,7 @@ async function researchNode(state: ChatState) {
  * 1단계: 문제 분석
  */
 async function analyzeNode(state: ChatState) {
-  console.log('[Sequential] Step 1: Analyzing problem...');
+  logger.info('[Sequential] Step 1: Analyzing problem...');
 
   // 단계 시작 알림 + 로딩 표시
   emitStreamingChunk('\n\n## 🔍 1단계: 문제 분석\n\n', state.conversationId);
@@ -202,7 +203,7 @@ async function analyzeNode(state: ChatState) {
     emitStreamingChunk(chunk, state.conversationId);
   }
 
-  console.log('[Sequential] Analysis complete:', `${analysis.substring(0, 100)}...`);
+  logger.info('[Sequential] Analysis complete:', `${analysis.substring(0, 100)}...`);
 
   return {
     context: `# Analysis\n\n${analysis}`,
@@ -213,7 +214,7 @@ async function analyzeNode(state: ChatState) {
  * 2단계: 단계별 계획 수립
  */
 async function planNode(state: ChatState) {
-  console.log('[Sequential] Step 2: Planning solution steps...');
+  logger.info('[Sequential] Step 2: Planning solution steps...');
 
   // 단계 시작 알림 + 로딩 표시
   emitStreamingChunk('\n\n---\n\n## 📋 2단계: 계획 수립\n\n', state.conversationId);
@@ -246,7 +247,7 @@ async function planNode(state: ChatState) {
     emitStreamingChunk(chunk, state.conversationId);
   }
 
-  console.log('[Sequential] Plan complete:', `${plan.substring(0, 100)}...`);
+  logger.info('[Sequential] Plan complete:', `${plan.substring(0, 100)}...`);
 
   return {
     context: `${state.context}\n\n# Plan\n\n${plan}`,
@@ -257,7 +258,7 @@ async function planNode(state: ChatState) {
  * 3단계: 단계별 실행
  */
 async function executeNode(state: ChatState) {
-  console.log('[Sequential] Step 3: Executing plan...');
+  logger.info('[Sequential] Step 3: Executing plan...');
 
   // 단계 시작 알림 + 로딩 표시
   emitStreamingChunk('\n\n---\n\n## ⚙️ 3단계: 계획 실행\n\n', state.conversationId);
@@ -290,7 +291,7 @@ async function executeNode(state: ChatState) {
     emitStreamingChunk(chunk, state.conversationId);
   }
 
-  console.log('[Sequential] Execution complete:', `${execution.substring(0, 100)}...`);
+  logger.info('[Sequential] Execution complete:', `${execution.substring(0, 100)}...`);
 
   return {
     context: `${state.context}\n\n# Execution\n\n${execution}`,
@@ -301,7 +302,7 @@ async function executeNode(state: ChatState) {
  * 4단계: 최종 답변 생성
  */
 async function synthesizeNode(state: ChatState) {
-  console.log('[Sequential] Step 4: Synthesizing final answer...');
+  logger.info('[Sequential] Step 4: Synthesizing final answer...');
 
   // 단계 시작 알림 + 로딩 표시
   emitStreamingChunk('\n\n---\n\n## ✨ 4단계: 최종 답변\n\n', state.conversationId);
@@ -346,7 +347,7 @@ ${state.context}
     created_at: Date.now(),
   };
 
-  console.log('[Sequential] Final answer generated:', `${finalAnswer.substring(0, 100)}...`);
+  logger.info('[Sequential] Final answer generated:', `${finalAnswer.substring(0, 100)}...`);
 
   return {
     messages: [assistantMessage],

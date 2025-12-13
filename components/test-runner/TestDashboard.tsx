@@ -8,13 +8,14 @@ import { TestResultViewer } from './TestResultViewer';
 import { Play, Activity, Database, Zap, Settings, ArrowLeft, X } from 'lucide-react';
 import type { HealthCheckResult, TestSuiteResult } from '@/types/electron';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Test Dashboard 메인 컴포넌트
  *
  * 시스템 Health Check 및 테스트 실행 결과를 통합 표시
  */
 export function TestDashboard() {
-  console.log('[TestDashboard] Component rendering');
+  logger.info('[TestDashboard] Component rendering');
 
   const [healthCheck, setHealthCheck] = useState<HealthCheckResult | null>(null);
   const [allTestsResult, setAllTestsResult] = useState<TestSuiteResult | null>(null);
@@ -75,9 +76,9 @@ export function TestDashboard() {
 
   // LLM 테스트 실행
   const runLlmTests = React.useCallback(async () => {
-    console.log('[TestDashboard] runLlmTests called');
-    console.log('[TestDashboard] window.electronAPI:', window.electronAPI);
-    console.log('[TestDashboard] window.electronAPI.testRunner:', window.electronAPI?.testRunner);
+    logger.info('[TestDashboard] runLlmTests called');
+    logger.info('[TestDashboard] window.electronAPI:', window.electronAPI);
+    logger.info('[TestDashboard] window.electronAPI.testRunner:', window.electronAPI?.testRunner);
 
     if (!window.electronAPI?.testRunner) {
       console.error('[TestDashboard] testRunner API not available');
@@ -86,9 +87,9 @@ export function TestDashboard() {
 
     setIsRunning(true);
     try {
-      console.log('[TestDashboard] Calling window.electronAPI.testRunner.runLLM()');
+      logger.info('[TestDashboard] Calling window.electronAPI.testRunner.runLLM()');
       const result = await window.electronAPI.testRunner.runLLM();
-      console.log('[TestDashboard] LLM test result:', result);
+      logger.info('[TestDashboard] LLM test result:', result);
       setLlmTestsResult(result);
       localStorage.setItem('test-history:llm', JSON.stringify(result));
     } catch (error) {
@@ -149,27 +150,27 @@ export function TestDashboard() {
       return;
     }
 
-    console.log('[TestDashboard] Registering event listeners');
+    logger.info('[TestDashboard] Registering event listeners');
 
     // Window custom events 리스너 (메인 페이지에서 전달된 이벤트)
     const handleRunAllFromWindow = () => {
-      console.log('[TestDashboard] Received window event: run-all');
+      logger.info('[TestDashboard] Received window event: run-all');
       runAllTests();
     };
     const handleHealthCheckFromWindow = () => {
-      console.log('[TestDashboard] Received window event: health-check');
+      logger.info('[TestDashboard] Received window event: health-check');
       runHealthCheck();
     };
     const handleRunLLMFromWindow = () => {
-      console.log('[TestDashboard] Received window event: run-llm');
+      logger.info('[TestDashboard] Received window event: run-llm');
       runLlmTests();
     };
     const handleRunDatabaseFromWindow = () => {
-      console.log('[TestDashboard] Received window event: run-database');
+      logger.info('[TestDashboard] Received window event: run-database');
       runDatabaseTests();
     };
     const handleRunMCPFromWindow = () => {
-      console.log('[TestDashboard] Received window event: run-mcp');
+      logger.info('[TestDashboard] Received window event: run-mcp');
       runMcpTests();
     };
 
@@ -181,7 +182,7 @@ export function TestDashboard() {
 
     // IPC 이벤트 리스너 (Dashboard가 이미 열려있을 때)
     if (window.electronAPI) {
-      console.log('[TestDashboard] Registering IPC listeners');
+      logger.info('[TestDashboard] Registering IPC listeners');
       window.electronAPI.on('test:run-all-from-menu', runAllTests);
       window.electronAPI.on('test:health-check-from-menu', runHealthCheck);
       window.electronAPI.on('test:run-llm-from-menu', runLlmTests);
@@ -301,7 +302,7 @@ export function TestDashboard() {
           <CardContent className="space-y-4">
             <Button
               onClick={() => {
-                console.log('[TestDashboard] Button clicked!');
+                logger.info('[TestDashboard] Button clicked!');
                 runLlmTests();
               }}
               disabled={isRunning}

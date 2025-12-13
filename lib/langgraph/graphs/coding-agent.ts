@@ -21,6 +21,7 @@ import {
   getPlanStepPrompt,
 } from '../prompts/coding-agent-system';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Coding Agent Graph
  *
@@ -260,7 +261,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
       return '';
     }
 
-    console.log('[CodingAgent] RAG enabled, retrieving documents...');
+    logger.info('[CodingAgent] RAG enabled, retrieving documents...');
     const { vectorDBService } = await import('../../../electron/services/vectordb');
     const { databaseService } = await import('../../../electron/services/database');
     const { initializeEmbedding, getEmbeddingProvider } =
@@ -281,7 +282,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
     const results = await vectorDBService.searchByVector(queryEmbedding, 5);
 
     if (results.length > 0) {
-      console.log(`[CodingAgent] Found ${results.length} documents`);
+      logger.info(`[CodingAgent] Found ${results.length} documents`);
       return results.map((doc, i) => `[참고 문서 ${i + 1}]\n${doc.content}`).join('\n\n');
     }
   } catch (error) {
@@ -344,7 +345,7 @@ async function triageNode(state: CodingAgentState): Promise<Partial<CodingAgentS
   const decision = isSimpleQuestion ? 'direct_response' : 'graph';
   const reason = isSimpleQuestion ? 'Simple question detected' : 'Complex task requiring tools';
 
-  console.log(`[Triage] Decision: ${decision}, Reason: ${reason}`);
+  logger.info(`[Triage] Decision: ${decision}, Reason: ${reason}`);
 
   return {
     triageDecision: decision,
@@ -356,7 +357,7 @@ async function triageNode(state: CodingAgentState): Promise<Partial<CodingAgentS
  * Direct Response Node: Answer without tools
  */
 async function directResponseNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
-  console.log('[DirectResponse] Generating direct response');
+  logger.info('[DirectResponse] Generating direct response');
 
   const messages = state.messages || [];
   if (messages.length === 0) {
@@ -417,7 +418,7 @@ async function directResponseNode(state: CodingAgentState): Promise<Partial<Codi
 async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
   // Skip if plan already exists
   if (state.planCreated) {
-    console.log('[Planning] Plan already exists, skipping');
+    logger.info('[Planning] Plan already exists, skipping');
     return {};
   }
 
@@ -435,7 +436,7 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
     return {};
   }
 
-  console.log('[Planning] Creating execution plan');
+  logger.info('[Planning] Creating execution plan');
 
   const planningSystemMessage: Message = {
     id: 'system-plan',
@@ -508,7 +509,7 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
         5 // Top 5 recommendations
       );
       if (recommendedFiles.length > 0) {
-        console.log(`[Planning] Recommended files:`, recommendedFiles);
+        logger.info(`[Planning] Recommended files:`, recommendedFiles);
       }
     } catch (error) {
       console.warn('[Planning] Failed to analyze codebase:', error);
@@ -517,7 +518,7 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
     // Combine manually extracted files with recommended files
     const allRequiredFiles = [...new Set([...requiredFiles, ...recommendedFiles])];
 
-    console.log(`[Planning] Plan created with ${planSteps.length} steps`);
+    logger.info(`[Planning] Plan created with ${planSteps.length} steps`);
 
     return {
       messages: [planResponse, executionInstruction],
@@ -542,11 +543,11 @@ async function iterationGuardNode(state: CodingAgentState): Promise<Partial<Codi
   const iteration = state.iterationCount || 0;
   const maxIter = state.maxIterations || 10;
 
-  console.log(`[IterationGuard] Iteration ${iteration + 1}/${maxIter}`);
+  logger.info(`[IterationGuard] Iteration ${iteration + 1}/${maxIter}`);
 
   // Check if limit reached
   if (iteration >= maxIter) {
-    console.log('[IterationGuard] Max iterations reached, forcing termination');
+    logger.info('[IterationGuard] Max iterations reached, forcing termination');
     return {
       forceTermination: true,
       verificationNotes: [`Iteration limit reached (${iteration}/${maxIter})`],
@@ -564,7 +565,7 @@ async function iterationGuardNode(state: CodingAgentState): Promise<Partial<Codi
  * Agent Node: Call LLM with Built-in tools (file operations)
  */
 async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
-  console.log('[CodingAgent.Agent] Calling LLM with Tools');
+  logger.info('[CodingAgent.Agent] Calling LLM with Tools');
 
   const messages = state.messages || [];
 
@@ -600,7 +601,7 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
   }
 
   // Debug: Log message count and sizes
-  console.log('[CodingAgent.Agent] Message summary:', {
+  logger.info('[CodingAgent.Agent] Message summary:', {
     totalMessages: messages.length,
     roles: messages.map((m) => m.role),
     contentLengths: messages.map((m) => m.content?.length || 0),
@@ -622,7 +623,7 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     return m.content && m.content.trim().length > 0;
   });
 
-  console.log('[CodingAgent.Agent] Filtered messages:', {
+  logger.info('[CodingAgent.Agent] Filtered messages:', {
     original: messages.length,
     filtered: filteredMessages.length,
     removed: messages.length - filteredMessages.length,
@@ -647,10 +648,10 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     },
   }));
 
-  console.log(
+  logger.info(
     `[CodingAgent.Agent] Available tools: ${builtinTools.length} builtin + ${mcpTools.length} MCP`
   );
-  console.log(
+  logger.info(
     '[CodingAgent.Agent] Tool details:',
     allTools.map((t) => t.name)
   );
@@ -707,7 +708,7 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
 
   // Log token statistics
   const tokenStats = CodingAgentGraph.contextManager.getTokenStats(optimizedMessages);
-  console.log('[CodingAgent.Agent] Token usage:', {
+  logger.info('[CodingAgent.Agent] Token usage:', {
     total: tokenStats.totalTokens,
     utilization: `${tokenStats.utilization}%`,
     remaining: tokenStats.remaining,
@@ -722,7 +723,7 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     let accumulatedContent = '';
     let finalToolCalls: any[] | undefined = undefined;
 
-    console.log('[CodingAgent.Agent] Starting streaming with tools...');
+    logger.info('[CodingAgent.Agent] Starting streaming with tools...');
 
     for await (const chunk of LLMService.streamChatWithChunks(messagesWithContext, {
       tools: toolsForLLM,
@@ -736,11 +737,11 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
       // Last chunk contains tool calls (if any)
       if (chunk.done && chunk.toolCalls) {
         finalToolCalls = chunk.toolCalls;
-        console.log('[CodingAgent.Agent] Received tool calls:', finalToolCalls);
+        logger.info('[CodingAgent.Agent] Received tool calls:', finalToolCalls);
       }
     }
 
-    console.log(
+    logger.info(
       '[CodingAgent.Agent] Streaming complete. Content length:',
       accumulatedContent.length
     );
@@ -758,7 +759,7 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
         console.warn('[CodingAgent.Agent] Failed to parse tool args, using raw value', err);
         parsedArgs = tc.function.arguments || {};
       }
-      console.log('[CodingAgent.Agent] Tool call:', {
+      logger.info('[CodingAgent.Agent] Tool call:', {
         id: toolCallId,
         name: tc.function.name,
         arguments: parsedArgs,
@@ -779,7 +780,7 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
       tool_calls: toolCalls,
     };
 
-    console.log('[CodingAgent.Agent] Assistant message created:', {
+    logger.info('[CodingAgent.Agent] Assistant message created:', {
       hasContent: !!assistantMessage.content,
       hasToolCalls: !!assistantMessage.tool_calls,
       toolCallsCount: assistantMessage.tool_calls?.length,
@@ -897,7 +898,7 @@ async function approvalNode(state: CodingAgentState): Promise<Partial<CodingAgen
       needsApproval.arguments.command
     }`;
     emitStreamingChunk(note, state.conversationId);
-    console.log('[Approval] Network/install command requires explicit approval');
+    logger.info('[Approval] Network/install command requires explicit approval');
     return {
       lastApprovalStatus: 'feedback',
       alwaysApproveTools: alwaysApprove,
@@ -917,12 +918,12 @@ async function approvalNode(state: CodingAgentState): Promise<Partial<CodingAgen
   }
 
   if (oneTimeApprove && needsApproval) {
-    console.log('[Approval] One-time approval granted by user message');
+    logger.info('[Approval] One-time approval granted by user message');
   }
 
   // For now, auto-approve remaining tools (non-sensitive or user-approved).
   // interrupt() 연동 시 여기서 UI 승인 흐름을 붙일 수 있습니다.
-  console.log(`[Approval] Auto-approving ${toolCalls.length} tool(s)`);
+  logger.info(`[Approval] Auto-approving ${toolCalls.length} tool(s)`);
 
   return {
     lastApprovalStatus: 'approved',
@@ -939,7 +940,7 @@ async function approvalNode(state: CodingAgentState): Promise<Partial<CodingAgen
  * Handles Built-in tools (file operations) directly, delegates MCP tools to toolsNode
  */
 async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
-  console.log('[CodingAgent.Tools] Executing tools with file tracking');
+  logger.info('[CodingAgent.Tools] Executing tools with file tracking');
 
   const lastMessage = state.messages[state.messages.length - 1];
   if (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) {
@@ -954,11 +955,11 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
   const builtinTools = getBuiltinTools();
   const builtinToolNames = new Set(builtinTools.map((t) => t.name));
 
-  console.log(
+  logger.info(
     '[CodingAgent.Tools] Tool calls:',
     lastMessage.tool_calls.map((c) => c.name)
   );
-  console.log('[CodingAgent.Tools] Built-in tools available:', Array.from(builtinToolNames));
+  logger.info('[CodingAgent.Tools] Built-in tools available:', Array.from(builtinToolNames));
 
   // Check for redundant calls and optimization opportunities
   const redundancyCheck = CodingAgentGraph.toolSelector.detectRedundantCalls(
@@ -976,7 +977,7 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
     lastMessage.tool_calls
   );
   if (optimizationSuggestions.length > 0) {
-    console.log('[CodingAgent.Tools] Optimization suggestions:', optimizationSuggestions);
+    logger.info('[CodingAgent.Tools] Optimization suggestions:', optimizationSuggestions);
     for (const suggestion of optimizationSuggestions) {
       emitStreamingChunk(`\n${suggestion}\n`, state.conversationId);
     }
@@ -1033,7 +1034,7 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
 
         // Check if it's a built-in tool
         if (builtinToolNames.has(call.name)) {
-          console.log(`[CodingAgent.Tools] Executing builtin tool: ${call.name}`);
+          logger.info(`[CodingAgent.Tools] Executing builtin tool: ${call.name}`);
 
           // Execute with retry and timeout
           const TOOL_EXECUTION_TIMEOUT = 360000; // 6 minutes
@@ -1097,13 +1098,13 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
           };
         } else {
           // Try to execute as MCP tool
-          console.log(`[CodingAgent.Tools] Checking MCP tools for: ${call.name}`);
+          logger.info(`[CodingAgent.Tools] Checking MCP tools for: ${call.name}`);
 
           const mcpTools = MCPServerManager.getAllToolsInMainProcess();
           const targetTool = mcpTools.find((t) => t.name === call.name);
 
           if (targetTool) {
-            console.log(
+            logger.info(
               `[CodingAgent.Tools] Executing MCP tool: ${call.name} on server ${targetTool.serverName}`
             );
 
@@ -1305,7 +1306,7 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
       content = 'No result';
     }
 
-    console.log('[CodingAgent.Tools] Creating tool result message:', {
+    logger.info('[CodingAgent.Tools] Creating tool result message:', {
       toolCallId: result.toolCallId,
       toolName: result.toolName,
       hasError: !!result.error,
@@ -1336,7 +1337,7 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
       updates.deletedFiles = fileChanges.deleted;
     }
 
-    console.log(`[CodingAgent.Tools] File changes detected: ${totalChanges} files`);
+    logger.info(`[CodingAgent.Tools] File changes detected: ${totalChanges} files`);
   }
 
   return updates;
@@ -1346,7 +1347,7 @@ async function enhancedToolsNode(state: CodingAgentState): Promise<Partial<Codin
  * Verification Node: Validate execution results with automated checks
  */
 async function verificationNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
-  console.log('[Verification] Validating execution results');
+  logger.info('[Verification] Validating execution results');
 
   const planSteps = state.planSteps || [];
   const currentStep = state.currentPlanStep || 0;
@@ -1354,7 +1355,7 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
 
   // Check if plan was created but not executed
   if (state.planCreated && toolResults.length === 0) {
-    console.log('[Verification] Plan created but no tools executed yet');
+    logger.info('[Verification] Plan created but no tools executed yet');
 
     const reminderMessage: Message = {
       id: `reminder-${Date.now()}`,
@@ -1372,14 +1373,14 @@ async function verificationNode(state: CodingAgentState): Promise<Partial<Coding
 
   // Run automated verification pipeline if files were modified
   if (state.modifiedFiles && state.modifiedFiles.length > 0) {
-    console.log('[Verification] Running automated verification pipeline...');
+    logger.info('[Verification] Running automated verification pipeline...');
     const pipeline = new VerificationPipeline();
 
     try {
       const verificationResult = await pipeline.verify(state);
 
       if (!verificationResult.allPassed) {
-        console.log('[Verification] Verification failed:', verificationResult);
+        logger.info('[Verification] Verification failed:', verificationResult);
 
         const failedChecks = verificationResult.checks.filter((c) => !c.passed);
         const failureMessage: Message = {
@@ -1400,7 +1401,7 @@ ${verificationResult.suggestions.join('\n')}
           needsAdditionalIteration: true,
         };
       } else {
-        console.log('[Verification] All automated checks passed');
+        logger.info('[Verification] All automated checks passed');
         emitStreamingChunk('\n✅ **자동 검증 통과** (타입 체크, 린트)\n\n', state.conversationId);
       }
     } catch (error: any) {
@@ -1419,7 +1420,7 @@ ${verificationResult.suggestions.join('\n')}
     );
 
     if (missingFiles.length > 0 && (state.iterationCount || 0) < 3) {
-      console.log(`[Verification] Missing required files: ${missingFiles.join(', ')}`);
+      logger.info(`[Verification] Missing required files: ${missingFiles.join(', ')}`);
 
       const reminderMessage: Message = {
         id: `reminder-${Date.now()}`,
@@ -1438,7 +1439,7 @@ ${verificationResult.suggestions.join('\n')}
 
   // Advance plan step if we have a plan
   if (planSteps.length > 0 && currentStep < planSteps.length - 1) {
-    console.log(
+    logger.info(
       `[Verification] Advancing to next plan step (${currentStep + 1}/${planSteps.length})`
     );
 
@@ -1456,7 +1457,7 @@ ${verificationResult.suggestions.join('\n')}
   }
 
   // All checks passed
-  console.log('[Verification] Execution validated');
+  logger.info('[Verification] Execution validated');
   return {
     verificationNotes: ['✅ Execution complete'],
     needsAdditionalIteration: false,
@@ -1467,7 +1468,7 @@ ${verificationResult.suggestions.join('\n')}
  * Reporter Node: Generate final summary for all completions
  */
 async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgentState>> {
-  console.log('[Reporter] Generating final summary');
+  logger.info('[Reporter] Generating final summary');
 
   const hasToolError = state.toolResults?.some((r) => r.error);
   const hasAgentError = state.agentError && state.agentError.length > 0;
@@ -1478,7 +1479,7 @@ async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgen
 
   // Error cases
   if (hasAgentError) {
-    console.log('[Reporter] Agent error already reported in messages');
+    logger.info('[Reporter] Agent error already reported in messages');
     return {};
   } else if (hasToolError) {
     const errorMessage: Message = {
@@ -1488,7 +1489,7 @@ async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgen
       created_at: Date.now(),
     };
 
-    console.log('[Reporter] Tool error detected, generating error report');
+    logger.info('[Reporter] Tool error detected, generating error report');
     return {
       messages: [errorMessage],
     };
@@ -1500,14 +1501,14 @@ async function reporterNode(state: CodingAgentState): Promise<Partial<CodingAgen
       created_at: Date.now(),
     };
 
-    console.log('[Reporter] Max iterations reached, generating warning');
+    logger.info('[Reporter] Max iterations reached, generating warning');
     return {
       messages: [maxIterMessage],
     };
   }
 
   // Success case - generate summary
-  console.log('[Reporter] Normal completion, generating summary');
+  logger.info('[Reporter] Normal completion, generating summary');
 
   const summaryParts: string[] = [];
   summaryParts.push('✅ **작업 완료**\n');
@@ -1663,11 +1664,11 @@ export class CodingAgentGraph {
     this.toolApprovalCallback = toolApprovalCallback;
     let state = { ...initialState };
 
-    console.log('[CodingAgentGraph] Starting stream with full planning pipeline');
+    logger.info('[CodingAgentGraph] Starting stream with full planning pipeline');
 
     try {
       // === PHASE 1: Triage ===
-      console.log('[CodingAgentGraph] Phase 1: Triage');
+      logger.info('[CodingAgentGraph] Phase 1: Triage');
       yield { type: 'node', node: 'triage', data: { status: 'starting' } };
       const triageResult = await triageNode(state);
       state = { ...state, ...triageResult };
@@ -1675,7 +1676,7 @@ export class CodingAgentGraph {
 
       // If simple question, use direct response
       if (state.triageDecision === 'direct_response') {
-        console.log('[CodingAgentGraph] Simple question detected, using direct response');
+        logger.info('[CodingAgentGraph] Simple question detected, using direct response');
         yield { type: 'node', node: 'direct_response', data: { status: 'starting' } };
         const directResult = await directResponseNode(state);
         state = { ...state, messages: [...state.messages, ...(directResult.messages || [])] };
@@ -1688,7 +1689,7 @@ export class CodingAgentGraph {
       }
 
       // === PHASE 2: Planning ===
-      console.log('[CodingAgentGraph] Phase 2: Planning');
+      logger.info('[CodingAgentGraph] Phase 2: Planning');
       yield { type: 'node', node: 'planner', data: { status: 'starting' } };
       const planResult = await planningNode(state);
       state = {
@@ -1703,7 +1704,7 @@ export class CodingAgentGraph {
       let hasError = false;
 
       // === PHASE 3: Main ReAct loop with plan awareness ===
-      console.log('[CodingAgentGraph] Phase 3: Execution (max iterations:', maxIterations, ')');
+      logger.info('[CodingAgentGraph] Phase 3: Execution (max iterations:', maxIterations, ')');
       while (iterations < maxIterations) {
         // Agent (LLM with tools)
         yield { type: 'node', node: 'agent', data: { status: 'starting' } };
@@ -1717,7 +1718,7 @@ export class CodingAgentGraph {
 
         // Check if agent encountered an error
         if (agentResult.agentError) {
-          console.log('[CodingAgentGraph] Agent error detected, ending loop');
+          logger.info('[CodingAgentGraph] Agent error detected, ending loop');
           hasError = true;
           break;
         }
@@ -1727,7 +1728,7 @@ export class CodingAgentGraph {
         // Check if tools need to be called
         if (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) {
           // No tools - normal completion
-          console.log('[CodingAgentGraph] No tool calls, ending loop');
+          logger.info('[CodingAgentGraph] No tool calls, ending loop');
           break;
         }
 
@@ -1783,7 +1784,7 @@ export class CodingAgentGraph {
             ],
             lastApprovalStatus: 'feedback',
           };
-          console.log('[CodingAgentGraph] Sensitive commands detected; awaiting user approval');
+          logger.info('[CodingAgentGraph] Sensitive commands detected; awaiting user approval');
           break;
         }
 
@@ -1793,7 +1794,7 @@ export class CodingAgentGraph {
           lastMessage.tool_calls &&
           lastMessage.tool_calls.length > 0
         ) {
-          console.log('[CodingAgentGraph] Requesting tool approval');
+          logger.info('[CodingAgentGraph] Requesting tool approval');
 
           // Yield tool approval request
           yield {
@@ -1811,7 +1812,7 @@ export class CodingAgentGraph {
             };
 
             if (!approved) {
-              console.log('[CodingAgentGraph] Tools rejected by user');
+              logger.info('[CodingAgentGraph] Tools rejected by user');
               const rejectionMessage: Message = {
                 id: `msg-${Date.now()}`,
                 role: 'assistant',
@@ -1872,14 +1873,14 @@ export class CodingAgentGraph {
 
         // Check if we need to continue (based on verification)
         if (!verificationResult.needsAdditionalIteration) {
-          console.log('[CodingAgentGraph] Verification indicates completion, ending loop');
+          logger.info('[CodingAgentGraph] Verification indicates completion, ending loop');
           break;
         }
 
         iterations++;
       }
 
-      console.log('[CodingAgentGraph] Stream completed, total iterations:', iterations);
+      logger.info('[CodingAgentGraph] Stream completed, total iterations:', iterations);
 
       // Reporter: Only for errors or max iterations
       yield { type: 'node', node: 'reporter', data: { status: 'starting' } };

@@ -6,6 +6,7 @@ import { Message } from '@/types';
 import { createRAGSystemMessage } from '../utils/system-message';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * RAG 생성 노드
  */
@@ -19,7 +20,7 @@ async function ragGenerateNode(state: typeof RAGStateAnnotation.State) {
 
       const client = getLLMClient();
       if (!client.isConfigured()) {
-        console.log('[RAGGraph] LLM client not configured, initializing from database...');
+        logger.info('[RAGGraph] LLM client not configured, initializing from database...');
 
         const configStr = databaseService.getSetting('app_config');
         if (!configStr) {
@@ -33,13 +34,13 @@ async function ragGenerateNode(state: typeof RAGStateAnnotation.State) {
 
         // V2 설정이면 V1으로 변환
         if (isLLMConfigV2(appConfig.llm)) {
-          console.log('[RAGGraph] Converting V2 LLM config to V1');
+          logger.info('[RAGGraph] Converting V2 LLM config to V1');
           appConfig.llm = convertV2ToV1(appConfig.llm);
         }
 
         // LLM 클라이언트 초기화
         initializeLLMClient(appConfig.llm);
-        console.log('[RAGGraph] LLM client initialized successfully');
+        logger.info('[RAGGraph] LLM client initialized successfully');
       }
     } catch (error: any) {
       console.error('[RAGGraph] Failed to initialize LLM client:', error);
@@ -74,14 +75,14 @@ async function ragGenerateNode(state: typeof RAGStateAnnotation.State) {
   }));
 
   try {
-    console.log('[RAGGraph] Starting generation with documents:', state.documents.length);
+    logger.info('[RAGGraph] Starting generation with documents:', state.documents.length);
     if (state.documents.length > 0) {
-      console.log(
+      logger.info(
         '[RAGGraph] Document titles:',
         state.documents.map((d) => d.metadata?.title)
       );
-      console.log('[RAGGraph] Total context length:', context.length, 'chars');
-      console.log(
+      logger.info('[RAGGraph] Total context length:', context.length, 'chars');
+      logger.info(
         '[RAGGraph] System message length:',
         messages.find((m) => m.role === 'system')?.content.length,
         'chars'
@@ -105,7 +106,7 @@ async function ragGenerateNode(state: typeof RAGStateAnnotation.State) {
       referenced_documents: referencedDocs,
     };
 
-    console.log(`[RAGGraph] Generation complete. Length: ${accumulatedContent.length}`);
+    logger.info(`[RAGGraph] Generation complete. Length: ${accumulatedContent.length}`);
 
     return {
       messages: [assistantMessage],

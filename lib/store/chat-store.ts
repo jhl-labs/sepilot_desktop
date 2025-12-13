@@ -25,6 +25,7 @@ import type {
 } from '@/types/presentation';
 
 // App mode types
+import { logger } from '@/lib/utils/logger';
 export type AppMode = 'chat' | 'editor' | 'browser' | 'presentation';
 
 // Open file tab interface
@@ -843,45 +844,45 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     const conversationSettings = conversation.chatSettings;
     const settingsUpdate: Partial<ChatStore> = {};
 
-    console.log('[setActiveConversation] Restoring settings for conversation:', id);
-    console.log('[setActiveConversation] Conversation chatSettings:', conversationSettings);
+    logger.info('[setActiveConversation] Restoring settings for conversation:', id);
+    logger.info('[setActiveConversation] Conversation chatSettings:', conversationSettings);
 
     if (conversationSettings) {
       if (conversationSettings.thinkingMode !== undefined) {
         settingsUpdate.thinkingMode = conversationSettings.thinkingMode;
-        console.log(
+        logger.info(
           '[setActiveConversation] Restoring thinkingMode:',
           conversationSettings.thinkingMode
         );
       }
       if (conversationSettings.enableRAG !== undefined) {
         settingsUpdate.enableRAG = conversationSettings.enableRAG;
-        console.log('[setActiveConversation] Restoring enableRAG:', conversationSettings.enableRAG);
+        logger.info('[setActiveConversation] Restoring enableRAG:', conversationSettings.enableRAG);
       }
       if (conversationSettings.enableTools !== undefined) {
         settingsUpdate.enableTools = conversationSettings.enableTools;
-        console.log(
+        logger.info(
           '[setActiveConversation] Restoring enableTools:',
           conversationSettings.enableTools
         );
       }
       if (conversationSettings.enabledTools !== undefined) {
         settingsUpdate.enabledTools = new Set(conversationSettings.enabledTools);
-        console.log(
+        logger.info(
           '[setActiveConversation] Restoring enabledTools:',
           conversationSettings.enabledTools
         );
       }
       if (conversationSettings.enableImageGeneration !== undefined) {
         settingsUpdate.enableImageGeneration = conversationSettings.enableImageGeneration;
-        console.log(
+        logger.info(
           '[setActiveConversation] Restoring enableImageGeneration:',
           conversationSettings.enableImageGeneration
         );
       }
       if (conversationSettings.selectedImageGenProvider !== undefined) {
         settingsUpdate.selectedImageGenProvider = conversationSettings.selectedImageGenProvider;
-        console.log(
+        logger.info(
           '[setActiveConversation] Restoring selectedImageGenProvider:',
           conversationSettings.selectedImageGenProvider
         );
@@ -889,7 +890,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
       // CRITICAL: Enforce consistency - if image generation is enabled, tools must be enabled
       if (settingsUpdate.enableImageGeneration === true) {
-        console.log(
+        logger.info(
           '[setActiveConversation] Image generation is enabled, forcing enableTools=true and enableRAG=false'
         );
         settingsUpdate.enableTools = true;
@@ -897,7 +898,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         settingsUpdate.thinkingMode = 'instant';
       }
     } else {
-      console.log('[setActiveConversation] No chatSettings found, using defaults');
+      logger.info('[setActiveConversation] No chatSettings found, using defaults');
     }
 
     // If we have cached messages (e.g., from background streaming), use them immediately
@@ -1642,8 +1643,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setPresentationSlides: (slides: PresentationSlide[]) => {
-    console.log('[ChatStore] setPresentationSlides called with', slides.length, 'slides');
-    console.log('[ChatStore] First slide:', slides[0]);
+    logger.info('[ChatStore] setPresentationSlides called with', slides.length, 'slides');
+    logger.info('[ChatStore] First slide:', slides[0]);
     set({ presentationSlides: slides });
   },
 

@@ -1,11 +1,12 @@
 import { Message, LLMConfig } from '@/types';
 
+import { logger } from '@/lib/utils/logger';
 export interface LLMTool {
   type: 'function';
   function: {
     name: string;
     description: string;
-    parameters: Record<string, any>;
+    parameters: Record<string, unknown>;
   };
 }
 
@@ -24,6 +25,7 @@ export interface LLMOptions {
   topP?: number;
   stream?: boolean;
   tools?: LLMTool[];
+  tool_choice?: 'auto' | 'none' | 'required' | { type: 'function'; function: { name: string } };
 }
 
 export interface LLMResponse {
@@ -101,11 +103,11 @@ export abstract class BaseLLMProvider {
   /**
    * Format messages for the API
    */
-  protected formatMessages(messages: Message[]): any[] {
+  protected formatMessages(messages: Message[]): Array<Record<string, unknown>> {
     return messages.map((msg) => {
       // Handle tool messages with tool_call_id (OpenAI API requirement)
       if (msg.role === 'tool') {
-        const toolMsg: any = {
+        const toolMsg: Record<string, unknown> = {
           role: 'tool',
           content: msg.content,
         };
@@ -128,21 +130,31 @@ export abstract class BaseLLMProvider {
         return {
           role: 'assistant',
           content: msg.content || null, // Can be null when only tool calls
-          tool_calls: msg.tool_calls.map((tc: any) => ({
-            id: tc.id,
-            type: tc.type || 'function',
-            function: {
-              name: tc.name,
-              arguments:
-                typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments),
-            },
-          })),
+          tool_calls: msg.tool_calls.map((tc) => {
+            const call = tc as {
+              id: string;
+              type?: string;
+              name?: string;
+              arguments?: unknown;
+            };
+            return {
+              id: call.id,
+              type: call.type || 'function',
+              function: {
+                name: call.name || '',
+                arguments:
+                  typeof call.arguments === 'string'
+                    ? call.arguments
+                    : JSON.stringify(call.arguments),
+              },
+            };
+          }),
         };
       }
 
       // If message has images, format content as OpenAI Vision API format
       if (msg.images && msg.images.length > 0) {
-        const content: any[] = [];
+        const content: Array<Record<string, unknown>> = [];
 
         // Add text content if present
         if (msg.content) {
@@ -162,10 +174,10 @@ export abstract class BaseLLMProvider {
             // If no data prefix, add one based on mimeType or default to jpeg
             const mimeType = image.mimeType || 'image/jpeg';
             imageUrl = `data:${mimeType};base64,${imageUrl}`;
-            console.log('[LLM] Added data URL prefix to image');
+            logger.debug('[LLM] Added data URL prefix to image');
           }
 
-          console.log('[LLM] Image for OpenAI format:', {
+          logger.debug('[LLM] Image for OpenAI format:', {
             filename: image.filename,
             mimeType: image.mimeType,
             hasDataPrefix: imageUrl.startsWith('data:'),
@@ -175,7 +187,7 @@ export abstract class BaseLLMProvider {
 
           // Skip if no valid image data
           if (!imageUrl || imageUrl.length < 50) {
-            console.warn('[LLM] Skipping invalid image:', {
+            logger.warn('[LLM] Skipping invalid image:', {
               filename: image.filename,
               urlLength: imageUrl.length,
             });
@@ -196,7 +208,7 @@ export abstract class BaseLLMProvider {
           content,
         };
 
-        console.log(
+        logger.debug(
           '[LLM] Formatted OpenAI Vision message:',
           `${JSON.stringify(formattedMsg).substring(0, 300)}...`
         );

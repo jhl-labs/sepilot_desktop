@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Code Analysis Tools for Editor Agent
  *
@@ -208,7 +209,7 @@ const searchSimilarCodeTool: EditorTool = {
       rgCommand += ` --max-count ${maxResults}`;
       rgCommand += ` "${pattern}" "${workingDir}"`;
 
-      console.log('[search_similar_code] Running:', rgCommand);
+      logger.info('[search_similar_code] Running:', rgCommand);
 
       const { stdout } = await execAsync(rgCommand);
       const lines = stdout.trim().split('\n');
@@ -383,7 +384,7 @@ const findDefinitionTool: EditorTool = {
       }
       rgCommand += ` "${pattern}" "${workingDir}"`;
 
-      console.log('[find_definition] Running:', rgCommand);
+      logger.info('[find_definition] Running:', rgCommand);
 
       const { stdout } = await execAsync(rgCommand);
       const lines = stdout.trim().split('\n');
@@ -444,5 +445,5 @@ export const codeTools: EditorTool[] = [
  */
 export function registerCodeTools(registry: any): void {
   codeTools.forEach((tool) => registry.register(tool));
-  console.log(`[CodeTools] Registered ${codeTools.length} code analysis tools`);
+  logger.info(`[CodeTools] Registered ${codeTools.length} code analysis tools`);
 }

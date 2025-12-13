@@ -1,4 +1,10 @@
-import { VectorDocument, SearchResult, VectorDBConfig, SearchOptions } from './types';
+import {
+  VectorDocument,
+  SearchResult,
+  VectorDBConfig,
+  SearchOptions,
+  DocumentMetadata,
+} from './types';
 
 /**
  * VectorDB 추상 인터페이스
@@ -59,7 +65,7 @@ export abstract class VectorDB {
   /**
    * 문서 메타데이터 업데이트
    */
-  abstract updateMetadata(id: string, metadata: Record<string, any>): Promise<void>;
+  abstract updateMetadata(id: string, metadata: DocumentMetadata): Promise<void>;
 
   /**
    * 인덱스의 문서 개수

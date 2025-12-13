@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * useConfigLoader Hook
  *
@@ -39,7 +40,7 @@ export function useConfigLoader() {
               let llmCfg = result.data.llm;
               // Convert V2 to V1 if needed
               if (isLLMConfigV2(llmCfg)) {
-                console.log('[useConfigLoader] Converting V2 config to V1 for LLM client');
+                logger.info('[useConfigLoader] Converting V2 config to V1 for LLM client');
                 llmCfg = convertV2ToV1(llmCfg);
               }
               initializeLLMClient(llmCfg);

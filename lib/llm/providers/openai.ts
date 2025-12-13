@@ -3,6 +3,7 @@ import { Message } from '@/types';
 import { fetchWithConfig, createAuthHeader } from '../http-utils';
 
 // Logger that works in both Electron Main Process and Browser
+import { logger } from '@/lib/utils/logger';
 const log = {
   info: (...args: any[]) => {
     if (typeof process !== 'undefined' && process.versions?.electron) {
@@ -12,10 +13,10 @@ const log = {
         const { logger } = require('../../../electron/services/logger');
         logger.info(...args);
       } catch {
-        console.log(...args);
+        logger.info(...args);
       }
     } else {
-      console.log(...args);
+      logger.info(...args);
     }
   },
   warn: (...args: any[]) => {

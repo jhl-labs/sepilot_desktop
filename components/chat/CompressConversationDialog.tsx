@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, FileArchive, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import type { Conversation, Message } from '@/types';
 
+import { logger } from '@/lib/utils/logger';
 interface CompressConversationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -102,19 +103,19 @@ export function CompressConversationDialog({
 
       const compressedText = result.data.content;
 
-      console.log('[CompressDialog] Raw LLM response:', compressedText);
+      logger.info('[CompressDialog] Raw LLM response:', compressedText);
 
       // 압축된 메시지 파싱
       const messageBlocks = compressedText.split('---').filter((block) => block.trim());
       const parsedMessages: Message[] = [];
 
-      console.log('[CompressDialog] Message blocks:', messageBlocks.length);
+      logger.info('[CompressDialog] Message blocks:', messageBlocks.length);
 
       for (const block of messageBlocks) {
         const roleMatch = block.match(/\[ROLE:\s*(user|assistant)\]/i);
         const contentMatch = block.match(/\[CONTENT:\s*(.+)\s*\]/s);
 
-        console.log('[CompressDialog] Block:', {
+        logger.info('[CompressDialog] Block:', {
           hasRole: !!roleMatch,
           hasContent: !!contentMatch,
           role: roleMatch?.[1],
@@ -137,7 +138,7 @@ export function CompressConversationDialog({
         }
       }
 
-      console.log('[CompressDialog] Parsed messages:', parsedMessages.length);
+      logger.info('[CompressDialog] Parsed messages:', parsedMessages.length);
 
       if (parsedMessages.length === 0) {
         throw new Error('압축된 메시지를 파싱하는데 실패했습니다.');

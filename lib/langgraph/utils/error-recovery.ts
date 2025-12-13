@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Error Recovery for Coding Agent
  *
@@ -77,14 +78,14 @@ export class ErrorRecovery {
 
     for (let attempt = 0; attempt <= finalConfig.maxRetries; attempt++) {
       try {
-        console.log(
+        logger.info(
           `[ErrorRecovery] ${context}: attempt ${attempt + 1}/${finalConfig.maxRetries + 1}`
         );
 
         const result = await fn();
 
         const duration = Date.now() - startTime;
-        console.log(
+        logger.info(
           `[ErrorRecovery] ${context}: success after ${attempt + 1} attempts (${duration}ms)`
         );
 
@@ -124,7 +125,7 @@ export class ErrorRecovery {
           finalConfig.maxDelayMs
         );
 
-        console.log(`[ErrorRecovery] ${context}: retrying in ${delay}ms...`);
+        logger.info(`[ErrorRecovery] ${context}: retrying in ${delay}ms...`);
         await this.sleep(delay);
       }
     }

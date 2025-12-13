@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Conversation-specific streaming callbacks for LLM responses
  * Supports multiple concurrent conversations with isolated streaming
@@ -133,7 +134,7 @@ export function setStreamingCallback(
 ): void {
   const id = conversationId || currentConversationId;
   if (!id) {
-    console.warn('[StreamingCallback] No conversationId provided');
+    logger.warn('[StreamingCallback] No conversationId provided');
     return;
   }
 
@@ -163,14 +164,14 @@ export function getStreamingCallback(conversationId?: string): StreamingCallback
 export function emitStreamingChunk(chunk: string, conversationId?: string): boolean {
   const id = conversationId || currentConversationId;
   if (!id) {
-    console.warn('[StreamingCallback] No conversationId for chunk emission');
+    logger.warn('[StreamingCallback] No conversationId for chunk emission');
     return false;
   }
 
   // Check if streaming was aborted
   const signal = abortSignals.get(id);
   if (signal?.aborted) {
-    console.log(`[StreamingCallback] Streaming aborted for ${id}, throwing error`);
+    logger.warn('[StreamingCallback] Streaming aborted', { conversationId: id });
     throw new Error('Streaming aborted by user');
   }
 
@@ -191,7 +192,7 @@ export function setImageProgressCallback(
 ): void {
   const id = conversationId || currentConversationId;
   if (!id) {
-    console.warn('[StreamingCallback] No conversationId provided for image progress');
+    logger.warn('[StreamingCallback] No conversationId provided for image progress');
     return;
   }
 
@@ -228,11 +229,11 @@ export function emitImageProgress(
 export function setAbortSignal(signal: AbortSignal, conversationId?: string): void {
   const id = conversationId || currentConversationId;
   if (!id) {
-    console.warn('[StreamingCallback] No conversationId provided for abort signal');
+    logger.warn('[StreamingCallback] No conversationId provided for abort signal');
     return;
   }
   abortSignals.set(id, signal);
-  console.log(`[StreamingCallback] Abort signal set for ${id}`);
+  logger.info('[StreamingCallback] Abort signal set', { conversationId: id });
 }
 
 /**

@@ -1,9 +1,11 @@
 /// <reference lib="dom" />
 /// <reference types="../../types/electron" />
 // Note: This file is used in both renderer (browser) and electron contexts
-import { MCPClient } from './client';
-import { MCPServerConfig, MCPTool } from './types';
 
+import { MCPClient } from './client';
+import { MCPServerConfig, MCPTool, ToolCallResult } from './types';
+
+import { logger } from '@/lib/utils/logger';
 /**
  * MCP Server Manager
  *
@@ -69,11 +71,15 @@ class MCPServerManagerClass {
   /**
    * 도구 호출
    */
-  async callTool(serverName: string, toolName: string, args: any): Promise<any> {
+  async callTool(
+    serverName: string,
+    toolName: string,
+    args: Record<string, unknown>
+  ): Promise<ToolCallResult> {
     if (typeof window !== 'undefined' && window.electronAPI) {
       const result = await window.electronAPI.mcp.callTool(serverName, toolName, args);
       if (result.success) {
-        return result.data;
+        return result.data as ToolCallResult;
       } else {
         throw new Error(result.error || 'Tool call failed');
       }
@@ -89,7 +95,10 @@ class MCPServerManagerClass {
     this.servers.set(client.getName(), client);
     this.updateAllTools();
 
-    console.log(`MCP Server added: ${client.getName()} (${client.getTools().length} tools)`);
+    logger.info('MCP Server added', {
+      name: client.getName(),
+      toolCount: client.getTools().length,
+    });
   }
 
   /**
@@ -101,7 +110,7 @@ class MCPServerManagerClass {
       await client.disconnect();
       this.servers.delete(name);
       this.updateAllTools();
-      console.log(`MCP Server removed: ${name}`);
+      logger.info('MCP Server removed', { name });
     }
   }
 
@@ -139,7 +148,11 @@ class MCPServerManagerClass {
   /**
    * Main Process용 - 도구 호출
    */
-  async callToolInMainProcess(serverName: string, toolName: string, args: any): Promise<any> {
+  async callToolInMainProcess(
+    serverName: string,
+    toolName: string,
+    args: Record<string, unknown>
+  ): Promise<ToolCallResult> {
     const client = this.servers.get(serverName);
     if (!client) {
       throw new Error(`Server '${serverName}' not found`);

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * File Tracker for Coding Agent
  *
@@ -111,7 +112,7 @@ export class FileTracker {
 
     this.changes.push(change);
 
-    console.log(`[FileTracker] Recorded ${operation} on ${path.basename(filePath)}`);
+    logger.info(`[FileTracker] Recorded ${operation} on ${path.basename(filePath)}`);
 
     return change;
   }
@@ -156,7 +157,7 @@ export class FileTracker {
       this.rollbackPoints.shift();
     }
 
-    console.log(`[FileTracker] Created rollback point: ${description} (${point.id})`);
+    logger.info(`[FileTracker] Created rollback point: ${description} (${point.id})`);
 
     return point;
   }
@@ -170,7 +171,7 @@ export class FileTracker {
       return { success: false, error: `Rollback point ${pointId} not found` };
     }
 
-    console.log(`[FileTracker] Rolling back to: ${point.description}`);
+    logger.info(`[FileTracker] Rolling back to: ${point.description}`);
 
     try {
       // Reverse changes in reverse order
@@ -185,7 +186,7 @@ export class FileTracker {
       // Remove changes after rollback point
       this.changes = this.changes.filter((c) => c.timestamp <= point.timestamp);
 
-      console.log(`[FileTracker] Successfully rolled back ${changesToRevert.length} changes`);
+      logger.info(`[FileTracker] Successfully rolled back ${changesToRevert.length} changes`);
 
       return { success: true };
     } catch (error: any) {
@@ -198,7 +199,7 @@ export class FileTracker {
    * Revert a single change
    */
   private async revertChange(change: FileChange): Promise<void> {
-    console.log(`[FileTracker] Reverting ${change.operation} on ${path.basename(change.filePath)}`);
+    logger.info(`[FileTracker] Reverting ${change.operation} on ${path.basename(change.filePath)}`);
 
     switch (change.operation) {
       case 'create':
@@ -338,7 +339,7 @@ export class FileTracker {
     this.snapshots.clear();
     this.changes = [];
     this.rollbackPoints = [];
-    console.log('[FileTracker] Cleared all tracking data');
+    logger.info('[FileTracker] Cleared all tracking data');
   }
 
   /**

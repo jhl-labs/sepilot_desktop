@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * useToolApproval Hook
  *
@@ -20,7 +21,7 @@ export function useToolApproval() {
         return;
       }
 
-      console.log(
+      logger.info(
         '[useToolApproval] Approving tools:',
         toolCalls.map((tc) => tc.name)
       );
@@ -47,7 +48,7 @@ export function useToolApproval() {
       return;
     }
 
-    console.log('[useToolApproval] Rejecting tools');
+    logger.info('[useToolApproval] Rejecting tools');
 
     try {
       if (isElectron() && window.electronAPI?.langgraph) {
@@ -70,7 +71,7 @@ export function useToolApproval() {
         return;
       }
 
-      console.log('[useToolApproval] Always approving tools for session');
+      logger.info('[useToolApproval] Always approving tools for session');
 
       // Set session-wide auto-approval
       setAlwaysApproveToolsForSession(true);

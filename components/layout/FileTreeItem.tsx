@@ -1,3 +1,6 @@
+'use client';
+
+import { logger } from '@/lib/utils/logger';
 /**
  * File Tree Item Component
  *
@@ -9,8 +12,6 @@
  * - Keyboard shortcuts (Enter, Escape)
  * - Performance optimized with React.memo and useCallback
  */
-
-'use client';
 
 import { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { Folder, FolderOpen, File, ChevronRight, ChevronDown } from 'lucide-react';
@@ -77,7 +78,7 @@ export const FileTreeItem = memo(function FileTreeItem({
   // Auto-load children if folder is expanded but children not loaded yet
   useEffect(() => {
     if (node.isDirectory && isExpanded && !children && isAvailable) {
-      console.log(`[FileTreeItem] Auto-loading expanded directory: ${node.path}`);
+      logger.info(`[FileTreeItem] Auto-loading expanded directory: ${node.path}`);
       readDirectory(node.path).then((loadedChildren) => {
         if (loadedChildren) {
           setChildren(loadedChildren);
@@ -90,7 +91,7 @@ export const FileTreeItem = memo(function FileTreeItem({
     if (node.isDirectory) {
       // Lazy load children if not loaded yet
       if (!children && isAvailable) {
-        console.log(`[FileTreeItem] Lazy loading directory: ${node.path}`);
+        logger.info(`[FileTreeItem] Lazy loading directory: ${node.path}`);
         const loadedChildren = await readDirectory(node.path);
         if (loadedChildren) {
           setChildren(loadedChildren);
@@ -118,11 +119,11 @@ export const FileTreeItem = memo(function FileTreeItem({
     const itemType = node.isDirectory ? '폴더와 내용' : '파일';
     const confirmed = window.confirm(`"${node.name}" ${itemType}을(를) 삭제하시겠습니까?`);
     if (!confirmed) {
-      console.log('[FileTreeItem] Delete cancelled by user');
+      logger.info('[FileTreeItem] Delete cancelled by user');
       return;
     }
 
-    console.log(`[FileTreeItem] Deleting: ${node.path}`);
+    logger.info(`[FileTreeItem] Deleting: ${node.path}`);
     const success = await deleteItem(node.path);
     if (success) {
       onRefresh();
@@ -133,7 +134,7 @@ export const FileTreeItem = memo(function FileTreeItem({
 
   const handleRename = useCallback(async () => {
     if (!newName || newName.trim() === '' || newName === node.name) {
-      console.log('[FileTreeItem] Rename cancelled - no change or empty name');
+      logger.info('[FileTreeItem] Rename cancelled - no change or empty name');
       setIsRenaming(false);
       setNewName(node.name);
       return;
@@ -157,7 +158,7 @@ export const FileTreeItem = memo(function FileTreeItem({
     }
 
     const newPath = newPathResult.data;
-    console.log(`[FileTreeItem] Renaming: ${node.path} -> ${newPath}`);
+    logger.info(`[FileTreeItem] Renaming: ${node.path} -> ${newPath}`);
     const success = await renameItem(node.path, newPath);
 
     if (success) {
@@ -183,12 +184,12 @@ export const FileTreeItem = memo(function FileTreeItem({
 
   const handleCopy = useCallback(() => {
     copyFiles([node.path]);
-    console.log('[FileTreeItem] Copied to clipboard:', node.path);
+    logger.info('[FileTreeItem] Copied to clipboard:', node.path);
   }, [copyFiles, node.path]);
 
   const handleCut = useCallback(() => {
     cutFiles([node.path]);
-    console.log('[FileTreeItem] Cut to clipboard:', node.path);
+    logger.info('[FileTreeItem] Cut to clipboard:', node.path);
   }, [cutFiles, node.path]);
 
   const handlePaste = useCallback(async () => {
@@ -197,7 +198,7 @@ export const FileTreeItem = memo(function FileTreeItem({
       return;
     }
 
-    console.log('[FileTreeItem] Pasting into:', node.path);
+    logger.info('[FileTreeItem] Pasting into:', node.path);
     await pasteFiles(node.path, onRefresh);
   }, [node.isDirectory, node.path, pasteFiles, onRefresh]);
 
@@ -205,7 +206,7 @@ export const FileTreeItem = memo(function FileTreeItem({
     // node.path is already an absolute path from the file system
     const success = await copyToClipboard(node.path);
     if (success) {
-      console.log('[FileTreeItem] Absolute path copied:', node.path);
+      logger.info('[FileTreeItem] Absolute path copied:', node.path);
     } else {
       console.error('[FileTreeItem] Failed to copy path to clipboard');
     }
@@ -222,7 +223,7 @@ export const FileTreeItem = memo(function FileTreeItem({
       if (result.success && result.data) {
         const success = await copyToClipboard(result.data);
         if (success) {
-          console.log('[FileTreeItem] Relative path copied:', result.data);
+          logger.info('[FileTreeItem] Relative path copied:', result.data);
         }
       }
     } catch (error) {
@@ -239,7 +240,7 @@ export const FileTreeItem = memo(function FileTreeItem({
     try {
       const result = await window.electronAPI.fs.showInFolder(node.path);
       if (result.success) {
-        console.log('[FileTreeItem] Showed in folder:', node.path);
+        logger.info('[FileTreeItem] Showed in folder:', node.path);
       }
     } catch (error) {
       console.error('[FileTreeItem] Error showing in folder:', error);
@@ -254,7 +255,7 @@ export const FileTreeItem = memo(function FileTreeItem({
     useChatStore.getState().setWorkingDirectory(dirPath);
     useChatStore.getState().setShowTerminalPanel(true);
 
-    console.log('[FileTreeItem] Opening terminal in:', dirPath);
+    logger.info('[FileTreeItem] Opening terminal in:', dirPath);
   }, [node.isDirectory, node.path, parentPath]);
 
   const handleDuplicate = useCallback(async () => {
@@ -266,7 +267,7 @@ export const FileTreeItem = memo(function FileTreeItem({
     try {
       const result = await window.electronAPI.fs.duplicate(node.path);
       if (result.success && result.data) {
-        console.log('[FileTreeItem] Duplicated:', node.path, '->', result.data);
+        logger.info('[FileTreeItem] Duplicated:', node.path, '->', result.data);
         onRefresh();
       }
     } catch (error) {
@@ -279,7 +280,7 @@ export const FileTreeItem = memo(function FileTreeItem({
   const handleCopyFileName = useCallback(async () => {
     const success = await copyToClipboard(node.name);
     if (success) {
-      console.log('[FileTreeItem] File name copied:', node.name);
+      logger.info('[FileTreeItem] File name copied:', node.name);
     } else {
       console.error('[FileTreeItem] Failed to copy file name');
     }
@@ -295,7 +296,7 @@ export const FileTreeItem = memo(function FileTreeItem({
     try {
       const result = await window.electronAPI.fs.openWithDefaultApp(node.path);
       if (result.success) {
-        console.log('[FileTreeItem] Opened with default app:', node.path);
+        logger.info('[FileTreeItem] Opened with default app:', node.path);
       } else {
         console.error('[FileTreeItem] Failed to open with default app:', result.error);
         window.alert('기본 앱으로 열기 실패');
@@ -310,7 +311,7 @@ export const FileTreeItem = memo(function FileTreeItem({
   const handleFindInFolder = useCallback(() => {
     // TODO: Implement setSearchScope in ChatStore for folder-scoped search
     useChatStore.getState().setActiveEditorTab?.('search');
-    console.log('[FileTreeItem] Find in folder:', node.path);
+    logger.info('[FileTreeItem] Find in folder:', node.path);
   }, [node.path]);
 
   // Collapse all children folders
@@ -330,7 +331,7 @@ export const FileTreeItem = memo(function FileTreeItem({
       }
     });
 
-    console.log('[FileTreeItem] Collapsed all children:', pathsToCollapse.length, 'folders');
+    logger.info('[FileTreeItem] Collapsed all children:', pathsToCollapse.length, 'folders');
   }, [node.path]);
 
   // Drag & Drop Handlers - memoized for performance
@@ -343,7 +344,7 @@ export const FileTreeItem = memo(function FileTreeItem({
       e.dataTransfer.setData('application/sepilot-name', node.name);
       e.dataTransfer.setData('application/sepilot-isdir', String(node.isDirectory));
       e.dataTransfer.effectAllowed = 'copyMove';
-      console.log('[FileTreeItem] Drag started:', node.path);
+      logger.info('[FileTreeItem] Drag started:', node.path);
     },
     [node.path, node.name, node.isDirectory]
   );
@@ -431,7 +432,7 @@ export const FileTreeItem = memo(function FileTreeItem({
 
       const targetPath = targetPathResult.data;
       const isCopy = e.ctrlKey || e.metaKey;
-      console.log(
+      logger.info(
         `[FileTreeItem] Dropping: ${draggedPath} -> ${targetPath} (${isCopy ? 'copy' : 'move'})`
       );
 
@@ -443,7 +444,7 @@ export const FileTreeItem = memo(function FileTreeItem({
             // Move the duplicated file to target location
             const success = await renameItem(duplicateResult.data, targetPath);
             if (success) {
-              console.log('[FileTreeItem] Copied successfully');
+              logger.info('[FileTreeItem] Copied successfully');
               onRefresh();
             } else {
               // Clean up the duplicate if move failed
@@ -457,7 +458,7 @@ export const FileTreeItem = memo(function FileTreeItem({
           // Move operation
           const success = await renameItem(draggedPath, targetPath);
           if (success) {
-            console.log('[FileTreeItem] Moved successfully');
+            logger.info('[FileTreeItem] Moved successfully');
             onRefresh();
           } else {
             window.alert('이동 실패');

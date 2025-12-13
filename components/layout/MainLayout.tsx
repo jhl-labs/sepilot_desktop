@@ -12,6 +12,7 @@ import { initializeEmbedding } from '@/lib/vectordb/embeddings/client';
 import { isElectron } from '@/lib/platform';
 import { copyToClipboard } from '@/lib/utils/clipboard';
 
+import { logger } from '@/lib/utils/logger';
 interface MainLayoutProps {
   children: ReactNode;
 }
@@ -139,13 +140,13 @@ export function MainLayout({ children }: MainLayoutProps) {
       key: ',',
       meta: true,
       handler: () => {
-        console.log('[MainLayout] Settings shortcut (Cmd+,) pressed - hiding BrowserView');
+        logger.info('[MainLayout] Settings shortcut (Cmd+,) pressed - hiding BrowserView');
         // Settings 열기 전에 BrowserView 숨김
         if (isElectron() && window.electronAPI) {
           window.electronAPI.browserView
             .hideAll()
             .then(() => {
-              console.log('[MainLayout] BrowserView hidden before opening Settings (shortcut)');
+              logger.info('[MainLayout] BrowserView hidden before opening Settings (shortcut)');
             })
             .catch((err) => {
               console.error('[MainLayout] Failed to hide BrowserView:', err);
@@ -205,7 +206,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       );
       setSidebarWidth(newWidth);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [isResizing]
   );
 
@@ -244,15 +245,15 @@ export function MainLayout({ children }: MainLayoutProps) {
     try {
       // VectorDB 초기화
       if (vectorDBConfig) {
-        console.log('[MainLayout] Initializing VectorDB:', vectorDBConfig.type);
+        logger.info('[MainLayout] Initializing VectorDB:', vectorDBConfig.type);
 
         // SQLite-vec는 브라우저에서 건너뛰기
         if (vectorDBConfig.type === 'sqlite-vec' && !isElectron()) {
-          console.log('⊘ Skipping SQLite-vec in browser environment');
+          logger.info('⊘ Skipping SQLite-vec in browser environment');
         } else {
           try {
             await initializeVectorDB(vectorDBConfig);
-            console.log('✓ VectorDB initialized:', vectorDBConfig.type);
+            logger.info('✓ VectorDB initialized:', vectorDBConfig.type);
           } catch (error) {
             console.error('✗ Failed to initialize VectorDB:', error);
           }
@@ -263,7 +264,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       if (embeddingConfig) {
         try {
           initializeEmbedding(embeddingConfig);
-          console.log('✓ Embedding initialized:', embeddingConfig.provider);
+          logger.info('✓ Embedding initialized:', embeddingConfig.provider);
         } catch (error) {
           console.error('✗ Failed to initialize Embedding:', error);
         }
@@ -291,7 +292,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           if (result.success && result.data) {
             vectorDBConfig = result.data.vectorDB;
             embeddingConfig = result.data.embedding;
-            console.log('[MainLayout] Loaded config from SQLite');
+            logger.info('[MainLayout] Loaded config from SQLite');
           }
         } else {
           // Web: localStorage에서 로드
@@ -308,33 +309,33 @@ export function MainLayout({ children }: MainLayoutProps) {
 
         // VectorDB 초기화
         if (vectorDBConfig) {
-          console.log('[MainLayout] VectorDB type:', vectorDBConfig.type);
+          logger.info('[MainLayout] VectorDB type:', vectorDBConfig.type);
 
           // SQLite-vec는 브라우저에서 건너뛰기
           if (vectorDBConfig.type === 'sqlite-vec' && !isElectron()) {
-            console.log('⊘ Skipping SQLite-vec in browser environment');
+            logger.info('⊘ Skipping SQLite-vec in browser environment');
           } else {
             try {
               await initializeVectorDB(vectorDBConfig);
-              console.log('✓ VectorDB auto-initialized:', vectorDBConfig.type);
+              logger.info('✓ VectorDB auto-initialized:', vectorDBConfig.type);
             } catch (error) {
               console.error('✗ Failed to auto-initialize VectorDB:', error);
             }
           }
         } else {
-          console.log('[MainLayout] No VectorDB config found');
+          logger.info('[MainLayout] No VectorDB config found');
         }
 
         // Embedding 초기화
         if (embeddingConfig) {
           try {
             initializeEmbedding(embeddingConfig);
-            console.log('✓ Embedding auto-initialized:', embeddingConfig.provider);
+            logger.info('✓ Embedding auto-initialized:', embeddingConfig.provider);
           } catch (error) {
             console.error('✗ Failed to auto-initialize Embedding:', error);
           }
         } else {
-          console.log('[MainLayout] No Embedding config found');
+          logger.info('[MainLayout] No Embedding config found');
         }
 
         await initializeFromConfig(vectorDBConfig, embeddingConfig);
@@ -359,7 +360,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       const { vectorDB, embedding } = customEvent.detail || {};
 
       if (vectorDB || embedding) {
-        console.log('[MainLayout] Config update received:', {
+        logger.info('[MainLayout] Config update received:', {
           vectorDB: !!vectorDB,
           embedding: !!embedding,
         });
@@ -382,7 +383,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
     // Settings/Documents/Gallery가 열려있으면 항상 숨김
     if (settingsOpen || viewMode === 'documents' || viewMode === 'gallery') {
-      console.log(
+      logger.info(
         '[MainLayout] Hiding BrowserView for overlay (settingsOpen:',
         settingsOpen,
         'viewMode:',
@@ -392,7 +393,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       window.electronAPI.browserView
         .hideAll()
         .then(() => {
-          console.log('[MainLayout] BrowserView hidden successfully');
+          logger.info('[MainLayout] BrowserView hidden successfully');
         })
         .catch((err) => {
           console.error('[MainLayout] Failed to hide BrowserView for overlay:', err);
@@ -402,7 +403,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
     // Editor 모드이고 Browser 탭이 활성화되어 있으면 표시
     if (appMode === 'editor' && activeEditorTab === 'browser') {
-      console.log(
+      logger.info(
         '[MainLayout] Showing BrowserView (appMode:',
         appMode,
         'activeEditorTab:',
@@ -412,7 +413,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       window.electronAPI.browserView
         .showActive()
         .then(() => {
-          console.log('[MainLayout] BrowserView shown successfully');
+          logger.info('[MainLayout] BrowserView shown successfully');
         })
         .catch((err) => {
           console.error('[MainLayout] Failed to show BrowserView:', err);
@@ -421,7 +422,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     // Browser 모드에서는 항상 BrowserView 표시
     // Sidebar의 browserViewMode (chat, snapshots, bookmarks, settings, tools, logs)와 무관하게 표시
     else if (appMode === 'browser' && viewMode === 'chat') {
-      console.log(
+      logger.info(
         '[MainLayout] Showing BrowserView (appMode:',
         appMode,
         'viewMode:',
@@ -433,7 +434,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       window.electronAPI.browserView
         .showActive()
         .then(() => {
-          console.log('[MainLayout] BrowserView shown successfully');
+          logger.info('[MainLayout] BrowserView shown successfully');
         })
         .catch((err) => {
           console.error('[MainLayout] Failed to show BrowserView:', err);
@@ -441,7 +442,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     }
     // 그 외의 경우 숨김
     else {
-      console.log(
+      logger.info(
         '[MainLayout] Hiding BrowserView (appMode:',
         appMode,
         'activeEditorTab:',

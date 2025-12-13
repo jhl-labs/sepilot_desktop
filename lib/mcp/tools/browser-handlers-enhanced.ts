@@ -1,8 +1,11 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Enhanced Browser Tool Handlers
  *
  * Accessibility Tree 기반 의미론적 DOM 분석을 사용한 개선된 브라우저 도구
  */
+
+import type { BrowserView } from 'electron';
 
 import { getActiveBrowserView } from '../../../electron/ipc/handlers/browser-control';
 import type { SemanticElement, DOMAnalysis } from '../../langgraph/utils/dom-analyzer';
@@ -15,8 +18,8 @@ import {
 /**
  * 브라우저에서 접근성 트리 기반 DOM 분석 실행
  */
-export async function analyzePage(browserView: any): Promise<DOMAnalysis> {
-  const result = await browserView.webContents.executeJavaScript(`
+export async function analyzePage(browserView: BrowserView): Promise<DOMAnalysis> {
+  const result = (await browserView.webContents.executeJavaScript(`
     (function() {
       // Utility: Get computed styles for visibility check
       function isElementVisible(element) {
@@ -315,7 +318,7 @@ export async function analyzePage(browserView: any): Promise<DOMAnalysis> {
         },
       };
     })();
-  `);
+  `)) as DOMAnalysis;
 
   // Categorize interactive elements
   const interactiveElements = {
@@ -350,7 +353,7 @@ export async function handleBrowserGetInteractiveElementsEnhanced(): Promise<str
     throw new Error('No active browser tab. Please switch to Browser mode first.');
   }
 
-  console.warn('[BrowserTools] Analyzing page with accessibility tree...');
+  logger.warn('[BrowserTools] Analyzing page with accessibility tree...');
 
   const analysis = await analyzePage(browserView);
 
@@ -394,7 +397,7 @@ export async function handleBrowserSearchElements(query: string): Promise<string
     throw new Error('No active browser tab. Please switch to Browser mode first.');
   }
 
-  console.log(`[BrowserTools] Searching for elements matching: "${query}"`);
+  logger.info('[BrowserTools] Searching for elements matching query', { query });
 
   const analysis = await analyzePage(browserView);
   const results = searchElements(analysis.elements, query, { fuzzy: true });
@@ -428,7 +431,7 @@ export async function handleBrowserGetPageContentEnhanced(): Promise<string> {
     throw new Error('No active browser tab. Please switch to Browser mode first.');
   }
 
-  console.warn('[BrowserTools] Getting page content with semantic structure...');
+  logger.warn('[BrowserTools] Getting page content with semantic structure...');
 
   const analysis = await analyzePage(browserView);
 
@@ -466,7 +469,7 @@ export async function handleBrowserClickElementEnhanced(elementId: string): Prom
     throw new Error('No active browser tab.');
   }
 
-  console.log(`[BrowserTools] Clicking element: ${elementId}`);
+  logger.info('[BrowserTools] Clicking element', { elementId });
 
   const result = await browserView.webContents.executeJavaScript(`
     (function() {
@@ -528,7 +531,7 @@ export async function handleBrowserTypeTextEnhanced(
     throw new Error('No active browser tab.');
   }
 
-  console.log(`[BrowserTools] Typing into element: ${elementId}`);
+  logger.info('[BrowserTools] Typing into element', { elementId, textPreview: text.slice(0, 20) });
 
   const result = await browserView.webContents.executeJavaScript(`
     (function() {

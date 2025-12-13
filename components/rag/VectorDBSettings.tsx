@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { VectorDBConfig, EmbeddingConfig } from '@/lib/vectordb';
 
+import { logger } from '@/lib/utils/logger';
 interface VectorDBSettingsProps {
   onSave: (vectorDBConfig: VectorDBConfig, embeddingConfig: EmbeddingConfig) => Promise<void>;
   initialVectorDBConfig?: VectorDBConfig;
@@ -37,7 +38,7 @@ export function VectorDBSettings({
 
   // 초기 설정이 변경되면 state 업데이트
   useEffect(() => {
-    console.log('[VectorDBSettings] Received initial configs:', {
+    logger.info('[VectorDBSettings] Received initial configs:', {
       vectorDB: initialVectorDBConfig,
       embedding: initialEmbeddingConfig,
       embeddingModel: initialEmbeddingConfig?.model,
@@ -48,7 +49,7 @@ export function VectorDBSettings({
     }
     if (initialEmbeddingConfig) {
       setEmbeddingConfig(initialEmbeddingConfig);
-      console.log(
+      logger.info(
         '[VectorDBSettings] Set embedding config with model:',
         initialEmbeddingConfig.model
       );
@@ -171,7 +172,7 @@ export function VectorDBSettings({
         // 현재 선택된 모델이 새 목록에 없으면 첫 번째 모델로 변경
         if (!models.includes(embeddingConfig.model || '')) {
           const firstModel = models[0];
-          console.log(
+          logger.info(
             `[VectorDBSettings] Current model "${embeddingConfig.model}" not in new list, selecting first: "${firstModel}"`
           );
 
@@ -203,7 +204,7 @@ export function VectorDBSettings({
     setIsSaving(true);
     setMessage(null);
 
-    console.log('[VectorDBSettings] Saving configs:', {
+    logger.info('[VectorDBSettings] Saving configs:', {
       vectorDB: vectorDBConfig,
       embedding: embeddingConfig,
       embeddingModel: embeddingConfig.model,

@@ -10,6 +10,7 @@ import type {
 } from '@/types/presentation';
 import type { Message } from '@/types';
 
+import { logger } from '@/lib/utils/logger';
 export interface PresentationAgentCallbacks {
   onToken?: (chunk: string) => void;
   onStateUpdate?: (state: PresentationAgentState) => void;
@@ -854,7 +855,7 @@ function extractAction(text: string): Record<string, any> | null {
       try {
         const parsed = JSON.parse(jsonContent);
         if (parsed.action) {
-          console.log('[ppt-agent] Successfully parsed JSON from code block');
+          logger.info('[ppt-agent] Successfully parsed JSON from code block');
           return parsed;
         }
       } catch (e) {
@@ -886,7 +887,7 @@ function extractAction(text: string): Record<string, any> | null {
         try {
           const parsed = JSON.parse(jsonStr);
           if (parsed.action) {
-            console.log('[ppt-agent] Successfully parsed JSON from direct match');
+            logger.info('[ppt-agent] Successfully parsed JSON from direct match');
             return parsed;
           }
         } catch (e) {
@@ -973,8 +974,8 @@ export async function runPresentationAgent(
   }
 
   // LLM 응답에서 Action 추출
-  console.log('[ppt-agent] Full response length:', fullResponse.length);
-  console.log(
+  logger.info('[ppt-agent] Full response length:', fullResponse.length);
+  logger.info(
     '[ppt-agent] Response preview:',
     fullResponse.substring(0, 200).replace(/\n/g, '\\n')
   );
@@ -982,7 +983,7 @@ export async function runPresentationAgent(
   let newState = { ...currentState, updatedAt: Date.now() };
 
   if (action) {
-    console.log('[ppt-agent] Extracted action:', action.action, action);
+    logger.info('[ppt-agent] Extracted action:', action.action, action);
     // Action에 따라 상태 업데이트
     switch (action.action) {
       case 'complete_briefing':
@@ -1024,15 +1025,15 @@ export async function runPresentationAgent(
 
       case 'create_slide': {
         const slideData = action.slide;
-        console.log('[ppt-agent] Creating slide with data:', slideData);
+        logger.info('[ppt-agent] Creating slide with data:', slideData);
         const newSlide: PresentationSlide = {
           id: generateId(),
           ...slideData,
         };
-        console.log('[ppt-agent] Generated slide with ID:', newSlide.id);
+        logger.info('[ppt-agent] Generated slide with ID:', newSlide.id);
 
         const requestedIndex = action.slideIndex ?? newState.currentSlideIndex ?? 0;
-        console.log(
+        logger.info(
           '[ppt-agent] Requested slide index:',
           requestedIndex,
           'Current slides array length:',
@@ -1058,7 +1059,7 @@ export async function runPresentationAgent(
           currentStep: nextIndex < totalSlides ? 'slide-creation' : 'review',
         };
 
-        console.log(
+        logger.info(
           '[ppt-agent] Created slide at array position',
           newSlides.length - 1,
           '(requested index:',
@@ -1130,7 +1131,7 @@ export async function runPresentationAgent(
         }
 
         // findings는 응답 메시지에 포함되어 사용자에게 전달됨
-        console.log('[ppt-agent] Verification findings:', findings);
+        logger.info('[ppt-agent] Verification findings:', findings);
         break;
       }
 

@@ -5,6 +5,7 @@ import { Message } from '@/types';
 import { createBaseSystemMessage, createVisionSystemMessage } from '../utils/system-message';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * 기본 채팅 그래프 노드 - 스트리밍 지원
  */
@@ -20,7 +21,7 @@ async function chatGenerateNode(state: typeof ChatStateAnnotation.State) {
   if (hasSystemMessage) {
     // Use existing system message from state (e.g., Quick Question)
     messages = [...state.messages];
-    console.log('[ChatGraph] Using existing system message from state');
+    logger.info('[ChatGraph] Using existing system message from state');
   } else {
     // 시스템 메시지 구성
     const additionalContext = state.context ? `# 추가 컨텍스트\n\n${state.context}` : undefined;
@@ -45,7 +46,7 @@ async function chatGenerateNode(state: typeof ChatStateAnnotation.State) {
   const messageId = `msg-${Date.now()}`;
 
   try {
-    console.log('[ChatGraph] Starting generation');
+    logger.info('[ChatGraph] Starting generation');
 
     // LLM 스트리밍 호출 - 각 청크를 즉시 렌더러로 전송
     for await (const chunk of LLMService.streamChat(messages)) {
@@ -61,7 +62,7 @@ async function chatGenerateNode(state: typeof ChatStateAnnotation.State) {
       created_at: Date.now(),
     };
 
-    console.log(`[ChatGraph] Generation complete. Length: ${accumulatedContent.length}`);
+    logger.info(`[ChatGraph] Generation complete. Length: ${accumulatedContent.length}`);
 
     return {
       messages: [assistantMessage],

@@ -5,6 +5,7 @@ import type { Message } from '@/types';
 import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-callback';
 import { LLMService } from '@/lib/llm/service';
 
+import { logger } from '@/lib/utils/logger';
 const MAX_ITERATIONS = 3;
 
 // RAG 헬퍼 함수
@@ -19,7 +20,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
       return '';
     }
 
-    console.log('[DeepWebResearch] RAG enabled, retrieving documents...');
+    logger.info('[DeepWebResearch] RAG enabled, retrieving documents...');
     const { vectorDBService } = await import('../../../electron/services/vectordb');
     const { databaseService } = await import('../../../electron/services/database');
     const { initializeEmbedding, getEmbeddingProvider } =
@@ -40,7 +41,7 @@ async function retrieveContextIfEnabled(query: string): Promise<string> {
     const results = await vectorDBService.searchByVector(queryEmbedding, 5);
 
     if (results.length > 0) {
-      console.log(`[DeepWebResearch] Found ${results.length} documents`);
+      logger.info(`[DeepWebResearch] Found ${results.length} documents`);
       return results
         .map(
           (doc, i) => `[참고 문서 ${i + 1}]
@@ -69,7 +70,7 @@ async function planNode(state: AgentState): Promise<Partial<AgentState>> {
   const allFailed = lastBatchResults.length > 0 && lastBatchResults.every((r) => !!r.error);
 
   if (allFailed && !isFirstStep) {
-    console.log(
+    logger.info(
       '[DeepWebResearch] Previous searches all failed. Retrying without incrementing iteration.'
     );
     emitStreamingChunk(
@@ -88,7 +89,7 @@ async function planNode(state: AgentState): Promise<Partial<AgentState>> {
     ragContext = await retrieveContextIfEnabled(query);
   }
 
-  console.log(`[DeepWebResearch] Planning Step (Iter ${iteration + 1}, Actual: ${iteration})`);
+  logger.info(`[DeepWebResearch] Planning Step (Iter ${iteration + 1}, Actual: ${iteration})`);
 
   if (isFirstStep) {
     emitStreamingChunk('\n\n## 🧠 심층 웹 연구 시작\n\n', state.conversationId);
@@ -202,7 +203,7 @@ ${previousResults || '(없음)'}
     planOutput += chunk;
   }
 
-  console.log('[DeepWebResearch] Plan Output:', planOutput);
+  logger.info('[DeepWebResearch] Plan Output:', planOutput);
 
   // 파싱
   let plannedQueries: any[] = [];
@@ -255,7 +256,7 @@ async function searchNode(state: AgentState): Promise<Partial<AgentState>> {
     return {};
   }
 
-  console.log(`[DeepWebResearch] Executing ${queries.length} searches...`);
+  logger.info(`[DeepWebResearch] Executing ${queries.length} searches...`);
   emitStreamingChunk(`🚀 **검색 실행 중...**\n`, state.conversationId);
 
   let newToolResults: any[] = [];
@@ -300,8 +301,8 @@ async function searchNode(state: AgentState): Promise<Partial<AgentState>> {
         cleanedParams.max_results = maxResults;
       }
 
-      console.log('[DeepWebResearch] Original params:', params);
-      console.log('[DeepWebResearch] Cleaned params:', cleanedParams);
+      logger.info('[DeepWebResearch] Original params:', params);
+      logger.info('[DeepWebResearch] Cleaned params:', cleanedParams);
     }
 
     return {
@@ -373,19 +374,19 @@ function checkPlan(state: AgentState) {
 
   // 강제 종료 플래그 확인
   if (notes?.forceSynthesize) {
-    console.log('[DeepWebResearch] Force synthesize flag detected');
+    logger.info('[DeepWebResearch] Force synthesize flag detected');
     return 'synthesize';
   }
 
   // 쿼리가 없으면 종료 (Synthesize) - LLM이 충분하다고 판단
   if (!notes || !notes.queries || notes.queries.length === 0) {
-    console.log('[DeepWebResearch] No more queries planned. Moving to synthesize.');
+    logger.info('[DeepWebResearch] No more queries planned. Moving to synthesize.');
     return 'synthesize';
   }
 
   // 최대 반복 횟수 도달 시 종료 (>= 사용하여 정확히 MAX_ITERATIONS만큼만 실행)
   if (notes.iteration >= MAX_ITERATIONS) {
-    console.log(
+    logger.info(
       `[DeepWebResearch] Max iterations reached (${notes.iteration}/${MAX_ITERATIONS}). Moving to synthesize.`
     );
     emitStreamingChunk(
@@ -395,7 +396,7 @@ function checkPlan(state: AgentState) {
     return 'synthesize';
   }
 
-  console.log(
+  logger.info(
     `[DeepWebResearch] Proceeding to search (iteration ${notes.iteration + 1}/${MAX_ITERATIONS})`
   );
   return 'search';
@@ -405,7 +406,7 @@ function checkPlan(state: AgentState) {
  * 3단계: 결과 종합 및 답변 생성 (Synthesize Node)
  */
 async function synthesizeNode(state: AgentState): Promise<Partial<AgentState>> {
-  console.log('[DeepWebResearch] Step 3: Synthesizing answer...');
+  logger.info('[DeepWebResearch] Step 3: Synthesizing answer...');
   emitStreamingChunk('\n\n## ✨ 최종 답변 생성\n\n', state.conversationId);
   emitStreamingChunk(
     '**단계 진행 중:** 수집된 방대한 정보를 바탕으로 최종 답변을 작성합니다...\n\n',
@@ -495,7 +496,7 @@ ${allSearchOutputs}
     created_at: Date.now(),
   };
 
-  console.log('[DeepWebResearch] Final answer synthesized');
+  logger.info('[DeepWebResearch] Final answer synthesized');
 
   return {
     messages: [assistantMessage],

@@ -104,6 +104,9 @@ describe('document fetchers', () => {
     it('should fetch GitHub file content', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
+        headers: {
+          get: jest.fn().mockReturnValue(null),
+        },
         json: jest.fn().mockResolvedValue(mockFileResponse),
       });
 
@@ -119,6 +122,9 @@ describe('document fetchers', () => {
     it('should include authorization header when token provided', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
+        headers: {
+          get: jest.fn().mockReturnValue(null),
+        },
         json: jest.fn().mockResolvedValue(mockFileResponse),
       });
 
@@ -137,6 +143,9 @@ describe('document fetchers', () => {
     it('should use custom branch', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
+        headers: {
+          get: jest.fn().mockReturnValue(null),
+        },
         json: jest.fn().mockResolvedValue(mockFileResponse),
       });
 
@@ -158,6 +167,9 @@ describe('document fetchers', () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 404,
+        headers: {
+          get: jest.fn().mockReturnValue(null),
+        },
       });
 
       await expect(
@@ -169,6 +181,9 @@ describe('document fetchers', () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 403,
+        headers: {
+          get: jest.fn().mockReturnValue(null),
+        },
       });
 
       await expect(
@@ -179,17 +194,23 @@ describe('document fetchers', () => {
     it('should throw error when path points to directory', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
+        headers: {
+          get: jest.fn().mockReturnValue(null),
+        },
         json: jest.fn().mockResolvedValue({ type: 'dir' }),
       });
 
       await expect(fetchGitHubDocument('https://github.com/owner/repo', 'docs')).rejects.toThrow(
-        'Path must point to a file'
+        'Path must point to a file, not a directory'
       );
     });
 
     it('should handle repo URL with .git suffix', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
+        headers: {
+          get: jest.fn().mockReturnValue(null),
+        },
         json: jest.fn().mockResolvedValue(mockFileResponse),
       });
 
@@ -223,21 +244,28 @@ describe('document fetchers', () => {
       (global.fetch as jest.Mock).mockImplementation((url: string) => {
         callCount++;
 
+        const mockHeaders = {
+          get: jest.fn().mockReturnValue(null),
+        };
+
         if (url.includes('/contents/docs?')) {
           return Promise.resolve({
             ok: true,
+            headers: mockHeaders,
             json: () => Promise.resolve(mockDirResponse),
           });
         }
         if (url.includes('/contents/docs/subdir?')) {
           return Promise.resolve({
             ok: true,
+            headers: mockHeaders,
             json: () => Promise.resolve(mockSubDirResponse),
           });
         }
         // File requests
         return Promise.resolve({
           ok: true,
+          headers: mockHeaders,
           json: () => Promise.resolve(mockFileContent),
         });
       });
@@ -253,10 +281,15 @@ describe('document fetchers', () => {
     });
 
     it('should use custom file extensions filter', async () => {
+      const mockHeaders = {
+        get: jest.fn().mockReturnValue(null),
+      };
+
       (global.fetch as jest.Mock).mockImplementation((url: string) => {
         if (url.includes('/contents/docs?')) {
           return Promise.resolve({
             ok: true,
+            headers: mockHeaders,
             json: () =>
               Promise.resolve([
                 { type: 'file', name: 'script.py', path: 'docs/script.py' },
@@ -266,6 +299,7 @@ describe('document fetchers', () => {
         }
         return Promise.resolve({
           ok: true,
+          headers: mockHeaders,
           json: () => Promise.resolve(mockFileContent),
         });
       });
@@ -290,6 +324,9 @@ describe('document fetchers', () => {
     it('should throw error when path points to file', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
+        headers: {
+          get: jest.fn().mockReturnValue(null),
+        },
         json: jest.fn().mockResolvedValue({ type: 'file' }), // Not an array
       });
 
@@ -335,6 +372,9 @@ describe('document fetchers', () => {
 
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
+        headers: {
+          get: jest.fn().mockReturnValue(null),
+        },
         json: jest.fn().mockResolvedValue(mockFileContent),
       });
 
@@ -351,11 +391,29 @@ describe('document fetchers', () => {
     });
 
     it('should fetch GitHub directory when path has no extension', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: jest
-          .fn()
-          .mockResolvedValue([{ type: 'file', name: 'file.md', path: 'docs/file.md' }]),
+      const mockHeaders = {
+        get: jest.fn().mockReturnValue(null),
+      };
+
+      (global.fetch as jest.Mock).mockImplementation((url: string) => {
+        if (url.includes('/contents/docs?')) {
+          return Promise.resolve({
+            ok: true,
+            headers: mockHeaders,
+            json: jest
+              .fn()
+              .mockResolvedValue([{ type: 'file', name: 'file.md', path: 'docs/file.md' }]),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          headers: mockHeaders,
+          json: jest.fn().mockResolvedValue({
+            type: 'file',
+            content: Buffer.from('content').toString('base64'),
+            sha: 'sha123',
+          }),
+        });
       });
 
       const source: DocumentSource = {

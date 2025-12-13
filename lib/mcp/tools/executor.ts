@@ -1,8 +1,11 @@
+import { getErrorMessage } from '@/lib/utils/error-handler';
+
 import { MCPServerManager } from '../server-manager';
 import { ToolRegistry } from './registry';
 import { ToolCallResult } from '../types';
 import { executeBuiltinTool, getBuiltinTools } from './builtin-tools';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Tool Executor
  *
@@ -19,13 +22,16 @@ export function initializeBuiltinTools(): void {
       ToolRegistry.registerTool(tool);
     }
   }
-  console.log(`[ToolExecutor] Registered ${builtinTools.length} builtin tools`);
+  logger.info('[ToolExecutor] Registered builtin tools', { count: builtinTools.length });
 }
 
 /**
  * 도구 실행
  */
-export async function executeTool(toolName: string, args: any): Promise<ToolCallResult> {
+export async function executeTool(
+  toolName: string,
+  args: Record<string, unknown> = {}
+): Promise<ToolCallResult> {
   // 도구 찾기
   const tool = ToolRegistry.getTool(toolName);
 
@@ -44,7 +50,7 @@ export async function executeTool(toolName: string, args: any): Promise<ToolCall
   try {
     // Check if it's a builtin tool
     if (tool.serverName === 'builtin') {
-      console.log(`[ToolExecutor] Executing builtin tool: ${toolName}`);
+      logger.info('[ToolExecutor] Executing builtin tool', { toolName });
       const result = await executeBuiltinTool(toolName, args);
       return {
         content: [
@@ -61,14 +67,15 @@ export async function executeTool(toolName: string, args: any): Promise<ToolCall
     const result = await MCPServerManager.callTool(tool.serverName, toolName, args);
 
     return result;
-  } catch (error: any) {
-    console.error(`Tool execution error [${toolName}]:`, error);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    logger.error('Tool execution error', { toolName, message, error });
 
     return {
       content: [
         {
           type: 'text',
-          text: `Error executing tool '${toolName}': ${error.message}`,
+          text: `Error executing tool '${toolName}': ${message}`,
         },
       ],
       isError: true,
@@ -80,7 +87,7 @@ export async function executeTool(toolName: string, args: any): Promise<ToolCall
  * 여러 도구 실행 (병렬)
  */
 export async function executeTools(
-  calls: Array<{ name: string; args: any }>
+  calls: Array<{ name: string; args: Record<string, unknown> }>
 ): Promise<ToolCallResult[]> {
   const promises = calls.map((call) => executeTool(call.name, call.args));
   return await Promise.all(promises);

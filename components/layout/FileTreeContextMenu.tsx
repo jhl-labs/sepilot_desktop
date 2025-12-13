@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * File Tree Context Menu Component
  *
@@ -9,8 +11,6 @@
  * - Collapse all children
  * - Keyboard shortcut display
  */
-
-'use client';
 
 import { ReactNode } from 'react';
 import {

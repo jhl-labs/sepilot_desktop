@@ -1,3 +1,6 @@
+'use client';
+
+import { logger } from '@/lib/utils/logger';
 /**
  * File Explorer Component
  *
@@ -8,8 +11,6 @@
  * - Context menu actions (rename, delete)
  * - File opening in Monaco Editor
  */
-
-'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Folder, FolderMinus, FolderOpen, RefreshCw } from 'lucide-react';
@@ -84,7 +85,7 @@ export function FileExplorer() {
   }, [showNewItemDialog]);
 
   const loadFileTree = async (dirPath: string) => {
-    console.log(`[FileExplorer] Loading file tree: ${dirPath}`);
+    logger.info(`[FileExplorer] Loading file tree: ${dirPath}`);
     setIsLoading(true);
     try {
       const data = await readDirectory(dirPath);
@@ -107,7 +108,7 @@ export function FileExplorer() {
     try {
       const result = await window.electronAPI.file.selectDirectory();
       if (result.success && result.data) {
-        console.log(`[FileExplorer] Directory selected: ${result.data}`);
+        logger.info(`[FileExplorer] Directory selected: ${result.data}`);
         setWorkingDirectory(result.data);
       }
     } catch (error) {
@@ -116,7 +117,7 @@ export function FileExplorer() {
   };
 
   const handleFileClick = async (filePath: string, filename: string) => {
-    console.log(`[FileExplorer] Opening file: ${filePath}`);
+    logger.info(`[FileExplorer] Opening file: ${filePath}`);
 
     // 이미지 파일인지 확인 (이미지는 별도 뷰어로 표시되므로 content 불필요)
     const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico'];
@@ -126,7 +127,7 @@ export function FileExplorer() {
 
     if (isImageFile) {
       // 이미지 파일은 content를 읽지 않음 (Editor에서 별도로 이미지로 로드)
-      console.log(`[FileExplorer] Opening image file: ${filePath}`);
+      logger.info(`[FileExplorer] Opening image file: ${filePath}`);
       openFile({
         path: filePath,
         filename,
@@ -138,7 +139,7 @@ export function FileExplorer() {
 
     const content = await readFile(filePath);
     if (content !== null) {
-      console.log(`[FileExplorer] File loaded with language: ${language}`);
+      logger.info(`[FileExplorer] File loaded with language: ${language}`);
 
       openFile({
         path: filePath,
@@ -174,7 +175,7 @@ export function FileExplorer() {
     }
 
     const itemPath = itemPathResult.data;
-    console.log(`[FileExplorer] Creating ${newItemType}: ${itemPath}`);
+    logger.info(`[FileExplorer] Creating ${newItemType}: ${itemPath}`);
 
     const success =
       newItemType === 'file' ? await createFile(itemPath, '') : await createDirectory(itemPath);
@@ -203,14 +204,14 @@ export function FileExplorer() {
       return;
     }
 
-    console.log('[FileExplorer] Pasting into root:', workingDirectory);
+    logger.info('[FileExplorer] Pasting into root:', workingDirectory);
     await pasteFiles(workingDirectory, () => loadFileTree(workingDirectory));
   };
 
   // Collapse all expanded folders
   const handleCollapseAll = useCallback(() => {
     clearExpandedFolders();
-    console.log('[FileExplorer] Collapsed all folders');
+    logger.info('[FileExplorer] Collapsed all folders');
   }, [clearExpandedFolders]);
 
   // Expand all folders recursively (first level only for performance)
@@ -228,7 +229,7 @@ export function FileExplorer() {
       }
     }
 
-    console.log('[FileExplorer] Expanded first level folders');
+    logger.info('[FileExplorer] Expanded first level folders');
   }, [workingDirectory, fileTree]);
 
   return (

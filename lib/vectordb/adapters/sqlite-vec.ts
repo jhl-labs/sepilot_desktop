@@ -1,6 +1,7 @@
 import { VectorDB } from '../interface';
-import { VectorDocument, SearchResult, VectorDBConfig } from '../types';
+import { VectorDocument, SearchResult, VectorDBConfig, DocumentMetadata } from '../types';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * SQLite-vec Adapter
  *
@@ -30,12 +31,12 @@ export class SQLiteVecAdapter extends VectorDB {
     }
 
     this.initialized = true;
-    console.log('SQLite-vec connected via IPC');
+    logger.info('SQLite-vec connected via IPC');
   }
 
   async disconnect(): Promise<void> {
     this.initialized = false;
-    console.log('SQLite-vec disconnected');
+    logger.info('SQLite-vec disconnected');
   }
 
   async createIndex(name: string, dimension: number): Promise<void> {
@@ -130,7 +131,7 @@ export class SQLiteVecAdapter extends VectorDB {
     }
   }
 
-  async updateMetadata(id: string, metadata: Record<string, any>): Promise<void> {
+  async updateMetadata(id: string, metadata: DocumentMetadata): Promise<void> {
     if (!window.electronAPI?.vectorDB) {
       throw new Error('Electron API not available');
     }

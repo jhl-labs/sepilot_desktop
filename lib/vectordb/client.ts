@@ -1,7 +1,9 @@
-import { VectorDB } from './interface';
-import { VectorDBConfig, VectorDocument, ExportData } from './types';
 import { isElectron } from '@/lib/platform';
 
+import { VectorDB } from './interface';
+import { VectorDBConfig, VectorDocument, ExportData, DocumentMetadata } from './types';
+
+import { logger } from '@/lib/utils/logger';
 /**
  * VectorDB Client Singleton
  * Electron 환경에서는 IPC를 통해 Main 프로세스에서 VectorDB를 관리합니다.
@@ -27,7 +29,7 @@ class VectorDBClientClass {
         }
 
         this.initialized = true;
-        console.log('VectorDB initialized via IPC:', config.type);
+        logger.info('VectorDB initialized via IPC', { type: config.type });
         return;
       }
     }
@@ -37,7 +39,7 @@ class VectorDBClientClass {
       case 'sqlite-vec': {
         // SQLite-vec는 Node.js 환경에서만 동작
         if (typeof window !== 'undefined') {
-          console.warn('SQLite-vec는 브라우저에서 사용할 수 없습니다. 설정만 저장됩니다.');
+          logger.warn('SQLite-vec는 브라우저에서 사용할 수 없습니다. 설정만 저장됩니다.');
           this.initialized = false;
           return;
         }
@@ -67,7 +69,7 @@ class VectorDBClientClass {
     await this.db.connect();
     this.initialized = true;
 
-    console.log('VectorDB initialized:', config.type);
+    logger.info('VectorDB initialized', { type: config.type });
   }
 
   async disconnect(): Promise<void> {
@@ -179,7 +181,7 @@ export async function deleteDocuments(ids: string[]): Promise<void> {
  */
 export async function updateDocumentMetadata(
   id: string,
-  metadata: Record<string, any>
+  metadata: DocumentMetadata
 ): Promise<void> {
   // Electron 환경: IPC를 통해 Main 프로세스에서 업데이트
   if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.vectorDB) {
@@ -343,7 +345,7 @@ export async function createEmptyFolder(folderPath: string): Promise<void> {
       _docType: 'folder',
       folderPath,
       title: folderPath.split('/').pop() || folderPath,
-      uploadedAt: Date.now(),
+      uploadedAt: new Date().toISOString(),
     },
     embedding: new Array(1536).fill(0), // 빈 임베딩 (검색 제외용)
   };
@@ -380,5 +382,7 @@ export async function getAllEmptyFolders(): Promise<string[]> {
 
   const allDocs = await getAllDocuments();
   const folderDocs = allDocs.filter((doc) => doc.metadata?._docType === 'folder');
-  return folderDocs.map((doc) => doc.metadata.folderPath!).filter(Boolean);
+  return folderDocs
+    .map((doc) => doc.metadata.folderPath)
+    .filter((path): path is string => Boolean(path));
 }

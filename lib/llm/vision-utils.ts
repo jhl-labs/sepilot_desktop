@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * Vision Model Utilities
  * LLM 메시지에서 이미지 감지 및 비전 모델 프로바이더 생성
@@ -7,23 +8,6 @@ import { Message, LLMConfig } from '@/types';
 import { OpenAIProvider } from './providers/openai';
 import { OllamaProvider } from './providers/ollama';
 import { BaseLLMProvider } from './base';
-
-// Logger that works in both Electron Main Process and Browser
-const log = {
-  info: (...args: any[]) => {
-    if (typeof process !== 'undefined' && process.versions?.electron) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { logger } = require('../../electron/services/logger');
-        logger.info(...args);
-      } catch {
-        console.log(...args);
-      }
-    } else {
-      console.log(...args);
-    }
-  },
-};
 
 /**
  * Check if any message contains images
@@ -51,8 +35,8 @@ export function createVisionProvider(
   const visionConfig = llmConfig.vision;
 
   // Debug: Log what we received
-  log.info('[VisionUtils] createVisionProvider called');
-  log.info('[VisionUtils] visionConfig:', {
+  logger.info('[VisionUtils] createVisionProvider called');
+  logger.info('[VisionUtils] visionConfig:', {
     enabled: visionConfig?.enabled,
     model: visionConfig?.model,
     baseURL: visionConfig?.baseURL,
@@ -61,7 +45,7 @@ export function createVisionProvider(
 
   // Only use vision model if it's enabled and configured
   if (!visionConfig?.enabled || !visionConfig?.model) {
-    log.info('[VisionUtils] Vision provider disabled or not configured, returning null');
+    logger.info('[VisionUtils] Vision provider disabled or not configured, returning null');
     return null;
   }
 
@@ -90,9 +74,9 @@ export function createVisionProvider(
       ollamaBaseURL = ollamaBaseURL.replace('/v1', '');
     }
 
-    log.info('[VisionUtils] Detected Ollama, using OllamaProvider');
-    log.info('[VisionUtils] Original baseURL:', baseURL);
-    log.info('[VisionUtils] Normalized baseURL:', ollamaBaseURL);
+    logger.info('[VisionUtils] Detected Ollama, using OllamaProvider');
+    logger.info('[VisionUtils] Original baseURL:', baseURL);
+    logger.info('[VisionUtils] Normalized baseURL:', ollamaBaseURL);
 
     provider = new OllamaProvider(
       ollamaBaseURL,
@@ -106,7 +90,7 @@ export function createVisionProvider(
     );
   } else {
     // Use OpenAI-compatible provider for other services
-    log.info('[VisionUtils] Using OpenAIProvider for vision model');
+    logger.info('[VisionUtils] Using OpenAIProvider for vision model');
     provider = new OpenAIProvider(
       baseURL,
       apiKey,
@@ -120,7 +104,7 @@ export function createVisionProvider(
   }
 
   // Set streaming capability based on config
-  (provider as any).streamingEnabled =
+  (provider as BaseLLMProvider & { streamingEnabled?: boolean }).streamingEnabled =
     visionConfig.enableStreaming ?? options?.enableStreaming ?? false;
 
   return provider;
@@ -158,7 +142,7 @@ export async function getVisionProviderFromConfig(): Promise<BaseLLMProvider | n
 
     return createVisionProvider(llmConfig);
   } catch (error) {
-    console.error('[VisionUtils] Error getting vision provider:', error);
+    logger.error('[VisionUtils] Error getting vision provider:', error);
     return null;
   }
 }

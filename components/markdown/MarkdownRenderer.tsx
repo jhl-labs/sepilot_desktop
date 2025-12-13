@@ -7,6 +7,7 @@ import { MermaidDiagram } from './MermaidDiagram';
 import { PlotlyChart } from './PlotlyChart';
 import { cn } from '@/lib/utils';
 
+import { logger } from '@/lib/utils/logger';
 interface MarkdownRendererProps {
   content: string;
   className?: string;
@@ -154,7 +155,7 @@ export function MarkdownRenderer({
             return;
           }
 
-          console.log('[MarkdownRenderer] Loading local image:', {
+          logger.info('[MarkdownRenderer] Loading local image:', {
             src,
             currentFilePath,
             workingDirectory,
@@ -173,7 +174,7 @@ export function MarkdownRenderer({
 
             if (resolveResult.success && resolveResult.data) {
               absolutePath = resolveResult.data;
-              console.log('[MarkdownRenderer] Resolved path from IPC:', {
+              logger.info('[MarkdownRenderer] Resolved path from IPC:', {
                 basePath,
                 src,
                 absolutePath,
@@ -195,7 +196,7 @@ export function MarkdownRenderer({
           if (result.success && result.data) {
             // 이미 data URL 형식으로 반환됨
             setImageSrc(result.data);
-            console.log('[MarkdownRenderer] Image loaded successfully');
+            logger.info('[MarkdownRenderer] Image loaded successfully');
           } else {
             console.error('[MarkdownRenderer] Failed to load image:', result.error);
             setImageSrc(src); // Fallback to original src

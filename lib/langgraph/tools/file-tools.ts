@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * File Management Tools for Editor Agent
  *
@@ -384,7 +385,7 @@ const searchFilesTool: EditorTool = {
       }
       rgCommand += ` "${query}" "${searchDir}"`;
 
-      console.log('[search_files] Running:', rgCommand);
+      logger.info('[search_files] Running:', rgCommand);
 
       const { stdout } = await execAsync(rgCommand);
       const lines = stdout.trim().split('\n');
@@ -511,5 +512,5 @@ export const fileTools: EditorTool[] = [
  */
 export function registerFileTools(registry: any): void {
   fileTools.forEach((tool) => registry.register(tool));
-  console.log(`[FileTools] Registered ${fileTools.length} file management tools`);
+  logger.info(`[FileTools] Registered ${fileTools.length} file management tools`);
 }

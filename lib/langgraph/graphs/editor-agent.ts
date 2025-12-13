@@ -5,6 +5,7 @@ import { getLLMClient } from '@/lib/llm/client';
 import { emitStreamingChunk, isAborted } from '@/lib/llm/streaming-callback';
 import { editorToolsRegistry, registerAllEditorTools } from '@/lib/langgraph/tools/index';
 
+import { logger } from '@/lib/utils/logger';
 /**
  * Editor Agent Graph
  *
@@ -66,10 +67,10 @@ export class EditorAgentGraph {
     let state = { ...initialState };
     let iterations = 0;
 
-    console.log('[EditorAgent] Starting with action:', state.editorContext?.action);
-    console.log('[EditorAgent] Action type:', state.editorContext?.actionType);
-    console.log('[EditorAgent] Use RAG:', state.editorContext?.useRag);
-    console.log('[EditorAgent] Use Tools:', state.editorContext?.useTools);
+    logger.info('[EditorAgent] Starting with action:', state.editorContext?.action);
+    logger.info('[EditorAgent] Action type:', state.editorContext?.actionType);
+    logger.info('[EditorAgent] Use RAG:', state.editorContext?.useRag);
+    logger.info('[EditorAgent] Use Tools:', state.editorContext?.useTools);
 
     // RAG: useRag가 활성화된 경우에만 문서 검색 수행
     if (
@@ -77,14 +78,14 @@ export class EditorAgentGraph {
       (state.editorContext?.action === 'autocomplete' ||
         state.editorContext?.action === 'code-action')
     ) {
-      console.log('[EditorAgent] RAG enabled - retrieving relevant documents');
+      logger.info('[EditorAgent] RAG enabled - retrieving relevant documents');
       try {
         const ragDocuments = await this.retrieveDocuments(state);
         state = {
           ...state,
           ragDocuments,
         };
-        console.log(`[EditorAgent] Retrieved ${ragDocuments.length} RAG documents`);
+        logger.info(`[EditorAgent] Retrieved ${ragDocuments.length} RAG documents`);
 
         // RAG 문서 검색 결과를 yield
         yield {
@@ -100,20 +101,20 @@ export class EditorAgentGraph {
         };
       }
     } else if (state.editorContext?.useRag === false) {
-      console.log('[EditorAgent] RAG disabled by user');
+      logger.info('[EditorAgent] RAG disabled by user');
     } else {
-      console.log('[EditorAgent] RAG not applicable for this action');
+      logger.info('[EditorAgent] RAG not applicable for this action');
     }
 
     let hasError = false;
     let errorMessage = '';
 
     while (iterations < this.maxIterations) {
-      console.log(`[EditorAgent] ===== Iteration ${iterations + 1}/${this.maxIterations} =====`);
+      logger.info(`[EditorAgent] ===== Iteration ${iterations + 1}/${this.maxIterations} =====`);
 
       // Check if streaming was aborted
       if (isAborted(state.conversationId)) {
-        console.log('[EditorAgent] Streaming aborted by user');
+        logger.info('[EditorAgent] Streaming aborted by user');
         const abortMessage: Message = {
           id: `msg-${Date.now()}`,
           role: 'assistant',
@@ -130,9 +131,9 @@ export class EditorAgentGraph {
       // 1. Generate response with tools
       let generateResult;
       try {
-        console.log('[EditorAgent] Calling generate node...');
+        logger.info('[EditorAgent] Calling generate node...');
         generateResult = await this.generateNode(state);
-        console.log('[EditorAgent] Generate completed');
+        logger.info('[EditorAgent] Generate completed');
       } catch (error: any) {
         console.error('[EditorAgent] Generate error:', error);
         hasError = true;
@@ -143,7 +144,7 @@ export class EditorAgentGraph {
       if (generateResult.messages && generateResult.messages.length > 0) {
         const newMessage = generateResult.messages[0];
 
-        console.log('[EditorAgent] Generated message:', {
+        logger.info('[EditorAgent] Generated message:', {
           content: newMessage.content?.substring(0, 100),
           hasToolCalls: !!newMessage.tool_calls,
           toolCallsCount: newMessage.tool_calls?.length,
@@ -163,17 +164,17 @@ export class EditorAgentGraph {
 
       // 2. Check if tools should be used
       const decision = this.shouldUseTool(state);
-      console.log('[EditorAgent] Decision:', decision);
+      logger.info('[EditorAgent] Decision:', decision);
 
       if (decision === 'end') {
-        console.log('[EditorAgent] No more tools to call, ending');
+        logger.info('[EditorAgent] No more tools to call, ending');
         break;
       }
 
       // 3. Tool approval (if callback provided)
       const lastMessage = state.messages[state.messages.length - 1];
       if (toolApprovalCallback && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
-        console.log('[EditorAgent] Requesting tool approval');
+        logger.info('[EditorAgent] Requesting tool approval');
 
         yield {
           type: 'tool_approval_request',
@@ -190,7 +191,7 @@ export class EditorAgentGraph {
           };
 
           if (!approved) {
-            console.log('[EditorAgent] Tools rejected by user');
+            logger.info('[EditorAgent] Tools rejected by user');
             const rejectionMessage: Message = {
               id: `msg-${Date.now()}`,
               role: 'assistant',
@@ -208,7 +209,7 @@ export class EditorAgentGraph {
             break;
           }
 
-          console.log('[EditorAgent] Tools approved');
+          logger.info('[EditorAgent] Tools approved');
         } catch (approvalError: any) {
           console.error('[EditorAgent] Approval error:', approvalError);
           hasError = true;
@@ -218,11 +219,11 @@ export class EditorAgentGraph {
       }
 
       // 4. Execute tools
-      console.log('[EditorAgent] Executing tools');
+      logger.info('[EditorAgent] Executing tools');
 
       // Check abort before tool execution
       if (isAborted(state.conversationId)) {
-        console.log('[EditorAgent] Streaming aborted before tool execution');
+        logger.info('[EditorAgent] Streaming aborted before tool execution');
         break;
       }
 
@@ -293,7 +294,7 @@ export class EditorAgentGraph {
         toolResults: toolsResult.toolResults || [],
       };
 
-      console.log('[EditorAgent] Tool results:', toolsResult.toolResults);
+      logger.info('[EditorAgent] Tool results:', toolsResult.toolResults);
 
       yield {
         type: 'tool_results',
@@ -303,7 +304,7 @@ export class EditorAgentGraph {
       iterations++;
     }
 
-    console.log('[EditorAgent] Stream completed, iterations:', iterations);
+    logger.info('[EditorAgent] Stream completed, iterations:', iterations);
 
     // Final report if error or max iterations
     if (hasError) {
@@ -346,7 +347,7 @@ export class EditorAgentGraph {
     // Get available tools based on editor context
     const tools = this.getEditorTools(state.editorContext);
 
-    console.log(
+    logger.info(
       '[EditorAgent] Calling LLM with tools:',
       tools.map((t) => t.function.name)
     );
@@ -405,7 +406,7 @@ ${ragContext}
 
       systemMessages.push(ragSystemMessage);
 
-      console.log(
+      logger.info(
         `[EditorAgent] Added RAG context with ${state.ragDocuments.length} documents to system message`
       );
     }
@@ -453,7 +454,7 @@ ${ragContext}
     const results = [];
 
     for (const toolCall of lastMessage.tool_calls) {
-      console.log('[EditorAgent] Executing tool:', toolCall.name);
+      logger.info('[EditorAgent] Executing tool:', toolCall.name);
 
       try {
         const result = await this.executeTool(toolCall, state);
@@ -552,7 +553,7 @@ ${ragContext}
     // args is already an object (Record<string, unknown>)
     const parsedArgs = args;
 
-    console.log('[EditorAgent] Executing tool:', name, 'with args:', parsedArgs);
+    logger.info('[EditorAgent] Executing tool:', name, 'with args:', parsedArgs);
 
     // All tools are now in the Tool Registry
     const registryTool = editorToolsRegistry.get(name);
@@ -603,7 +604,7 @@ ${ragContext}
         }
       }
 
-      console.log('[EditorAgent] RAG query:', query);
+      logger.info('[EditorAgent] RAG query:', query);
 
       // Dynamic import
       const { vectorDBService } = await import('../../../electron/services/vectordb');
@@ -634,7 +635,7 @@ ${ragContext}
       // 벡터 검색 (상위 3개)
       const results = await vectorDBService.searchByVector(queryEmbedding, 3);
 
-      console.log(`[EditorAgent] RAG retrieved ${results.length} documents`);
+      logger.info(`[EditorAgent] RAG retrieved ${results.length} documents`);
 
       return results.map((result) => ({
         id: result.id,

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * LangGraph 통합 - 메인 엔트리 포인트
  *
@@ -312,8 +313,8 @@ export class GraphFactory {
     const initialState = await this.createInitialState(stateType, messages, conversationId);
 
     try {
-      console.log('[GraphFactory] Starting stream with config:', config);
-      console.log('[GraphFactory] Using state type:', stateType);
+      logger.info('[GraphFactory] Starting stream with config:', config);
+      logger.info('[GraphFactory] Using state type:', stateType);
 
       const stream = await graph.stream(initialState, {
         recursionLimit: 100,
@@ -358,7 +359,7 @@ export class GraphFactory {
     const conversationId = options?.conversationId || '';
 
     try {
-      console.log('[GraphFactory] Starting coding agent stream with Human-in-the-loop support');
+      logger.info('[GraphFactory] Starting coding agent stream with Human-in-the-loop support');
 
       const { CodingAgentGraph } = await import('./graphs/coding-agent');
       const { createInitialCodingAgentState } = await import('./state');
@@ -437,7 +438,7 @@ export class GraphFactory {
     const conversationId = options?.conversationId || '';
 
     try {
-      console.log('[GraphFactory] Starting browser agent stream (automatic tool execution)');
+      logger.info('[GraphFactory] Starting browser agent stream (automatic tool execution)');
 
       const { BrowserAgentGraph } = await import('./graphs/browser-agent');
       const { createInitialAgentState } = await import('./state');
@@ -507,7 +508,7 @@ export class GraphFactory {
     const conversationId = options?.conversationId || '';
 
     try {
-      console.log('[GraphFactory] Starting agent stream with Human-in-the-loop support');
+      logger.info('[GraphFactory] Starting agent stream with Human-in-the-loop support');
 
       const { ChatAgentGraph } = await import('./graphs/chat-agent');
       const { createInitialAgentState } = await import('./state');
@@ -577,7 +578,7 @@ export class GraphFactory {
     const conversationId = options?.conversationId || '';
 
     try {
-      console.log('[GraphFactory] Starting Deep Web Research stream');
+      logger.info('[GraphFactory] Starting Deep Web Research stream');
 
       const graph = await this.getDeepWebResearchGraph();
       const { createInitialAgentState } = await import('./state');
@@ -694,7 +695,7 @@ export class GraphFactory {
     initialState: any,
     toolApprovalCallback?: ToolApprovalCallback
   ): AsyncGenerator<any> {
-    console.log('[GraphFactory] Starting Editor Agent stream');
+    logger.info('[GraphFactory] Starting Editor Agent stream');
 
     try {
       const graph = await this.getEditorAgentGraph();
@@ -718,7 +719,7 @@ export class GraphFactory {
   static stopBrowserAgent(conversationId: string): boolean {
     const browserAgentGraph = this.activeBrowserAgentGraphs.get(conversationId);
     if (browserAgentGraph) {
-      console.log('[GraphFactory] Stopping Browser Agent for conversation:', conversationId);
+      logger.info('[GraphFactory] Stopping Browser Agent for conversation:', conversationId);
       browserAgentGraph.stop();
       this.activeBrowserAgentGraphs.delete(conversationId);
       return true;

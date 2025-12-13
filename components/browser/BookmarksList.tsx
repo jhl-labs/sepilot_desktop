@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { logger } from '@/lib/utils/logger';
 interface Bookmark {
   id: string;
   url: string;
@@ -145,7 +146,7 @@ export function BookmarksList() {
     try {
       const result = await window.electronAPI.browserView.openBookmark(bookmark.id);
       if (result.success) {
-        console.debug('[BookmarksList] Bookmark opened:', bookmark.id);
+        logger.debug('[BookmarksList] Bookmark opened:', bookmark.id);
         setBrowserViewMode('chat');
       } else {
         console.error('[BookmarksList] Failed to open bookmark:', result.error);

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger';
 /**
  * NanoBanana (Google Imagen) API Client
  * Google Cloud Imagen API를 사용한 이미지 생성
@@ -84,7 +85,7 @@ async function generateWithNanoBananaAPI(
       });
     }
 
-    console.log('[NanoBanana] Generating image with nanobananaapi.ai:', {
+    logger.info('[NanoBanana] Generating image with nanobananaapi.ai:', {
       endpoint,
       prompt: `${params.prompt.substring(0, 50)}...`,
       numberOfImages,
@@ -99,7 +100,7 @@ async function generateWithNanoBananaAPI(
       body: JSON.stringify(payload),
     });
 
-    console.log('[NanoBanana] Response status:', response.status, response.statusText);
+    logger.info('[NanoBanana] Response status:', response.status, response.statusText);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -109,7 +110,7 @@ async function generateWithNanoBananaAPI(
     }
 
     const result = await response.json();
-    console.log('[NanoBanana] Initial response:', JSON.stringify(result, null, 2));
+    logger.info('[NanoBanana] Initial response:', JSON.stringify(result, null, 2));
 
     // NanoBananaAPI.ai returns: { code: 200, msg: "success", data: { taskId: "..." } }
     if (result.code !== 200 || !result.data?.taskId) {
@@ -118,12 +119,12 @@ async function generateWithNanoBananaAPI(
     }
 
     const taskId = result.data.taskId;
-    console.log('[NanoBanana] Task created:', taskId);
+    logger.info('[NanoBanana] Task created:', taskId);
 
     // Poll for results
     const images = await pollForResults(config, networkConfig, taskId);
 
-    console.log(`[NanoBanana] Successfully generated ${images.length} image(s)`);
+    logger.info(`[NanoBanana] Successfully generated ${images.length} image(s)`);
 
     return {
       success: true,
@@ -166,7 +167,7 @@ async function pollForResults(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
 
-    console.log(`[NanoBanana] Polling attempt ${attempt + 1}/${maxAttempts}`);
+    logger.info(`[NanoBanana] Polling attempt ${attempt + 1}/${maxAttempts}`);
 
     const response = await fetch(endpoint, {
       method: 'GET',
@@ -181,7 +182,7 @@ async function pollForResults(
     }
 
     const result = await response.json();
-    console.log(`[NanoBanana] Poll response:`, JSON.stringify(result, null, 2));
+    logger.info(`[NanoBanana] Poll response:`, JSON.stringify(result, null, 2));
 
     // NanoBananaAPI.ai response: { code: 200, data: { successFlag: 1, response: { resultImageUrl } } }
     const successFlag = result.data?.successFlag ?? result.successFlag;
@@ -217,12 +218,12 @@ async function pollForResults(
         throw new Error('No image URLs in successful response');
       }
 
-      console.log('[NanoBanana] Found image URLs:', imageUrls);
+      logger.info('[NanoBanana] Found image URLs:', imageUrls);
 
       for (const imageUrl of imageUrls) {
-        console.log('[NanoBanana] Downloading image from:', imageUrl);
+        logger.info('[NanoBanana] Downloading image from:', imageUrl);
         const imageData = await downloadImageAsBase64(imageUrl, networkConfig);
-        console.log(
+        logger.info(
           '[NanoBanana] Downloaded image, base64 length:',
           imageData?.length || 0,
           'prefix:',
@@ -231,7 +232,7 @@ async function pollForResults(
         images.push(imageData);
       }
 
-      console.log('[NanoBanana] Total images collected:', images.length);
+      logger.info('[NanoBanana] Total images collected:', images.length);
       return images;
     } else if (status === 2 || status === 3 || status === '2' || status === '3') {
       // Failed
@@ -338,7 +339,7 @@ async function generateWithVertexAI(
       });
     }
 
-    console.log('[NanoBanana] Generating image with Vertex AI:', {
+    logger.info('[NanoBanana] Generating image with Vertex AI:', {
       prompt: `${params.prompt.substring(0, 50)}...`,
       numberOfImages: payload.parameters.sampleCount,
       aspectRatio: payload.parameters.aspectRatio,
@@ -359,7 +360,7 @@ async function generateWithVertexAI(
     }
 
     const result = await response.json();
-    console.log('[NanoBanana] Vertex AI response received');
+    logger.info('[NanoBanana] Vertex AI response received');
 
     // Extract base64 images from response
     const images: string[] = [];
@@ -393,9 +394,9 @@ async function generateWithVertexAI(
       usage.imageCount = images.length;
     }
 
-    console.log(`[NanoBanana] Successfully generated ${images.length} image(s) with Vertex AI`);
+    logger.info(`[NanoBanana] Successfully generated ${images.length} image(s) with Vertex AI`);
     if (usage.totalTokenCount) {
-      console.log(
+      logger.info(
         `[NanoBanana] Token usage: ${usage.totalTokenCount} (prompt: ${usage.promptTokenCount}, output: ${usage.candidatesTokenCount})`
       );
     }

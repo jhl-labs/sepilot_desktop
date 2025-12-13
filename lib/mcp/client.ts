@@ -8,6 +8,47 @@ import {
   ToolCallResult,
 } from './types';
 
+type RawMCPTool = Omit<MCPTool, 'serverName'>;
+interface ToolsListResponse {
+  tools: RawMCPTool[];
+}
+
+interface ResourcesListResponse {
+  resources: MCPResource[];
+}
+
+interface ResourceReadResponse {
+  contents: Array<{ text: string }>;
+}
+
+function isToolsListResponse(value: unknown): value is ToolsListResponse {
+  return (
+    typeof value === 'object' && value !== null && Array.isArray((value as ToolsListResponse).tools)
+  );
+}
+
+function isResourcesListResponse(value: unknown): value is ResourcesListResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Array.isArray((value as ResourcesListResponse).resources)
+  );
+}
+
+function isResourceReadResponse(value: unknown): value is ResourceReadResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Array.isArray((value as ResourceReadResponse).contents)
+  );
+}
+
+function isToolCallResult(value: unknown): value is ToolCallResult {
+  return (
+    typeof value === 'object' && value !== null && Array.isArray((value as ToolCallResult).content)
+  );
+}
+
 /**
  * MCP Client 추상 클래스
  */
@@ -78,7 +119,7 @@ export abstract class MCPClient {
     }
 
     this.isConnected = true;
-    return response.result;
+    return response.result as MCPInitializeResult;
   }
 
   /**
@@ -98,7 +139,11 @@ export abstract class MCPClient {
       throw new Error(`List tools error: ${response.error.message}`);
     }
 
-    this.tools = response.result.tools.map((tool: any) => ({
+    if (!isToolsListResponse(response.result)) {
+      throw new Error('Invalid tools response from MCP server');
+    }
+
+    this.tools = response.result.tools.map((tool) => ({
       ...tool,
       serverName: this.config.name,
     }));
@@ -109,7 +154,7 @@ export abstract class MCPClient {
   /**
    * 도구 호출
    */
-  async callTool(name: string, args: any): Promise<ToolCallResult> {
+  async callTool(name: string, args: Record<string, unknown> = {}): Promise<ToolCallResult> {
     const request: JSONRPCRequest = {
       jsonrpc: '2.0',
       id: this.getNextId(),
@@ -134,6 +179,10 @@ export abstract class MCPClient {
       };
     }
 
+    if (!isToolCallResult(response.result)) {
+      throw new Error('Invalid tool call response from MCP server');
+    }
+
     return response.result;
   }
 
@@ -152,6 +201,10 @@ export abstract class MCPClient {
 
     if (response.error) {
       throw new Error(`List resources error: ${response.error.message}`);
+    }
+
+    if (!isResourcesListResponse(response.result)) {
+      throw new Error('Invalid resource list response from MCP server');
     }
 
     this.resources = response.result.resources;
@@ -175,6 +228,10 @@ export abstract class MCPClient {
 
     if (response.error) {
       throw new Error(`Read resource error: ${response.error.message}`);
+    }
+
+    if (!isResourceReadResponse(response.result) || response.result.contents.length === 0) {
+      throw new Error('Invalid resource read response from MCP server');
     }
 
     return response.result.contents[0].text;

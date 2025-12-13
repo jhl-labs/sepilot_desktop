@@ -11,6 +11,7 @@ import { PresentationStudio } from '@/components/presentation/PresentationStudio
 import { useChatStore } from '@/lib/store/chat-store';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
 
+import { logger } from '@/lib/utils/logger';
 export default function Home() {
   const { appMode, createConversation, setActiveConversation, setAppMode, setActiveEditorTab } =
     useChatStore();
@@ -21,7 +22,7 @@ export default function Home() {
   // 세션 복원 완료 시 로그 출력
   useEffect(() => {
     if (!isRestoringSession && user) {
-      console.warn('[Home] Session restored for user:', user.login);
+      logger.warn('[Home] Session restored for user', { login: user.login });
     }
   }, [isRestoringSession, user]);
 
@@ -32,27 +33,30 @@ export default function Home() {
     }
 
     const handleQuickInput = async (data: unknown) => {
-      console.warn('[Home] handleQuickInput called with data:', typeof data, data);
+      logger.info('[Home] handleQuickInput called with data', {
+        dataType: typeof data,
+        data,
+      });
 
       // Both Quick Input and Quick Question send simple strings
       if (typeof data !== 'string') {
-        console.warn('[Home] Invalid quick input data:', data);
+        logger.warn('[Home] Invalid quick input data', { data });
         return;
       }
 
       try {
-        console.warn('[Home] Creating new conversation...');
+        logger.info('[Home] Creating new conversation');
         // 새 대화 생성
         const conversationId = await createConversation();
-        console.warn('[Home] New conversation created:', conversationId);
+        logger.info('[Home] New conversation created', { conversationId });
 
         // 새 대화 활성화
         await setActiveConversation(conversationId);
-        console.warn('[Home] Conversation activated');
+        logger.info('[Home] Conversation activated');
 
         // UI가 업데이트될 시간을 주고 메시지 전송
         setTimeout(() => {
-          console.warn('[Home] Dispatching sepilot:auto-send-message event with:', data);
+          logger.info('[Home] Dispatching sepilot:auto-send-message event', { data });
           window.dispatchEvent(
             new CustomEvent('sepilot:auto-send-message', {
               detail: { userMessage: data },
@@ -60,7 +64,7 @@ export default function Home() {
           );
         }, 200);
       } catch (error) {
-        console.error('[Home] Failed to handle quick input:', error);
+        logger.error('[Home] Failed to handle quick input', { error });
       }
     };
 
@@ -91,17 +95,17 @@ export default function Home() {
   // Test Dashboard 관련 IPC 이벤트 리스너
   useEffect(() => {
     if (typeof window === 'undefined' || !window.electronAPI) {
-      console.warn('[Home] electronAPI not available for test dashboard');
+      logger.warn('[Home] electronAPI not available for test dashboard');
       return;
     }
 
     const handleOpenTestDashboard = () => {
-      console.log('[Home] Opening test dashboard...');
+      logger.info('[Home] Opening test dashboard');
       window.location.href = '/test-dashboard';
     };
 
     const handleRunAllTests = () => {
-      console.log('[Home] Run all tests triggered from menu, opening dashboard...');
+      logger.info('[Home] Run all tests triggered from menu; opening dashboard');
       window.location.href = '/test-dashboard';
       // 페이지 이동 후 테스트 실행 이벤트를 다시 발행
       setTimeout(() => {
@@ -110,7 +114,7 @@ export default function Home() {
     };
 
     const handleHealthCheck = () => {
-      console.log('[Home] Health check triggered from menu, opening dashboard...');
+      logger.info('[Home] Health check triggered from menu; opening dashboard');
       window.location.href = '/test-dashboard';
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('test:health-check-from-menu'));
@@ -118,7 +122,7 @@ export default function Home() {
     };
 
     const handleRunLLM = () => {
-      console.log('[Home] LLM test triggered from menu, opening dashboard...');
+      logger.info('[Home] LLM test triggered from menu; opening dashboard');
       window.location.href = '/test-dashboard';
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('test:run-llm-from-menu'));
@@ -126,7 +130,7 @@ export default function Home() {
     };
 
     const handleRunDatabase = () => {
-      console.log('[Home] Database test triggered from menu, opening dashboard...');
+      logger.info('[Home] Database test triggered from menu; opening dashboard');
       window.location.href = '/test-dashboard';
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('test:run-database-from-menu'));
@@ -134,7 +138,7 @@ export default function Home() {
     };
 
     const handleRunMCP = () => {
-      console.log('[Home] MCP test triggered from menu, opening dashboard...');
+      logger.info('[Home] MCP test triggered from menu; opening dashboard');
       window.location.href = '/test-dashboard';
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('test:run-mcp-from-menu'));
@@ -142,7 +146,7 @@ export default function Home() {
     };
 
     // IPC 이벤트 리스너 등록
-    console.log('[Home] Registering test dashboard listeners');
+    logger.info('[Home] Registering test dashboard listeners');
     window.electronAPI.on('test:open-dashboard', handleOpenTestDashboard);
     window.electronAPI.on('test:run-all-from-menu', handleRunAllTests);
     window.electronAPI.on('test:health-check-from-menu', handleHealthCheck);
