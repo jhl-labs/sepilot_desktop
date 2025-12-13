@@ -131,7 +131,7 @@
     "copy-webpack-plugin": "^13.0.1",
     "cross-env": "^10.1.0",
     "dependency-cruiser": "^17.3.2",
-    "electron": "^39.2.4",
+    "electron": "^39.2.7",
     "electron-builder": "^26.0.12",
     "electron-builder-squirrel-windows": "26.0.12",
     "electron-rebuild": "^3.2.9",
