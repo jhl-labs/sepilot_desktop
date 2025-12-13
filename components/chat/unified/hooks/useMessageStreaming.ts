@@ -39,6 +39,7 @@ export function useMessageStreaming() {
     enableImageGeneration,
     thinkingMode,
     workingDirectory,
+    appMode,
   } = useChatStore();
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -331,13 +332,22 @@ export function useMessageStreaming() {
 
               // If this is a final assistant message (no tool_calls), update content
               // This replaces status messages like "🤖 AI가 응답을 생성하고 있습니다..."
-              // Thinking Mode일 때는 중간 과정 스트리밍이 중요하므로 assistant message content로 덮어쓰지 않음
-              const isThinkingGraph = ['sequential', 'tree_of_thought', 'deep_thinking'].includes(
-                thinkingMode
-              );
+              // Thinking Mode, Agent Mode, Tools 사용 시에는 중간 과정(로그)이 중요하므로 덮어쓰지 않음
+              const isAdvancedMode =
+                [
+                  'sequential',
+                  'tree_of_thought',
+                  'deep',
+                  'deep_thinking',
+                  'deep-web-research',
+                  'coding',
+                ].includes(thinkingMode) ||
+                appMode === 'browser' ||
+                appMode === 'editor' ||
+                enableTools;
 
               if (
-                !isThinkingGraph &&
+                !isAdvancedMode &&
                 lastMessage?.role === 'assistant' &&
                 (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) &&
                 lastMessage.content
@@ -622,6 +632,7 @@ export function useMessageStreaming() {
       enableImageGeneration,
       thinkingMode,
       workingDirectory,
+      appMode,
     ]
   );
 

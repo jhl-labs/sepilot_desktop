@@ -69,7 +69,8 @@ export function CompressConversationDialog({
 2. **반복 제거**: 중복되거나 반복되는 내용은 하나로 통합
 3. **불필요한 대화 제거**: 인사말, 감사 표현, 일상적인 상호작용 등 제거
 4. **컨텍스트 보존**: 대화의 흐름과 맥락이 이해 가능하도록 유지
-5. **간결성**: 가능한 한 짧고 명확하게 작성
+5. **순서 유지**: 대화의 시간적 순서를 반드시 준수 (User -> Assistant -> User -> Assistant ...)
+6. **간결성**: 가능한 한 짧고 명확하게 작성
 
 출력 형식:
 각 압축된 메시지를 다음 형식으로 작성하세요:
@@ -111,6 +112,8 @@ export function CompressConversationDialog({
 
       logger.info('[CompressDialog] Message blocks:', messageBlocks.length);
 
+      const baseTime = Date.now();
+
       for (const block of messageBlocks) {
         const roleMatch = block.match(/\[ROLE:\s*(user|assistant)\]/i);
         const contentMatch = block.match(/\[CONTENT:\s*(.+)\s*\]/s);
@@ -126,12 +129,16 @@ export function CompressConversationDialog({
           const role = roleMatch[1].toLowerCase() as 'user' | 'assistant';
           const content = contentMatch[1].trim();
 
+          // Ensure strict chronological order with incremental timestamps
+          // This prevents message swapping issues in the UI
+          const timestamp = baseTime + parsedMessages.length * 100;
+
           parsedMessages.push({
-            id: `compressed_${Date.now()}_${parsedMessages.length}`,
+            id: `compressed_${timestamp}_${parsedMessages.length}`,
             role,
             content,
             conversation_id: conversation!.id,
-            created_at: Date.now(),
+            created_at: timestamp,
           });
         } else {
           console.warn('[CompressDialog] Failed to parse block:', block);
