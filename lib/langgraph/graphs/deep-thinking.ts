@@ -546,7 +546,13 @@ ${state.verification}
   const assistantMessage: Message = {
     id: messageId,
     role: 'assistant',
-    content: finalAnswer,
+    content:
+      `## 🧠 1단계: 초기 심층 분석\n\n${state.initialAnalysis}\n\n` +
+      `## 🔭 2단계 & 3단계: 다중 관점 탐색 및 분석\n\n${state.perspectives
+        .map((p) => `### 👁️ ${p.name}\n${p.content}\n\n#### 🔍 심화 분석\n${p.deepAnalysis}`)
+        .join('\n\n')}\n\n` +
+      `## 🔗 4단계: 통합 및 검증\n\n### 📦 관점 통합\n${state.integration}\n\n### ✅ 검증\n${state.verification}\n\n` +
+      `---\n\n## ✨ 최종 답변\n\n${finalAnswer}`,
     created_at: Date.now(),
   };
 

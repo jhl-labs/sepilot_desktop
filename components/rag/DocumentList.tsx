@@ -1345,6 +1345,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
             size="sm"
             onClick={loadDocuments}
             disabled={isLoading || disabled}
+            title="문서 새로고침"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>

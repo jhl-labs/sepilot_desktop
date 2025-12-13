@@ -206,7 +206,7 @@ async function analyzeNode(state: ChatState) {
   logger.info('[Sequential] Analysis complete:', `${analysis.substring(0, 100)}...`);
 
   return {
-    context: `# Analysis\n\n${analysis}`,
+    context: `${researchContext ? `${researchContext}\n\n` : ''}# Analysis\n\n${analysis}`,
   };
 }
 
@@ -340,10 +340,18 @@ ${state.context}
     emitStreamingChunk(chunk, state.conversationId);
   }
 
+  // 사고 과정 포맷팅
+  const processNodes = state.context
+    .replace(/# Analysis/g, '## 🔍 1단계: 문제 분석')
+    .replace(/# Plan/g, '## 📋 2단계: 계획 수립')
+    .replace(/# Execution/g, '## ⚙️ 3단계: 계획 실행');
+
+  const finalContent = `${processNodes}\n\n---\n\n## ✨ 최종 답변\n\n${finalAnswer}`;
+
   const assistantMessage: Message = {
     id: messageId,
     role: 'assistant',
-    content: finalAnswer,
+    content: finalContent,
     created_at: Date.now(),
   };
 

@@ -260,7 +260,7 @@ async function decomposeNode(state: TreeOfThoughtState) {
   logger.info('[ToT] Decomposition complete');
 
   return {
-    context: decomposition,
+    context: `${researchContext ? `${researchContext}\n\n` : ''}${decomposition}`,
   };
 }
 
@@ -470,7 +470,15 @@ ${topBranches}
   const assistantMessage: Message = {
     id: messageId,
     role: 'assistant',
-    content: finalAnswer,
+    content:
+      `## 🌳 1단계: 문제 분해\n\n${state.context}\n\n` +
+      `## 🌿 2단계: 다중 사고 경로 생성\n\n${state.branches
+        .map((b, i) => `### 🔀 경로 ${i + 1}\n${b.content}`)
+        .join('\n\n')}\n\n` +
+      `## ⚖️ 3단계: 경로 평가\n\n${state.branches
+        .map((b, i) => `### 📊 경로 ${i + 1} 점수: ${b.score}`)
+        .join('\n')}\n\n**🏆 최고 점수 경로 선택됨 (점수: ${state.branches[0]?.score || 0})**\n\n` +
+      `---\n\n## ✨ 최종 답변\n\n${finalAnswer}`,
     created_at: Date.now(),
   };
 

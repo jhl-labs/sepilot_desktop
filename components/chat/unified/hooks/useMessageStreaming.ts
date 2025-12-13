@@ -331,7 +331,13 @@ export function useMessageStreaming() {
 
               // If this is a final assistant message (no tool_calls), update content
               // This replaces status messages like "🤖 AI가 응답을 생성하고 있습니다..."
+              // Thinking Mode일 때는 중간 과정 스트리밍이 중요하므로 assistant message content로 덮어쓰지 않음
+              const isThinkingGraph = ['sequential', 'tree_of_thought', 'deep_thinking'].includes(
+                thinkingMode
+              );
+
               if (
+                !isThinkingGraph &&
                 lastMessage?.role === 'assistant' &&
                 (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) &&
                 lastMessage.content

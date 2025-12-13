@@ -13,7 +13,7 @@ import { logger } from '@/lib/utils/logger';
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Folder, FolderMinus, FolderOpen, RefreshCw } from 'lucide-react';
+import { Folder, FolderMinus, FolderOpen, RefreshCw, FilePlus, FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -250,12 +250,51 @@ export function FileExplorer() {
                       size="icon"
                       onClick={handleSelectDirectory}
                       className="h-7 w-7"
+                      title="디렉토리 선택"
                     >
                       <Folder className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <p>디렉토리 선택</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={!workingDirectory}
+                      onClick={() =>
+                        workingDirectory && openNewItemDialog('file', workingDirectory)
+                      }
+                      className="h-7 w-7"
+                      title="새 파일"
+                    >
+                      <FilePlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>새 파일</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={!workingDirectory}
+                      onClick={() =>
+                        workingDirectory && openNewItemDialog('folder', workingDirectory)
+                      }
+                      className="h-7 w-7"
+                      title="새 폴더"
+                    >
+                      <FolderPlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>새 폴더</p>
                   </TooltipContent>
                 </Tooltip>
                 {workingDirectory && (

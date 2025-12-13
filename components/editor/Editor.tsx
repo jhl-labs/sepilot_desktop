@@ -606,7 +606,7 @@ export function CodeEditor() {
           (window as any).monaco?.KeyMod.Alt |
           (window as any).monaco?.KeyCode.KeyF,
       ],
-      contextMenuGroupId: 'editing',
+      contextMenuGroupId: '2_editing',
       contextMenuOrder: 1,
       run: (ed) => {
         ed.getAction('editor.action.formatDocument')?.run();
@@ -616,7 +616,7 @@ export function CodeEditor() {
     const formatSelectionAction = editor.addAction({
       id: 'format-selection',
       label: 'Edit: Format Selection',
-      contextMenuGroupId: 'editing',
+      contextMenuGroupId: '2_editing',
       contextMenuOrder: 2,
       run: (ed) => {
         ed.getAction('editor.action.formatSelection')?.run();
@@ -627,7 +627,7 @@ export function CodeEditor() {
       id: 'comment-line',
       label: 'Edit: Toggle Line Comment',
       keybindings: [(window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.Slash],
-      contextMenuGroupId: 'editing',
+      contextMenuGroupId: '2_editing',
       contextMenuOrder: 3,
       run: (ed) => {
         ed.getAction('editor.action.commentLine')?.run();
@@ -642,7 +642,7 @@ export function CodeEditor() {
           (window as any).monaco?.KeyMod.Alt |
           (window as any).monaco?.KeyCode.KeyA,
       ],
-      contextMenuGroupId: 'editing',
+      contextMenuGroupId: '2_editing',
       contextMenuOrder: 4,
       run: (ed) => {
         ed.getAction('editor.action.blockComment')?.run();
@@ -657,7 +657,7 @@ export function CodeEditor() {
           (window as any).monaco?.KeyMod.Alt |
           (window as any).monaco?.KeyCode.DownArrow,
       ],
-      contextMenuGroupId: 'editing',
+      contextMenuGroupId: '2_editing',
       contextMenuOrder: 5,
       run: (ed) => {
         ed.getAction('editor.action.copyLinesDownAction')?.run();
@@ -672,7 +672,7 @@ export function CodeEditor() {
           (window as any).monaco?.KeyMod.Shift |
           (window as any).monaco?.KeyCode.KeyK,
       ],
-      contextMenuGroupId: 'editing',
+      contextMenuGroupId: '2_editing',
       contextMenuOrder: 6,
       run: (ed) => {
         ed.getAction('editor.action.deleteLines')?.run();
@@ -683,7 +683,7 @@ export function CodeEditor() {
       id: 'move-line-up',
       label: 'Edit: Move Line Up',
       keybindings: [(window as any).monaco?.KeyMod.Alt | (window as any).monaco?.KeyCode.UpArrow],
-      contextMenuGroupId: 'editing',
+      contextMenuGroupId: '2_editing',
       contextMenuOrder: 7,
       run: (ed) => {
         ed.getAction('editor.action.moveLinesUpAction')?.run();
@@ -694,7 +694,7 @@ export function CodeEditor() {
       id: 'move-line-down',
       label: 'Edit: Move Line Down',
       keybindings: [(window as any).monaco?.KeyMod.Alt | (window as any).monaco?.KeyCode.DownArrow],
-      contextMenuGroupId: 'editing',
+      contextMenuGroupId: '2_editing',
       contextMenuOrder: 8,
       run: (ed) => {
         ed.getAction('editor.action.moveLinesDownAction')?.run();
@@ -705,7 +705,7 @@ export function CodeEditor() {
     const uppercaseAction = editor.addAction({
       id: 'transform-uppercase',
       label: 'Transform: UPPERCASE',
-      contextMenuGroupId: 'transform',
+      contextMenuGroupId: '4_transform',
       contextMenuOrder: 1,
       run: (ed) => {
         ed.getAction('editor.action.transformToUppercase')?.run();
@@ -715,7 +715,7 @@ export function CodeEditor() {
     const lowercaseAction = editor.addAction({
       id: 'transform-lowercase',
       label: 'Transform: lowercase',
-      contextMenuGroupId: 'transform',
+      contextMenuGroupId: '4_transform',
       contextMenuOrder: 2,
       run: (ed) => {
         ed.getAction('editor.action.transformToLowercase')?.run();
@@ -725,7 +725,7 @@ export function CodeEditor() {
     const titleCaseAction = editor.addAction({
       id: 'transform-titlecase',
       label: 'Transform: Title Case',
-      contextMenuGroupId: 'transform',
+      contextMenuGroupId: '4_transform',
       contextMenuOrder: 3,
       run: (ed) => {
         ed.getAction('editor.action.transformToTitlecase')?.run();
@@ -735,7 +735,7 @@ export function CodeEditor() {
     const sortLinesAscAction = editor.addAction({
       id: 'sort-lines-asc',
       label: 'Transform: Sort Lines Ascending',
-      contextMenuGroupId: 'transform',
+      contextMenuGroupId: '4_transform',
       contextMenuOrder: 4,
       run: (ed) => {
         ed.getAction('editor.action.sortLinesAscending')?.run();
@@ -745,7 +745,7 @@ export function CodeEditor() {
     const sortLinesDescAction = editor.addAction({
       id: 'sort-lines-desc',
       label: 'Transform: Sort Lines Descending',
-      contextMenuGroupId: 'transform',
+      contextMenuGroupId: '4_transform',
       contextMenuOrder: 5,
       run: (ed) => {
         ed.getAction('editor.action.sortLinesDescending')?.run();
@@ -761,7 +761,7 @@ export function CodeEditor() {
           (window as any).monaco?.KeyMod.Shift |
           (window as any).monaco?.KeyCode.BracketLeft,
       ],
-      contextMenuGroupId: 'folding',
+      contextMenuGroupId: '5_folding',
       contextMenuOrder: 1,
       run: (ed) => {
         ed.getAction('editor.fold')?.run();
@@ -776,7 +776,7 @@ export function CodeEditor() {
           (window as any).monaco?.KeyMod.Shift |
           (window as any).monaco?.KeyCode.BracketRight,
       ],
-      contextMenuGroupId: 'folding',
+      contextMenuGroupId: '5_folding',
       contextMenuOrder: 2,
       run: (ed) => {
         ed.getAction('editor.unfold')?.run();
@@ -790,7 +790,7 @@ export function CodeEditor() {
         (window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.KeyK,
         (window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.Digit0,
       ],
-      contextMenuGroupId: 'folding',
+      contextMenuGroupId: '5_folding',
       contextMenuOrder: 3,
       run: (ed) => {
         ed.getAction('editor.foldAll')?.run();
@@ -804,7 +804,7 @@ export function CodeEditor() {
         (window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.KeyK,
         (window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.KeyJ,
       ],
-      contextMenuGroupId: 'folding',
+      contextMenuGroupId: '5_folding',
       contextMenuOrder: 4,
       run: (ed) => {
         ed.getAction('editor.unfoldAll')?.run();
@@ -816,7 +816,7 @@ export function CodeEditor() {
       id: 'go-to-line',
       label: 'Navigate: Go to Line...',
       keybindings: [(window as any).monaco?.KeyMod.CtrlCmd | (window as any).monaco?.KeyCode.KeyG],
-      contextMenuGroupId: 'navigation',
+      contextMenuGroupId: '1_navigation',
       contextMenuOrder: 1,
       run: (ed) => {
         ed.getAction('editor.action.gotoLine')?.run();
@@ -827,7 +827,7 @@ export function CodeEditor() {
       id: 'go-to-definition',
       label: 'Navigate: Go to Definition',
       keybindings: [(window as any).monaco?.KeyCode.F12],
-      contextMenuGroupId: 'navigation',
+      contextMenuGroupId: '1_navigation',
       contextMenuOrder: 2,
       run: (ed) => {
         ed.getAction('editor.action.revealDefinition')?.run();
@@ -838,7 +838,7 @@ export function CodeEditor() {
       id: 'peek-definition',
       label: 'Navigate: Peek Definition',
       keybindings: [(window as any).monaco?.KeyMod.Alt | (window as any).monaco?.KeyCode.F12],
-      contextMenuGroupId: 'navigation',
+      contextMenuGroupId: '1_navigation',
       contextMenuOrder: 3,
       run: (ed) => {
         ed.getAction('editor.action.peekDefinition')?.run();
@@ -849,7 +849,7 @@ export function CodeEditor() {
       id: 'find-references',
       label: 'Navigate: Find All References',
       keybindings: [(window as any).monaco?.KeyMod.Shift | (window as any).monaco?.KeyCode.F12],
-      contextMenuGroupId: 'navigation',
+      contextMenuGroupId: '1_navigation',
       contextMenuOrder: 4,
       run: (ed) => {
         ed.getAction('editor.action.goToReferences')?.run();
@@ -865,7 +865,7 @@ export function CodeEditor() {
           (window as any).monaco?.KeyMod.Shift |
           (window as any).monaco?.KeyCode.KeyL,
       ],
-      contextMenuGroupId: 'selection',
+      contextMenuGroupId: '3_selection',
       contextMenuOrder: 1,
       run: (ed) => {
         ed.getAction('editor.action.selectHighlights')?.run();
@@ -880,7 +880,7 @@ export function CodeEditor() {
           (window as any).monaco?.KeyMod.Alt |
           (window as any).monaco?.KeyCode.UpArrow,
       ],
-      contextMenuGroupId: 'selection',
+      contextMenuGroupId: '3_selection',
       contextMenuOrder: 2,
       run: (ed) => {
         ed.getAction('editor.action.insertCursorAbove')?.run();
@@ -895,7 +895,7 @@ export function CodeEditor() {
           (window as any).monaco?.KeyMod.Alt |
           (window as any).monaco?.KeyCode.DownArrow,
       ],
-      contextMenuGroupId: 'selection',
+      contextMenuGroupId: '3_selection',
       contextMenuOrder: 3,
       run: (ed) => {
         ed.getAction('editor.action.insertCursorBelow')?.run();
@@ -910,7 +910,7 @@ export function CodeEditor() {
           (window as any).monaco?.KeyMod.Alt |
           (window as any).monaco?.KeyCode.RightArrow,
       ],
-      contextMenuGroupId: 'selection',
+      contextMenuGroupId: '3_selection',
       contextMenuOrder: 4,
       run: (ed) => {
         ed.getAction('editor.action.smartSelect.expand')?.run();
@@ -925,7 +925,7 @@ export function CodeEditor() {
           (window as any).monaco?.KeyMod.Alt |
           (window as any).monaco?.KeyCode.LeftArrow,
       ],
-      contextMenuGroupId: 'selection',
+      contextMenuGroupId: '3_selection',
       contextMenuOrder: 5,
       run: (ed) => {
         ed.getAction('editor.action.smartSelect.shrink')?.run();
@@ -936,7 +936,7 @@ export function CodeEditor() {
     const explainAction = editor.addAction({
       id: 'code-ai-explain',
       label: 'Code AI: 코드 설명',
-      contextMenuGroupId: 'code-ai',
+      contextMenuGroupId: '9_ai_1_code',
       contextMenuOrder: 1,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -952,7 +952,7 @@ export function CodeEditor() {
     const fixAction = editor.addAction({
       id: 'code-ai-fix',
       label: 'Code AI: 버그 수정',
-      contextMenuGroupId: 'code-ai',
+      contextMenuGroupId: '9_ai_1_code',
       contextMenuOrder: 2,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -968,7 +968,7 @@ export function CodeEditor() {
     const improveAction = editor.addAction({
       id: 'code-ai-improve',
       label: 'Code AI: 코드 개선',
-      contextMenuGroupId: 'code-ai',
+      contextMenuGroupId: '9_ai_1_code',
       contextMenuOrder: 3,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -984,7 +984,7 @@ export function CodeEditor() {
     const completeAction = editor.addAction({
       id: 'code-ai-complete',
       label: 'Code AI: 코드 완성',
-      contextMenuGroupId: 'code-ai',
+      contextMenuGroupId: '9_ai_1_code',
       contextMenuOrder: 4,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -1000,7 +1000,7 @@ export function CodeEditor() {
     const addCommentsAction = editor.addAction({
       id: 'code-ai-add-comments',
       label: 'Code AI: 주석 추가',
-      contextMenuGroupId: 'code-ai',
+      contextMenuGroupId: '9_ai_1_code',
       contextMenuOrder: 5,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -1016,7 +1016,7 @@ export function CodeEditor() {
     const generateTestsAction = editor.addAction({
       id: 'code-ai-generate-tests',
       label: 'Code AI: 테스트 생성',
-      contextMenuGroupId: 'code-ai',
+      contextMenuGroupId: '9_ai_1_code',
       contextMenuOrder: 6,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -1033,7 +1033,7 @@ export function CodeEditor() {
     const continueAction = editor.addAction({
       id: 'writing-ai-continue',
       label: 'Writing AI: 계속 작성',
-      contextMenuGroupId: 'writing-ai',
+      contextMenuGroupId: '9_ai_2_writing',
       contextMenuOrder: 1,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -1049,7 +1049,7 @@ export function CodeEditor() {
     const makeShorterAction = editor.addAction({
       id: 'writing-ai-make-shorter',
       label: 'Writing AI: 짧게 만들기',
-      contextMenuGroupId: 'writing-ai',
+      contextMenuGroupId: '9_ai_2_writing',
       contextMenuOrder: 2,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -1065,7 +1065,7 @@ export function CodeEditor() {
     const makeLongerAction = editor.addAction({
       id: 'writing-ai-make-longer',
       label: 'Writing AI: 길게 만들기',
-      contextMenuGroupId: 'writing-ai',
+      contextMenuGroupId: '9_ai_2_writing',
       contextMenuOrder: 3,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -1081,7 +1081,7 @@ export function CodeEditor() {
     const simplifyAction = editor.addAction({
       id: 'writing-ai-simplify',
       label: 'Writing AI: 단순화',
-      contextMenuGroupId: 'writing-ai',
+      contextMenuGroupId: '9_ai_2_writing',
       contextMenuOrder: 4,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -1097,7 +1097,7 @@ export function CodeEditor() {
     const fixGrammarAction = editor.addAction({
       id: 'writing-ai-fix-grammar',
       label: 'Writing AI: 문법/맞춤법 수정',
-      contextMenuGroupId: 'writing-ai',
+      contextMenuGroupId: '9_ai_2_writing',
       contextMenuOrder: 5,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -1113,7 +1113,7 @@ export function CodeEditor() {
     const summarizeAction = editor.addAction({
       id: 'writing-ai-summarize',
       label: 'Writing AI: 요약',
-      contextMenuGroupId: 'writing-ai',
+      contextMenuGroupId: '9_ai_2_writing',
       contextMenuOrder: 6,
       run: async (ed) => {
         const selection = ed.getSelection();
@@ -1129,7 +1129,7 @@ export function CodeEditor() {
     const translateAction = editor.addAction({
       id: 'writing-ai-translate',
       label: 'Writing AI: 한국어로 번역',
-      contextMenuGroupId: 'writing-ai',
+      contextMenuGroupId: '9_ai_2_writing',
       contextMenuOrder: 7,
       run: async (ed) => {
         const selection = ed.getSelection();

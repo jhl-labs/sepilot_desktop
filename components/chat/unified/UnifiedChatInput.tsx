@@ -97,7 +97,7 @@ export function UnifiedChatInput({
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('full');
 
   // Load LLM config
-  const { llmConfig } = useConfigLoader();
+  const { llmConfig, updateLLMConfig } = useConfigLoader();
 
   // Store state (Main Chat only)
   const {
@@ -1120,6 +1120,7 @@ export function UnifiedChatInput({
             input={input}
             mounted={mounted}
             tools={tools}
+            onConfigUpdate={updateLLMConfig}
           />
         </div>
       )}

@@ -223,5 +223,38 @@ export function useConfigLoader() {
     imageGenConfig,
     imageGenAvailable,
     mounted,
+    updateLLMConfig: async (newConfig: LLMConfig) => {
+      try {
+        if (isElectron() && window.electronAPI) {
+          // Load current full config to preserve other settings (especially mcp)
+          const result = await window.electronAPI.config.load();
+          if (result.success && result.data) {
+            const currentConfig = result.data;
+            const updatedConfig = {
+              ...currentConfig,
+              llm: newConfig,
+            };
+            await window.electronAPI.config.save(updatedConfig);
+            initializeLLMClient(newConfig);
+          } else {
+            console.error('Failed to load current config for update');
+            return;
+          }
+        } else {
+          localStorage.setItem('sepilot_llm_config', JSON.stringify(newConfig));
+          configureWebLLMClient(newConfig);
+        }
+
+        setLlmConfig(newConfig);
+
+        window.dispatchEvent(
+          new CustomEvent('sepilot:config-updated', {
+            detail: { llm: newConfig },
+          })
+        );
+      } catch (error) {
+        console.error('Failed to update LLM config:', error);
+      }
+    },
   };
 }
