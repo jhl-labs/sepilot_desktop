@@ -105,8 +105,8 @@ importers:
         specifier: ^1.11.0
         version: 1.11.0
       markdown-to-jsx:
-        specifier: 9.2.0
-        version: 9.2.0(react@19.2.1)
+        specifier: 9.3.5
+        version: 9.3.5(react@19.2.1)
       mermaid:
         specifier: ^11.12.2
         version: 11.12.2
@@ -5744,16 +5744,22 @@ packages:
     resolution: {integrity: sha512-lgL7XpIwsgICiL82ITplfS7IGwrB1OJIw/pCvprDp2dhmSSEBgmPzYRvwYYYvJGJD7fxUv1Tvpih4nZ6VrLuaA==}
     engines: {node: '>=16.14.0', npm: '>=8.1.0'}
 
-  markdown-to-jsx@9.2.0:
-    resolution: {integrity: sha512-D7ZgL7MJ0XIWNTfmpZd+he99bl2cNb7iGoj4EzZZP5hC9UE2OklNWRLgzSHrgtSOJ8zAEv3z4IlHKlbH+lPBmQ==}
+  markdown-to-jsx@9.3.5:
+    resolution: {integrity: sha512-KPOCpEWDypPWcZ24TUk7Xlrz9RvGdmGOsmjrRBX5uSi+7rKHmQhzwog4vwG66FVIsFERJRfEXsKflAZDjGrTvw==}
     engines: {node: '>= 18'}
     peerDependencies:
       react: '>= 16.0.0'
       react-native: '*'
+      solid-js: '>=1.0.0'
+      vue: '>=3.0.0'
     peerDependenciesMeta:
       react:
         optional: true
       react-native:
+        optional: true
+      solid-js:
+        optional: true
+      vue:
         optional: true
 
   marked@14.0.0:
@@ -14798,7 +14804,7 @@ snapshots:
       tinyqueue: 3.0.0
       vt-pbf: 3.1.3
 
-  markdown-to-jsx@9.2.0(react@19.2.1):
+  markdown-to-jsx@9.3.5(react@19.2.1):
     optionalDependencies:
       react: 19.2.1
 
