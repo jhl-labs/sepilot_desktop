@@ -84,7 +84,7 @@
     "node-pty": "1.1.0-beta39",
     "pdf-parse": "^2.4.5",
     "plotly.js-dist-min": "^3.3.0",
-    "pptxgenjs": "^3.12.0",
+    "pptxgenjs": "^4.0.1",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-plotly.js": "^2.6.0",
