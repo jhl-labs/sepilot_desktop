@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import mermaid from 'mermaid';
-import DOMPurify from 'isomorphic-dompurify';
+import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
 import { Check, Copy, RefreshCw, Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
