@@ -94,14 +94,16 @@ describe('ChatHistory', () => {
     expect(mockChatStore.setActiveConversation).toHaveBeenCalledWith('conv-2');
   });
 
-  it('should call onConversationClick when conversation clicked', () => {
+  it('should call onConversationClick when conversation clicked', async () => {
     const onConversationClick = jest.fn();
     render(<ChatHistory onConversationClick={onConversationClick} />);
 
     const conversation = screen.getByText('First Chat');
     fireEvent.click(conversation);
 
-    expect(onConversationClick).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(onConversationClick).toHaveBeenCalled();
+    });
   });
 
   it('should show empty state when no conversations', () => {
@@ -208,8 +210,10 @@ describe('ChatHistory', () => {
     const searchResult = screen.getByText('Second Chat').closest('div');
     fireEvent.click(searchResult!);
 
-    expect(mockChatStore.setActiveConversation).toHaveBeenCalledWith('conv-2');
-    expect(onConversationClick).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockChatStore.setActiveConversation).toHaveBeenCalledWith('conv-2');
+      expect(onConversationClick).toHaveBeenCalled();
+    });
   });
 
   it('should enter edit mode on edit button click', async () => {

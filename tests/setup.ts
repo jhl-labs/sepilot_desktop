@@ -87,6 +87,13 @@ export const mockElectronAPI = {
     createDirectory: jest.fn(),
     delete: jest.fn(),
     rename: jest.fn(),
+    resolvePath: jest.fn((parentPath: string, child: string) => {
+      const separator = parentPath.endsWith('/') ? '' : '/';
+      return Promise.resolve({
+        success: true,
+        data: `${parentPath}${separator}${child}`,
+      });
+    }),
   },
   github: {
     setPrivateKey: jest.fn(),

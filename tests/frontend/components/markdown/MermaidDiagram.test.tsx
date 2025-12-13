@@ -435,12 +435,16 @@ describe('MermaidDiagram', () => {
 
       render(<MermaidDiagram chart={badChart} />);
 
-      await waitFor(
-        () => {
-          expect(mockElectronAPI.llm.chat).toHaveBeenCalled();
-        },
-        { timeout: 3000 }
-      );
+      await waitFor(() => {
+        expect(screen.getByText('Mermaid Diagram Error')).toBeInTheDocument();
+      });
+
+      const retryButton = screen.getByRole('button', { name: /수정/ });
+      fireEvent.click(retryButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.llm.chat).toHaveBeenCalled();
+      });
 
       delete (window as any).electronAPI;
       (require('@/lib/platform').isElectron as jest.Mock).mockReturnValue(false);
@@ -466,15 +470,19 @@ describe('MermaidDiagram', () => {
 
       render(<MermaidDiagram chart={badChart} />);
 
-      await waitFor(
-        () => {
-          const calls = mockElectronAPI.llm.chat.mock.calls;
-          if (calls.length > 0) {
-            expect(calls[0][0][0].content).toContain('Parse error');
-          }
-        },
-        { timeout: 3000 }
-      );
+      await waitFor(() => {
+        expect(screen.getByText('Mermaid Diagram Error')).toBeInTheDocument();
+      });
+
+      const retryButton = screen.getByRole('button', { name: /수정/ });
+      fireEvent.click(retryButton);
+
+      await waitFor(() => {
+        const calls = mockElectronAPI.llm.chat.mock.calls;
+        if (calls.length > 0) {
+          expect(calls[0][0][0].content).toContain('Parse error');
+        }
+      });
 
       delete (window as any).electronAPI;
       (require('@/lib/platform').isElectron as jest.Mock).mockReturnValue(false);
@@ -567,13 +575,17 @@ describe('MermaidDiagram', () => {
 
       render(<MermaidDiagram chart={badChart} />);
 
-      // Wait for LLM call to start
-      await waitFor(
-        () => {
-          expect(mockElectronAPI.llm.chat).toHaveBeenCalled();
-        },
-        { timeout: 3000 }
-      );
+      await waitFor(() => {
+        expect(screen.getByText('Mermaid Diagram Error')).toBeInTheDocument();
+      });
+
+      const retryButton = screen.getByRole('button', { name: /수정/ });
+      fireEvent.click(retryButton);
+
+      await waitFor(() => {
+        expect(mockElectronAPI.llm.chat).toHaveBeenCalled();
+        expect(screen.getByText(/다이어그램 수정 중.../)).toBeInTheDocument();
+      });
 
       delete (window as any).electronAPI;
       (require('@/lib/platform').isElectron as jest.Mock).mockReturnValue(false);

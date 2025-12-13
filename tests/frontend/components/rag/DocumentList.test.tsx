@@ -72,6 +72,11 @@ describe('DocumentList', () => {
     (getAllDocuments as jest.Mock).mockResolvedValue(mockDocuments);
   });
 
+  const switchToGridView = async () => {
+    const gridButton = await screen.findByTitle('그리드 뷰');
+    fireEvent.click(gridButton);
+  };
+
   describe('초기 렌더링', () => {
     it('should render document list header', async () => {
       render(<DocumentList />);
@@ -92,7 +97,7 @@ describe('DocumentList', () => {
     it('should render refresh button', async () => {
       render(<DocumentList />);
 
-      const refreshButton = await screen.findByRole('button');
+      const refreshButton = await screen.findByTitle('문서 새로고침');
       expect(refreshButton).toBeInTheDocument();
     });
 
@@ -139,12 +144,11 @@ describe('DocumentList', () => {
       });
     });
 
-    it('should display document source', async () => {
+    it('should display document source for uploaded docs', async () => {
       render(<DocumentList />);
 
       await waitFor(() => {
         expect(screen.getByText(/출처: upload/)).toBeInTheDocument();
-        expect(screen.getByText(/출처: manual/)).toBeInTheDocument();
       });
     });
 
@@ -166,6 +170,7 @@ describe('DocumentList', () => {
 
     it('should truncate long content', async () => {
       render(<DocumentList />);
+      await switchToGridView();
 
       await waitFor(() => {
         const content = screen.getByText(/This is a very long document content/);
@@ -177,6 +182,7 @@ describe('DocumentList', () => {
   describe('문서 확장/축소', () => {
     it('should show "더 보기" button for long content', async () => {
       render(<DocumentList />);
+      await switchToGridView();
 
       await waitFor(() => {
         const moreButton = screen.getByText('더 보기');
@@ -186,6 +192,7 @@ describe('DocumentList', () => {
 
     it('should expand content when "더 보기" clicked', async () => {
       render(<DocumentList />);
+      await switchToGridView();
 
       await waitFor(() => {
         const moreButton = screen.getByText('더 보기');
@@ -199,6 +206,7 @@ describe('DocumentList', () => {
 
     it('should collapse content when "접기" clicked', async () => {
       render(<DocumentList />);
+      await switchToGridView();
 
       await waitFor(() => {
         const moreButton = screen.getByText('더 보기');
@@ -391,7 +399,7 @@ describe('DocumentList', () => {
         expect(getAllDocuments).toHaveBeenCalledTimes(1);
       });
 
-      const refreshButton = screen.getAllByRole('button')[0]; // First button is refresh
+      const refreshButton = await screen.findByTitle('문서 새로고침');
       fireEvent.click(refreshButton);
 
       await waitFor(() => {
@@ -408,7 +416,7 @@ describe('DocumentList', () => {
 
       render(<DocumentList />);
 
-      const refreshButton = screen.getAllByRole('button')[0];
+      const refreshButton = await screen.findByTitle('문서 새로고침');
       fireEvent.click(refreshButton);
 
       await waitFor(() => {
@@ -432,7 +440,7 @@ describe('DocumentList', () => {
       render(<DocumentList />);
 
       await waitFor(() => {
-        const refreshButton = screen.getAllByRole('button')[0];
+        const refreshButton = screen.getByTitle('문서 새로고침');
         expect(refreshButton).toBeDisabled();
       });
 
@@ -456,6 +464,7 @@ describe('DocumentList', () => {
       (getAllDocuments as jest.Mock).mockResolvedValue(mockChunkedDocuments);
 
       render(<DocumentList />);
+      await switchToGridView();
 
       await waitFor(() => {
         expect(screen.getByText('Chunked Document')).toBeInTheDocument();
@@ -472,6 +481,7 @@ describe('DocumentList', () => {
       (getAllDocuments as jest.Mock).mockResolvedValue(unorderedChunks);
 
       render(<DocumentList />);
+      await switchToGridView();
 
       await waitFor(() => {
         const content = screen.getByText(/First chunk.*Second chunk/s);

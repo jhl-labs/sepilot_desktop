@@ -63,7 +63,7 @@ describe('BrowserToolsList', () => {
       render(<BrowserToolsList />);
 
       expect(
-        screen.getByText('Browser Agent가 사용할 수 있는 총 18개의 도구입니다.')
+        screen.getByText('Browser Agent가 사용할 수 있는 총 27개의 도구입니다.')
       ).toBeInTheDocument();
     });
   });
@@ -237,19 +237,16 @@ describe('BrowserToolsList', () => {
   });
 
   describe('All Tools Count', () => {
-    it('should have exactly 18 tools total', () => {
-      render(<BrowserToolsList />);
-
-      // Count all tool names (code elements with font-mono)
+    it('should have exactly 27 tools total', () => {
       const { container } = render(<BrowserToolsList />);
       const toolNames = container.querySelectorAll('code.font-mono');
 
-      expect(toolNames.length).toBe(18);
+      expect(toolNames.length).toBe(27);
     });
   });
 
   describe('Categories', () => {
-    it('should render all 5 categories', () => {
+    it('should render all 6 categories', () => {
       render(<BrowserToolsList />);
 
       expect(screen.getByText('Navigation (1)')).toBeInTheDocument();
@@ -257,11 +254,11 @@ describe('BrowserToolsList', () => {
       expect(screen.getByText('Page Interaction (3)')).toBeInTheDocument();
       expect(screen.getByText('Tab Management (4)')).toBeInTheDocument();
       expect(screen.getByText('Vision-based Tools (5)')).toBeInTheDocument();
+      expect(screen.getByText('Google Search Tools (9)')).toBeInTheDocument();
     });
 
     it('should sum to 18 tools across all categories', () => {
-      // 1 + 5 + 3 + 4 + 5 = 18
-      expect(1 + 5 + 3 + 4 + 5).toBe(18);
+      expect(1 + 5 + 3 + 4 + 5 + 9).toBe(27);
     });
   });
 

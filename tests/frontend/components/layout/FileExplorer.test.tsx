@@ -21,18 +21,32 @@ describe('FileExplorer', () => {
   const mockSetWorkingDirectory = jest.fn();
   const mockOpenFile = jest.fn();
   const mockLoadWorkingDirectory = jest.fn();
+  let storeState = createStore();
+  const createStore = (overrides: Record<string, any> = {}) => ({
+    workingDirectory: null,
+    setWorkingDirectory: mockSetWorkingDirectory,
+    openFile: mockOpenFile,
+    activeFilePath: null,
+    loadWorkingDirectory: mockLoadWorkingDirectory,
+    fileTreeRefreshTrigger: 0,
+    refreshFileTree: jest.fn(),
+    expandedFolderPaths: new Set<string>(),
+    clearExpandedFolders: jest.fn(),
+    ...overrides,
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
     enableElectronMode();
 
-    (useChatStore as unknown as jest.Mock).mockReturnValue({
-      workingDirectory: null,
-      setWorkingDirectory: mockSetWorkingDirectory,
-      openFile: mockOpenFile,
-      activeFilePath: null,
-      loadWorkingDirectory: mockLoadWorkingDirectory,
+    storeState = createStore();
+    (useChatStore as unknown as jest.Mock).mockImplementation((selector?: any) => {
+      if (typeof selector === 'function') {
+        return selector(storeState);
+      }
+      return storeState;
     });
+    (useChatStore as any).getState = () => storeState;
   });
 
   describe('초기 렌더링', () => {
@@ -125,12 +139,8 @@ describe('FileExplorer', () => {
     it('working directory 설정 시 파일 트리를 로드해야 함', async () => {
       const { rerender } = render(<FileExplorer />);
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test/directory',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       rerender(<FileExplorer />);
@@ -150,12 +160,8 @@ describe('FileExplorer', () => {
 
       const { rerender } = render(<FileExplorer />);
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test/directory',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       rerender(<FileExplorer />);
@@ -175,12 +181,8 @@ describe('FileExplorer', () => {
 
       const { rerender } = render(<FileExplorer />);
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test/empty',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       rerender(<FileExplorer />);
@@ -191,12 +193,8 @@ describe('FileExplorer', () => {
     });
 
     it('선택된 working directory 경로를 표시해야 함', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/home/user/projects/my-app',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -231,12 +229,8 @@ describe('FileExplorer', () => {
         return Promise.resolve({ success: true, data: [] });
       });
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test/directory',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
     });
 
@@ -279,12 +273,8 @@ describe('FileExplorer', () => {
         ],
       });
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
     });
 
@@ -424,12 +414,9 @@ describe('FileExplorer', () => {
         ],
       });
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
         activeFilePath: '/test/active.ts',
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -461,12 +448,8 @@ describe('FileExplorer', () => {
         return Promise.reject(new Error('Permission denied'));
       });
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -493,12 +476,8 @@ describe('FileExplorer', () => {
 
       (mockElectronAPI.fs.readDirectory as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -527,12 +506,8 @@ describe('FileExplorer', () => {
     });
 
     it('working directory가 있으면 버튼이 활성화되어야 함', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -546,12 +521,8 @@ describe('FileExplorer', () => {
 
     it('새 파일 버튼 클릭 시 dialog가 열려야 함', async () => {
       const user = userEvent.setup();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -567,12 +538,8 @@ describe('FileExplorer', () => {
 
     it('새 폴더 버튼 클릭 시 dialog가 열려야 함', async () => {
       const user = userEvent.setup();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -588,12 +555,8 @@ describe('FileExplorer', () => {
 
     it('새 파일 dialog에서 파일 생성 성공', async () => {
       const user = userEvent.setup();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       (mockElectronAPI.fs.createFile as jest.Mock).mockResolvedValue({
@@ -624,12 +587,8 @@ describe('FileExplorer', () => {
 
     it('새 파일 dialog에서 Enter 키로 파일 생성', async () => {
       const user = userEvent.setup();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       (mockElectronAPI.fs.createFile as jest.Mock).mockResolvedValue({
@@ -656,12 +615,8 @@ describe('FileExplorer', () => {
 
     it('새 파일 dialog 취소 버튼', async () => {
       const user = userEvent.setup();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -683,12 +638,8 @@ describe('FileExplorer', () => {
       const user = userEvent.setup();
       const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       (mockElectronAPI.fs.createFile as jest.Mock).mockResolvedValue({
@@ -715,12 +666,8 @@ describe('FileExplorer', () => {
 
     it('새 폴더 dialog에서 폴더 생성 성공', async () => {
       const user = userEvent.setup();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       (mockElectronAPI.fs.createDirectory as jest.Mock).mockResolvedValue({
@@ -751,12 +698,8 @@ describe('FileExplorer', () => {
 
     it('새 폴더 dialog에서 Enter 키로 폴더 생성', async () => {
       const user = userEvent.setup();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       (mockElectronAPI.fs.createDirectory as jest.Mock).mockResolvedValue({
@@ -783,12 +726,8 @@ describe('FileExplorer', () => {
 
     it('새 폴더 dialog 취소 버튼', async () => {
       const user = userEvent.setup();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -810,12 +749,8 @@ describe('FileExplorer', () => {
       const user = userEvent.setup();
       const alertSpy = jest.spyOn(window, 'alert').mockImplementation();
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       (mockElectronAPI.fs.createDirectory as jest.Mock).mockResolvedValue({
@@ -841,12 +776,8 @@ describe('FileExplorer', () => {
     });
 
     it('빈 디렉토리 메시지 표시', async () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       (mockElectronAPI.fs.readDirectory as jest.Mock).mockResolvedValue({
@@ -869,12 +800,8 @@ describe('FileExplorer', () => {
         data: 'test content',
       });
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
     });
 
@@ -968,12 +895,8 @@ describe('FileExplorer', () => {
     it('should warn when trying to create file without name', async () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -992,7 +915,7 @@ describe('FileExplorer', () => {
 
       await waitFor(() => {
         expect(consoleWarnSpy).toHaveBeenCalledWith(
-          '[FileExplorer] Cannot create file - missing name or working directory'
+          '[FileExplorer] Cannot create item - missing name or parent path'
         );
       });
 
@@ -1002,12 +925,8 @@ describe('FileExplorer', () => {
     it('should warn when trying to create folder without name', async () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      storeState = createStore({
         workingDirectory: '/test',
-        setWorkingDirectory: mockSetWorkingDirectory,
-        openFile: mockOpenFile,
-        activeFilePath: null,
-        loadWorkingDirectory: mockLoadWorkingDirectory,
       });
 
       render(<FileExplorer />);
@@ -1026,7 +945,7 @@ describe('FileExplorer', () => {
 
       await waitFor(() => {
         expect(consoleWarnSpy).toHaveBeenCalledWith(
-          '[FileExplorer] Cannot create folder - missing name or working directory'
+          '[FileExplorer] Cannot create item - missing name or parent path'
         );
       });
 
