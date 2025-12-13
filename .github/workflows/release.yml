@@ -40,8 +40,8 @@ jobs:
         with:
           path: |
             ${{ env.STORE_PATH }}
-            ~/.cache/electron
-            ~/.cache/electron-builder
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
             ${{ github.workspace }}/.cache/electron-builder
           key: ${{ runner.os }}-deps-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
@@ -77,11 +77,18 @@ jobs:
         run: pnpm build:icon
 
       - name: Build for Windows
-        run: pnpm build:win
+        uses: nick-invision/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: pnpm build:win
         env:
           ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           CI: true
+          ELECTRON_GET_USE_PROXY: true
+          GLOBAL_AGENT_HTTPS_PROXY: ''
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v5
