@@ -1239,7 +1239,9 @@ export function InputBox() {
             graphConfig,
             allMessages,
             conversationId,
-            enableImageGeneration && comfyUIConfig ? comfyUIConfig : undefined,
+            enableImageGeneration && comfyUIConfig
+              ? { provider: 'comfyui', comfyui: comfyUIConfig }
+              : undefined,
             enableImageGeneration && networkConfig ? networkConfig : undefined,
             workingDirectory || undefined
           );
