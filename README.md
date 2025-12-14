@@ -9,28 +9,31 @@ _Thinking, Coding, Editor, Browser, Vision을 하나로 통합한 궁극의 데�
 ![Version](https://img.shields.io/badge/version-0.6.5-blue.svg)
 [![License](https://img.shields.io/badge/license-Custom-green)](./LICENSE)
 
-<!-- Tech Stack -->
+<p>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.4-blue" alt="TypeScript"></a>
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-14.0-black" alt="Next.js"></a>
+  <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-31.0-47848F" alt="Electron"></a>
+</p>
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14.0-black)](https://nextjs.org/)
-[![Electron](https://img.shields.io/badge/Electron-31.0-47848F)](https://www.electronjs.org/)
+<p>
+  <a href="https://github.com/jhl-labs/sepilot_desktop/actions/workflows/ci.yml"><img src="https://github.com/jhl-labs/sepilot_desktop/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/jhl-labs/sepilot_desktop/actions/workflows/release.yml"><img src="https://github.com/jhl-labs/sepilot_desktop/actions/workflows/release.yml/badge.svg" alt="Release"></a>
+  <a href="https://github.com/jhl-labs/sepilot_desktop/actions/workflows/deploy-pages.yml"><img src="https://github.com/jhl-labs/sepilot_desktop/actions/workflows/deploy-pages.yml/badge.svg" alt="Deploy Pages"></a>
+  <br/>
+  <a href="https://codecov.io/gh/jhl-labs/sepilot_desktop"><img src="https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graph/badge.svg?token=RTDC27F34B" alt="codecov"></a>
+  <a href="https://github.com/jhl-labs/sepilot_desktop/actions/workflows/codeql.yml"><img src="https://github.com/jhl-labs/sepilot_desktop/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
+  <a href="https://github.com/jhl-labs/sepilot_desktop/actions/workflows/security-scan.yml"><img src="https://github.com/jhl-labs/sepilot_desktop/actions/workflows/security-scan.yml/badge.svg" alt="Security Scan"></a>
+</p>
 
-<!-- Build & Release -->
-
-[![CI](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/ci.yml)
-[![Release](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/release.yml/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/release.yml)
-[![Deploy Pages](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/deploy-pages.yml)
-
-<!-- Security & Quality -->
-
-[![codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graph/badge.svg?token=RTDC27F34B)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
-[![CodeQL](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/codeql.yml/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/codeql.yml)
-[![Security Scan](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/security-scan.yml/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/security-scan.yml)
-
-<br/>
-
-[![Codecov Tree](https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/tree.svg?token=RTDC27F34B&width=200&height=50)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
-[![Codecov Sunburst](https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/sunburst.svg?token=RTDC27F34B&width=200&height=50)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
+<p align="center">
+  <a href="https://codecov.io/gh/jhl-labs/sepilot_desktop">
+    <img src="https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/tree.svg?token=RTDC27F34B&width=200&height=50" alt="Codecov Tree" height="50">
+  </a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://codecov.io/gh/jhl-labs/sepilot_desktop">
+    <img src="https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/sunburst.svg?token=RTDC27F34B&width=200&height=50" alt="Codecov Sunburst" height="50">
+  </a>
+</p>
 
 [English](#english) | [한국어](#korean)
 
