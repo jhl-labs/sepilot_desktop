@@ -42,17 +42,47 @@
   // Fix: Buffer is not defined
   if (typeof Buffer === 'undefined') {
     window.Buffer = {
-      from: function (data) {
-        return data;
+      from: function (data, encoding) {
+        if (typeof data === 'string') {
+          if (encoding === 'base64') {
+            try {
+              const binString = atob(data);
+              const bytes = new Uint8Array(binString.length);
+              for (let i = 0; i < binString.length; i++) {
+                bytes[i] = binString.charCodeAt(i);
+              }
+              return bytes;
+            } catch (e) {
+              console.error('Buffer.from base64 failed', e);
+              return new Uint8Array(0);
+            }
+          }
+          // Default to utf8 handling via TextEncoder
+          return new TextEncoder().encode(data);
+        }
+        return data; // Assume it's already array-like if not string
       },
-      isBuffer: function () {
-        return false;
+      isBuffer: function (obj) {
+        return obj instanceof Uint8Array;
       },
       alloc: function (size) {
         return new Uint8Array(size);
       },
       allocUnsafe: function (size) {
         return new Uint8Array(size);
+      },
+      concat: function (list) {
+        let length = 0;
+        for (let i = 0; i < list.length; i++) {
+          length += list[i].length;
+        }
+        const result = new Uint8Array(length);
+        let offset = 0;
+        for (let i = 0; i < list.length; i++) {
+          result.set(list[i], offset);
+          offset += list[i].length;
+        }
+        return result;
       },
     };
   }

@@ -1,4 +1,4 @@
-import { encoding_for_model, Tiktoken, type TiktokenModel } from 'tiktoken';
+import { encodingForModel, type Tiktoken, type TiktokenModel } from 'js-tiktoken';
 import type { Message } from '@/types';
 
 // 인코더 캐시 (모델별로 재사용)
@@ -23,16 +23,22 @@ function getEncoderForModel(modelName: string): Tiktoken {
   try {
     // OpenAI 모델은 직접 인코더 가져오기
     if (modelName.startsWith('gpt-')) {
-      // tiktoken이 지원하는 모델인지 확인
-      encoder = encoding_for_model(modelName as TiktokenModel);
+      // js-tiktoken은 타입 호환성이 조금 다를 수 있으므로 as any 사용 가능하지만
+      // cl100k_base를 사용하는 대부분의 최신 모델을 지원합니다.
+      // 알려지지 않은 모델이면 cl100k_base로 폴백합니다.
+      try {
+        encoder = encodingForModel(modelName as TiktokenModel);
+      } catch {
+        encoder = encodingForModel('gpt-4');
+      }
     } else {
       // 기타 모델(Claude, Ollama 등)은 cl100k_base 인코더 사용
       // cl100k_base는 GPT-4, GPT-3.5-turbo에서 사용하는 인코더
-      encoder = encoding_for_model('gpt-4' as TiktokenModel);
+      encoder = encodingForModel('gpt-4');
     }
   } catch {
     // 지원하지 않는 모델명이면 기본 인코더 사용
-    encoder = encoding_for_model('gpt-4' as TiktokenModel);
+    encoder = encodingForModel('gpt-4');
   }
 
   // 캐시에 저장
@@ -127,16 +133,6 @@ export function countMessagesTokens(messages: Message[], modelName: string = 'gp
 }
 
 /**
- * 컨텍스트 사용률을 계산합니다.
- *
- * @param messages - 메시지 배열
- * @param input - 현재 입력 텍스트
- * @param modelName - LLM 모델 이름 (기본값: 'gpt-4')
- * @param maxContextTokens - 모델의 최대 컨텍스트 토큰 수 (기본값: 128000)
- * @returns 사용된 토큰 수, 최대 토큰 수, 사용률(%)
- */
-
-/**
  * Common model context limits
  */
 export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
@@ -226,8 +222,6 @@ export function formatTokens(tokens: number): string {
  * 메모리 정리가 필요할 때 사용합니다.
  */
 export function clearEncoderCache(): void {
-  for (const encoder of encoderCache.values()) {
-    encoder.free();
-  }
+  // js-tiktoken does not require manual freeing, so we just clear the map
   encoderCache.clear();
 }
