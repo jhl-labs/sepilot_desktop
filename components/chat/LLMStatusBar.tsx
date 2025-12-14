@@ -214,6 +214,11 @@ export function LLMStatusBar({
           );
 
           // Re-initialize Main Process LLM client with new config
+          console.log('[LLMStatusBar] Initializing backend with config:', {
+            provider: updatedConfig.provider,
+            model: updatedConfig.model,
+            baseURL: updatedConfig.baseURL,
+          });
           await window.electronAPI.llm.init({ ...mergedConfig, llm: updatedConfig });
           console.log(
             '[LLMStatusBar] Main Process LLM client re-initialized with model:',
