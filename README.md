@@ -7,14 +7,30 @@
 _Thinking, Coding, Editor, Browser, Vision을 하나로 통합한 궁극의 데스크톱 AI 워크스페이스_
 
 ![Version](https://img.shields.io/badge/version-0.6.5-blue.svg)
+[![License](https://img.shields.io/badge/license-Custom-green)](./LICENSE)
+
+<!-- Tech Stack -->
+
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14.0-black)](https://nextjs.org/)
 [![Electron](https://img.shields.io/badge/Electron-31.0-47848F)](https://www.electronjs.org/)
-[![CI](https://github.com/jhl-labs/sepilot_desktop/workflows/CI/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions)
-[![codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graph/badge.svg?token=RTDC27F34B)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
-[![License](https://img.shields.io/badge/license-Custom-green)](./LICENSE)
 
-![Codecov Tree Graph](https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/tree.svg?token=RTDC27F34B)
+<!-- Build & Release -->
+
+[![CI](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/ci.yml)
+[![Release](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/release.yml/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/release.yml)
+[![Deploy Pages](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/deploy-pages.yml)
+
+<!-- Security & Quality -->
+
+[![codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graph/badge.svg?token=RTDC27F34B)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
+[![CodeQL](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/codeql.yml/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/codeql.yml)
+[![Security Scan](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/security-scan.yml/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions/workflows/security-scan.yml)
+
+<br/>
+
+[![Codecov Tree](https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/tree.svg?token=RTDC27F34B&width=200&height=50)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
+[![Codecov Sunburst](https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/sunburst.svg?token=RTDC27F34B&width=200&height=50)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
 
 [English](#english) | [한국어](#korean)
 
