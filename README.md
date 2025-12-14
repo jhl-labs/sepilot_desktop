@@ -27,12 +27,12 @@ _Thinking, Coding, Editor, Browser, Vision을 하나로 통합한 궁극의 데�
 
 <p align="center">
   <a href="https://codecov.io/gh/jhl-labs/sepilot_desktop">
-    <img src="https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/tree.svg?token=RTDC27F34B&width=300&height=75" alt="Codecov Tree" height="75">
+    <img src="https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/tree.svg?token=RTDC27F34B&width=600&height=120" alt="Codecov Tree" height="120">
   </a>
   <br>
-  &nbsp;&nbsp;&nbsp;
+  <br>
   <a href="https://codecov.io/gh/jhl-labs/sepilot_desktop">
-    <img src="https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/sunburst.svg?token=RTDC27F34B&width=300&height=75" alt="Codecov Sunburst" height="75">
+    <img src="https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/sunburst.svg?token=RTDC27F34B&width=600&height=220" alt="Codecov Sunburst" height="220">
   </a>
 </p>
 
@@ -125,13 +125,6 @@ _Turn your documents into AI's knowledge._
 
 Download the latest installer from [Releases](https://github.com/jhl-labs/sepilot_desktop/releases).
 
-### 🚀 Development
-
-```bash
-# Run development server (Next.js + Electron)
-pnpm run dev
-```
-
 ---
 
 <a name="korean"></a>
@@ -218,13 +211,6 @@ _당신의 문서를 AI의 지식으로._
 ### 📦 설치
 
 [Releases](https://github.com/jhl-labs/sepilot_desktop/releases) 페이지에서 최신 설치 파일을 다운로드하세요.
-
-### 🚀 개발
-
-```bash
-# 개발 서버 실행 (Next.js + Electron)
-pnpm run dev
-```
 
 ### 📄 License
 
