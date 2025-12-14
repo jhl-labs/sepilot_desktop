@@ -47,6 +47,12 @@ const readFileTool: EditorTool = {
           : process.cwd());
       const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
 
+      // Security Check
+      const relative = path.relative(workingDir, absolutePath);
+      if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        throw new Error(`Access denied: Path is outside the working directory: ${filePath}`);
+      }
+
       const content = await fs.readFile(absolutePath, 'utf-8');
       const lines = content.split('\n').length;
 
@@ -110,6 +116,12 @@ const writeFileTool: EditorTool = {
           ? path.dirname(state.editorContext.filePath)
           : process.cwd());
       const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
+
+      // Security Check
+      const relative = path.relative(workingDir, absolutePath);
+      if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        throw new Error(`Access denied: Path is outside the working directory: ${filePath}`);
+      }
 
       // 디렉토리가 없으면 생성
       const dir = path.dirname(absolutePath);
@@ -186,6 +198,12 @@ const editFileTool: EditorTool = {
           ? path.dirname(state.editorContext.filePath)
           : process.cwd());
       const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
+
+      // Security Check
+      const relative = path.relative(workingDir, absolutePath);
+      if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        throw new Error(`Access denied: Path is outside the working directory: ${filePath}`);
+      }
 
       // 파일 읽기
       const content = await fs.readFile(absolutePath, 'utf-8');
@@ -266,6 +284,12 @@ const listFilesTool: EditorTool = {
           ? dirPath
           : path.join(workingDir, dirPath)
         : workingDir;
+
+      // Security Check
+      const relative = path.relative(workingDir, absolutePath);
+      if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        throw new Error(`Access denied: Path is outside the working directory: ${dirPath || '.'}`);
+      }
 
       // 재귀적 목록 조회 함수
       async function listRecursive(dir: string): Promise<string[]> {
@@ -372,6 +396,12 @@ const searchFilesTool: EditorTool = {
           : path.join(workingDir, dirPath)
         : workingDir;
 
+      // Security Check
+      const relative = path.relative(workingDir, searchDir);
+      if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        throw new Error(`Access denied: Path is outside the working directory: ${dirPath || '.'}`);
+      }
+
       // ripgrep 명령 구성
       let rgCommand = 'rg --json';
       if (!caseSensitive) {
@@ -469,6 +499,12 @@ const deleteFileTool: EditorTool = {
           ? path.dirname(state.editorContext.filePath)
           : process.cwd());
       const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
+
+      // Security Check
+      const relative = path.relative(workingDir, absolutePath);
+      if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        throw new Error(`Access denied: Path is outside the working directory: ${filePath}`);
+      }
 
       // 파일/디렉토리 확인
       const stats = await fs.stat(absolutePath);

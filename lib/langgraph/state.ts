@@ -214,6 +214,11 @@ export const CodingAgentStateAnnotation = Annotation.Root({
     reducer: (_existing: string, update: string) => update,
     default: () => '',
   }),
+  // Environment
+  workingDirectory: Annotation<string>({
+    reducer: (_existing: string, update: string) => update || _existing,
+    default: () => '',
+  }),
   // Token & Cost Tracking
   totalTokensUsed: Annotation<number>({
     reducer: (existing: number, update: number) => existing + update,
@@ -285,7 +290,8 @@ export function createInitialAgentState(
 export function createInitialCodingAgentState(
   messages: Message[] = [],
   conversationId: string = '',
-  maxIterations: number = 50
+  maxIterations: number = 50,
+  workingDirectory: string = ''
 ): CodingAgentState {
   return {
     messages,
@@ -315,5 +321,6 @@ export function createInitialCodingAgentState(
     agentError: '',
     totalTokensUsed: 0,
     estimatedCost: 0,
+    workingDirectory,
   };
 }

@@ -312,7 +312,10 @@ async function triageNode(state: CodingAgentState): Promise<Partial<CodingAgentS
   }
 
   const lowerPrompt = userPrompt.toLowerCase();
+
+  // 1. Fast Path: Check for obvious modification/inspection keywords
   const modificationKeywords = [
+    // Action keywords
     'make',
     'create',
     'build',
@@ -323,6 +326,35 @@ async function triageNode(state: CodingAgentState): Promise<Partial<CodingAgentS
     'install',
     'edit',
     'update',
+    // Inspection/Read keywords
+    'test',
+    'debug',
+    'analyze',
+    'review',
+    'check',
+    'verify',
+    'list',
+    'ls',
+    'dir',
+    'show',
+    'read',
+    'search',
+    'find',
+    'grep',
+    'tree',
+    'cat',
+    'print',
+    'locate',
+    // Noun triggers (implies looking at them)
+    'file',
+    'folder',
+    'directory',
+    'path',
+    'structure',
+    'code',
+    'error',
+    'bug',
+    'issue',
     // Korean action cues
     '만들',
     '생성',
@@ -333,24 +365,104 @@ async function triageNode(state: CodingAgentState): Promise<Partial<CodingAgentS
     '설치',
     '실행',
     '빌드',
+    // Korean Inspection/Read cues
+    '테스트',
+    '디버그',
+    '분석',
+    '리뷰',
+    '검토',
+    '확인',
+    '목록',
+    '리스트',
+    '보여',
+    '읽어',
+    '검색',
+    '찾아',
+    '구조',
+    '무엇',
+    '뭐야',
+    '어때',
+    // Korean Noun triggers
+    '파일',
+    '폴더',
+    '디렉터리',
+    '디렉토리',
+    '경로',
+    '에러',
+    '오류',
+    '버그',
+    '이슈',
+    '코드',
   ];
-  const isLikelyModification = modificationKeywords.some((k) => lowerPrompt.includes(k));
 
-  // Simple heuristic: keep direct responses to short, clear questions without action verbs
-  const isSimpleQuestion =
-    userPrompt.length < 200 &&
-    (userPrompt.includes('?') || userPrompt.includes('what') || userPrompt.includes('how')) &&
-    !isLikelyModification;
+  const hasComplexKeyword = modificationKeywords.some((k) => lowerPrompt.includes(k));
+  const hasFileParams =
+    userPrompt.includes('@') || /[a-zA-Z0-9_\-.]+\.(ts|js|py|html|css|json|md)/.test(userPrompt);
 
-  const decision = isSimpleQuestion ? 'direct_response' : 'graph';
-  const reason = isSimpleQuestion ? 'Simple question detected' : 'Complex task requiring tools';
+  if (hasComplexKeyword || hasFileParams) {
+    logger.info(`[Triage] Fast path: Detected complex task via keywords`);
+    return {
+      triageDecision: 'graph',
+      triageReason: 'Detected technical keywords or file references',
+    };
+  }
 
-  logger.info(`[Triage] Decision: ${decision}, Reason: ${reason}`);
+  // 2. LLM Classification: For ambiguous cases, ask the LLM
+  try {
+    const classificationMsg: Message = {
+      id: 'triage-system',
+      role: 'system',
+      content:
+        'You are a Triage Expert for a Coding Assistant.\n' +
+        'Determine if the user request requires accessing the codebase, tools, or specific project context.\n\n' +
+        'Respond with "COMPLEX" if:\n' +
+        '- Requires reading/writing files or listing directories\n' +
+        '- Requires searching the codebase or answering about project structure\n' +
+        '- Requires running commands or using any tools\n' +
+        '- Asks specific questions about the code (e.g. "what is in X?")\n\n' +
+        'Respond with "SIMPLE" ONLY if:\n' +
+        '- Pure greeting (Hi, Hello, How are you)\n' +
+        '- General unrelated programming question (e.g. "What is a Variable?")\n' +
+        '- Question about YOUR identity\n\n' +
+        'Output ONE word: COMPLEX or SIMPLE.',
+      created_at: Date.now(),
+    };
 
-  return {
-    triageDecision: decision,
-    triageReason: reason,
-  };
+    const userMsg: Message = {
+      id: 'triage-user',
+      role: 'user',
+      content: userPrompt,
+      created_at: Date.now(),
+    };
+
+    logger.info('[Triage] Calling LLM for classification...');
+    const response = await LLMService.chat([classificationMsg, userMsg], {
+      temperature: 0.1, // Deterministic
+      maxTokens: 10,
+    });
+
+    const classification = response.content?.trim().toUpperCase();
+    logger.info(`[Triage] LLM Classification: ${classification}`);
+
+    if (classification?.includes('SIMPLE')) {
+      return {
+        triageDecision: 'direct_response',
+        triageReason: 'LLM classified as general/simple query',
+      };
+    } else {
+      return {
+        triageDecision: 'graph',
+        triageReason: 'LLM classified as complex/context-dependent',
+      };
+    }
+  } catch (error) {
+    logger.warn('[Triage] Classification failed, falling back to graph:', error);
+    // Safety fallback: if in doubt, use the capable graph
+    return {
+      triageDecision: 'graph',
+      triageReason: 'Triage fallback strategy',
+    };
+  }
 }
 
 /**
@@ -657,10 +769,11 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
   );
 
   // Add system prompts (verified best practices from Cursor/Cline/Claude Code)
+  // Ensure workingDirectory is passed to ground the agent
   const codingSystemMsg: Message = {
     id: 'system-coding',
     role: 'system',
-    content: getCodingAgentSystemPrompt(),
+    content: getCodingAgentSystemPrompt(state.workingDirectory),
     created_at: Date.now(),
   };
 

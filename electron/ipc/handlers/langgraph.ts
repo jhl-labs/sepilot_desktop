@@ -224,7 +224,10 @@ export function setupLangGraphHandlers() {
 
         // Stream events to renderer
         try {
-          for await (const streamEvent of GraphFactory.streamWithConfig(graphConfig, messages, {
+          // Inject workingDirectory into graphConfig so GraphFactory can use it
+          const configWithWD = { ...graphConfig, workingDirectory };
+
+          for await (const streamEvent of GraphFactory.streamWithConfig(configWithWD, messages, {
             toolApprovalCallback,
             conversationId: streamId,
           })) {

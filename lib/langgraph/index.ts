@@ -365,7 +365,12 @@ export class GraphFactory {
       const { createInitialCodingAgentState } = await import('./state');
 
       const codingAgentGraph = new CodingAgentGraph();
-      const initialState = createInitialCodingAgentState(messages, conversationId);
+      const initialState = createInitialCodingAgentState(
+        messages,
+        conversationId,
+        options?.maxIterations || 50,
+        config.workingDirectory || process.cwd()
+      );
 
       // Use the CodingAgentGraph's stream method with tool approval callback
       for await (const event of codingAgentGraph.stream(

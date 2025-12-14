@@ -240,8 +240,8 @@ export const SECURITY_AND_SAFETY = `# Security & Safety
 /**
  * Get complete system prompt for coding agent
  */
-export function getCodingAgentSystemPrompt(): string {
-  return [
+export function getCodingAgentSystemPrompt(workingDirectory?: string): string {
+  const parts = [
     CODING_AGENT_IDENTITY,
     '',
     TOOL_USAGE_GUIDELINES,
@@ -253,7 +253,17 @@ export function getCodingAgentSystemPrompt(): string {
     REACT_EXECUTION_PATTERN,
     '',
     SECURITY_AND_SAFETY,
-  ].join('\n');
+  ];
+
+  if (workingDirectory) {
+    parts.push('');
+    parts.push(`## Current Context
+- **Working Directory**: ${workingDirectory}
+  - All file operations must be relative to this path or use this absolute path.
+  - You are RESTRICTED to this directory. Do not try to access files outside (e.g. ../).`);
+  }
+
+  return parts.join('\n');
 }
 
 /**

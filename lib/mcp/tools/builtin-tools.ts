@@ -104,20 +104,21 @@ function resolveShellForExec(): string {
  * If no working directory is set, uses current process directory
  */
 function resolvePath(filePath: string): string {
-  const workingDir = getCurrentWorkingDirectory();
+  const workingDir = getCurrentWorkingDirectory() || process.cwd();
+  const targetPath = path.isAbsolute(filePath)
+    ? path.resolve(filePath)
+    : path.resolve(workingDir, filePath);
 
-  // If path is already absolute, return as-is
-  if (path.isAbsolute(filePath)) {
-    return filePath;
+  // Security Check: Ensure targetPath is within workingDir
+  const relative = path.relative(workingDir, targetPath);
+  const isOutside = relative.startsWith('..') || path.isAbsolute(relative);
+
+  if (isOutside) {
+    logger.warn(`[Security] Blocked access to path outside working directory: ${targetPath}`);
+    throw new Error(`Access denied: Path is outside the working directory: ${filePath}`);
   }
 
-  // If working directory is set, resolve relative to it
-  if (workingDir) {
-    return path.resolve(workingDir, filePath);
-  }
-
-  // Otherwise resolve relative to current process directory
-  return path.resolve(process.cwd(), filePath);
+  return targetPath;
 }
 
 function getErrorMessage(error: unknown): string {

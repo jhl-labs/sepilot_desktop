@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Terminal, FileText, Database, Wrench, Presentation } from 'lucide-react';
+import {
+  Settings,
+  Terminal,
+  FileText,
+  Database,
+  Wrench,
+  Presentation,
+  Sparkles,
+  MessageSquarePlus,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -34,6 +43,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
     clearPendingToolApproval,
     setAlwaysApproveToolsForSession,
     setAppMode,
+    clearEditorChat,
   } = useChatStore();
 
   const [betaConfig, setBetaConfig] = useState<BetaConfig>({ enablePresentationMode: false });
@@ -104,6 +114,24 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
     clearPendingToolApproval();
   };
 
+  const handleNewChat = () => {
+    const confirmed = window.confirm('현재 대화 내역을 모두 삭제하시겠습니까?');
+    if (confirmed) {
+      clearEditorChat();
+      setEditorViewMode('chat');
+    }
+  };
+
+  const handleAiAssistantClick = () => {
+    setEditorViewMode('chat');
+  };
+
+  const terminalButtonTitle = !workingDirectory
+    ? 'Working Directory를 먼저 설정해주세요'
+    : showTerminalPanel
+      ? '터미널 숨기기'
+      : '터미널 열기';
+
   return (
     <>
       <div className="flex h-full w-full flex-col">
@@ -142,6 +170,42 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={handleAiAssistantClick}
+                    className={cn('flex-1', editorViewMode === 'chat' && 'bg-accent')}
+                    title="AI 코딩 어시스턴트"
+                  >
+                    <Sparkles className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>AI 코딩 어시스턴트</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {editorViewMode === 'chat' && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleNewChat}
+                      className="flex-1"
+                      title="새 대화"
+                    >
+                      <MessageSquarePlus className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>새 대화</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setEditorUseToolsInAutocomplete(!editorUseToolsInAutocomplete)}
                     className={cn(
                       'flex-1',
@@ -149,6 +213,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                         ? 'bg-accent text-accent-foreground'
                         : 'text-muted-foreground'
                     )}
+                    title={`Autocomplete Tools ${editorUseToolsInAutocomplete ? '(켜짐)' : '(꺼짐)'}`}
                   >
                     <Wrench className="h-5 w-5" />
                   </Button>
@@ -170,6 +235,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                         ? 'bg-accent text-accent-foreground'
                         : 'text-muted-foreground'
                     )}
+                    title={`Autocomplete RAG ${editorUseRagInAutocomplete ? '(켜짐)' : '(꺼짐)'}`}
                   >
                     <Database className="h-5 w-5" />
                   </Button>
@@ -181,7 +247,13 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={onDocumentsClick} className="flex-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onDocumentsClick}
+                    className="flex-1"
+                    title="문서 관리 (RAG)"
+                  >
                     <FileText className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
@@ -202,6 +274,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                     }}
                     disabled={!workingDirectory}
                     className={cn('flex-1', showTerminalPanel && 'bg-accent')}
+                    title={terminalButtonTitle}
                   >
                     <Terminal className="h-5 w-5" />
                   </Button>
@@ -224,6 +297,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                     size="icon"
                     onClick={() => setEditorViewMode('settings')}
                     className={cn('flex-1', editorViewMode === 'settings' && 'bg-accent')}
+                    title="설정"
                   >
                     <Settings className="h-5 w-5" />
                   </Button>
@@ -241,6 +315,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                       size="icon"
                       onClick={() => setAppMode('presentation')}
                       className="flex-1"
+                      title="Presentation 모드 (Beta)"
                     >
                       <Presentation className="h-5 w-5" />
                     </Button>
