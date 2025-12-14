@@ -27,6 +27,7 @@
     "node_modules/sql.js/**/*",
     "node_modules/better-sqlite3/**/*"
   ],
+  "extraResources": ["assets/**"],
   "mac": {
     "category": "public.app-category.developer-tools",
     "target": ["dmg", "zip"],
