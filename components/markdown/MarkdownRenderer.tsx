@@ -97,6 +97,18 @@ function CustomPreComponent({
         return <PlotlyChart data={codeText} />;
       }
 
+      // Handle json blocks - check if they are plotly charts
+      if (language === 'json') {
+        if (isStreaming) {
+          return <CodeBlock language="json" code={codeText} />;
+        }
+        // Try to detect if this JSON is a Plotly figure
+        if (isLikelyPlotlyJSON(codeText)) {
+          return <PlotlyChart data={codeText} />;
+        }
+        return <CodeBlock language="json" code={codeText} />;
+      }
+
       // Handle regular code blocks
       return <CodeBlock language={language} code={codeText} />;
     }
@@ -104,6 +116,69 @@ function CustomPreComponent({
 
   // Fallback for plain pre blocks
   return <pre {...props}>{children}</pre>;
+}
+
+// Helper to detect if a JSON string is likely a Plotly figure
+function isLikelyPlotlyJSON(jsonString: string): boolean {
+  try {
+    const trimmed = jsonString.trim();
+    if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
+      return false;
+    }
+
+    const parsed = JSON.parse(trimmed);
+
+    // Must be an object
+    if (!parsed || typeof parsed !== 'object') {
+      return false;
+    }
+
+    // Must have 'data' array (required by PlotlyChart component)
+    if (!Array.isArray(parsed.data)) {
+      return false;
+    }
+
+    // Additional heuristics to avoid false positives with generic API responses
+    // 1. If data has items, check for common Plotly trace keys
+    if (parsed.data.length > 0) {
+      const firstTrace = parsed.data[0];
+      if (typeof firstTrace !== 'object' || firstTrace === null) {
+        return false;
+      }
+
+      // Keys that strongly suggest a Plotly trace
+      const plotlyKeys = [
+        'type',
+        'x',
+        'y',
+        'z',
+        'values',
+        'labels',
+        'mode',
+        'marker',
+        'line',
+        'textinfo',
+        'hoverinfo',
+        'transforms',
+      ];
+
+      const hasPlotlyKey = plotlyKeys.some((key) => key in firstTrace);
+
+      // If no specific plotly key is found, checking if 'layout' exists is a good secondary check
+      if (!hasPlotlyKey && !('layout' in parsed)) {
+        return false;
+      }
+    } else {
+      // If data is empty array, it must have 'layout' to be considered a chart
+      if (!('layout' in parsed) || typeof parsed.layout !== 'object') {
+        return false;
+      }
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Custom inline code component
