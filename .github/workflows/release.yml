@@ -130,7 +130,6 @@ jobs:
           ls -la
           
           sha256sum *.exe > SHA256SUMS.txt
-          sha256sum *.yml >> SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Create Release
