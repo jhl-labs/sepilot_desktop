@@ -1,6 +1,6 @@
 {
   "name": "sepilot-desktop",
-  "version": "0.6.4-beta",
+  "version": "0.6.5",
   "description": "SEPilot Desktop - LLM Desktop Application with LangGraph, RAG, and MCP",
   "main": "dist/electron/electron/main.js",
   "scripts": {
@@ -88,6 +88,7 @@
     "pdf-parse": "^2.4.5",
     "plotly.js-dist-min": "^3.3.0",
     "pptxgenjs": "^4.0.1",
+    "proxy-agent": "^6.5.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-i18next": "^15.1.2",

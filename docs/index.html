@@ -105,7 +105,7 @@
                 "chat_title": "Native Chat Experience",
                 "chat_desc": "Don't waste time learning new tools. We provide the familiar ChatGPT-style interface you already know.<br><br>Beautiful markdown rendering, real-time streaming, chat history. Hot-swap models like GPT-4o, Claude 3.5, and even Ollama local models with a single click.",
                 "chat_list_1": "• Model Hot-swap (OpenAI, Anthropic, Ollama, DeepSeek, etc.)",
-                "chat_list_2": "• Perfect Markdown & Math (LaTeX) Rendering",
+                "chat_list_2": "• Perfect Markdown (Like GitHub Markdown)",
                 "chat_list_3": "• Chat history safely stored in local DB",
 
                 "thinking_header": "Depth of Thought",
@@ -120,13 +120,22 @@
                 "thinking_tot_list_1": "• Multi-path Exploration",
                 "thinking_tot_list_2": "• Scenario Comparison Analysis",
                 "thinking_tot_list_3": "• Optimal Solution Derivation",
-                "thinking_persona_title": "AI Persona",
-                "thinking_persona_desc": "Create and manage your own AI personas like 'Strict Senior Developer' or 'Friendly UX Designer'. Beyond system prompts, tone and expertise levels are permanently stored.",
+
+                "thinking_dt_title": "Deep Thinking (Graph)",
+                "thinking_dt_desc": "Combines Sequential Thinking and Tree of Thought for maximum depth. Analyzes the problem from 4 distinct perspectives (Analytical, Practical, Critical, Creative) and integrates them for a verified conclusion.",
+                "thinking_dt_list_1": "• 4-Perspective Analysis",
+                "thinking_dt_list_2": "• Deep Dive & Integration",
+                "thinking_dt_list_3": "• Logic Verification Loop",
+
+                "persona_header": "AI Persona & Collaboration",
+                "persona_subtitle": "Preparation for the future of Multi-Party Conversation.",
+                "persona_title": "AI Persona System",
+                "persona_desc": "Create and manage your own AI personas like 'Strict Code Reviewer' or 'Python Specialist'. Beyond system prompts, tone and expertise levels are permanently stored. <br><br><strong>Ready for Multi-Party:</strong> This system serves as the foundational layer for upcoming Multi-Agent features where multiple personas collaborate.",
 
                 "coding_header": "Autonomous Coding",
-                "coding_subtitle": "The most powerful coding agent experience available.",
-                "coding_title": "Coding Agent (ReAct)",
-                "coding_desc": "Goes beyond just writing code.<br>Repeats the cycle of <strong>Think -> Action (File I/O) -> Observe</strong>. It executes terminal commands to install packages and self-corrects by analyzing logs if errors occur.",
+                "coding_subtitle": "Experimental autonomous coding support.",
+                "coding_title": "Coding Agent (Beta)",
+                "coding_desc": "Provides lightweight coding assistance.<br>Repeats the cycle of <strong>Think -> Action (File I/O) -> Observe</strong>. It executes terminal commands to install packages and attempts to self-correct by analyzing logs.",
                 "coding_list_1": "• File Create/Edit/Delete Permissions",
                 "coding_list_2": "• Terminal Command Execution & Result Analysis",
                 "coding_list_3": "• Auto-debugging Loop on Error",
@@ -136,28 +145,24 @@
                 "editor_monaco_title": "Monaco Editor Integration",
                 "editor_monaco_desc": "Equipped with Monaco Editor, the core of VS Code. Provides familiar environment with Syntax Highlighting, Minimap, Code Folding, Multi-cursor. Edit AI-written code on the spot.",
                 "editor_term_title": "Integrated Terminal",
-                "editor_term_desc": "Don't break your flow. Use the xterm.js-based built-in terminal to run `npm install`, `git commit`, `python script.py`. Coding Agent communicates directly with this terminal.",
+                "editor_term_desc": "Don't break your flow. Use the xterm.js-based built-in terminal to run `npm install`, `git commit`, `python script.py`.",
                 "editor_context_title": "AI Context Menu",
                 "editor_context_desc": "Elevate your editing experience. Drag text in editor or chat to see Notion-style AI menu. Instantly valid 10 tools like 'Refactor', 'Add Comments', 'Translate', 'Fix Typos'.",
 
                 "browser_header": "Vision Browser Agent",
                 "browser_subtitle": "Understands as it sees, moves like a human.",
-                "browser_vision_title": "Vision-Based Control",
-                "browser_vision_desc": "Different from DOM-based crawlers. Vision AI analyzes screenshot to recognize coordinates of buttons, links, inputs (Set-of-Mark). Clicks like a human even on Canvas, complex SPAs, and obfuscated sites.",
-                "browser_stealth_title": "Automation Tools & Stealth",
-                "browser_stealth_desc": "Provides over 27 browser actions including click, scroll, type, back. Applied Stealth tech, Random Delay, Mouse Trajectory Simulation to bypass bot detection.",
+                "browser_vision_title": "Hybrid Control (DOM + Vision)",
+                "browser_vision_desc": "Uses semantic DOM analysis and Set-of-Mark coordinates to interact with web pages. Analyzes screenshots to help identify elements even on complex sites.",
+                "browser_stealth_title": "Browser Automation",
+                "browser_stealth_desc": "Provides over 27 browser actions including click, scroll, type, back. Supports both precise selector-based interaction and coordinate-based clicks.",
 
                 "rag_header": "Knowledge Base (RAG)",
-                "rag_subtitle": "Turn all your data into AI's brain.",
+                "rag_subtitle": "Turn your documents into AI's knowledge.",
                 "rag_personal_title": "Personal Docs (Local RAG)",
-                "rag_personal_desc": "Drag & drop PC's PDF, Markdown, Text files. Uses local SQLite-vec vector DB to build secure knowledge base without data leak concerns. Searches thousands of pages instantly.",
-                "rag_team_title": "Team Docs (GitHub Sync)",
-                "rag_team_desc": "Share knowledge with teammates. Link GitHub repos to auto-sync latest docs, wikis, code snippets. Build a centralized Knowledge Base for the team.",
+                "rag_personal_desc": "Drag & drop Markdown or Text files. Uses local SQLite-vec vector DB to build secure knowledge base without data leak concerns. Searches your notes instantly.",
 
-                "creative_header": "Multimodal Creativity",
-                "creative_subtitle": "Interaction beyond text.",
                 "creative_vision_title": "Vision Analysis",
-                "creative_vision_desc": "'What does this error mean?', 'Turn this design into code.' Paste images and let Vision models (GPT-4o, Claude 3.5) analyze them. Get instant feedback on error screenshots or reference images.",
+                "creative_vision_desc": "'What does this error mean?', 'Analyze this UI.' Paste images and let Vision models (Qwen2-VL) analyze them. Get instant feedback on error screenshots or reference images.",
                 "creative_image_title": "Image Generation",
                 "creative_image_desc": "Powerful integration with Nano Banana and ComfyUI. Control complex node-based image generation workflows directly from chat. Accelerate creative workflows from idea visualization to asset generation.",
 
@@ -192,7 +197,7 @@
                 "chat_title": "Native Chat Experience",
                 "chat_desc": "새로운 도구를 배우느라 시간을 낭비하지 마세요. 우리에게 이미 익숙한 ChatGPT 스타일의 인터페이스를 그대로 제공합니다.<br><br>유려한 마크다운 렌더링, 실시간 스트리밍 답변, 대화 히스토리 관리까지. GPT-4o, Claude 3.5, 심지어 Ollama 로컬 모델까지 클릭 한 번으로 전환하며 자유롭게 대화할 수 있습니다.",
                 "chat_list_1": "• 모델 핫스왑 (OpenAI, Anthropic, Ollama, DeepSeek 등)",
-                "chat_list_2": "• 완벽한 마크다운 & 수식(LaTeX) 렌더링",
+                "chat_list_2": "• 완벽한 마크다운 (GitHub Markdown 스타일)",
                 "chat_list_3": "• 로컬 DB에 안전하게 저장되는 대화 히스토리",
 
                 "thinking_header": "Depth of Thought",
@@ -207,13 +212,22 @@
                 "thinking_tot_list_1": "• 다중 경로 탐색",
                 "thinking_tot_list_2": "• 시나리오 비교 분석",
                 "thinking_tot_list_3": "• 최적해 도출",
-                "thinking_persona_title": "AI Persona",
-                "thinking_persona_desc": "'깐깐한 시니어 개발자', '친절한 UX 디자이너' 등 나만의 AI 페르소나를 생성하고 관리하세요. 시스템 프롬프트 설정을 넘어, 대화의 톤앤매너와 전문 지식 수준까지 영구적으로 저장됩니다.",
+
+                "thinking_dt_title": "Deep Thinking (Graph)",
+                "thinking_dt_desc": "Sequential과 Tree of Thought의 장점을 결합한 심층 사고 모델입니다. 4가지 관점(분석적, 실용적, 비판적, 창의적)으로 문제를 입체적으로 해부하고, 각 관점을 심층 검증하여 결론을 도출합니다.",
+                "thinking_dt_list_1": "• 4가지 관점의 다각적 분석",
+                "thinking_dt_list_2": "• 심층 분석 및 인사이트 통합",
+                "thinking_dt_list_3": "• 논리적 정합성 검증 루프",
+
+                "persona_header": "AI 페르소나 및 협업",
+                "persona_subtitle": "다자간 대화(Multi-Party Conversation)의 미래를 위한 준비.",
+                "persona_title": "AI 페르소나 시스템",
+                "persona_desc": "'깐깐한 코드 리뷰어', '테크니컬 라이터' 등 나만의 AI 페르소나를 생성하고 관리하세요. <br><br><strong>Multi-Party Ready:</strong> 이 시스템은 곧 도입될 '다자간 대화' 기능을 위한 핵심 기반입니다. 여러 페르소나가 서로 대화하며 문제를 해결하는 미래를 준비하고 있습니다.",
 
                 "coding_header": "Autonomous Coding",
-                "coding_subtitle": "단언컨대 가장 강력한 코딩 에이전트 경험입니다.",
-                "coding_title": "Coding Agent (ReAct)",
-                "coding_desc": "단순히 코드를 짜주는 것을 넘어섭니다. <br><strong>생각(Think) -> 파일 읽기/쓰기(Action) -> 결과 확인(Observe)</strong>의 사이클을 반복합니다. 터미널 명령어를 직접 실행하여 패키지를 설치하고, 에러가 발생하면 스스로 로그를 분석해 코드를 수정(Self-Correction)합니다.",
+                "coding_subtitle": "실험적인 자율 코딩 지원.",
+                "coding_title": "Coding Agent (Beta)",
+                "coding_desc": "가벼운 코딩 작업을 지원합니다.<br><strong>생각(Think) -> 파일 읽기/쓰기(Action) -> 결과 확인(Observe)</strong>의 사이클을 반복합니다. 터미널 명령어를 실행하고, 에러 로그를 분석하여 코드를 수정하는 실험적인 기능을 제공합니다.",
                 "coding_list_1": "• 파일 생성/수정/삭제 권한",
                 "coding_list_2": "• 터미널 명령어 실행 및 결과 분석",
                 "coding_list_3": "• 에러 발생 시 자동 디버깅 루프",
@@ -223,28 +237,24 @@
                 "editor_monaco_title": "Monaco Editor Integration",
                 "editor_monaco_desc": "전 세계 개발자의 표준인 VS Code의 코어, Monaco Editor를 탑재했습니다. 구문 강조(Syntax Highlighting), 미니맵, 코드 폴딩, 멀티 커서 등 익숙한 개발 환경을 그대로 제공합니다. AI가 작성한 코드를 별도 IDE로 옮길 필요 없이 그 자리에서 수정하세요.",
                 "editor_term_title": "Integrated Terminal",
-                "editor_term_desc": "xterm.js 기반의 내장 터미널을 통해 개발 흐름을 끊지 마세요. `npm install`, `git commit`, `python script.py` 등 모든 명령어를 실행할 수 있습니다. Coding Agent는 이 터미널을 통해 시스템과 직접 소통합니다.",
+                "editor_term_desc": "xterm.js 기반의 내장 터미널을 통해 개발 흐름을 끊지 마세요. `npm install`, `git commit`, `python script.py` 등 명령어를 실행할 수 있습니다.",
                 "editor_context_title": "AI Context Menu",
                 "editor_context_desc": "텍스트 에디팅 경험을 한 차원 높이세요. 에디터나 채팅창에서 텍스트를 드래그하면 Notion 스타일의 AI 메뉴가 나타납니다. '코드 리팩토링', '주석 생성', '번역하기', '오타 수정' 등 개발과 글쓰기에 필요한 10가지 도구를 즉시 실행하세요.",
 
                 "browser_header": "Vision Browser Agent",
                 "browser_subtitle": "보이는 대로 이해하고, 사람처럼 움직입니다.",
-                "browser_vision_title": "Vision-Based Control",
-                "browser_vision_desc": "기존의 DOM 기반 크롤러와는 다릅니다. 현재 화면 스크린샷을 Vision AI가 분석하여 버튼, 링크, 입력창의 좌표를 인식합니다(Set-of-Mark). Canvas, 복잡한 SPA, 난독화된 사이트에서도 사람처럼 화면을 '보고' 클릭합니다.",
-                "browser_stealth_title": "Automation Tools & Stealth",
-                "browser_stealth_desc": "클릭, 스크롤, 타이핑, 뒤로가기 등 27개 이상의 브라우저 조작 도구를 제공합니다. 또한, 자동화 탐지를 방지하기 위한 Stealth 기술과 무작위 지연(Random Delay), 마우스 궤적 시뮬레이션이 적용되어 각종 보안 시스템을 우회하여 작업을 수행합니다.",
+                "browser_vision_title": "Hybrid Control (DOM + Vision)",
+                "browser_vision_desc": "DOM 분석과 Vision AI를 결합하여 웹 페이지를 제어합니다. 스크린샷과 시맨틱 구조(Headings, Roles)를 분석하여 요소의 좌표를 파악하고 상호작용합니다.",
+                "browser_stealth_title": "Browser Automation",
+                "browser_stealth_desc": "클릭, 스크롤, 타이핑, 뒤로가기 등 27개 이상의 브라우저 조작 도구를 제공합니다. 좌표 기반 클릭과 선택자 기반 제어를 유연하게 사용합니다.",
 
                 "rag_header": "Knowledge Base (RAG)",
-                "rag_subtitle": "당신의 모든 데이터를 AI의 두뇌로.",
+                "rag_subtitle": "당신의 문서를 AI의 지식으로.",
                 "rag_personal_title": "Personal Docs (Local RAG)",
-                "rag_personal_desc": "개인 PC의 PDF, Markdown, 텍스트 파일을 드래그 앤 드롭으로 추가하세요. 로컬 SQLite-vec 벡터 데이터베이스를 사용하여 데이터 유출 걱정 없이 안전하게 개인 지식 기반을 구축합니다. 수천 페이지의 문서도 순식간에 검색하여 답변의 근거로 사용합니다.",
-                "rag_team_title": "Team Docs (GitHub Sync)",
-                "rag_team_desc": "팀원들과 지식을 공유하세요. GitHub 저장소를 연동하면 최신 문서, 위키, 코드 스니펫이 자동으로 동기화됩니다. 팀을 위한 중앙 집중식 기술 자료(Knowledge Base)를 구축하고 프로젝트 전반에 걸쳐 활용할 수 있습니다.",
+                "rag_personal_desc": "Markdown, 텍스트 파일을 드래그 앤 드롭으로 추가하세요. 로컬 SQLite-vec 벡터 데이터베이스를 사용하여 데이터 유출 걱정 없이 안전하게 개인 지식 기반을 구축합니다. 내 노트를 빠르게 검색합니다.",
 
-                "creative_header": "Multimodal Creativity",
-                "creative_subtitle": "텍스트 그 이상의 상호작용.",
                 "creative_vision_title": "Vision Analysis",
-                "creative_vision_desc": "'이 에러 로그가 무슨 뜻이야?', '이 디자인을 코드로 바꿔줘.' <br>이미지를 붙여넣는 순간 최신 Vision 모델(GPT-4o, Claude 3.5)이 이미지를 분석합니다. 코딩 중 발생한 에러 스크린샷이나 레퍼런스 이미지를 AI에게 보여주고 즉각적인 피드백을 받으세요.",
+                "creative_vision_desc": "'이 에러 로그가 무슨 뜻이야?', '이 UI 분석해줘.' <br>이미지를 붙여넣는 순간 Vision 모델(Qwen2-VL)이 이미지를 분석합니다. 코딩 중 발생한 에러 스크린샷이나 레퍼런스 이미지를 AI에게 보여주고 피드백을 받으세요.",
                 "creative_image_title": "Image Generation",
                 "creative_image_desc": "Nano Banana 및 ComfyUI와의 강력한 통합을 지원합니다. 단순한 텍스트-이미지 생성을 넘어, 복잡한 노드 기반의 이미지 생성 워크플로우를 채팅창에서 직접 제어할 수 있습니다. 아이디어 시각화부터 자산(Asset) 생성까지, 크리에이티브 워크플로우를 가속화하세요.",
 
@@ -279,7 +289,7 @@
                 "chat_title": "原生聊天体验",
                 "chat_desc": "无需浪费时间学习新工具。我们提供您熟悉的类 ChatGPT 界面。<br><br>Markdown 渲染、实时流式传输、聊天记录管理。只需一次点击，即可在 GPT-4o、Claude 3.5 甚至 Ollama 本地模型之间自由切换。",
                 "chat_list_1": "• 模型热切换 (OpenAI, Anthropic, Ollama, DeepSeek 等)",
-                "chat_list_2": "• 完美的 Markdown 和数学公式 (LaTeX) 渲染",
+                "chat_list_2": "• 完美的 Markdown (GitHub Markdown)",
                 "chat_list_3": "• 聊天记录安全存储在本地数据库中",
 
                 "thinking_header": "Depth of Thought",
@@ -294,13 +304,22 @@
                 "thinking_tot_list_1": "• 多路径探索",
                 "thinking_tot_list_2": "• 方案比对分析",
                 "thinking_tot_list_3": "• 推导最优解",
-                "thinking_persona_title": "AI 角色",
-                "thinking_persona_desc": "创建和管理您自己的 AI 角色，如“严厉的高级开发人员”或“友好的用户体验设计师”。除了系统提示设置外，语气和专业知识水平也会永久存储。",
+
+                "thinking_dt_title": "深度思考 (Deep Thinking Graph)",
+                "thinking_dt_desc": "结合了顺序思维和思维树优点的最深层思维模型。从4个不同的角度（分析、实用、批判、创新）对问题进行剖析，并执行深度验证以得出结论。",
+                "thinking_dt_list_1": "• 4种视角的立体分析",
+                "thinking_dt_list_2": "• 深度分析与见解整合",
+                "thinking_dt_list_3": "• 逻辑一致性验证循环",
+
+                "persona_header": "AI 角色与协作",
+                "persona_subtitle": "为未来的多方对话 (Multi-Party Conversation) 做准备。",
+                "persona_title": "AI 角色系统",
+                "persona_desc": "创建和管理您自己的 AI 角色，如“严厉的代码审查员”或“技术文档撰写人”。<br><br><strong>Multi-Party Ready:</strong> 该系统是即将推出的“多方对话”功能的核心基础，为多个角色协同解决问题的未来做好了准备。",
 
                 "coding_header": "Autonomous Coding",
-                "coding_subtitle": "目前最强大的编码代理体验。",
-                "coding_title": "编码代理 (ReAct)",
-                "coding_desc": "不仅仅是编写代码。<br>重复 <strong>思考 (Think) -> 动作 (Action - 文件读写) -> 观察 (Observe)</strong> 的循环。它直接执行终端命令安装包，如果发生错误，可以通过分析日志自动修正代码。",
+                "coding_subtitle": "实验性自主编码支持。",
+                "coding_title": "Coding Agent (Beta)",
+                "coding_desc": "提供轻量级编码协助。<br>重复 <strong>思考 (Think) -> 动作 (Action - 文件读写) -> 观察 (Observe)</strong> 的循环。它执行终端命令安装包，并尝试通过分析日志来自我修正。",
                 "coding_list_1": "• 文件创建/修改/删除权限",
                 "coding_list_2": "• 终端命令执行和结果分析",
                 "coding_list_3": "• 错误发生时的自动调试循环",
@@ -310,28 +329,24 @@
                 "editor_monaco_title": "Monaco Editor 集成",
                 "editor_monaco_desc": "配备 VS Code 的核心 Monaco Editor。提供熟悉的语法高亮、Minimap、代码折叠、多光标等开发环境。无需转移到其他 IDE，即可当场修改 AI 编写的代码。",
                 "editor_term_title": "集成终端",
-                "editor_term_desc": "不要中断您的开发流程。使用基于 xterm.js 的内置终端运行 `npm install`、`git commit`、`python script.py` 等所有命令。编码代理直接与此终端通信。",
+                "editor_term_desc": "不要中断您的开发流程。使用基于 xterm.js 的内置终端运行 `npm install`、`git commit`、`python script.py`。",
                 "editor_context_title": "AI 上下文菜单",
                 "editor_context_desc": "提升您的编辑体验。在编辑器或聊天中拖动文本，会出现类似 Notion 的 AI 菜单。立即执行“代码重构”、“添加注释”、“翻译”、“修正拼写”等 10 种工具。",
 
                 "browser_header": "Vision Browser Agent",
                 "browser_subtitle": "所见即所知，像人一样操作。",
-                "browser_vision_title": "基于视觉的控制",
-                "browser_vision_desc": "与基于 DOM 的爬虫不同。视觉 AI 分析当前屏幕截图，识别按钮、链接、输入框的坐标 (Set-of-Mark)。即使在 Canvas、复杂的 SPA 和混淆站点上，也能像人一样“看”并点击。",
-                "browser_stealth_title": "自动化工具与隐身",
-                "browser_stealth_desc": "提供点击、滚动、打字、返回等 27 种以上的浏览器操作工具。应用了隐身技术、随机延迟 (Random Delay) 和鼠标轨迹模拟，以规避自动化检测安全系统。",
+                "browser_vision_title": "混合控制 (Hybrid Control)",
+                "browser_vision_desc": "结合使用 DOM 分析和 Set-of-Mark 坐标与网页进行交互。分析屏幕截图以帮助识别元素，即使在复杂的网站上也能使用。",
+                "browser_stealth_title": "浏览器自动化",
+                "browser_stealth_desc": "提供点击、滚动、打字、返回等 27 种以上的浏览器操作工具。支持精确的选择器交互和基于坐标的点击。",
 
                 "rag_header": "Knowledge Base (RAG)",
-                "rag_subtitle": "将您的所有数据转化为 AI 的大脑。",
+                "rag_subtitle": "将文档转化为 AI 的知识。",
                 "rag_personal_title": "个人文档 (本地 RAG)",
-                "rag_personal_desc": "拖放 PC 上的 PDF、Markdown、文本文件。使用本地 SQLite-vec 向量数据库构建安全的知识库，无需担心数据泄露。瞬间搜索数千页文档作为回答依据。",
-                "rag_team_title": "团队文档 (GitHub 同步)",
-                "rag_team_desc": "与团队成员共享知识。链接 GitHub 存储库可自动同步最新文档、Wiki、代码片段。为团队构建集中式技术知识库 (Knowledge Base)。",
+                "rag_personal_desc": "拖放 Markdown 或文本文件。使用本地 SQLite-vec 向量数据库构建安全的知识库，无需担心数据泄露。即时搜索您的笔记。",
 
-                "creative_header": "Multimodal Creativity",
-                "creative_subtitle": "超越文本的交互。",
                 "creative_vision_title": "视觉分析",
-                "creative_vision_desc": "“这个错误日志是什么意思？”、“把这个设计变成代码。”<br>粘贴图片的瞬间，最新的视觉模型 (GPT-4o, Claude 3.5) 会分析图像。向 AI 展示编码过程中的错误截图或参考图像，并获得即时反馈。",
+                "creative_vision_desc": "“这个错误日志是什么意思？”、“分析这个 UI。”<br>粘贴图片的瞬间，Vision 模型 (Qwen2-VL) 会分析图像。向 AI 展示错误截图或参考图像，并获得即时反馈。",
                 "creative_image_title": "图像生成",
                 "creative_image_desc": "支持与 Nano Banana 和 ComfyUI 的强大集成。不仅仅是简单的文本到图像生成，还可以直接在聊天窗口中控制复杂的基于节点的图像生成工作流。从创意可视化到资产 (Asset) 生成，加速创意工作流。",
 
@@ -543,21 +558,56 @@
                 </div>
             </div>
 
-            <!-- 3. Persona System -->
+            <!-- 3. Deep Thinking -->
             <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none">
                 <div>
-                    <h3 class="text-3xl font-bold mb-4 text-orange-600" data-i18n="thinking_persona_title">AI Persona
-                    </h3>
-                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="thinking_persona_desc">
-                        Create and manage your own AI personas like 'Strict Senior Developer' or 'Friendly UX Designer'.
-                        Beyond system prompts, tone and expertise levels are permanently stored.
+                    <h3 class="text-3xl font-bold mb-4 text-indigo-600" data-i18n="thinking_dt_title">Deep Thinking
+                        (Graph)</h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="thinking_dt_desc">
+                        Combines Sequential Thinking and Tree of Thought for maximum depth. Analyzes the problem from 4
+                        distinct perspectives (Analytical, Practical, Critical, Creative) and integrates them for a
+                        verified conclusion.
                     </p>
+                    <ul class="space-y-2 text-gray-500">
+                        <li data-i18n="thinking_dt_list_1">• 4-Perspective Analysis</li>
+                        <li data-i18n="thinking_dt_list_2">• Deep Dive & Integration</li>
+                        <li data-i18n="thinking_dt_list_3">• Logic Verification Loop</li>
+                    </ul>
                 </div>
                 <div class="video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">🧘</div>
+                        <div class="video-label">assets/videos/thinking_deep.mp4</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         AI Persona (Multi-Party)
+    ========================================== -->
+    <div id="section-persona" class="bg-gray-50">
+        <div class="max-w-7xl mx-auto px-6 py-16">
+            <h2 class="text-4xl font-bold mb-4" data-i18n="persona_header">AI Persona & Collaboration</h2>
+            <p class="text-xl text-gray-600 mb-8" data-i18n="persona_subtitle">Foundation for the future of AI
+                collaboration.</p>
+
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none pt-8">
+                <div class="order-2 md:order-1 video-placeholder">
                     <div class="text-center">
                         <div class="icon-overlay">🎭</div>
                         <div class="video-label">assets/videos/thinking_persona.mp4</div>
                     </div>
+                </div>
+                <div class="order-1 md:order-2">
+                    <h3 class="text-3xl font-bold mb-4 text-orange-600" data-i18n="persona_title">AI Persona System</h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="persona_desc">
+                        Create and manage your own AI personas like 'Strict Code Reviewer' or 'Python Specialist'.
+                        Beyond system prompts, tone and expertise levels are permanently stored. <br><br><strong>Ready
+                            for Multi-Party:</strong> This system serves as the foundational layer for upcoming
+                        Multi-Agent features where multiple personas collaborate.
+                    </p>
                 </div>
             </div>
         </div>
@@ -566,11 +616,11 @@
     <!-- ==========================================
          Coding Agent
     ========================================== -->
-    <div id="section-coding" class="bg-gray-50">
+    <div id="section-coding" class="bg-white">
         <div class="max-w-7xl mx-auto px-6 py-16">
             <h2 class="text-4xl font-bold mb-4" data-i18n="coding_header">Autonomous Coding</h2>
-            <p class="text-xl text-gray-600 mb-8" data-i18n="coding_subtitle">The most powerful coding agent experience
-                available.</p>
+            <p class="text-xl text-gray-600 mb-8" data-i18n="coding_subtitle">Experimental autonomous coding support.
+            </p>
 
             <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none pt-8">
                 <div class="order-2 md:order-1 video-placeholder">
@@ -580,12 +630,11 @@
                     </div>
                 </div>
                 <div class="order-1 md:order-2">
-                    <h3 class="text-3xl font-bold mb-4 text-green-600" data-i18n="coding_title">Coding Agent (ReAct)
-                    </h3>
+                    <h3 class="text-3xl font-bold mb-4 text-green-600" data-i18n="coding_title">Coding Agent (Beta)</h3>
                     <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="coding_desc">
-                        Goes beyond just writing code.<br>Repeats the cycle of <strong>Think -> Action (File I/O) ->
-                            Observe</strong>. It executes terminal commands to install packages and self-corrects by
-                        analyzing logs if errors occur.
+                        Provides lightweight coding assistance.<br>Repeats the cycle of <strong>Think -> Action (File
+                            I/O) -> Observe</strong>. It executes terminal commands to install packages and attempts to
+                        self-correct by analyzing logs.
                     </p>
                     <ul class="space-y-2 text-gray-500">
                         <li data-i18n="coding_list_1">• File Create/Edit/Delete Permissions</li>
@@ -600,7 +649,7 @@
     <!-- ==========================================
          Editor Mode
     ========================================== -->
-    <div id="section-editor" class="bg-white">
+    <div id="section-editor" class="bg-gray-50">
         <div class="max-w-7xl mx-auto px-6 py-16">
             <h2 class="text-4xl font-bold mb-4" data-i18n="editor_header">Full-featured Editor</h2>
             <p class="text-xl text-gray-600 mb-8" data-i18n="editor_subtitle">Power of VS Code, but lighter.</p>
@@ -634,7 +683,7 @@
                     <h3 class="text-3xl font-bold mb-4" data-i18n="editor_term_title">Integrated Terminal</h3>
                     <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="editor_term_desc">
                         Don't break your flow. Use the xterm.js-based built-in terminal to run `npm install`, `git
-                        commit`, `python script.py`. Coding Agent communicates directly with this terminal.
+                        commit`, `python script.py`.
                     </p>
                 </div>
             </div>
@@ -661,7 +710,7 @@
     <!-- ==========================================
          Browser Mode
     ========================================== -->
-    <div id="section-browser" class="bg-gray-50">
+    <div id="section-browser" class="bg-white">
         <div class="max-w-7xl mx-auto px-6 py-16">
             <h2 class="text-4xl font-bold mb-4" data-i18n="browser_header">Vision Browser Agent</h2>
             <p class="text-xl text-gray-600 mb-8" data-i18n="browser_subtitle">Understands as it sees, moves like a
@@ -670,12 +719,11 @@
             <!-- 1. Vision Control -->
             <div class="feature-section grid md:grid-cols-2 gap-16 items-center pt-8">
                 <div>
-                    <h3 class="text-3xl font-bold mb-4 text-purple-600" data-i18n="browser_vision_title">Vision-Based
-                        Control</h3>
+                    <h3 class="text-3xl font-bold mb-4 text-purple-600" data-i18n="browser_vision_title">Hybrid Control
+                        (DOM + Vision)</h3>
                     <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="browser_vision_desc">
-                        Different from DOM-based crawlers. Vision AI analyzes screenshot to recognize coordinates of
-                        buttons, links, inputs (Set-of-Mark). Clicks like a human even on Canvas, complex SPAs, and
-                        obfuscated sites.
+                        Uses semantic DOM analysis and Set-of-Mark coordinates to interact with web pages. Analyzes
+                        screenshots to help identify elements even on complex sites.
                     </p>
                 </div>
                 <div class="video-placeholder">
@@ -695,11 +743,11 @@
                     </div>
                 </div>
                 <div class="order-1 md:order-2">
-                    <h3 class="text-3xl font-bold mb-4 text-purple-600" data-i18n="browser_stealth_title">Automation
-                        Tools & Stealth</h3>
+                    <h3 class="text-3xl font-bold mb-4 text-purple-600" data-i18n="browser_stealth_title">Browser
+                        Automation</h3>
                     <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="browser_stealth_desc">
-                        Provides over 27 browser actions including click, scroll, type, back. Applied Stealth tech,
-                        Random Delay, Mouse Trajectory Simulation to bypass bot detection.
+                        Provides over 27 browser actions including click, scroll, type, back. Supports both precise
+                        selector-based interaction and coordinate-based clicks.
                     </p>
                 </div>
             </div>
@@ -709,7 +757,7 @@
     <!-- ==========================================
          RAG
     ========================================== -->
-    <div id="section-rag" class="bg-white">
+    <div id="section-rag" class="bg-gray-50">
         <div class="max-w-7xl mx-auto px-6 py-16">
             <h2 class="text-4xl font-bold mb-4" data-i18n="rag_header">Knowledge Base (RAG)</h2>
             <p class="text-xl text-gray-600 mb-8" data-i18n="rag_subtitle">Turn all your data into AI's brain.</p>
@@ -720,8 +768,8 @@
                     <h3 class="text-3xl font-bold mb-4 text-green-600" data-i18n="rag_personal_title">Personal Docs
                         (Local RAG)</h3>
                     <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="rag_personal_desc">
-                        Drag & drop PC's PDF, Markdown, Text files. Uses local SQLite-vec vector DB to build secure
-                        knowledge base without data leak concerns. Searches thousands of pages instantly.
+                        Drag & drop Markdown or Text files. Uses local SQLite-vec vector DB to build secure knowledge
+                        base without data leak concerns. Searches your notes instantly.
                     </p>
                 </div>
                 <div class="video-placeholder">
@@ -755,7 +803,7 @@
     <!-- ==========================================
          Multimodal & Creative
     ========================================== -->
-    <div id="section-creative" class="bg-gray-50">
+    <div id="section-creative" class="bg-white">
         <div class="max-w-7xl mx-auto px-6 py-16">
             <h2 class="text-4xl font-bold mb-4" data-i18n="creative_header">Multimodal Creativity</h2>
             <p class="text-xl text-gray-600 mb-8" data-i18n="creative_subtitle">Interaction beyond text.</p>
@@ -766,9 +814,8 @@
                     <h3 class="text-3xl font-bold mb-4 text-pink-600" data-i18n="creative_vision_title">Vision Analysis
                     </h3>
                     <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="creative_vision_desc">
-                        'What does this error mean?', 'Turn this design into code.' Paste images and let Vision models
-                        (GPT-4o, Claude 3.5) analyze them. Get instant feedback on error screenshots or reference
-                        images.
+                        'What does this error mean?', 'Analyze this UI.' Paste images and let Vision models (Qwen2-VL)
+                        analyze them. Get instant feedback on error screenshots or reference images.
                     </p>
                 </div>
                 <div class="video-placeholder">

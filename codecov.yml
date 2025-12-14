@@ -42,12 +42,14 @@ flags:
     paths:
       - app/
       - components/
+      - types/
     carryforward: true
 
   backend:
     paths:
       - lib/
       - electron/
+      - types/
     carryforward: true
 
   bundle-analysis:
@@ -76,7 +78,6 @@ parsers:
       macro: no
 
 ignore:
-  - "tests/"
   - "**/*.test.ts"
   - "**/*.test.tsx"
   - "**/*.spec.ts"

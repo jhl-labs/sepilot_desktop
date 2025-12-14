@@ -67,6 +67,19 @@ export function LLMStatusBar({
   useEffect(() => {
     const loadConfigV2 = async () => {
       if (!isElectron() || !window.electronAPI) {
+        // Fallback: If not electron, use current model as a base model
+        if (llmConfig) {
+          setAvailableModels([
+            {
+              id: 'legacy-model',
+              connectionId: 'legacy-connection',
+              modelId: llmConfig.model,
+              tags: ['base'],
+              temperature: llmConfig.temperature,
+              maxTokens: llmConfig.maxTokens,
+            },
+          ]);
+        }
         return;
       }
 

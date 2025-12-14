@@ -22,6 +22,7 @@ const config = {
       collectCoverageFrom: [
         'app/**/*.{ts,tsx}',
         'components/**/*.{ts,tsx}',
+        'types/**/*.{ts,tsx}',
         '!**/*.d.ts',
         '!**/node_modules/**',
         '!**/.next/**',
@@ -64,6 +65,8 @@ const config = {
       setupFilesAfterEnv: ['<rootDir>/tests/setup.backend.ts'],
       collectCoverageFrom: [
         'lib/**/*.ts',
+        'electron/**/*.ts',
+        'types/**/*.ts',
         '!lib/**/*.d.ts',
         '!lib/**/index.ts',
         '!lib/**/types.ts',
