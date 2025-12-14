@@ -132,11 +132,17 @@ export function InputBox() {
     // Save to storage
     try {
       if (isElectron() && window.electronAPI) {
-        // Load current config and update only llm
+        // Load current config - if it's LLMConfigV2, preserve it
         const currentConfig = await window.electronAPI.config.load();
         if (currentConfig.success && currentConfig.data) {
-          const mergedConfig = { ...currentConfig.data, llm: updatedConfig };
-          await window.electronAPI.config.save(mergedConfig);
+          // If current config is LLMConfigV2, don't overwrite it
+          // (LLMStatusBar already saved the updated LLMConfigV2)
+          const { isLLMConfigV2 } = await import('@/lib/config/llm-config-migration');
+          if (!isLLMConfigV2(currentConfig.data.llm)) {
+            // Only update if it's not LLMConfigV2 (legacy mode)
+            const mergedConfig = { ...currentConfig.data, llm: updatedConfig };
+            await window.electronAPI.config.save(mergedConfig);
+          }
         }
         initializeLLMClient(updatedConfig);
       } else {

@@ -360,6 +360,7 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
           <div className="space-y-2">
             <Label htmlFor="serverType">GitHub 서버 타입</Label>
             <select
+              title="GitHub 서버 타입"
               id="serverType"
               value={serverType}
               onChange={(e) => setServerType(e.target.value as 'github.com' | 'ghes')}
@@ -534,6 +535,7 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
               <div className="space-y-2">
                 <Label htmlFor="selectedRepo">레포지토리</Label>
                 <select
+                  title="레포지토리"
                   id="selectedRepo"
                   value={selectedRepo}
                   onChange={(e) => setSelectedRepo(e.target.value)}

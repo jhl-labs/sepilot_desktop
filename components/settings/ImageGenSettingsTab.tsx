@@ -184,6 +184,7 @@ export function ImageGenSettingsTab({
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
+                  title="ComfyUI 연결"
                   type="checkbox"
                   className="sr-only peer"
                   checked={imageGenConfig.comfyui?.enabled ?? false}
@@ -443,6 +444,7 @@ export function ImageGenSettingsTab({
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
+                  title="NanoBanana 연결"
                   type="checkbox"
                   className="sr-only peer"
                   checked={imageGenConfig.nanobanana?.enabled ?? false}
@@ -472,6 +474,7 @@ export function ImageGenSettingsTab({
             <div className="space-y-2">
               <Label htmlFor="nanoBananaProvider">API Provider</Label>
               <select
+                title="NanoBanana API Provider"
                 id="nanoBananaProvider"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={imageGenConfig.nanobanana?.provider || 'nanobananaapi'}
@@ -578,6 +581,7 @@ export function ImageGenSettingsTab({
                 <div className="space-y-2">
                   <Label htmlFor="nanoBananaModel">Model</Label>
                   <select
+                    title="NanoBanana 모델"
                     id="nanoBananaModel"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     value={imageGenConfig.nanobanana?.model || 'imagen-3.0-generate-001'}
@@ -604,6 +608,7 @@ export function ImageGenSettingsTab({
             <div className="space-y-2">
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
+                  title="NanoBanana 이미지 생성 시 옵션 물어보기"
                   type="checkbox"
                   className="sr-only peer"
                   checked={imageGenConfig.nanobanana?.askOptionsOnGenerate ?? false}
@@ -629,6 +634,7 @@ export function ImageGenSettingsTab({
               <div className="space-y-2">
                 <Label htmlFor="nanoBananaAspectRatio">Aspect Ratio</Label>
                 <select
+                  title="NanoBanana 이미지 생성 시 화면 비율"
                   id="nanoBananaAspectRatio"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={imageGenConfig.nanobanana?.aspectRatio || '1:1'}

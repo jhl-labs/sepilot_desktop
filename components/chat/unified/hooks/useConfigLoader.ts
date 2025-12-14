@@ -229,12 +229,65 @@ export function useConfigLoader() {
           // Load current full config to preserve other settings (especially mcp)
           const result = await window.electronAPI.config.load();
           if (result.success && result.data) {
-            const currentConfig = result.data;
-            const updatedConfig = {
-              ...currentConfig,
-              llm: newConfig,
-            };
-            await window.electronAPI.config.save(updatedConfig);
+            const finalConfig = result.data;
+            const currentLLM = result.data.llm;
+
+            // Smart Update for V2: Preserve structure, update active model/params
+            if (isLLMConfigV2(currentLLM)) {
+              logger.info('[useConfigLoader] Updating LLMConfigV2 (preserving structure)');
+              const v2Config = { ...currentLLM };
+
+              // 1. Check if we need to switch model (fallback if LLMStatusBar didn't save yet)
+              // Note: LLMStatusBar usually saves the exact ID, so this is a backup for other callers
+              const currentV1 = convertV2ToV1(v2Config);
+              if (currentV1.model !== newConfig.model) {
+                // Try to find a base model with this modelId
+                const targetModel = v2Config.models.find(
+                  (m) => m.modelId === newConfig.model && m.tags.includes('base')
+                );
+                if (targetModel) {
+                  logger.info(
+                    `[useConfigLoader] Switching activeBaseModelId to ${targetModel.id} (${targetModel.modelId})`
+                  );
+                  v2Config.activeBaseModelId = targetModel.id;
+                } else {
+                  logger.warn(
+                    `[useConfigLoader] Could not find V2 base model for '${newConfig.model}' - changes might not persist correctly`
+                  );
+                }
+              }
+
+              // 2. Update parameters (temperature, maxTokens) for the ACTIVE model
+              if (v2Config.activeBaseModelId) {
+                const activeModelIndex = v2Config.models.findIndex(
+                  (m) => m.id === v2Config.activeBaseModelId
+                );
+                if (activeModelIndex >= 0) {
+                  const activeModel = v2Config.models[activeModelIndex];
+
+                  // Update if changed
+                  if (
+                    activeModel.temperature !== newConfig.temperature ||
+                    activeModel.maxTokens !== newConfig.maxTokens
+                  ) {
+                    logger.info('[useConfigLoader] Updating active model parameters');
+                    v2Config.models[activeModelIndex] = {
+                      ...activeModel,
+                      temperature: newConfig.temperature,
+                      maxTokens: newConfig.maxTokens,
+                    };
+                  }
+                }
+              }
+
+              finalConfig.llm = v2Config;
+            } else {
+              // Legacy V1: Overwrite normally
+              logger.info('[useConfigLoader] Overwriting legacy LLMConfig (V1)');
+              finalConfig.llm = newConfig;
+            }
+
+            await window.electronAPI.config.save(finalConfig);
             initializeLLMClient(newConfig);
           } else {
             console.error('Failed to load current config for update');

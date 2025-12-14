@@ -39,6 +39,7 @@ export function NetworkSettingsTab({
             </Label>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
+                title="프록시 설정"
                 id="proxyEnabled"
                 type="checkbox"
                 checked={networkConfig.proxy?.enabled ?? false}
@@ -63,6 +64,7 @@ export function NetworkSettingsTab({
               <div className="space-y-2">
                 <Label htmlFor="proxyMode">프록시 모드</Label>
                 <select
+                  title="프록시 모드"
                   id="proxyMode"
                   value={networkConfig.proxy?.mode || 'none'}
                   onChange={(e) =>
@@ -130,6 +132,7 @@ export function NetworkSettingsTab({
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
+                title="SSL 인증서 검증"
                 id="sslVerify"
                 type="checkbox"
                 checked={networkConfig.ssl?.verify ?? true}

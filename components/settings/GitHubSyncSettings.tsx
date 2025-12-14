@@ -338,6 +338,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
             <div className="col-span-2 space-y-2">
               <Label htmlFor="serverType">Server Type</Label>
               <select
+                title="GitHub 서버 타입"
                 id="serverType"
                 value={serverType}
                 onChange={(e) => setServerType(e.target.value as 'github.com' | 'ghes')}

@@ -1,12 +1,22 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Minimize2, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import type { LLMConfig, Message } from '@/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { LLMConfig, Message, LLMConfigV2, ModelConfig } from '@/types';
 import { calculateContextUsage, formatTokens } from '@/lib/utils/token-counter';
+import { isLLMConfigV2, convertV2ToV1 } from '@/lib/config/llm-config-migration';
+import { isElectron } from '@/lib/platform';
+import { initializeLLMClient } from '@/lib/llm/client';
 
 export interface ToolInfo {
   name: string;
@@ -37,6 +47,9 @@ export function LLMStatusBar({
 }: LLMStatusBarProps) {
   const [editingField, setEditingField] = useState<'maxTokens' | 'temperature' | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [availableModels, setAvailableModels] = useState<ModelConfig[]>([]);
+  const [modelSelectOpen, setModelSelectOpen] = useState(false);
+  const [llmConfigV2, setLlmConfigV2] = useState<LLMConfigV2 | null>(null);
 
   // Group tools by server
   const groupedTools = useMemo(() => {
@@ -49,6 +62,226 @@ export function LLMStatusBar({
     });
     return groups;
   }, [tools]);
+
+  // Load LLMConfigV2 to get base models
+  useEffect(() => {
+    const loadConfigV2 = async () => {
+      if (!isElectron() || !window.electronAPI) {
+        return;
+      }
+
+      try {
+        const result = await window.electronAPI.config.load();
+        if (result.success && result.data?.llm) {
+          if (isLLMConfigV2(result.data.llm)) {
+            setLlmConfigV2(result.data.llm);
+            // Load base models (models with 'base' tag)
+            const baseModels = result.data.llm.models.filter((m) => m.tags.includes('base'));
+            console.log('[LLMStatusBar] Loaded base models:', baseModels);
+            setAvailableModels(baseModels);
+
+            // If no base models but we have models, show all models as fallback
+            if (baseModels.length === 0 && result.data.llm.models.length > 0) {
+              console.warn('[LLMStatusBar] No base models found, showing all models');
+              setAvailableModels(result.data.llm.models);
+            }
+          } else {
+            // Fallback: If using LLMConfig (v1), create a dummy model entry
+            console.log('[LLMStatusBar] Using LLMConfig (v1), creating fallback model');
+            if (llmConfig) {
+              setAvailableModels([
+                {
+                  id: 'legacy-model',
+                  connectionId: 'legacy-connection',
+                  modelId: llmConfig.model,
+                  tags: ['base'],
+                  temperature: llmConfig.temperature,
+                  maxTokens: llmConfig.maxTokens,
+                },
+              ]);
+            }
+          }
+        } else {
+          console.warn('[LLMStatusBar] Config load failed or no llm config');
+          // Fallback: use current model
+          if (llmConfig) {
+            setAvailableModels([
+              {
+                id: 'legacy-model',
+                connectionId: 'legacy-connection',
+                modelId: llmConfig.model,
+                tags: ['base'],
+                temperature: llmConfig.temperature,
+                maxTokens: llmConfig.maxTokens,
+              },
+            ]);
+          }
+        }
+      } catch (error) {
+        console.error('[LLMStatusBar] Failed to load LLMConfigV2:', error);
+        // Fallback: If error, use current model
+        if (llmConfig) {
+          setAvailableModels([
+            {
+              id: 'legacy-model',
+              connectionId: 'legacy-connection',
+              modelId: llmConfig.model,
+              tags: ['base'],
+              temperature: llmConfig.temperature,
+              maxTokens: llmConfig.maxTokens,
+            },
+          ]);
+        }
+      }
+    };
+
+    if (llmConfig) {
+      loadConfigV2();
+    }
+  }, [llmConfig?.model, llmConfig]); // Reload when model changes
+
+  // Handle model change
+  const handleModelChange = async (newModelId: string) => {
+    if (!llmConfig || !onConfigUpdate) {
+      return;
+    }
+
+    // If using legacy LLMConfig (v1), just update the model directly
+    if (!llmConfigV2) {
+      const updatedConfig: LLMConfig = {
+        ...llmConfig,
+        model: newModelId === 'legacy-model' ? llmConfig.model : newModelId,
+      };
+      onConfigUpdate(updatedConfig);
+      return;
+    }
+
+    try {
+      // Update activeBaseModelId in LLMConfigV2
+      const updatedConfigV2: LLMConfigV2 = {
+        ...llmConfigV2,
+        activeBaseModelId: newModelId,
+      };
+
+      // Convert to LLMConfig for actual use
+      const updatedConfig = convertV2ToV1(updatedConfigV2);
+
+      // Save to storage FIRST (before calling onConfigUpdate)
+      if (isElectron() && window.electronAPI) {
+        const currentConfig = await window.electronAPI.config.load();
+        if (currentConfig.success && currentConfig.data) {
+          // Preserve all existing models and connections from current config
+          const currentLLMConfig = currentConfig.data.llm;
+          let preservedModels: ModelConfig[] = [];
+          let preservedConnections = updatedConfigV2.connections;
+
+          if (isLLMConfigV2(currentLLMConfig)) {
+            // Preserve all existing models - CRITICAL: don't lose any models
+            preservedModels = currentLLMConfig.models;
+            preservedConnections = currentLLMConfig.connections;
+            console.log(
+              '[LLMStatusBar] Preserving',
+              preservedModels.length,
+              'models from current config'
+            );
+          } else {
+            // Fallback: use models from updatedConfigV2
+            preservedModels = updatedConfigV2.models;
+            console.log(
+              '[LLMStatusBar] Using models from updatedConfigV2:',
+              preservedModels.length
+            );
+          }
+
+          // Ensure we preserve all existing models when updating activeBaseModelId
+          const mergedConfig = {
+            ...currentConfig.data,
+            llm: {
+              ...updatedConfigV2,
+              // CRITICAL: Preserve all models - don't lose any
+              models: preservedModels,
+              // Preserve connections
+              connections: preservedConnections,
+            } as any,
+          };
+
+          await window.electronAPI.config.save(mergedConfig);
+          console.log(
+            '[LLMStatusBar] Saved LLMConfigV2 with activeBaseModelId:',
+            newModelId,
+            'Models count:',
+            preservedModels.length
+          );
+
+          // Re-initialize Main Process LLM client with new config
+          await window.electronAPI.llm.init({ ...mergedConfig, llm: updatedConfig });
+          console.log(
+            '[LLMStatusBar] Main Process LLM client re-initialized with model:',
+            updatedConfig.model
+          );
+
+          // Verify the save by reloading
+          const verifyConfig = await window.electronAPI.config.load();
+          if (
+            verifyConfig.success &&
+            verifyConfig.data?.llm &&
+            isLLMConfigV2(verifyConfig.data.llm)
+          ) {
+            console.log(
+              '[LLMStatusBar] Verified saved config, activeBaseModelId:',
+              verifyConfig.data.llm.activeBaseModelId,
+              'Models count:',
+              verifyConfig.data.llm.models.length
+            );
+            if (verifyConfig.data.llm.models.length !== preservedModels.length) {
+              console.error(
+                '[LLMStatusBar] WARNING: Model count mismatch! Expected:',
+                preservedModels.length,
+                'Got:',
+                verifyConfig.data.llm.models.length
+              );
+            }
+          }
+        }
+      }
+
+      // Update local state
+      setLlmConfigV2(updatedConfigV2);
+
+      // Initialize LLM client with new config - MUST be done before onConfigUpdate
+      initializeLLMClient(updatedConfig);
+      console.log('[LLMStatusBar] LLMClient initialized with model:', updatedConfig.model);
+
+      // Update parent component (InputBox) - this will trigger re-render
+      // Note: InputBox's handleConfigUpdate will check if it's LLMConfigV2 and won't overwrite
+      onConfigUpdate(updatedConfig);
+
+      // Dispatch event to notify other components (including InputBox's event listener)
+      window.dispatchEvent(
+        new CustomEvent('sepilot:config-updated', { detail: { llm: updatedConfig } })
+      );
+
+      console.log('[LLMStatusBar] Model changed to:', newModelId, 'Config:', updatedConfig);
+
+      // Reload config to ensure state is in sync
+      setTimeout(async () => {
+        if (isElectron() && window.electronAPI) {
+          const reloaded = await window.electronAPI.config.load();
+          if (reloaded.success && reloaded.data?.llm && isLLMConfigV2(reloaded.data.llm)) {
+            setLlmConfigV2(reloaded.data.llm);
+            const baseModels = reloaded.data.llm.models.filter((m) => m.tags.includes('base'));
+            setAvailableModels(baseModels);
+            console.log(
+              '[LLMStatusBar] Reloaded config, activeBaseModelId:',
+              reloaded.data.llm.activeBaseModelId
+            );
+          }
+        }
+      }, 100);
+    } catch (error) {
+      console.error('[LLMStatusBar] Failed to update model:', error);
+    }
+  };
 
   const contextUsage = useMemo(() => {
     if (!llmConfig) {
@@ -123,7 +356,68 @@ export function LLMStatusBar({
           <span className="text-primary animate-pulse">응답 생성 중... (Esc로 중지)</span>
         ) : llmConfig ? (
           <>
-            <span title={`Provider: ${llmConfig.provider}`}>{llmConfig.model}</span>
+            <div className="flex items-center gap-1">
+              <Select
+                value={
+                  llmConfigV2?.activeBaseModelId ||
+                  (availableModels.length > 0 ? availableModels[0]?.id : '')
+                }
+                onValueChange={handleModelChange}
+                open={modelSelectOpen}
+                onOpenChange={setModelSelectOpen}
+                disabled={isStreaming}
+              >
+                <SelectTrigger
+                  className="h-auto w-auto border-none bg-transparent p-0 text-xs font-normal text-muted-foreground/70 hover:text-primary focus:ring-0 focus:ring-offset-0"
+                  title={`Provider: ${llmConfig.provider} - 클릭하여 모델 변경`}
+                >
+                  <SelectValue>
+                    {(() => {
+                      if (llmConfigV2?.activeBaseModelId) {
+                        const model = availableModels.find(
+                          (m) => m.id === llmConfigV2.activeBaseModelId
+                        );
+                        return model?.displayName || model?.modelId || llmConfig.model;
+                      }
+                      if (availableModels.length > 0) {
+                        const model = availableModels[0];
+                        return model.displayName || model.modelId;
+                      }
+                      return llmConfig.model;
+                    })()}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {availableModels.length > 0 ? (
+                    availableModels.map((model) => {
+                      const connection = llmConfigV2?.connections.find(
+                        (c) => c.id === model.connectionId
+                      );
+                      const displayName = model.displayName || model.modelId;
+                      return (
+                        <SelectItem key={model.id} value={model.id}>
+                          <div className="flex flex-col">
+                            <span>{displayName}</span>
+                            {connection && (
+                              <span className="text-[10px] text-muted-foreground">
+                                {connection.name}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })
+                  ) : (
+                    <div className="px-2 py-4 text-xs text-muted-foreground">
+                      <div className="mb-2">Base 모델이 설정되지 않았습니다.</div>
+                      <div className="text-[10px]">
+                        설정에서 Models 탭에서 base 태그가 있는 모델을 추가하세요.
+                      </div>
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
             <span className="text-muted-foreground/50">·</span>
             {editingField === 'maxTokens' ? (
               <input

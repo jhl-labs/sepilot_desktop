@@ -365,6 +365,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="serverType">Server Type</Label>
                 <select
+                  title="GitHub 서버 타입"
                   id="serverType"
                   value={formData.serverType}
                   onChange={(e) =>

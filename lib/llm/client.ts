@@ -12,6 +12,11 @@ export class LLMClient {
   }
 
   setConfig(config: LLMConfig): void {
+    console.log('[LLMClient] setConfig called with:', {
+      provider: config.provider,
+      model: config.model,
+      baseURL: config.baseURL,
+    });
     switch (config.provider) {
       case 'openai':
       case 'anthropic':
@@ -27,6 +32,7 @@ export class LLMClient {
           },
           config // Pass full config for network settings
         );
+        console.log('[LLMClient] OpenAIProvider initialized for model:', config.model);
         break;
       default:
         throw new Error(`Unsupported provider: ${config.provider}`);
@@ -50,7 +56,10 @@ let llmClient: LLMClient | null = null;
 
 export function getLLMClient(): LLMClient {
   if (!llmClient) {
+    console.log('[LLMClient] Creating new LLMClient singleton instance');
     llmClient = new LLMClient();
+  } else {
+    // console.log('[LLMClient] Returning existing LLMClient singleton instance');
   }
   return llmClient;
 }

@@ -285,8 +285,54 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       return null;
     }
 
+    // Load current config from DB to preserve existing models and connections
+    const currentConfigResult = await window.electronAPI.config.load();
+    const currentLLMConfig =
+      currentConfigResult.success && currentConfigResult.data?.llm
+        ? currentConfigResult.data.llm
+        : (appConfigSnapshot?.llm ?? mergeLLMConfig());
+
+    // Merge LLM config properly - preserve models and connections if LLMConfigV2
+    let mergedLLM: LLMConfig | LLMConfigV2;
+    if (partial.llm) {
+      if (isLLMConfigV2(partial.llm) && isLLMConfigV2(currentLLMConfig)) {
+        // Both are V2: merge models and connections, but use new activeBaseModelId and other settings from partial
+        // CRITICAL: Always preserve models and connections from current config (DB) to avoid data loss
+        // Both are V2: merge models and connections
+        // Priority: partial (UI) > DB models/connections
+        // When saving from SettingsDialog, partial.llm is the full config state from the UI,
+        // so we should use it to overwrite the DB state (allowing additions/deletions).
+
+        const newModels = partial.llm.models;
+        const newConnections = partial.llm.connections;
+
+        mergedLLM = {
+          ...partial.llm,
+          models: newModels,
+          connections: newConnections,
+        };
+        console.log('[persistAppConfig] Merged LLMConfigV2 (UI priority):');
+        console.log('  - Saving models:', newModels.length);
+        console.log('  - Saving connections:', newConnections.length);
+        if (isLLMConfigV2(mergedLLM)) {
+          console.log('  - Updated activeBaseModelId:', mergedLLM.activeBaseModelId);
+        }
+      } else if (isLLMConfigV2(partial.llm)) {
+        // partial is V2 but current is V1: use partial as-is (migration case)
+        mergedLLM = partial.llm;
+        console.log(
+          '[persistAppConfig] Using partial LLMConfigV2 (migration case), models:',
+          partial.llm.models.length
+        );
+      } else {
+        mergedLLM = partial.llm;
+      }
+    } else {
+      mergedLLM = currentLLMConfig;
+    }
+
     const merged: AppConfig = {
-      llm: partial.llm ?? appConfigSnapshot?.llm ?? mergeLLMConfig(),
+      llm: mergedLLM as any, // LLMConfigV2 is stored as llm in AppConfig
       network: partial.network ?? appConfigSnapshot?.network ?? mergeNetworkConfig(),
       vectorDB: partial.vectorDB ?? appConfigSnapshot?.vectorDB,
       embedding: partial.embedding ?? appConfigSnapshot?.embedding,
@@ -365,8 +411,29 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       if (isElectron() && window.electronAPI) {
         try {
           // Save V2 config to DB (V2 is the source of truth)
+          // persistAppConfig will preserve existing models and connections from DB
+          console.log(
+            '[SettingsDialog] Saving configV2 with models:',
+            configV2.models.length,
+            'connections:',
+            configV2.connections.length
+          );
           savedConfig = await persistAppConfig({ llm: configV2 as any, network: networkConfig });
           if (savedConfig) {
+            // Verify models were preserved
+            if (isLLMConfigV2(savedConfig.llm)) {
+              console.log(
+                '[SettingsDialog] Saved config has models:',
+                savedConfig.llm.models.length,
+                'connections:',
+                savedConfig.llm.connections.length
+              );
+              if (savedConfig.llm.models.length < configV2.models.length) {
+                console.warn(
+                  '[SettingsDialog] WARNING: Some models may have been lost during save!'
+                );
+              }
+            }
             // Initialize Main Process LLM client with V1 config
             const configForInit = { ...savedConfig, llm: v1Config };
             await window.electronAPI.llm.init(configForInit);
