@@ -25,29 +25,41 @@ jest.mock('@/components/theme/ThemeToggle', () => ({
   ThemeToggle: () => <button data-testid="theme-toggle">Theme Toggle</button>,
 }));
 
-jest.mock('@/components/editor/EditorChatArea', () => ({
-  EditorChatArea: () => <div data-testid="editor-chat-area">Editor Chat Area</div>,
-}));
-
-jest.mock('@/components/editor/EditorChatInput', () => ({
-  EditorChatInput: () => <div data-testid="editor-chat-input">Editor Chat Input</div>,
+jest.mock('@/components/editor/EditorChatContainer', () => ({
+  EditorChatContainer: () => <div data-testid="editor-chat-container">Editor Chat</div>,
 }));
 
 describe('SidebarEditor', () => {
   const mockOnSettingsClick = jest.fn();
   const mockSetShowTerminalPanel = jest.fn();
+  const mockClearEditorChat = jest.fn();
+  const baseStore = () => ({
+    editorViewMode: 'files',
+    setEditorViewMode: jest.fn(),
+    showTerminalPanel: false,
+    setShowTerminalPanel: mockSetShowTerminalPanel,
+    workingDirectory: '/home/user/project',
+    editorUseRagInAutocomplete: false,
+    setEditorUseRagInAutocomplete: jest.fn(),
+    editorUseToolsInAutocomplete: true,
+    setEditorUseToolsInAutocomplete: jest.fn(),
+    pendingToolApproval: null,
+    clearPendingToolApproval: jest.fn(),
+    setAlwaysApproveToolsForSession: jest.fn(),
+    setAppMode: jest.fn(),
+    clearEditorChat: jest.fn(),
+  });
+  let storeState: ReturnType<typeof baseStore>;
+  const setStore = (overrides: Partial<ReturnType<typeof baseStore>> = {}) => {
+    storeState = baseStore();
+    Object.assign(storeState, overrides);
+    (useChatStore as unknown as jest.Mock).mockImplementation(() => storeState);
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    (useChatStore as unknown as jest.Mock).mockReturnValue({
-      editorViewMode: 'files',
-      setEditorViewMode: jest.fn(),
-      showTerminalPanel: false,
-      setShowTerminalPanel: mockSetShowTerminalPanel,
-      workingDirectory: '/home/user/project',
-      clearEditorChat: jest.fn(),
-    });
+    mockClearEditorChat.mockReset();
+    setStore();
   });
 
   afterEach(() => {
@@ -63,13 +75,8 @@ describe('SidebarEditor', () => {
     });
 
     it('should render SearchPanel when editorViewMode is search', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      setStore({
         editorViewMode: 'search',
-        setEditorViewMode: jest.fn(),
-        showTerminalPanel: false,
-        setShowTerminalPanel: mockSetShowTerminalPanel,
-        workingDirectory: '/home/user/project',
-        clearEditorChat: jest.fn(),
       });
 
       render(<SidebarEditor />);
@@ -110,11 +117,8 @@ describe('SidebarEditor', () => {
     });
 
     it('should show "터미널 숨기기" when terminal is open', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        activeEditorTab: 'files',
+      setStore({
         showTerminalPanel: true,
-        setShowTerminalPanel: mockSetShowTerminalPanel,
-        workingDirectory: '/home/user/project',
       });
 
       render(<SidebarEditor />);
@@ -123,11 +127,8 @@ describe('SidebarEditor', () => {
     });
 
     it('should close terminal when button clicked while open', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        activeEditorTab: 'files',
+      setStore({
         showTerminalPanel: true,
-        setShowTerminalPanel: mockSetShowTerminalPanel,
-        workingDirectory: '/home/user/project',
       });
 
       render(<SidebarEditor />);
@@ -139,10 +140,7 @@ describe('SidebarEditor', () => {
     });
 
     it('should disable terminal button when workingDirectory is not set', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        activeEditorTab: 'files',
-        showTerminalPanel: false,
-        setShowTerminalPanel: mockSetShowTerminalPanel,
+      setStore({
         workingDirectory: null,
       });
 
@@ -153,10 +151,7 @@ describe('SidebarEditor', () => {
     });
 
     it('should not toggle terminal when button is disabled', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        activeEditorTab: 'files',
-        showTerminalPanel: false,
-        setShowTerminalPanel: mockSetShowTerminalPanel,
+      setStore({
         workingDirectory: null,
       });
 
@@ -169,11 +164,8 @@ describe('SidebarEditor', () => {
     });
 
     it('should apply bg-accent class when terminal is open', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        activeEditorTab: 'files',
+      setStore({
         showTerminalPanel: true,
-        setShowTerminalPanel: mockSetShowTerminalPanel,
-        workingDirectory: '/home/user/project',
       });
 
       const { container } = render(<SidebarEditor />);
@@ -288,13 +280,8 @@ describe('SidebarEditor', () => {
   describe('AI Assistant Button', () => {
     it('should switch to chat mode when not in chat mode', () => {
       const mockSetEditorViewMode = jest.fn();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        editorViewMode: 'files',
+      setStore({
         setEditorViewMode: mockSetEditorViewMode,
-        showTerminalPanel: false,
-        setShowTerminalPanel: mockSetShowTerminalPanel,
-        workingDirectory: '/home/user/project',
-        clearEditorChat: jest.fn(),
       });
 
       render(<SidebarEditor />);
@@ -307,15 +294,11 @@ describe('SidebarEditor', () => {
 
     it('should show confirmation dialog when in chat mode', () => {
       global.confirm = jest.fn(() => true);
-      const mockClearEditorChat = jest.fn();
       const mockSetEditorViewMode = jest.fn();
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      setStore({
         editorViewMode: 'chat',
         setEditorViewMode: mockSetEditorViewMode,
-        showTerminalPanel: false,
-        setShowTerminalPanel: mockSetShowTerminalPanel,
-        workingDirectory: '/home/user/project',
         clearEditorChat: mockClearEditorChat,
       });
 
@@ -331,15 +314,11 @@ describe('SidebarEditor', () => {
 
     it('should not clear chat when user cancels confirmation', () => {
       global.confirm = jest.fn(() => false);
-      const mockClearEditorChat = jest.fn();
       const mockSetEditorViewMode = jest.fn();
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      setStore({
         editorViewMode: 'chat',
         setEditorViewMode: mockSetEditorViewMode,
-        showTerminalPanel: false,
-        setShowTerminalPanel: mockSetShowTerminalPanel,
-        workingDirectory: '/home/user/project',
         clearEditorChat: mockClearEditorChat,
       });
 

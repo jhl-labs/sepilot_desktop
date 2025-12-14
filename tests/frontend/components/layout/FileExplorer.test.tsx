@@ -5,14 +5,43 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FileExplorer } from '@/components/layout/FileExplorer';
 import { useChatStore } from '@/lib/store/chat-store';
 import { enableElectronMode, mockElectronAPI } from '../../../setup';
 
 // Mock dependencies
-jest.mock('@/lib/store/chat-store');
+jest.mock('@/lib/store/chat-store', () => {
+  const { useSyncExternalStore } = require('react');
+  const listeners = new Set<() => void>();
+  let state: Record<string, any> = {};
+
+  const subscribe = (listener: () => void) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  };
+
+  const setState = (partial: any, replace = false) => {
+    const nextState = typeof partial === 'function' ? partial(state) : partial;
+    state = replace ? nextState : { ...state, ...nextState };
+    listeners.forEach((listener) => listener());
+  };
+
+  const useChatStore = jest.fn((selector: any = (s: any) => s) =>
+    useSyncExternalStore(
+      subscribe,
+      () => selector(state),
+      () => selector(state)
+    )
+  );
+
+  (useChatStore as any).getState = () => state;
+  (useChatStore as any).setState = (partial: any) => setState(partial);
+  (useChatStore as any).__replaceState = (nextState: any) => setState(nextState, true);
+
+  return { useChatStore };
+});
 jest.mock('@/lib/platform', () => ({
   isElectron: jest.fn(() => true),
 }));
@@ -21,32 +50,72 @@ describe('FileExplorer', () => {
   const mockSetWorkingDirectory = jest.fn();
   const mockOpenFile = jest.fn();
   const mockLoadWorkingDirectory = jest.fn();
+  const getStoreState = () => (useChatStore as any).getState();
+  const replaceStoreState = (state: Record<string, any>) => {
+    act(() => {
+      (useChatStore as any).__replaceState(state);
+    });
+    return getStoreState();
+  };
+  const patchStoreState = (updater: (prev: Record<string, any>) => Record<string, any>) => {
+    act(() => {
+      const prev = getStoreState();
+      (useChatStore as any).__replaceState(updater(prev));
+    });
+  };
+  const createStore = (overrides: Record<string, any> = {}) => {
+    const state: Record<string, any> = {
+      workingDirectory: null,
+      setWorkingDirectory: (dir: string | null) => {
+        mockSetWorkingDirectory(dir);
+        patchStoreState((prev) => ({
+          ...prev,
+          workingDirectory: dir,
+        }));
+      },
+      openFile: mockOpenFile,
+      activeFilePath: null,
+      loadWorkingDirectory: mockLoadWorkingDirectory,
+      fileTreeRefreshTrigger: 0,
+      refreshFileTree: jest.fn(() => {
+        patchStoreState((prev) => ({
+          ...prev,
+          fileTreeRefreshTrigger: (prev.fileTreeRefreshTrigger ?? 0) + 1,
+        }));
+      }),
+      expandedFolderPaths: new Set<string>(),
+      clearExpandedFolders: jest.fn(() => {
+        patchStoreState((prev) => ({
+          ...prev,
+          expandedFolderPaths: new Set<string>(),
+        }));
+      }),
+      toggleExpandedFolder: jest.fn((path: string) => {
+        patchStoreState((prev) => {
+          const nextPaths = new Set(prev.expandedFolderPaths ?? []);
+          if (nextPaths.has(path)) {
+            nextPaths.delete(path);
+          } else {
+            nextPaths.add(path);
+          }
+          return {
+            ...prev,
+            expandedFolderPaths: nextPaths,
+          };
+        });
+      }),
+      ...overrides,
+    };
+    return replaceStoreState(state);
+  };
   let storeState = createStore();
-  const createStore = (overrides: Record<string, any> = {}) => ({
-    workingDirectory: null,
-    setWorkingDirectory: mockSetWorkingDirectory,
-    openFile: mockOpenFile,
-    activeFilePath: null,
-    loadWorkingDirectory: mockLoadWorkingDirectory,
-    fileTreeRefreshTrigger: 0,
-    refreshFileTree: jest.fn(),
-    expandedFolderPaths: new Set<string>(),
-    clearExpandedFolders: jest.fn(),
-    ...overrides,
-  });
 
   beforeEach(() => {
     jest.clearAllMocks();
     enableElectronMode();
 
     storeState = createStore();
-    (useChatStore as unknown as jest.Mock).mockImplementation((selector?: any) => {
-      if (typeof selector === 'function') {
-        return selector(storeState);
-      }
-      return storeState;
-    });
-    (useChatStore as any).getState = () => storeState;
+    (useChatStore as jest.Mock).mockClear?.();
   });
 
   describe('초기 렌더링', () => {

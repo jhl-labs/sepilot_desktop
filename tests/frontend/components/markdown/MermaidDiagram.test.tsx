@@ -419,7 +419,6 @@ describe('MermaidDiagram', () => {
     it('should remove ```mermaid code blocks from LLM response', async () => {
       const badChart = 'graph TD\n  A[[[Invalid';
       mockRender.mockRejectedValueOnce(new Error('Parse error'));
-      mockRender.mockResolvedValueOnce({ svg: '<svg>Fixed</svg>' });
 
       const mockElectronAPI = {
         llm: {
@@ -452,9 +451,7 @@ describe('MermaidDiagram', () => {
 
     it('should remove ``` code blocks from LLM response', async () => {
       const badChart = 'graph TD\n  A[[[Invalid';
-      mockRender
-        .mockRejectedValueOnce(new Error('Parse error'))
-        .mockResolvedValueOnce({ svg: '<svg>Fixed</svg>' });
+      mockRender.mockRejectedValueOnce(new Error('Parse error'));
 
       const mockElectronAPI = {
         llm: {
