@@ -2,18 +2,15 @@
 
 <div align="center">
 
-**A professional LLM desktop application built with Next.js and Electron**
+**The All-in-One AI Workspace**
 
-_Claude Desktop과 같은 수준의 LLM 데스크톱 애플리케이션_
+_Thinking, Coding, Editor, Browser, Vision을 하나로 통합한 궁극의 데스크톱 AI 워크스페이스_
 
+![Version](https://img.shields.io/badge/version-0.6.5-blue.svg)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-16.0-black)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14.0-black)](https://nextjs.org/)
 [![Electron](https://img.shields.io/badge/Electron-31.0-47848F)](https://www.electronjs.org/)
-[![CI](https://github.com/jhl-labs/sepilot_desktop/workflows/CI/badge.svg)](https://github.com/jhl-labs/sepilot_desktop/actions)
-[![codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graph/badge.svg?token=RTDC27F34B)](https://codecov.io/gh/jhl-labs/sepilot_desktop)
 [![License](https://img.shields.io/badge/license-Custom-green)](./LICENSE)
-
-![Codecov Tree Graph](https://codecov.io/gh/jhl-labs/sepilot_desktop/graphs/tree.svg?token=RTDC27F34B)
 
 [English](#english) | [한국어](#korean)
 
@@ -25,256 +22,97 @@ _Claude Desktop과 같은 수준의 LLM 데스크톱 애플리케이션_
 
 ## English
 
-### 📖 Overview
+### 🚀 Overview
 
-SEPilot Desktop is a professional LLM desktop application that provides Claude Desktop-level functionality with enhanced features. Built on Next.js and Electron, it offers a seamless experience for interacting with multiple LLM providers through various workflow patterns including RAG and autonomous agents.
+**SEPilot Desktop** is not just a chatbot. It is an integrated open-source desktop application that combines **Thinking, Coding, Editor, Browser, and Vision** into a seamless workflow. Experience the familiarity of ChatGPT with the power of a professional workspace.
 
-### ✨ Features
+### ✨ Key Features
 
-- 🤖 **LangGraph-based Workflow**: Support for Chat, RAG, and Agent graphs
-- 🔌 **OpenAI Compatible API**: Works with OpenAI, Anthropic, and custom LLM servers
-- 📚 **RAG (Retrieval-Augmented Generation)**: Multi-vector database support
-  - SQLite-vec, OpenSearch, Elasticsearch, pgvector
-- 🛠️ **MCP (Model Context Protocol)**: Standard tool and context integration
-- 🔐 **GitHub OAuth**: AES-256-GCM encrypted configuration synchronization
-- 💬 **Advanced Chat Features**
-  - Automatic title generation
-  - Message editing and regeneration
-  - Code block copying
-- ⌨️ **Keyboard Shortcuts**: Cmd/Ctrl+N, Cmd/Ctrl+,, Cmd/Ctrl+Shift+C
-- 🌓 **Dark/Light Mode**: Automatic theme detection
-- 💻 **Cross-Platform**: Windows, macOS, Linux
-- ✨ **Real-time Streaming**: Live LLM response rendering
-- 📝 **Markdown & Mermaid**: Rich content rendering with diagrams
+#### 💬 Native Chat Experience
 
-### 📊 Code Quality & Testing
+_Familiarity of ChatGPT, flexibility beyond._
 
-This project maintains high code quality standards with comprehensive testing and continuous integration:
+- **No Learning Curve**: Provides the familiar interface you already know.
+- **Model Hot-swap**: Switch between GPT-4o, Claude 3.5, and local Ollama models with a single click.
+- **Perfect Rendering**: Beautiful Markdown, LaTeX support, and real-time streaming.
+- **Secure**: Chat history is safely stored in a local database.
 
-- **Test Coverage**:
-  - Frontend: `app/`, `components/` - React components and UI logic
-  - Backend: `lib/`, `electron/` - Business logic and Electron integrations
-  - View detailed coverage reports on [Codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop)
+#### 🧠 Depth of Thought (Thinking Models)
 
-- **Continuous Integration**:
-  - ✅ ESLint - Code quality and consistency
-  - ✅ Prettier - Code formatting
-  - ✅ TypeScript - Type checking (strict mode)
-  - ✅ Jest - Unit and integration tests
-  - ✅ Codecov - Coverage tracking and analysis
-  - ✅ Bundle Analysis - Performance optimization
-  - ✅ Dependency Check - Circular dependency detection
+_Choose AI thinking process matching problem complexity._
 
-- **Quality Gates**:
-  - Minimum coverage: 55% overall
-  - All tests must pass
-  - No TypeScript errors
-  - ESLint compliance
+- **Sequential Thinking**: Step-by-step reasoning where AI self-verifies logical gaps before moving forward.
+- **Tree of Thought**: Generates multiple solution possibilities simultaneously (Branching) to find the optimal path.
+- **Deep Thinking (Graph)**: Combines Sequential and Tree of Thought. Analyzes problems from 4 distinct perspectives (Analytical, Practical, Critical, Creative).
+
+#### 👨‍💻 Autonomous Coding Agent (Beta)
+
+_Experimental autonomous coding support._
+
+- **Think -> Action -> Observe**: Repeats the cycle of thinking, file I/O, and result analysis.
+- **Full Control**: Can create/edit/delete files and execute terminal commands.
+- **Auto-debugging**: Automatically analyzes error logs and attempts to fix issues.
+
+#### 📝 Full-featured Editor & Terminal
+
+_Power of VS Code, but lighter._
+
+- **Monaco Editor**: Built-in VS Code core with syntax highlighting, minimap, and multi-cursor support.
+- **Integrated Terminal**: Run `npm install`, `git commit`, or python scripts directly within the app.
+- **AI Context Menu**: Drag text to access Notion-style AI tools (Refactor, Translate, Fix Typos, etc.).
+
+#### 👁️ Vision Browser Agent
+
+_Understands as it sees, moves like a human._
+
+- **Hybrid Control**: Combines semantic DOM analysis with Vision (Set-of-Mark) to interact with complex web pages.
+- **Automation**: Supports over 27 browser actions including click, scroll, type, and navigation.
+
+#### 📚 Knowledge Base (RAG)
+
+_Turn your documents into AI's knowledge._
+
+- **Local RAG**: Uses local SQLite-vec vector DB. Drag & drop Markdown/Text files to build a secure knowledge base.
+- **Team Docs**: Link GitHub repositories to auto-sync team documentation and code snippets.
+
+#### 🎨 Vision & Visualization
+
+- **Vision Analysis**: Paste images for instant analysis by Vision models (e.g., "Analyze this error log").
+- **Image Generation**: Integrate with Nano Banana and ComfyUI for complex image generation workflows.
+- **Mermaid & Plotly**: Generate diagrams from text and visualize CSV/Excel data with interactive charts.
+
+#### 🚀 Super Productivity
+
+- **Quick Input**: Call SEPilot instantly with a global shortcut without leaving your current app.
+- **Quick Search**: Ripgrep-powered search finds files and content in milliseconds.
+
+---
 
 ### 🏗️ Tech Stack
 
-#### Frontend
-
-- **Framework**: Next.js 14 (App Router), React 18
-- **Styling**: Tailwind CSS, shadcn/ui
-- **State Management**: Zustand
-- **Theme**: next-themes
-
-#### Desktop
-
-- **Runtime**: Electron 31
-- **IPC**: Context Bridge (secure communication)
-- **Storage**: better-sqlite3
-
-#### LLM & AI
-
-- **Workflow**: LangGraph (custom implementation)
-- **Embeddings**: OpenAI text-embedding-3
-- **Vector DB**: SQLite-vec (default)
-- **Protocol**: MCP (Model Context Protocol)
-
-#### Development
-
-- **Language**: TypeScript 5.4 (strict mode)
-- **Linter**: ESLint 8.57
-- **Formatter**: Prettier 3.2
-- **Builder**: electron-builder 24
+- **Frontend**: Next.js 14 (App Router), React 18, Tailwind CSS, shadcn/ui
+- **Desktop**: Electron 31, Context Bridge IPC, better-sqlite3
+- **AI Core**: LangGraph (Custom Implementation), OpenAI Compatible API, MCP (Model Context Protocol)
+- **DevOps**: TypeScript 5.4, ESLint, Prettier, electron-builder
 
 ### 📦 Installation
 
-#### Requirements
-
-- Node.js >= 18.0.0
-- npm, yarn, or pnpm
-
-#### Install Dependencies
+Download the latest installer from [Releases](https://github.com/jhl-labs/sepilot_desktop/releases).
 
 ```bash
-# Using npm
-npm install
+# Verify SHA256 (Optional)
+sha256sum -c SHA256SUMS.txt
+```
 
-# Using pnpm (recommended)
+### 🚀 Development
+
+```bash
+# Install dependencies
 pnpm install
 
-# Using yarn
-yarn install
+# Run development server (Next.js + Electron)
+pnpm run dev
 ```
-
-#### Environment Setup (Optional)
-
-```bash
-cp .env.example .env
-# Edit .env file to configure API keys and settings
-```
-
-### 🚀 Usage
-
-#### Development Mode
-
-```bash
-# Run Next.js + Electron together (recommended)
-npm run dev
-
-# Run Next.js only (browser testing)
-npm run dev:next
-
-# Run Electron only
-npm run dev:electron
-```
-
-The Electron window will open automatically when the development server starts.
-
-#### Building
-
-```bash
-# Production build (Next.js + Electron)
-npm run build
-
-# Platform-specific builds
-npm run build:app      # Current platform
-npm run build:mac      # macOS (dmg, zip)
-npm run build:win      # Windows (nsis, portable)
-npm run build:linux    # Linux (AppImage, deb)
-```
-
-Built applications will be created in the `dist/` directory.
-
-### 📥 Installation
-
-**Download the latest release:**
-
-Go to [Releases](https://github.com/jhl-labs/sepilot_desktop/releases) and download the installer for your platform.
-
-**Windows:**
-
-1. Download `SEPilot-Setup-*.exe`
-2. If Windows SmartScreen shows a warning:
-   - Click "More info" → "Run anyway"
-3. Follow the installation wizard
-
-**Security Verification (Optional):**
-
-All release files are signed with GPG and include SHA256 checksums for verification.
-
-```bash
-# Verify SHA256 checksum
-sha256sum -c SHA256SUMS.txt
-
-# Verify GPG signature
-gpg --keyserver keys.openpgp.org --recv-keys YOUR_KEY_ID
-gpg --verify SEPilot-Setup-*.exe.asc SEPilot-Setup-*.exe
-```
-
-See [GPG Setup Guide](.github/GPG_SETUP.md) for detailed verification instructions.
-
-### 🎯 Getting Started
-
-1. **Configure LLM Settings**
-   - Click the settings icon in the bottom left
-   - Select your LLM provider (OpenAI / Anthropic / Custom)
-   - Enter your API key
-   - Choose a model (e.g., gpt-4, claude-3-5-sonnet)
-
-2. **Select Graph Type**
-   - **Basic Chat**: Simple LLM conversation
-   - **RAG Chat**: Document-based retrieval-augmented generation
-   - **Agent**: Autonomous agent with MCP tools
-
-3. **Configure Vector DB (for RAG)**
-   - Go to VectorDB tab in settings
-   - Select SQLite-vec (default) or configure other databases
-   - Set up embedding provider (OpenAI recommended)
-   - Upload and index documents in the Documents tab
-
-4. **Add MCP Servers (for Agent)**
-   - Go to MCP Server tab
-   - Choose from predefined templates or create custom configurations
-   - Add servers and verify available tools
-
-5. **GitHub Sync (Optional)**
-   - Configure GitHub OAuth in the Account tab
-   - Set a master password
-   - Save to or restore from GitHub
-
-### 🤝 Contributing
-
-Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) before submitting pull requests.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### 📸 Screenshots
-
-_(Add screenshots here to showcase your application)_
-
-### 🗺️ Roadmap
-
-- [ ] Plugin system for custom extensions
-- [ ] Multi-language UI support
-- [ ] Enhanced voice input/output
-- [ ] Collaborative chat sessions
-- [ ] Mobile companion app
-
-### ❓ FAQ
-
-<details>
-<summary>Which LLM providers are supported?</summary>
-
-OpenAI, Anthropic, and any custom LLM server that supports OpenAI Compatible API.
-
-</details>
-
-<details>
-<summary>Can it run locally?</summary>
-
-Yes, SEPilot Desktop is a fully local desktop application. All data is stored on your computer.
-
-</details>
-
-<details>
-<summary>How do I use the RAG feature?</summary>
-
-Configure VectorDB in settings, upload documents in the Documents tab, and select RAG as your chat type.
-
-</details>
-
-### 📄 License
-
-This project is licensed under a custom license. See the [LICENSE](LICENSE) file for details.
-
-### 🙏 Acknowledgments
-
-- Built with [Claude Code](https://claude.com/claude-code)
-- UI components from [shadcn/ui](https://ui.shadcn.com/)
-- Icons from [Lucide](https://lucide.dev/)
-
-### 📞 Contact & Support
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/sepilot_desktop/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/sepilot_desktop/discussions)
 
 ---
 
@@ -282,255 +120,98 @@ This project is licensed under a custom license. See the [LICENSE](LICENSE) file
 
 ## 한국어
 
-### 📖 개요
+### 🚀 개요
 
-SEPilot Desktop은 Claude Desktop 수준의 기능을 제공하는 전문 LLM 데스크톱 애플리케이션입니다. Next.js와 Electron으로 구축되었으며, RAG 및 자율 에이전트를 포함한 다양한 워크플로우 패턴을 통해 여러 LLM 제공자와의 원활한 상호작용을 제공합니다.
+**SEPilot Desktop**은 단순한 챗봇이 아닙니다. **Thinking, Coding, Editor, Browser, Vision**이 완벽하게 통합된 오픈소스 데스크톱 애플리케이션입니다. ChatGPT와 같은 익숙한 사용성에 전문적인 워크스페이스의 강력함을 더했습니다.
 
 ### ✨ 주요 기능
 
-- 🤖 **LangGraph 기반 워크플로우**: Chat, RAG, Agent 그래프 지원
-- 🔌 **OpenAI Compatible API**: OpenAI, Anthropic, 커스텀 LLM 서버 지원
-- 📚 **RAG (검색 증강 생성)**: 다중 벡터 DB 지원
-  - SQLite-vec, OpenSearch, Elasticsearch, pgvector
-- 🛠️ **MCP (Model Context Protocol)**: 표준 도구 및 컨텍스트 통합
-- 🔐 **GitHub OAuth**: AES-256-GCM 암호화된 설정 동기화
-- 💬 **고급 채팅 기능**
-  - 자동 제목 생성
-  - 메시지 편집/재생성
-  - 코드 블록 복사
-- ⌨️ **키보드 단축키**: Cmd/Ctrl+N, Cmd/Ctrl+,, Cmd/Ctrl+Shift+C
-- 🌓 **다크/라이트 모드**: 시스템 설정 자동 감지
-- 💻 **크로스 플랫폼**: Windows, macOS, Linux
-- ✨ **실시간 스트리밍**: LLM 응답 실시간 표시
-- 📝 **Markdown & Mermaid**: 다이어그램을 포함한 풍부한 콘텐츠 렌더링
+#### 💬 네이티브 채팅 경험 (Native Chat Experience)
 
-### 📊 코드 품질 & 테스트
+_ChatGPT와 같은 편안함, 그 이상의 유연함._
 
-이 프로젝트는 포괄적인 테스트와 지속적 통합을 통해 높은 코드 품질 기준을 유지합니다:
+- **익숙한 UI**: 새로운 도구를 배울 필요 없이 바로 사용할 수 있습니다.
+- **모델 핫스왑**: GPT-4o, Claude 3.5, Ollama 로컬 모델 등을 클릭 한 번으로 전환합니다.
+- **완벽한 렌더링**: GitHub 스타일의 마크다운 렌더링과 수식(LaTeX) 지원.
+- **보안**: 모든 대화 내용은 로컬 데이터베이스에 안전하게 저장됩니다.
 
-- **테스트 커버리지**:
-  - Frontend: `app/`, `components/` - React 컴포넌트 및 UI 로직
-  - Backend: `lib/`, `electron/` - 비즈니스 로직 및 Electron 통합
-  - 자세한 커버리지 리포트는 [Codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop)에서 확인
+#### 🧠 사고 모델 (Depth of Thought)
 
-- **지속적 통합**:
-  - ✅ ESLint - 코드 품질 및 일관성
-  - ✅ Prettier - 코드 포매팅
-  - ✅ TypeScript - 타입 체크 (strict mode)
-  - ✅ Jest - 유닛 및 통합 테스트
-  - ✅ Codecov - 커버리지 추적 및 분석
-  - ✅ Bundle Analysis - 성능 최적화
-  - ✅ Dependency Check - 순환 의존성 검사
+_문제의 복잡도에 맞춰 AI의 사고 방식을 선택하세요._
 
-- **품질 게이트**:
-  - 최소 커버리지: 전체 55%
-  - 모든 테스트 통과 필수
-  - TypeScript 에러 없음
-  - ESLint 규칙 준수
+- **Sequential Thinking**: 단계별(Step-by-Step)로 논리를 전개하며 스스로 허점을 검증합니다.
+- **Tree of Thought**: 여러 해결 경로를 동시에 탐색(Branching)하여 최적의 해를 도출합니다. 브레인스토밍에 강력합니다.
+- **Deep Thinking (Graph)**: 4가지 관점(분석적, 실용적, 비판적, 창의적)으로 문제를 입체적으로 분석하고 검증합니다.
 
-### 🏗️ 기술 스택
+#### 👨‍💻 자율 코딩 에이전트 (Coding Agent)
 
-#### 프론트엔드
+_실험적인 자율 코딩 지원._
 
-- **프레임워크**: Next.js 14 (App Router), React 18
-- **스타일링**: Tailwind CSS, shadcn/ui
-- **상태 관리**: Zustand
-- **테마**: next-themes
+- **Think -> Action -> Observe**: 생각하고, 파일을 수행하고, 결과를 확인하는 주기를 반복합니다.
+- **완전한 제어**: 파일 생성/수정/삭제 권한과 터미널 명령어 실행 능력을 가집니다.
+- **자동 디버깅**: 에러 발생 시 로그를 분석하여 스스로 코드를 수정(Self-correction)합니다.
 
-#### 데스크톱
+#### 📝 풀 피처 에디터 & 터미널
 
-- **런타임**: Electron 31
-- **IPC**: Context Bridge (안전한 통신)
-- **저장소**: better-sqlite3
+_VS Code의 강력함을 그대로, 더 가볍게._
 
-#### LLM & AI
+- **Monaco Editor**: VS Code의 핵심 엔진을 탑재하여 구문 강조, 미니맵, 멀티 커서 등을 지원합니다.
+- **내장 터미널**: 앱 내에서 바로 `npm install`, `git commit` 등을 실행할 수 있습니다.
+- **AI 컨텍스트 메뉴**: 텍스트를 드래그하면 Notion 스타일의 AI 메뉴(리팩토링, 주석 생성 등)가 나타납니다.
 
-- **워크플로우**: LangGraph (커스텀 구현)
-- **임베딩**: OpenAI text-embedding-3
-- **벡터 DB**: SQLite-vec (기본값)
-- **프로토콜**: MCP (Model Context Protocol)
+#### 👁️ 비전 브라우저 에이전트 (Vision Browser Agent)
 
-#### 개발
+_보이는 대로 이해하고, 사람처럼 움직입니다._
 
-- **언어**: TypeScript 5.4 (strict mode)
-- **린터**: ESLint 8.57
-- **포매터**: Prettier 3.2
-- **빌더**: electron-builder 24
+- **하이브리드 제어**: DOM 분석과 Vision AI(Set-of-Mark)를 결합하여 복잡한 웹 페이지도 정확하게 제어합니다.
+- **브라우저 자동화**: 클릭, 스크롤, 타이핑 등 27개 이상의 브라우저 액션을 지원합니다.
 
-### 📦 설치
+#### 📚 지식 기반 (RAG)
 
-#### 요구사항
+_당신의 문서를 AI의 지식으로._
 
-- Node.js >= 18.0.0
-- npm, yarn, 또는 pnpm
+- **로컬 RAG**: 로컬 SQLite-vec 벡터 DB를 사용합니다. 마크다운/텍스트 파일을 드래그하여 안전한 개인 지식 저장소를 구축하세요.
+- **팀 문서**: GitHub 저장소를 연결하여 팀의 위키나 코드를 자동으로 동기화하고 공유할 수 있습니다.
 
-#### 의존성 설치
+#### 🎨 비전 & 시각화
 
-```bash
-# npm 사용
-npm install
+- **비전 분석**: 이미지나 에러 스크린샷을 붙여넣으면 Qwen2-VL 모델이 즉시 분석합니다.
+- **이미지 생성**: ComfyUI, Nano Banana와 연동하여 복잡한 노드 기반 이미지 생성 워크플로우를 제어합니다.
+- **Mermaid & Plotly**: 텍스트로 다이어그램을 요청하거나, 엑셀/CSV 데이터를 인터랙티브 차트로 시각화합니다.
 
-# pnpm 사용 (권장)
-pnpm install
+#### 🚀 초생산성 (Super Productivity)
 
-# yarn 사용
-yarn install
-```
-
-#### 환경 설정 (선택사항)
-
-```bash
-cp .env.example .env
-# .env 파일을 편집하여 API 키 및 설정 구성
-```
-
-### 🚀 사용법
-
-#### 개발 모드
-
-```bash
-# Next.js + Electron 동시 실행 (권장)
-npm run dev
-
-# Next.js만 실행 (브라우저 테스트)
-npm run dev:next
-
-# Electron만 실행
-npm run dev:electron
-```
-
-개발 서버가 시작되면 Electron 윈도우가 자동으로 열립니다.
-
-#### 빌드
-
-```bash
-# 프로덕션 빌드 (Next.js + Electron)
-npm run build
-
-# 플랫폼별 빌드
-npm run build:app      # 현재 플랫폼
-npm run build:mac      # macOS (dmg, zip)
-npm run build:win      # Windows (nsis, portable)
-npm run build:linux    # Linux (AppImage, deb)
-```
-
-빌드된 애플리케이션은 `dist/` 디렉토리에 생성됩니다.
-
-### 📥 설치
-
-**최신 릴리즈 다운로드:**
-
-[Releases](https://github.com/jhl-labs/sepilot_desktop/releases)에서 플랫폼에 맞는 설치 파일을 다운로드하세요.
-
-**Windows:**
-
-1. `SEPilot-Setup-*.exe` 다운로드
-2. Windows SmartScreen 경고가 표시되면:
-   - "추가 정보" → "실행" 클릭
-3. 설치 마법사 진행
-
-**보안 검증 (선택사항):**
-
-모든 릴리즈 파일은 GPG 서명 및 SHA256 체크섬을 제공합니다.
-
-```bash
-# SHA256 체크섬 확인
-sha256sum -c SHA256SUMS.txt
-
-# GPG 서명 검증
-gpg --keyserver keys.openpgp.org --recv-keys YOUR_KEY_ID
-gpg --verify SEPilot-Setup-*.exe.asc SEPilot-Setup-*.exe
-```
-
-자세한 검증 방법은 [GPG 설정 가이드](.github/GPG_SETUP.md)를 참고하세요.
-
-### 🎯 시작하기
-
-1. **LLM 설정**
-   - 왼쪽 하단의 설정 아이콘 클릭
-   - LLM 제공자 선택 (OpenAI / Anthropic / Custom)
-   - API 키 입력
-   - 모델 선택 (예: gpt-4, claude-3-5-sonnet)
-
-2. **그래프 타입 선택**
-   - **기본 채팅**: 단순 LLM 대화
-   - **RAG 채팅**: 문서 기반 검색 증강 생성
-   - **Agent**: MCP 도구를 활용한 자율 에이전트
-
-3. **벡터 DB 설정 (RAG 사용 시)**
-   - 설정의 VectorDB 탭으로 이동
-   - SQLite-vec 선택 (기본값) 또는 다른 데이터베이스 구성
-   - 임베딩 제공자 설정 (OpenAI 권장)
-   - Documents 탭에서 문서 업로드 및 인덱싱
-
-4. **MCP 서버 추가 (Agent 사용 시)**
-   - MCP Server 탭으로 이동
-   - 사전 정의된 템플릿 선택 또는 커스텀 구성 생성
-   - 서버 추가 및 사용 가능한 도구 확인
-
-5. **GitHub 동기화 (선택사항)**
-   - Account 탭에서 GitHub OAuth 구성
-   - 마스터 패스워드 설정
-   - GitHub에 저장하거나 GitHub에서 복원
-
-### 🤝 기여
-
-기여를 환영합니다! Pull Request를 제출하기 전에 [기여 가이드라인](CONTRIBUTING.md)을 읽어주세요.
-
-1. 저장소 포크
-2. 기능 브랜치 생성 (`git checkout -b feature/AmazingFeature`)
-3. 변경사항 커밋 (`git commit -m 'Add some AmazingFeature'`)
-4. 브랜치에 푸시 (`git push origin feature/AmazingFeature`)
-5. Pull Request 생성
-
-### 📸 스크린샷
-
-_(애플리케이션을 소개하는 스크린샷을 추가하세요)_
-
-### 🗺️ 로드맵
-
-- [ ] 커스텀 확장을 위한 플러그인 시스템
-- [ ] 다국어 UI 지원
-- [ ] 향상된 음성 입력/출력
-- [ ] 협업 채팅 세션
-- [ ] 모바일 컴패니언 앱
-
-### ❓ FAQ
-
-<details>
-<summary>어떤 LLM 제공자를 지원하나요?</summary>
-
-OpenAI, Anthropic, 그리고 OpenAI Compatible API를 지원하는 모든 커스텀 LLM 서버를 사용할 수 있습니다.
-
-</details>
-
-<details>
-<summary>로컬에서 실행 가능한가요?</summary>
-
-네, SEPilot Desktop은 완전히 로컬에서 실행되는 데스크톱 애플리케이션입니다. 모든 데이터는 사용자의 컴퓨터에 저장됩니다.
-
-</details>
-
-<details>
-<summary>RAG 기능은 어떻게 사용하나요?</summary>
-
-설정에서 VectorDB를 구성하고, Documents 탭에서 문서를 업로드한 후, 채팅 타입을 RAG로 선택하면 됩니다.
-
-</details>
-
-### 📄 라이선스
-
-이 프로젝트는 커스텀 라이선스로 제공됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
-
-### 🙏 감사의 말
-
-- [Claude Code](https://claude.com/claude-code)로 제작되었습니다
-- UI 컴포넌트는 [shadcn/ui](https://ui.shadcn.com/)를 사용했습니다
-- 아이콘은 [Lucide](https://lucide.dev/)를 사용했습니다
+- **Quick Input**: 단축키 하나로 어디서든 SEPilot을 호출하여 빠르게 질문하세요.
+- **Quick Search**: Ripgrep 엔진을 탑재하여 수만 개의 파일을 0.1초 만에 검색합니다.
 
 ---
 
-### 📞 Contact & Support
+### 🏗️ 기술 스택
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/sepilot_desktop/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/sepilot_desktop/discussions)
+- **Frontend**: Next.js 14 (App Router), React 18, Tailwind CSS, shadcn/ui
+- **Desktop**: Electron 31, Context Bridge IPC, better-sqlite3
+- **AI Core**: LangGraph (Custom Implementation), OpenAI Compatible API, MCP (Model Context Protocol)
+- **DevOps**: TypeScript 5.4, ESLint, Prettier, electron-builder
+
+### 📦 설치
+
+[Releases](https://github.com/jhl-labs/sepilot_desktop/releases) 페이지에서 최신 설치 파일을 다운로드하세요.
+
+```bash
+# SHA256 체크섬 확인 (선택사항)
+sha256sum -c SHA256SUMS.txt
+```
+
+### 🚀 개발
+
+```bash
+# 의존성 설치
+pnpm install
+
+# 개발 서버 실행 (Next.js + Electron)
+pnpm run dev
+```
+
+### 📄 License
+
+This project is licensed under a custom license. See the [LICENSE](LICENSE) file for details.
