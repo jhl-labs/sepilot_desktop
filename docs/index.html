@@ -1,1144 +1,901 @@
 <!DOCTYPE html>
-<html lang="ko" class="scroll-smooth">
+<html lang="en" class="scroll-smooth">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-        content="SEPilot Desktop - 오픈소스 LLM 데스크톱 애플리케이션. Chat, Editor, Browser 3가지 모드, LangGraph, RAG, MCP 지원.">
-    <meta name="keywords"
-        content="LLM, Desktop App, Electron, Next.js, LangGraph, RAG, MCP, AI Assistant, Open Source, Monaco Editor, Browser Automation">
+        content="SEPilot Desktop - AI 혁명. Chat, Editor, Browser, RAG, Vision을 하나로 통합한 궁극의 데스크톱 AI 워크스페이스.">
     <meta name="author" content="SEPilot Team">
-
-    <!-- Open Graph -->
-    <meta property="og:title" content="SEPilot Desktop - Open Source LLM Desktop Application">
-    <meta property="og:description"
-        content="Chat, Editor, Browser 3가지 모드를 지원하는 오픈소스 LLM 데스크톱 애플리케이션. LangGraph, RAG, MCP 지원.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://jhl-labs.github.io/sepilot_desktop">
-
-    <title>SEPilot Desktop - Open Source LLM Desktop Application</title>
-
-    <!-- Tailwind CSS CDN -->
+    <title>SEPilot Desktop - The All-in-One AI Workspace</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Custom Theme Configuration -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        primary: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            200: '#bae6fd',
-                            300: '#7dd3fc',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            700: '#0369a1',
-                            800: '#075985',
-                            900: '#0c4a6e',
-                        }
+                        primary: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+                        secondary: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 900: '#4c1d95' },
                     },
                     fontFamily: {
-                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
-                        mono: ['ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'Consolas', 'Liberation Mono', 'monospace'],
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
                     }
                 }
             }
         }
     </script>
-
-    <!-- Animations -->
     <style>
-        @keyframes float {
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-            0%,
-            100% {
-                transform: translateY(0px);
-            }
-
-            50% {
-                transform: translateY(-20px);
-            }
-        }
-
-        .animate-float {
-            animation: float 3s ease-in-out infinite;
-        }
-
-        /* Smooth scroll */
         html {
             scroll-behavior: smooth;
         }
 
-        /* Gradient text */
         .gradient-text {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .feature-section {
+            padding-top: 3rem;
+            padding-bottom: 3rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .feature-section:last-child {
+            border-bottom: none;
+        }
+
+        .video-placeholder {
+            aspect-ratio: 16/10;
+            background-color: #111827;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid #374151;
+        }
+
+        .video-label {
+            color: #9ca3af;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+
+        .icon-overlay {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
         }
     </style>
+    <script>
+        const translations = {
+            "en": {
+                "nav_chat": "Chat", "nav_thinking": "Thinking", "nav_coding": "Coding", "nav_editor": "Editor", "nav_browser": "Browser", "nav_rag": "RAG", "nav_creative": "Creative", "nav_prod": "Productivity", "nav_download": "Download",
+                "hero_badge": "v0.6.5 Major Update",
+                "hero_title_1": "All-in-One",
+                "hero_title_2": "AI Workspace.",
+                "hero_desc": "Not just a chatbot.<br>Experience the integrated open-source desktop app with <br class='hidden md:block'><strong>Thinking, Coding, Editor, Browser, Vision</strong>.",
+                "video_hero_label": "assets/videos/hero_demo.mp4",
+                "video_hero_desc": "SEPilot Desktop Full Highlight",
+
+                "chat_header": "Instant & Familiar",
+                "chat_subtitle": "Familiarity of ChatGPT, flexibility beyond.",
+                "chat_title": "Native Chat Experience",
+                "chat_desc": "Don't waste time learning new tools. We provide the familiar ChatGPT-style interface you already know.<br><br>Beautiful markdown rendering, real-time streaming, chat history. Hot-swap models like GPT-4o, Claude 3.5, and even Ollama local models with a single click.",
+                "chat_list_1": "• Model Hot-swap (OpenAI, Anthropic, Ollama, DeepSeek, etc.)",
+                "chat_list_2": "• Perfect Markdown & Math (LaTeX) Rendering",
+                "chat_list_3": "• Chat history safely stored in local DB",
+
+                "thinking_header": "Depth of Thought",
+                "thinking_subtitle": "Choose AI thinking process matching problem complexity.",
+                "thinking_seq_title": "Sequential Thinking",
+                "thinking_seq_desc": "Use for complex logical reasoning. AI develops thoughts step-by-step and self-verifies logical gaps before moving to the next step.",
+                "thinking_seq_list_1": "• Deep Context Understanding",
+                "thinking_seq_list_2": "• Step-by-step Logic Verification",
+                "thinking_seq_list_3": "• Optimized for Complex Problem Solving",
+                "thinking_tot_title": "Tree of Thought",
+                "thinking_tot_desc": "Does not stick to one path. Generates multiple solution possibilities simultaneously (Branching) and predicts outcomes to select the best path. Powerful for brainstorming.",
+                "thinking_tot_list_1": "• Multi-path Exploration",
+                "thinking_tot_list_2": "• Scenario Comparison Analysis",
+                "thinking_tot_list_3": "• Optimal Solution Derivation",
+                "thinking_persona_title": "AI Persona",
+                "thinking_persona_desc": "Create and manage your own AI personas like 'Strict Senior Developer' or 'Friendly UX Designer'. Beyond system prompts, tone and expertise levels are permanently stored.",
+
+                "coding_header": "Autonomous Coding",
+                "coding_subtitle": "The most powerful coding agent experience available.",
+                "coding_title": "Coding Agent (ReAct)",
+                "coding_desc": "Goes beyond just writing code.<br>Repeats the cycle of <strong>Think -> Action (File I/O) -> Observe</strong>. It executes terminal commands to install packages and self-corrects by analyzing logs if errors occur.",
+                "coding_list_1": "• File Create/Edit/Delete Permissions",
+                "coding_list_2": "• Terminal Command Execution & Result Analysis",
+                "coding_list_3": "• Auto-debugging Loop on Error",
+
+                "editor_header": "Full-featured Editor",
+                "editor_subtitle": "Power of VS Code, but lighter.",
+                "editor_monaco_title": "Monaco Editor Integration",
+                "editor_monaco_desc": "Equipped with Monaco Editor, the core of VS Code. Provides familiar environment with Syntax Highlighting, Minimap, Code Folding, Multi-cursor. Edit AI-written code on the spot.",
+                "editor_term_title": "Integrated Terminal",
+                "editor_term_desc": "Don't break your flow. Use the xterm.js-based built-in terminal to run `npm install`, `git commit`, `python script.py`. Coding Agent communicates directly with this terminal.",
+                "editor_context_title": "AI Context Menu",
+                "editor_context_desc": "Elevate your editing experience. Drag text in editor or chat to see Notion-style AI menu. Instantly valid 10 tools like 'Refactor', 'Add Comments', 'Translate', 'Fix Typos'.",
+
+                "browser_header": "Vision Browser Agent",
+                "browser_subtitle": "Understands as it sees, moves like a human.",
+                "browser_vision_title": "Vision-Based Control",
+                "browser_vision_desc": "Different from DOM-based crawlers. Vision AI analyzes screenshot to recognize coordinates of buttons, links, inputs (Set-of-Mark). Clicks like a human even on Canvas, complex SPAs, and obfuscated sites.",
+                "browser_stealth_title": "Automation Tools & Stealth",
+                "browser_stealth_desc": "Provides over 27 browser actions including click, scroll, type, back. Applied Stealth tech, Random Delay, Mouse Trajectory Simulation to bypass bot detection.",
+
+                "rag_header": "Knowledge Base (RAG)",
+                "rag_subtitle": "Turn all your data into AI's brain.",
+                "rag_personal_title": "Personal Docs (Local RAG)",
+                "rag_personal_desc": "Drag & drop PC's PDF, Markdown, Text files. Uses local SQLite-vec vector DB to build secure knowledge base without data leak concerns. Searches thousands of pages instantly.",
+                "rag_team_title": "Team Docs (GitHub Sync)",
+                "rag_team_desc": "Share knowledge with teammates. Link GitHub repos to auto-sync latest docs, wikis, code snippets. Build a centralized Knowledge Base for the team.",
+
+                "creative_header": "Multimodal Creativity",
+                "creative_subtitle": "Interaction beyond text.",
+                "creative_vision_title": "Vision Analysis",
+                "creative_vision_desc": "'What does this error mean?', 'Turn this design into code.' Paste images and let Vision models (GPT-4o, Claude 3.5) analyze them. Get instant feedback on error screenshots or reference images.",
+                "creative_image_title": "Image Generation",
+                "creative_image_desc": "Powerful integration with Nano Banana and ComfyUI. Control complex node-based image generation workflows directly from chat. Accelerate creative workflows from idea visualization to asset generation.",
+
+                "vis_header": "Rich Visualization",
+                "vis_subtitle": "Visually understand data and structures.",
+                "vis_title": "Mermaid & Plotly Integration",
+                "vis_desc": "<strong>Mermaid:</strong> Request complex architectures, sequence diagrams, flowcharts in text and get diagrams instantly.<br><br><strong>Plotly:</strong> Analyze Excel/CSV data and visualize with interactive charts (Line, Bar, Pie, Scatter).",
+
+                "prod_header": "Super Productivity",
+                "prod_subtitle": "Speed is competitiveness.",
+                "prod_input_title": "Quick Input",
+                "prod_input_desc": "Call SEPilot instantly with a shortcut while using other apps. Ask quickly via the center popup and get answers without opening editor or browser.",
+                "prod_search_title": "Quick Search",
+                "prod_search_desc": "Powered by Ripgrep engine to search tens of thousands of files in 0.1s. Finds filenames and contents instantly, so you never get lost in huge projects.",
+
+                "footer_title": "Ready to Fly?",
+                "footer_btn_download": "Download for Windows",
+                "footer_btn_github": "View on GitHub",
+                "footer_copy": "Open Source Project by JHL Labs."
+            },
+            "ko": {
+                "nav_chat": "채팅", "nav_thinking": "사고", "nav_coding": "코딩", "nav_editor": "에디터", "nav_browser": "브라우저", "nav_rag": "RAG", "nav_creative": "창작", "nav_prod": "생산성", "nav_download": "다운로드",
+                "hero_badge": "v0.6.5 Major Update",
+                "hero_title_1": "All-in-One",
+                "hero_title_2": "AI Workspace.",
+                "hero_desc": "단순한 챗봇이 아닙니다.<br><strong>Thinking, Coding, Editor, Browser, Vision</strong>이 완벽하게 통합된 <br class='hidden md:block'>오픈소스 데스크톱 애플리케이션의 경험을 확인하세요.",
+                "video_hero_label": "assets/videos/hero_demo.mp4",
+                "video_hero_desc": "Sepilot Desktop 전체 기능 하이라이트",
+
+                "chat_header": "Instant & Familiar",
+                "chat_subtitle": "ChatGPT와 같은 편안함, 그 이상의 유연함.",
+                "chat_title": "Native Chat Experience",
+                "chat_desc": "새로운 도구를 배우느라 시간을 낭비하지 마세요. 우리에게 이미 익숙한 ChatGPT 스타일의 인터페이스를 그대로 제공합니다.<br><br>유려한 마크다운 렌더링, 실시간 스트리밍 답변, 대화 히스토리 관리까지. GPT-4o, Claude 3.5, 심지어 Ollama 로컬 모델까지 클릭 한 번으로 전환하며 자유롭게 대화할 수 있습니다.",
+                "chat_list_1": "• 모델 핫스왑 (OpenAI, Anthropic, Ollama, DeepSeek 등)",
+                "chat_list_2": "• 완벽한 마크다운 & 수식(LaTeX) 렌더링",
+                "chat_list_3": "• 로컬 DB에 안전하게 저장되는 대화 히스토리",
+
+                "thinking_header": "Depth of Thought",
+                "thinking_subtitle": "문제의 복잡도에 맞춰 AI의 사고 방식을 선택하세요.",
+                "thinking_seq_title": "Sequential Thinking",
+                "thinking_seq_desc": "복잡한 논리적 추론이 필요할 때 사용합니다. AI가 스스로 생각을 단계별(Step-by-Step)로 전개하며, 각 단계의 논리적 허점을 스스로 검증한 후 다음 단계로 넘어갑니다.",
+                "thinking_seq_list_1": "• 심층적인 문맥 파악",
+                "thinking_seq_list_2": "• 단계별 논리 검증",
+                "thinking_seq_list_3": "• 복잡한 문제 해결에 최적화",
+                "thinking_tot_title": "Tree of Thought",
+                "thinking_tot_desc": "한 가지 경로만 고집하지 않습니다. 여러 가지 해결 가능성을 동시에 생성하고(Branching), 각 시나리오의 결과를 예측하여 최적의 경로를 선택합니다. 브레인스토밍이나 창의적 문제 해결에 강력합니다.",
+                "thinking_tot_list_1": "• 다중 경로 탐색",
+                "thinking_tot_list_2": "• 시나리오 비교 분석",
+                "thinking_tot_list_3": "• 최적해 도출",
+                "thinking_persona_title": "AI Persona",
+                "thinking_persona_desc": "'깐깐한 시니어 개발자', '친절한 UX 디자이너' 등 나만의 AI 페르소나를 생성하고 관리하세요. 시스템 프롬프트 설정을 넘어, 대화의 톤앤매너와 전문 지식 수준까지 영구적으로 저장됩니다.",
+
+                "coding_header": "Autonomous Coding",
+                "coding_subtitle": "단언컨대 가장 강력한 코딩 에이전트 경험입니다.",
+                "coding_title": "Coding Agent (ReAct)",
+                "coding_desc": "단순히 코드를 짜주는 것을 넘어섭니다. <br><strong>생각(Think) -> 파일 읽기/쓰기(Action) -> 결과 확인(Observe)</strong>의 사이클을 반복합니다. 터미널 명령어를 직접 실행하여 패키지를 설치하고, 에러가 발생하면 스스로 로그를 분석해 코드를 수정(Self-Correction)합니다.",
+                "coding_list_1": "• 파일 생성/수정/삭제 권한",
+                "coding_list_2": "• 터미널 명령어 실행 및 결과 분석",
+                "coding_list_3": "• 에러 발생 시 자동 디버깅 루프",
+
+                "editor_header": "Full-featured Editor",
+                "editor_subtitle": "VS Code의 강력함을 그대로, 더 가볍게.",
+                "editor_monaco_title": "Monaco Editor Integration",
+                "editor_monaco_desc": "전 세계 개발자의 표준인 VS Code의 코어, Monaco Editor를 탑재했습니다. 구문 강조(Syntax Highlighting), 미니맵, 코드 폴딩, 멀티 커서 등 익숙한 개발 환경을 그대로 제공합니다. AI가 작성한 코드를 별도 IDE로 옮길 필요 없이 그 자리에서 수정하세요.",
+                "editor_term_title": "Integrated Terminal",
+                "editor_term_desc": "xterm.js 기반의 내장 터미널을 통해 개발 흐름을 끊지 마세요. `npm install`, `git commit`, `python script.py` 등 모든 명령어를 실행할 수 있습니다. Coding Agent는 이 터미널을 통해 시스템과 직접 소통합니다.",
+                "editor_context_title": "AI Context Menu",
+                "editor_context_desc": "텍스트 에디팅 경험을 한 차원 높이세요. 에디터나 채팅창에서 텍스트를 드래그하면 Notion 스타일의 AI 메뉴가 나타납니다. '코드 리팩토링', '주석 생성', '번역하기', '오타 수정' 등 개발과 글쓰기에 필요한 10가지 도구를 즉시 실행하세요.",
+
+                "browser_header": "Vision Browser Agent",
+                "browser_subtitle": "보이는 대로 이해하고, 사람처럼 움직입니다.",
+                "browser_vision_title": "Vision-Based Control",
+                "browser_vision_desc": "기존의 DOM 기반 크롤러와는 다릅니다. 현재 화면 스크린샷을 Vision AI가 분석하여 버튼, 링크, 입력창의 좌표를 인식합니다(Set-of-Mark). Canvas, 복잡한 SPA, 난독화된 사이트에서도 사람처럼 화면을 '보고' 클릭합니다.",
+                "browser_stealth_title": "Automation Tools & Stealth",
+                "browser_stealth_desc": "클릭, 스크롤, 타이핑, 뒤로가기 등 27개 이상의 브라우저 조작 도구를 제공합니다. 또한, 자동화 탐지를 방지하기 위한 Stealth 기술과 무작위 지연(Random Delay), 마우스 궤적 시뮬레이션이 적용되어 각종 보안 시스템을 우회하여 작업을 수행합니다.",
+
+                "rag_header": "Knowledge Base (RAG)",
+                "rag_subtitle": "당신의 모든 데이터를 AI의 두뇌로.",
+                "rag_personal_title": "Personal Docs (Local RAG)",
+                "rag_personal_desc": "개인 PC의 PDF, Markdown, 텍스트 파일을 드래그 앤 드롭으로 추가하세요. 로컬 SQLite-vec 벡터 데이터베이스를 사용하여 데이터 유출 걱정 없이 안전하게 개인 지식 기반을 구축합니다. 수천 페이지의 문서도 순식간에 검색하여 답변의 근거로 사용합니다.",
+                "rag_team_title": "Team Docs (GitHub Sync)",
+                "rag_team_desc": "팀원들과 지식을 공유하세요. GitHub 저장소를 연동하면 최신 문서, 위키, 코드 스니펫이 자동으로 동기화됩니다. 팀을 위한 중앙 집중식 기술 자료(Knowledge Base)를 구축하고 프로젝트 전반에 걸쳐 활용할 수 있습니다.",
+
+                "creative_header": "Multimodal Creativity",
+                "creative_subtitle": "텍스트 그 이상의 상호작용.",
+                "creative_vision_title": "Vision Analysis",
+                "creative_vision_desc": "'이 에러 로그가 무슨 뜻이야?', '이 디자인을 코드로 바꿔줘.' <br>이미지를 붙여넣는 순간 최신 Vision 모델(GPT-4o, Claude 3.5)이 이미지를 분석합니다. 코딩 중 발생한 에러 스크린샷이나 레퍼런스 이미지를 AI에게 보여주고 즉각적인 피드백을 받으세요.",
+                "creative_image_title": "Image Generation",
+                "creative_image_desc": "Nano Banana 및 ComfyUI와의 강력한 통합을 지원합니다. 단순한 텍스트-이미지 생성을 넘어, 복잡한 노드 기반의 이미지 생성 워크플로우를 채팅창에서 직접 제어할 수 있습니다. 아이디어 시각화부터 자산(Asset) 생성까지, 크리에이티브 워크플로우를 가속화하세요.",
+
+                "vis_header": "Rich Visualization",
+                "vis_subtitle": "데이터와 구조를 시각적으로 이해하세요.",
+                "vis_title": "Mermaid & Plotly Integration",
+                "vis_desc": "<strong>Mermaid:</strong> 복잡한 시스템 아키텍처, 시퀀스 다이어그램, 플로우차트를 텍스트로 요청하면 즉시 다이어그램으로 그려줍니다.<br><br><strong>Plotly:</strong> 엑셀 파일이나 CSV 데이터를 분석하고, 줌/팬이 가능한 인터랙티브 차트(Line, Bar, Pie, Scatter 등)로 시각화합니다.",
+
+                "prod_header": "Super Productivity",
+                "prod_subtitle": "속도가 곧 경쟁력입니다.",
+                "prod_input_title": "Quick Input",
+                "prod_input_desc": "다른 프로그램을 사용하다가도 단축키 하나로 즉시 SEPilot을 호출하세요. 화면 중앙에 떠오르는 입력창을 통해 빠르게 질문하고, 에디터나 브라우저를 열지 않고도 답변을 얻을 수 있습니다.",
+                "prod_search_title": "Quick Search",
+                "prod_search_desc": "Ripgrep 엔진을 탑재하여 수만 개의 파일도 0.1초 만에 검색합니다. 파일 이름뿐만 아니라 파일 내용까지 순식간에 찾아내어, 거대한 프로젝트에서도 길을 잃지 않습니다.",
+
+                "footer_title": "Ready to Fly?",
+                "footer_btn_download": "Download for Windows",
+                "footer_btn_github": "View on GitHub",
+                "footer_copy": "Open Source Project by JHL Labs."
+            },
+            "zh": {
+                "nav_chat": "聊天", "nav_thinking": "思考", "nav_coding": "编码", "nav_editor": "编辑器", "nav_browser": "浏览器", "nav_rag": "RAG", "nav_creative": "创意", "nav_prod": "生产力", "nav_download": "下载",
+                "hero_badge": "v0.6.5 重大更新",
+                "hero_title_1": "All-in-One",
+                "hero_title_2": "AI工作区",
+                "hero_desc": "不仅仅是一个聊天机器人。<br>体验集成了 <strong>Thinking, Coding, Editor, Browser, Vision</strong> 的开源桌面应用程序。",
+                "video_hero_label": "assets/videos/hero_demo.mp4",
+                "video_hero_desc": "SEPilot Desktop 全功能展示",
+
+                "chat_header": "Instant & Familiar",
+                "chat_subtitle": "像 ChatGPT 一样舒适，但更加灵活。",
+                "chat_title": "原生聊天体验",
+                "chat_desc": "无需浪费时间学习新工具。我们提供您熟悉的类 ChatGPT 界面。<br><br>Markdown 渲染、实时流式传输、聊天记录管理。只需一次点击，即可在 GPT-4o、Claude 3.5 甚至 Ollama 本地模型之间自由切换。",
+                "chat_list_1": "• 模型热切换 (OpenAI, Anthropic, Ollama, DeepSeek 等)",
+                "chat_list_2": "• 完美的 Markdown 和数学公式 (LaTeX) 渲染",
+                "chat_list_3": "• 聊天记录安全存储在本地数据库中",
+
+                "thinking_header": "Depth of Thought",
+                "thinking_subtitle": "选择与问题复杂性相匹配的 AI 思维过程。",
+                "thinking_seq_title": "顺序思维 (Sequential Thinking)",
+                "thinking_seq_desc": "用于复杂的逻辑推理。AI 逐步展开思考 (Step-by-step)，并在进行下一步之前自我验证逻辑漏洞。",
+                "thinking_seq_list_1": "• 深度上下文理解",
+                "thinking_seq_list_2": "• 逐步逻辑验证",
+                "thinking_seq_list_3": "• 针对复杂问题解决进行了优化",
+                "thinking_tot_title": "思维树 (Tree of Thought)",
+                "thinking_tot_desc": "不局限于单一路径。同时生成多种解决方案可能性 (Branching)，并预测结果以选择最佳路径。非常适合头脑风暴或创造性解决问题。",
+                "thinking_tot_list_1": "• 多路径探索",
+                "thinking_tot_list_2": "• 方案比对分析",
+                "thinking_tot_list_3": "• 推导最优解",
+                "thinking_persona_title": "AI 角色",
+                "thinking_persona_desc": "创建和管理您自己的 AI 角色，如“严厉的高级开发人员”或“友好的用户体验设计师”。除了系统提示设置外，语气和专业知识水平也会永久存储。",
+
+                "coding_header": "Autonomous Coding",
+                "coding_subtitle": "目前最强大的编码代理体验。",
+                "coding_title": "编码代理 (ReAct)",
+                "coding_desc": "不仅仅是编写代码。<br>重复 <strong>思考 (Think) -> 动作 (Action - 文件读写) -> 观察 (Observe)</strong> 的循环。它直接执行终端命令安装包，如果发生错误，可以通过分析日志自动修正代码。",
+                "coding_list_1": "• 文件创建/修改/删除权限",
+                "coding_list_2": "• 终端命令执行和结果分析",
+                "coding_list_3": "• 错误发生时的自动调试循环",
+
+                "editor_header": "Full-featured Editor",
+                "editor_subtitle": "VS Code 的强大功能，但更轻量。",
+                "editor_monaco_title": "Monaco Editor 集成",
+                "editor_monaco_desc": "配备 VS Code 的核心 Monaco Editor。提供熟悉的语法高亮、Minimap、代码折叠、多光标等开发环境。无需转移到其他 IDE，即可当场修改 AI 编写的代码。",
+                "editor_term_title": "集成终端",
+                "editor_term_desc": "不要中断您的开发流程。使用基于 xterm.js 的内置终端运行 `npm install`、`git commit`、`python script.py` 等所有命令。编码代理直接与此终端通信。",
+                "editor_context_title": "AI 上下文菜单",
+                "editor_context_desc": "提升您的编辑体验。在编辑器或聊天中拖动文本，会出现类似 Notion 的 AI 菜单。立即执行“代码重构”、“添加注释”、“翻译”、“修正拼写”等 10 种工具。",
+
+                "browser_header": "Vision Browser Agent",
+                "browser_subtitle": "所见即所知，像人一样操作。",
+                "browser_vision_title": "基于视觉的控制",
+                "browser_vision_desc": "与基于 DOM 的爬虫不同。视觉 AI 分析当前屏幕截图，识别按钮、链接、输入框的坐标 (Set-of-Mark)。即使在 Canvas、复杂的 SPA 和混淆站点上，也能像人一样“看”并点击。",
+                "browser_stealth_title": "自动化工具与隐身",
+                "browser_stealth_desc": "提供点击、滚动、打字、返回等 27 种以上的浏览器操作工具。应用了隐身技术、随机延迟 (Random Delay) 和鼠标轨迹模拟，以规避自动化检测安全系统。",
+
+                "rag_header": "Knowledge Base (RAG)",
+                "rag_subtitle": "将您的所有数据转化为 AI 的大脑。",
+                "rag_personal_title": "个人文档 (本地 RAG)",
+                "rag_personal_desc": "拖放 PC 上的 PDF、Markdown、文本文件。使用本地 SQLite-vec 向量数据库构建安全的知识库，无需担心数据泄露。瞬间搜索数千页文档作为回答依据。",
+                "rag_team_title": "团队文档 (GitHub 同步)",
+                "rag_team_desc": "与团队成员共享知识。链接 GitHub 存储库可自动同步最新文档、Wiki、代码片段。为团队构建集中式技术知识库 (Knowledge Base)。",
+
+                "creative_header": "Multimodal Creativity",
+                "creative_subtitle": "超越文本的交互。",
+                "creative_vision_title": "视觉分析",
+                "creative_vision_desc": "“这个错误日志是什么意思？”、“把这个设计变成代码。”<br>粘贴图片的瞬间，最新的视觉模型 (GPT-4o, Claude 3.5) 会分析图像。向 AI 展示编码过程中的错误截图或参考图像，并获得即时反馈。",
+                "creative_image_title": "图像生成",
+                "creative_image_desc": "支持与 Nano Banana 和 ComfyUI 的强大集成。不仅仅是简单的文本到图像生成，还可以直接在聊天窗口中控制复杂的基于节点的图像生成工作流。从创意可视化到资产 (Asset) 生成，加速创意工作流。",
+
+                "vis_header": "Rich Visualization",
+                "vis_subtitle": "可视化地理解数据和结构。",
+                "vis_title": "Mermaid & Plotly 集成",
+                "vis_desc": "<strong>Mermaid:</strong> 用文本请求复杂的系统架构、时序图、流程图，即刻绘制出图表。<br><br><strong>Plotly:</strong> 分析 Excel 或 CSV 数据，并以可缩放/平移的交互式图表 (折线图、柱状图、饼图、散点图等) 进行可视化。",
+
+                "prod_header": "Super Productivity",
+                "prod_subtitle": "速度即竞争力。",
+                "prod_input_title": "快速输入 (Quick Input)",
+                "prod_input_desc": "在使用其他程序时，通过快捷键立即调用 SEPilot。通过屏幕中央弹出的输入框快速提问，无需打开编辑器或浏览器即可获得答案。",
+                "prod_search_title": "快速搜索 (Quick Search)",
+                "prod_search_desc": "搭载 Ripgrep 引擎，仅需 0.1 秒即可搜索数万个文件。不仅是文件名，还能瞬间找到文件内容，让您在庞大的项目中也不会迷路。",
+
+                "footer_title": "Ready to Fly?",
+                "footer_btn_download": "下载 Windows 版",
+                "footer_btn_github": "GitHub 查看",
+                "footer_copy": "Open Source Project by JHL Labs."
+            }
+        };
+
+        function updateContent(lang) {
+            const t = translations[lang] || translations['en'];
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (t[key]) {
+                    element.innerHTML = t[key];
+                }
+            });
+            // Update html lang attribute
+            document.documentElement.lang = lang;
+        }
+
+        function changeLanguage(lang) {
+            updateContent(lang);
+            localStorage.setItem('sepilot_docs_lang', lang);
+        }
+
+        function initI18n() {
+            const savedLang = localStorage.getItem('sepilot_docs_lang');
+            const userLang = navigator.language || navigator.userLanguage;
+            let lang = savedLang || 'en';
+            if (!savedLang) {
+                if (userLang.startsWith('ko')) lang = 'ko';
+                else if (userLang.startsWith('zh')) lang = 'zh';
+            }
+
+            updateContent(lang);
+
+            // Sync selector
+            const selector = document.getElementById('lang-select');
+            if (selector) selector.value = lang;
+        }
+
+        document.addEventListener('DOMContentLoaded', initI18n);
+    </script>
 </head>
 
-<body class="bg-gray-50 text-gray-900 antialiased">
-    <!-- Navigation -->
-    <nav class="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-b border-gray-200 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-3">
-                    <div
-                        class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                        <span class="text-white font-bold text-xl">SE</span>
-                    </div>
-                    <span class="text-xl font-bold text-gray-900">SEPilot Desktop</span>
-                </div>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased">
 
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="#features" class="text-gray-600 hover:text-gray-900 transition">주요 기능</a>
-                    <a href="#modes" class="text-gray-600 hover:text-gray-900 transition">애플리케이션 모드</a>
-                    <a href="#tech-stack" class="text-gray-600 hover:text-gray-900 transition">기술 스택</a>
-                    <a href="#get-started" class="text-gray-600 hover:text-gray-900 transition">시작하기</a>
-                    <a href="#download" class="text-gray-600 hover:text-gray-900 transition">다운로드</a>
-                    <a href="https://github.com/jhl-labs/sepilot_desktop" target="_blank"
-                        class="inline-flex items-center px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition">
-                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                            <path fill-rule="evenodd"
-                                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        GitHub
-                    </a>
-                </div>
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full glass z-50">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div
+                    class="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-600 rounded-lg flex items-center justify-center text-white font-bold">
+                    SE</div>
+                <span class="text-lg font-bold">SEPilot Desktop</span>
+            </div>
+            <div class="hidden lg:flex space-x-6 text-sm font-medium text-gray-600">
+                <a href="#section-chat" class="hover:text-primary-600" data-i18n="nav_chat">Chat</a>
+                <a href="#section-thinking" class="hover:text-primary-600" data-i18n="nav_thinking">Thinking</a>
+                <a href="#section-coding" class="hover:text-primary-600" data-i18n="nav_coding">Coding</a>
+                <a href="#section-editor" class="hover:text-primary-600" data-i18n="nav_editor">Editor</a>
+                <a href="#section-browser" class="hover:text-primary-600" data-i18n="nav_browser">Browser</a>
+                <a href="#section-rag" class="hover:text-primary-600" data-i18n="nav_rag">RAG</a>
+                <a href="#section-creative" class="hover:text-primary-600" data-i18n="nav_creative">Creative</a>
+                <a href="#section-productivity" class="hover:text-primary-600" data-i18n="nav_prod">Productivity</a>
+            </div>
+            <div class="flex items-center space-x-3">
+                <select id="lang-select" onchange="changeLanguage(this.value)"
+                    class="bg-gray-100 text-sm font-medium text-gray-700 focus:outline-none cursor-pointer py-2 px-2 rounded-lg border border-transparent hover:border-gray-300 transition">
+                    <option value="en">English</option>
+                    <option value="ko">한국어</option>
+                    <option value="zh">中文</option>
+                </select>
+                <a href="https://github.com/jhl-labs/sepilot_desktop"
+                    class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition"
+                    data-i18n="nav_download">
+                    Download
+                </a>
             </div>
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-7xl mx-auto">
+    <!-- Hero -->
+    <header class="pt-40 pb-20 px-6 text-center max-w-5xl mx-auto">
+        <div class="inline-block px-4 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-semibold mb-6 border border-blue-100 animate-fade-in-up"
+            data-i18n="hero_badge">
+            v0.6.5 Major Update
+        </div>
+        <h1 class="text-5xl md:text-7xl font-black tracking-tight mb-6 leading-tight animate-fade-in-up"
+            style="animation-delay: 0.1s;">
+            <span class="gradient-text" data-i18n="hero_title_1">All-in-One</span><br>
+            <span data-i18n="hero_title_2">AI Workspace.</span>
+        </h1>
+        <p class="text-xl text-gray-600 mb-10 max-w-3xl mx-auto animate-fade-in-up" style="animation-delay: 0.2s;"
+            data-i18n="hero_desc">
+            Not just a chatbot.<br>Experience the integrated open-source desktop app with <br
+                class='hidden md:block'><strong>Thinking, Coding, Editor, Browser, Vision</strong>.
+        </p>
+
+        <!-- Main Demo Video -->
+        <div class="video-placeholder max-w-4xl mx-auto animate-fade-in-up" style="animation-delay: 0.3s;">
             <div class="text-center">
-                <div class="inline-flex items-center px-4 py-2 bg-blue-50 rounded-full mb-6">
-                    <span class="text-blue-600 text-sm font-medium">🚀 v0.6.5 출시 - AI Agents (PPT/Editor), Team Docs,
-                        GitHub Sync, 향상된 RAG 및 Browser 통합</span>
-                </div>
-
-                <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-                    <span class="gradient-text">오픈소스</span> LLM<br />
-                    데스크톱 앱
-                </h1>
-
-                <p class="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto">
-                    Chat, Editor, Browser 3가지 모드를 지원하는 강력하고 유연한 LLM 데스크톱 애플리케이션<br />
-                    LangGraph 워크플로우, RAG (문서 편집/폴더 관리), MCP 도구, Monaco Editor + Terminal, Vision 기반 브라우저 자동화
-                </p>
-
-                <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-16">
-                    <a href="#download"
-                        class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition transform hover:scale-105 shadow-lg">
-                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        다운로드
-                    </a>
-                    <a href="https://github.com/jhl-labs/sepilot_desktop" target="_blank"
-                        class="inline-flex items-center px-8 py-4 bg-white text-gray-900 rounded-lg hover:bg-gray-50 transition border-2 border-gray-200">
-                        GitHub에서 보기
-                        <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                    </a>
-                </div>
-
-                <!-- Demo Video/Image Placeholder -->
-                <div
-                    class="relative max-w-5xl mx-auto rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white">
-                    <div
-                        class="aspect-video bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
-                        <div class="text-center p-8">
-                            <svg class="w-24 h-24 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            <p class="text-gray-500 text-lg font-semibold mb-2">SEPilot Desktop 데모 영상</p>
-                            <p class="text-gray-400 text-sm">📁 assets/videos/demo-main.mp4</p>
-                        </div>
-                    </div>
-                </div>
+                <div class="icon-overlay">🎬</div>
+                <div class="video-label" data-i18n="video_hero_label">assets/videos/hero_demo.mp4</div>
+                <div class="text-sm text-gray-500 mt-2" data-i18n="video_hero_desc">SEPilot Desktop Full Highlight</div>
             </div>
         </div>
-    </section>
+    </header>
 
-    <!-- Application Modes Section -->
-    <section id="modes" class="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-        <div class="max-w-7xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl md:text-5xl font-bold mb-4">3가지 애플리케이션 모드</h2>
-                <p class="text-xl text-gray-600">용도에 맞는 최적의 작업 환경</p>
-            </div>
+    <!-- ==========================================
+         Instant Chat (Core Experience)
+    ========================================== -->
+    <div id="section-chat" class="bg-gray-50">
+        <div class="max-w-7xl mx-auto px-6 py-16">
+            <h2 class="text-4xl font-bold mb-4" data-i18n="chat_header">Instant & Familiar</h2>
+            <p class="text-xl text-gray-600 mb-8" data-i18n="chat_subtitle">Familiarity of ChatGPT, flexibility beyond.
+            </p>
 
-            <div class="grid md:grid-cols-3 gap-8">
-                <!-- Chat Mode -->
-                <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 border border-gray-200">
-                    <div class="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-4">Chat 모드</h3>
-                    <p class="text-gray-600 mb-6">AI와 대화하고 질문하세요</p>
-                    <ul class="space-y-2 text-sm text-gray-700">
-                        <li>• LangGraph 워크플로우 (6가지: Instant, Sequential, Deep, Coding, RAG, Browser)</li>
-                        <li>• RAG 문서 검색 (편집, 폴더 관리, Export/Import)</li>
-                        <li>• MCP 도구 통합 (GitHub, Brave Search, Filesystem 등)</li>
-                        <li>• 이미지 생성 및 해석 (ComfyUI, Vision API)</li>
-                        <li>• Persona 시스템 (AI 역할 정의, SQLite 영구 저장)</li>
-                        <li>• Quick Question (빠른 질문, 최대 5개 단축키)</li>
-                        <li>• GitHub Sync (Token 기반, AES-256-GCM 암호화)</li>
-                    </ul>
-                    <div
-                        class="mt-6 aspect-video bg-white rounded-lg flex items-center justify-center border border-gray-200">
-                        <p class="text-gray-400 text-xs">📁 chat-mode-demo.mp4</p>
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none pt-0">
+                <div class="order-2 md:order-1 video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">💬</div>
+                        <div class="video-label">assets/videos/chat_basic.mp4</div>
                     </div>
                 </div>
-
-                <!-- Editor Mode -->
-                <div class="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 border border-gray-200">
-                    <div class="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-4">Editor 모드</h3>
-                    <p class="text-gray-600 mb-6">코드를 작성하고 편집하세요</p>
-                    <ul class="space-y-2 text-sm text-gray-700">
-                        <li>• Monaco Editor (VS Code 엔진, 구문 강조, AI 자동완성)</li>
-                        <li>• 파일 탐색기 (Working Directory, 생성/삭제/이름변경)</li>
-                        <li>• 다중 파일 탭 관리, Markdown 미리보기</li>
-                        <li>• 통합 터미널 (xterm.js, PowerShell/bash/zsh, 탭 관리)</li>
-                        <li>• 전체 파일 검색 (ripgrep 기반, Ctrl+Shift+F)</li>
-                        <li>• Advanced Editor Agent (독립적 코딩 에이전트, 50회 반복)</li>
-                        <li>• PPT Agent & 10가지 Notion 스타일 Tools</li>
-                    </ul>
-                    <div
-                        class="mt-6 aspect-video bg-white rounded-lg flex items-center justify-center border border-gray-200">
-                        <p class="text-gray-400 text-xs">📁 editor-mode-demo.mp4</p>
-                    </div>
-                </div>
-
-                <!-- Browser Mode -->
-                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border border-gray-200">
-                    <div class="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold mb-4">Browser 모드</h3>
-                    <p class="text-gray-600 mb-6">AI와 함께 웹을 탐색하세요</p>
-                    <ul class="space-y-2 text-sm text-gray-700">
-                        <li>• Chromium 기반 브라우저 (BrowserView, 크롬 스타일 탭)</li>
-                        <li>• 18개 자동화 도구 (Navigate, DOM Inspection, Vision Tools)</li>
-                        <li>• Google Search Tools (9개: 검색, 뉴스, Scholar, 이미지, 고급 필터)</li>
-                        <li>• Vision 기반 UI 제어 (Set-of-Mark, 좌표 클릭)</li>
-                        <li>• Bot 감지 우회 (Stealth 핑거프린트, 자연스러운 타이밍)</li>
-                        <li>• 페이지 캡처 (MHTML + 스크린샷, 오프라인 뷰어)</li>
-                        <li>• 북마크 관리 (폴더별 정리)</li>
-                    </ul>
-                    <div
-                        class="mt-6 aspect-video bg-white rounded-lg flex items-center justify-center border border-gray-200">
-                        <p class="text-gray-400 text-xs">📁 browser-mode-demo.mp4</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section id="features" class="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div class="max-w-7xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl md:text-5xl font-bold mb-4">주요 기능</h2>
-                <p class="text-xl text-gray-600">강력하고 유연한 LLM 워크플로우를 경험하세요</p>
-            </div>
-
-            <!-- Feature Grid -->
-            <div class="space-y-24">
-                <!-- Feature 1: LangGraph Workflow -->
-                <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div>
-                        <div
-                            class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-4">
-                            🤖 핵심 기능
-                        </div>
-                        <h3 class="text-3xl font-bold mb-4">LangGraph 워크플로우</h3>
-                        <p class="text-lg text-gray-600 mb-6">
-                            다양한 사고(Thinking) 모드를 지원하는 LangGraph 기반 워크플로우.<br />
-                            Instant, Sequential, Tree-of-Thought, Deep Thinking 등 상황에 맞는 최적의 응답 생성.
-                        </p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">Chat, RAG, Agent, Coding Agent 그래프 지원</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">실시간 스트리밍으로 사고 과정 시각화</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">conversationId 기반 격리로 안정적인 동시 대화</span>
-                            </li>
-                        </ul>
-                    </div>
-                    <div
-                        class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
-                        <div class="text-center">
-                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <p class="text-gray-500 text-sm">📁 assets/videos/langgraph-workflow.gif</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Feature 2: Persona System -->
-                <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div
-                        class="order-2 md:order-1 bg-gradient-to-br from-pink-50 to-purple-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
-                        <div class="text-center">
-                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            <p class="text-gray-500 text-sm">📁 assets/videos/persona-system.gif</p>
-                        </div>
-                    </div>
-                    <div class="order-1 md:order-2">
-                        <div
-                            class="inline-flex items-center px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-sm font-medium mb-4">
-                            🎭 NEW in v0.6.5
-                        </div>
-                        <h3 class="text-3xl font-bold mb-4">AI Agents & Persona</h3>
-                        <p class="text-lg text-gray-600 mb-6">
-                            목적에 특화된 도구형 에이전트와 유연한 페르소나 시스템.<br />
-                            코딩부터 프레젠테이션 제작까지 전문적인 작업을 수행합니다.
-                        </p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700"><strong>PPT Agent</strong>: 프레젠테이션 생성, 슬라이드 수정, 디자인 변경, 다국어
-                                    번역</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700"><strong>Editor Agent</strong>: 파일 시스템 제어, 터미널 실행, 복잡한 리팩토링
-                                    수행</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700"><strong>Persona</strong>: 역할 정의 (개발자, 번역가 등) 및 커스텀 페르소나 영구
-                                    저장</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Feature 3: RAG -->
-                <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div>
-                        <div
-                            class="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium mb-4">
-                            📚 문서 검색
-                        </div>
-                        <h3 class="text-3xl font-bold mb-4">RAG (검색 증강 생성)</h3>
-                        <p class="text-lg text-gray-600 mb-6">
-                            강력한 문서 검색과 임베딩 기반 RAG 시스템.<br />
-                            텍스트, URL, 파일(PDF, DOCX, TXT, MD) 업로드 지원 및 LLM 기반 문서 편집 기능.
-                        </p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">SQLite-vec, OpenSearch, Elasticsearch, pgvector 지원</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">문서 편집 AI 기능 (정제, 확장, 축약, 검증, 커스텀 프롬프트)</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">폴더 구조 관리 (드래그 앤 드롭, Tree/List/Grid 뷰)</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700"><strong>Team Docs</strong>: 여러 GitHub 레포지토리 연동 및 팀 문서 지식
-                                    공유</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">Export/Import (JSON 형식, 중복 처리, 백업/복원)</span>
-                            </li>
-                        </ul>
-                    </div>
-                    <div
-                        class="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
-                        <div class="text-center">
-                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <p class="text-gray-500 text-sm">📁 assets/videos/rag-demo.gif</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Feature 4: Browser Automation -->
-                <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div
-                        class="order-2 md:order-1 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
-                        <div class="text-center">
-                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            <p class="text-gray-500 text-sm">📁 assets/videos/browser-automation.gif</p>
-                        </div>
-                    </div>
-                    <div class="order-1 md:order-2">
-                        <div
-                            class="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium mb-4">
-                            🌐 NEW in v0.6.0
-                        </div>
-                        <h3 class="text-3xl font-bold mb-4">브라우저 자동화 (27개 도구)</h3>
-                        <p class="text-lg text-gray-600 mb-6">
-                            Electron BrowserView 기반 Chromium 브라우저 통합.<br />
-                            Vision 기반 UI 제어 및 Google Search Tools로 Perplexity 수준의 검색 지원.
-                        </p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">DOM Inspection: 의미론적 구조 분석, 자연어 요소 검색</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">Vision Tools: Set-of-Mark 주석, 좌표 클릭, 마커 클릭</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">Google Search: 웹/뉴스/Scholar/이미지, 고급 필터 (날짜, 언어, 사이트)</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">Bot 감지 우회: Stealth 핑거프린트, 자연스러운 타이밍, 헤더 강화</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Feature 5: MCP -->
-                <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div>
-                        <div
-                            class="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium mb-4">
-                            🛠️ 도구 통합
-                        </div>
-                        <h3 class="text-3xl font-bold mb-4">MCP 프로토콜</h3>
-                        <p class="text-lg text-gray-600 mb-6">
-                            Model Context Protocol을 통한 표준화된 도구 및 컨텍스트 통합.<br />
-                            Human-in-the-loop 도구 승인으로 안전한 실행.
-                        </p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">GitHub, Brave Search, Git, Filesystem 등 템플릿 제공</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">환경 변수 설정 UI로 간편한 구성</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">도구 실행 전 사용자 승인 (5분 타임아웃)</span>
-                            </li>
-                        </ul>
-                    </div>
-                    <div
-                        class="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
-                        <div class="text-center">
-                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <p class="text-gray-500 text-sm">📁 assets/videos/mcp-tools.gif</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Feature 6: GitHub Sync -->
-                <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div>
-                        <div
-                            class="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium mb-4">
-                            🔄 NEW in v0.6.5
-                        </div>
-                        <h3 class="text-3xl font-bold mb-4">GitHub Sync (클라우드 동기화)</h3>
-                        <p class="text-lg text-gray-600 mb-6">
-                            GitHub Personal Access Token을 사용한 안전한 데이터 동기화.<br />
-                            설정, 문서, 페르소나, 이미지, 대화 내역을 여러 기기에서 공유.
-                        </p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">AES-256-GCM 암호화로 API 키, 토큰 등 민감 정보 보호</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">데이터 타입별 선택적 동기화 (설정/문서/페르소나/이미지/대화)</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">개별/전체 동기화, 상태 추적, 연결 테스트</span>
-                            </li>
-                        </ul>
-                    </div>
-                    <div
-                        class="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
-                        <div class="text-center">
-                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8.5l-4-4.5m0 0L7 7.5M12 3v13.5" />
-                            </svg>
-                            <p class="text-gray-500 text-sm">📁 assets/videos/github-sync.gif</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Feature 7: Image Generation -->
-                <div class="grid md:grid-cols-2 gap-12 items-center">
-                    <div
-                        class="order-2 md:order-1 bg-gradient-to-br from-pink-50 to-red-50 rounded-2xl p-8 aspect-video flex items-center justify-center border border-gray-200">
-                        <div class="text-center">
-                            <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <p class="text-gray-500 text-sm">📁 assets/videos/image-generation.gif</p>
-                        </div>
-                    </div>
-                    <div class="order-1 md:order-2">
-                        <div
-                            class="inline-flex items-center px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-sm font-medium mb-4">
-                            🎨 이미지 기능
-                        </div>
-                        <h3 class="text-3xl font-bold mb-4">이미지 생성 및 해석</h3>
-                        <p class="text-lg text-gray-600 mb-6">
-                            ComfyUI 통합으로 강력한 이미지 생성.<br />
-                            Vision API를 통한 이미지 해석 및 분석.
-                        </p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">ComfyUI 통합으로 고품질 이미지 생성</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">실시간 생성 진행 상태 표시</span>
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-6 h-6 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-gray-700">Vision API로 이미지 해석 및 질의응답</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Tech Stack Section -->
-    <section id="tech-stack" class="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-        <div class="max-w-7xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl md:text-5xl font-bold mb-4">기술 스택</h2>
-                <p class="text-xl text-gray-600">현대적이고 검증된 기술로 구축</p>
-            </div>
-
-            <div class="grid md:grid-cols-3 gap-8">
-                <!-- Frontend -->
-                <div class="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-200">
-                    <h3 class="text-2xl font-bold mb-6 text-gray-900">프론트엔드</h3>
-                    <ul class="space-y-4">
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-black rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">▲</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">Next.js 15.3</div>
-                                <div class="text-sm text-gray-500">App Router, React 19</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">TS</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">TypeScript 5.7</div>
-                                <div class="text-sm text-gray-500">Strict mode</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-cyan-500 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">TW</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">Tailwind CSS</div>
-                                <div class="text-sm text-gray-500">shadcn/ui</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">Z</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">Zustand</div>
-                                <div class="text-sm text-gray-500">상태 관리</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-blue-700 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">M</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">Monaco Editor</div>
-                                <div class="text-sm text-gray-500">VS Code 엔진</div>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Desktop -->
-                <div class="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-200">
-                    <h3 class="text-2xl font-bold mb-6 text-gray-900">데스크톱</h3>
-                    <ul class="space-y-4">
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-teal-500 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">e</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">Electron 35</div>
-                                <div class="text-sm text-gray-500">크로스 플랫폼</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">N</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">Node.js 20+</div>
-                                <div class="text-sm text-gray-500">백엔드 런타임</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">DB</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">better-sqlite3</div>
-                                <div class="text-sm text-gray-500">로컬 스토리지</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">VDB</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">SQLite-vec</div>
-                                <div class="text-sm text-gray-500">벡터 검색</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">IPC</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">Context Bridge</div>
-                                <div class="text-sm text-gray-500">안전한 통신</div>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- LLM & AI -->
-                <div class="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-200">
-                    <h3 class="text-2xl font-bold mb-6 text-gray-900">LLM & AI</h3>
-                    <ul class="space-y-4">
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">LG</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">LangGraph</div>
-                                <div class="text-sm text-gray-500">워크플로우 엔진</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">AI</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">Multiple LLMs</div>
-                                <div class="text-sm text-gray-500">OpenAI, Anthropic, Google, Groq</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">LC</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">LangChain</div>
-                                <div class="text-sm text-gray-500">RAG, Embeddings</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-blue-700 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">MCP</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">MCP Protocol</div>
-                                <div class="text-sm text-gray-500">도구 통합</div>
-                            </div>
-                        </li>
-                        <li class="flex items-center">
-                            <div class="w-10 h-10 bg-pink-500 rounded-lg flex items-center justify-center mr-3">
-                                <span class="text-white font-bold text-sm">CI</span>
-                            </div>
-                            <div>
-                                <div class="font-semibold">ComfyUI</div>
-                                <div class="text-sm text-gray-500">이미지 생성</div>
-                            </div>
-                        </li>
+                <div class="order-1 md:order-2">
+                    <h3 class="text-3xl font-bold mb-4" data-i18n="chat_title">Native Chat Experience</h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="chat_desc">
+                        Don't waste time learning new tools. We provide the familiar ChatGPT-style interface you already
+                        know.<br><br>Beautiful markdown rendering, real-time streaming, chat history. Hot-swap models
+                        like GPT-4o, Claude 3.5, and even Ollama local models with a single click.
+                    </p>
+                    <ul class="space-y-2 text-gray-500">
+                        <li data-i18n="chat_list_1">• Model Hot-swap (OpenAI, Anthropic, Ollama, DeepSeek, etc.)</li>
+                        <li data-i18n="chat_list_2">• Perfect Markdown & Math (LaTeX) Rendering</li>
+                        <li data-i18n="chat_list_3">• Chat history safely stored in local DB</li>
                     </ul>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
-    <!-- Get Started Section -->
-    <section id="get-started" class="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div class="max-w-4xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl md:text-5xl font-bold mb-4">빠른 시작</h2>
-                <p class="text-xl text-gray-600">5분 안에 시작하세요</p>
+    <!-- ==========================================
+         Thinking & Persona
+    ========================================== -->
+    <div id="section-thinking" class="bg-white">
+        <div class="max-w-7xl mx-auto px-6 py-16">
+            <h2 class="text-4xl font-bold mb-4" data-i18n="thinking_header">Depth of Thought</h2>
+            <p class="text-xl text-gray-600 mb-8" data-i18n="thinking_subtitle">Choose AI thinking process matching
+                problem complexity.</p>
+
+            <!-- 1. Sequential Thinking -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center pt-8">
+                <div>
+                    <h3 class="text-3xl font-bold mb-4 text-blue-600" data-i18n="thinking_seq_title">Sequential Thinking
+                    </h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="thinking_seq_desc">
+                        Use for complex logical reasoning. AI develops thoughts step-by-step and self-verifies logical
+                        gaps before moving to the next step.
+                    </p>
+                    <ul class="space-y-2 text-gray-500">
+                        <li data-i18n="thinking_seq_list_1">• Deep Context Understanding</li>
+                        <li data-i18n="thinking_seq_list_2">• Step-by-step Logic Verification</li>
+                        <li data-i18n="thinking_seq_list_3">• Optimized for Complex Problem Solving</li>
+                    </ul>
+                </div>
+                <div class="video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">🧠</div>
+                        <div class="video-label">assets/videos/thinking_sequential.mp4</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="space-y-8">
-                <!-- Step 1 -->
-                <div class="flex items-start">
-                    <div
-                        class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl mr-6">
-                        1
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-2xl font-bold mb-2">다운로드 및 설치</h3>
-                        <p class="text-gray-600 mb-4">플랫폼에 맞는 설치 파일을 다운로드하고 설치하세요.</p>
-                        <div class="bg-white rounded-lg p-4 border border-gray-200">
-                            <code class="text-sm text-gray-800">
-                                <span class="text-gray-500"># Windows: </span>SEPilot-Setup-0.6.5.exe<br/>
-                                <span class="text-gray-500"># macOS: </span>SEPilot-0.6.5.dmg<br/>
-                                <span class="text-gray-500"># Linux: </span>SEPilot-0.6.5.AppImage
-                            </code>
-                        </div>
+            <!-- 2. Tree of Thought -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center">
+                <div class="order-2 md:order-1 video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">🌳</div>
+                        <div class="video-label">assets/videos/thinking_tot.mp4</div>
                     </div>
                 </div>
-
-                <!-- Step 2 -->
-                <div class="flex items-start">
-                    <div
-                        class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl mr-6">
-                        2
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-2xl font-bold mb-2">LLM 설정</h3>
-                        <p class="text-gray-600 mb-4">왼쪽 하단 설정 아이콘을 클릭하고 LLM 제공자와 API 키를 설정하세요.</p>
-                        <ul class="space-y-2 text-gray-700">
-                            <li class="flex items-start">
-                                <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none"
-                                    stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 5l7 7-7 7" />
-                                </svg>
-                                OpenAI (gpt-4o, gpt-4-turbo, gpt-3.5-turbo)
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none"
-                                    stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 5l7 7-7 7" />
-                                </svg>
-                                Anthropic (claude-3-5-sonnet, claude-3-opus)
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none"
-                                    stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 5l7 7-7 7" />
-                                </svg>
-                                Google (gemini-pro, gemini-1.5-pro)
-                            </li>
-                            <li class="flex items-start">
-                                <svg class="w-5 h-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none"
-                                    stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 5l7 7-7 7" />
-                                </svg>
-                                Custom (OpenAI-compatible API)
-                            </li>
-                        </ul>
-                    </div>
+                <div class="order-1 md:order-2">
+                    <h3 class="text-3xl font-bold mb-4 text-purple-600" data-i18n="thinking_tot_title">Tree of Thought
+                    </h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="thinking_tot_desc">
+                        Does not stick to one path. Generates multiple solution possibilities simultaneously (Branching)
+                        and predicts outcomes to select the best path. Powerful for brainstorming.
+                    </p>
+                    <ul class="space-y-2 text-gray-500">
+                        <li data-i18n="thinking_tot_list_1">• Multi-path Exploration</li>
+                        <li data-i18n="thinking_tot_list_2">• Scenario Comparison Analysis</li>
+                        <li data-i18n="thinking_tot_list_3">• Optimal Solution Derivation</li>
+                    </ul>
                 </div>
+            </div>
 
-                <!-- Step 3 -->
-                <div class="flex items-start">
-                    <div
-                        class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl mr-6">
-                        3
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-2xl font-bold mb-2">모드 및 그래프 타입 선택</h3>
-                        <p class="text-gray-600 mb-4">사용 목적에 맞는 모드와 워크플로우를 선택하세요.</p>
-                        <div class="grid sm:grid-cols-2 gap-4">
-                            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                                <div class="font-semibold text-blue-900 mb-1">Chat: Basic Chat</div>
-                                <div class="text-sm text-blue-700">일반 대화</div>
-                            </div>
-                            <div class="bg-green-50 rounded-lg p-4 border border-green-200">
-                                <div class="font-semibold text-green-900 mb-1">Chat: RAG Chat</div>
-                                <div class="text-sm text-green-700">문서 기반 질의응답</div>
-                            </div>
-                            <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                                <div class="font-semibold text-purple-900 mb-1">Chat: Agent</div>
-                                <div class="text-sm text-purple-700">MCP 도구 활용</div>
-                            </div>
-                            <div class="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                                <div class="font-semibold text-orange-900 mb-1">Chat: Coding Agent</div>
-                                <div class="text-sm text-orange-700">복잡한 코딩 작업</div>
-                            </div>
-                            <div class="bg-teal-50 rounded-lg p-4 border border-teal-200">
-                                <div class="font-semibold text-teal-900 mb-1">Editor 모드</div>
-                                <div class="text-sm text-teal-700">코드 편집 및 파일 관리</div>
-                            </div>
-                            <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
-                                <div class="font-semibold text-indigo-900 mb-1">Browser 모드</div>
-                                <div class="text-sm text-indigo-700">웹 탐색 및 자동화</div>
-                            </div>
-                        </div>
-                    </div>
+            <!-- 3. Persona System -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none">
+                <div>
+                    <h3 class="text-3xl font-bold mb-4 text-orange-600" data-i18n="thinking_persona_title">AI Persona
+                    </h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="thinking_persona_desc">
+                        Create and manage your own AI personas like 'Strict Senior Developer' or 'Friendly UX Designer'.
+                        Beyond system prompts, tone and expertise levels are permanently stored.
+                    </p>
                 </div>
-
-                <!-- Step 4 -->
-                <div class="flex items-start">
-                    <div
-                        class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl mr-6">
-                        4
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-2xl font-bold mb-2">대화 시작</h3>
-                        <p class="text-gray-600">모든 준비가 완료되었습니다. 이제 대화를 시작하세요!</p>
+                <div class="video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">🎭</div>
+                        <div class="video-label">assets/videos/thinking_persona.mp4</div>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
-    <!-- Download Section -->
-    <section id="download" class="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 to-purple-50">
-        <div class="max-w-5xl mx-auto text-center">
-            <h2 class="text-4xl md:text-5xl font-bold mb-4">지금 다운로드</h2>
-            <p class="text-xl text-gray-600 mb-12">Windows, macOS, Linux 모두 지원</p>
+    <!-- ==========================================
+         Coding Agent
+    ========================================== -->
+    <div id="section-coding" class="bg-gray-50">
+        <div class="max-w-7xl mx-auto px-6 py-16">
+            <h2 class="text-4xl font-bold mb-4" data-i18n="coding_header">Autonomous Coding</h2>
+            <p class="text-xl text-gray-600 mb-8" data-i18n="coding_subtitle">The most powerful coding agent experience
+                available.</p>
 
-            <div class="grid md:grid-cols-3 gap-6 mb-12">
-                <!-- Windows -->
-                <a href="https://github.com/jhl-labs/sepilot_desktop/releases/latest" target="_blank"
-                    class="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition border border-gray-200 group">
-                    <div
-                        class="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition">
-                        <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801" />
-                        </svg>
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none pt-8">
+                <div class="order-2 md:order-1 video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">👨‍💻</div>
+                        <div class="video-label">assets/videos/agent_coding.mp4</div>
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Windows</h3>
-                    <p class="text-gray-600 text-sm mb-4">Windows 10/11 (64-bit)</p>
-                    <div class="inline-flex items-center text-blue-600 font-medium">
-                        다운로드
-                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                    </div>
-                </a>
+                </div>
+                <div class="order-1 md:order-2">
+                    <h3 class="text-3xl font-bold mb-4 text-green-600" data-i18n="coding_title">Coding Agent (ReAct)
+                    </h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="coding_desc">
+                        Goes beyond just writing code.<br>Repeats the cycle of <strong>Think -> Action (File I/O) ->
+                            Observe</strong>. It executes terminal commands to install packages and self-corrects by
+                        analyzing logs if errors occur.
+                    </p>
+                    <ul class="space-y-2 text-gray-500">
+                        <li data-i18n="coding_list_1">• File Create/Edit/Delete Permissions</li>
+                        <li data-i18n="coding_list_2">• Terminal Command Execution & Result Analysis</li>
+                        <li data-i18n="coding_list_3">• Auto-debugging Loop on Error</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                <!-- macOS -->
-                <a href="https://github.com/jhl-labs/sepilot_desktop/releases/latest" target="_blank"
-                    class="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition border border-gray-200 group">
-                    <div
-                        class="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition">
-                        <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold mb-2">macOS</h3>
-                    <p class="text-gray-600 text-sm mb-4">macOS 11+ (Intel & Apple Silicon)</p>
-                    <div class="inline-flex items-center text-blue-600 font-medium">
-                        다운로드
-                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                    </div>
-                </a>
+    <!-- ==========================================
+         Editor Mode
+    ========================================== -->
+    <div id="section-editor" class="bg-white">
+        <div class="max-w-7xl mx-auto px-6 py-16">
+            <h2 class="text-4xl font-bold mb-4" data-i18n="editor_header">Full-featured Editor</h2>
+            <p class="text-xl text-gray-600 mb-8" data-i18n="editor_subtitle">Power of VS Code, but lighter.</p>
 
-                <!-- Linux -->
-                <a href="https://github.com/jhl-labs/sepilot_desktop/releases/latest" target="_blank"
-                    class="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition border border-gray-200 group">
-                    <div
-                        class="w-16 h-16 bg-yellow-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition">
-                        <svg class="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path
-                                d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.84-.41 1.684-.287 2.489a2.99 2.99 0 00-.287-.004c-.964 0-1.809.675-1.809 1.665 0 .496.227.908.574 1.23-.057.236-.084.478-.084.721 0 1.653 1.348 2.998 3 2.998 1.651 0 3-1.345 3-2.998 0-.243-.027-.485-.084-.721.347-.322.574-.734.574-1.23 0-.99-.845-1.665-1.809-1.665-.099 0-.195.011-.287.004.123-.805-.009-1.649-.287-2.489-.589-1.771-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298-.165-.013-.325-.021-.48-.021zm-.004 7.242c.36 0 .67.291.67.648 0 .358-.31.649-.67.649-.361 0-.671-.291-.671-.649 0-.357.31-.648.671-.648zm7.5 0c.36 0 .67.291.67.648 0 .358-.31.649-.67.649-.361 0-.671-.291-.671-.649 0-.357.31-.648.671-.648zm-7.5 2.898c.825 0 1.5.675 1.5 1.5s-.675 1.5-1.5 1.5c-.826 0-1.5-.675-1.5-1.5s.674-1.5 1.5-1.5zm7.5 0c.825 0 1.5.675 1.5 1.5s-.675 1.5-1.5 1.5c-.826 0-1.5-.675-1.5-1.5s.674-1.5 1.5-1.5z" />
-                        </svg>
+            <!-- 1. Monaco Editor -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center pt-8">
+                <div>
+                    <h3 class="text-3xl font-bold mb-4" data-i18n="editor_monaco_title">Monaco Editor Integration</h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="editor_monaco_desc">
+                        Equipped with Monaco Editor, the core of VS Code. Provides familiar environment with Syntax
+                        Highlighting, Minimap, Code Folding, Multi-cursor. Edit AI-written code on the spot.
+                    </p>
+                </div>
+                <div class="video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">📝</div>
+                        <div class="video-label">assets/videos/editor_monaco.mp4</div>
                     </div>
-                    <h3 class="text-xl font-bold mb-2">Linux</h3>
-                    <p class="text-gray-600 text-sm mb-4">AppImage, deb (64-bit)</p>
-                    <div class="inline-flex items-center text-blue-600 font-medium">
-                        다운로드
-                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                    </div>
-                </a>
+                </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 max-w-2xl mx-auto">
-                <h3 class="text-xl font-bold mb-4">시스템 요구사항</h3>
-                <div class="grid sm:grid-cols-2 gap-6 text-left">
-                    <div>
-                        <div class="font-semibold text-gray-900 mb-2">최소 사양</div>
-                        <ul class="space-y-1 text-gray-600 text-sm">
-                            <li>• Node.js 20.9.0 이상</li>
-                            <li>• 4GB RAM</li>
-                            <li>• 500MB 디스크 공간</li>
-                        </ul>
+            <!-- 2. Integrated Terminal -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center">
+                <div class="order-2 md:order-1 video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">⌨️</div>
+                        <div class="video-label">assets/videos/editor_terminal.mp4</div>
                     </div>
-                    <div>
-                        <div class="font-semibold text-gray-900 mb-2">권장 사양</div>
-                        <ul class="space-y-1 text-gray-600 text-sm">
-                            <li>• Node.js 22.0.0 이상</li>
-                            <li>• 8GB RAM</li>
-                            <li>• 1GB 디스크 공간</li>
-                        </ul>
+                </div>
+                <div class="order-1 md:order-2">
+                    <h3 class="text-3xl font-bold mb-4" data-i18n="editor_term_title">Integrated Terminal</h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="editor_term_desc">
+                        Don't break your flow. Use the xterm.js-based built-in terminal to run `npm install`, `git
+                        commit`, `python script.py`. Coding Agent communicates directly with this terminal.
+                    </p>
+                </div>
+            </div>
+
+            <!-- 3. Context Menu -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none">
+                <div>
+                    <h3 class="text-3xl font-bold mb-4" data-i18n="editor_context_title">AI Context Menu</h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="editor_context_desc">
+                        Elevate your editing experience. Drag text in editor or chat to see Notion-style AI menu.
+                        Instantly valid 10 tools like 'Refactor', 'Add Comments', 'Translate', 'Fix Typos'.
+                    </p>
+                </div>
+                <div class="video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">🖱️</div>
+                        <div class="video-label">assets/videos/productivity_context.mp4</div>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+
+    <!-- ==========================================
+         Browser Mode
+    ========================================== -->
+    <div id="section-browser" class="bg-gray-50">
+        <div class="max-w-7xl mx-auto px-6 py-16">
+            <h2 class="text-4xl font-bold mb-4" data-i18n="browser_header">Vision Browser Agent</h2>
+            <p class="text-xl text-gray-600 mb-8" data-i18n="browser_subtitle">Understands as it sees, moves like a
+                human.</p>
+
+            <!-- 1. Vision Control -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center pt-8">
+                <div>
+                    <h3 class="text-3xl font-bold mb-4 text-purple-600" data-i18n="browser_vision_title">Vision-Based
+                        Control</h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="browser_vision_desc">
+                        Different from DOM-based crawlers. Vision AI analyzes screenshot to recognize coordinates of
+                        buttons, links, inputs (Set-of-Mark). Clicks like a human even on Canvas, complex SPAs, and
+                        obfuscated sites.
+                    </p>
+                </div>
+                <div class="video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">👁️</div>
+                        <div class="video-label">assets/videos/browser_vision.mp4</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Automation & Stealth -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none">
+                <div class="order-2 md:order-1 video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">🕵️</div>
+                        <div class="video-label">assets/videos/browser_stealth.mp4</div>
+                    </div>
+                </div>
+                <div class="order-1 md:order-2">
+                    <h3 class="text-3xl font-bold mb-4 text-purple-600" data-i18n="browser_stealth_title">Automation
+                        Tools & Stealth</h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="browser_stealth_desc">
+                        Provides over 27 browser actions including click, scroll, type, back. Applied Stealth tech,
+                        Random Delay, Mouse Trajectory Simulation to bypass bot detection.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         RAG
+    ========================================== -->
+    <div id="section-rag" class="bg-white">
+        <div class="max-w-7xl mx-auto px-6 py-16">
+            <h2 class="text-4xl font-bold mb-4" data-i18n="rag_header">Knowledge Base (RAG)</h2>
+            <p class="text-xl text-gray-600 mb-8" data-i18n="rag_subtitle">Turn all your data into AI's brain.</p>
+
+            <!-- 1. Personal Docs -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center pt-8">
+                <div>
+                    <h3 class="text-3xl font-bold mb-4 text-green-600" data-i18n="rag_personal_title">Personal Docs
+                        (Local RAG)</h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="rag_personal_desc">
+                        Drag & drop PC's PDF, Markdown, Text files. Uses local SQLite-vec vector DB to build secure
+                        knowledge base without data leak concerns. Searches thousands of pages instantly.
+                    </p>
+                </div>
+                <div class="video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">📁</div>
+                        <div class="video-label">assets/videos/rag_personal.mp4</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Team Docs -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none">
+                <div class="order-2 md:order-1 video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">🏢</div>
+                        <div class="video-label">assets/videos/rag_team.mp4</div>
+                    </div>
+                </div>
+                <div class="order-1 md:order-2">
+                    <h3 class="text-3xl font-bold mb-4 text-blue-600" data-i18n="rag_team_title">Team Docs (GitHub Sync)
+                    </h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="rag_team_desc">
+                        Share knowledge with teammates. Link GitHub repos to auto-sync latest docs, wikis, code
+                        snippets. Build a centralized Knowledge Base for the team.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         Multimodal & Creative
+    ========================================== -->
+    <div id="section-creative" class="bg-gray-50">
+        <div class="max-w-7xl mx-auto px-6 py-16">
+            <h2 class="text-4xl font-bold mb-4" data-i18n="creative_header">Multimodal Creativity</h2>
+            <p class="text-xl text-gray-600 mb-8" data-i18n="creative_subtitle">Interaction beyond text.</p>
+
+            <!-- 1. Vision Analysis -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center pt-8">
+                <div>
+                    <h3 class="text-3xl font-bold mb-4 text-pink-600" data-i18n="creative_vision_title">Vision Analysis
+                    </h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="creative_vision_desc">
+                        'What does this error mean?', 'Turn this design into code.' Paste images and let Vision models
+                        (GPT-4o, Claude 3.5) analyze them. Get instant feedback on error screenshots or reference
+                        images.
+                    </p>
+                </div>
+                <div class="video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">🖼️</div>
+                        <div class="video-label">assets/videos/creative_vision.mp4</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Image Generation -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none">
+                <div class="order-2 md:order-1 video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">🎨</div>
+                        <div class="video-label">assets/videos/creative_image_gen.mp4</div>
+                    </div>
+                </div>
+                <div class="order-1 md:order-2">
+                    <h3 class="text-3xl font-bold mb-4 text-pink-600" data-i18n="creative_image_title">Image Generation
+                    </h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="creative_image_desc">
+                        Powerful integration with Nano Banana and ComfyUI. Control complex node-based image generation
+                        workflows directly from chat. Accelerate creative workflows from idea visualization to asset
+                        generation.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         Visualization
+    ========================================== -->
+    <div id="section-visualization" class="bg-white">
+        <div class="max-w-7xl mx-auto px-6 py-16">
+            <h2 class="text-4xl font-bold mb-4" data-i18n="vis_header">Rich Visualization</h2>
+            <p class="text-xl text-gray-600 mb-8" data-i18n="vis_subtitle">Visually understand data and structures.</p>
+
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none pt-8">
+                <div>
+                    <h3 class="text-3xl font-bold mb-4 text-indigo-600" data-i18n="vis_title">Mermaid & Plotly
+                        Integration</h3>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="vis_desc">
+                        <strong>Mermaid:</strong> Request complex architectures, sequence diagrams, flowcharts in text
+                        and get diagrams instantly.<br><br><strong>Plotly:</strong> Analyze Excel/CSV data and visualize
+                        with interactive charts (Line, Bar, Pie, Scatter).
+                    </p>
+                </div>
+                <div class="video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">📊</div>
+                        <div class="video-label">assets/videos/visualization_charts.mp4</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         Productivity
+    ========================================== -->
+    <div id="section-productivity" class="bg-gray-50">
+        <div class="max-w-7xl mx-auto px-6 py-16">
+            <h2 class="text-4xl font-bold mb-4" data-i18n="prod_header">Super Productivity</h2>
+            <p class="text-xl text-gray-600 mb-8" data-i18n="prod_subtitle">Speed is competitiveness.</p>
+
+            <!-- 1. Quick Input -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center pt-8">
+                <div class="order-2 md:order-1 video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">🚀</div>
+                        <div class="video-label">assets/videos/productivity_quickinput.mp4</div>
+                    </div>
+                </div>
+                <div class="order-1 md:order-2">
+                    <h3 class="text-3xl font-bold mb-4" data-i18n="prod_input_title">Quick Input</h3>
+                    <code
+                        class="block mb-4 text-sm font-mono bg-gray-200 px-2 py-1 rounded w-fit">Ctrl + Shift + Space</code>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="prod_input_desc">
+                        Call SEPilot instantly with a shortcut while using other apps. Ask quickly via the center popup
+                        and get answers without opening editor or browser.
+                    </p>
+                </div>
+            </div>
+
+            <!-- 2. Quick Search -->
+            <div class="feature-section grid md:grid-cols-2 gap-16 items-center border-none">
+                <div>
+                    <h3 class="text-3xl font-bold mb-4" data-i18n="prod_search_title">Quick Search</h3>
+                    <code
+                        class="block mb-4 text-sm font-mono bg-gray-200 px-2 py-1 rounded w-fit">Ctrl + Shift + F</code>
+                    <p class="text-lg text-gray-700 mb-6 leading-relaxed" data-i18n="prod_search_desc">
+                        Powered by Ripgrep engine to search tens of thousands of files in 0.1s. Finds filenames and
+                        contents instantly, so you never get lost in huge projects.
+                    </p>
+                </div>
+                <div class="video-placeholder">
+                    <div class="text-center">
+                        <div class="icon-overlay">🔍</div>
+                        <div class="video-label">assets/videos/productivity_search.mp4</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-300 py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-7xl mx-auto">
-            <div class="grid md:grid-cols-4 gap-8 mb-8">
-                <!-- About -->
-                <div class="md:col-span-2">
-                    <div class="flex items-center space-x-3 mb-4">
-                        <div
-                            class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <span class="text-white font-bold text-xl">SE</span>
-                        </div>
-                        <span class="text-xl font-bold text-white">SEPilot Desktop</span>
-                    </div>
-                    <p class="text-gray-400 mb-4">
-                        Chat, Editor, Browser 3가지 모드를 지원하는 오픈소스 LLM 데스크톱 애플리케이션.<br />
-                        LangGraph, RAG, MCP를 통한 강력하고 유연한 AI 워크플로우를 경험하세요.
-                    </p>
-                    <div class="flex space-x-4">
-                        <a href="https://github.com/jhl-labs/sepilot_desktop" target="_blank"
-                            class="text-gray-400 hover:text-white transition">
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                <path fill-rule="evenodd"
-                                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                                    clip-rule="evenodd" />
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Links -->
-                <div>
-                    <h3 class="text-white font-semibold mb-4">링크</h3>
-                    <ul class="space-y-2">
-                        <li><a href="https://github.com/jhl-labs/sepilot_desktop" target="_blank"
-                                class="text-gray-400 hover:text-white transition">GitHub</a></li>
-                        <li><a href="https://github.com/jhl-labs/sepilot_desktop/issues" target="_blank"
-                                class="text-gray-400 hover:text-white transition">Issues</a></li>
-                        <li><a href="https://github.com/jhl-labs/sepilot_desktop/releases" target="_blank"
-                                class="text-gray-400 hover:text-white transition">Releases</a></li>
-                        <li><a href="https://github.com/jhl-labs/sepilot_desktop/blob/main/FEATURES.md" target="_blank"
-                                class="text-gray-400 hover:text-white transition">Features</a></li>
-                    </ul>
-                </div>
-
-                <!-- Resources -->
-                <div>
-                    <h3 class="text-white font-semibold mb-4">리소스</h3>
-                    <ul class="space-y-2">
-                        <li><a href="https://github.com/jhl-labs/sepilot_desktop#readme" target="_blank"
-                                class="text-gray-400 hover:text-white transition">문서</a></li>
-                        <li><a href="https://github.com/jhl-labs/sepilot_desktop/blob/main/CONTRIBUTING.md"
-                                target="_blank" class="text-gray-400 hover:text-white transition">기여하기</a></li>
-                        <li><a href="https://github.com/jhl-labs/sepilot_desktop/blob/main/LICENSE" target="_blank"
-                                class="text-gray-400 hover:text-white transition">라이선스</a></li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
-                <p>Built with ❤️ using <a href="https://claude.com/claude-code" target="_blank"
-                        class="text-blue-400 hover:text-blue-300 transition">Claude Code</a></p>
-                <p class="mt-2">© 2025 SEPilot Desktop. All rights reserved.</p>
-            </div>
+    <footer class="bg-gray-900 text-white py-20 text-center">
+        <h2 class="text-4xl font-bold mb-8" data-i18n="footer_title">Ready to Fly?</h2>
+        <div class="flex justify-center gap-4 mb-12">
+            <a href="https://github.com/jhl-labs/sepilot_desktop/releases"
+                class="bg-white text-gray-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition"
+                data-i18n="footer_btn_download">
+                Download for Windows
+            </a>
+            <a href="https://github.com/jhl-labs/sepilot_desktop"
+                class="border border-gray-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transition"
+                data-i18n="footer_btn_github">
+                View on GitHub
+            </a>
         </div>
+        <p class="text-gray-500" data-i18n="footer_copy">
+            Open Source Project by JHL Labs.
+        </p>
     </footer>
 
-    <!-- Smooth scroll script -->
-    <script>
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-    </script>
 </body>
 
 </html>
