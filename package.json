@@ -127,7 +127,7 @@
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.49.0",
     "@typescript-eslint/parser": "^8.49.0",
-    "app-builder-bin": "5.0.0-alpha.6",
+    "app-builder-bin": "5.0.0-alpha.13",
     "autoprefixer": "^10.4.22",
     "backstopjs": "^6.3.25",
     "buffer": "^6.0.3",
@@ -168,7 +168,7 @@
   },
   "pnpm": {
     "overrides": {
-      "app-builder-bin": "5.0.0-alpha.6",
+      "app-builder-bin": "5.0.0-alpha.13",
       "tmp": "^0.2.4"
     }
   },
