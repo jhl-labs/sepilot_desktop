@@ -136,8 +136,8 @@ importers:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       node-pty:
-        specifier: 1.1.0-beta39
-        version: 1.1.0-beta39
+        specifier: 1.1.0-beta42
+        version: 1.1.0-beta42
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
@@ -6166,8 +6166,8 @@ packages:
   node-int64@0.4.0:
     resolution: {integrity: sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw==}
 
-  node-pty@1.1.0-beta39:
-    resolution: {integrity: sha512-1xnN2dbS0QngT4xenpS/6Q77QtaDQo5vE6f4slATgZsFIv3NP4ObE7vAjYnZtMFG5OEh3jyDRZc+hy1DjDF7dg==}
+  node-pty@1.1.0-beta42:
+    resolution: {integrity: sha512-59KoV6xxhJciRVpo4lQ9wnP38SPaBlXgwszYS8nlHAHrt02d14peg+kHtJ4AOtyLWiCf8WPCeJNbxBkiA7Oy7Q==}
 
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
@@ -15244,7 +15244,7 @@ snapshots:
 
   node-int64@0.4.0: {}
 
-  node-pty@1.1.0-beta39:
+  node-pty@1.1.0-beta42:
     dependencies:
       node-addon-api: 7.1.1
 
