@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +31,7 @@ export function ComfyUISettingsTab({
   message,
   setMessage,
 }: ComfyUISettingsTabProps) {
+  const { t } = useTranslation();
   const [isTestingComfy, setIsTestingComfy] = useState(false);
 
   const handleTestComfyConnection = async () => {
@@ -38,7 +40,7 @@ export function ComfyUISettingsTab({
 
     try {
       if (!comfyConfig.httpUrl.trim()) {
-        throw new Error('ComfyUI HTTP URL을 입력해주세요.');
+        throw new Error(t('settings.imagegen.comfyui.httpUrlRequired'));
       }
 
       // Electron 환경: IPC를 통해 Main Process에서 호출 (CORS 없음, Network Config 사용)
@@ -53,10 +55,10 @@ export function ComfyUISettingsTab({
         );
 
         if (!result.success) {
-          throw new Error(result.error || 'ComfyUI 서버 연결 테스트에 실패했습니다.');
+          throw new Error(result.error || t('settings.imagegen.comfyui.connectionTestFailed'));
         }
 
-        setMessage({ type: 'success', text: 'ComfyUI 서버와 연결되었습니다.' });
+        setMessage({ type: 'success', text: t('settings.imagegen.comfyui.connectionSuccess') });
       } else {
         // 브라우저 환경 (fallback): 직접 fetch
         console.warn(
@@ -72,16 +74,18 @@ export function ComfyUISettingsTab({
         });
 
         if (!response.ok) {
-          throw new Error(`ComfyUI 서버 응답이 올바르지 않습니다. (HTTP ${response.status})`);
+          throw new Error(
+            t('settings.imagegen.comfyui.invalidResponse', { status: response.status })
+          );
         }
 
-        setMessage({ type: 'success', text: 'ComfyUI 서버와 연결되었습니다.' });
+        setMessage({ type: 'success', text: t('settings.imagegen.comfyui.connectionSuccess') });
       }
     } catch (error: any) {
       console.error('Failed to test ComfyUI connection:', error);
       setMessage({
         type: 'error',
-        text: error.message || 'ComfyUI 서버 연결 테스트에 실패했습니다.',
+        text: error.message || t('settings.imagegen.comfyui.connectionTestFailed'),
       });
     } finally {
       setIsTestingComfy(false);
@@ -91,18 +95,17 @@ export function ComfyUISettingsTab({
   return (
     <div className="space-y-6">
       <SettingsSectionHeader
-        title="ComfyUI 설정"
-        description="이미지 생성을 위한 ComfyUI 워크플로우 연결 및 설정을 관리합니다."
+        title={t('settings.imagegen.comfyui.title')}
+        description={t('settings.imagegen.comfyui.description')}
         icon={Image}
       />
 
       <div className="rounded-md border bg-muted/40 p-4 space-y-2">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h3 className="text-base font-semibold">ComfyUI 연결</h3>
+            <h3 className="text-base font-semibold">{t('settings.imagegen.comfyui.connection')}</h3>
             <p className="text-xs text-muted-foreground mt-1">
-              이미지 생성을 위해 사용할 ComfyUI REST/WebSocket 엔드포인트와 기본 워크플로우를
-              설정합니다.
+              {t('settings.imagegen.comfyui.connectionDescription')}
             </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
@@ -122,7 +125,7 @@ export function ComfyUISettingsTab({
         </div>
         {!comfyConfig.enabled && (
           <p className="text-xs text-muted-foreground">
-            토글을 활성화하면 아래 설정을 편집할 수 있습니다.
+            {t('settings.imagegen.comfyui.enableToggleHint')}
           </p>
         )}
       </div>
@@ -130,7 +133,7 @@ export function ComfyUISettingsTab({
       <div className={`space-y-4 ${!comfyConfig.enabled ? 'opacity-60 pointer-events-none' : ''}`}>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="comfyHttp">HTTP Endpoint</Label>
+            <Label htmlFor="comfyHttp">{t('settings.imagegen.comfyui.httpEndpoint')}</Label>
             <Input
               id="comfyHttp"
               value={comfyConfig.httpUrl}
@@ -140,15 +143,15 @@ export function ComfyUISettingsTab({
                   httpUrl: e.target.value,
                 })
               }
-              placeholder="http://127.0.0.1:8188"
+              placeholder={t('settings.imagegen.comfyui.httpPlaceholder')}
             />
             <p className="text-xs text-muted-foreground">
-              ComfyUI REST API 기본 URL (예: http://localhost:8188)
+              {t('settings.imagegen.comfyui.httpUrlDescription')}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="comfyWs">WebSocket Endpoint</Label>
+            <Label htmlFor="comfyWs">{t('settings.imagegen.comfyui.wsEndpoint')}</Label>
             <Input
               id="comfyWs"
               value={comfyConfig.wsUrl}
@@ -158,14 +161,14 @@ export function ComfyUISettingsTab({
                   wsUrl: e.target.value,
                 })
               }
-              placeholder="ws://127.0.0.1:8188/ws"
+              placeholder={t('settings.imagegen.comfyui.wsPlaceholder')}
             />
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="comfyWorkflow">기본 워크플로우 ID 또는 파일</Label>
+            <Label htmlFor="comfyWorkflow">{t('settings.imagegen.comfyui.workflowLabel')}</Label>
             <Input
               id="comfyWorkflow"
               value={comfyConfig.workflowId}
@@ -175,11 +178,11 @@ export function ComfyUISettingsTab({
                   workflowId: e.target.value,
                 })
               }
-              placeholder="workflow.json 또는 prompt ID"
+              placeholder={t('settings.imagegen.comfyui.workflowPlaceholder')}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="comfyClientId">Client ID</Label>
+            <Label htmlFor="comfyClientId">{t('settings.imagegen.comfyui.clientId')}</Label>
             <Input
               id="comfyClientId"
               value={comfyConfig.clientId || ''}
@@ -189,14 +192,14 @@ export function ComfyUISettingsTab({
                   clientId: e.target.value,
                 })
               }
-              placeholder="선택 사항"
+              placeholder={t('settings.imagegen.comfyui.optional')}
             />
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="comfyApiKey">API Key</Label>
+            <Label htmlFor="comfyApiKey">{t('settings.imagegen.comfyui.apiKey')}</Label>
             <Input
               id="comfyApiKey"
               type="password"
@@ -207,11 +210,11 @@ export function ComfyUISettingsTab({
                   apiKey: e.target.value,
                 })
               }
-              placeholder="인증 필요 시 입력"
+              placeholder={t('settings.imagegen.comfyui.apiKeyPlaceholder')}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="comfySeed">Seed</Label>
+            <Label htmlFor="comfySeed">{t('settings.imagegen.comfyui.seed')}</Label>
             <Input
               id="comfySeed"
               type="number"
@@ -223,17 +226,17 @@ export function ComfyUISettingsTab({
                   seed: Number.isNaN(parsed) ? undefined : parsed,
                 });
               }}
-              placeholder="-1"
+              placeholder={t('settings.imagegen.comfyui.seedPlaceholder')}
             />
             <p className="text-xs text-muted-foreground">
-              -1이면 ComfyUI가 자동 Seed를 사용합니다.
+              {t('settings.imagegen.comfyui.seedDescription')}
             </p>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="comfySteps">Steps</Label>
+            <Label htmlFor="comfySteps">{t('settings.imagegen.comfyui.steps')}</Label>
             <Input
               id="comfySteps"
               type="number"
@@ -248,7 +251,7 @@ export function ComfyUISettingsTab({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="comfyCfg">CFG Scale</Label>
+            <Label htmlFor="comfyCfg">{t('settings.imagegen.comfyui.cfgScale')}</Label>
             <Input
               id="comfyCfg"
               type="number"
@@ -263,16 +266,16 @@ export function ComfyUISettingsTab({
             />
           </div>
           <div className="space-y-2">
-            <Label>워크플로우 경로 참고</Label>
+            <Label>{t('settings.imagegen.comfyui.workflowReference')}</Label>
             <p className="text-xs text-muted-foreground">
-              ComfyUI API 호출 시 사용할 기본 하이퍼파라미터를 정의합니다.
+              {t('settings.imagegen.comfyui.workflowReferenceDescription')}
             </p>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="comfyPositive">기본 프롬프트</Label>
+            <Label htmlFor="comfyPositive">{t('settings.imagegen.comfyui.positivePrompt')}</Label>
             <Textarea
               id="comfyPositive"
               value={comfyConfig.positivePrompt || ''}
@@ -282,12 +285,12 @@ export function ComfyUISettingsTab({
                   positivePrompt: e.target.value,
                 })
               }
-              placeholder="이미지 생성 시 기본으로 사용할 포지티브 프롬프트"
+              placeholder={t('settings.imagegen.comfyui.positivePromptPlaceholder')}
               className="min-h-[100px]"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="comfyNegative">네거티브 프롬프트</Label>
+            <Label htmlFor="comfyNegative">{t('settings.imagegen.comfyui.negativePrompt')}</Label>
             <Textarea
               id="comfyNegative"
               value={comfyConfig.negativePrompt || ''}
@@ -297,7 +300,7 @@ export function ComfyUISettingsTab({
                   negativePrompt: e.target.value,
                 })
               }
-              placeholder="불필요한 요소를 제거하기 위한 네거티브 프롬프트"
+              placeholder={t('settings.imagegen.comfyui.negativePromptPlaceholder')}
               className="min-h-[100px]"
             />
           </div>
@@ -322,13 +325,13 @@ export function ComfyUISettingsTab({
           onClick={handleTestComfyConnection}
           disabled={!comfyConfig.httpUrl.trim() || isTestingComfy || !comfyConfig.enabled}
         >
-          {isTestingComfy ? '테스트 중...' : '연결 테스트'}
+          {isTestingComfy ? t('common.testing') : t('common.testConnection')}
         </Button>
         <Button
           onClick={onSave}
           disabled={isSaving || (comfyConfig.enabled && !comfyConfig.httpUrl.trim())}
         >
-          {isSaving ? '저장 중...' : '저장'}
+          {isSaving ? t('common.saving') : t('common.save')}
         </Button>
       </div>
     </div>

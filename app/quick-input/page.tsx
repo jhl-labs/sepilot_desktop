@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 
 export default function QuickInputPage() {
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -96,7 +98,7 @@ export default function QuickInputPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
-            placeholder="무엇을 도와드릴까요?"
+            placeholder={t('quickInput.placeholder')}
             className="w-full text-base h-12 px-4 bg-background border-2 border-primary/20 focus:border-primary shadow-lg"
             autoComplete="off"
           />
