@@ -47,7 +47,7 @@ jobs:
           pnpm audit --audit-level=info >> $GITHUB_STEP_SUMMARY || true
 
       - name: Upload audit report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: npm-audit-report
