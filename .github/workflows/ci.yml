@@ -139,7 +139,7 @@ jobs:
           files: ./test-results/junit.xml
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-report
           path: |
@@ -202,7 +202,7 @@ jobs:
         run: pnpm run build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: build-${{ matrix.os }}
           path: |
@@ -351,7 +351,7 @@ jobs:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Lighthouse reports
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: lighthouse-reports
@@ -398,7 +398,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload visual regression report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: backstop-report
