@@ -20,7 +20,10 @@ interface StreamingOptions {
   personaSystemPrompt?: string | null;
 }
 
+import { useLanguage } from '@/components/providers/i18n-provider';
+
 export function useMessageStreaming() {
+  const { language } = useLanguage();
   const {
     messages,
     addMessage,
@@ -577,7 +580,7 @@ export function useMessageStreaming() {
             { role: 'assistant' as const, content: accumulatedContent },
           ];
 
-          generateConversationTitle(allMessagesForTitle)
+          generateConversationTitle(allMessagesForTitle, language)
             .then((title) => {
               updateConversationTitle(conversationId, title);
             })

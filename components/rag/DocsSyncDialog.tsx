@@ -332,6 +332,7 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
               <div className="space-y-2">
                 <Label>Server Type</Label>
                 <select
+                  title="GitHub 서버 타입"
                   value={personalForm.serverType}
                   onChange={(e) =>
                     setPersonalForm({
@@ -457,6 +458,7 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
                 <div className="space-y-2">
                   <Label>Server Type</Label>
                   <select
+                    title="GitHub 서버 타입"
                     value={teamForm.serverType}
                     onChange={(e) =>
                       setTeamForm({

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,11 +23,13 @@ export function NetworkSettingsTab({
   isSaving,
   message,
 }: NetworkSettingsTabProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-6">
       <SettingsSectionHeader
-        title="Network 설정"
-        description="프록시 및 SSL 인증서 검증 설정을 관리합니다. 이 설정은 LLM, ComfyUI, VectorDB, MCP 등 모든 외부 연결에 적용됩니다."
+        title={t('settings.network.title')}
+        description={t('settings.network.proxy.description')}
         icon={Network}
       />
 
@@ -35,11 +38,11 @@ export function NetworkSettingsTab({
         <div className="space-y-3 p-4 rounded-lg border">
           <div className="flex items-center justify-between">
             <Label htmlFor="proxyEnabled" className="text-base font-semibold">
-              프록시 설정
+              {t('settings.network.proxy.title')}
             </Label>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
-                title="프록시 설정"
+                title={t('settings.network.proxy.title')}
                 id="proxyEnabled"
                 type="checkbox"
                 checked={networkConfig.proxy?.enabled ?? false}
@@ -62,9 +65,9 @@ export function NetworkSettingsTab({
           {networkConfig.proxy?.enabled && (
             <div className="space-y-3 pl-4">
               <div className="space-y-2">
-                <Label htmlFor="proxyMode">프록시 모드</Label>
+                <Label htmlFor="proxyMode">{t('settings.network.proxy.mode')}</Label>
                 <select
-                  title="프록시 모드"
+                  title={t('settings.network.proxy.mode')}
                   id="proxyMode"
                   value={networkConfig.proxy?.mode || 'none'}
                   onChange={(e) =>
@@ -80,20 +83,20 @@ export function NetworkSettingsTab({
                   className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
                 >
                   <option value="none" className="bg-background text-foreground">
-                    사용 안 함
+                    {t('settings.network.proxy.modeNone')}
                   </option>
                   <option value="system" className="bg-background text-foreground">
-                    시스템 프록시 사용
+                    {t('settings.network.proxy.modeSystem')}
                   </option>
                   <option value="manual" className="bg-background text-foreground">
-                    수동 설정
+                    {t('settings.network.proxy.modeManual')}
                   </option>
                 </select>
               </div>
 
               {networkConfig.proxy?.mode === 'manual' && (
                 <div className="space-y-2">
-                  <Label htmlFor="proxyUrl">프록시 URL</Label>
+                  <Label htmlFor="proxyUrl">{t('settings.network.proxy.url')}</Label>
                   <Input
                     id="proxyUrl"
                     value={networkConfig.proxy?.url || ''}
@@ -111,7 +114,7 @@ export function NetworkSettingsTab({
                     placeholder="http://proxy.example.com:8080"
                   />
                   <p className="text-xs text-muted-foreground">
-                    예: http://proxy.example.com:8080 또는 socks5://127.0.0.1:1080
+                    {t('settings.network.proxy.urlExample')}
                   </p>
                 </div>
               )}
@@ -124,15 +127,15 @@ export function NetworkSettingsTab({
           <div className="flex items-center justify-between">
             <div>
               <Label htmlFor="sslVerify" className="text-base font-semibold">
-                SSL 인증서 검증
+                {t('settings.network.ssl.verify')}
               </Label>
               <p className="text-xs text-muted-foreground mt-1">
-                자체 서명 인증서 사용 시 비활성화하세요
+                {t('settings.network.ssl.verifyDescriptionShort')}
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
-                title="SSL 인증서 검증"
+                title={t('settings.network.ssl.verify')}
                 id="sslVerify"
                 type="checkbox"
                 checked={networkConfig.ssl?.verify ?? true}
@@ -151,7 +154,7 @@ export function NetworkSettingsTab({
           </div>
           {!(networkConfig.ssl?.verify ?? true) && (
             <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-3 py-2 text-xs text-yellow-600 dark:text-yellow-500">
-              보안 경고: SSL 검증을 비활성화하면 중간자 공격에 취약할 수 있습니다.
+              {t('settings.network.ssl.securityWarning')}
             </div>
           )}
         </div>
@@ -160,7 +163,7 @@ export function NetworkSettingsTab({
       {/* Save Button */}
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button onClick={onSave} disabled={isSaving}>
-          {isSaving ? '저장 중...' : '저장'}
+          {isSaving ? t('common.saving') : t('common.save')}
         </Button>
       </div>
 

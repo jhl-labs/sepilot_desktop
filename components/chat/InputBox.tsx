@@ -45,7 +45,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+import { useLanguage } from '@/components/providers/i18n-provider';
+
 export function InputBox() {
+  const { language } = useLanguage();
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [selectedImages, setSelectedImages] = useState<ImageAttachment[]>([]);
@@ -1300,7 +1303,7 @@ export function InputBox() {
             ];
 
             // Generate title in background (don't await)
-            generateConversationTitle(allMessagesForTitle)
+            generateConversationTitle(allMessagesForTitle, language)
               .then((title) => {
                 updateConversationTitle(conversationId, title);
               })

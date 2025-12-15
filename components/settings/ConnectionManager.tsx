@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { LLMConnection, ModelConfig } from '@/types';
 import { Plus, Trash2, Edit2, Check, X } from 'lucide-react';
 
+import { useTranslation } from 'react-i18next';
+
 interface ConnectionManagerProps {
   connections: LLMConnection[];
   onConnectionsChange: (connections: LLMConnection[]) => void;
@@ -29,6 +31,7 @@ export function ConnectionManager({
   activeAutocompleteModelId,
   onActiveModelsChange,
 }: ConnectionManagerProps) {
+  const { t } = useTranslation();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState<Partial<LLMConnection>>({
@@ -49,13 +52,13 @@ export function ConnectionManager({
 
     // Validate baseURL format
     if (!baseURL.match(/^https?:\/\/.+/)) {
-      window.alert('Base URL은 http:// 또는 https://로 시작해야 합니다.');
+      window.alert(t('settings.llm.connections.validation.url'));
       return;
     }
 
     // Validate API key length
     if (apiKey.trim().length < 20) {
-      window.alert('API 키는 최소 20자 이상이어야 합니다.');
+      window.alert(t('settings.llm.connections.validation.apiKey'));
       return;
     }
 
@@ -98,13 +101,13 @@ export function ConnectionManager({
 
     // Validate baseURL format
     if (!baseURL.match(/^https?:\/\/.+/)) {
-      window.alert('Base URL은 http:// 또는 https://로 시작해야 합니다.');
+      window.alert(t('settings.llm.connections.validation.url'));
       return;
     }
 
     // Validate API key length
     if (apiKey.trim().length < 20) {
-      window.alert('API 키는 최소 20자 이상이어야 합니다.');
+      window.alert(t('settings.llm.connections.validation.apiKey'));
       return;
     }
 
@@ -155,7 +158,10 @@ export function ConnectionManager({
       const modelNames = referencedModels.map((m) => m.displayName || m.modelId).join(', ');
 
       const confirmed = window.confirm(
-        `이 Connection을 사용하는 ${referencedModels.length}개의 모델이 있습니다:\n${modelNames}\n\n삭제하시겠습니까? (모델도 함께 삭제됩니다)`
+        t('settings.llm.connections.validation.deleteConfirm', {
+          count: referencedModels.length,
+          models: modelNames,
+        })
       );
 
       if (!confirmed) {
@@ -204,10 +210,9 @@ export function ConnectionManager({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Connections</h3>
+          <h3 className="text-lg font-semibold">{t('settings.llm.connections.title')}</h3>
           <p className="text-sm text-muted-foreground">
-            LLM 서비스 연결을 관리합니다. 여러 Connection을 등록하고 각 Connection의 모델을 사용할
-            수 있습니다.
+            {t('settings.llm.connections.description')}
           </p>
         </div>
         <Button
@@ -216,7 +221,7 @@ export function ConnectionManager({
           size="sm"
         >
           <Plus className="h-4 w-4 mr-1" />
-          추가
+          {t('settings.llm.connections.add')}
         </Button>
       </div>
 
@@ -248,7 +253,9 @@ export function ConnectionManager({
                           : 'bg-gray-500/10 text-gray-500'
                       }`}
                     >
-                      {connection.enabled ? '활성' : '비활성'}
+                      {connection.enabled
+                        ? t('settings.llm.connections.enabled')
+                        : t('settings.llm.connections.disabled')}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground">
@@ -321,6 +328,7 @@ interface ConnectionFormProps {
 }
 
 function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionFormProps) {
+  const { t } = useTranslation();
   const [newHeaderKey, setNewHeaderKey] = useState('');
   const [newHeaderValue, setNewHeaderValue] = useState('');
 
@@ -351,17 +359,17 @@ function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionForm
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="conn-name">이름</Label>
+        <Label htmlFor="conn-name">{t('settings.llm.connections.name')}</Label>
         <Input
           id="conn-name"
           value={formData.name || ''}
           onChange={(e) => onChange({ ...formData, name: e.target.value })}
-          placeholder="My OpenAI, Local Ollama 등"
+          placeholder={t('settings.llm.connections.namePlaceholder')}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="conn-provider">Provider</Label>
+        <Label htmlFor="conn-provider">{t('settings.llm.connections.provider')}</Label>
         <select
           id="conn-provider"
           value={formData.provider || 'openai'}
@@ -383,7 +391,7 @@ function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionForm
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="conn-baseurl">Base URL</Label>
+        <Label htmlFor="conn-baseurl">{t('settings.llm.connections.baseURL')}</Label>
         <Input
           id="conn-baseurl"
           value={formData.baseURL || ''}
@@ -393,7 +401,7 @@ function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionForm
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="conn-apikey">API Key</Label>
+        <Label htmlFor="conn-apikey">{t('settings.llm.connections.apiKey')}</Label>
         <Input
           id="conn-apikey"
           type="password"
@@ -404,7 +412,7 @@ function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionForm
       </div>
 
       <div className="space-y-2">
-        <Label>커스텀 HTTP 헤더</Label>
+        <Label>{t('settings.llm.connections.customHeaders')}</Label>
         {formData.customHeaders && Object.keys(formData.customHeaders).length > 0 && (
           <div className="space-y-1">
             {Object.entries(formData.customHeaders).map(([key, value]) => (
@@ -412,7 +420,7 @@ function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionForm
                 <span className="font-mono flex-1">{key}:</span>
                 <span className="font-mono text-muted-foreground flex-1">{value}</span>
                 <Button variant="ghost" size="sm" onClick={() => handleDeleteHeader(key)}>
-                  삭제
+                  {t('common.delete')}
                 </Button>
               </div>
             ))}
@@ -422,17 +430,17 @@ function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionForm
           <Input
             value={newHeaderKey}
             onChange={(e) => setNewHeaderKey(e.target.value)}
-            placeholder="헤더 이름"
+            placeholder={t('settings.llm.connections.headerKey')}
             className="flex-1"
           />
           <Input
             value={newHeaderValue}
             onChange={(e) => setNewHeaderValue(e.target.value)}
-            placeholder="헤더 값"
+            placeholder={t('settings.llm.connections.headerValue')}
             className="flex-1"
           />
           <Button size="sm" onClick={handleAddHeader}>
-            헤더 추가
+            {t('settings.llm.connections.addHeader')}
           </Button>
         </div>
       </div>
@@ -440,11 +448,11 @@ function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionForm
       <div className="flex items-center justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onCancel}>
           <X className="h-4 w-4 mr-1" />
-          취소
+          {t('common.cancel')}
         </Button>
         <Button size="sm" onClick={onSave}>
           <Check className="h-4 w-4 mr-1" />
-          저장
+          {t('common.save')}
         </Button>
       </div>
     </div>

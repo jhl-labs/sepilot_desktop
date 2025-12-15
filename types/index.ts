@@ -404,8 +404,13 @@ export interface BetaConfig {
   enablePresentationMode?: boolean; // Presentation 모드 활성화 (기본값: false)
 }
 
+export interface GeneralConfig {
+  language: 'ko' | 'en' | 'zh';
+}
+
 export interface AppConfig {
   llm: LLMConfig;
+  general?: GeneralConfig;
   network?: NetworkConfig;
   vectorDB?: VectorDBConfig;
   embedding?: EmbeddingConfig;

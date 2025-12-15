@@ -18,7 +18,7 @@ import type { SupportedLanguage } from '@/lib/i18n';
 
 import { logger } from '@/lib/utils/logger';
 interface GeneralSettingsTabProps {
-  onSave?: () => void;
+  onSave?: (language?: string) => void;
   isSaving?: boolean;
   message?: { type: 'success' | 'error'; text: string } | null;
 }
@@ -35,14 +35,14 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
 
   const handleSave = async () => {
     if (selectedLanguage === language) {
-      onSave?.();
+      onSave?.(selectedLanguage);
       return;
     }
 
     setIsChanging(true);
     try {
       await setLanguage(selectedLanguage);
-      onSave?.();
+      onSave?.(selectedLanguage);
     } catch (error) {
       logger.error('Failed to change language:', error);
     } finally {

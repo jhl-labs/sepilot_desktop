@@ -101,7 +101,8 @@ const electronAPI = {
     chat: (messages: any[], options?: any) => ipcRenderer.invoke('llm-chat', messages, options),
     init: (config: any) => ipcRenderer.invoke('llm-init', config),
     validate: () => ipcRenderer.invoke('llm-validate'),
-    generateTitle: (messages: any[]) => ipcRenderer.invoke('llm-generate-title', messages),
+    generateTitle: (messages: any[], language?: string) =>
+      ipcRenderer.invoke('llm-generate-title', { messages, language }),
     fetchModels: (config: {
       provider: any;
       baseURL?: string;

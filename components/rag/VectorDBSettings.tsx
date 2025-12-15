@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +19,7 @@ export function VectorDBSettings({
   initialVectorDBConfig,
   initialEmbeddingConfig,
 }: VectorDBSettingsProps) {
+  const { t } = useTranslation();
   const [vectorDBConfig, setVectorDBConfig] = useState<VectorDBConfig>(
     initialVectorDBConfig || {
       type: 'sqlite-vec',
@@ -84,7 +86,7 @@ export function VectorDBSettings({
   // 모델 목록 가져오기
   const fetchAvailableModels = async () => {
     if (!embeddingConfig.baseURL || !embeddingConfig.apiKey) {
-      setModelError('Base URL과 API Key를 먼저 입력해주세요.');
+      setModelError(t('settings.vectordb.validation.needBaseUrlAndApiKey'));
       return;
     }
 
@@ -102,7 +104,9 @@ export function VectorDBSettings({
       });
 
       if (!response.ok) {
-        throw new Error(`모델 목록을 가져오는데 실패했습니다: ${response.statusText}`);
+        throw new Error(
+          t('settings.vectordb.validation.fetchModelsFailed', { error: response.statusText })
+        );
       }
 
       const data = await response.json();
@@ -163,7 +167,7 @@ export function VectorDBSettings({
       }
 
       if (models.length === 0) {
-        setModelError('사용 가능한 모델을 찾을 수 없습니다.');
+        setModelError(t('settings.vectordb.validation.noModelsFound'));
         // 기본 모델 목록 유지
       } else {
         setAvailableModels(models);
@@ -194,7 +198,10 @@ export function VectorDBSettings({
       }
     } catch (error: any) {
       console.error('Failed to fetch models:', error);
-      setModelError(error.message || '모델 목록을 가져오는데 실패했습니다.');
+      setModelError(
+        error.message ||
+          t('settings.vectordb.validation.fetchModelsFailed', { error: 'Unknown error' })
+      );
     } finally {
       setIsLoadingModels(false);
     }
@@ -216,20 +223,23 @@ export function VectorDBSettings({
         embeddingConfig.provider === 'openai' &&
         (!embeddingConfig.apiKey || !embeddingConfig.apiKey.trim())
       ) {
-        setMessage({ type: 'error', text: 'OpenAI API 키를 입력해주세요.' });
+        setMessage({ type: 'error', text: t('settings.vectordb.validation.apiKeyRequired') });
         setIsSaving(false);
         return;
       }
 
       await onSave(vectorDBConfig, embeddingConfig);
 
-      setMessage({ type: 'success', text: 'VectorDB 설정이 저장되었습니다!' });
+      setMessage({ type: 'success', text: t('settings.vectordb.validation.saveSuccess') });
 
       // 성공 메시지 표시 후 자동으로 사라지게
       setTimeout(() => setMessage(null), 3000);
     } catch (error: any) {
       console.error('Failed to save VectorDB config:', error);
-      setMessage({ type: 'error', text: error.message || 'VectorDB 설정 저장에 실패했습니다.' });
+      setMessage({
+        type: 'error',
+        text: error.message || t('settings.vectordb.validation.saveFailed'),
+      });
     } finally {
       setIsSaving(false);
     }
@@ -238,34 +248,36 @@ export function VectorDBSettings({
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold mb-4">Vector Database 설정</h3>
+        <h3 className="text-lg font-semibold mb-4">{t('settings.vectordb.title')}</h3>
 
         <div className="space-y-4">
           {/* Vector DB Type */}
           <div className="space-y-2">
-            <Label htmlFor="vectordb-type">Vector DB Type</Label>
+            <Label htmlFor="vectordb-type">{t('settings.vectordb.type.title')}</Label>
             <select
+              title="Vector DB Type"
               id="vectordb-type"
               value={vectorDBConfig.type}
               onChange={(e) =>
                 setVectorDBConfig({ ...vectorDBConfig, type: e.target.value as any })
               }
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
             >
-              <option value="sqlite-vec">SQLite-vec (Electron 전용)</option>
-              <option value="opensearch" disabled>
-                OpenSearch (준비 중)
+              <option value="sqlite-vec" className="bg-background text-foreground">
+                {t('settings.vectordb.type.sqliteVec')}
               </option>
-              <option value="elasticsearch" disabled>
-                Elasticsearch (준비 중)
+              <option value="opensearch" disabled className="bg-background text-foreground">
+                {t('settings.vectordb.type.opensearch')}
               </option>
-              <option value="pgvector" disabled>
-                pgvector (준비 중)
+              <option value="elasticsearch" disabled className="bg-background text-foreground">
+                {t('settings.vectordb.type.elasticsearch')}
+              </option>
+              <option value="pgvector" disabled className="bg-background text-foreground">
+                {t('settings.vectordb.type.pgvector')}
               </option>
             </select>
             <p className="text-xs text-muted-foreground mt-1">
-              ℹ️ SQLite-vec는 Node.js 환경(Electron)에서만 동작합니다. 웹 브라우저에서는 설정만
-              저장됩니다.
+              {t('settings.vectordb.hints.sqliteVec')}
             </p>
           </div>
 
@@ -283,22 +295,25 @@ export function VectorDBSettings({
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mb-4">Embedding 설정</h3>
+        <h3 className="text-lg font-semibold mb-4">{t('settings.vectordb.embedding.title')}</h3>
 
         <div className="space-y-4">
           {/* Embedding Provider */}
           <div className="space-y-2">
-            <Label htmlFor="embedding-provider">Provider</Label>
+            <Label htmlFor="embedding-provider">{t('settings.vectordb.embedding.provider')}</Label>
             <select
+              title="Embedding Provider"
               id="embedding-provider"
               value={embeddingConfig.provider}
               onChange={(e) =>
                 setEmbeddingConfig({ ...embeddingConfig, provider: e.target.value as any })
               }
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
             >
-              <option value="openai">OpenAI</option>
-              <option value="local" disabled>
+              <option value="openai" className="bg-background text-foreground">
+                OpenAI
+              </option>
+              <option value="local" disabled className="bg-background text-foreground">
                 Local (준비 중)
               </option>
             </select>
@@ -308,7 +323,7 @@ export function VectorDBSettings({
           {embeddingConfig.provider === 'openai' && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="embedding-baseurl">Base URL</Label>
+                <Label htmlFor="embedding-baseurl">{t('settings.llm.connections.baseURL')}</Label>
                 <div className="flex gap-2">
                   <Input
                     id="embedding-baseurl"
@@ -325,7 +340,7 @@ export function VectorDBSettings({
                     size="icon"
                     onClick={fetchAvailableModels}
                     disabled={isLoadingModels}
-                    title="사용 가능한 모델 목록 가져오기"
+                    title={t('settings.vectordb.hints.fetchModels')}
                   >
                     {isLoadingModels ? (
                       <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -361,13 +376,13 @@ export function VectorDBSettings({
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  OpenAI Compatible API 엔드포인트 URL
+                  {t('settings.vectordb.hints.baseUrlDescription')}
                 </p>
                 {modelError && <p className="text-xs text-destructive">{modelError}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="embedding-api-key">API Key</Label>
+                <Label htmlFor="embedding-api-key">{t('settings.llm.connections.apiKey')}</Label>
                 <Input
                   id="embedding-api-key"
                   type="password"
@@ -380,8 +395,9 @@ export function VectorDBSettings({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="embedding-model">Model</Label>
+                <Label htmlFor="embedding-model">{t('settings.vectordb.embedding.model')}</Label>
                 <select
+                  title="Embedding Model"
                   id="embedding-model"
                   value={embeddingConfig.model}
                   onChange={(e) => {
@@ -406,19 +422,21 @@ export function VectorDBSettings({
                     });
                     setVectorDBConfig({ ...vectorDBConfig, dimension });
                   }}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
                   disabled={isLoadingModels}
                 >
                   {availableModels.map((model) => (
-                    <option key={model} value={model}>
+                    <option key={model} value={model} className="bg-background text-foreground">
                       {model}
                     </option>
                   ))}
                 </select>
                 <p className="text-xs text-muted-foreground">
                   {availableModels.length > 2
-                    ? `${availableModels.length}개의 모델 사용 가능`
-                    : '새로고침 버튼을 눌러 사용 가능한 모델을 가져오세요'}
+                    ? t('settings.vectordb.hints.availableModels', {
+                        count: availableModels.length,
+                      })
+                    : t('settings.vectordb.hints.fetchModelsHint')}
                 </p>
               </div>
             </>
@@ -426,7 +444,7 @@ export function VectorDBSettings({
 
           {/* Dimension (읽기 전용) */}
           <div className="space-y-2">
-            <Label htmlFor="dimension">Dimension</Label>
+            <Label htmlFor="dimension">{t('settings.vectordb.embedding.dimension')}</Label>
             <Input id="dimension" value={embeddingConfig.dimension} disabled />
           </div>
         </div>
@@ -448,7 +466,7 @@ export function VectorDBSettings({
       {/* Actions */}
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? '저장 중...' : '저장'}
+          {isSaving ? t('common.saving') : t('common.save')}
         </Button>
       </div>
     </div>

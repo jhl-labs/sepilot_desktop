@@ -421,67 +421,84 @@ export function setupLLMHandlers() {
   /**
    * LLM 대화 제목 생성 (CORS 없이 Main Process에서 실행)
    */
-  ipcMain.handle('llm-generate-title', async (_event, messages: Message[]) => {
-    try {
-      const client = getLLMClient();
+  ipcMain.handle(
+    'llm-generate-title',
+    async (_event, params: { messages: Message[]; language: string }) => {
+      try {
+        const { messages, language = 'en' } = params;
+        const client = getLLMClient();
 
-      if (!client.isConfigured()) {
-        throw new Error('LLM client is not configured');
-      }
-
-      const provider = client.getProvider();
-
-      // 제목 생성을 위한 프롬프트
-      const titlePrompt: Message[] = [
-        {
-          id: 'system',
-          role: 'system',
-          content: `You are a helpful assistant that generates concise, descriptive titles for conversations.
-Generate a short title (max 5-7 words) that captures the main topic of the conversation.
-Return ONLY the title, without quotes or additional text.`,
-          created_at: Date.now(),
-        },
-        {
-          id: 'user',
-          role: 'user',
-          content: `Based on this conversation, generate a concise title:\n\n${messages
-            .map((m) => `${m.role}: ${m.content}`)
-            .join('\n\n')}`,
-          created_at: Date.now(),
-        },
-      ];
-
-      // LLM 호출 (스트리밍)
-      let generatedTitle = '';
-      for await (const chunk of provider.stream(titlePrompt)) {
-        if (chunk.content) {
-          generatedTitle += chunk.content;
+        if (!client.isConfigured()) {
+          throw new Error('LLM client is not configured');
         }
-      }
 
-      // 제목 정제
-      generatedTitle = generatedTitle
-        .trim()
-        .replace(/^["']|["']$/g, '') // 시작/끝의 따옴표 제거
-        .replace(/\n/g, ' ') // 개행 제거
-        .slice(0, 100); // 최대 100자
+        const provider = client.getProvider();
 
-      logger.info('[LLM IPC] Generated title:', generatedTitle);
+        // 언어 코드 -> 언어 이름 매핑
+        const languageMap: Record<string, string> = {
+          ko: 'Korean',
+          en: 'English',
+          zh: 'Chinese',
+          ja: 'Japanese',
+        };
+        const targetLanguage = languageMap[language] || 'English';
 
-      return {
-        success: true,
-        data: {
+        // 제목 생성을 위한 프롬프트
+        const titlePrompt: Message[] = [
+          {
+            id: 'system',
+            role: 'system',
+            content: `You are a helpful assistant that generates concise, descriptive titles for conversations.
+Generate a short title (max 5-7 words) that captures the main topic of the conversation.
+The title MUST be in ${targetLanguage} language.
+Return ONLY the title, without quotes or additional text.`,
+            created_at: Date.now(),
+          },
+          {
+            id: 'user',
+            role: 'user',
+            content: `Based on this conversation, generate a concise title:\n\n${messages
+              .map((m) => `${m.role}: ${m.content}`)
+              .join('\n\n')}`,
+            created_at: Date.now(),
+          },
+        ];
+
+        // LLM 호출 (스트리밍)
+        let generatedTitle = '';
+        for await (const chunk of provider.stream(titlePrompt)) {
+          if (chunk.content) {
+            generatedTitle += chunk.content;
+          }
+        }
+
+        // 제목 정제
+        generatedTitle = generatedTitle
+          .trim()
+          .replace(/^["']|["']$/g, '') // 시작/끝의 따옴표 제거
+          .replace(/\n/g, ' ') // 개행 제거
+          .slice(0, 100); // 최대 100자
+
+        logger.info('[LLM IPC] Generated title:', {
           title: generatedTitle,
-        },
-      };
-    } catch (error: any) {
-      logger.error('[LLM IPC] Generate title error:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to generate title',
-      };
+          language: targetLanguage,
+        });
+
+        return {
+          success: true,
+          data: {
+            title: generatedTitle,
+          },
+        };
+      } catch (error: any) {
+        logger.error('[LLM IPC] Generate title error:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to generate title',
+        };
+      }
     }
-  });
+  );
 
   /**
    * 에디터 자동완성 (Editor Agent 사용)

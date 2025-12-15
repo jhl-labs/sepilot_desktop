@@ -158,7 +158,8 @@ interface LLMAPI {
   validate: () => Promise<IPCResponse>;
   fetchModels: (config: LLMFetchModelsConfig) => Promise<IPCResponse<string[]>>;
   generateTitle: (
-    messages: Array<Pick<Message, 'role' | 'content'>>
+    messages: Array<Pick<Message, 'role' | 'content'>>,
+    language?: string
   ) => Promise<IPCResponse<{ title: string }>>;
   onStreamChunk: (callback: (chunk: string) => void) => (...args: unknown[]) => void;
   onStreamDone: (callback: () => void) => (...args: unknown[]) => void;

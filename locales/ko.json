@@ -84,28 +84,67 @@
       "settingsV2Description": "Connection 기반 LLM 모델 관리 시스템",
       "connections": {
         "title": "Connections",
-        "add": "Connection 추가",
-        "edit": "Connection 편집",
-        "delete": "Connection 삭제",
-        "name": "Connection 이름",
-        "provider": "제공자",
+        "description": "LLM 서비스 연결을 관리합니다. 여러 Connection을 등록하고 각 Connection의 모델을 사용할 수 있습니다.",
+        "add": "추가",
+        "edit": "편집",
+        "delete": "삭제",
+        "cancel": "취소",
+        "save": "저장",
+        "name": "이름",
+        "namePlaceholder": "My OpenAI, Local Ollama 등",
+        "provider": "Provider",
         "baseURL": "Base URL",
         "apiKey": "API Key",
-        "enabled": "활성화"
+        "enabled": "활성",
+        "disabled": "비활성",
+        "customHeaders": "커스텀 HTTP 헤더",
+        "headerKey": "헤더 이름",
+        "headerValue": "헤더 값",
+        "addHeader": "헤더 추가",
+        "validation": {
+          "url": "Base URL은 http:// 또는 https://로 시작해야 합니다.",
+          "apiKey": "API 키는 최소 20자 이상이어야 합니다.",
+          "deleteConfirm": "이 Connection을 사용하는 {{count}}개의 모델이 있습니다:\n{{models}}\n\n삭제하시겠습니까? (모델도 함께 삭제됩니다)"
+        }
       },
       "models": {
         "title": "Models",
-        "add": "모델 추가",
-        "edit": "모델 편집",
-        "delete": "모델 삭제",
-        "modelId": "모델 ID",
-        "displayName": "표시 이름",
-        "tags": "태그",
-        "temperature": "Temperature",
-        "maxTokens": "Max Tokens",
-        "setAsDefault": "기본 모델로 설정",
-        "setAsVision": "Vision 모델로 설정",
-        "setAsAutocomplete": "Autocomplete 모델로 설정"
+        "available": {
+          "title": "사용 가능한 모델",
+          "description": "활성화된 Connection에서 모델 목록을 가져와 추가할 수 있습니다.",
+          "fetch": "모델 목록 가져오기",
+          "fetching": "가져오는 중...",
+          "add": "추가",
+          "added": "추가됨"
+        },
+        "configured": {
+          "title": "구성된 모델",
+          "description": "추가된 모델에 태그를 지정하고 세부 설정을 구성합니다.",
+          "empty": "구성된 모델이 없습니다.",
+          "emptyHint": "위에서 모델 목록을 가져와 추가하세요."
+        },
+        "displayName": "표시 이름 (선택사항)",
+        "customHeaders": {
+          "title": "커스텀 HTTP 헤더 (모델 전용)",
+          "description": "Connection에 설정된 헤더를 기본으로 사용하며, 동일한 이름의 헤더를 추가하면 이 모델에서만 덮어씁니다.",
+          "inherited": "상속되는 헤더",
+          "modelSpecific": "모델 전용 헤더",
+          "restore": "복원",
+          "remove": "모델에서 제거"
+        },
+        "active": {
+          "title": "활성 모델 지정",
+          "base": "기본 모델로 사용",
+          "vision": "Vision 모델로 사용",
+          "autocomplete": "자동완성 모델로 사용"
+        },
+        "streaming": "스트리밍 응답 활성화",
+        "validation": {
+          "duplicate": "\"{{modelId}}\"는 이미 추가되었습니다.",
+          "fetchError": "일부 Connection에서 모델을 가져오지 못했습니다:\n{{error}}",
+          "fetchErrorAll": "활성화된 Connection에서 모델을 가져오지 못했습니다.",
+          "unknownError": "알 수 없는 오류"
+        }
       },
       "validation": {
         "noConfig": "설정이 초기화되지 않았습니다.",
@@ -162,24 +201,24 @@
         "provider": "임베딩 제공자",
         "model": "임베딩 모델",
         "dimension": "차원"
+      },
+      "validation": {
+        "needBaseUrlAndApiKey": "Base URL과 API Key를 먼저 입력해주세요.",
+        "fetchModelsFailed": "모델 목록을 가져오는데 실패했습니다: {{error}}",
+        "noModelsFound": "사용 가능한 모델을 찾을 수 없습니다.",
+        "apiKeyRequired": "OpenAI API 키를 입력해주세요.",
+        "saveSuccess": "VectorDB 설정이 저장되었습니다!",
+        "saveFailed": "VectorDB 설정 저장에 실패했습니다."
+      },
+      "hints": {
+        "sqliteVec": "ℹ️ SQLite-vec는 Node.js 환경(Electron)에서만 동작합니다. 웹 브라우저에서는 설정만 저장됩니다.",
+        "fetchModels": "사용 가능한 모델 목록 가져오기",
+        "baseUrlDescription": "OpenAI Compatible API 엔드포인트 URL",
+        "availableModels": "{{count}}개의 모델 사용 가능",
+        "fetchModelsHint": "새로고침 버튼을 눌러 사용 가능한 모델을 가져오세요"
       }
     },
     "imagegen": {
-      "title": "ImageGen",
-      "description": "이미지 생성 (ComfyUI, NanoBanana)",
-      "provider": "이미지 생성 제공자",
-      "comfyui": {
-        "title": "ComfyUI",
-        "enabled": "ComfyUI 활성화",
-        "httpUrl": "HTTP URL",
-        "wsUrl": "WebSocket URL",
-        "workflowId": "기본 워크플로우 ID"
-      },
-      "nanobanana": {
-        "title": "NanoBanana",
-        "enabled": "NanoBanana 활성화",
-        "apiKey": "API Key"
-      },
       "title": "이미지 생성 설정",
       "description": "ComfyUI 또는 NanoBanana(Google Imagen)를 사용한 이미지 생성 설정을 관리합니다.",
       "providerSelection": "이미지 생성 제공자 선택",
@@ -237,21 +276,6 @@
         "apiKeyRequired": "NanoBanana API Key를 입력해주세요."
       },
       "saved": "이미지 생성 설정이 저장되었습니다!"
-    },
-    "mcp": {
-      "title": "MCP 서버",
-      "description": "Model Context Protocol 서버",
-      "add": "MCP 서버 추가",
-      "edit": "MCP 서버 편집",
-      "delete": "MCP 서버 삭제",
-      "name": "서버 이름",
-      "transport": "전송 방식",
-      "transportStdio": "stdio",
-      "transportSse": "SSE",
-      "command": "명령어",
-      "args": "인자",
-      "url": "SSE URL",
-      "enabled": "활성화"
     },
     "quickinput": {
       "title": "Quick Input",
@@ -477,6 +501,159 @@
         "generic": "{{type}} 동기화 실패"
       }
     },
+    "githubOAuth": {
+      "steps": {
+        "statusTitle": "GitHub App 설정 진행 상태",
+        "statusDescription": "단계별로 진행하여 GitHub 동기화를 설정합니다.",
+        "config": "1. 기본 설정",
+        "install": "2. GitHub App 설치",
+        "verify": "3. Installation 검증",
+        "repository": "4. 레포지토리 선택",
+        "complete": "5. 완료"
+      },
+      "config": {
+        "title": "1. 기본 설정",
+        "description": "GitHub 서버 타입과 App ID를 설정합니다.",
+        "serverType": "GitHub 서버 타입",
+        "ghesUrl": "GHES URL",
+        "ghesUrlPlaceholder": "https://github.company.com",
+        "ghesUrlDescription": "GitHub Enterprise Server의 전체 URL을 입력하세요",
+        "appId": "GitHub App ID",
+        "appIdDescription": "GitHub App 설정 페이지에서 확인할 수 있는 App ID",
+        "privateKey": "Private Key 파일",
+        "privateKeyDescription": "GitHub App의 Private Key 파일 (.pem)을 업로드하세요",
+        "nextStep": "다음 단계",
+        "validation": {
+          "allFields": "모든 필드를 입력해주세요."
+        }
+      },
+      "install": {
+        "title": "2. GitHub App 설치",
+        "description": "브라우저에서 GitHub App을 설치합니다.",
+        "guide": {
+          "title": "설치 방법",
+          "step1": "아래 버튼을 클릭하여 GitHub App 설치 페이지를 엽니다.",
+          "step2": "설치할 레포지토리를 선택합니다 (All repositories 또는 특정 레포지토리).",
+          "step3": "Install 버튼을 클릭합니다.",
+          "step4": "설치 후 URL에서 Installation ID를 확인합니다 (예: /settings/installations/12345678)."
+        },
+        "openPage": "GitHub App 설치 페이지 열기"
+      },
+      "verify": {
+        "title": "3. Installation 검증",
+        "description": "Installation ID를 입력하고 연결을 확인합니다.",
+        "installationId": "Installation ID",
+        "installationIdDescription": "GitHub App 설치 후 획득한 Installation ID (숫자만)",
+        "verifyAndFetch": "Installation 검증 및 레포지토리 불러오기"
+      },
+      "repository": {
+        "title": "4. 동기화 레포지토리 선택",
+        "description": "설정과 데이터를 동기화할 레포지토리를 선택하세요.",
+        "label": "레포지토리",
+        "placeholder": "레포지토리를 선택하세요",
+        "private": "Private",
+        "public": "Public",
+        "selectedPrefix": "선택된 레포지토리: ",
+        "noSelection": "암호화된 설정을 저장할 레포지토리를 선택하세요.",
+        "testConnection": "연결 테스트",
+        "saveAll": "모든 설정 저장"
+      },
+      "complete": {
+        "title": "5. 설정 완료!",
+        "description": "GitHub 동기화가 성공적으로 설정되었습니다.",
+        "successMessage": "✅ 설정이 완료되었습니다",
+        "editSettings": "설정 수정하기"
+      },
+      "security": {
+        "title": "🔒 보안 정보",
+        "description": "모든 민감한 정보(토큰, API 키, Private Key 등)는 AES-256-GCM으로 암호화되어 선택한 GitHub 레포지토리에 동기화됩니다. Network 탭에서 설정한 Proxy 및 SSL 검증 설정이 GitHub 통신에도 적용됩니다."
+      },
+      "messages": {
+        "privateKeySaved": "Private Key가 안전하게 저장되었습니다.",
+        "privateKeySaveFailed": "Private Key 저장에 실패했습니다.",
+        "privateKeyUploadFailed": "Private Key 업로드에 실패했습니다.",
+        "invalidPrivateKey": "유효하지 않은 Private Key 파일 형식입니다.",
+        "appIdRequired": "App ID를 입력해주세요.",
+        "ghesUrlRequired": "GHES URL을 입력해주세요.",
+        "privateKeyRequired": "Private Key를 먼저 업로드해주세요.",
+        "installPageOpened": "브라우저에서 GitHub App을 설치해주세요. 설치 후 Installation ID를 입력하세요.",
+        "installPageFailed": "GitHub App 설치 페이지를 열지 못했습니다.",
+        "installationIdRequired": "Installation ID를 입력해주세요.",
+        "connectionSuccess": "연결 성공! {{count}}개의 레포지토리를 찾았습니다.",
+        "repoFetchFailed": "레포지토리 목록을 가져오지 못했습니다.",
+        "verificationFailed": "Installation 검증에 실패했습니다.",
+        "repoSelectRequired": "레포지토리를 먼저 선택해주세요.",
+        "testSuccess": "연결 테스트 성공! 레포지토리에 접근할 수 있습니다.",
+        "testFailed": "연결 테스트에 실패했습니다.",
+        "saveSuccess": "GitHub 설정이 저장되었습니다!",
+        "saveFailed": "설정 저장에 실패했습니다."
+      }
+    },
+    "githubSync": {
+      "title": "GitHub 연결 설정",
+      "description": "GitHub Personal Access Token을 사용하여 레포지토리에 연결합니다.",
+      "newTokenLink": "새 토큰 생성하기 (repo 권한 필요)",
+      "serverType": "Server Type",
+      "ghesUrl": "GHES URL",
+      "ghesUrlPlaceholder": "https://github.company.com",
+      "ghesUrlDescription": "GHES 인스턴스의 기본 URL을 입력하세요 (예: https://github.company.com)",
+      "token": "GitHub Personal Access Token",
+      "tokenPlaceholder": "ghp_xxxxxxxxxxxxxxxxxxxx",
+      "tokenDescription": "repo 권한이 있는 Personal Access Token이 필요합니다.",
+      "owner": "Owner (Organization 또는 User)",
+      "ownerPlaceholder": "my-org 또는 my-username",
+      "repo": "Repository",
+      "repoPlaceholder": "my-repo",
+      "branch": "Branch (기본값: main)",
+      "branchPlaceholder": "main",
+      "testConnection": "연결 테스트",
+      "testing": "연결 테스트 중...",
+      "save": "설정 저장",
+      "saving": "저장 중...",
+      "dataSync": "데이터 동기화",
+      "push": "Push",
+      "pushing": "Push 중...",
+      "syncAll": "전체 동기화 (활성화된 항목만)",
+      "syncAllProgress": "전체 동기화 중...",
+      "lastSync": {
+        "title": "마지막 동기화 정보",
+        "time": "시간",
+        "status": "상태",
+        "success": "성공",
+        "failed": "실패",
+        "error": "에러"
+      },
+      "errorReporting": {
+        "title": "에러 자동 리포팅",
+        "description": "프로그램 에러 발생 시 GitHub Issue로 자동 리포트하여 개선에 도움을 줍니다.",
+        "enable": "에러 자동 리포팅 활성화",
+        "enableDescription": "에러 발생 시 자동으로 GitHub Issue를 생성하여 개발팀에 전달합니다.\n에러 메시지, 스택 트레이스, 시스템 정보가 포함되며, 개인정보는 포함되지 않습니다.",
+        "infoTitle": "💡 에러 리포팅 정보",
+        "info1": "에러 메시지와 스택 트레이스가 GitHub Issue로 전송됩니다.",
+        "info2": "앱 버전, OS 플랫폼 등 기본 시스템 정보가 포함됩니다.",
+        "info3": "API 키, 토큰 등 민감한 정보는 절대 전송되지 않습니다.",
+        "info4": "프로그램 개선을 위해 매우 중요한 정보입니다.",
+        "info5": "이 기능은 GitHub Token이 설정된 경우에만 사용할 수 있습니다."
+      },
+      "security": {
+        "title": "🔒 보안 정보",
+        "item1": "민감한 정보(LLM API 키 등)는 AES-256-GCM으로 암호화되어 저장됩니다.",
+        "item2": "GitHub Token은 로컬에만 저장되며 동기화되지 않습니다.",
+        "item3": "동기화된 파일은 sepilot/ 폴더에 저장됩니다.",
+        "item4": "대화 및 이미지 동기화 시 개인정보 보호에 주의하세요."
+      },
+      "messages": {
+        "fillAll": "모든 필드를 입력해주세요.",
+        "ghesUrlRequired": "GHES URL을 입력해주세요.",
+        "testSuccess": "GitHub 레포지토리 연결 성공!",
+        "testFailed": "연결 테스트 실패",
+        "saveSuccess": "GitHub Sync 설정이 저장되었습니다!",
+        "saveFailed": "설정 저장 실패",
+        "syncSuccess": "{{type}} 동기화 완료!",
+        "syncFailed": "{{type}} 동기화 실패",
+        "saveFirst": "먼저 설정을 저장해주세요."
+      }
+    },
     "backup": {
       "title": "백업/복구",
       "description": "데이터 백업 및 복원",
@@ -529,60 +706,131 @@
     "mcp": {
       "title": "MCP",
       "description": "Model Context Protocol 서버 설정",
-      "addServer": "새 서버 추가",
-      "serverConfig": {
-        "title": "새 MCP 서버 추가",
-        "description": "AI 어시스턴트에 새로운 도구를 제공합니다",
-        "transport": {
-          "stdio": "로컬 프로세스",
-          "sse": "HTTP 서버"
+      "serverList": {
+        "count": "총 <1>{{count}}</1>개 서버",
+        "totalServers": "총 {{count}}개 서버",
+        "refresh": "새로고침",
+        "loading": "서버 목록을 불러오는 중...",
+        "emptyTitle": "MCP 서버 추가",
+        "emptyDescription": "AI 어시스턴트가 파일 시스템, 데이터베이스, 웹 검색 등 다양한 도구를 사용할 수 있도록 MCP 서버를 등록하세요.",
+        "deleteDialog": {
+          "title": "서버 삭제",
+          "question": "'{{name}}' 서버를 삭제하시겠습니까?",
+          "warning": "이 작업은 실행 취소할 수 없습니다.",
+          "cancel": "취소",
+          "confirm": "삭제"
         },
-        "quickStart": "빠른 시작 템플릿",
-        "serverSettings": "서버 설정",
-        "serverName": "서버 이름",
-        "required": "필수",
-        "serverNamePlaceholder": "예: my-filesystem",
-        "serverNameDescription": "Agent 모드에서 표시될 서버 식별자입니다",
-        "command": "실행 명령어",
-        "commandPlaceholder": "예: npx, node, python",
-        "args": "실행 인자",
-        "argsDescription": "각 인자를 새 줄에 입력하세요. 경로는 절대 경로를 사용하세요.",
-        "sseUrl": "SSE URL",
-        "sseUrlPlaceholder": "예: http://localhost:3001/sse",
-        "sseUrlDescription": "MCP 서버의 SSE 엔드포인트 URL을 입력하세요",
-        "headers": "HTTP 헤더",
-        "optional": "선택",
-        "headersDescription": "각 헤더를 \"키: 값\" 형식으로 새 줄에 입력하세요",
-        "advanced": "고급 옵션",
-        "envVars": "환경 변수",
-        "envVarsDescription": "각 환경 변수를 \"키=값\" 형식으로 새 줄에 입력하세요. API 키 등 민감한 정보에 사용됩니다.",
-        "serverInfo": "MCP 서버 정보",
-        "stdioDescription": "stdio 프로토콜을 통해 로컬 프로세스와 통신합니다",
-        "stdioHint1": "추가 시 자동으로 초기화되며 사용 가능한 도구가 로드됩니다",
-        "stdioHint2": "Agent 모드에서 등록된 도구를 LLM이 사용할 수 있습니다",
-        "sseDescription": "SSE를 통해 HTTP 기반 MCP 서버와 통신합니다",
-        "sseHint1": "원격 서버나 클라우드 서비스에 연결할 수 있습니다",
-        "sseHint2": "서버가 실행 중인지 확인한 후 추가하세요",
-        "adding": "서버 추가 중...",
-        "add": "MCP 서버 추가",
-        "nameRequired": "서버 이름을 입력해주세요.",
-        "commandRequired": "실행 명령어를 입력해주세요.",
-        "sseUrlRequired": "SSE URL을 입력해주세요.",
-        "addSuccess": "'{{name}}' 서버가 추가되었습니다!",
-        "addFailed": "서버 추가에 실패했습니다.",
-        "templates": {
+        "status": {
+          "connected": "연결됨",
+          "connecting": "연결 중...",
+          "error": "오류",
+          "disconnected": "연결 끊김",
+          "active": "활성",
+          "inactive": "비활성",
+          "waiting": "대기 중"
+        },
+        "labels": {
+          "transport": "전송 방식",
+          "status": "상태",
+          "registeredTools": "등록된 도구",
+          "argCount": "인자 개수",
+          "execCommand": "실행 명령어",
+          "execArgs": "실행 인자",
+          "sseUrl": "SSE URL",
+          "headers": "HTTP 헤더",
+          "availableTools": "사용 가능한 도구"
+        },
+        "transport": {
+          "sse": "SSE",
+          "stdio": "stdio"
+        },
+        "toolCount": "{{count}}개의 도구",
+        "tooltips": {
+          "reconnect": "서버 재연결",
+          "delete": "서버 삭제"
+        },
+        "agentInfo": "Agent 모드에서 이 서버의 도구를 LLM이 사용할 수 있습니다. 도구를 사용하려면 서버가 활성화되어 있어야 합니다.",
+        "expand": {
+          "show": "상세 정보",
+          "hide": "접기"
+        }
+      },
+      "config": {
+        "title": "새 MCP 서버 추가",
+        "subtitle": "AI 어시스턴트에 새로운 도구를 제공합니다",
+        "tabs": {
+          "stdio": "stdio",
+          "stdioDesc": "로컬 프로세스",
+          "sse": "SSE",
+          "sseDesc": "HTTP 서버"
+        },
+        "presets": {
+          "title": "빠른 시작 템플릿",
           "filesystem": "로컬 파일 읽기/쓰기",
           "github": "GitHub 저장소 관리",
           "sqlite": "SQLite 데이터베이스 쿼리",
-          "webSearch": "웹 검색 도구 (Tavily Remote)",
+          "websearch": "웹 검색 도구 (Tavily Remote)",
           "git": "Git 저장소 작업",
-          "context7": "최신 코드 예제와 문서 검색 (프롬프트에 \"use context7\" 입력)",
-          "brave": "지식 그래프 기반 장기 기억",
-          "sequentialThinking": "복잡한 문제 해결을 위한 순차적 사고",
+          "context7": "최신 코드 예제와 문서 검색",
+          "memory": "지식 그래프 기반 장기 기억",
+          "thinking": "복잡한 문제 해결을 위한 순차적 사고",
           "puppeteer": "브라우저 자동화 및 웹 스크래핑",
           "customSse": "HTTP SSE MCP 서버"
+        },
+        "section": {
+          "serverConfig": "서버 설정",
+          "advanced": "고급 옵션"
+        },
+        "labels": {
+          "name": "서버 이름",
+          "required": "필수",
+          "optional": "선택",
+          "command": "실행 명령어",
+          "args": "실행 인자",
+          "sseUrl": "SSE URL",
+          "headers": "HTTP 헤더",
+          "env": "환경 변수"
+        },
+        "placeholders": {
+          "name": "예: my-filesystem",
+          "command": "예: npx, node, python",
+          "sseUrl": "예: http://localhost:3001/sse",
+          "headers": "Authorization: Bearer YOUR_API_KEY\\nX-Custom-Header: value",
+          "env": "GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxxx\\nBRAVE_API_KEY=BSA_xxxx\\nCUSTOM_VAR=value"
+        },
+        "helpers": {
+          "name": "Agent 모드에서 표시될 서버 식별자입니다",
+          "args": "각 인자를 새 줄에 입력하세요. 경로는 절대 경로를 사용하세요.",
+          "sseUrl": "MCP 서버의 SSE 엔드포인트 URL을 입력하세요",
+          "headers": "각 헤더를 \"키: 값\" 형식으로 새 줄에 입력하세요",
+          "env": "각 환경 변수를 \"키=값\" 형식으로 새 줄에 입력하세요. API 키 등 민감한 정보에 사용됩니다."
+        },
+        "info": {
+          "title": "MCP 서버 정보",
+          "stdio": {
+            "item1": "stdio 프로토콜을 통해 로컬 프로세스와 통신합니다",
+            "item2": "추가 시 자동으로 초기화되며 사용 가능한 도구가 로드됩니다",
+            "item3": "Agent 모드에서 등록된 도구를 LLM이 사용할 수 있습니다"
+          },
+          "sse": {
+            "item1": "SSE를 통해 HTTP 기반 MCP 서버와 통신합니다",
+            "item2": "원격 서버나 클라우드 서비스에 연결할 수 있습니다",
+            "item3": "서버가 실행 중인지 확인한 후 추가하세요"
+          }
+        },
+        "messages": {
+          "nameRequired": "서버 이름을 입력해주세요.",
+          "commandRequired": "실행 명령어를 입력해주세요.",
+          "urlRequired": "SSE URL을 입력해주세요.",
+          "success": "'{{name}}' 서버가 추가되었습니다!",
+          "failed": "서버 추가에 실패했습니다."
+        },
+        "buttons": {
+          "adding": "서버 추가 중...",
+          "add": "MCP 서버 추가"
         }
-      }
+      },
+      "addNew": "새 서버 추가"
     }
   },
   "chat": {

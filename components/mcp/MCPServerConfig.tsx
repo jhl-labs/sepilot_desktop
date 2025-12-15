@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +30,7 @@ import {
   Chrome,
 } from 'lucide-react';
 import { MCPServerConfig } from '@/lib/mcp/types';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -38,107 +39,110 @@ interface MCPServerConfigComponentProps {
   onAdd: () => void;
 }
 
-// 사전 정의된 서버 템플릿
-const PRESETS = {
-  stdio: [
-    {
-      name: 'Filesystem',
-      icon: FileText,
-      description: '로컬 파일 읽기/쓰기',
-      command: 'npx',
-      args: '-y\n@modelcontextprotocol/server-filesystem\n/path/to/allowed/directory',
-      color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-      iconColor: 'text-blue-500',
-    },
-    {
-      name: 'GitHub',
-      icon: Globe,
-      description: 'GitHub 저장소 관리',
-      command: 'npx',
-      args: '-y\n@modelcontextprotocol/server-github',
-      env: 'GITHUB_PERSONAL_ACCESS_TOKEN=',
-      color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
-      iconColor: 'text-purple-500',
-    },
-    {
-      name: 'SQLite',
-      icon: Database,
-      description: 'SQLite 데이터베이스 쿼리',
-      command: 'npx',
-      args: '-y\n@modelcontextprotocol/server-sqlite\n/path/to/database.db',
-      color: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20',
-      iconColor: 'text-green-500',
-    },
-    {
-      name: 'Web Search',
-      icon: Search,
-      description: '웹 검색 도구 (Tavily Remote)',
-      command: 'npx',
-      args: '-y\nmcp-remote\nhttps://mcp.tavily.com/mcp/?tavilyApiKey=YOUR_API_KEY',
-      color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
-      iconColor: 'text-orange-500',
-    },
-    {
-      name: 'Git',
-      icon: Code,
-      description: 'Git 저장소 작업',
-      command: 'npx',
-      args: '-y\n@modelcontextprotocol/server-git\n--repository\n/path/to/git/repo',
-      color: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
-      iconColor: 'text-red-500',
-    },
-    {
-      name: 'Context7',
-      icon: Sparkles,
-      description: '최신 코드 예제와 문서 검색 (프롬프트에 "use context7" 입력)',
-      command: 'npx',
-      args: '-y\n@upstash/context7-mcp',
-      env: 'CONTEXT7_API_KEY=',
-      color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
-      iconColor: 'text-indigo-500',
-    },
-    {
-      name: 'Memory',
-      icon: Brain,
-      description: '지식 그래프 기반 장기 기억',
-      command: 'npx',
-      args: '-y\n@modelcontextprotocol/server-memory',
-      color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
-      iconColor: 'text-rose-500',
-    },
-    {
-      name: 'Thinking',
-      icon: Lightbulb,
-      description: '복잡한 문제 해결을 위한 순차적 사고',
-      command: 'npx',
-      args: '-y\n@modelcontextprotocol/server-sequential-thinking',
-      color: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
-      iconColor: 'text-yellow-500',
-    },
-    {
-      name: 'Puppeteer',
-      icon: Chrome,
-      description: '브라우저 자동화 및 웹 스크래핑',
-      command: 'npx',
-      args: '-y\n@modelcontextprotocol/server-puppeteer',
-      color: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
-      iconColor: 'text-cyan-500',
-    },
-  ],
-  sse: [
-    {
-      name: 'Custom SSE',
-      icon: Cloud,
-      description: 'HTTP SSE MCP 서버',
-      url: 'http://localhost:3001/sse',
-      headers: 'Authorization: Bearer YOUR_API_KEY',
-      color: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
-      iconColor: 'text-cyan-500',
-    },
-  ],
-};
-
 export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProps) {
+  const { t } = useTranslation();
+
+  const PRESETS = useMemo(
+    () => ({
+      stdio: [
+        {
+          name: 'Filesystem',
+          icon: FileText,
+          description: t('settings.mcp.config.presets.filesystem'),
+          command: 'npx',
+          args: '-y\n@modelcontextprotocol/server-filesystem\n/path/to/allowed/directory',
+          color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+          iconColor: 'text-blue-500',
+        },
+        {
+          name: 'GitHub',
+          icon: Globe,
+          description: t('settings.mcp.config.presets.github'),
+          command: 'npx',
+          args: '-y\n@modelcontextprotocol/server-github',
+          env: 'GITHUB_PERSONAL_ACCESS_TOKEN=',
+          color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+          iconColor: 'text-purple-500',
+        },
+        {
+          name: 'SQLite',
+          icon: Database,
+          description: t('settings.mcp.config.presets.sqlite'),
+          command: 'npx',
+          args: '-y\n@modelcontextprotocol/server-sqlite\n/path/to/database.db',
+          color: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20',
+          iconColor: 'text-green-500',
+        },
+        {
+          name: 'Web Search',
+          icon: Search,
+          description: t('settings.mcp.config.presets.websearch'),
+          command: 'npx',
+          args: '-y\nmcp-remote\nhttps://mcp.tavily.com/mcp/?tavilyApiKey=YOUR_API_KEY',
+          color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+          iconColor: 'text-orange-500',
+        },
+        {
+          name: 'Git',
+          icon: Code,
+          description: t('settings.mcp.config.presets.git'),
+          command: 'npx',
+          args: '-y\n@modelcontextprotocol/server-git\n--repository\n/path/to/git/repo',
+          color: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
+          iconColor: 'text-red-500',
+        },
+        {
+          name: 'Context7',
+          icon: Sparkles,
+          description: t('settings.mcp.config.presets.context7'),
+          command: 'npx',
+          args: '-y\n@upstash/context7-mcp',
+          env: 'CONTEXT7_API_KEY=',
+          color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+          iconColor: 'text-indigo-500',
+        },
+        {
+          name: 'Memory',
+          icon: Brain,
+          description: t('settings.mcp.config.presets.memory'),
+          command: 'npx',
+          args: '-y\n@modelcontextprotocol/server-memory',
+          color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+          iconColor: 'text-rose-500',
+        },
+        {
+          name: 'Thinking',
+          icon: Lightbulb,
+          description: t('settings.mcp.config.presets.thinking'),
+          command: 'npx',
+          args: '-y\n@modelcontextprotocol/server-sequential-thinking',
+          color: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
+          iconColor: 'text-yellow-500',
+        },
+        {
+          name: 'Puppeteer',
+          icon: Chrome,
+          description: t('settings.mcp.config.presets.puppeteer'),
+          command: 'npx',
+          args: '-y\n@modelcontextprotocol/server-puppeteer',
+          color: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+          iconColor: 'text-cyan-500',
+        },
+      ],
+      sse: [
+        {
+          name: 'Custom SSE',
+          icon: Cloud,
+          description: t('settings.mcp.config.presets.customSse'),
+          url: 'http://localhost:3001/sse',
+          headers: 'Authorization: Bearer YOUR_API_KEY',
+          color: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+          iconColor: 'text-cyan-500',
+        },
+      ],
+    }),
+    [t]
+  );
   const [transport, setTransport] = useState<'stdio' | 'sse'>('stdio');
   const [config, setConfig] = useState<MCPServerConfig>({
     name: '',
@@ -176,18 +180,18 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
 
   const handleAdd = async () => {
     if (!config.name.trim()) {
-      setMessage({ type: 'error', text: '서버 이름을 입력해주세요.' });
+      setMessage({ type: 'error', text: t('settings.mcp.config.messages.nameRequired') });
       return;
     }
 
     if (transport === 'stdio') {
       if (!config.command?.trim()) {
-        setMessage({ type: 'error', text: '실행 명령어를 입력해주세요.' });
+        setMessage({ type: 'error', text: t('settings.mcp.config.messages.commandRequired') });
         return;
       }
     } else if (transport === 'sse') {
       if (!config.url?.trim()) {
-        setMessage({ type: 'error', text: 'SSE URL을 입력해주세요.' });
+        setMessage({ type: 'error', text: t('settings.mcp.config.messages.urlRequired') });
         return;
       }
     }
@@ -278,7 +282,7 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
         } else {
           setMessage({
             type: 'error',
-            text: result.error || '서버 추가에 실패했습니다.',
+            text: result.error || t('settings.mcp.config.messages.failed'),
           });
         }
       }
@@ -286,7 +290,7 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
       console.error('Failed to add MCP server:', error);
       setMessage({
         type: 'error',
-        text: error.message || '서버 추가에 실패했습니다.',
+        text: error.message || t('settings.mcp.config.messages.failed'),
       });
     } finally {
       setIsAdding(false);
@@ -318,8 +322,8 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
           <Zap className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold">새 MCP 서버 추가</h3>
-          <p className="text-sm text-muted-foreground">AI 어시스턴트에 새로운 도구를 제공합니다</p>
+          <h3 className="text-lg font-semibold">{t('settings.mcp.config.title')}</h3>
+          <p className="text-sm text-muted-foreground">{t('settings.mcp.config.subtitle')}</p>
         </div>
       </div>
 
@@ -330,14 +334,18 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
             <Terminal className="h-4 w-4" />
             <div className="text-left">
               <div className="font-medium">stdio</div>
-              <div className="text-[10px] text-muted-foreground hidden sm:block">로컬 프로세스</div>
+              <div className="text-[10px] text-muted-foreground hidden sm:block">
+                {t('settings.mcp.config.tabs.stdioDesc')}
+              </div>
             </div>
           </TabsTrigger>
           <TabsTrigger value="sse" className="gap-2 h-10">
             <Cloud className="h-4 w-4" />
             <div className="text-left">
               <div className="font-medium">SSE</div>
-              <div className="text-[10px] text-muted-foreground hidden sm:block">HTTP 서버</div>
+              <div className="text-[10px] text-muted-foreground hidden sm:block">
+                {t('settings.mcp.config.tabs.sseDesc')}
+              </div>
             </div>
           </TabsTrigger>
         </TabsList>
@@ -345,7 +353,7 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
         <TabsContent value="stdio" className="space-y-6 mt-6">
           {/* stdio Presets */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">빠른 시작 템플릿</Label>
+            <Label className="text-sm font-medium">{t('settings.mcp.config.presets.title')}</Label>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
               {currentPresets.map((preset) => {
                 const Icon = preset.icon;

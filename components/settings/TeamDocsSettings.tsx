@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +28,7 @@ interface TeamDocsSettingsProps {
 }
 
 export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
+  const { t } = useTranslation();
   const [configs, setConfigs] = useState<TeamDocsConfig[]>(teamDocs || []);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -83,7 +85,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('이 Team Docs 설정을 삭제하시겠습니까?')) {
+    if (!window.confirm(t('settings.teamDocs.deleteConfirm'))) {
       return;
     }
 
@@ -91,36 +93,36 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
       const newConfigs = configs.filter((c) => c.id !== id);
       await onSave(newConfigs);
       setConfigs(newConfigs);
-      setMessage({ type: 'success', text: 'Team Docs 설정이 삭제되었습니다.' });
+      setMessage({ type: 'success', text: t('settings.teamDocs.deleteSuccess') });
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to delete team docs:', err);
-      setMessage({ type: 'error', text: err.message || '삭제 실패' });
+      setMessage({ type: 'error', text: err.message || t('settings.teamDocs.deleteFailed') });
     }
   };
 
   const handleSaveConfig = async () => {
     // 필수 필드 검증 (개별 메시지)
     if (!formData.name?.trim()) {
-      setMessage({ type: 'error', text: '팀 이름을 입력하세요.' });
+      setMessage({ type: 'error', text: t('settings.teamDocs.nameRequired') });
       return;
     }
     if (!formData.token?.trim()) {
-      setMessage({ type: 'error', text: 'GitHub Personal Access Token을 입력하세요.' });
+      setMessage({ type: 'error', text: t('settings.teamDocs.tokenRequired') });
       return;
     }
     if (!formData.owner?.trim()) {
-      setMessage({ type: 'error', text: 'Owner를 입력하세요.' });
+      setMessage({ type: 'error', text: t('settings.teamDocs.ownerRequired') });
       return;
     }
     if (!formData.repo?.trim()) {
-      setMessage({ type: 'error', text: 'Repository를 입력하세요.' });
+      setMessage({ type: 'error', text: t('settings.teamDocs.repoRequired') });
       return;
     }
 
     // GHES URL 검증
     if (formData.serverType === 'ghes' && !formData.ghesUrl?.trim()) {
-      setMessage({ type: 'error', text: 'GHES URL을 입력하세요.' });
+      setMessage({ type: 'error', text: t('settings.teamDocs.ghesUrlRequired') });
       return;
     }
 
@@ -151,12 +153,12 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
 
       await onSave(newConfigs);
       setConfigs(newConfigs);
-      setMessage({ type: 'success', text: 'Team Docs 설정이 저장되었습니다!' });
+      setMessage({ type: 'success', text: t('settings.teamDocs.saveSuccess') });
       resetForm();
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to save team docs:', err);
-      setMessage({ type: 'error', text: err.message || '저장 실패' });
+      setMessage({ type: 'error', text: err.message || t('settings.teamDocs.saveFailed') });
     } finally {
       setIsSaving(false);
     }
@@ -172,18 +174,18 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
         if (result.success) {
           setMessage({
             type: 'success',
-            text: result.message || 'GitHub 레포지토리 연결 성공!',
+            text: result.message || t('settings.teamDocs.connectionSuccess'),
           });
         } else {
-          throw new Error(result.error || '연결 테스트 실패');
+          throw new Error(result.error || t('settings.teamDocs.connectionFailed'));
         }
       } else {
-        throw new Error('ElectronAPI를 사용할 수 없습니다.');
+        throw new Error(t('settings.teamDocs.electronApiUnavailable'));
       }
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Connection test failed:', err);
-      setMessage({ type: 'error', text: err.message || '연결 테스트 실패' });
+      setMessage({ type: 'error', text: err.message || t('settings.teamDocs.connectionFailed') });
     }
   };
 
@@ -198,7 +200,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
         if (result.success) {
           setMessage({
             type: 'success',
-            text: result.message || '동기화 성공!',
+            text: result.message || t('settings.teamDocs.syncSuccess'),
           });
 
           // 마지막 동기화 시간 업데이트
@@ -215,10 +217,10 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
           setConfigs(newConfigs);
           await onSave(newConfigs);
         } else {
-          throw new Error(result.error || '동기화 실패');
+          throw new Error(result.error || t('settings.teamDocs.syncFailed'));
         }
       } else {
-        throw new Error('ElectronAPI를 사용할 수 없습니다.');
+        throw new Error(t('settings.teamDocs.electronApiUnavailable'));
       }
     } catch (error: unknown) {
       const err = error as Error;
@@ -238,7 +240,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
       setConfigs(newConfigs);
       await onSave(newConfigs);
 
-      setMessage({ type: 'error', text: err.message || '동기화 실패' });
+      setMessage({ type: 'error', text: err.message || t('settings.teamDocs.syncFailed') });
     } finally {
       setIsSyncing(null);
     }
@@ -247,7 +249,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
   const handleSyncAll = async () => {
     const enabledConfigs = configs.filter((c) => c.enabled);
     if (enabledConfigs.length === 0) {
-      setMessage({ type: 'error', text: '활성화된 Team Docs가 없습니다.' });
+      setMessage({ type: 'error', text: t('settings.teamDocs.noEnabledConfigs') });
       return;
     }
 
@@ -261,7 +263,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
         if (result.success) {
           setMessage({
             type: 'success',
-            text: result.message || '모든 팀 문서를 동기화했습니다!',
+            text: result.message || t('settings.teamDocs.syncAllSuccess'),
           });
 
           // 설정 다시 로드 (마지막 동기화 시간 업데이트)
@@ -270,15 +272,15 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
             setConfigs(configResult.data.teamDocs);
           }
         } else {
-          throw new Error(result.error || '일괄 동기화 실패');
+          throw new Error(result.error || t('settings.teamDocs.syncAllFailed'));
         }
       } else {
-        throw new Error('ElectronAPI를 사용할 수 없습니다.');
+        throw new Error(t('settings.teamDocs.electronApiUnavailable'));
       }
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to sync all team docs:', err);
-      setMessage({ type: 'error', text: err.message || '일괄 동기화 실패' });
+      setMessage({ type: 'error', text: err.message || t('settings.teamDocs.syncAllFailed') });
     } finally {
       setIsSyncingAll(false);
     }
@@ -302,11 +304,9 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Users className="h-6 w-6" />
-            Team Docs 관리
+            {t('settings.teamDocs.title')}
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            여러 GitHub 레포지토리에서 팀 문서를 동기화하세요
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">{t('settings.teamDocs.description')}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -317,17 +317,18 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
             {isSyncingAll ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                동기화 중...
+                {t('settings.teamDocs.syncing')}
               </>
             ) : (
               <>
                 <Download className="h-4 w-4 mr-2" />
-                모두 동기화
+                {t('settings.teamDocs.syncAll')}
               </>
             )}
           </Button>
           <Button onClick={handleAddNew} disabled={editingId !== null}>
-            <Plus className="h-4 w-4 mr-2" />새 Team Docs 추가
+            <Plus className="h-4 w-4 mr-2" />
+            {t('settings.teamDocs.addNew')}
           </Button>
         </div>
       </div>
@@ -336,13 +337,15 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
       {editingId && (
         <Card className="border-primary">
           <CardHeader>
-            <CardTitle>{editingId === 'new' ? '새 Team Docs 추가' : 'Team Docs 수정'}</CardTitle>
-            <CardDescription>GitHub 레포지토리 정보를 입력하세요</CardDescription>
+            <CardTitle>
+              {editingId === 'new' ? t('settings.teamDocs.addNew') : t('settings.teamDocs.edit')}
+            </CardTitle>
+            <CardDescription>{t('settings.teamDocs.editDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="name">팀 이름 *</Label>
+                <Label htmlFor="name">{t('settings.teamDocs.teamName')}</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -352,12 +355,12 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
               </div>
 
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="description">설명</Label>
+                <Label htmlFor="description">{t('settings.teamDocs.descriptionLabel')}</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="프론트엔드 팀의 공식 문서"
+                  placeholder={t('settings.teamDocs.descriptionPlaceholder')}
                   rows={2}
                 />
               </div>
@@ -407,12 +410,12 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
                   placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                 />
                 <p className="text-xs text-muted-foreground">
-                  💡 Token은 로컬에만 저장되며 GitHub에 동기화되지 않습니다. repo 권한이 필요합니다.
+                  {t('settings.teamDocs.tokenDescription')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="owner">Owner *</Label>
+                <Label htmlFor="owner">{t('settings.teamDocs.owner')}</Label>
                 <Input
                   id="owner"
                   value={formData.owner}
@@ -422,7 +425,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="repo">Repository *</Label>
+                <Label htmlFor="repo">{t('settings.teamDocs.repository')}</Label>
                 <Input
                   id="repo"
                   value={formData.repo}
@@ -442,7 +445,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="docsPath">문서 경로</Label>
+                <Label htmlFor="docsPath">{t('settings.teamDocs.docsPath')}</Label>
                 <Input
                   id="docsPath"
                   value={formData.docsPath}
@@ -450,12 +453,12 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
                   placeholder="sepilot/documents"
                 />
                 <p className="text-xs text-muted-foreground">
-                  GitHub 레포지토리에서 문서를 가져올 폴더 경로 (기본값: sepilot/documents)
+                  {t('settings.teamDocs.docsPathDescription')}
                 </p>
               </div>
 
               <div className="col-span-2 flex items-center justify-between p-3 border rounded-md">
-                <Label htmlFor="enabled">활성화</Label>
+                <Label htmlFor="enabled">{t('settings.teamDocs.enabled')}</Label>
                 <Switch
                   id="enabled"
                   checked={formData.enabled}
@@ -469,14 +472,14 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    저장 중...
+                    {t('common.saving')}
                   </>
                 ) : (
-                  '저장'
+                  t('common.save')
                 )}
               </Button>
               <Button onClick={resetForm} variant="outline">
-                취소
+                {t('common.cancel')}
               </Button>
             </div>
           </CardContent>
@@ -490,8 +493,8 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
             <CardContent className="pt-6">
               <div className="text-center text-sm text-muted-foreground py-8">
                 <Users className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                <p>등록된 Team Docs가 없습니다.</p>
-                <p className="text-xs mt-2">새 Team Docs를 추가하여 팀 문서를 동기화하세요.</p>
+                <p>{t('settings.teamDocs.noConfigs')}</p>
+                <p className="text-xs mt-2">{t('settings.teamDocs.noConfigsHint')}</p>
               </div>
             </CardContent>
           </Card>
@@ -506,7 +509,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
                       {config.name}
                       {!config.enabled && (
                         <span className="text-xs font-normal text-muted-foreground">
-                          (비활성화)
+                          ({t('settings.teamDocs.disabled')})
                         </span>
                       )}
                     </CardTitle>
@@ -520,7 +523,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
                       size="sm"
                       onClick={() => handleEdit(config)}
                       disabled={editingId !== null}
-                      title="수정"
+                      title={t('common.edit')}
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
@@ -529,7 +532,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
                       size="sm"
                       onClick={() => handleDelete(config.id)}
                       disabled={editingId !== null}
-                      title="삭제"
+                      title={t('common.delete')}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -547,12 +550,16 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
                     <span className="font-mono">{config.branch || 'main'}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">문서 경로:</span>{' '}
+                    <span className="text-muted-foreground">
+                      {t('settings.teamDocs.docsPath')}:
+                    </span>{' '}
                     <span className="font-mono">{config.docsPath || 'sepilot/documents'}</span>
                   </div>
                   {config.lastSyncAt && (
                     <div>
-                      <span className="text-muted-foreground">마지막 동기화:</span>{' '}
+                      <span className="text-muted-foreground">
+                        {t('settings.teamDocs.lastSync')}:
+                      </span>{' '}
                       <span className={config.lastSyncStatus === 'error' ? 'text-destructive' : ''}>
                         {new Date(config.lastSyncAt).toLocaleString('ko-KR')}
                       </span>
@@ -574,7 +581,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
                     disabled={!config.enabled}
                   >
                     <Github className="h-4 w-4 mr-2" />
-                    연결 테스트
+                    {t('settings.teamDocs.testConnection')}
                   </Button>
                   <Button
                     variant="outline"
@@ -585,7 +592,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
                     {isSyncing === config.id ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        동기화 중...
+                        {t('settings.teamDocs.syncing')}
                       </>
                     ) : (
                       <>
@@ -603,12 +610,12 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
 
       {/* 안내 */}
       <div className="rounded-md bg-blue-500/10 border border-blue-500/20 px-4 py-3 text-sm">
-        <p className="font-medium mb-2">💡 Team Docs 사용 방법</p>
+        <p className="font-medium mb-2">{t('settings.teamDocs.usageTitle')}</p>
         <ul className="space-y-1 text-xs list-disc list-inside text-blue-700 dark:text-blue-400">
-          <li>여러 GitHub 레포지토리에서 팀 문서를 가져올 수 있습니다</li>
-          <li>각 Team Docs는 독립적으로 관리되며 VectorDB에 저장됩니다</li>
-          <li>Personal Docs와 구분하여 RAG 검색에 활용할 수 있습니다</li>
-          <li>Pull 버튼으로 언제든지 최신 문서를 동기화하세요</li>
+          <li>{t('settings.teamDocs.usage1')}</li>
+          <li>{t('settings.teamDocs.usage2')}</li>
+          <li>{t('settings.teamDocs.usage3')}</li>
+          <li>{t('settings.teamDocs.usage4')}</li>
         </ul>
       </div>
     </div>

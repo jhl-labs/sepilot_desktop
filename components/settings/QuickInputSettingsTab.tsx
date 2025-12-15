@@ -15,6 +15,8 @@ interface QuickInputSettingsTabProps {
   message: { type: 'success' | 'error'; text: string } | null;
 }
 
+import { useTranslation } from 'react-i18next';
+
 export function QuickInputSettingsTab({
   config,
   setConfig,
@@ -22,6 +24,8 @@ export function QuickInputSettingsTab({
   isSaving,
   message,
 }: QuickInputSettingsTabProps) {
+  const { t } = useTranslation();
+
   // Check for shortcut conflicts
   const getShortcutConflict = (shortcut: string, excludeId?: string): string | null => {
     if (!shortcut.trim()) {
@@ -30,13 +34,13 @@ export function QuickInputSettingsTab({
 
     // Check against Quick Input shortcut
     if (shortcut === config.quickInputShortcut) {
-      return 'Quick Input 단축키와 중복됩니다';
+      return t('settings.quickinput.validation.conflictWithQuickInput');
     }
 
     // Check against other Quick Questions
     for (const q of config.quickQuestions) {
       if (q.id !== excludeId && q.shortcut === shortcut) {
-        return `"${q.name}"과(와) 중복됩니다`;
+        return t('settings.quickinput.validation.conflictWithQuestion', { name: q.name });
       }
     }
 
@@ -45,7 +49,7 @@ export function QuickInputSettingsTab({
 
   const handleAddQuestion = () => {
     if (config.quickQuestions.length >= 5) {
-      window.alert('최대 5개의 Quick Question만 등록할 수 있습니다.');
+      window.alert(t('settings.quickinput.validation.maxQuestionsReached'));
       return;
     }
 
@@ -80,8 +84,8 @@ export function QuickInputSettingsTab({
   return (
     <div className="space-y-6">
       <SettingsSectionHeader
-        title="Quick Input 설정"
-        description="Quick Input과 Quick Question 기능의 단축키 및 프롬프트를 설정합니다."
+        title={t('settings.quickinput.title')}
+        description={t('settings.quickinput.description')}
         icon={Zap}
       />
 
@@ -89,7 +93,7 @@ export function QuickInputSettingsTab({
         {/* Quick Input Shortcut */}
         <div className="space-y-3 p-4 rounded-lg border">
           <Label htmlFor="quickInputShortcut" className="text-base font-semibold">
-            Quick Input 단축키
+            {t('settings.quickinput.shortcut')}
           </Label>
           <Input
             id="quickInputShortcut"
@@ -102,13 +106,17 @@ export function QuickInputSettingsTab({
             }
             placeholder="CommandOrControl+Shift+Space"
           />
-          <p className="text-xs text-muted-foreground">예: CommandOrControl+Shift+Space (기본값)</p>
+          <p className="text-xs text-muted-foreground">
+            {t('settings.quickinput.shortcutExample')}
+          </p>
         </div>
 
         {/* Quick Questions */}
         <div className="space-y-3 p-4 rounded-lg border">
           <div className="flex items-center justify-between">
-            <Label className="text-base font-semibold">Quick Questions (최대 5개)</Label>
+            <Label className="text-base font-semibold">
+              {t('settings.quickinput.questions.title')}
+            </Label>
             <Button
               variant="outline"
               size="sm"
@@ -116,24 +124,36 @@ export function QuickInputSettingsTab({
               disabled={config.quickQuestions.length >= 5}
             >
               <Plus className="h-4 w-4 mr-1" />
-              추가
+              {t('common.add')}
             </Button>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            클립보드 내용을 기반으로 즉시 질문하고 답변을 받는 기능입니다.
-            <br />• <strong>프롬프트</strong>: LLM의 시스템 메시지로 전송되어 역할/지시사항을
-            정의합니다.
-            <br />• <strong>클립보드 내용</strong>: 사용자 메시지로 전송되어 처리할 대상이 됩니다.
+            {t('settings.quickinput.questions.description')}
+            <br />
+            <span
+              dangerouslySetInnerHTML={{
+                __html: t('settings.quickinput.questions.descriptionPrompt'),
+              }}
+            />
+            <br />
+            <span
+              dangerouslySetInnerHTML={{
+                __html: t('settings.quickinput.questions.descriptionClipboard'),
+              }}
+            />
             <br />
             <br />
-            예: 프롬프트 &quot;한국어를 영어로, 영어는 한국어로&quot; → 클립보드의 텍스트를
-            번역합니다.
+            <span
+              dangerouslySetInnerHTML={{
+                __html: t('settings.quickinput.questions.descriptionExample'),
+              }}
+            />
           </p>
 
           {config.quickQuestions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              등록된 Quick Question이 없습니다.
+              {t('settings.quickinput.questions.noQuestions')}
             </div>
           ) : (
             <div className="space-y-4">
@@ -155,7 +175,9 @@ export function QuickInputSettingsTab({
                         />
                         <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
                         <span className="ml-2 text-xs text-muted-foreground">
-                          {question.enabled ? '활성화' : '비활성화'}
+                          {question.enabled
+                            ? t('settings.quickinput.questions.enabled')
+                            : t('settings.quickinput.questions.disabled')}
                         </span>
                       </label>
                       <Button
@@ -170,17 +192,21 @@ export function QuickInputSettingsTab({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor={`qq-name-${question.id}`}>이름</Label>
+                    <Label htmlFor={`qq-name-${question.id}`}>
+                      {t('settings.quickinput.questions.name')}
+                    </Label>
                     <Input
                       id={`qq-name-${question.id}`}
                       value={question.name}
                       onChange={(e) => handleUpdateQuestion(question.id, { name: e.target.value })}
-                      placeholder="Quick Question 이름"
+                      placeholder={t('settings.quickinput.questions.namePlaceholder')}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor={`qq-shortcut-${question.id}`}>단축키</Label>
+                    <Label htmlFor={`qq-shortcut-${question.id}`}>
+                      {t('settings.quickinput.questions.shortcut')}
+                    </Label>
                     <Input
                       id={`qq-shortcut-${question.id}`}
                       value={question.shortcut}
@@ -202,20 +228,22 @@ export function QuickInputSettingsTab({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor={`qq-prompt-${question.id}`}>프롬프트 (시스템 메시지)</Label>
+                    <Label htmlFor={`qq-prompt-${question.id}`}>
+                      {t('settings.quickinput.questions.prompt')}
+                    </Label>
                     <textarea
                       id={`qq-prompt-${question.id}`}
                       value={question.prompt}
                       onChange={(e) =>
                         handleUpdateQuestion(question.id, { prompt: e.target.value })
                       }
-                      placeholder="예: 한국어를 영어로, 영어는 한국어로"
+                      placeholder={t('settings.quickinput.questions.promptPlaceholder')}
                       className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     <p className="text-xs text-muted-foreground">
-                      LLM에게 역할이나 지시사항을 정의하는 시스템 메시지입니다.
+                      {t('settings.quickinput.questions.promptDescription')}
                       <br />
-                      클립보드의 내용은 별도의 사용자 메시지로 전송되어 처리 대상이 됩니다.
+                      {t('settings.quickinput.questions.promptDescriptionClipboard')}
                     </p>
                   </div>
                 </div>
@@ -228,7 +256,7 @@ export function QuickInputSettingsTab({
       {/* Save Button */}
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button onClick={onSave} disabled={isSaving}>
-          {isSaving ? '저장 중...' : '저장'}
+          {isSaving ? t('common.saving') : t('common.save')}
         </Button>
       </div>
 

@@ -43,6 +43,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { SaveKnowledgeDialog } from '@/components/chat/SaveKnowledgeDialog';
 import { CompressConversationDialog } from '@/components/chat/CompressConversationDialog';
 import { isElectron } from '@/lib/platform';
+import { useTranslation } from 'react-i18next';
 
 import { logger } from '@/lib/utils/logger';
 interface ChatHistoryProps {
@@ -107,7 +108,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('이 대화를 삭제하시겠습니까?')) {
+    if (window.confirm(t('chat.confirmDelete'))) {
       await deleteConversation(id);
     }
   };
@@ -336,6 +337,8 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     onConversationClick?.();
   };
 
+  const { t } = useTranslation();
+
   const selectedConversation = selectedConversationId
     ? conversations.find((c) => c.id === selectedConversationId)
     : null;
@@ -348,7 +351,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="대화 검색..."
+            placeholder={t('chat.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             className="pl-9 pr-9 h-9"
@@ -373,7 +376,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
           searchResults.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
               <Search className="mb-2 h-8 w-8 opacity-50" />
-              <p className="text-sm">검색 결과가 없습니다</p>
+              <p className="text-sm">{t('chat.noSearchResults')}</p>
               <p className="mt-1 text-xs">&quot;{searchQuery}&quot;</p>
             </div>
           ) : (
@@ -401,7 +404,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                       </p>
                     </div>
                     <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full whitespace-nowrap">
-                      {matchedMessages.length}개 일치
+                      {t('chat.matchCount', { count: matchedMessages.length })}
                     </span>
                   </div>
                   {matchedMessages.length > 0 && (
@@ -416,7 +419,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                       ))}
                       {matchedMessages.length > 2 && (
                         <p className="text-xs text-muted-foreground italic">
-                          +{matchedMessages.length - 2}개 더...
+                          {t('chat.moreMatches', { count: matchedMessages.length - 2 })}
                         </p>
                       )}
                     </div>
@@ -428,8 +431,8 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
         ) : conversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
             <MessageSquare className="mb-2 h-8 w-8 opacity-50" />
-            <p className="text-sm">대화가 없습니다</p>
-            <p className="mt-1 text-xs">새 대화를 시작하세요</p>
+            <p className="text-sm">{t('chat.noConversations')}</p>
+            <p className="mt-1 text-xs">{t('chat.startNewConversation')}</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -493,32 +496,32 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                           onClick={() => handleStartEdit(conversation.id, conversation.title)}
                         >
                           <Pencil className="mr-2 h-4 w-4" />
-                          이름 변경
+                          {t('chat.rename')}
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => handleOpenPersonaDialog(conversation.id)}>
                           <User className="mr-2 h-4 w-4" />
-                          Persona
+                          {t('chat.persona')}
                         </ContextMenuItem>
                         <ContextMenuItem
                           onClick={() => handleOpenSaveKnowledgeDialog(conversation.id)}
                         >
                           <BookOpen className="mr-2 h-4 w-4" />
-                          지식 저장
+                          {t('chat.saveKnowledge')}
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => handleDuplicate(conversation.id)}>
                           <Copy className="mr-2 h-4 w-4" />
-                          대화 복제
+                          {t('chat.duplicate')}
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => handleCompress(conversation.id)}>
                           <FileArchive className="mr-2 h-4 w-4" />
-                          대화 압축
+                          {t('chat.compress')}
                         </ContextMenuItem>
                         <ContextMenuItem
                           onClick={() => handleDelete(conversation.id)}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          삭제
+                          {t('chat.delete')}
                         </ContextMenuItem>
                       </ContextMenuContent>
                     </ContextMenu>
@@ -538,32 +541,32 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                           onClick={() => handleStartEdit(conversation.id, conversation.title)}
                         >
                           <Pencil className="mr-2 h-4 w-4" />
-                          이름 변경
+                          {t('chat.rename')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleOpenPersonaDialog(conversation.id)}>
                           <User className="mr-2 h-4 w-4" />
-                          Persona
+                          {t('chat.persona')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleOpenSaveKnowledgeDialog(conversation.id)}
                         >
                           <BookOpen className="mr-2 h-4 w-4" />
-                          지식 저장
+                          {t('chat.saveKnowledge')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDuplicate(conversation.id)}>
                           <Copy className="mr-2 h-4 w-4" />
-                          대화 복제
+                          {t('chat.duplicate')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleCompress(conversation.id)}>
                           <FileArchive className="mr-2 h-4 w-4" />
-                          대화 압축
+                          {t('chat.compress')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDelete(conversation.id)}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          삭제
+                          {t('chat.delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -579,8 +582,8 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
       <Dialog open={personaDialogOpen} onOpenChange={setPersonaDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Persona 선택</DialogTitle>
-            <DialogDescription>이 대화에 적용할 페르소나를 선택하세요</DialogDescription>
+            <DialogTitle>{t('chat.selectPersona')}</DialogTitle>
+            <DialogDescription>{t('chat.selectPersonaDesc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-4">
             {/* None option */}
@@ -595,8 +598,8 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                 <X className="h-5 w-5 text-muted-foreground" />
               </div>
               <div className="flex-1 text-left">
-                <div className="font-medium">없음</div>
-                <div className="text-xs text-muted-foreground">페르소나를 사용하지 않습니다</div>
+                <div className="font-medium">{t('chat.noPersona')}</div>
+                <div className="text-xs text-muted-foreground">{t('chat.noPersonaDesc')}</div>
               </div>
               {!selectedConversation?.personaId && <Check className="h-5 w-5 text-primary" />}
             </button>

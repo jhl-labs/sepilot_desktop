@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { nanoid } from 'nanoid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ export function ModelListView({
   defaultTemperature,
   defaultMaxTokens,
 }: ModelListViewProps) {
+  const { t } = useTranslation();
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export function ModelListView({
         console.error(`Failed to fetch models from ${connection.name}:`, error);
         errors.push({
           connection: connection.name,
-          error: error.message || '알 수 없는 오류',
+          error: error.message || t('settings.llm.models.validation.unknownError'),
         });
       }
     }
@@ -90,9 +92,9 @@ export function ModelListView({
 
     if (errors.length > 0) {
       const errorMsg = errors.map((e) => `- ${e.connection}: ${e.error}`).join('\n');
-      setLoadError(`일부 Connection에서 모델을 가져오지 못했습니다:\n${errorMsg}`);
+      setLoadError(t('settings.llm.models.validation.fetchError', { error: errorMsg }));
     } else if (allModels.length === 0) {
-      setLoadError('활성화된 Connection에서 모델을 가져오지 못했습니다.');
+      setLoadError(t('settings.llm.models.validation.fetchErrorAll'));
     }
   };
 
@@ -105,7 +107,9 @@ export function ModelListView({
     );
 
     if (existingModel) {
-      setDuplicateError(`"${availableModel.modelId}"는 이미 추가되었습니다.`);
+      setDuplicateError(
+        t('settings.llm.models.validation.duplicate', { modelId: availableModel.modelId })
+      );
       setTimeout(() => setDuplicateError(null), 3000);
       return;
     }
@@ -187,9 +191,9 @@ export function ModelListView({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold">사용 가능한 모델</h3>
+            <h3 className="text-lg font-semibold">{t('settings.llm.models.available.title')}</h3>
             <p className="text-sm text-muted-foreground">
-              활성화된 Connection에서 모델 목록을 가져와 추가할 수 있습니다.
+              {t('settings.llm.models.available.description')}
             </p>
           </div>
           <Button
@@ -198,7 +202,9 @@ export function ModelListView({
             size="sm"
           >
             <RefreshCw className={`h-4 w-4 mr-1 ${isLoadingModels ? 'animate-spin' : ''}`} />
-            모델 목록 가져오기
+            {isLoadingModels
+              ? t('settings.llm.models.available.fetching')
+              : t('settings.llm.models.available.fetch')}
           </Button>
         </div>
 
@@ -223,7 +229,9 @@ export function ModelListView({
                   onClick={() => handleAddModel(availableModel)}
                   disabled={isModelAdded(availableModel)}
                 >
-                  {isModelAdded(availableModel) ? '추가됨' : '추가'}
+                  {isModelAdded(availableModel)
+                    ? t('settings.llm.models.available.added')
+                    : t('settings.llm.models.available.add')}
                 </Button>
               </div>
             ))}
@@ -234,16 +242,16 @@ export function ModelListView({
       {/* Configured Models Section */}
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-semibold">구성된 모델</h3>
+          <h3 className="text-lg font-semibold">{t('settings.llm.models.configured.title')}</h3>
           <p className="text-sm text-muted-foreground">
-            추가된 모델에 태그를 지정하고 세부 설정을 구성합니다.
+            {t('settings.llm.models.configured.description')}
           </p>
         </div>
 
         {models.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <p>구성된 모델이 없습니다.</p>
-            <p className="text-sm">위에서 모델 목록을 가져와 추가하세요.</p>
+            <p>{t('settings.llm.models.configured.empty')}</p>
+            <p className="text-sm">{t('settings.llm.models.configured.emptyHint')}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -309,7 +317,7 @@ export function ModelListView({
                         onClick={() => handleRemoveModel(model.id)}
                         className="text-destructive hover:text-destructive"
                       >
-                        삭제
+                        {t('settings.llm.models.delete')}
                       </Button>
                     </div>
                   </div>
@@ -357,6 +365,7 @@ function ModelSettings({
   isActiveAutocomplete,
   connection,
 }: ModelSettingsProps) {
+  const { t } = useTranslation();
   const [newHeaderKey, setNewHeaderKey] = useState('');
   const [newHeaderValue, setNewHeaderValue] = useState('');
 
@@ -407,7 +416,7 @@ function ModelSettings({
     <div className="space-y-4">
       {/* Display Name */}
       <div className="space-y-2">
-        <Label htmlFor={`display-name-${model.id}`}>표시 이름 (선택사항)</Label>
+        <Label htmlFor={`display-name-${model.id}`}>{t('settings.llm.models.displayName')}</Label>
         <Input
           id={`display-name-${model.id}`}
           value={model.displayName || ''}
@@ -418,15 +427,14 @@ function ModelSettings({
 
       {/* Custom Headers */}
       <div className="space-y-2">
-        <Label>커스텀 HTTP 헤더 (모델 전용)</Label>
+        <Label>{t('settings.llm.models.customHeaders.title')}</Label>
         <p className="text-xs text-muted-foreground">
-          Connection에 설정된 헤더를 기본으로 사용하며, 동일한 이름의 헤더를 추가하면 이 모델에서만
-          덮어씁니다.
+          {t('settings.llm.models.customHeaders.description')}
         </p>
 
         {Object.keys(connectionHeaders).length > 0 && (
           <div className="space-y-1 rounded-md border bg-background p-2 text-xs">
-            <p className="font-medium">상속되는 헤더</p>
+            <p className="font-medium">{t('settings.llm.models.customHeaders.inherited')}</p>
             {Object.entries(connectionHeaders).map(([key, value]) => (
               <div
                 key={key}
@@ -445,7 +453,7 @@ function ModelSettings({
                     onClick={() => handleRestoreInheritedHeader(key)}
                     aria-label={`${key} 헤더 복원`}
                   >
-                    복원
+                    {t('settings.llm.models.customHeaders.restore')}
                   </Button>
                 ) : (
                   <Button
@@ -454,7 +462,7 @@ function ModelSettings({
                     onClick={() => handleExcludeInheritedHeader(key)}
                     aria-label={`${key} 헤더 제거`}
                   >
-                    모델에서 제거
+                    {t('settings.llm.models.customHeaders.remove')}
                   </Button>
                 )}
               </div>
@@ -464,7 +472,7 @@ function ModelSettings({
 
         {Object.entries(modelHeaders).some(([, value]) => value !== null) && (
           <div className="space-y-1 rounded-md border bg-background p-2 text-xs">
-            <p className="font-medium">모델 전용 헤더</p>
+            <p className="font-medium">{t('settings.llm.models.customHeaders.modelSpecific')}</p>
             {Object.entries(modelHeaders)
               .filter(([, value]) => value !== null)
               .map(([key, value]) => (
@@ -472,7 +480,7 @@ function ModelSettings({
                   <span className="font-mono flex-1">{key}</span>
                   <span className="font-mono text-muted-foreground flex-1">{value}</span>
                   <Button variant="ghost" size="sm" onClick={() => handleDeleteHeader(key)}>
-                    삭제
+                    {t('common.delete')}
                   </Button>
                 </div>
               ))}
@@ -483,24 +491,24 @@ function ModelSettings({
           <Input
             value={newHeaderKey}
             onChange={(e) => setNewHeaderKey(e.target.value)}
-            placeholder="헤더 이름"
+            placeholder={t('settings.llm.connections.headerKey')}
             className="flex-1"
           />
           <Input
             value={newHeaderValue}
             onChange={(e) => setNewHeaderValue(e.target.value)}
-            placeholder="헤더 값"
+            placeholder={t('settings.llm.connections.headerValue')}
             className="flex-1"
           />
           <Button size="sm" onClick={handleAddHeader}>
-            헤더 추가
+            {t('settings.llm.connections.addHeader')}
           </Button>
         </div>
       </div>
 
       {/* Active Model Selection */}
       <div className="space-y-2">
-        <Label>활성 모델 지정</Label>
+        <Label>{t('settings.llm.models.active.title')}</Label>
         <div className="flex flex-wrap gap-2">
           {model.tags.includes('base') && (
             <Button
@@ -508,7 +516,7 @@ function ModelSettings({
               variant={isActiveBase ? 'default' : 'outline'}
               onClick={() => onSetActive(model.id, 'base')}
             >
-              기본 모델로 사용 {isActiveBase && '★'}
+              {t('settings.llm.models.active.base')} {isActiveBase && '★'}
             </Button>
           )}
           {model.tags.includes('vision') && (
@@ -517,7 +525,7 @@ function ModelSettings({
               variant={isActiveVision ? 'default' : 'outline'}
               onClick={() => onSetActive(model.id, 'vision')}
             >
-              Vision 모델로 사용 {isActiveVision && '★'}
+              {t('settings.llm.models.active.vision')} {isActiveVision && '★'}
             </Button>
           )}
           {model.tags.includes('autocomplete') && (
@@ -526,7 +534,7 @@ function ModelSettings({
               variant={isActiveAutocomplete ? 'default' : 'outline'}
               onClick={() => onSetActive(model.id, 'autocomplete')}
             >
-              자동완성 모델로 사용 {isActiveAutocomplete && '★'}
+              {t('settings.llm.models.active.autocomplete')} {isActiveAutocomplete && '★'}
             </Button>
           )}
         </div>
@@ -534,7 +542,9 @@ function ModelSettings({
 
       {/* Temperature */}
       <div className="space-y-2">
-        <Label htmlFor={`temperature-${model.id}`}>Temperature ({model.temperature ?? 0.7})</Label>
+        <Label htmlFor={`temperature-${model.id}`}>
+          {t('settings.llm.models.temperature')} ({model.temperature ?? 0.7})
+        </Label>
         <input
           id={`temperature-${model.id}`}
           type="range"
@@ -549,7 +559,7 @@ function ModelSettings({
 
       {/* Max Tokens */}
       <div className="space-y-2">
-        <Label htmlFor={`max-tokens-${model.id}`}>Max Tokens</Label>
+        <Label htmlFor={`max-tokens-${model.id}`}>{t('settings.llm.models.maxTokens')}</Label>
         <Input
           id={`max-tokens-${model.id}`}
           type="number"
@@ -593,7 +603,7 @@ function ModelSettings({
               className="h-4 w-4 rounded border-input"
             />
             <Label htmlFor={`enable-streaming-${model.id}`} className="font-normal cursor-pointer">
-              스트리밍 응답 활성화
+              {t('settings.llm.models.streaming')}
             </Label>
           </div>
         </>

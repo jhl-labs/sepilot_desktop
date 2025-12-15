@@ -423,6 +423,7 @@ export function BrowserPanel() {
               <span className="flex-1 truncate">{tab.title || 'New Tab'}</span>
               {tabs.length > 1 && (
                 <button
+                  title="닫기"
                   onClick={(e) => handleCloseTab(tab.id, e)}
                   className="shrink-0 rounded p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100 transition-opacity"
                 >

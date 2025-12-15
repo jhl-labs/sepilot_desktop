@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Download, Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -15,6 +16,7 @@ interface BackupData {
 }
 
 export function BackupRestoreSettings() {
+  const { t } = useTranslation();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{
@@ -27,13 +29,13 @@ export function BackupRestoreSettings() {
    */
   const handleExport = async () => {
     if (!isElectron() || !window.electronAPI) {
-      setStatusMessage({ type: 'error', text: 'Electron 환경에서만 사용 가능합니다.' });
+      setStatusMessage({ type: 'error', text: t('settings.backup.electronOnly') });
       return;
     }
 
     try {
       setIsExporting(true);
-      setStatusMessage({ type: 'info', text: '대화 데이터를 내보내는 중...' });
+      setStatusMessage({ type: 'info', text: t('settings.backup.exporting') });
 
       // Load all conversations
       const conversationsResult = await window.electronAPI.chat.loadConversations();
@@ -81,11 +83,17 @@ export function BackupRestoreSettings() {
 
       setStatusMessage({
         type: 'success',
-        text: `${conversations.length}개의 대화와 ${allMessages.length}개의 메시지를 내보냈습니다.`,
+        text: t('settings.backup.exportSuccess', {
+          conversations: conversations.length,
+          messages: allMessages.length,
+        }),
       });
     } catch (error: any) {
       console.error('Export error:', error);
-      setStatusMessage({ type: 'error', text: `내보내기 실패: ${error.message}` });
+      setStatusMessage({
+        type: 'error',
+        text: t('settings.backup.exportFailed', { error: error.message }),
+      });
     } finally {
       setIsExporting(false);
     }
@@ -96,13 +104,13 @@ export function BackupRestoreSettings() {
    */
   const handleImport = async () => {
     if (!isElectron() || !window.electronAPI) {
-      setStatusMessage({ type: 'error', text: 'Electron 환경에서만 사용 가능합니다.' });
+      setStatusMessage({ type: 'error', text: t('settings.backup.electronOnly') });
       return;
     }
 
     try {
       setIsImporting(true);
-      setStatusMessage({ type: 'info', text: '백업 파일을 선택하세요...' });
+      setStatusMessage({ type: 'info', text: t('settings.backup.selectFile') });
 
       // Create file input
       const input = document.createElement('input');
@@ -117,12 +125,12 @@ export function BackupRestoreSettings() {
         }
 
         try {
-          setStatusMessage({ type: 'info', text: '백업 파일을 읽는 중...' });
+          setStatusMessage({ type: 'info', text: t('settings.backup.readingFile') });
 
           const text = await file.text();
           const backupData = parseXML(text);
 
-          setStatusMessage({ type: 'info', text: '대화 데이터를 복원하는 중...' });
+          setStatusMessage({ type: 'info', text: t('settings.backup.restoring') });
 
           // Restore conversations
           let conversationsRestored = 0;
@@ -144,7 +152,10 @@ export function BackupRestoreSettings() {
 
           setStatusMessage({
             type: 'success',
-            text: `${conversationsRestored}개의 대화와 ${messagesRestored}개의 메시지를 복원했습니다.`,
+            text: t('settings.backup.importSuccess', {
+              conversations: conversationsRestored,
+              messages: messagesRestored,
+            }),
           });
 
           // Reload the page to reflect changes
@@ -153,7 +164,10 @@ export function BackupRestoreSettings() {
           }, 2000);
         } catch (error: any) {
           console.error('Import error:', error);
-          setStatusMessage({ type: 'error', text: `가져오기 실패: ${error.message}` });
+          setStatusMessage({
+            type: 'error',
+            text: t('settings.backup.importFailed', { error: error.message }),
+          });
         } finally {
           setIsImporting(false);
         }
@@ -162,7 +176,10 @@ export function BackupRestoreSettings() {
       input.click();
     } catch (error: any) {
       console.error('Import error:', error);
-      setStatusMessage({ type: 'error', text: `가져오기 실패: ${error.message}` });
+      setStatusMessage({
+        type: 'error',
+        text: t('settings.backup.importFailed', { error: error.message }),
+      });
       setIsImporting(false);
     }
   };
@@ -316,7 +333,7 @@ export function BackupRestoreSettings() {
         });
       }
 
-      // Parse referenced documents
+      // Referenced documents
       const docNodes = node.querySelectorAll('referenced-documents > document');
       if (docNodes.length > 0) {
         msg.referenced_documents = [];
@@ -356,10 +373,8 @@ export function BackupRestoreSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium mb-4">백업 및 복구</h3>
-        <p className="text-sm text-muted-foreground mb-6">
-          모든 대화 내용을 XML 파일로 내보내거나 가져올 수 있습니다.
-        </p>
+        <h3 className="text-lg font-medium mb-4">{t('settings.backup.title')}</h3>
+        <p className="text-sm text-muted-foreground mb-6">{t('settings.backup.description')}</p>
       </div>
 
       {/* Status Message */}
@@ -390,9 +405,9 @@ export function BackupRestoreSettings() {
           <div className="flex items-start gap-3">
             <Download className="w-5 h-5 mt-0.5 text-muted-foreground" />
             <div className="flex-1">
-              <Label className="text-base font-medium">내보내기</Label>
+              <Label className="text-base font-medium">{t('settings.backup.export')}</Label>
               <p className="text-sm text-muted-foreground mt-1">
-                모든 대화와 메시지를 XML 파일로 내보냅니다.
+                {t('settings.backup.exportDescription')}
               </p>
             </div>
           </div>
@@ -405,12 +420,12 @@ export function BackupRestoreSettings() {
             {isExporting ? (
               <>
                 <span className="animate-spin mr-2">⏳</span>
-                내보내는 중...
+                {t('settings.backup.exporting')}
               </>
             ) : (
               <>
                 <Download className="w-4 h-4 mr-2" />
-                XML로 내보내기
+                {t('settings.backup.exportButton')}
               </>
             )}
           </Button>
@@ -421,9 +436,9 @@ export function BackupRestoreSettings() {
           <div className="flex items-start gap-3">
             <Upload className="w-5 h-5 mt-0.5 text-muted-foreground" />
             <div className="flex-1">
-              <Label className="text-base font-medium">가져오기</Label>
+              <Label className="text-base font-medium">{t('settings.backup.import')}</Label>
               <p className="text-sm text-muted-foreground mt-1">
-                XML 백업 파일에서 대화를 복원합니다.
+                {t('settings.backup.importDescription')}
               </p>
             </div>
           </div>
@@ -436,12 +451,12 @@ export function BackupRestoreSettings() {
             {isImporting ? (
               <>
                 <span className="animate-spin mr-2">⏳</span>
-                가져오는 중...
+                {t('settings.backup.importing')}
               </>
             ) : (
               <>
                 <Upload className="w-4 h-4 mr-2" />
-                XML에서 가져오기
+                {t('settings.backup.importButton')}
               </>
             )}
           </Button>
@@ -453,11 +468,11 @@ export function BackupRestoreSettings() {
         <div className="flex items-start gap-2">
           <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
           <div>
-            <p className="font-medium">주의사항</p>
+            <p className="font-medium">{t('settings.backup.warning')}</p>
             <ul className="mt-2 space-y-1 list-disc list-inside">
-              <li>가져오기는 기존 대화에 추가됩니다 (덮어쓰지 않음)</li>
-              <li>중복된 ID가 있을 경우 최신 데이터로 업데이트됩니다</li>
-              <li>가져오기 후 자동으로 페이지가 새로고침됩니다</li>
+              <li>{t('settings.backup.warning1')}</li>
+              <li>{t('settings.backup.warning2')}</li>
+              <li>{t('settings.backup.warning3')}</li>
             </ul>
           </div>
         </div>

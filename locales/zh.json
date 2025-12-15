@@ -161,6 +161,21 @@
         "provider": "嵌入提供商",
         "model": "嵌入模型",
         "dimension": "维度"
+      },
+      "validation": {
+        "needBaseUrlAndApiKey": "请先输入 Base URL 和 API Key。",
+        "fetchModelsFailed": "获取模型列表失败: {{error}}",
+        "noModelsFound": "未找到可用模型。",
+        "apiKeyRequired": "请输入 OpenAI API Key。",
+        "saveSuccess": "VectorDB 设置已保存！",
+        "saveFailed": "保存 VectorDB 设置失败。"
+      },
+      "hints": {
+        "sqliteVec": "ℹ️ SQLite-vec 仅在 Node.js (Electron) 环境中工作。在浏览器中仅保存设置。",
+        "fetchModels": "获取可用模型列表",
+        "baseUrlDescription": "OpenAI 兼容 API 端点 URL",
+        "availableModels": "{{count}} 个模型可用",
+        "fetchModelsHint": "点击刷新按钮获取可用模型"
       }
     },
     "imagegen": {

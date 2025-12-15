@@ -439,6 +439,7 @@ export function LLMStatusBar({
             <span className="text-muted-foreground/50">·</span>
             {editingField === 'maxTokens' ? (
               <input
+                title="최대 출력 토큰"
                 type="number"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
@@ -460,6 +461,7 @@ export function LLMStatusBar({
             <span className="text-muted-foreground/50">·</span>
             {editingField === 'temperature' ? (
               <input
+                title="클릭하여 수정 (Temperature: 0~2)"
                 type="number"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}

@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { BetaConfig } from '@/types';
 
+import { useTranslation } from 'react-i18next';
+
 interface BetaSettingsTabProps {
   config: BetaConfig;
   setConfig: (config: BetaConfig) => void;
@@ -23,6 +25,7 @@ export function BetaSettingsTab({
   isSaving,
   message,
 }: BetaSettingsTabProps) {
+  const { t } = useTranslation();
   const [localConfig, setLocalConfig] = useState<BetaConfig>(config);
 
   useEffect(() => {
@@ -38,19 +41,14 @@ export function BetaSettingsTab({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Beta 기능</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          개발 중인 실험적 기능들을 활성화합니다.
-        </p>
+        <h2 className="text-2xl font-bold">{t('settings.beta.title')}</h2>
+        <p className="text-sm text-muted-foreground mt-1">{t('settings.beta.description')}</p>
       </div>
 
       {/* Warning Alert */}
       <Alert variant="destructive">
         <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          <strong>주의:</strong> Beta 기능은 아직 개발 진행 중이며 완성되지 않았습니다. 버그가 많을
-          수 있으므로 프로덕션 환경에서는 사용을 권장하지 않습니다.
-        </AlertDescription>
+        <AlertDescription>{t('settings.beta.warning')}</AlertDescription>
       </Alert>
 
       {/* Status Message */}
@@ -71,14 +69,13 @@ export function BetaSettingsTab({
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <Label htmlFor="presentation-mode" className="text-base font-medium">
-              Presentation 모드 활성화
+              {t('settings.beta.presentationMode.title')}
             </Label>
             <p className="text-sm text-muted-foreground">
-              Presentation 모드를 활성화하면 Chat, Editor, Browser 사이드바에서
-              &quot;Presentation&quot; 항목이 표시됩니다.
+              {t('settings.beta.presentationMode.description')}
             </p>
             <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
-              ⚠️ 이 기능은 현재 개발 중이며 완전하지 않습니다.
+              {t('settings.beta.presentationMode.warning')}
             </p>
           </div>
           <Switch
@@ -92,7 +89,7 @@ export function BetaSettingsTab({
       {/* Save Button */}
       <div className="flex justify-end pt-4 border-t">
         <Button onClick={onSave} disabled={isSaving}>
-          {isSaving ? '저장 중...' : '저장'}
+          {isSaving ? t('common.saving') : t('common.save')}
         </Button>
       </div>
     </div>

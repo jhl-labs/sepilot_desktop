@@ -26,6 +26,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { MCPServerConfig } from '@/lib/mcp/types';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -53,6 +54,7 @@ interface ServerWithStatus extends MCPServerConfig {
 }
 
 export function MCPServerList({ onRefresh }: MCPServerListProps) {
+  const { t } = useTranslation();
   const [servers, setServers] = useState<ServerWithStatus[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedServer, setExpandedServer] = useState<string | null>(null);
@@ -203,13 +205,13 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
   const getStatusText = (status?: string) => {
     switch (status) {
       case 'connected':
-        return '연결됨';
+        return t('settings.mcp.serverList.status.connected');
       case 'connecting':
-        return '연결 중...';
+        return t('settings.mcp.serverList.status.connecting');
       case 'error':
-        return '오류';
+        return t('settings.mcp.serverList.status.error');
       default:
-        return '대기 중';
+        return t('settings.mcp.serverList.status.waiting');
     }
   };
 
@@ -233,7 +235,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
           <Server className="h-12 w-12 opacity-20" />
           <Loader2 className="h-6 w-6 animate-spin absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
         </div>
-        <p className="text-sm mt-4 font-medium">서버 목록을 불러오는 중...</p>
+        <p className="text-sm mt-4 font-medium">{t('settings.mcp.serverList.loading')}</p>
       </div>
     );
   }
@@ -245,10 +247,11 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
           <Server className="h-16 w-16 text-muted-foreground/30" />
           <Zap className="h-6 w-6 text-primary absolute -bottom-1 -right-1" />
         </div>
-        <h3 className="text-lg font-semibold mt-6 mb-2">MCP 서버를 추가하세요</h3>
+        <h3 className="text-lg font-semibold mt-6 mb-2">
+          {t('settings.mcp.serverList.emptyTitle')}
+        </h3>
         <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-          MCP 서버를 등록하면 AI 어시스턴트가 파일 시스템, 데이터베이스, 웹 검색 등 다양한 도구를
-          사용할 수 있습니다.
+          {t('settings.mcp.serverList.emptyDescription')}
         </p>
         <div className="flex items-center justify-center gap-6 mt-8 text-xs text-muted-foreground">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
@@ -412,7 +415,11 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                         )}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>{isExpanded ? '접기' : '상세 정보'}</TooltipContent>
+                    <TooltipContent>
+                      {isExpanded
+                        ? t('settings.mcp.serverList.expand.hide')
+                        : t('settings.mcp.serverList.expand.show')}
+                    </TooltipContent>
                   </Tooltip>
 
                   {/* Delete Button */}
@@ -427,7 +434,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>서버 삭제</TooltipContent>
+                    <TooltipContent>{t('settings.mcp.serverList.tooltips.delete')}</TooltipContent>
                   </Tooltip>
                 </div>
               </div>
@@ -439,7 +446,9 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                     {/* Connection Info */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">전송 방식</p>
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {t('settings.mcp.serverList.labels.transport')}
+                        </p>
                         <div className="flex items-center gap-1.5">
                           {server.transport === 'sse' ? (
                             <Cloud className="h-4 w-4 text-cyan-500" />
@@ -452,23 +461,31 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">상태</p>
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {t('settings.mcp.serverList.labels.status')}
+                        </p>
                         <div className="flex items-center gap-1.5">
                           {server.enabled !== false ? (
                             <>
                               <Power className="h-4 w-4 text-green-500" />
-                              <span className="text-sm font-medium">활성</span>
+                              <span className="text-sm font-medium">
+                                {t('settings.mcp.serverList.status.active')}
+                              </span>
                             </>
                           ) : (
                             <>
                               <PowerOff className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm font-medium">비활성</span>
+                              <span className="text-sm font-medium">
+                                {t('settings.mcp.serverList.status.inactive')}
+                              </span>
                             </>
                           )}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">등록된 도구</p>
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {t('settings.mcp.serverList.labels.registeredTools')}
+                        </p>
                         <div className="flex items-center gap-1.5">
                           <Wrench className="h-4 w-4 text-orange-500" />
                           <span className="text-sm font-medium">{server.toolCount ?? 0}개</span>
@@ -476,7 +493,9 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                       </div>
                       {server.transport === 'stdio' && (
                         <div className="space-y-1">
-                          <p className="text-xs font-medium text-muted-foreground">인자 개수</p>
+                          <p className="text-xs font-medium text-muted-foreground">
+                            {t('settings.mcp.serverList.labels.argCount')}
+                          </p>
                           <span className="text-sm font-medium">{server.args?.length ?? 0}개</span>
                         </div>
                       )}
@@ -486,14 +505,18 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                     {server.transport === 'stdio' ? (
                       <>
                         <div className="space-y-2">
-                          <p className="text-xs font-medium text-muted-foreground">실행 명령어</p>
+                          <p className="text-xs font-medium text-muted-foreground">
+                            {t('settings.mcp.serverList.labels.execCommand')}
+                          </p>
                           <code className="block rounded-lg bg-background border px-3 py-2 font-mono text-xs">
                             {server.command}
                           </code>
                         </div>
                         {(server.args?.length ?? 0) > 0 && (
                           <div className="space-y-2">
-                            <p className="text-xs font-medium text-muted-foreground">실행 인자</p>
+                            <p className="text-xs font-medium text-muted-foreground">
+                              {t('settings.mcp.serverList.labels.execArgs')}
+                            </p>
                             <div className="rounded-lg bg-background border p-3 space-y-1">
                               {server.args?.map((arg, index) => (
                                 <code
@@ -510,14 +533,18 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                     ) : (
                       <>
                         <div className="space-y-2">
-                          <p className="text-xs font-medium text-muted-foreground">SSE URL</p>
+                          <p className="text-xs font-medium text-muted-foreground">
+                            {t('settings.mcp.serverList.labels.sseUrl')}
+                          </p>
                           <code className="block rounded-lg bg-background border px-3 py-2 font-mono text-xs break-all">
                             {server.url}
                           </code>
                         </div>
                         {server.headers && Object.keys(server.headers).length > 0 && (
                           <div className="space-y-2">
-                            <p className="text-xs font-medium text-muted-foreground">HTTP 헤더</p>
+                            <p className="text-xs font-medium text-muted-foreground">
+                              {t('settings.mcp.serverList.labels.headers')}
+                            </p>
                             <div className="rounded-lg bg-background border p-3 space-y-1">
                               {Object.entries(server.headers).map(([key, value]) => (
                                 <code
@@ -541,7 +568,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                     {server.tools && server.tools.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-xs font-medium text-muted-foreground">
-                          사용 가능한 도구
+                          {t('settings.mcp.serverList.labels.availableTools')}
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                           {server.tools.map((tool) => (
@@ -557,8 +584,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                     <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/10 p-3">
                       <Zap className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       <p className="text-xs text-muted-foreground">
-                        Agent 모드에서 이 서버의 도구를 LLM이 사용할 수 있습니다. 도구를 사용하려면
-                        서버가 활성화되어 있어야 합니다.
+                        {t('settings.mcp.serverList.agentInfo')}
                       </p>
                     </div>
                   </div>
@@ -578,20 +604,29 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>서버 삭제</AlertDialogTitle>
+            <AlertDialogTitle>{t('settings.mcp.serverList.deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-semibold">&apos;{deleteDialog.serverName}&apos;</span> 서버를
-              삭제하시겠습니까?
-              <br />이 작업은 취소할 수 없습니다.
+              <div className="space-y-2">
+                <p>
+                  {t('settings.mcp.serverList.deleteDialog.question', {
+                    name: deleteDialog.serverName,
+                  })}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {t('settings.mcp.serverList.deleteDialog.warning')}
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogCancel>
+              {t('settings.mcp.serverList.deleteDialog.cancel')}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemove}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              삭제
+              {t('settings.mcp.serverList.deleteDialog.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

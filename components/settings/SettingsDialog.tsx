@@ -27,9 +27,11 @@ import { initializeVectorDB } from '@/lib/vectordb/client';
 import { initializeEmbedding } from '@/lib/vectordb/embeddings/client';
 import { isElectron } from '@/lib/platform';
 import { configureWebLLMClient } from '@/lib/llm/web-client';
+import { changeLanguage, SupportedLanguage } from '@/lib/i18n';
 import { GitHubSyncSettings } from '@/components/settings/GitHubSyncSettings';
 import { TeamDocsSettings } from '@/components/settings/TeamDocsSettings';
 import { BackupRestoreSettings } from '@/components/settings/BackupRestoreSettings';
+import { GeneralSettingsTab } from './GeneralSettingsTab';
 import { LLMSettingsTab } from './LLMSettingsTab';
 import { NetworkSettingsTab } from './NetworkSettingsTab';
 import { ImageGenSettingsTab } from './ImageGenSettingsTab';
@@ -68,7 +70,7 @@ const createDefaultBetaConfig = (): BetaConfig => ({
 });
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<SettingSection>('llm');
+  const [activeTab, setActiveTab] = useState<SettingSection>('general');
   const [viewMode, setViewMode] = useState<'ui' | 'json'>('ui');
 
   const [config, setConfig] = useState<LLMConfig>(createDefaultLLMConfig());
@@ -81,6 +83,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     createDefaultQuickInputConfig()
   );
   const [betaConfig, setBetaConfig] = useState<BetaConfig>(createDefaultBetaConfig());
+  const [generalConfig, setGeneralConfig] = useState<{ language: SupportedLanguage } | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -162,6 +165,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             setQuickInputConfig(normalizedConfig.quickInput ?? createDefaultQuickInputConfig());
             setBetaConfig(normalizedConfig.beta ?? createDefaultBetaConfig());
 
+            // General 설정 로드
+            if (result.data.general?.language) {
+              setGeneralConfig(result.data.general);
+              changeLanguage(result.data.general.language);
+            }
+
             // VectorDB 설정 로드 (DB에서)
             if (result.data.vectorDB) {
               setVectorDBConfig(result.data.vectorDB);
@@ -233,6 +242,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             setBetaConfig(createDefaultBetaConfig());
           }
 
+          const savedGeneralConfig = localStorage.getItem('sepilot_general_config');
+          if (savedGeneralConfig) {
+            setGeneralConfig(JSON.parse(savedGeneralConfig));
+          }
+
           // VectorDB 설정 로드 및 초기화 (Web 환경에서만, Electron은 위에서 DB에서 로드함)
           const savedVectorDBConfig = localStorage.getItem('sepilot_vectordb_config');
           if (savedVectorDBConfig) {
@@ -273,8 +287,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       }
     };
 
+    loadConfig();
+
     if (open) {
-      loadConfig();
       setMessage(null);
       setImageGenMessage(null);
     }
@@ -343,6 +358,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       githubSync: partial.githubSync ?? appConfigSnapshot?.githubSync,
       quickInput: partial.quickInput ?? appConfigSnapshot?.quickInput,
       beta: partial.beta ?? appConfigSnapshot?.beta,
+      general: partial.general ?? appConfigSnapshot?.general,
     };
 
     const result = await window.electronAPI.config.save(merged);
@@ -838,6 +854,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       setGithubSyncConfig(newConfig.githubSync ?? null);
       setQuickInputConfig(newConfig.quickInput ?? createDefaultQuickInputConfig());
       setBetaConfig(newConfig.beta ?? createDefaultBetaConfig());
+      setGeneralConfig(newConfig.general ?? null);
       setVectorDBConfig(newConfig.vectorDB ?? null);
       setEmbeddingConfig(newConfig.embedding ?? null);
       setAppConfigSnapshot(newConfig);
@@ -890,6 +907,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       githubSync: githubSyncConfig ?? undefined,
       quickInput: quickInputConfig,
       beta: betaConfig,
+      general: generalConfig ?? undefined,
     };
   };
 
@@ -930,6 +948,29 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
               {/* Content Area */}
               <div className="flex-1 overflow-y-auto p-6">
+                {activeTab === 'general' && (
+                  <GeneralSettingsTab
+                    onSave={async (lang) => {
+                      if (lang) {
+                        setGeneralConfig({ language: lang as SupportedLanguage });
+                        changeLanguage(lang as SupportedLanguage);
+                        if (isElectron() && window.electronAPI) {
+                          await persistAppConfig({
+                            general: { language: lang as SupportedLanguage },
+                          });
+                        } else {
+                          localStorage.setItem(
+                            'sepilot_general_config',
+                            JSON.stringify({ language: lang })
+                          );
+                        }
+                      }
+                      setMessage({ type: 'success', text: '일반 설정이 저장되었습니다!' });
+                    }}
+                    isSaving={isSaving}
+                    message={message}
+                  />
+                )}
                 {activeTab === 'llm' && configV2 && (
                   <LLMSettingsTab
                     config={configV2}

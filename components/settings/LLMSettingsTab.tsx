@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { LLMConfigV2, NetworkConfig, LLMConnection, ModelConfig } from '@/types';
 import { Settings } from 'lucide-react';
@@ -25,6 +26,7 @@ export function LLMSettingsTab({
   isSaving,
   message,
 }: LLMSettingsTabProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'connections' | 'models'>('connections');
 
   const handleConnectionsChange = (connections: LLMConnection[]) => {
@@ -51,8 +53,8 @@ export function LLMSettingsTab({
   return (
     <div className="space-y-6">
       <SettingsSectionHeader
-        title="LLM 설정 (v2)"
-        description="Connection 기반 LLM 모델 관리 시스템"
+        title={t('settings.llm.settingsV2')}
+        description={t('settings.llm.settingsV2Description')}
         icon={Settings}
       />
 
@@ -66,7 +68,7 @@ export function LLMSettingsTab({
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          Connections
+          {t('settings.llm.connections.title')}
         </button>
         <button
           onClick={() => setActiveTab('models')}
@@ -76,7 +78,7 @@ export function LLMSettingsTab({
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          Models
+          {t('settings.llm.models.title')}
         </button>
       </div>
 
@@ -127,7 +129,7 @@ export function LLMSettingsTab({
       {/* Actions */}
       <div className="flex justify-end gap-2">
         <Button onClick={onSave} disabled={isSaving}>
-          {isSaving ? '저장 중...' : '저장'}
+          {isSaving ? t('common.saving') : t('common.save')}
         </Button>
       </div>
     </div>

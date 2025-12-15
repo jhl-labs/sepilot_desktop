@@ -1045,6 +1045,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               {teamDocs.length > 0 ? (
                 <>
                   <select
+                    title="Team Docs Repository"
                     className="flex-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm font-medium"
                     value={selectedTeamDocsId}
                     onChange={(e) => setSelectedTeamDocsId(e.target.value)}
@@ -1354,6 +1355,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       {/* Hidden file input for import */}
       <input
+        title="문서 Import (JSON)"
         ref={fileInputRef}
         type="file"
         accept=".json"

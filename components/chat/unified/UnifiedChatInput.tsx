@@ -244,7 +244,7 @@ export function UnifiedChatInput({
                 !tool.name.startsWith('google') &&
                 !tool.name.startsWith('file') &&
                 !tool.name.startsWith('command') &&
-                tool.name !== 'grepSearch'
+                !tool.name.startsWith('grep')
             );
           }
 

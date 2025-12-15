@@ -3,6 +3,7 @@ import Script from 'next/script';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { ThemePersistenceProvider } from '@/components/providers/theme-persistence-provider';
+import { I18nProvider } from '@/components/providers/i18n-provider';
 
 export const metadata: Metadata = {
   title: 'SEPilot Desktop',
@@ -30,7 +31,9 @@ export default function RootLayout({
           disableTransitionOnChange
           storageKey="sepilot-theme"
         >
-          <ThemePersistenceProvider>{children}</ThemePersistenceProvider>
+          <ThemePersistenceProvider>
+            <I18nProvider>{children}</I18nProvider>
+          </ThemePersistenceProvider>
         </ThemeProvider>
       </body>
     </html>

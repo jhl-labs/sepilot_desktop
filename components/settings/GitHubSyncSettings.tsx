@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +39,7 @@ interface SyncItemConfig {
 }
 
 export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) {
+  const { t } = useTranslation();
   // Form states
   const [serverType, setServerType] = useState<'github.com' | 'ghes'>(
     config?.serverType || 'github.com'
@@ -52,33 +54,33 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
   const [syncItems, setSyncItems] = useState<SyncItemConfig[]>([
     {
       id: 'settings',
-      title: '설정 동기화',
-      description: 'LLM, Network, VectorDB 등 애플리케이션 설정',
+      title: 'Settings',
+      description: 'Settings',
       icon: Settings,
       enabled: config?.syncSettings ?? true,
     },
     {
       id: 'personas',
-      title: 'AI 페르소나',
-      description: '사용자 정의 AI 페르소나 설정',
+      title: 'Personas',
+      description: 'Personas',
       icon: User,
       enabled: config?.syncPersonas ?? false,
     },
     {
       id: 'images',
-      title: '이미지 동기화',
-      description: '생성된 이미지 메타데이터',
+      title: 'Images',
+      description: 'Images',
       icon: Image,
       enabled: config?.syncImages ?? false,
-      warning: '용량 주의',
+      warning: 'warning',
     },
     {
       id: 'conversations',
-      title: '대화 동기화',
-      description: '대화 내역 및 메시지',
+      title: 'Conversations',
+      description: 'Conversations',
       icon: MessageSquare,
       enabled: config?.syncConversations ?? false,
-      warning: '개인정보 주의',
+      warning: 'warning',
     },
   ]);
 
@@ -121,12 +123,12 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
 
   const handleTestConnection = async () => {
     if (!token || !owner || !repo) {
-      setMessage({ type: 'error', text: '모든 필드를 입력해주세요.' });
+      setMessage({ type: 'error', text: t('settings.githubSync.messages.fillAll') });
       return;
     }
 
     if (serverType === 'ghes' && !ghesUrl) {
-      setMessage({ type: 'error', text: 'GHES URL을 입력해주세요.' });
+      setMessage({ type: 'error', text: t('settings.githubSync.messages.ghesUrlRequired') });
       return;
     }
 
@@ -154,16 +156,19 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         if (result.success) {
           setMessage({
             type: 'success',
-            text: result.message || 'GitHub 레포지토리 연결 성공!',
+            text: result.message || t('settings.githubSync.messages.testSuccess'),
           });
         } else {
-          throw new Error(result.error || '연결 테스트 실패');
+          throw new Error(result.error || t('settings.githubSync.messages.testFailed'));
         }
       }
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Connection test failed:', err);
-      setMessage({ type: 'error', text: err.message || '연결 테스트 실패' });
+      setMessage({
+        type: 'error',
+        text: err.message || t('settings.githubSync.messages.testFailed'),
+      });
     } finally {
       setIsTesting(false);
     }
@@ -176,12 +181,12 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
 
   const handleSave = async () => {
     if (!token || !owner || !repo) {
-      setMessage({ type: 'error', text: '모든 필드를 입력해주세요.' });
+      setMessage({ type: 'error', text: t('settings.githubSync.messages.fillAll') });
       return;
     }
 
     if (serverType === 'ghes' && !ghesUrl) {
-      setMessage({ type: 'error', text: 'GHES URL을 입력해주세요.' });
+      setMessage({ type: 'error', text: t('settings.githubSync.messages.ghesUrlRequired') });
       return;
     }
 
@@ -205,11 +210,14 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       };
 
       await onSave(newConfig);
-      setMessage({ type: 'success', text: 'GitHub Sync 설정이 저장되었습니다!' });
+      setMessage({ type: 'success', text: t('settings.githubSync.messages.saveSuccess') });
     } catch (error: unknown) {
       const err = error as Error;
       console.error('Failed to save config:', err);
-      setMessage({ type: 'error', text: err.message || '설정 저장 실패' });
+      setMessage({
+        type: 'error',
+        text: err.message || t('settings.githubSync.messages.saveFailed'),
+      });
     } finally {
       setIsSaving(false);
     }
@@ -217,12 +225,12 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
 
   const handleSync = async (type: 'settings' | 'images' | 'conversations' | 'personas' | 'all') => {
     if (!token || !owner || !repo) {
-      setMessage({ type: 'error', text: '먼저 설정을 저장해주세요.' });
+      setMessage({ type: 'error', text: t('settings.githubSync.messages.saveFirst') });
       return;
     }
 
     if (serverType === 'ghes' && !ghesUrl) {
-      setMessage({ type: 'error', text: 'GHES URL을 입력해주세요.' });
+      setMessage({ type: 'error', text: t('settings.githubSync.messages.ghesUrlRequired') });
       return;
     }
 
@@ -251,41 +259,99 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
           case 'settings':
             result = await window.electronAPI.githubSync.syncSettings(syncConfig);
             if (result.success) {
-              setMessage({ type: 'success', text: result.message || '설정 동기화 완료!' });
+              setMessage({
+                type: 'success',
+                text:
+                  result.message ||
+                  t('settings.githubSync.messages.syncSuccess', {
+                    type: t('settings.sync.settings.title'),
+                  }),
+              });
             } else {
-              throw new Error(result.error || '설정 동기화 실패');
+              throw new Error(
+                result.error ||
+                  t('settings.githubSync.messages.syncFailed', {
+                    type: t('settings.sync.settings.title'),
+                  })
+              );
             }
             break;
           case 'personas':
             result = await window.electronAPI.githubSync.syncPersonas(syncConfig);
             if (result.success) {
-              setMessage({ type: 'success', text: result.message || 'AI 페르소나 동기화 완료!' });
+              setMessage({
+                type: 'success',
+                text:
+                  result.message ||
+                  t('settings.githubSync.messages.syncSuccess', {
+                    type: t('settings.sync.personas.title'),
+                  }),
+              });
             } else {
-              throw new Error(result.error || 'AI 페르소나 동기화 실패');
+              throw new Error(
+                result.error ||
+                  t('settings.githubSync.messages.syncFailed', {
+                    type: t('settings.sync.personas.title'),
+                  })
+              );
             }
             break;
           case 'images':
             result = await window.electronAPI.githubSync.syncImages(syncConfig);
             if (result.success) {
-              setMessage({ type: 'success', text: result.message || '이미지 동기화 완료!' });
+              setMessage({
+                type: 'success',
+                text:
+                  result.message ||
+                  t('settings.githubSync.messages.syncSuccess', {
+                    type: t('settings.sync.images.title'),
+                  }),
+              });
             } else {
-              throw new Error(result.error || '이미지 동기화 실패');
+              throw new Error(
+                result.error ||
+                  t('settings.githubSync.messages.syncFailed', {
+                    type: t('settings.sync.images.title'),
+                  })
+              );
             }
             break;
           case 'conversations':
             result = await window.electronAPI.githubSync.syncConversations(syncConfig);
             if (result.success) {
-              setMessage({ type: 'success', text: result.message || '대화 동기화 완료!' });
+              setMessage({
+                type: 'success',
+                text:
+                  result.message ||
+                  t('settings.githubSync.messages.syncSuccess', {
+                    type: t('settings.sync.conversations.title'),
+                  }),
+              });
             } else {
-              throw new Error(result.error || '대화 동기화 실패');
+              throw new Error(
+                result.error ||
+                  t('settings.githubSync.messages.syncFailed', {
+                    type: t('settings.sync.conversations.title'),
+                  })
+              );
             }
             break;
           case 'all': {
             const allResult = await window.electronAPI.githubSync.syncAll(syncConfig);
             if (allResult.success) {
-              setMessage({ type: 'success', text: '전체 동기화 완료!' });
+              setMessage({
+                type: 'success',
+                text: t('settings.githubSync.messages.syncSuccess', {
+                  type: t('settings.githubSync.syncAll'),
+                }),
+              });
             } else {
-              throw new Error(allResult.error || '전체 동기화 실패');
+              throw new Error(
+                allResult.error ||
+                  t('settings.githubSync.messages.syncFailed', {
+                    type: t('settings.githubSync.syncAll'),
+                  })
+              );
             }
             break;
           }
@@ -294,7 +360,10 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
     } catch (error: unknown) {
       const err = error as Error;
       console.error(`Failed to sync ${type}:`, err);
-      setMessage({ type: 'error', text: err.message || `${type} 동기화 실패` });
+      setMessage({
+        type: 'error',
+        text: err.message || t('settings.githubSync.messages.syncFailed', { type }),
+      });
     } finally {
       setIsSyncing(null);
     }
@@ -318,10 +387,10 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Github className="h-5 w-5" />
-            GitHub 연결 설정
+            {t('settings.githubSync.title')}
           </CardTitle>
           <CardDescription>
-            GitHub Personal Access Token을 사용하여 레포지토리에 연결합니다.
+            {t('settings.githubSync.description')}
             <br />
             <a
               href="https://github.com/settings/tokens/new"
@@ -329,16 +398,16 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
               rel="noopener noreferrer"
               className="text-primary hover:underline"
             >
-              새 토큰 생성하기 (repo 권한 필요)
+              {t('settings.githubSync.newTokenLink')}
             </a>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="serverType">Server Type</Label>
+              <Label htmlFor="serverType">{t('settings.githubSync.serverType')}</Label>
               <select
-                title="GitHub 서버 타입"
+                title={t('settings.githubSync.serverType')}
                 id="serverType"
                 value={serverType}
                 onChange={(e) => setServerType(e.target.value as 'github.com' | 'ghes')}
@@ -355,60 +424,60 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
 
             {serverType === 'ghes' && (
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="ghesUrl">GHES URL</Label>
+                <Label htmlFor="ghesUrl">{t('settings.githubSync.ghesUrl')}</Label>
                 <Input
                   id="ghesUrl"
                   value={ghesUrl}
                   onChange={(e) => setGhesUrl(e.target.value)}
-                  placeholder="https://github.company.com"
+                  placeholder={t('settings.githubSync.ghesUrlPlaceholder')}
                 />
                 <p className="text-xs text-muted-foreground">
-                  GHES 인스턴스의 기본 URL을 입력하세요 (예: https://github.company.com)
+                  {t('settings.githubSync.ghesUrlDescription')}
                 </p>
               </div>
             )}
 
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="token">GitHub Personal Access Token</Label>
+              <Label htmlFor="token">{t('settings.githubSync.token')}</Label>
               <Input
                 id="token"
                 type="password"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                placeholder={t('settings.githubSync.tokenPlaceholder')}
               />
               <p className="text-xs text-muted-foreground">
-                repo 권한이 있는 Personal Access Token이 필요합니다.
+                {t('settings.githubSync.tokenDescription')}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="owner">Owner (Organization 또는 User)</Label>
+              <Label htmlFor="owner">{t('settings.githubSync.owner')}</Label>
               <Input
                 id="owner"
                 value={owner}
                 onChange={(e) => setOwner(e.target.value)}
-                placeholder="my-org 또는 my-username"
+                placeholder={t('settings.githubSync.ownerPlaceholder')}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="repo">Repository</Label>
+              <Label htmlFor="repo">{t('settings.githubSync.repo')}</Label>
               <Input
                 id="repo"
                 value={repo}
                 onChange={(e) => setRepo(e.target.value)}
-                placeholder="my-repo"
+                placeholder={t('settings.githubSync.repoPlaceholder')}
               />
             </div>
 
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="branch">Branch (기본값: main)</Label>
+              <Label htmlFor="branch">{t('settings.githubSync.branch')}</Label>
               <Input
                 id="branch"
                 value={branch}
                 onChange={(e) => setBranch(e.target.value)}
-                placeholder="main"
+                placeholder={t('settings.githubSync.branchPlaceholder')}
               />
             </div>
           </div>
@@ -423,12 +492,12 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
               {isTesting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  연결 테스트 중...
+                  {t('settings.githubSync.testing')}
                 </>
               ) : (
                 <>
                   <Github className="mr-2 h-4 w-4" />
-                  연결 테스트
+                  {t('settings.githubSync.testConnection')}
                 </>
               )}
             </Button>
@@ -437,12 +506,12 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  저장 중...
+                  {t('settings.githubSync.saving')}
                 </>
               ) : (
                 <>
                   <Check className="mr-2 h-4 w-4" />
-                  설정 저장
+                  {t('settings.githubSync.save')}
                 </>
               )}
             </Button>
@@ -452,11 +521,16 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
 
       {/* 동기화 항목 카드 그리드 */}
       <div>
-        <h3 className="text-lg font-semibold mb-4">데이터 동기화</h3>
+        <h3 className="text-lg font-semibold mb-4">{t('settings.githubSync.dataSync')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {syncItems.map((item) => {
             const Icon = item.icon;
             const isDisabled = !item.enabled || isSyncing !== null;
+            const title = t(`settings.sync.${item.id}.title`);
+            const description = t(`settings.sync.${item.id}.description`);
+            const warningKey = `settings.sync.${item.id}.warning`;
+            const hasWarning = item.id === 'images' || item.id === 'conversations';
+            const warning = hasWarning ? t(warningKey) : undefined;
 
             return (
               <Card key={item.id} className={item.enabled ? 'border-primary/50' : ''}>
@@ -472,16 +546,14 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
                       </div>
                       <div>
                         <CardTitle className="text-base flex items-center gap-2">
-                          {item.title}
-                          {item.warning && (
+                          {title}
+                          {warning && (
                             <span className="text-xs font-normal text-yellow-600 dark:text-yellow-500">
-                              ({item.warning})
+                              ({warning})
                             </span>
                           )}
                         </CardTitle>
-                        <CardDescription className="text-xs mt-1">
-                          {item.description}
-                        </CardDescription>
+                        <CardDescription className="text-xs mt-1">{description}</CardDescription>
                       </div>
                     </div>
                     <Switch
@@ -502,12 +574,12 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
                       {isSyncing === item.id ? (
                         <>
                           <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                          Push 중...
+                          {t('settings.githubSync.pushing')}
                         </>
                       ) : (
                         <>
                           <RefreshCw className="mr-2 h-3 w-3" />
-                          Push
+                          {t('settings.githubSync.push')}
                         </>
                       )}
                     </Button>
@@ -531,12 +603,12 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
             {isSyncing === 'all' ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                전체 동기화 중...
+                {t('settings.githubSync.syncAllProgress')}
               </>
             ) : (
               <>
                 <RefreshCw className="mr-2 h-5 w-5" />
-                전체 동기화 (활성화된 항목만)
+                {t('settings.githubSync.syncAll')}
               </>
             )}
           </Button>
@@ -547,18 +619,22 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       {config?.lastSyncAt && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">마지막 동기화 정보</CardTitle>
+            <CardTitle className="text-base">{t('settings.githubSync.lastSync.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-sm space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">시간:</span>
+                <span className="text-muted-foreground">
+                  {t('settings.githubSync.lastSync.time')}:
+                </span>
                 <span className="font-medium">
                   {new Date(config.lastSyncAt).toLocaleString('ko-KR')}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">상태:</span>
+                <span className="text-muted-foreground">
+                  {t('settings.githubSync.lastSync.status')}:
+                </span>
                 <span
                   className={`font-medium ${
                     config.lastSyncStatus === 'success'
@@ -566,12 +642,14 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
                       : 'text-red-600 dark:text-red-500'
                   }`}
                 >
-                  {config.lastSyncStatus === 'success' ? '성공' : '실패'}
+                  {config.lastSyncStatus === 'success'
+                    ? t('settings.githubSync.lastSync.success')
+                    : t('settings.githubSync.lastSync.failed')}
                 </span>
               </div>
               {config.lastSyncError && (
                 <div className="mt-2 p-2 rounded bg-red-500/10 text-red-600 dark:text-red-400 text-xs">
-                  에러: {config.lastSyncError}
+                  {t('settings.githubSync.lastSync.error')}: {config.lastSyncError}
                 </div>
               )}
             </div>
@@ -584,23 +662,21 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Bug className="h-5 w-5" />
-            에러 자동 리포팅
+            {t('settings.githubSync.errorReporting.title')}
           </CardTitle>
-          <CardDescription>
-            프로그램 에러 발생 시 GitHub Issue로 자동 리포트하여 개선에 도움을 줍니다.
-          </CardDescription>
+          <CardDescription>{t('settings.githubSync.errorReporting.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 rounded-lg bg-card border">
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-500" />
-                <p className="font-medium text-sm">에러 자동 리포팅 활성화</p>
+                <p className="font-medium text-sm">
+                  {t('settings.githubSync.errorReporting.enable')}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                에러 발생 시 자동으로 GitHub Issue를 생성하여 개발팀에 전달합니다.
-                <br />
-                에러 메시지, 스택 트레이스, 시스템 정보가 포함되며, 개인정보는 포함되지 않습니다.
+              <p className="text-xs text-muted-foreground whitespace-pre-line">
+                {t('settings.githubSync.errorReporting.enableDescription')}
               </p>
             </div>
             <Switch
@@ -611,13 +687,15 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
           </div>
 
           <div className="rounded-md bg-blue-500/10 border border-blue-500/20 px-4 py-3 text-sm">
-            <p className="font-medium mb-2 text-blue-600 dark:text-blue-500">💡 에러 리포팅 정보</p>
+            <p className="font-medium mb-2 text-blue-600 dark:text-blue-500">
+              {t('settings.githubSync.errorReporting.infoTitle')}
+            </p>
             <ul className="space-y-1 text-xs list-disc list-inside text-blue-700 dark:text-blue-400">
-              <li>에러 메시지와 스택 트레이스가 GitHub Issue로 전송됩니다.</li>
-              <li>앱 버전, OS 플랫폼 등 기본 시스템 정보가 포함됩니다.</li>
-              <li>API 키, 토큰 등 민감한 정보는 절대 전송되지 않습니다.</li>
-              <li>프로그램 개선을 위해 매우 중요한 정보입니다.</li>
-              <li>이 기능은 GitHub Token이 설정된 경우에만 사용할 수 있습니다.</li>
+              <li>{t('settings.githubSync.errorReporting.info1')}</li>
+              <li>{t('settings.githubSync.errorReporting.info2')}</li>
+              <li>{t('settings.githubSync.errorReporting.info3')}</li>
+              <li>{t('settings.githubSync.errorReporting.info4')}</li>
+              <li>{t('settings.githubSync.errorReporting.info5')}</li>
             </ul>
           </div>
         </CardContent>
@@ -625,12 +703,12 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
 
       {/* 보안 안내 */}
       <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-500">
-        <p className="font-medium mb-2">🔒 보안 정보</p>
+        <p className="font-medium mb-2">{t('settings.githubSync.security.title')}</p>
         <ul className="space-y-1 text-xs list-disc list-inside text-yellow-700 dark:text-yellow-400">
-          <li>민감한 정보(LLM API 키 등)는 AES-256-GCM으로 암호화되어 저장됩니다.</li>
-          <li>GitHub Token은 로컬에만 저장되며 동기화되지 않습니다.</li>
-          <li>동기화된 파일은 sepilot/ 폴더에 저장됩니다.</li>
-          <li>대화 및 이미지 동기화 시 개인정보 보호에 주의하세요.</li>
+          <li>{t('settings.githubSync.security.item1')}</li>
+          <li>{t('settings.githubSync.security.item2')}</li>
+          <li>{t('settings.githubSync.security.item3')}</li>
+          <li>{t('settings.githubSync.security.item4')}</li>
         </ul>
       </div>
     </div>

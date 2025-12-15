@@ -14,9 +14,12 @@ import {
   FileCode,
   Globe,
   FlaskConical,
+  Languages,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export type SettingSection =
+  | 'general'
   | 'llm'
   | 'network'
   | 'vectordb'
@@ -41,111 +44,6 @@ interface SettingsCategory {
   }[];
 }
 
-const settingsCategories: SettingsCategory[] = [
-  {
-    id: 'core',
-    label: 'Core Settings',
-    items: [
-      {
-        id: 'llm',
-        label: 'LLM',
-        icon: Settings,
-        description: 'LLM 제공자 및 모델 설정',
-      },
-      {
-        id: 'network',
-        label: 'Network',
-        icon: Network,
-        description: '프록시 및 네트워크 설정',
-      },
-    ],
-  },
-  {
-    id: 'integrations',
-    label: 'Integrations',
-    items: [
-      {
-        id: 'vectordb',
-        label: 'VectorDB',
-        icon: Database,
-        description: '벡터 데이터베이스 및 임베딩',
-      },
-      {
-        id: 'imagegen',
-        label: 'ImageGen',
-        icon: Image,
-        description: '이미지 생성 (ComfyUI, NanoBanana)',
-      },
-      {
-        id: 'mcp',
-        label: 'MCP 서버',
-        icon: Plug,
-        description: 'Model Context Protocol 서버',
-      },
-    ],
-  },
-  {
-    id: 'features',
-    label: 'Features',
-    items: [
-      {
-        id: 'quickinput',
-        label: 'Quick Input',
-        icon: Zap,
-        description: '빠른 입력 및 단축키',
-      },
-      {
-        id: 'editor',
-        label: 'Editor',
-        icon: FileCode,
-        description: '코드 에디터 설정',
-      },
-      {
-        id: 'browser',
-        label: 'Browser',
-        icon: Globe,
-        description: '브라우저 에이전트 설정',
-      },
-    ],
-  },
-  {
-    id: 'documents',
-    label: 'Documents',
-    items: [
-      {
-        id: 'team-docs',
-        label: 'Team Docs',
-        icon: Users,
-        description: '팀 문서 동기화 (다중 Repo)',
-      },
-    ],
-  },
-  {
-    id: 'system',
-    label: 'System',
-    items: [
-      {
-        id: 'github',
-        label: 'GitHub Sync',
-        icon: Github,
-        description: 'Personal Docs 동기화',
-      },
-      {
-        id: 'backup',
-        label: '백업/복구',
-        icon: HardDrive,
-        description: '데이터 백업 및 복원',
-      },
-      {
-        id: 'beta',
-        label: 'Beta',
-        icon: FlaskConical,
-        description: '실험적 기능 (개발 중)',
-      },
-    ],
-  },
-];
-
 interface SettingsSidebarProps {
   activeSection: SettingSection;
   onSectionChange: (section: SettingSection) => void;
@@ -157,9 +55,122 @@ export function SettingsSidebar({
   onSectionChange,
   className,
 }: SettingsSidebarProps) {
+  const { t } = useTranslation();
+
+  const categories: SettingsCategory[] = [
+    {
+      id: 'core',
+      label: t('settings.categories.core'),
+      items: [
+        {
+          id: 'general',
+          label: t('settings.general.title'),
+          icon: Languages,
+          description: t('settings.general.description'),
+        },
+        {
+          id: 'llm',
+          label: t('settings.llm.title'),
+          icon: Settings,
+          description: t('settings.llm.description'),
+        },
+        {
+          id: 'network',
+          label: t('settings.network.title'),
+          icon: Network,
+          description: t('settings.network.description'),
+        },
+      ],
+    },
+    {
+      id: 'integrations',
+      label: t('settings.categories.integrations'),
+      items: [
+        {
+          id: 'vectordb',
+          label: t('settings.vectordb.title'),
+          icon: Database,
+          description: t('settings.vectordb.description'),
+        },
+        {
+          id: 'imagegen',
+          label: t('settings.imagegen.title'),
+          icon: Image,
+          description: t('settings.imagegen.description'),
+        },
+        {
+          id: 'mcp',
+          label: t('settings.mcp.title'),
+          icon: Plug,
+          description: t('settings.mcp.description'),
+        },
+      ],
+    },
+    {
+      id: 'features',
+      label: t('settings.categories.features'),
+      items: [
+        {
+          id: 'quickinput',
+          label: t('settings.quickinput.title'),
+          icon: Zap,
+          description: t('settings.quickinput.description'),
+        },
+        {
+          id: 'editor',
+          label: t('settings.editor.title'),
+          icon: FileCode,
+          description: t('settings.editor.description'),
+        },
+        {
+          id: 'browser',
+          label: t('settings.browser.title'),
+          icon: Globe,
+          description: t('settings.browser.description'),
+        },
+      ],
+    },
+    {
+      id: 'documents',
+      label: t('settings.categories.documents'),
+      items: [
+        {
+          id: 'team-docs',
+          label: t('settings.teamDocs.title'),
+          icon: Users,
+          description: t('settings.teamDocs.description'),
+        },
+      ],
+    },
+    {
+      id: 'system',
+      label: t('settings.categories.system'),
+      items: [
+        {
+          id: 'github',
+          label: t('settings.github.title'),
+          icon: Github,
+          description: t('settings.github.description'),
+        },
+        {
+          id: 'backup',
+          label: t('settings.backup.title'),
+          icon: HardDrive,
+          description: t('settings.backup.description'),
+        },
+        {
+          id: 'beta',
+          label: t('settings.beta.title'),
+          icon: FlaskConical,
+          description: t('settings.beta.description'),
+        },
+      ],
+    },
+  ];
+
   return (
     <nav className={cn('w-64 border-r bg-muted/30 p-4 space-y-6', className)}>
-      {settingsCategories.map((category) => (
+      {categories.map((category) => (
         <div key={category.id} className="space-y-2">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">
             {category.label}
