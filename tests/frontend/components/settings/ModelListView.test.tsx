@@ -129,4 +129,51 @@ describe('ModelListView - custom headers', () => {
       'X-Only-Model': 'model-only',
     });
   });
+
+  it('상속된 헤더를 모델에서 제거할 수 있다', async () => {
+    const user = userEvent.setup();
+    const handleModelsChange = jest.fn();
+
+    const models: ModelConfig[] = [
+      {
+        id: 'model-1',
+        connectionId: baseConnection.id,
+        modelId: 'gpt-4o',
+        tags: ['base'],
+      },
+    ];
+
+    render(
+      <ModelListView
+        connections={[baseConnection]}
+        models={models}
+        onModelsChange={handleModelsChange}
+        activeBaseModelId={undefined}
+        activeVisionModelId={undefined}
+        activeAutocompleteModelId={undefined}
+        onActiveModelsChange={jest.fn()}
+        networkConfig={defaultNetworkConfig}
+        defaultTemperature={0.7}
+        defaultMaxTokens={2000}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /gpt-4o/i }));
+
+    const inheritedRow = screen.getByText('X-Conn-Header').closest('div');
+    expect(inheritedRow).toBeTruthy();
+
+    if (inheritedRow) {
+      const removeButton = within(inheritedRow).getByRole('button', { name: /헤더 제거/ });
+      await user.click(removeButton);
+    }
+
+    expect(handleModelsChange).toHaveBeenCalled();
+    const updatedModels = handleModelsChange.mock.calls[
+      handleModelsChange.mock.calls.length - 1
+    ][0] as ModelConfig[];
+    expect(updatedModels[0].customHeaders).toEqual({
+      'X-Conn-Header': null,
+    });
+  });
 });

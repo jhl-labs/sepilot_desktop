@@ -388,6 +388,21 @@ function ModelSettings({
     onUpdate({ customHeaders: updatedHeaders });
   };
 
+  const handleExcludeInheritedHeader = (key: string) => {
+    onUpdate({
+      customHeaders: {
+        ...modelHeaders,
+        [key]: null,
+      },
+    });
+  };
+
+  const handleRestoreInheritedHeader = (key: string) => {
+    const updatedHeaders = { ...modelHeaders };
+    delete updatedHeaders[key];
+    onUpdate({ customHeaders: updatedHeaders });
+  };
+
   return (
     <div className="space-y-4">
       {/* Display Name */}
@@ -413,26 +428,54 @@ function ModelSettings({
           <div className="space-y-1 rounded-md border bg-background p-2 text-xs">
             <p className="font-medium">상속되는 헤더</p>
             {Object.entries(connectionHeaders).map(([key, value]) => (
-              <div key={key} className="flex items-center gap-2 rounded bg-muted/40 p-2 text-sm">
-                <span className="font-mono flex-1">{key}</span>
-                <span className="font-mono text-muted-foreground flex-1">{value}</span>
+              <div
+                key={key}
+                className="flex flex-wrap items-center gap-2 rounded bg-muted/40 p-2 text-sm"
+              >
+                <span className="font-mono flex-1 min-w-[120px]">{key}</span>
+                <span className="font-mono text-muted-foreground flex-1 min-w-[120px]">
+                  {modelHeaders[key] && modelHeaders[key] !== null
+                    ? `${value} → ${modelHeaders[key]}`
+                    : value}
+                </span>
+                {modelHeaders[key] === null ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleRestoreInheritedHeader(key)}
+                    aria-label={`${key} 헤더 복원`}
+                  >
+                    복원
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleExcludeInheritedHeader(key)}
+                    aria-label={`${key} 헤더 제거`}
+                  >
+                    모델에서 제거
+                  </Button>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        {Object.keys(modelHeaders).length > 0 && (
+        {Object.entries(modelHeaders).some(([, value]) => value !== null) && (
           <div className="space-y-1 rounded-md border bg-background p-2 text-xs">
             <p className="font-medium">모델 전용 헤더</p>
-            {Object.entries(modelHeaders).map(([key, value]) => (
-              <div key={key} className="flex items-center gap-2 rounded bg-muted/40 p-2 text-sm">
-                <span className="font-mono flex-1">{key}</span>
-                <span className="font-mono text-muted-foreground flex-1">{value}</span>
-                <Button variant="ghost" size="sm" onClick={() => handleDeleteHeader(key)}>
-                  삭제
-                </Button>
-              </div>
-            ))}
+            {Object.entries(modelHeaders)
+              .filter(([, value]) => value !== null)
+              .map(([key, value]) => (
+                <div key={key} className="flex items-center gap-2 rounded bg-muted/40 p-2 text-sm">
+                  <span className="font-mono flex-1">{key}</span>
+                  <span className="font-mono text-muted-foreground flex-1">{value}</span>
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteHeader(key)}>
+                    삭제
+                  </Button>
+                </div>
+              ))}
           </div>
         )}
 
