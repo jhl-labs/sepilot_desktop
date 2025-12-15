@@ -353,8 +353,8 @@ importers:
         specifier: ^9.0.3
         version: 9.0.3
       webpack-bundle-analyzer:
-        specifier: ^5.0.1
-        version: 5.0.1
+        specifier: ^5.1.0
+        version: 5.1.0
 
 packages:
 
@@ -7965,8 +7965,8 @@ packages:
     engines: {node: '>= 10.13.0'}
     hasBin: true
 
-  webpack-bundle-analyzer@5.0.1:
-    resolution: {integrity: sha512-PUp3YFOHysSw8t+13rcF+8o5SGaP/AZ5KnIF3qJfFodv4xJkmixnfcyy+LOwNadpzvyrEKpaMlewAG2sFUfdpw==}
+  webpack-bundle-analyzer@5.1.0:
+    resolution: {integrity: sha512-WAWwIoIUx4yC2AEBqXbDkcmh/LzAaenv0+nISBflP5l+XIXO9/x6poWarGA3RTrfavk9H3oWQ64Wm0z26/UGKA==}
     engines: {node: '>= 20.9.0'}
     hasBin: true
 
@@ -17326,7 +17326,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  webpack-bundle-analyzer@5.0.1:
+  webpack-bundle-analyzer@5.1.0:
     dependencies:
       '@discoveryjs/json-ext': 0.5.7
       acorn: 8.15.0
