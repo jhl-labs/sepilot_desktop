@@ -86,7 +86,7 @@
     "next-themes": "^0.4.6",
     "node-pty": "1.1.0-beta39",
     "pdf-parse": "^2.4.5",
-    "plotly.js-dist-min": "^3.3.0",
+    "plotly.js-dist-min": "^3.3.1",
     "pptxgenjs": "^4.0.1",
     "proxy-agent": "^6.5.0",
     "react": "^19.2.1",
