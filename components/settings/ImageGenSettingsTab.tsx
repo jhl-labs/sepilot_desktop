@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +32,7 @@ export function ImageGenSettingsTab({
   message,
   setMessage,
 }: ImageGenSettingsTabProps) {
+  const { t } = useTranslation();
   const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   const handleProviderChange = (provider: 'comfyui' | 'nanobanana') => {
@@ -46,7 +48,7 @@ export function ImageGenSettingsTab({
 
     try {
       if (!imageGenConfig.comfyui?.httpUrl.trim()) {
-        throw new Error('ComfyUI HTTP URL을 입력해주세요.');
+        throw new Error(t('settings.imagegen.comfyui.httpUrlRequired'));
       }
 
       if (typeof window !== 'undefined' && window.electronAPI?.comfyui) {
@@ -59,10 +61,10 @@ export function ImageGenSettingsTab({
         );
 
         if (!result.success) {
-          throw new Error(result.error || 'ComfyUI 서버 연결 테스트에 실패했습니다.');
+          throw new Error(result.error || t('settings.imagegen.comfyui.connectionTestFailed'));
         }
 
-        setMessage({ type: 'success', text: 'ComfyUI 서버와 연결되었습니다.' });
+        setMessage({ type: 'success', text: t('settings.imagegen.comfyui.connectionSuccess') });
       } else {
         console.warn(
           '[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied'
@@ -77,16 +79,18 @@ export function ImageGenSettingsTab({
         });
 
         if (!response.ok) {
-          throw new Error(`ComfyUI 서버 응답이 올바르지 않습니다. (HTTP ${response.status})`);
+          throw new Error(
+            t('settings.imagegen.comfyui.invalidResponse', { status: response.status })
+          );
         }
 
-        setMessage({ type: 'success', text: 'ComfyUI 서버와 연결되었습니다.' });
+        setMessage({ type: 'success', text: t('settings.imagegen.comfyui.connectionSuccess') });
       }
     } catch (error: any) {
       console.error('Failed to test ComfyUI connection:', error);
       setMessage({
         type: 'error',
-        text: error.message || 'ComfyUI 서버 연결 테스트에 실패했습니다.',
+        text: error.message || t('settings.imagegen.comfyui.connectionTestFailed'),
       });
     } finally {
       setIsTestingConnection(false);
@@ -99,17 +103,17 @@ export function ImageGenSettingsTab({
 
     try {
       if (!imageGenConfig.nanobanana?.apiKey.trim()) {
-        throw new Error('NanoBanana API Key를 입력해주세요.');
+        throw new Error(t('settings.imagegen.nanobanana.apiKeyRequired'));
       }
 
       // TODO: Implement NanoBanana connection test via IPC
       // For now, just validate API key format
-      setMessage({ type: 'success', text: 'NanoBanana 설정이 유효합니다.' });
+      setMessage({ type: 'success', text: t('settings.imagegen.nanobanana.configValid') });
     } catch (error: any) {
       console.error('Failed to test NanoBanana connection:', error);
       setMessage({
         type: 'error',
-        text: error.message || 'NanoBanana 연결 테스트에 실패했습니다.',
+        text: error.message || t('settings.imagegen.nanobanana.connectionTestFailed'),
       });
     } finally {
       setIsTestingConnection(false);
@@ -119,17 +123,17 @@ export function ImageGenSettingsTab({
   return (
     <div className="space-y-6">
       <SettingsSectionHeader
-        title="이미지 생성 설정"
-        description="ComfyUI 또는 NanoBanana(Google Imagen)를 사용한 이미지 생성 설정을 관리합니다."
+        title={t('settings.imagegen.title')}
+        description={t('settings.imagegen.description')}
         icon={Image}
       />
 
       {/* Provider Selection */}
       <div className="rounded-md border bg-muted/40 p-4 space-y-3">
         <div>
-          <h3 className="text-base font-semibold">이미지 생성 제공자 선택</h3>
+          <h3 className="text-base font-semibold">{t('settings.imagegen.providerSelection')}</h3>
           <p className="text-xs text-muted-foreground mt-1">
-            사용할 이미지 생성 서비스를 선택하세요.
+            {t('settings.imagegen.providerSelectionDescription')}
           </p>
         </div>
         <div className="flex gap-4">
@@ -176,15 +180,16 @@ export function ImageGenSettingsTab({
           <div className="rounded-md border bg-muted/40 p-4 space-y-2">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-base font-semibold">ComfyUI 연결</h3>
+                <h3 className="text-base font-semibold">
+                  {t('settings.imagegen.comfyui.connection')}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  이미지 생성을 위해 사용할 ComfyUI REST/WebSocket 엔드포인트와 기본 워크플로우를
-                  설정합니다.
+                  {t('settings.imagegen.comfyui.connectionDescription')}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
-                  title="ComfyUI 연결"
+                  title={t('settings.imagegen.comfyui.connection')}
                   type="checkbox"
                   className="sr-only peer"
                   checked={imageGenConfig.comfyui?.enabled ?? false}
@@ -203,7 +208,7 @@ export function ImageGenSettingsTab({
             </div>
             {!imageGenConfig.comfyui?.enabled && (
               <p className="text-xs text-muted-foreground">
-                토글을 활성화하면 아래 설정을 편집할 수 있습니다.
+                {t('settings.imagegen.comfyui.enableToggleHint')}
               </p>
             )}
           </div>
@@ -213,7 +218,7 @@ export function ImageGenSettingsTab({
           >
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="comfyHttp">HTTP Endpoint</Label>
+                <Label htmlFor="comfyHttp">{t('settings.imagegen.comfyui.httpEndpoint')}</Label>
                 <Input
                   id="comfyHttp"
                   value={imageGenConfig.comfyui?.httpUrl || ''}
@@ -226,15 +231,15 @@ export function ImageGenSettingsTab({
                       },
                     })
                   }
-                  placeholder="http://127.0.0.1:8188"
+                  placeholder={t('settings.imagegen.comfyui.httpPlaceholder')}
                 />
                 <p className="text-xs text-muted-foreground">
-                  ComfyUI REST API 기본 URL (예: http://localhost:8188)
+                  {t('settings.imagegen.comfyui.httpUrlDescription')}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="comfyWs">WebSocket Endpoint</Label>
+                <Label htmlFor="comfyWs">{t('settings.imagegen.comfyui.wsEndpoint')}</Label>
                 <Input
                   id="comfyWs"
                   value={imageGenConfig.comfyui?.wsUrl || ''}
@@ -247,14 +252,16 @@ export function ImageGenSettingsTab({
                       },
                     })
                   }
-                  placeholder="ws://127.0.0.1:8188/ws"
+                  placeholder={t('settings.imagegen.comfyui.wsPlaceholder')}
                 />
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="comfyWorkflow">기본 워크플로우 ID 또는 파일</Label>
+                <Label htmlFor="comfyWorkflow">
+                  {t('settings.imagegen.comfyui.workflowLabel')}
+                </Label>
                 <Input
                   id="comfyWorkflow"
                   value={imageGenConfig.comfyui?.workflowId || ''}
@@ -267,11 +274,11 @@ export function ImageGenSettingsTab({
                       },
                     })
                   }
-                  placeholder="workflow.json 또는 prompt ID"
+                  placeholder={t('settings.imagegen.comfyui.workflowPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="comfyClientId">Client ID</Label>
+                <Label htmlFor="comfyClientId">{t('settings.imagegen.comfyui.clientId')}</Label>
                 <Input
                   id="comfyClientId"
                   value={imageGenConfig.comfyui?.clientId || ''}
@@ -284,14 +291,14 @@ export function ImageGenSettingsTab({
                       },
                     })
                   }
-                  placeholder="선택 사항"
+                  placeholder={t('settings.imagegen.comfyui.optional')}
                 />
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="comfyApiKey">API Key</Label>
+                <Label htmlFor="comfyApiKey">{t('settings.imagegen.comfyui.apiKey')}</Label>
                 <Input
                   id="comfyApiKey"
                   type="password"
@@ -305,11 +312,11 @@ export function ImageGenSettingsTab({
                       },
                     })
                   }
-                  placeholder="인증 필요 시 입력"
+                  placeholder={t('settings.imagegen.comfyui.apiKeyPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="comfySeed">Seed</Label>
+                <Label htmlFor="comfySeed">{t('settings.imagegen.comfyui.seed')}</Label>
                 <Input
                   id="comfySeed"
                   type="number"
@@ -324,17 +331,17 @@ export function ImageGenSettingsTab({
                       },
                     });
                   }}
-                  placeholder="-1"
+                  placeholder={t('settings.imagegen.comfyui.seedPlaceholder')}
                 />
                 <p className="text-xs text-muted-foreground">
-                  -1이면 ComfyUI가 자동 Seed를 사용합니다.
+                  {t('settings.imagegen.comfyui.seedDescription')}
                 </p>
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="comfySteps">Steps</Label>
+                <Label htmlFor="comfySteps">{t('settings.imagegen.comfyui.steps')}</Label>
                 <Input
                   id="comfySteps"
                   type="number"
@@ -352,7 +359,7 @@ export function ImageGenSettingsTab({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="comfyCfg">CFG Scale</Label>
+                <Label htmlFor="comfyCfg">{t('settings.imagegen.comfyui.cfgScale')}</Label>
                 <Input
                   id="comfyCfg"
                   type="number"
@@ -370,16 +377,18 @@ export function ImageGenSettingsTab({
                 />
               </div>
               <div className="space-y-2">
-                <Label>워크플로우 경로 참고</Label>
+                <Label>{t('settings.imagegen.comfyui.workflowReference')}</Label>
                 <p className="text-xs text-muted-foreground">
-                  ComfyUI API 호출 시 사용할 기본 하이퍼파라미터를 정의합니다.
+                  {t('settings.imagegen.comfyui.workflowReferenceDescription')}
                 </p>
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="comfyPositive">기본 프롬프트</Label>
+                <Label htmlFor="comfyPositive">
+                  {t('settings.imagegen.comfyui.positivePrompt')}
+                </Label>
                 <Textarea
                   id="comfyPositive"
                   value={imageGenConfig.comfyui?.positivePrompt || ''}
@@ -392,12 +401,14 @@ export function ImageGenSettingsTab({
                       },
                     })
                   }
-                  placeholder="이미지 생성 시 기본으로 사용할 포지티브 프롬프트"
+                  placeholder={t('settings.imagegen.comfyui.positivePromptPlaceholder')}
                   className="min-h-[100px]"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="comfyNegative">네거티브 프롬프트</Label>
+                <Label htmlFor="comfyNegative">
+                  {t('settings.imagegen.comfyui.negativePrompt')}
+                </Label>
                 <Textarea
                   id="comfyNegative"
                   value={imageGenConfig.comfyui?.negativePrompt || ''}
@@ -410,7 +421,7 @@ export function ImageGenSettingsTab({
                       },
                     })
                   }
-                  placeholder="불필요한 요소를 제거하기 위한 네거티브 프롬프트"
+                  placeholder={t('settings.imagegen.comfyui.negativePromptPlaceholder')}
                   className="min-h-[100px]"
                 />
               </div>
@@ -426,7 +437,7 @@ export function ImageGenSettingsTab({
                   !imageGenConfig.comfyui?.enabled
                 }
               >
-                {isTestingConnection ? '테스트 중...' : '연결 테스트'}
+                {isTestingConnection ? t('common.testing') : t('common.testConnection')}
               </Button>
             </div>
           </div>
@@ -437,14 +448,16 @@ export function ImageGenSettingsTab({
           <div className="rounded-md border bg-muted/40 p-4 space-y-2">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-base font-semibold">NanoBanana 연결</h3>
+                <h3 className="text-base font-semibold">
+                  {t('settings.imagegen.nanobanana.connection')}
+                </h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Google Imagen API를 사용한 이미지 생성 설정을 관리합니다.
+                  {t('settings.imagegen.nanobanana.connectionDescription')}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
-                  title="NanoBanana 연결"
+                  title={t('settings.imagegen.nanobanana.connection')}
                   type="checkbox"
                   className="sr-only peer"
                   checked={imageGenConfig.nanobanana?.enabled ?? false}
@@ -463,7 +476,7 @@ export function ImageGenSettingsTab({
             </div>
             {!imageGenConfig.nanobanana?.enabled && (
               <p className="text-xs text-muted-foreground">
-                토글을 활성화하면 아래 설정을 편집할 수 있습니다.
+                {t('settings.imagegen.nanobanana.enableToggleHint')}
               </p>
             )}
           </div>
@@ -472,9 +485,11 @@ export function ImageGenSettingsTab({
             className={`space-y-4 ${!imageGenConfig.nanobanana?.enabled ? 'opacity-60 pointer-events-none' : ''}`}
           >
             <div className="space-y-2">
-              <Label htmlFor="nanoBananaProvider">API Provider</Label>
+              <Label htmlFor="nanoBananaProvider">
+                {t('settings.imagegen.nanobanana.provider')}
+              </Label>
               <select
-                title="NanoBanana API Provider"
+                title={t('settings.imagegen.nanobanana.provider')}
                 id="nanoBananaProvider"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={imageGenConfig.nanobanana?.provider || 'nanobananaapi'}
@@ -488,13 +503,17 @@ export function ImageGenSettingsTab({
                   })
                 }
               >
-                <option value="nanobananaapi">NanoBanana API (nanobananaapi.ai)</option>
-                <option value="vertex-ai">Google Vertex AI (직접 연결)</option>
+                <option value="nanobananaapi">
+                  {t('settings.imagegen.nanobanana.providerNanobanana')}
+                </option>
+                <option value="vertex-ai">
+                  {t('settings.imagegen.nanobanana.providerVertexAi')}
+                </option>
               </select>
               <p className="text-xs text-muted-foreground">
                 {imageGenConfig.nanobanana?.provider === 'vertex-ai'
-                  ? 'Google Cloud Vertex AI를 직접 사용합니다. OAuth 2 access token이 필요합니다.'
-                  : 'NanoBanana API를 사용합니다. 간단한 API key로 사용 가능합니다.'}
+                  ? t('settings.imagegen.nanobanana.vertexAiDescription')
+                  : t('settings.imagegen.nanobanana.apiDescription')}
               </p>
             </div>
 
@@ -502,8 +521,8 @@ export function ImageGenSettingsTab({
               <div className="space-y-2">
                 <Label htmlFor="nanoBananaApiKey">
                   {imageGenConfig.nanobanana?.provider === 'vertex-ai'
-                    ? 'Google Cloud API Key (OAuth 2 Token)'
-                    : 'NanoBanana API Key'}
+                    ? t('settings.imagegen.nanobanana.vertexAiApiKeyLabel')
+                    : t('settings.imagegen.nanobanana.apiKeyLabel')}
                 </Label>
                 <Input
                   id="nanoBananaApiKey"
@@ -520,20 +539,22 @@ export function ImageGenSettingsTab({
                   }
                   placeholder={
                     imageGenConfig.nanobanana?.provider === 'vertex-ai'
-                      ? 'Google Cloud OAuth 2 Token'
-                      : 'NanoBanana API Key'
+                      ? t('settings.imagegen.nanobanana.vertexAiApiKeyPlaceholder')
+                      : t('settings.imagegen.nanobanana.apiKeyPlaceholder')
                   }
                 />
                 <p className="text-xs text-muted-foreground">
                   {imageGenConfig.nanobanana?.provider === 'vertex-ai'
-                    ? 'Google Cloud Console에서 발급받은 OAuth 2 access token을 입력하세요.'
-                    : 'https://nanobananaapi.ai 에서 발급받은 API Key를 입력하세요.'}
+                    ? t('settings.imagegen.nanobanana.vertexAiApiKeyDescription')
+                    : t('settings.imagegen.nanobanana.apiKeyDescription')}
                 </p>
               </div>
 
               {imageGenConfig.nanobanana?.provider === 'vertex-ai' && (
                 <div className="space-y-2">
-                  <Label htmlFor="nanoBananaProject">Project ID</Label>
+                  <Label htmlFor="nanoBananaProject">
+                    {t('settings.imagegen.nanobanana.projectId')}
+                  </Label>
                   <Input
                     id="nanoBananaProject"
                     value={imageGenConfig.nanobanana?.projectId || ''}
@@ -546,10 +567,10 @@ export function ImageGenSettingsTab({
                         },
                       })
                     }
-                    placeholder="my-project-id"
+                    placeholder={t('settings.imagegen.nanobanana.projectIdPlaceholder')}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Google Cloud Project ID (Vertex AI 사용 시 필수)
+                    {t('settings.imagegen.nanobanana.projectIdDescription')}
                   </p>
                 </div>
               )}
@@ -558,7 +579,9 @@ export function ImageGenSettingsTab({
             {imageGenConfig.nanobanana?.provider === 'vertex-ai' && (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="nanoBananaLocation">Location</Label>
+                  <Label htmlFor="nanoBananaLocation">
+                    {t('settings.imagegen.nanobanana.location')}
+                  </Label>
                   <Input
                     id="nanoBananaLocation"
                     value={imageGenConfig.nanobanana?.location || 'us-central1'}
@@ -571,17 +594,17 @@ export function ImageGenSettingsTab({
                         },
                       })
                     }
-                    placeholder="us-central1"
+                    placeholder={t('settings.imagegen.nanobanana.locationPlaceholder')}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Google Cloud 리전 (기본값: us-central1)
+                    {t('settings.imagegen.nanobanana.locationDescription')}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nanoBananaModel">Model</Label>
+                  <Label htmlFor="nanoBananaModel">{t('settings.imagegen.nanobanana.model')}</Label>
                   <select
-                    title="NanoBanana 모델"
+                    title={t('settings.imagegen.nanobanana.model')}
                     id="nanoBananaModel"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     value={imageGenConfig.nanobanana?.model || 'imagen-3.0-generate-001'}
@@ -595,11 +618,15 @@ export function ImageGenSettingsTab({
                       })
                     }
                   >
-                    <option value="imagen-3.0-generate-001">Imagen 3.0 (Standard)</option>
-                    <option value="imagen-3.0-fast-generate-001">Imagen 3.0 Fast</option>
+                    <option value="imagen-3.0-generate-001">
+                      {t('settings.imagegen.nanobanana.modelStandard')}
+                    </option>
+                    <option value="imagen-3.0-fast-generate-001">
+                      {t('settings.imagegen.nanobanana.modelFast')}
+                    </option>
                   </select>
                   <p className="text-xs text-muted-foreground">
-                    Fast: 빠른 생성, Standard: 더 높은 품질
+                    {t('settings.imagegen.nanobanana.modelDescription')}
                   </p>
                 </div>
               </div>
@@ -608,7 +635,7 @@ export function ImageGenSettingsTab({
             <div className="space-y-2">
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
-                  title="NanoBanana 이미지 생성 시 옵션 물어보기"
+                  title={t('settings.imagegen.nanobanana.askOptions')}
                   type="checkbox"
                   className="sr-only peer"
                   checked={imageGenConfig.nanobanana?.askOptionsOnGenerate ?? false}
@@ -623,18 +650,22 @@ export function ImageGenSettingsTab({
                   }
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                <span className="ml-3 text-sm font-medium">이미지 생성 시 옵션 물어보기</span>
+                <span className="ml-3 text-sm font-medium">
+                  {t('settings.imagegen.nanobanana.askOptions')}
+                </span>
               </label>
               <p className="text-xs text-muted-foreground ml-14">
-                활성화하면 이미지 생성할 때마다 aspect ratio, 이미지 개수 등을 선택할 수 있습니다.
+                {t('settings.imagegen.nanobanana.askOptionsDescription')}
               </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="nanoBananaAspectRatio">Aspect Ratio</Label>
+                <Label htmlFor="nanoBananaAspectRatio">
+                  {t('settings.imagegen.nanobanana.aspectRatio')}
+                </Label>
                 <select
-                  title="NanoBanana 이미지 생성 시 화면 비율"
+                  title={t('settings.imagegen.nanobanana.aspectRatio')}
                   id="nanoBananaAspectRatio"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={imageGenConfig.nanobanana?.aspectRatio || '1:1'}
@@ -657,7 +688,9 @@ export function ImageGenSettingsTab({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nanoBananaNumImages">Number of Images</Label>
+                <Label htmlFor="nanoBananaNumImages">
+                  {t('settings.imagegen.nanobanana.numberOfImages')}
+                </Label>
                 <Input
                   id="nanoBananaNumImages"
                   type="number"
@@ -675,13 +708,15 @@ export function ImageGenSettingsTab({
                       },
                     });
                   }}
-                  placeholder="1"
+                  placeholder={t('settings.imagegen.nanobanana.numberOfImagesPlaceholder')}
                 />
-                <p className="text-xs text-muted-foreground">생성할 이미지 개수 (1-8)</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('settings.imagegen.nanobanana.numImagesDescription')}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nanoBananaSeed">Seed</Label>
+                <Label htmlFor="nanoBananaSeed">{t('settings.imagegen.nanobanana.seed')}</Label>
                 <Input
                   id="nanoBananaSeed"
                   type="number"
@@ -696,13 +731,15 @@ export function ImageGenSettingsTab({
                       },
                     });
                   }}
-                  placeholder="-1"
+                  placeholder={t('settings.imagegen.nanobanana.seedPlaceholder')}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nanoBananaNegative">네거티브 프롬프트</Label>
+              <Label htmlFor="nanoBananaNegative">
+                {t('settings.imagegen.nanobanana.negativePrompt')}
+              </Label>
               <Textarea
                 id="nanoBananaNegative"
                 value={imageGenConfig.nanobanana?.negativePrompt || ''}
@@ -715,7 +752,7 @@ export function ImageGenSettingsTab({
                     },
                   })
                 }
-                placeholder="불필요한 요소를 제거하기 위한 네거티브 프롬프트"
+                placeholder={t('settings.imagegen.nanobanana.negativePromptPlaceholder')}
                 className="min-h-[100px]"
               />
             </div>
@@ -730,7 +767,7 @@ export function ImageGenSettingsTab({
                   !imageGenConfig.nanobanana?.enabled
                 }
               >
-                {isTestingConnection ? '테스트 중...' : '연결 테스트'}
+                {isTestingConnection ? t('common.testing') : t('common.testConnection')}
               </Button>
             </div>
           </div>
@@ -762,7 +799,7 @@ export function ImageGenSettingsTab({
               !imageGenConfig.nanobanana?.apiKey.trim())
           }
         >
-          {isSaving ? '저장 중...' : '저장'}
+          {isSaving ? t('common.saving') : t('common.save')}
         </Button>
       </div>
     </div>
