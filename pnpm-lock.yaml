@@ -142,8 +142,8 @@ importers:
         specifier: ^2.4.5
         version: 2.4.5
       plotly.js-dist-min:
-        specifier: ^3.3.0
-        version: 3.3.0
+        specifier: ^3.3.1
+        version: 3.3.1
       pptxgenjs:
         specifier: ^4.0.1
         version: 4.0.1
@@ -6531,8 +6531,8 @@ packages:
     resolution: {integrity: sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==}
     engines: {node: '>=10.4.0'}
 
-  plotly.js-dist-min@3.3.0:
-    resolution: {integrity: sha512-XENvNJRiMmoMsktlO2DA635vmLU8Be0eIy2Y58is9qudNQqpvGBu4y50cBj7rl1hS3htP+1XnCUrFmyvwbtP0w==}
+  plotly.js-dist-min@3.3.1:
+    resolution: {integrity: sha512-ZxKM9DlEoEF3wBzGRPGHt6gWTJrm5N81J9AgX9UBX/Qjc9L4lRxtPBPq+RmBJWoA71j1X5Z1ouuguLkdoo88tg==}
 
   plotly.js@3.3.0:
     resolution: {integrity: sha512-3PT9dW7IbIfN7JWGr4YxxFQnbN5MRaB36qIKF/eF0iC9l0/MuGSlMlgRgI7Uu8vYuGxX6AjLwsBBRYTPG7NFSA==}
@@ -15606,7 +15606,7 @@ snapshots:
       base64-js: 1.5.1
       xmlbuilder: 15.1.1
 
-  plotly.js-dist-min@3.3.0: {}
+  plotly.js-dist-min@3.3.1: {}
 
   plotly.js@3.3.0(mapbox-gl@1.13.3):
     dependencies:
