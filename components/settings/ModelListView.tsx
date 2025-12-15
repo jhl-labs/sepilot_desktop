@@ -350,9 +350,6 @@ function ModelSettings({
   isActiveVision,
   isActiveAutocomplete,
 }: ModelSettingsProps) {
-  const [newHeaderKey, setNewHeaderKey] = useState('');
-  const [newHeaderValue, setNewHeaderValue] = useState('');
-
   return (
     <div className="space-y-4">
       {/* Display Name */}
@@ -486,63 +483,6 @@ function ModelSettings({
           />
         </div>
       )}
-
-      {/* Custom Headers */}
-      <div className="space-y-2">
-        <Label>커스텀 HTTP 헤더 (모델 전용)</Label>
-        {model.customHeaders && Object.keys(model.customHeaders).length > 0 && (
-          <div className="space-y-1">
-            {Object.entries(model.customHeaders).map(([key, value]) => (
-              <div key={key} className="flex items-center gap-2 p-2 rounded bg-background text-sm">
-                <span className="font-mono flex-1">{key}:</span>
-                <span className="font-mono text-muted-foreground flex-1">{value}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const newHeaders = { ...model.customHeaders };
-                    delete newHeaders[key];
-                    onUpdate({ customHeaders: newHeaders });
-                  }}
-                >
-                  삭제
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="flex gap-2">
-          <Input
-            value={newHeaderKey}
-            onChange={(e) => setNewHeaderKey(e.target.value)}
-            placeholder="헤더 이름"
-            className="flex-1"
-          />
-          <Input
-            value={newHeaderValue}
-            onChange={(e) => setNewHeaderValue(e.target.value)}
-            placeholder="헤더 값"
-            className="flex-1"
-          />
-          <Button
-            size="sm"
-            onClick={() => {
-              if (newHeaderKey.trim() && newHeaderValue.trim()) {
-                onUpdate({
-                  customHeaders: {
-                    ...model.customHeaders,
-                    [newHeaderKey.trim()]: newHeaderValue.trim(),
-                  },
-                });
-                setNewHeaderKey('');
-                setNewHeaderValue('');
-              }
-            }}
-          >
-            추가
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }
