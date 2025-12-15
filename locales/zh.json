@@ -57,6 +57,9 @@
     "description": "配置 LLM、VectorDB、MCP 等设置。",
     "saved": "设置已保存！",
     "saveFailed": "保存设置失败。",
+    "notInitialized": "设置未初始化。",
+    "conversionFailed": "设置转换失败。",
+    "conversionError": "设置转换错误：{{error}}",
     "categories": {
       "core": "核心设置",
       "integrations": "集成",

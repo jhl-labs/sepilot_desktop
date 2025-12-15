@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -70,6 +71,7 @@ const createDefaultBetaConfig = (): BetaConfig => ({
 });
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<SettingSection>('general');
   const [viewMode, setViewMode] = useState<'ui' | 'json'>('ui');
 
@@ -378,7 +380,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     try {
       // Validate V2 config
       if (!configV2) {
-        setMessage({ type: 'error', text: '설정이 초기화되지 않았습니다.' });
+        setMessage({ type: 'error', text: t('settings.notInitialized') });
         setIsSaving(false);
         return;
       }
@@ -404,7 +406,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       } catch (error: any) {
         console.error('[SettingsDialog] V2 to V1 conversion failed:', error);
 
-        let userMessage = '설정 변환에 실패했습니다.';
+        let userMessage = t('settings.conversionFailed');
 
         // Provide specific error messages
         if (error.message?.includes('No active base model')) {
@@ -414,7 +416,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           userMessage =
             '모델이 참조하는 Connection이 존재하지 않습니다. Connections 탭을 확인해주세요.';
         } else {
-          userMessage = `설정 변환 오류: ${error.message}`;
+          userMessage = t('settings.conversionError', { error: error.message });
         }
 
         setMessage({ type: 'error', text: userMessage });
@@ -488,10 +490,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         })
       );
 
-      setMessage({ type: 'success', text: '설정이 저장되었습니다!' });
+      setMessage({ type: 'success', text: t('settings.saved') });
     } catch (error: any) {
       console.error('Failed to save config:', error);
-      setMessage({ type: 'error', text: error.message || '설정 저장에 실패했습니다.' });
+      setMessage({ type: 'error', text: error.message || t('settings.saveFailed') });
     } finally {
       setIsSaving(false);
     }
@@ -537,9 +539,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         })
       );
 
-      setMessage({ type: 'success', text: '네트워크 설정이 저장되었습니다!' });
+      setMessage({ type: 'success', text: t('settings.network.saved') });
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || '설정 저장에 실패했습니다.' });
+      setMessage({ type: 'error', text: error.message || t('settings.saveFailed') });
     } finally {
       setIsSaving(false);
     }
@@ -584,12 +586,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         })
       );
 
-      setImageGenMessage({ type: 'success', text: '이미지 생성 설정이 저장되었습니다!' });
+      setImageGenMessage({ type: 'success', text: t('settings.imagegen.saved') });
     } catch (error: any) {
       console.error('Failed to save ImageGen config:', error);
       setImageGenMessage({
         type: 'error',
-        text: error.message || '이미지 생성 설정 저장에 실패했습니다.',
+        text: error.message || t('settings.saveFailed'),
       });
     } finally {
       setIsImageGenSaving(false);
@@ -671,12 +673,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         }
       }
 
-      setMessage({ type: 'success', text: 'Quick Input 설정이 저장되었습니다!' });
+      setMessage({ type: 'success', text: t('settings.quickinput.saved') });
     } catch (error: any) {
       console.error('Failed to save QuickInput config:', error);
       setMessage({
         type: 'error',
-        text: error.message || 'Quick Input 설정 저장에 실패했습니다.',
+        text: error.message || t('settings.saveFailed'),
       });
     } finally {
       setIsSaving(false);
@@ -708,12 +710,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         })
       );
 
-      setMessage({ type: 'success', text: 'Beta 설정이 저장되었습니다!' });
+      setMessage({ type: 'success', text: t('settings.beta.saved') });
     } catch (error: any) {
       console.error('Failed to save Beta config:', error);
       setMessage({
         type: 'error',
-        text: error.message || 'Beta 설정 저장에 실패했습니다.',
+        text: error.message || t('settings.saveFailed'),
       });
     } finally {
       setIsSaving(false);
@@ -776,7 +778,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           logger.info('SQLite-vec initialized in Electron environment');
         } else {
           // 브라우저 환경: 설정만 저장, 초기화는 건너뛰기
-          logger.info('브라우저 환경에서는 SQLite-vec를 사용할 수 없습니다. 설정만 저장됩니다.');
+          logger.info(t('settings.vectordb.hints.sqliteVec'));
         }
       } else {
         // OpenSearch, Elasticsearch, pgvector 등은 브라우저에서도 초기화 가능
@@ -919,8 +921,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       >
         <div className="px-6 pt-6 pb-3 border-b">
           <DialogHeader>
-            <DialogTitle>설정</DialogTitle>
-            <DialogDescription>LLM, VectorDB, MCP 등의 설정을 구성하세요.</DialogDescription>
+            <DialogTitle>{t('settings.title')}</DialogTitle>
+            <DialogDescription>{t('settings.description')}</DialogDescription>
           </DialogHeader>
 
           {/* UI/JSON Toggle Tabs (VSCode-style) */}

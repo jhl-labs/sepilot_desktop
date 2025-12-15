@@ -57,6 +57,9 @@
     "description": "LLM, VectorDB, MCP 등의 설정을 구성하세요.",
     "saved": "설정이 저장되었습니다!",
     "saveFailed": "설정 저장에 실패했습니다.",
+    "notInitialized": "설정이 초기화되지 않았습니다.",
+    "conversionFailed": "설정 변환에 실패했습니다.",
+    "conversionError": "설정 변환 오류: {{error}}",
     "categories": {
       "core": "핵심 설정",
       "integrations": "연동",

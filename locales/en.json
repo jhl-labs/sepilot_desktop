@@ -57,6 +57,9 @@
     "description": "Configure LLM, VectorDB, MCP, and other settings.",
     "saved": "Settings saved!",
     "saveFailed": "Failed to save settings.",
+    "notInitialized": "Settings not initialized.",
+    "conversionFailed": "Failed to convert settings.",
+    "conversionError": "Settings conversion error: {{error}}",
     "categories": {
       "core": "Core Settings",
       "integrations": "Integrations",

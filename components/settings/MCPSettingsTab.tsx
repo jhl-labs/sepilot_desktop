@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MCPServerList } from '@/components/mcp/MCPServerList';
 import { MCPServerConfigComponent } from '@/components/mcp/MCPServerConfig';
 
 export function MCPSettingsTab() {
+  const { t } = useTranslation();
   const [mcpRefreshKey, setMcpRefreshKey] = useState(0);
 
   return (
@@ -25,7 +27,9 @@ export function MCPSettingsTab() {
           <span className="w-full border-t border-dashed" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-3 text-muted-foreground">새 서버 추가</span>
+          <span className="bg-background px-3 text-muted-foreground">
+            {t('settings.mcp.serverConfig.title')}
+          </span>
         </div>
       </div>
 
