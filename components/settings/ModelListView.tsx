@@ -247,85 +247,90 @@ export function ModelListView({
           </div>
         ) : (
           <div className="space-y-2">
-            {models.map((model) => (
-              <div key={model.id} className="border rounded-lg overflow-hidden">
-                <div className="p-4 bg-background">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <button
-                          onClick={() =>
-                            setExpandedModelId(expandedModelId === model.id ? null : model.id)
-                          }
-                          className="flex items-center gap-1 hover:text-primary"
-                        >
-                          {expandedModelId === model.id ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                          <h4 className="font-semibold">{model.displayName || model.modelId}</h4>
-                        </button>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {getConnectionName(model.connectionId)} • {model.modelId}
-                      </p>
+            {models.map((model) => {
+              const connection = connections.find((c) => c.id === model.connectionId);
 
-                      {/* Tags */}
-                      <div className="flex flex-wrap gap-2">
-                        {(['base', 'vision', 'autocomplete'] as ModelRoleTag[]).map((tag) => {
-                          const isActive =
-                            (tag === 'base' && activeBaseModelId === model.id) ||
-                            (tag === 'vision' && activeVisionModelId === model.id) ||
-                            (tag === 'autocomplete' && activeAutocompleteModelId === model.id);
-                          const hasTag = model.tags.includes(tag);
+              return (
+                <div key={model.id} className="border rounded-lg overflow-hidden">
+                  <div className="p-4 bg-background">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <button
+                            onClick={() =>
+                              setExpandedModelId(expandedModelId === model.id ? null : model.id)
+                            }
+                            className="flex items-center gap-1 hover:text-primary"
+                          >
+                            {expandedModelId === model.id ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                            <h4 className="font-semibold">{model.displayName || model.modelId}</h4>
+                          </button>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {getConnectionName(model.connectionId)} • {model.modelId}
+                        </p>
 
-                          return (
-                            <button
-                              key={tag}
-                              onClick={() => handleToggleTag(model.id, tag)}
-                              className={`px-2 py-1 rounded text-xs transition-colors ${
-                                hasTag
-                                  ? isActive
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-primary/20 text-primary'
-                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                              }`}
-                            >
-                              {tag}
-                              {isActive && ' ★'}
-                            </button>
-                          );
-                        })}
+                        {/* Tags */}
+                        <div className="flex flex-wrap gap-2">
+                          {(['base', 'vision', 'autocomplete'] as ModelRoleTag[]).map((tag) => {
+                            const isActive =
+                              (tag === 'base' && activeBaseModelId === model.id) ||
+                              (tag === 'vision' && activeVisionModelId === model.id) ||
+                              (tag === 'autocomplete' && activeAutocompleteModelId === model.id);
+                            const hasTag = model.tags.includes(tag);
+
+                            return (
+                              <button
+                                key={tag}
+                                onClick={() => handleToggleTag(model.id, tag)}
+                                className={`px-2 py-1 rounded text-xs transition-colors ${
+                                  hasTag
+                                    ? isActive
+                                      ? 'bg-primary text-primary-foreground'
+                                      : 'bg-primary/20 text-primary'
+                                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                }`}
+                              >
+                                {tag}
+                                {isActive && ' ★'}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveModel(model.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        삭제
+                      </Button>
                     </div>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveModel(model.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      삭제
-                    </Button>
                   </div>
+
+                  {/* Expanded Settings */}
+                  {expandedModelId === model.id && (
+                    <div className="p-4 border-t bg-muted/30 space-y-4">
+                      <ModelSettings
+                        model={model}
+                        onUpdate={(updates) => handleUpdateModel(model.id, updates)}
+                        onSetActive={handleSetActive}
+                        isActiveBase={activeBaseModelId === model.id}
+                        isActiveVision={activeVisionModelId === model.id}
+                        isActiveAutocomplete={activeAutocompleteModelId === model.id}
+                        connection={connection}
+                      />
+                    </div>
+                  )}
                 </div>
-
-                {/* Expanded Settings */}
-                {expandedModelId === model.id && (
-                  <div className="p-4 border-t bg-muted/30 space-y-4">
-                    <ModelSettings
-                      model={model}
-                      onUpdate={(updates) => handleUpdateModel(model.id, updates)}
-                      onSetActive={handleSetActive}
-                      isActiveBase={activeBaseModelId === model.id}
-                      isActiveVision={activeVisionModelId === model.id}
-                      isActiveAutocomplete={activeAutocompleteModelId === model.id}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -340,6 +345,7 @@ interface ModelSettingsProps {
   isActiveBase: boolean;
   isActiveVision: boolean;
   isActiveAutocomplete: boolean;
+  connection?: LLMConnection;
 }
 
 function ModelSettings({
@@ -349,7 +355,39 @@ function ModelSettings({
   isActiveBase,
   isActiveVision,
   isActiveAutocomplete,
+  connection,
 }: ModelSettingsProps) {
+  const [newHeaderKey, setNewHeaderKey] = useState('');
+  const [newHeaderValue, setNewHeaderValue] = useState('');
+
+  const connectionHeaders = connection?.customHeaders || {};
+  const modelHeaders = model.customHeaders || {};
+
+  const handleAddHeader = () => {
+    const key = newHeaderKey.trim();
+    const value = newHeaderValue.trim();
+
+    if (!key || !value) {
+      return;
+    }
+
+    onUpdate({
+      customHeaders: {
+        ...modelHeaders,
+        [key]: value,
+      },
+    });
+
+    setNewHeaderKey('');
+    setNewHeaderValue('');
+  };
+
+  const handleDeleteHeader = (key: string) => {
+    const updatedHeaders = { ...modelHeaders };
+    delete updatedHeaders[key];
+    onUpdate({ customHeaders: updatedHeaders });
+  };
+
   return (
     <div className="space-y-4">
       {/* Display Name */}
@@ -361,6 +399,60 @@ function ModelSettings({
           onChange={(e) => onUpdate({ displayName: e.target.value })}
           placeholder={model.modelId}
         />
+      </div>
+
+      {/* Custom Headers */}
+      <div className="space-y-2">
+        <Label>커스텀 HTTP 헤더 (모델 전용)</Label>
+        <p className="text-xs text-muted-foreground">
+          Connection에 설정된 헤더를 기본으로 사용하며, 동일한 이름의 헤더를 추가하면 이 모델에서만
+          덮어씁니다.
+        </p>
+
+        {Object.keys(connectionHeaders).length > 0 && (
+          <div className="space-y-1 rounded-md border bg-background p-2 text-xs">
+            <p className="font-medium">상속되는 헤더</p>
+            {Object.entries(connectionHeaders).map(([key, value]) => (
+              <div key={key} className="flex items-center gap-2 rounded bg-muted/40 p-2 text-sm">
+                <span className="font-mono flex-1">{key}</span>
+                <span className="font-mono text-muted-foreground flex-1">{value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {Object.keys(modelHeaders).length > 0 && (
+          <div className="space-y-1 rounded-md border bg-background p-2 text-xs">
+            <p className="font-medium">모델 전용 헤더</p>
+            {Object.entries(modelHeaders).map(([key, value]) => (
+              <div key={key} className="flex items-center gap-2 rounded bg-muted/40 p-2 text-sm">
+                <span className="font-mono flex-1">{key}</span>
+                <span className="font-mono text-muted-foreground flex-1">{value}</span>
+                <Button variant="ghost" size="sm" onClick={() => handleDeleteHeader(key)}>
+                  삭제
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <Input
+            value={newHeaderKey}
+            onChange={(e) => setNewHeaderKey(e.target.value)}
+            placeholder="헤더 이름"
+            className="flex-1"
+          />
+          <Input
+            value={newHeaderValue}
+            onChange={(e) => setNewHeaderValue(e.target.value)}
+            placeholder="헤더 값"
+            className="flex-1"
+          />
+          <Button size="sm" onClick={handleAddHeader}>
+            헤더 추가
+          </Button>
+        </div>
       </div>
 
       {/* Active Model Selection */}
