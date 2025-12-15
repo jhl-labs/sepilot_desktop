@@ -136,7 +136,7 @@ export interface ModelConfig {
   // 모델별 세부 설정
   temperature?: number; // 기본값: Connection의 기본 temperature
   maxTokens?: number; // 기본값: Connection의 기본 maxTokens
-  customHeaders?: Record<string, string>; // 모델별 커스텀 헤더 (Connection 헤더에 병합됨)
+  customHeaders?: Record<string, string | null>; // 모델별 커스텀 헤더 (null이면 상속 헤더 제거)
 
   // Vision 전용 설정
   maxImageTokens?: number; // Vision 모델 전용

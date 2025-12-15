@@ -262,6 +262,7 @@ export function ConnectionManager({
                   <Button
                     variant="ghost"
                     size="icon"
+                    aria-label="Connection 활성/비활성 전환"
                     onClick={() => handleToggleEnabled(connection.id)}
                     disabled={editingId !== null || isAdding}
                   >
@@ -275,6 +276,7 @@ export function ConnectionManager({
                   <Button
                     variant="ghost"
                     size="icon"
+                    aria-label="Connection 수정"
                     onClick={() => handleEdit(connection)}
                     disabled={editingId !== null || isAdding}
                   >
@@ -283,6 +285,7 @@ export function ConnectionManager({
                   <Button
                     variant="ghost"
                     size="icon"
+                    aria-label="Connection 삭제"
                     onClick={() => handleDelete(connection.id)}
                     disabled={editingId !== null || isAdding}
                   >
@@ -318,6 +321,33 @@ interface ConnectionFormProps {
 }
 
 function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionFormProps) {
+  const [newHeaderKey, setNewHeaderKey] = useState('');
+  const [newHeaderValue, setNewHeaderValue] = useState('');
+
+  const handleAddHeader = () => {
+    const key = newHeaderKey.trim();
+    const value = newHeaderValue.trim();
+
+    if (!key || !value) {
+      return;
+    }
+
+    const updatedHeaders = {
+      ...(formData.customHeaders || {}),
+      [key]: value,
+    };
+
+    onChange({ ...formData, customHeaders: updatedHeaders });
+    setNewHeaderKey('');
+    setNewHeaderValue('');
+  };
+
+  const handleDeleteHeader = (key: string) => {
+    const updatedHeaders = { ...(formData.customHeaders || {}) };
+    delete updatedHeaders[key];
+    onChange({ ...formData, customHeaders: updatedHeaders });
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -371,6 +401,40 @@ function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionForm
           onChange={(e) => onChange({ ...formData, apiKey: e.target.value })}
           placeholder="sk-..."
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label>커스텀 HTTP 헤더</Label>
+        {formData.customHeaders && Object.keys(formData.customHeaders).length > 0 && (
+          <div className="space-y-1">
+            {Object.entries(formData.customHeaders).map(([key, value]) => (
+              <div key={key} className="flex items-center gap-2 p-2 rounded bg-background text-sm">
+                <span className="font-mono flex-1">{key}:</span>
+                <span className="font-mono text-muted-foreground flex-1">{value}</span>
+                <Button variant="ghost" size="sm" onClick={() => handleDeleteHeader(key)}>
+                  삭제
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Input
+            value={newHeaderKey}
+            onChange={(e) => setNewHeaderKey(e.target.value)}
+            placeholder="헤더 이름"
+            className="flex-1"
+          />
+          <Input
+            value={newHeaderValue}
+            onChange={(e) => setNewHeaderValue(e.target.value)}
+            placeholder="헤더 값"
+            className="flex-1"
+          />
+          <Button size="sm" onClick={handleAddHeader}>
+            헤더 추가
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center justify-end gap-2">

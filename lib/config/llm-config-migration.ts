@@ -136,6 +136,17 @@ export function convertV2ToV1(configV2: LLMConfigV2): LLMConfig {
     throw new Error('No active base model configured');
   }
 
+  const mergedHeaders: Record<string, string> = { ...(baseConnection.customHeaders || {}) };
+
+  Object.entries(baseModel.customHeaders || {}).forEach(([key, value]) => {
+    if (value === null) {
+      delete mergedHeaders[key];
+      return;
+    }
+
+    mergedHeaders[key] = value;
+  });
+
   const config: LLMConfig = {
     provider: baseConnection.provider,
     baseURL: baseConnection.baseURL,
@@ -143,10 +154,7 @@ export function convertV2ToV1(configV2: LLMConfigV2): LLMConfig {
     model: baseModel.modelId,
     temperature: baseModel.temperature ?? configV2.defaultTemperature,
     maxTokens: baseModel.maxTokens ?? configV2.defaultMaxTokens,
-    customHeaders: {
-      ...baseConnection.customHeaders,
-      ...baseModel.customHeaders,
-    },
+    customHeaders: mergedHeaders,
   };
 
   // Add Vision config if active vision model exists
