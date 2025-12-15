@@ -128,7 +128,7 @@
     "@typescript-eslint/eslint-plugin": "^8.49.0",
     "@typescript-eslint/parser": "^8.49.0",
     "app-builder-bin": "5.0.0-alpha.13",
-    "autoprefixer": "^10.4.22",
+    "autoprefixer": "^10.4.23",
     "backstopjs": "^6.3.25",
     "buffer": "^6.0.3",
     "canvas": "^3.2.0",
