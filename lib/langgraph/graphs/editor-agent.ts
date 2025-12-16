@@ -387,8 +387,8 @@ export class EditorAgentGraph {
 
     const provider = client.getProvider();
 
-    // Get available tools based on editor context (now async)
-    const tools = await this.getEditorTools(state.editorContext);
+    // Get available tools based on editor context
+    const tools = this.getEditorTools(state.editorContext);
 
     logger.info(
       '[EditorAgent] Calling LLM with tools:',
@@ -403,7 +403,7 @@ export class EditorAgentGraph {
     const baseSystemMessage: Message = {
       id: 'editor-agent-system',
       role: 'system',
-      content: `You are an Editor Agent with powerful file management and code assistance tools.
+      content: `You are an Editor Agent with powerful LOCAL file management and code assistance tools.
 
 **Context:**
 - Working Directory: ${state.workingDirectory || 'not specified'}
@@ -411,21 +411,32 @@ export class EditorAgentGraph {
 - Language: ${state.editorContext?.language || 'unknown'}
 - Action Type: ${state.editorContext?.action || 'general'}
 
+**CRITICAL: Available Tools (LOCAL ONLY)**
+You ONLY have access to LOCAL file system tools. You CANNOT access external APIs or remote repositories.
+
+**Available Tools:**
+- read_file: Read local file contents
+- write_file: Create or overwrite local files with full content
+- edit_file: Replace specific line ranges in existing local files
+- list_files: Browse local directory structure
+- search_files: Search for files in local directory
+- delete_file: Delete local files
+- run_command: Execute terminal commands in working directory
+- git_status, git_diff, git_log, git_branch: Local git operations
+
+**IMPORTANT:**
+- DO NOT try to use external tools like create_or_update_file, get_file_contents, or any GitHub API tools
+- ALL file operations must be on LOCAL file system only
+- If you need to work with remote repositories, use git commands or ask the user
+
 **Instructions:**
-- Use tools proactively to complete user requests
+- Use LOCAL tools proactively to complete user requests
 - For file creation: use write_file with complete content immediately
 - For file editing: read_file first, then write_file with updated content
 - Always confirm actions with clear, concise feedback
 - Execute multi-step tasks systematically
 
-**Tool Usage Guidelines:**
-- write_file: Create or overwrite files with full content
-- edit_file: Replace specific line ranges in existing files
-- read_file: Read file contents before editing
-- list_files: Browse directory structure
-- run_command: Execute terminal commands when needed
-
-Respond in Korean and use tools efficiently.`,
+Respond in Korean and use LOCAL tools efficiently.`,
       created_at: Date.now(),
     };
     systemMessages.push(baseSystemMessage);
@@ -538,8 +549,11 @@ ${ragContext}
 
   /**
    * Get Editor-specific tools based on context
+   *
+   * Note: EditorAgent only uses builtin tools (local file system tools).
+   * MCP tools are NOT available in EditorAgent to keep it focused on local development.
    */
-  private async getEditorTools(_context?: EditorAgentState['editorContext']): Promise<any[]> {
+  private getEditorTools(_context?: EditorAgentState['editorContext']): any[] {
     const tools: any[] = [];
 
     // Always include file management tools from registry
@@ -585,36 +599,14 @@ ${ragContext}
     ]);
     tools.push(...codeTools);
 
-    // Add MCP tools if available (Main Process only)
-    if (typeof window === 'undefined') {
-      try {
-        const { MCPServerManager } = await import('@/lib/mcp/server-manager');
-        const mcpTools = MCPServerManager.getAllToolsInMainProcess();
-
-        // Convert MCP tools to OpenAI format
-        const mcpToolsFormatted = mcpTools.map((tool) => ({
-          type: 'function',
-          function: {
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.inputSchema,
-          },
-        }));
-
-        tools.push(...mcpToolsFormatted);
-
-        logger.info(`[EditorAgent] Added ${mcpTools.length} MCP tools`);
-      } catch (error: any) {
-        // MCP tools are optional
-        logger.warn('[EditorAgent] Failed to load MCP tools:', error.message);
-      }
-    }
-
     return tools;
   }
 
   /**
    * Execute editor tool
+   *
+   * Note: EditorAgent only executes builtin tools from the registry.
+   * MCP tools are NOT supported in EditorAgent.
    */
   private async executeTool(toolCall: ToolCall, state: EditorAgentState): Promise<any> {
     const { name, arguments: args } = toolCall;
@@ -623,55 +615,14 @@ ${ragContext}
 
     logger.info('[EditorAgent] Executing tool:', name, 'with args:', parsedArgs);
 
-    // 1. Check Tool Registry first
+    // Check Tool Registry (builtin tools only)
     const registryTool = editorToolsRegistry.get(name);
     if (registryTool) {
       return editorToolsRegistry.execute(name, parsedArgs, state);
     }
 
-    // 2. Check MCP tools (Main Process only)
-    if (typeof window === 'undefined') {
-      try {
-        const { MCPServerManager } = await import('@/lib/mcp/server-manager');
-        const mcpTools = MCPServerManager.getAllToolsInMainProcess();
-        const mcpTool = mcpTools.find((t) => t.name === name);
-
-        if (mcpTool) {
-          logger.info('[EditorAgent] Executing MCP tool:', name);
-
-          // Find which server provides this tool
-          const servers = MCPServerManager.listServersInMainProcess();
-          let serverName: string | null = null;
-
-          for (const server of servers) {
-            const serverTools = MCPServerManager.getServerTools(server.name);
-            if (serverTools.some((t) => t.name === name)) {
-              serverName = server.name;
-              break;
-            }
-          }
-
-          if (!serverName) {
-            throw new Error(`MCP tool "${name}" found but no server provides it`);
-          }
-
-          // Execute MCP tool
-          const result = await MCPServerManager.callToolInMainProcess(serverName, name, parsedArgs);
-
-          if (result.isError) {
-            throw new Error(result.content[0]?.text || 'MCP tool execution failed');
-          }
-
-          return result.content[0]?.text || JSON.stringify(result.content);
-        }
-      } catch (error: any) {
-        logger.error('[EditorAgent] MCP tool execution error:', error);
-        throw error;
-      }
-    }
-
-    // Unknown tool
-    throw new Error(`Unknown tool: ${name}`);
+    // Unknown tool - EditorAgent does not support MCP tools
+    throw new Error(`Unknown tool: ${name}. EditorAgent only supports builtin tools.`);
   }
 
   /**
