@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, RotateCcw, Code, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -18,6 +19,7 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { EDITOR_AVAILABLE_FONTS } from '@/types/editor-settings';
 
 export function EditorSettings() {
+  const { t } = useTranslation();
   const {
     setEditorViewMode,
     editorAppearanceConfig,
@@ -85,7 +87,7 @@ export function EditorSettings() {
 
   // 외형 설정 초기화
   const handleResetAppearance = () => {
-    if (window.confirm('외형 설정을 기본값으로 초기화하시겠습니까?')) {
+    if (window.confirm(t('settings.editor.settings.appearance.resetConfirm'))) {
       resetEditorAppearanceConfig();
       const config = useChatStore.getState().editorAppearanceConfig;
       setFontSize(config.fontSize);
@@ -125,7 +127,7 @@ export function EditorSettings() {
 
   // LLM 프롬프트 초기화
   const handleResetPrompts = () => {
-    if (window.confirm('LLM 프롬프트 설정을 기본값으로 초기화하시겠습니까?')) {
+    if (window.confirm(t('settings.editor.settings.prompts.resetConfirm'))) {
       resetEditorLLMPromptsConfig();
       const config = useChatStore.getState().editorLLMPromptsConfig;
       // 코드용 AI
@@ -143,7 +145,7 @@ export function EditorSettings() {
       setFixGrammarPrompt(config.fixGrammarPrompt);
       setSummarizePrompt(config.summarizePrompt);
       setTranslatePrompt(config.translatePrompt);
-      window.alert('LLM 프롬프트 설정이 초기화되었습니다.');
+      window.alert(t('settings.editor.settings.prompts.resetSuccess'));
     }
   };
 
@@ -160,7 +162,7 @@ export function EditorSettings() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h2 className="text-sm font-semibold">Editor 설정</h2>
+          <h2 className="text-sm font-semibold">{t('settings.editor.settings.title')}</h2>
         </div>
       </div>
 
@@ -169,7 +171,9 @@ export function EditorSettings() {
         {/* 외형 설정 */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label className="text-xs font-semibold">외형 설정</Label>
+            <Label className="text-xs font-semibold">
+              {t('settings.editor.settings.appearance.title')}
+            </Label>
             <Button
               variant="outline"
               size="sm"
@@ -177,13 +181,13 @@ export function EditorSettings() {
               className="h-7 text-xs gap-1"
             >
               <RotateCcw className="h-3 w-3" />
-              초기화
+              {t('settings.editor.settings.appearance.reset')}
             </Button>
           </div>
 
           {/* 폰트 크기 */}
           <div className="space-y-1.5">
-            <Label className="text-xs">폰트 크기 (px)</Label>
+            <Label className="text-xs">{t('settings.editor.settings.appearance.fontSize')}</Label>
             <Input
               type="number"
               value={fontSize}
@@ -194,16 +198,18 @@ export function EditorSettings() {
               className="h-8 text-xs"
             />
             <p className="text-xs text-muted-foreground">
-              에디터 폰트 크기 (10-24px, 기본값: 14px)
+              {t('settings.editor.settings.appearance.fontSizeDescription')}
             </p>
           </div>
 
           {/* 폰트 종류 */}
           <div className="space-y-1.5">
-            <Label className="text-xs">폰트</Label>
+            <Label className="text-xs">{t('settings.editor.settings.appearance.fontFamily')}</Label>
             <Select value={fontFamily} onValueChange={setFontFamily}>
               <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="폰트를 선택하세요" />
+                <SelectValue
+                  placeholder={t('settings.editor.settings.appearance.fontFamilyPlaceholder')}
+                />
               </SelectTrigger>
               <SelectContent>
                 {EDITOR_AVAILABLE_FONTS.map((font) => (
@@ -213,12 +219,14 @@ export function EditorSettings() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">에디터에 사용할 폰트를 선택하세요.</p>
+            <p className="text-xs text-muted-foreground">
+              {t('settings.editor.settings.appearance.fontFamilyDescription')}
+            </p>
           </div>
 
           {/* 테마 */}
           <div className="space-y-1.5">
-            <Label className="text-xs">테마</Label>
+            <Label className="text-xs">{t('settings.editor.settings.appearance.theme')}</Label>
             <Select
               value={theme}
               onValueChange={(value: 'vs-dark' | 'vs-light') => setTheme(value)}
@@ -227,16 +235,22 @@ export function EditorSettings() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="vs-dark">Dark</SelectItem>
-                <SelectItem value="vs-light">Light</SelectItem>
+                <SelectItem value="vs-dark">
+                  {t('settings.editor.settings.appearance.themeDark')}
+                </SelectItem>
+                <SelectItem value="vs-light">
+                  {t('settings.editor.settings.appearance.themeLight')}
+                </SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">에디터 색상 테마 (기본값: Dark)</p>
+            <p className="text-xs text-muted-foreground">
+              {t('settings.editor.settings.appearance.themeDescription')}
+            </p>
           </div>
 
           {/* 탭 크기 */}
           <div className="space-y-1.5">
-            <Label className="text-xs">탭 크기</Label>
+            <Label className="text-xs">{t('settings.editor.settings.appearance.tabSize')}</Label>
             <Select
               value={String(tabSize)}
               onValueChange={(value) => setTabSize(parseInt(value, 10))}
@@ -250,45 +264,55 @@ export function EditorSettings() {
                 <SelectItem value="8">8 spaces</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">들여쓰기 크기 (기본값: 2)</p>
+            <p className="text-xs text-muted-foreground">
+              {t('settings.editor.settings.appearance.tabSizeDescription')}
+            </p>
           </div>
 
           {/* Word Wrap */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-xs">자동 줄바꿈</Label>
+              <Label className="text-xs">{t('settings.editor.settings.appearance.wordWrap')}</Label>
               <Switch
                 checked={wordWrap === 'on'}
                 onCheckedChange={(checked) => setWordWrap(checked ? 'on' : 'off')}
               />
             </div>
-            <p className="text-xs text-muted-foreground">긴 줄을 자동으로 줄바꿈 (기본값: Off)</p>
+            <p className="text-xs text-muted-foreground">
+              {t('settings.editor.settings.appearance.wordWrapDescription')}
+            </p>
           </div>
 
           {/* Minimap */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-xs">미니맵 표시</Label>
+              <Label className="text-xs">{t('settings.editor.settings.appearance.minimap')}</Label>
               <Switch checked={minimap} onCheckedChange={setMinimap} />
             </div>
-            <p className="text-xs text-muted-foreground">우측 미니맵 표시 여부 (기본값: On)</p>
+            <p className="text-xs text-muted-foreground">
+              {t('settings.editor.settings.appearance.minimapDescription')}
+            </p>
           </div>
 
           {/* Line Numbers */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-xs">줄 번호 표시</Label>
+              <Label className="text-xs">
+                {t('settings.editor.settings.appearance.lineNumbers')}
+              </Label>
               <Switch
                 checked={lineNumbers === 'on'}
                 onCheckedChange={(checked) => setLineNumbers(checked ? 'on' : 'off')}
               />
             </div>
-            <p className="text-xs text-muted-foreground">좌측 줄 번호 표시 여부 (기본값: On)</p>
+            <p className="text-xs text-muted-foreground">
+              {t('settings.editor.settings.appearance.lineNumbersDescription')}
+            </p>
           </div>
 
           {/* 미리보기 */}
           <div className="space-y-1.5">
-            <Label className="text-xs">미리보기</Label>
+            <Label className="text-xs">{t('settings.editor.settings.appearance.preview')}</Label>
             <div
               className="rounded-md border bg-muted p-3 font-mono overflow-x-auto"
               style={{
@@ -312,19 +336,23 @@ export function EditorSettings() {
                 </div>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">현재 설정이 적용된 코드 미리보기</p>
+            <p className="text-xs text-muted-foreground">
+              {t('settings.editor.settings.appearance.previewDescription')}
+            </p>
           </div>
 
           {/* 저장 버튼 */}
           <Button onClick={handleSaveAppearance} className="w-full h-8 text-xs">
-            외형 설정 저장
+            {t('settings.editor.settings.appearance.save')}
           </Button>
         </div>
 
         {/* LLM 프롬프트 설정 */}
         <div className="border-t pt-4 space-y-4">
           <div className="flex items-center justify-between">
-            <Label className="text-xs font-semibold">AI 프롬프트 설정</Label>
+            <Label className="text-xs font-semibold">
+              {t('settings.editor.settings.prompts.title')}
+            </Label>
             <Button
               variant="outline"
               size="sm"
@@ -332,78 +360,82 @@ export function EditorSettings() {
               className="h-7 text-xs gap-1"
             >
               <RotateCcw className="h-3 w-3" />
-              초기화
+              {t('settings.editor.settings.prompts.reset')}
             </Button>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            컨텍스트 메뉴(우클릭)에서 사용되는 AI 프롬프트를 커스터마이징할 수 있습니다.
+            {t('settings.editor.settings.prompts.description')}
           </p>
 
           {/* 코드용 AI 프롬프트 */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-medium text-primary">
               <Code className="h-3.5 w-3.5" />
-              코드용 AI (Code AI)
+              {t('settings.editor.settings.prompts.codeAi')}
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">코드 설명 프롬프트</Label>
+              <Label className="text-xs">{t('settings.editor.settings.prompts.explainCode')}</Label>
               <Textarea
                 value={explainCodePrompt}
                 onChange={(e) => setExplainCodePrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="코드 설명에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.explainCodePlaceholder')}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">버그 수정 프롬프트</Label>
+              <Label className="text-xs">{t('settings.editor.settings.prompts.fixCode')}</Label>
               <Textarea
                 value={fixCodePrompt}
                 onChange={(e) => setFixCodePrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="버그 수정에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.fixCodePlaceholder')}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">코드 개선 프롬프트</Label>
+              <Label className="text-xs">{t('settings.editor.settings.prompts.improveCode')}</Label>
               <Textarea
                 value={improveCodePrompt}
                 onChange={(e) => setImproveCodePrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="코드 개선/리팩토링에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.improveCodePlaceholder')}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">코드 완성 프롬프트</Label>
+              <Label className="text-xs">
+                {t('settings.editor.settings.prompts.completeCode')}
+              </Label>
               <Textarea
                 value={completeCodePrompt}
                 onChange={(e) => setCompleteCodePrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="코드 완성에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.completeCodePlaceholder')}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">주석 추가 프롬프트</Label>
+              <Label className="text-xs">{t('settings.editor.settings.prompts.addComments')}</Label>
               <Textarea
                 value={addCommentsPrompt}
                 onChange={(e) => setAddCommentsPrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="주석 추가에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.addCommentsPlaceholder')}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">테스트 생성 프롬프트</Label>
+              <Label className="text-xs">
+                {t('settings.editor.settings.prompts.generateTest')}
+              </Label>
               <Textarea
                 value={generateTestPrompt}
                 onChange={(e) => setGenerateTestPrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="테스트 생성에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.generateTestPlaceholder')}
               />
             </div>
           </div>
@@ -412,83 +444,85 @@ export function EditorSettings() {
           <div className="space-y-3 border-t pt-3">
             <div className="flex items-center gap-2 text-xs font-medium text-primary">
               <FileText className="h-3.5 w-3.5" />
-              문서용 AI (Writing AI)
+              {t('settings.editor.settings.prompts.writingAi')}
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">계속 작성 프롬프트</Label>
+              <Label className="text-xs">
+                {t('settings.editor.settings.prompts.continueWriting')}
+              </Label>
               <Textarea
                 value={continueWritingPrompt}
                 onChange={(e) => setContinueWritingPrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="계속 작성에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.continueWritingPlaceholder')}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">짧게 만들기 프롬프트</Label>
+              <Label className="text-xs">{t('settings.editor.settings.prompts.makeShorter')}</Label>
               <Textarea
                 value={makeShorterPrompt}
                 onChange={(e) => setMakeShorterPrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="짧게 만들기에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.makeShorterPlaceholder')}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">길게 만들기 프롬프트</Label>
+              <Label className="text-xs">{t('settings.editor.settings.prompts.makeLonger')}</Label>
               <Textarea
                 value={makeLongerPrompt}
                 onChange={(e) => setMakeLongerPrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="길게 만들기에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.makeLongerPlaceholder')}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">단순화 프롬프트</Label>
+              <Label className="text-xs">{t('settings.editor.settings.prompts.simplify')}</Label>
               <Textarea
                 value={simplifyPrompt}
                 onChange={(e) => setSimplifyPrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="단순화에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.simplifyPlaceholder')}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">문법/맞춤법 수정 프롬프트</Label>
+              <Label className="text-xs">{t('settings.editor.settings.prompts.fixGrammar')}</Label>
               <Textarea
                 value={fixGrammarPrompt}
                 onChange={(e) => setFixGrammarPrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="문법/맞춤법 수정에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.fixGrammarPlaceholder')}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">요약 프롬프트</Label>
+              <Label className="text-xs">{t('settings.editor.settings.prompts.summarize')}</Label>
               <Textarea
                 value={summarizePrompt}
                 onChange={(e) => setSummarizePrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="요약에 사용될 프롬프트..."
+                placeholder={t('settings.editor.settings.prompts.summarizePlaceholder')}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">번역 프롬프트</Label>
+              <Label className="text-xs">{t('settings.editor.settings.prompts.translate')}</Label>
               <Textarea
                 value={translatePrompt}
                 onChange={(e) => setTranslatePrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
-                placeholder="번역에 사용될 프롬프트... ({targetLanguage} 변수 사용 가능)"
+                placeholder={t('settings.editor.settings.prompts.translatePlaceholder')}
               />
             </div>
           </div>
 
           {/* 저장 버튼 */}
           <Button onClick={handleSavePrompts} className="w-full h-8 text-xs">
-            AI 프롬프트 저장
+            {t('settings.editor.settings.prompts.save')}
           </Button>
         </div>
       </div>
