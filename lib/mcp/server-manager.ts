@@ -146,6 +146,30 @@ class MCPServerManagerClass {
   }
 
   /**
+   * Main Process용 - 서버 설정 목록 가져오기
+   */
+  listServersInMainProcess(): MCPServerConfig[] {
+    return Array.from(this.servers.values()).map((client) => ({
+      name: client.getName(),
+      transport: 'stdio' as const, // Default transport type
+      command: '', // Client에는 command 정보가 없음
+      args: [],
+      env: {},
+    }));
+  }
+
+  /**
+   * Main Process용 - 특정 서버의 도구 목록 가져오기
+   */
+  getServerTools(serverName: string): MCPTool[] {
+    const client = this.servers.get(serverName);
+    if (!client) {
+      return [];
+    }
+    return client.getTools();
+  }
+
+  /**
    * Main Process용 - 도구 호출
    */
   async callToolInMainProcess(

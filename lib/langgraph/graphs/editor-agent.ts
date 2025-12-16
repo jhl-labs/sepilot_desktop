@@ -49,9 +49,13 @@ export interface EditorAgentState extends AgentState {
 
 export class EditorAgentGraph {
   private maxIterations: number;
+  private toolCallHistory: Map<string, number>; // 도구 호출 횟수 추적
+  private lastToolCall: { name: string; args: string } | null; // 마지막 도구 호출
 
   constructor(maxIterations = 50) {
     this.maxIterations = maxIterations;
+    this.toolCallHistory = new Map();
+    this.lastToolCall = null;
 
     // Register all editor tools
     registerAllEditorTools();
@@ -227,6 +231,45 @@ export class EditorAgentGraph {
         break;
       }
 
+      // 무한 루프 감지: 같은 도구가 연속으로 호출되는지 확인
+      const currentToolCalls = state.messages[state.messages.length - 1].tool_calls;
+      if (currentToolCalls && currentToolCalls.length > 0) {
+        const currentCall = currentToolCalls[0];
+        const currentKey = `${currentCall.name}:${JSON.stringify(currentCall.arguments)}`;
+
+        if (
+          this.lastToolCall &&
+          this.lastToolCall.name === currentCall.name &&
+          this.lastToolCall.args === JSON.stringify(currentCall.arguments)
+        ) {
+          const count = (this.toolCallHistory.get(currentKey) || 0) + 1;
+          this.toolCallHistory.set(currentKey, count);
+
+          if (count >= 3) {
+            logger.warn('[EditorAgent] Infinite loop detected - same tool called 3 times');
+            const loopMessage: Message = {
+              id: `msg-${Date.now()}`,
+              role: 'assistant',
+              content: `⚠️ 무한 루프가 감지되었습니다. 도구 "${currentCall.name}"이(가) 같은 인자로 3번 연속 호출되었습니다.\n\n작업을 중단합니다. 다른 방법을 시도해주세요.`,
+              created_at: Date.now(),
+            };
+            yield {
+              type: 'message',
+              message: loopMessage,
+            };
+            break;
+          }
+        } else {
+          // 다른 도구가 호출되면 이력 초기화
+          this.toolCallHistory.clear();
+        }
+
+        this.lastToolCall = {
+          name: currentCall.name,
+          args: JSON.stringify(currentCall.arguments),
+        };
+      }
+
       // Log tool execution start (Detailed)
       const toolCalls = state.messages[state.messages.length - 1].tool_calls;
       if (toolCalls && toolCalls.length > 0) {
@@ -344,8 +387,8 @@ export class EditorAgentGraph {
 
     const provider = client.getProvider();
 
-    // Get available tools based on editor context
-    const tools = this.getEditorTools(state.editorContext);
+    // Get available tools based on editor context (now async)
+    const tools = await this.getEditorTools(state.editorContext);
 
     logger.info(
       '[EditorAgent] Calling LLM with tools:',
@@ -496,7 +539,7 @@ ${ragContext}
   /**
    * Get Editor-specific tools based on context
    */
-  private getEditorTools(_context?: EditorAgentState['editorContext']): any[] {
+  private async getEditorTools(_context?: EditorAgentState['editorContext']): Promise<any[]> {
     const tools: any[] = [];
 
     // Always include file management tools from registry
@@ -542,6 +585,31 @@ ${ragContext}
     ]);
     tools.push(...codeTools);
 
+    // Add MCP tools if available (Main Process only)
+    if (typeof window === 'undefined') {
+      try {
+        const { MCPServerManager } = await import('@/lib/mcp/server-manager');
+        const mcpTools = MCPServerManager.getAllToolsInMainProcess();
+
+        // Convert MCP tools to OpenAI format
+        const mcpToolsFormatted = mcpTools.map((tool) => ({
+          type: 'function',
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.inputSchema,
+          },
+        }));
+
+        tools.push(...mcpToolsFormatted);
+
+        logger.info(`[EditorAgent] Added ${mcpTools.length} MCP tools`);
+      } catch (error: any) {
+        // MCP tools are optional
+        logger.warn('[EditorAgent] Failed to load MCP tools:', error.message);
+      }
+    }
+
     return tools;
   }
 
@@ -555,10 +623,51 @@ ${ragContext}
 
     logger.info('[EditorAgent] Executing tool:', name, 'with args:', parsedArgs);
 
-    // All tools are now in the Tool Registry
+    // 1. Check Tool Registry first
     const registryTool = editorToolsRegistry.get(name);
     if (registryTool) {
       return editorToolsRegistry.execute(name, parsedArgs, state);
+    }
+
+    // 2. Check MCP tools (Main Process only)
+    if (typeof window === 'undefined') {
+      try {
+        const { MCPServerManager } = await import('@/lib/mcp/server-manager');
+        const mcpTools = MCPServerManager.getAllToolsInMainProcess();
+        const mcpTool = mcpTools.find((t) => t.name === name);
+
+        if (mcpTool) {
+          logger.info('[EditorAgent] Executing MCP tool:', name);
+
+          // Find which server provides this tool
+          const servers = MCPServerManager.listServersInMainProcess();
+          let serverName: string | null = null;
+
+          for (const server of servers) {
+            const serverTools = MCPServerManager.getServerTools(server.name);
+            if (serverTools.some((t) => t.name === name)) {
+              serverName = server.name;
+              break;
+            }
+          }
+
+          if (!serverName) {
+            throw new Error(`MCP tool "${name}" found but no server provides it`);
+          }
+
+          // Execute MCP tool
+          const result = await MCPServerManager.callToolInMainProcess(serverName, name, parsedArgs);
+
+          if (result.isError) {
+            throw new Error(result.content[0]?.text || 'MCP tool execution failed');
+          }
+
+          return result.content[0]?.text || JSON.stringify(result.content);
+        }
+      } catch (error: any) {
+        logger.error('[EditorAgent] MCP tool execution error:', error);
+        throw error;
+      }
     }
 
     // Unknown tool
