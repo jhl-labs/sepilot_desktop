@@ -144,6 +144,9 @@
           "autocomplete": "자동완성 모델로 사용"
         },
         "streaming": "스트리밍 응답 활성화",
+        "delete": "삭제",
+        "temperature": "Temperature",
+        "maxTokens": "Max Tokens",
         "validation": {
           "duplicate": "\"{{modelId}}\"는 이미 추가되었습니다.",
           "fetchError": "일부 Connection에서 모델을 가져오지 못했습니다:\n{{error}}",

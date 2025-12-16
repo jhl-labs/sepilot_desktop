@@ -144,6 +144,9 @@
           "autocomplete": "Set as Autocomplete Model"
         },
         "streaming": "Enable Streaming Response",
+        "delete": "Delete",
+        "temperature": "Temperature",
+        "maxTokens": "Max Tokens",
         "validation": {
           "duplicate": "\"{{modelId}}\" is already added.",
           "fetchError": "Failed to fetch models from some connections:\n{{error}}",
