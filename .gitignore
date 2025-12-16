@@ -114,3 +114,6 @@ coverage-*/
 .*.swp
 .*.swo
 .*.swn
+
+.gemini/
+gha-creds-*.json
