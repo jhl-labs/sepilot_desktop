@@ -346,26 +346,6 @@
       "description": "Quick input and shortcuts",
       "shortcut": "Quick Input Shortcut",
       "questions": {
-        "title": "Quick Questions",
-        "add": "Add Quick Question",
-        "name": "Name",
-        "shortcut": "Shortcut",
-        "prompt": "Prompt",
-        "enabled": "Enabled"
-      },
-      "validation": {
-        "shortcutRequired": "Please enter Quick Input shortcut.",
-        "nameRequired": "Please enter Quick Question name.",
-        "questionShortcutRequired": "Please enter Quick Question shortcut.",
-        "promptRequired": "Please enter Quick Question prompt.",
-        "duplicateShortcut": "The shortcut for \"{{name}}\" conflicts with another shortcut.",
-        "conflictWithQuickInput": "Conflicts with Quick Input shortcut",
-        "conflictWithQuestion": "Conflicts with \"{{name}}\"",
-        "maxQuestionsReached": "You can only register up to 5 Quick Questions."
-      },
-      "shortcut": "Quick Input Shortcut",
-      "shortcutExample": "e.g., CommandOrControl+Shift+Space (default)",
-      "questions": {
         "title": "Quick Questions (Max 5)",
         "description": "Instantly ask questions and get answers based on clipboard content.",
         "descriptionPrompt": "• <strong>Prompt</strong>: Sent as LLM system message to define role/instructions.",
@@ -382,6 +362,17 @@
         "promptDescription": "System message that defines the role or instructions for the LLM.",
         "promptDescriptionClipboard": "Clipboard content is sent as a separate user message to be processed."
       },
+      "validation": {
+        "shortcutRequired": "Please enter Quick Input shortcut.",
+        "nameRequired": "Please enter Quick Question name.",
+        "questionShortcutRequired": "Please enter Quick Question shortcut.",
+        "promptRequired": "Please enter Quick Question prompt.",
+        "duplicateShortcut": "The shortcut for \"{{name}}\" conflicts with another shortcut.",
+        "conflictWithQuickInput": "Conflicts with Quick Input shortcut",
+        "conflictWithQuestion": "Conflicts with \"{{name}}\"",
+        "maxQuestionsReached": "You can only register up to 5 Quick Questions."
+      },
+      "shortcutExample": "e.g., CommandOrControl+Shift+Space (default)",
       "saved": "Quick Input settings saved!"
     },
     "editor": {
@@ -553,316 +544,6 @@
       "description": "Personal Docs sync"
     },
     "githubSync": {
-      "connectionTitle": "GitHub Connection Settings",
-      "connectionDescription": "Connect to repository using GitHub Personal Access Token.",
-      "createToken": "Create new token (repo permission required)",
-      "ghesUrlDescription": "Enter the base URL of GHES instance (e.g., https://github.company.com)",
-      "tokenDescription": "Personal Access Token with repo permission is required.",
-      "ownerLabel": "Owner (Organization or User)",
-      "ownerPlaceholder": "my-org or my-username",
-      "branchLabel": "Branch (default: main)",
-      "testing": "Testing connection...",
-      "testConnection": "Test Connection",
-      "save": "Save Settings",
-      "allFieldsRequired": "Please fill in all fields.",
-      "ghesUrlRequired": "Please enter GHES URL.",
-      "connectionSuccess": "GitHub repository connection successful!",
-      "connectionFailed": "Connection test failed",
-      "saveSuccess": "GitHub Sync settings saved!",
-      "saveFailed": "Failed to save settings",
-      "saveFirst": "Please save settings first.",
-      "dataSync": "Data Sync",
-      "pushing": "Pushing...",
-      "syncingAll": "Syncing all...",
-      "syncAll": "Sync All (enabled items only)",
-      "lastSyncInfo": "Last Sync Info",
-      "time": "Time",
-      "status": "Status",
-      "errorReporting": "Error Auto Reporting",
-      "errorReportingDescription": "Automatically report errors to GitHub Issue to help improve the program.",
-      "errorReportingEnabled": "Enable Error Auto Reporting",
-      "errorReportingDetails": "Automatically creates GitHub Issue when errors occur and sends to development team.\nError messages, stack traces, and system information are included, but no personal information is included.",
-      "errorReportingInfo": "💡 Error Reporting Info",
-      "errorReportingInfo1": "Error messages and stack traces are sent to GitHub Issue.",
-      "errorReportingInfo2": "Basic system information such as app version and OS platform is included.",
-      "errorReportingInfo3": "Sensitive information such as API keys and tokens are never sent.",
-      "errorReportingInfo4": "This information is very important for program improvement.",
-      "errorReportingInfo5": "This feature is only available when GitHub Token is set.",
-      "securityInfo": "🔒 Security Info",
-      "securityInfo1": "Sensitive information (LLM API keys, etc.) is encrypted with AES-256-GCM.",
-      "securityInfo2": "GitHub Token is stored locally only and is not synced.",
-      "securityInfo3": "Synced files are stored in sepilot/ folder.",
-      "securityInfo4": "Please be careful about privacy when syncing conversations and images.",
-      "syncItems": {
-        "settings": {
-          "title": "Settings Sync",
-          "description": "Application settings such as LLM, Network, VectorDB"
-        },
-        "personas": {
-          "title": "AI Personas",
-          "description": "User-defined AI persona settings"
-        },
-        "images": {
-          "title": "Image Sync",
-          "description": "Generated image metadata",
-          "warning": "Size warning"
-        },
-        "conversations": {
-          "title": "Conversation Sync",
-          "description": "Conversation history and messages",
-          "warning": "Privacy warning"
-        }
-      },
-      "syncSuccess": {
-        "settings": "Settings sync completed!",
-        "personas": "AI Personas sync completed!",
-        "images": "Image sync completed!",
-        "conversations": "Conversation sync completed!",
-        "all": "All sync completed!"
-      },
-      "syncFailed": {
-        "settings": "Settings sync failed",
-        "personas": "AI Personas sync failed",
-        "images": "Image sync failed",
-        "conversations": "Conversation sync failed",
-        "all": "All sync failed",
-        "generic": "{{type}} sync failed"
-      }
-    },
-    "backup": {
-      "title": "Backup/Restore",
-      "description": "Data backup and restoration",
-      "electronOnly": "Only available in Electron environment.",
-      "exporting": "Exporting conversation data...",
-      "exportSuccess": "Exported {{conversations}} conversations and {{messages}} messages.",
-      "exportFailed": "Export failed: {{error}}",
-      "export": "Export",
-      "exportDescription": "Export all conversations and messages to XML file.",
-      "exportButton": "Export to XML",
-      "selectFile": "Select backup file...",
-      "readingFile": "Reading backup file...",
-      "restoring": "Restoring conversation data...",
-      "importSuccess": "Restored {{conversations}} conversations and {{messages}} messages.",
-      "importFailed": "Import failed: {{error}}",
-      "import": "Import",
-      "importDescription": "Restore conversations from XML backup file.",
-      "importing": "Importing...",
-      "importButton": "Import from XML",
-      "warning": "Warning",
-      "warning1": "Import adds to existing conversations (does not overwrite)",
-      "warning2": "Duplicate IDs will be updated with latest data",
-      "warning3": "Page will automatically refresh after import"
-    },
-    "beta": {
-      "title": "Beta",
-      "description": "Experimental features (in development)",
-      "saved": "Beta settings saved!",
-      "features": "Beta Features",
-      "featuresDescription": "Enable experimental features under development.",
-      "warning": "Beta features are still in development and incomplete. They may have many bugs, so use in production is not recommended.",
-      "presentationMode": {
-        "title": "Enable Presentation Mode",
-        "description": "When Presentation mode is enabled, the \"Presentation\" item will appear in Chat, Editor, and Browser sidebars.",
-        "warning": "⚠️ This feature is currently under development and incomplete."
-      }
-    },
-    "jsonEditor": {
-      "description": "Edit settings.json - Manage all settings in the same way as VSCode.",
-      "format": "Format Document",
-      "saving": "Saving...",
-      "saveSuccess": "Settings saved successfully.",
-      "placeholder": "Enter settings in JSON format...",
-      "tip": "💡 Tip: Press Ctrl+Space to use autocomplete (coming soon)",
-      "warning": "⚠️ Warning: Invalid settings may cause application errors.",
-      "llmRequired": "LLM configuration is required.",
-      "syntaxError": "JSON syntax error: {{error}}",
-      "saveFailed": "Failed to save settings."
-    },
-    "mcp": {
-      "title": "MCP",
-      "description": "Model Context Protocol server settings",
-      "addServer": "Add New Server",
-      "serverConfig": {
-        "title": "Add New MCP Server",
-        "description": "Provide new tools to AI Assistant",
-        "transport": {
-          "stdio": "Local Process",
-          "sse": "HTTP Server"
-        },
-        "quickStart": "Quick Start Templates",
-        "serverSettings": "Server Settings",
-        "serverName": "Server Name",
-        "required": "Required",
-        "serverNamePlaceholder": "e.g., my-filesystem",
-        "serverNameDescription": "Server identifier displayed in Agent mode",
-        "command": "Command",
-        "commandPlaceholder": "e.g., npx, node, python",
-        "args": "Arguments",
-        "argsDescription": "Enter each argument on a new line. Use absolute paths.",
-        "sseUrl": "SSE URL",
-        "sseUrlPlaceholder": "e.g., http://localhost:3001/sse",
-        "sseUrlDescription": "Enter the SSE endpoint URL of the MCP server",
-        "headers": "HTTP Headers",
-        "optional": "Optional",
-        "headersDescription": "Enter each header as \"Key: Value\" on a new line",
-        "advanced": "Advanced Options",
-        "envVars": "Environment Variables",
-        "envVarsDescription": "Enter each variable as \"KEY=VALUE\" on a new line. Used for sensitive info like API keys.",
-        "serverInfo": "MCP Server Info",
-        "stdioDescription": "Communicate with a local process via stdio protocol",
-        "stdioHint1": "Automatically initialized and tools loaded upon addition",
-        "stdioHint2": "LLM can use registered tools in Agent mode",
-        "sseDescription": "Communicate with HTTP-based MCP server via SSE",
-        "sseHint1": "Can connect to remote servers or cloud services",
-        "sseHint2": "Please ensure the server is running before adding",
-        "adding": "Adding server...",
-        "add": "Add MCP Server",
-        "nameRequired": "Please enter server name.",
-        "commandRequired": "Please enter command.",
-        "sseUrlRequired": "Please enter SSE URL.",
-        "addSuccess": "Server '{{name}}' added!",
-        "addFailed": "Failed to add server.",
-        "templates": {
-          "filesystem": "Local File Read/Write",
-          "github": "GitHub Repository Management",
-          "sqlite": "SQLite Database Query",
-          "webSearch": "Web Search Tool (Tavily Remote)",
-          "git": "Git Repository Operations",
-          "context7": "Latest Code Examples & Docs (type \"use context7\")",
-          "brave": "Knowledge Graph Long-term Memory",
-          "sequentialThinking": "Sequential Thinking for Complex Problems",
-          "puppeteer": "Browser Automation & Web Scraping",
-          "customSse": "HTTP SSE MCP Server"
-        }
-      },
-      "serverList": {
-        "count": "Total <1>{{count}}</1> servers",
-        "totalServers": "Total {{count}} servers",
-        "refresh": "Refresh",
-        "loading": "Loading server list...",
-        "emptyTitle": "Add MCP Server",
-        "emptyDescription": "Register MCP servers to enable AI assistant to use various tools like file system, database, web search, etc.",
-        "deleteDialog": {
-          "title": "Delete Server",
-          "description": "Are you sure you want to delete server '{{name}}'?\nThis action cannot be undone."
-        },
-        "status": {
-          "connected": "Connected",
-          "connecting": "Connecting...",
-          "error": "Error",
-          "disconnected": "Disconnected"
-        },
-        "transport": {
-          "sse": "SSE",
-          "stdio": "stdio"
-        },
-        "toolCount": "{{count}} tools",
-        "argCount": "{{count}} args",
-        "execCommand": "Command",
-        "execArgs": "Arguments",
-        "envVars": "Environment Variables",
-        "headers": "HTTP Headers",
-        "availableTools": "Available Tools",
-        "agentInfo": "LLM can use tools from this server in Agent mode. Server must be enabled to use tools.",
-        "toggle": {
-          "enable": "Enable",
-          "disable": "Disable"
-        },
-        "expand": {
-          "show": "Show Details",
-          "hide": "Hide"
-        }
-      }
-    },
-    "githubOAuth": {
-      "steps": {
-        "statusTitle": "GitHub App Configuration Status",
-        "statusDescription": "Follow the steps to configure GitHub synchronization.",
-        "config": "1. Basic Configuration",
-        "install": "2. Install GitHub App",
-        "verify": "3. Verify Installation",
-        "repository": "4. Select Repository",
-        "complete": "5. Complete"
-      },
-      "config": {
-        "title": "1. Basic Configuration",
-        "description": "Configure GitHub Server Type and App ID.",
-        "serverType": "GitHub Server Type",
-        "ghesUrl": "GHES URL",
-        "ghesUrlPlaceholder": "https://github.company.com",
-        "ghesUrlDescription": "Enter the full URL of your GitHub Enterprise Server",
-        "appId": "GitHub App ID",
-        "appIdDescription": "App ID found in the GitHub App settings page",
-        "privateKey": "Private Key File",
-        "privateKeyDescription": "Upload the Private Key file (.pem) of the GitHub App",
-        "nextStep": "Next Step",
-        "validation": {
-          "allFields": "Please fill in all fields."
-        }
-      },
-      "install": {
-        "title": "2. Install GitHub App",
-        "description": "Install the GitHub App in your browser.",
-        "guide": {
-          "title": "Installation Guide",
-          "step1": "Click the button below to open the GitHub App installation page.",
-          "step2": "Select the repository to install (All repositories or specific repository).",
-          "step3": "Click the Install button.",
-          "step4": "Check the Installation ID in the URL after installation (e.g., /settings/installations/12345678)."
-        },
-        "openPage": "Open GitHub App Installation Page"
-      },
-      "verify": {
-        "title": "3. Verify Installation",
-        "description": "Enter the Installation ID and verify the connection.",
-        "installationId": "Installation ID",
-        "installationIdDescription": "Installation ID obtained after installing GitHub App (numbers only)",
-        "verifyAndFetch": "Verify Installation & Fetch Repositories"
-      },
-      "repository": {
-        "title": "4. Select Sync Repository",
-        "description": "Select the repository to sync settings and data.",
-        "label": "Repository",
-        "placeholder": "Select a repository",
-        "private": "Private",
-        "public": "Public",
-        "selectedPrefix": "Selected Repository: ",
-        "noSelection": "Select a repository to store encrypted settings.",
-        "testConnection": "Test Connection",
-        "saveAll": "Save All Settings"
-      },
-      "complete": {
-        "title": "5. Setup Complete!",
-        "description": "GitHub synchronization has been successfully configured.",
-        "successMessage": "✅ Configuration Complete",
-        "editSettings": "Edit Settings"
-      },
-      "security": {
-        "title": "🔒 Security Info",
-        "description": "All sensitive information (tokens, API keys, Private Keys, etc.) is encrypted with AES-256-GCM and synced to the selected GitHub repository. Proxy and SSL verification settings configured in the Network tab also apply to GitHub communication."
-      },
-      "messages": {
-        "privateKeySaved": "Private Key has been securely saved.",
-        "privateKeySaveFailed": "Failed to save Private Key.",
-        "privateKeyUploadFailed": "Failed to upload Private Key.",
-        "invalidPrivateKey": "Invalid Private Key file format.",
-        "appIdRequired": "Please enter App ID.",
-        "ghesUrlRequired": "Please enter GHES URL.",
-        "privateKeyRequired": "Please upload Private Key first.",
-        "installPageOpened": "Please install GitHub App in the browser. Enter Installation ID after installation.",
-        "installPageFailed": "Failed to open GitHub App installation page.",
-        "installationIdRequired": "Please enter Installation ID.",
-        "connectionSuccess": "Connection successful! Found {{count}} repositories.",
-        "repoFetchFailed": "Failed to fetch repository list.",
-        "verificationFailed": "Failed to verify installation.",
-        "repoSelectRequired": "Please select a repository first.",
-        "testSuccess": "Connection test successful! Can access the repository.",
-        "testFailed": "Connection test failed.",
-        "saveSuccess": "GitHub settings saved!",
-        "saveFailed": "Failed to save settings."
-      }
-    },
-    "githubSync": {
       "title": "GitHub Connection Settings",
       "description": "Connect to repository using GitHub Personal Access Token.",
       "newTokenLink": "Generate new token (repo scope required)",
@@ -927,6 +608,55 @@
         "saveFirst": "Please save settings first."
       }
     },
+    "backup": {
+      "title": "Backup/Restore",
+      "description": "Data backup and restoration",
+      "electronOnly": "Only available in Electron environment.",
+      "exporting": "Exporting conversation data...",
+      "exportSuccess": "Exported {{conversations}} conversations and {{messages}} messages.",
+      "exportFailed": "Export failed: {{error}}",
+      "export": "Export",
+      "exportDescription": "Export all conversations and messages to XML file.",
+      "exportButton": "Export to XML",
+      "selectFile": "Select backup file...",
+      "readingFile": "Reading backup file...",
+      "restoring": "Restoring conversation data...",
+      "importSuccess": "Restored {{conversations}} conversations and {{messages}} messages.",
+      "importFailed": "Import failed: {{error}}",
+      "import": "Import",
+      "importDescription": "Restore conversations from XML backup file.",
+      "importing": "Importing...",
+      "importButton": "Import from XML",
+      "warning": "Warning",
+      "warning1": "Import adds to existing conversations (does not overwrite)",
+      "warning2": "Duplicate IDs will be updated with latest data",
+      "warning3": "Page will automatically refresh after import"
+    },
+    "beta": {
+      "title": "Beta",
+      "description": "Experimental features (in development)",
+      "saved": "Beta settings saved!",
+      "features": "Beta Features",
+      "featuresDescription": "Enable experimental features under development.",
+      "warning": "Beta features are still in development and incomplete. They may have many bugs, so use in production is not recommended.",
+      "presentationMode": {
+        "title": "Enable Presentation Mode",
+        "description": "When Presentation mode is enabled, the \"Presentation\" item will appear in Chat, Editor, and Browser sidebars.",
+        "warning": "⚠️ This feature is currently under development and incomplete."
+      }
+    },
+    "jsonEditor": {
+      "description": "Edit settings.json - Manage all settings in the same way as VSCode.",
+      "format": "Format Document",
+      "saving": "Saving...",
+      "saveSuccess": "Settings saved successfully.",
+      "placeholder": "Enter settings in JSON format...",
+      "tip": "💡 Tip: Press Ctrl+Space to use autocomplete (coming soon)",
+      "warning": "⚠️ Warning: Invalid settings may cause application errors.",
+      "llmRequired": "LLM configuration is required.",
+      "syntaxError": "JSON syntax error: {{error}}",
+      "saveFailed": "Failed to save settings."
+    },
     "mcp": {
       "title": "MCP",
       "description": "Model Context Protocol Server Settings",
@@ -939,7 +669,8 @@
         "emptyDescription": "Register an MCP server to allow the AI assistant to use various tools like file system, database, web search, etc.",
         "deleteDialog": {
           "title": "Delete Server",
-          "description": "Are you sure you want to delete server '{{name}}'?\nThis action cannot be undone.",
+          "question": "Are you sure you want to delete server '{{name}}'?",
+          "warning": "This action cannot be undone.",
           "cancel": "Cancel",
           "confirm": "Delete"
         },
@@ -969,13 +700,6 @@
         },
         "toolCount": "{{count}} Tools",
         "toolsUnit": "{{count}}",
-        "deleteDialog": {
-          "title": "Delete Server",
-          "question": "Are you sure you want to delete server '{{name}}'?",
-          "warning": "This action cannot be undone.",
-          "cancel": "Cancel",
-          "confirm": "Delete"
-        },
         "tooltips": {
           "reconnect": "Reconnect Server",
           "delete": "Delete Server",
@@ -1064,6 +788,94 @@
         }
       },
       "addNew": "Add New Server"
+    },
+    "githubOAuth": {
+      "steps": {
+        "statusTitle": "GitHub App Configuration Status",
+        "statusDescription": "Follow the steps to configure GitHub synchronization.",
+        "config": "1. Basic Configuration",
+        "install": "2. Install GitHub App",
+        "verify": "3. Verify Installation",
+        "repository": "4. Select Repository",
+        "complete": "5. Complete"
+      },
+      "config": {
+        "title": "1. Basic Configuration",
+        "description": "Configure GitHub Server Type and App ID.",
+        "serverType": "GitHub Server Type",
+        "ghesUrl": "GHES URL",
+        "ghesUrlPlaceholder": "https://github.company.com",
+        "ghesUrlDescription": "Enter the full URL of your GitHub Enterprise Server",
+        "appId": "GitHub App ID",
+        "appIdDescription": "App ID found in the GitHub App settings page",
+        "privateKey": "Private Key File",
+        "privateKeyDescription": "Upload the Private Key file (.pem) of the GitHub App",
+        "nextStep": "Next Step",
+        "validation": {
+          "allFields": "Please fill in all fields."
+        }
+      },
+      "install": {
+        "title": "2. Install GitHub App",
+        "description": "Install the GitHub App in your browser.",
+        "guide": {
+          "title": "Installation Guide",
+          "step1": "Click the button below to open the GitHub App installation page.",
+          "step2": "Select the repository to install (All repositories or specific repository).",
+          "step3": "Click the Install button.",
+          "step4": "Check the Installation ID in the URL after installation (e.g., /settings/installations/12345678)."
+        },
+        "openPage": "Open GitHub App Installation Page"
+      },
+      "verify": {
+        "title": "3. Verify Installation",
+        "description": "Enter the Installation ID and verify the connection.",
+        "installationId": "Installation ID",
+        "installationIdDescription": "Installation ID obtained after installing GitHub App (numbers only)",
+        "verifyAndFetch": "Verify Installation & Fetch Repositories"
+      },
+      "repository": {
+        "title": "4. Select Sync Repository",
+        "description": "Select the repository to sync settings and data.",
+        "label": "Repository",
+        "placeholder": "Select a repository",
+        "private": "Private",
+        "public": "Public",
+        "selectedPrefix": "Selected Repository: ",
+        "noSelection": "Select a repository to store encrypted settings.",
+        "testConnection": "Test Connection",
+        "saveAll": "Save All Settings"
+      },
+      "complete": {
+        "title": "5. Setup Complete!",
+        "description": "GitHub synchronization has been successfully configured.",
+        "successMessage": "✅ Configuration Complete",
+        "editSettings": "Edit Settings"
+      },
+      "security": {
+        "title": "🔒 Security Info",
+        "description": "All sensitive information (tokens, API keys, Private Keys, etc.) is encrypted with AES-256-GCM and synced to the selected GitHub repository. Proxy and SSL verification settings configured in the Network tab also apply to GitHub communication."
+      },
+      "messages": {
+        "privateKeySaved": "Private Key has been securely saved.",
+        "privateKeySaveFailed": "Failed to save Private Key.",
+        "privateKeyUploadFailed": "Failed to upload Private Key.",
+        "invalidPrivateKey": "Invalid Private Key file format.",
+        "appIdRequired": "Please enter App ID.",
+        "ghesUrlRequired": "Please enter GHES URL.",
+        "privateKeyRequired": "Please upload Private Key first.",
+        "installPageOpened": "Please install GitHub App in the browser. Enter Installation ID after installation.",
+        "installPageFailed": "Failed to open GitHub App installation page.",
+        "installationIdRequired": "Please enter Installation ID.",
+        "connectionSuccess": "Connection successful! Found {{count}} repositories.",
+        "repoFetchFailed": "Failed to fetch repository list.",
+        "verificationFailed": "Failed to verify installation.",
+        "repoSelectRequired": "Please select a repository first.",
+        "testSuccess": "Connection test successful! Can access the repository.",
+        "testFailed": "Connection test failed.",
+        "saveSuccess": "GitHub settings saved!",
+        "saveFailed": "Failed to save settings."
+      }
     }
   },
   "chat": {
@@ -1081,7 +893,9 @@
     "copy": "Copy",
     "copied": "Copied!",
     "thinking": "Thinking...",
-    "streaming": "Generating response...",
+    "streaming": {
+      "generating": "AI generating response..."
+    },
     "error": "An error occurred",
     "retry": "Retry",
     "searchPlaceholder": "Search conversations...",
@@ -1218,14 +1032,34 @@
       "collapse": "Collapse",
       "clickToShow": "Click to show in chat",
       "referenceDocument": "📄 Referenced Document: {{title}}"
-    },
-    "streaming": {
-      "generating": "AI generating response..."
     }
   },
   "sidebar": {
     "chat": "Chat",
-    "editor": "Editor",
+    "editor": {
+      "confirmations": {
+        "clearChat": "Do you want to delete all current conversation history?"
+      },
+      "tooltips": {
+        "setWorkingDirectoryFirst": "Please set Working Directory first",
+        "hideTerminal": "Hide Terminal",
+        "openTerminal": "Open Terminal",
+        "toggleTheme": "Toggle Theme",
+        "aiAssistant": "AI Coding Assistant",
+        "newChat": "New Chat",
+        "autocompleteToolsStatus": "Autocomplete Tools ({{status}})",
+        "autocompleteRagStatus": "Autocomplete RAG ({{status}})",
+        "documentManagement": "Document Management (RAG)",
+        "workingDirectoryRequired": "Working Directory Required",
+        "settings": "Settings",
+        "editorSettings": "Editor Settings",
+        "presentationMode": "Presentation Mode (Beta)"
+      },
+      "status": {
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      }
+    },
     "browser": "Browser",
     "documents": "Documents",
     "presentation": "Presentation",
@@ -1614,14 +1448,13 @@
       "deleteFailed": "Delete failed",
       "confirmDelete": "Delete this Team Docs setting?",
       "title": "GitHub Sync Settings",
-      "description": "Sync Personal Docs and Team Docs with GitHub repositories.",
+      "description": "Description",
       "saving": "Saving...",
       "save": "Save Settings",
       "saveHint": "After saving settings, you can perform Pull/Push operations in Document List.",
       "cancel": "Cancel",
       "teamName": "Team Name *",
       "teamNamePlaceholder": "e.g., Frontend Team",
-      "description": "Description",
       "descriptionPlaceholder": "Description for this Team Docs",
       "enabled": "Enabled",
       "add": "Add",
@@ -1635,7 +1468,7 @@
       "pathRequired": "Please enter folder path.",
       "invalidPath": "Please enter a valid folder path.",
       "create": "Create New Folder",
-      "rename": "Rename Folder",
+      "rename": "Rename",
       "createDescription": "Enter folder path. Use slash (/) to separate subfolders.",
       "renameDescription": "Enter new folder path.",
       "folderPath": "Folder Path",
@@ -1644,8 +1477,7 @@
       "tip1": "Use slash (/) to separate subfolders",
       "tip2": "e.g., \"Project/Backend/API\"",
       "tip3": "Folders are created automatically",
-      "cancel": "Cancel",
-      "rename": "Rename"
+      "cancel": "Cancel"
     },
     "refinementPromptDialog": {
       "title": "LLM Document Refinement Prompt",
@@ -1994,24 +1826,15 @@
     "moveFailed": "Move failed",
     "pasteFailed": "Paste failed",
     "targetPathCreationFailed": "Target path creation failed",
-    "newFile": "New File",
-    "newFolder": "New Folder",
-    "paste": "Paste",
-    "refresh": "Refresh",
     "searchInFolder": "Search in Folder",
     "collapseAllSubfolders": "Collapse All Subfolders",
-    "copy": "Copy",
-    "cut": "Cut",
-    "copyPath": "Copy Path",
     "copyAbsolutePath": "Copy Absolute Path",
     "copyRelativePath": "Copy Relative Path",
     "copyFileName": "Copy File Name",
     "openInExplorer": "Open in Explorer",
     "openInTerminal": "Open in Terminal",
     "openWithDefaultApp": "Open with Default App",
-    "duplicate": "Duplicate",
-    "rename": "Rename",
-    "delete": "Delete"
+    "duplicate": "Duplicate"
   },
   "editor": {
     "untitled": "Untitled",
@@ -2128,13 +1951,136 @@
       "title": "Available Editor Agent Tools",
       "approvalRequired": "Approval Required",
       "tip": "💡 Tip: Chat with Agent to automatically select and execute needed tools"
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "categories": {
+        "basicEditing": "Basic Editing",
+        "navigation": "Navigation",
+        "selection": "Selection",
+        "aiFeatures": "AI Features",
+        "advanced": "Advanced",
+        "fileManagement": "File Management",
+        "general": "General"
+      },
+      "save": "Save",
+      "undo": "Undo",
+      "redo": "Redo",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select All",
+      "toggleComment": "Toggle Comment",
+      "formatDocument": "Format Document",
+      "find": "Find",
+      "replace": "Replace",
+      "goToLine": "Go to Line",
+      "quickOpen": "Quick Open",
+      "findNext": "Find Next",
+      "findPrevious": "Find Previous",
+      "selectLine": "Select Line",
+      "selectNextOccurrence": "Select Next Occurrence",
+      "selectAllOccurrences": "Select All Occurrences",
+      "multiCursor": "Multi Cursor",
+      "aiContinueWriting": "Continue Writing",
+      "aiMakeShorter": "Make Shorter",
+      "aiMakeLonger": "Make Longer",
+      "aiFixGrammar": "Fix Grammar",
+      "aiSummarize": "Summarize",
+      "aiExplainCode": "Explain Code",
+      "aiFixCode": "Fix Code",
+      "aiImproveCode": "Improve Code",
+      "aiCompleteCode": "Complete Code",
+      "aiAddComments": "Add Comments",
+      "aiGenerateTests": "Generate Tests",
+      "duplicateLine": "Duplicate Line",
+      "deleteLine": "Delete Line",
+      "formatSelection": "Format Selection",
+      "closeFile": "Close File",
+      "nextFile": "Next File",
+      "previousFile": "Previous File",
+      "commandPalette": "Command Palette",
+      "showShortcuts": "Show Shortcuts",
+      "closeDialog": "Close Dialog"
+    },
+    "commands": {
+      "searchPlaceholder": "Search commands...",
+      "noResults": "No results",
+      "saveFile": "Save File",
+      "closeFile": "Close File",
+      "closeAllFiles": "Close All Files",
+      "refreshFile": "Refresh File",
+      "undo": "Undo",
+      "redo": "Redo",
+      "formatDocument": "Format Document",
+      "toggleComment": "Toggle Comment",
+      "aiExplainCode": "Explain Code",
+      "aiFixCode": "Fix Code",
+      "aiImproveCode": "Improve Code",
+      "aiCompleteCode": "Complete Code",
+      "aiAddComments": "Add Comments",
+      "aiGenerateTests": "Generate Tests",
+      "aiContinueWriting": "Continue Writing",
+      "aiMakeShorter": "Make Shorter",
+      "aiMakeLonger": "Make Longer",
+      "aiSimplify": "Simplify",
+      "aiFixGrammar": "Fix Grammar",
+      "aiSummarize": "Summarize",
+      "showShortcuts": "Show Shortcuts",
+      "toggleTerminal": "Toggle Terminal",
+      "toggleSidebar": "Toggle Sidebar",
+      "find": "Find",
+      "replace": "Replace",
+      "goToLine": "Go to Line",
+      "categories": {
+        "file": "File",
+        "edit": "Edit",
+        "aiCode": "AI Code",
+        "aiWriting": "AI Writing",
+        "view": "View",
+        "navigation": "Navigation"
+      }
+    },
+    "errors": {
+      "cannotRefreshFile": "Cannot refresh file: {{error}}",
+      "refreshError": "An error occurred while refreshing the file.",
+      "cannotLoadImage": "Cannot load image"
+    },
+    "confirmations": {
+      "closeUnsavedFile": "The file has unsaved changes. Do you want to close it?"
+    },
+    "dropzone": {
+      "dropFileHere": "Drop file here",
+      "openDraggedFile": "Open dragged file in editor",
+      "dropToOpen": "Drop file here to open"
+    },
+    "emptyState": {
+      "selectOrDragFile": "Select or drag a file from the file explorer"
+    },
+    "status": {
+      "unsavedChanges": "Unsaved changes",
+      "refreshing": "Refreshing...",
+      "saving": "Saving...",
+      "loadingImage": "Loading image..."
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "save": "Save (Ctrl+S)",
+      "ignore": "Ignore"
+    },
+    "warnings": {
+      "fileChangedExternally": "This file has been modified externally. Do you want to refresh it?"
     }
   },
   "terminal": {
     "title": "Terminal",
     "newTerminal": "New Terminal",
     "clear": "Clear",
-    "kill": "Kill"
+    "kill": "Kill",
+    "actions": {
+      "close": "Close",
+      "newTerminal": "New Terminal (Ctrl+Shift+`)"
+    }
   },
   "documents": {
     "title": "Documents",

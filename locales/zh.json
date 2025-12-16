@@ -259,27 +259,9 @@
       }
     },
     "imagegen": {
-      "title": "图像生成",
-      "description": "图像生成（ComfyUI、NanoBanana）",
-      "provider": "图像生成提供商",
-      "comfyui": {
-        "title": "ComfyUI",
-        "enabled": "启用 ComfyUI",
-        "httpUrl": "HTTP URL",
-        "wsUrl": "WebSocket URL",
-        "workflowId": "默认工作流 ID"
-      },
-      "nanobanana": {
-        "title": "NanoBanana",
-        "enabled": "启用 NanoBanana",
-        "apiKey": "API Key"
-      },
       "title": "图像生成设置",
       "description": "管理使用 ComfyUI 或 NanoBanana（Google Imagen）的图像生成设置。",
-      "providerSelection": "选择图像生成提供商",
-      "providerSelectionDescription": "选择要使用的图像生成服务。",
-      "testing": "测试中...",
-      "testConnection": "测试连接",
+      "provider": "图像生成提供商",
       "comfyui": {
         "title": "ComfyUI 设置",
         "description": "管理用于图像生成的 ComfyUI 工作流连接和设置。",
@@ -352,6 +334,10 @@
         "negativePrompt": "负面提示",
         "negativePromptPlaceholder": "用于移除不需要元素的负面提示"
       },
+      "providerSelection": "选择图像生成提供商",
+      "providerSelectionDescription": "选择要使用的图像生成服务。",
+      "testing": "测试中...",
+      "testConnection": "测试连接",
       "validation": {
         "httpUrlRequired": "请输入 ComfyUI HTTP URL。",
         "workflowIdRequired": "请输入默认工作流 ID。",
@@ -360,44 +346,66 @@
       "saved": "图像生成设置已保存！"
     },
     "mcp": {
-      "title": "MCP 服务器",
-      "description": "Model Context Protocol 服务器",
-      "add": "添加 MCP 服务器",
-      "edit": "编辑 MCP 服务器",
-      "delete": "删除 MCP 服务器",
-      "name": "服务器名称",
-      "transport": "传输方式",
-      "transportStdio": "stdio",
-      "transportSse": "SSE",
-      "command": "命令",
-      "args": "参数",
-      "url": "SSE URL",
-      "enabled": "启用"
+      "title": "MCP",
+      "description": "Model Context Protocol 服务器设置",
+      "addServer": "添加新服务器",
+      "serverList": {
+        "count": "共 <1>{{count}}</1> 个服务器",
+        "totalServers": "共 {{count}} 个服务器",
+        "refresh": "刷新",
+        "loading": "正在加载服务器列表...",
+        "emptyTitle": "添加 MCP 服务器",
+        "emptyDescription": "注册 MCP 服务器以允许 AI 助手使用文件系统、数据库、网络搜索等各种工具。",
+        "deleteDialog": {
+          "title": "删除服务器",
+          "question": "确定要删除服务器 '{{name}}' 吗？",
+          "warning": "此操作无法撤销。",
+          "cancel": "取消",
+          "confirm": "删除"
+        },
+        "status": {
+          "connected": "已连接",
+          "connecting": "连接中...",
+          "error": "错误",
+          "disconnected": "已断开连接",
+          "active": "活动",
+          "inactive": "非活动",
+          "waiting": "等待中"
+        },
+        "labels": {
+          "transport": "传输方式",
+          "status": "状态",
+          "registeredTools": "已注册工具",
+          "argCount": "参数数量",
+          "execCommand": "执行命令",
+          "execArgs": "执行参数",
+          "sseUrl": "SSE URL",
+          "headers": "HTTP 标头",
+          "availableTools": "可用工具"
+        },
+        "transport": {
+          "sse": "SSE",
+          "stdio": "stdio"
+        },
+        "toolCount": "{{count}} 个工具",
+        "toolsUnit": "{{count}}个",
+        "tooltips": {
+          "reconnect": "重新连接服务器",
+          "delete": "删除服务器",
+          "activate": "激活",
+          "deactivate": "停用"
+        },
+        "agentInfo": "LLM 可以在代理模式下使用此服务器的工具。必须启用服务器才能使用工具。",
+        "expand": {
+          "show": "详细信息",
+          "hide": "隐藏"
+        }
+      }
     },
     "quickinput": {
       "title": "快速输入",
       "description": "快速输入和快捷键",
       "shortcut": "快速输入快捷键",
-      "questions": {
-        "title": "快速问题",
-        "add": "添加快速问题",
-        "name": "名称",
-        "shortcut": "快捷键",
-        "prompt": "提示词",
-        "enabled": "启用"
-      },
-      "validation": {
-        "shortcutRequired": "请输入快速输入快捷键。",
-        "nameRequired": "请输入快速问题名称。",
-        "questionShortcutRequired": "请输入快速问题快捷键。",
-        "promptRequired": "请输入快速问题提示词。",
-        "duplicateShortcut": "\"{{name}}\" 的快捷键与其他快捷键冲突。",
-        "conflictWithQuickInput": "与快速输入快捷键冲突",
-        "conflictWithQuestion": "与 \"{{name}}\" 冲突",
-        "maxQuestionsReached": "最多只能注册 5 个快速问题。"
-      },
-      "shortcut": "快速输入快捷键",
-      "shortcutExample": "例如：CommandOrControl+Shift+Space（默认值）",
       "questions": {
         "title": "快速问题（最多 5 个）",
         "description": "基于剪贴板内容即时提问和获取答案的功能。",
@@ -415,6 +423,17 @@
         "promptDescription": "定义 LLM 角色或指令的系统消息。",
         "promptDescriptionClipboard": "剪贴板内容作为单独的用户消息发送，成为处理对象。"
       },
+      "validation": {
+        "shortcutRequired": "请输入快速输入快捷键。",
+        "nameRequired": "请输入快速问题名称。",
+        "questionShortcutRequired": "请输入快速问题快捷键。",
+        "promptRequired": "请输入快速问题提示词。",
+        "duplicateShortcut": "\"{{name}}\" 的快捷键与其他快捷键冲突。",
+        "conflictWithQuickInput": "与快速输入快捷键冲突",
+        "conflictWithQuestion": "与 \"{{name}}\" 冲突",
+        "maxQuestionsReached": "最多只能注册 5 个快速问题。"
+      },
+      "shortcutExample": "例如：CommandOrControl+Shift+Space（默认值）",
       "saved": "快速输入设置已保存！"
     },
     "editor": {
@@ -799,63 +818,6 @@
       "llmRequired": "需要 LLM 配置。",
       "syntaxError": "JSON 语法错误：{{error}}",
       "saveFailed": "保存设置失败。"
-    },
-    "mcp": {
-      "title": "MCP",
-      "description": "Model Context Protocol 服务器设置",
-      "addServer": "添加新服务器",
-      "serverList": {
-        "count": "共 <1>{{count}}</1> 个服务器",
-        "totalServers": "共 {{count}} 个服务器",
-        "refresh": "刷新",
-        "loading": "正在加载服务器列表...",
-        "emptyTitle": "添加 MCP 服务器",
-        "emptyDescription": "注册 MCP 服务器以允许 AI 助手使用文件系统、数据库、网络搜索等各种工具。",
-        "deleteDialog": {
-          "title": "删除服务器",
-          "question": "确定要删除服务器 '{{name}}' 吗？",
-          "warning": "此操作无法撤销。",
-          "cancel": "取消",
-          "confirm": "删除"
-        },
-        "status": {
-          "connected": "已连接",
-          "connecting": "连接中...",
-          "error": "错误",
-          "disconnected": "已断开连接",
-          "active": "活动",
-          "inactive": "非活动",
-          "waiting": "等待中"
-        },
-        "labels": {
-          "transport": "传输方式",
-          "status": "状态",
-          "registeredTools": "已注册工具",
-          "argCount": "参数数量",
-          "execCommand": "执行命令",
-          "execArgs": "执行参数",
-          "sseUrl": "SSE URL",
-          "headers": "HTTP 标头",
-          "availableTools": "可用工具"
-        },
-        "transport": {
-          "sse": "SSE",
-          "stdio": "stdio"
-        },
-        "toolCount": "{{count}} 个工具",
-        "toolsUnit": "{{count}}个",
-        "tooltips": {
-          "reconnect": "重新连接服务器",
-          "delete": "删除服务器",
-          "activate": "激活",
-          "deactivate": "停用"
-        },
-        "agentInfo": "LLM 可以在代理模式下使用此服务器的工具。必须启用服务器才能使用工具。",
-        "expand": {
-          "show": "详细信息",
-          "hide": "隐藏"
-        }
-      }
     }
   },
   "chat": {
@@ -873,7 +835,9 @@
     "copy": "复制",
     "copied": "已复制！",
     "thinking": "思考中...",
-    "streaming": "正在生成回复...",
+    "streaming": {
+      "generating": "AI 正在生成回复..."
+    },
     "error": "发生错误",
     "retry": "重试",
     "searchPlaceholder": "搜索对话...",
@@ -1010,14 +974,34 @@
       "collapse": "收起",
       "clickToShow": "点击在聊天中显示",
       "referenceDocument": "📄 参考文档：{{title}}"
-    },
-    "streaming": {
-      "generating": "AI 正在生成回复..."
     }
   },
   "sidebar": {
     "chat": "聊天",
-    "editor": "编辑器",
+    "editor": {
+      "confirmations": {
+        "clearChat": "是否要删除所有当前对话记录？"
+      },
+      "tooltips": {
+        "setWorkingDirectoryFirst": "请先设置工作目录",
+        "hideTerminal": "隐藏终端",
+        "openTerminal": "打开终端",
+        "toggleTheme": "切换主题",
+        "aiAssistant": "AI 编码助手",
+        "newChat": "新对话",
+        "autocompleteToolsStatus": "自动完成工具 ({{status}})",
+        "autocompleteRagStatus": "自动完成 RAG ({{status}})",
+        "documentManagement": "文档管理 (RAG)",
+        "workingDirectoryRequired": "需要工作目录",
+        "settings": "设置",
+        "editorSettings": "编辑器设置",
+        "presentationMode": "演示模式 (Beta)"
+      },
+      "status": {
+        "enabled": "已启用",
+        "disabled": "已禁用"
+      }
+    },
     "browser": "浏览器",
     "documents": "文档",
     "presentation": "演示文稿",
@@ -1406,14 +1390,13 @@
       "deleteFailed": "删除失败",
       "confirmDelete": "删除此团队文档设置？",
       "title": "GitHub 同步设置",
-      "description": "将个人文档和团队文档与 GitHub 仓库同步。",
+      "description": "描述",
       "saving": "保存中...",
       "save": "保存设置",
       "saveHint": "保存设置后，您可以在文档列表中执行 Pull/Push 操作。",
       "cancel": "取消",
       "teamName": "团队名称 *",
       "teamNamePlaceholder": "例如：前端团队",
-      "description": "描述",
       "descriptionPlaceholder": "此团队文档的描述",
       "enabled": "启用",
       "add": "添加",
@@ -1427,7 +1410,7 @@
       "pathRequired": "请输入文件夹路径。",
       "invalidPath": "请输入有效的文件夹路径。",
       "create": "创建新文件夹",
-      "rename": "重命名文件夹",
+      "rename": "重命名",
       "createDescription": "输入文件夹路径。使用斜杠 (/) 分隔子文件夹。",
       "renameDescription": "输入新文件夹路径。",
       "folderPath": "文件夹路径",
@@ -1436,8 +1419,7 @@
       "tip1": "使用斜杠 (/) 分隔子文件夹",
       "tip2": "例如：\"项目/后端/API\"",
       "tip3": "文件夹会自动创建",
-      "cancel": "取消",
-      "rename": "重命名"
+      "cancel": "取消"
     },
     "refinementPromptDialog": {
       "title": "LLM 文档精炼提示词",
@@ -1786,24 +1768,15 @@
     "moveFailed": "移动失败",
     "pasteFailed": "粘贴失败",
     "targetPathCreationFailed": "目标路径创建失败",
-    "newFile": "新建文件",
-    "newFolder": "新建文件夹",
-    "paste": "粘贴",
-    "refresh": "刷新",
     "searchInFolder": "在文件夹中搜索",
     "collapseAllSubfolders": "折叠所有子文件夹",
-    "copy": "复制",
-    "cut": "剪切",
-    "copyPath": "复制路径",
     "copyAbsolutePath": "复制绝对路径",
     "copyRelativePath": "复制相对路径",
     "copyFileName": "复制文件名",
     "openInExplorer": "在资源管理器中打开",
     "openInTerminal": "在终端中打开",
     "openWithDefaultApp": "使用默认应用打开",
-    "duplicate": "复制",
-    "rename": "重命名",
-    "delete": "删除"
+    "duplicate": "复制"
   },
   "editor": {
     "untitled": "未命名",
@@ -1920,13 +1893,136 @@
       "title": "可用的编辑器代理工具",
       "approvalRequired": "需要批准",
       "tip": "💡 提示：与代理对话可自动选择并执行所需工具"
+    },
+    "shortcuts": {
+      "title": "键盘快捷键",
+      "categories": {
+        "basicEditing": "基本编辑",
+        "navigation": "导航",
+        "selection": "选择",
+        "aiFeatures": "AI 功能",
+        "advanced": "高级",
+        "fileManagement": "文件管理",
+        "general": "常规"
+      },
+      "save": "保存",
+      "undo": "撤销",
+      "redo": "重做",
+      "cut": "剪切",
+      "copy": "复制",
+      "paste": "粘贴",
+      "selectAll": "全选",
+      "toggleComment": "切换注释",
+      "formatDocument": "格式化文档",
+      "find": "查找",
+      "replace": "替换",
+      "goToLine": "转到行",
+      "quickOpen": "快速打开",
+      "findNext": "查找下一个",
+      "findPrevious": "查找上一个",
+      "selectLine": "选择行",
+      "selectNextOccurrence": "选择下一个匹配项",
+      "selectAllOccurrences": "选择所有匹配项",
+      "multiCursor": "多光标",
+      "aiContinueWriting": "继续写作",
+      "aiMakeShorter": "缩短",
+      "aiMakeLonger": "加长",
+      "aiFixGrammar": "修复语法",
+      "aiSummarize": "总结",
+      "aiExplainCode": "解释代码",
+      "aiFixCode": "修复代码",
+      "aiImproveCode": "改进代码",
+      "aiCompleteCode": "完成代码",
+      "aiAddComments": "添加注释",
+      "aiGenerateTests": "生成测试",
+      "duplicateLine": "复制行",
+      "deleteLine": "删除行",
+      "formatSelection": "格式化选择",
+      "closeFile": "关闭文件",
+      "nextFile": "下一个文件",
+      "previousFile": "上一个文件",
+      "commandPalette": "命令面板",
+      "showShortcuts": "显示快捷键",
+      "closeDialog": "关闭对话框"
+    },
+    "commands": {
+      "searchPlaceholder": "搜索命令...",
+      "noResults": "无结果",
+      "saveFile": "保存文件",
+      "closeFile": "关闭文件",
+      "closeAllFiles": "关闭所有文件",
+      "refreshFile": "刷新文件",
+      "undo": "撤销",
+      "redo": "重做",
+      "formatDocument": "格式化文档",
+      "toggleComment": "切换注释",
+      "aiExplainCode": "解释代码",
+      "aiFixCode": "修复代码",
+      "aiImproveCode": "改进代码",
+      "aiCompleteCode": "完成代码",
+      "aiAddComments": "添加注释",
+      "aiGenerateTests": "生成测试",
+      "aiContinueWriting": "继续写作",
+      "aiMakeShorter": "缩短",
+      "aiMakeLonger": "加长",
+      "aiSimplify": "简化",
+      "aiFixGrammar": "修复语法",
+      "aiSummarize": "总结",
+      "showShortcuts": "显示快捷键",
+      "toggleTerminal": "切换终端",
+      "toggleSidebar": "切换侧边栏",
+      "find": "查找",
+      "replace": "替换",
+      "goToLine": "转到行",
+      "categories": {
+        "file": "文件",
+        "edit": "编辑",
+        "aiCode": "AI 代码",
+        "aiWriting": "AI 写作",
+        "view": "视图",
+        "navigation": "导航"
+      }
+    },
+    "errors": {
+      "cannotRefreshFile": "无法刷新文件：{{error}}",
+      "refreshError": "刷新文件时发生错误。",
+      "cannotLoadImage": "无法加载图像"
+    },
+    "confirmations": {
+      "closeUnsavedFile": "文件有未保存的更改。是否要关闭？"
+    },
+    "dropzone": {
+      "dropFileHere": "将文件拖放到这里",
+      "openDraggedFile": "在编辑器中打开拖放的文件",
+      "dropToOpen": "拖放文件到这里打开"
+    },
+    "emptyState": {
+      "selectOrDragFile": "从文件资源管理器中选择或拖放文件"
+    },
+    "status": {
+      "unsavedChanges": "未保存的更改",
+      "refreshing": "刷新中...",
+      "saving": "保存中...",
+      "loadingImage": "加载图像..."
+    },
+    "actions": {
+      "refresh": "刷新",
+      "save": "保存 (Ctrl+S)",
+      "ignore": "忽略"
+    },
+    "warnings": {
+      "fileChangedExternally": "此文件已在外部修改。是否要刷新？"
     }
   },
   "terminal": {
     "title": "终端",
     "newTerminal": "新建终端",
     "clear": "清除",
-    "kill": "终止"
+    "kill": "终止",
+    "actions": {
+      "close": "关闭",
+      "newTerminal": "新建终端 (Ctrl+Shift+`)"
+    }
   },
   "documents": {
     "title": "文档",

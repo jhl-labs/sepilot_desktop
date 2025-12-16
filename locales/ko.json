@@ -349,26 +349,6 @@
       "description": "빠른 입력 및 단축키",
       "shortcut": "Quick Input 단축키",
       "questions": {
-        "title": "Quick Questions",
-        "add": "Quick Question 추가",
-        "name": "이름",
-        "shortcut": "단축키",
-        "prompt": "프롬프트",
-        "enabled": "활성화"
-      },
-      "validation": {
-        "shortcutRequired": "Quick Input 단축키를 입력해주세요.",
-        "nameRequired": "Quick Question의 이름을 입력해주세요.",
-        "questionShortcutRequired": "Quick Question의 단축키를 입력해주세요.",
-        "promptRequired": "Quick Question의 프롬프트를 입력해주세요.",
-        "duplicateShortcut": "\"{{name}}\"의 단축키가 다른 단축키와 중복됩니다.",
-        "conflictWithQuickInput": "Quick Input 단축키와 중복됩니다",
-        "conflictWithQuestion": "\"{{name}}\"과(와) 중복됩니다",
-        "maxQuestionsReached": "최대 5개의 Quick Question만 등록할 수 있습니다."
-      },
-      "shortcut": "Quick Input 단축키",
-      "shortcutExample": "예: CommandOrControl+Shift+Space (기본값)",
-      "questions": {
         "title": "Quick Questions (최대 5개)",
         "description": "클립보드 내용을 기반으로 즉시 질문하고 답변을 받는 기능입니다.",
         "descriptionPrompt": "• <strong>프롬프트</strong>: LLM의 시스템 메시지로 전송되어 역할/지시사항을 정의합니다.",
@@ -385,6 +365,17 @@
         "promptDescription": "LLM에게 역할이나 지시사항을 정의하는 시스템 메시지입니다.",
         "promptDescriptionClipboard": "클립보드의 내용은 별도의 사용자 메시지로 전송되어 처리 대상이 됩니다."
       },
+      "validation": {
+        "shortcutRequired": "Quick Input 단축키를 입력해주세요.",
+        "nameRequired": "Quick Question의 이름을 입력해주세요.",
+        "questionShortcutRequired": "Quick Question의 단축키를 입력해주세요.",
+        "promptRequired": "Quick Question의 프롬프트를 입력해주세요.",
+        "duplicateShortcut": "\"{{name}}\"의 단축키가 다른 단축키와 중복됩니다.",
+        "conflictWithQuickInput": "Quick Input 단축키와 중복됩니다",
+        "conflictWithQuestion": "\"{{name}}\"과(와) 중복됩니다",
+        "maxQuestionsReached": "최대 5개의 Quick Question만 등록할 수 있습니다."
+      },
+      "shortcutExample": "예: CommandOrControl+Shift+Space (기본값)",
       "saved": "Quick Input 설정이 저장되었습니다!"
     },
     "editor": {
@@ -556,80 +547,68 @@
       "description": "Personal Docs 동기화"
     },
     "githubSync": {
-      "connectionTitle": "GitHub 연결 설정",
-      "connectionDescription": "GitHub Personal Access Token을 사용하여 레포지토리에 연결합니다.",
-      "createToken": "새 토큰 생성하기 (repo 권한 필요)",
+      "title": "GitHub 연결 설정",
+      "description": "GitHub Personal Access Token을 사용하여 레포지토리에 연결합니다.",
+      "newTokenLink": "새 토큰 생성하기 (repo 권한 필요)",
+      "serverType": "Server Type",
+      "ghesUrl": "GHES URL",
+      "ghesUrlPlaceholder": "https://github.company.com",
       "ghesUrlDescription": "GHES 인스턴스의 기본 URL을 입력하세요 (예: https://github.company.com)",
+      "token": "GitHub Personal Access Token",
+      "tokenPlaceholder": "ghp_xxxxxxxxxxxxxxxxxxxx",
       "tokenDescription": "repo 권한이 있는 Personal Access Token이 필요합니다.",
-      "ownerLabel": "Owner (Organization 또는 User)",
+      "owner": "Owner (Organization 또는 User)",
       "ownerPlaceholder": "my-org 또는 my-username",
-      "branchLabel": "Branch (기본값: main)",
-      "testing": "연결 테스트 중...",
+      "repo": "Repository",
+      "repoPlaceholder": "my-repo",
+      "branch": "Branch (기본값: main)",
+      "branchPlaceholder": "main",
       "testConnection": "연결 테스트",
+      "testing": "연결 테스트 중...",
       "save": "설정 저장",
-      "allFieldsRequired": "모든 필드를 입력해주세요.",
-      "ghesUrlRequired": "GHES URL을 입력해주세요.",
-      "connectionSuccess": "GitHub 레포지토리 연결 성공!",
-      "connectionFailed": "연결 테스트 실패",
-      "saveSuccess": "GitHub Sync 설정이 저장되었습니다!",
-      "saveFailed": "설정 저장 실패",
-      "saveFirst": "먼저 설정을 저장해주세요.",
+      "saving": "저장 중...",
       "dataSync": "데이터 동기화",
+      "push": "Push",
       "pushing": "Push 중...",
-      "syncingAll": "전체 동기화 중...",
       "syncAll": "전체 동기화 (활성화된 항목만)",
-      "lastSyncInfo": "마지막 동기화 정보",
-      "time": "시간",
-      "status": "상태",
-      "errorReporting": "에러 자동 리포팅",
-      "errorReportingDescription": "프로그램 에러 발생 시 GitHub Issue로 자동 리포트하여 개선에 도움을 줍니다.",
-      "errorReportingEnabled": "에러 자동 리포팅 활성화",
-      "errorReportingDetails": "에러 발생 시 자동으로 GitHub Issue를 생성하여 개발팀에 전달합니다.\n에러 메시지, 스택 트레이스, 시스템 정보가 포함되며, 개인정보는 포함되지 않습니다.",
-      "errorReportingInfo": "💡 에러 리포팅 정보",
-      "errorReportingInfo1": "에러 메시지와 스택 트레이스가 GitHub Issue로 전송됩니다.",
-      "errorReportingInfo2": "앱 버전, OS 플랫폼 등 기본 시스템 정보가 포함됩니다.",
-      "errorReportingInfo3": "API 키, 토큰 등 민감한 정보는 절대 전송되지 않습니다.",
-      "errorReportingInfo4": "프로그램 개선을 위해 매우 중요한 정보입니다.",
-      "errorReportingInfo5": "이 기능은 GitHub Token이 설정된 경우에만 사용할 수 있습니다.",
-      "securityInfo": "🔒 보안 정보",
-      "securityInfo1": "민감한 정보(LLM API 키 등)는 AES-256-GCM으로 암호화되어 저장됩니다.",
-      "securityInfo2": "GitHub Token은 로컬에만 저장되며 동기화되지 않습니다.",
-      "securityInfo3": "동기화된 파일은 sepilot/ 폴더에 저장됩니다.",
-      "securityInfo4": "대화 및 이미지 동기화 시 개인정보 보호에 주의하세요.",
-      "syncItems": {
-        "settings": {
-          "title": "설정 동기화",
-          "description": "LLM, Network, VectorDB 등 애플리케이션 설정"
-        },
-        "personas": {
-          "title": "AI 페르소나",
-          "description": "사용자 정의 AI 페르소나 설정"
-        },
-        "images": {
-          "title": "이미지 동기화",
-          "description": "생성된 이미지 메타데이터",
-          "warning": "용량 주의"
-        },
-        "conversations": {
-          "title": "대화 동기화",
-          "description": "대화 내역 및 메시지",
-          "warning": "개인정보 주의"
-        }
+      "syncAllProgress": "전체 동기화 중...",
+      "lastSync": {
+        "title": "마지막 동기화 정보",
+        "time": "시간",
+        "status": "상태",
+        "success": "성공",
+        "failed": "실패",
+        "error": "에러"
       },
-      "syncSuccess": {
-        "settings": "설정 동기화 완료!",
-        "personas": "AI 페르소나 동기화 완료!",
-        "images": "이미지 동기화 완료!",
-        "conversations": "대화 동기화 완료!",
-        "all": "전체 동기화 완료!"
+      "errorReporting": {
+        "title": "에러 자동 리포팅",
+        "description": "프로그램 에러 발생 시 GitHub Issue로 자동 리포트하여 개선에 도움을 줍니다.",
+        "enable": "에러 자동 리포팅 활성화",
+        "enableDescription": "에러 발생 시 자동으로 GitHub Issue를 생성하여 개발팀에 전달합니다.\n에러 메시지, 스택 트레이스, 시스템 정보가 포함되며, 개인정보는 포함되지 않습니다.",
+        "infoTitle": "💡 에러 리포팅 정보",
+        "info1": "에러 메시지와 스택 트레이스가 GitHub Issue로 전송됩니다.",
+        "info2": "앱 버전, OS 플랫폼 등 기본 시스템 정보가 포함됩니다.",
+        "info3": "API 키, 토큰 등 민감한 정보는 절대 전송되지 않습니다.",
+        "info4": "프로그램 개선을 위해 매우 중요한 정보입니다.",
+        "info5": "이 기능은 GitHub Token이 설정된 경우에만 사용할 수 있습니다."
       },
-      "syncFailed": {
-        "settings": "설정 동기화 실패",
-        "personas": "AI 페르소나 동기화 실패",
-        "images": "이미지 동기화 실패",
-        "conversations": "대화 동기화 실패",
-        "all": "전체 동기화 실패",
-        "generic": "{{type}} 동기화 실패"
+      "security": {
+        "title": "🔒 보안 정보",
+        "item1": "민감한 정보(LLM API 키 등)는 AES-256-GCM으로 암호화되어 저장됩니다.",
+        "item2": "GitHub Token은 로컬에만 저장되며 동기화되지 않습니다.",
+        "item3": "동기화된 파일은 sepilot/ 폴더에 저장됩니다.",
+        "item4": "대화 및 이미지 동기화 시 개인정보 보호에 주의하세요."
+      },
+      "messages": {
+        "fillAll": "모든 필드를 입력해주세요.",
+        "ghesUrlRequired": "GHES URL을 입력해주세요.",
+        "testSuccess": "GitHub 레포지토리 연결 성공!",
+        "testFailed": "연결 테스트 실패",
+        "saveSuccess": "GitHub Sync 설정이 저장되었습니다!",
+        "saveFailed": "설정 저장 실패",
+        "syncSuccess": "{{type}} 동기화 완료!",
+        "syncFailed": "{{type}} 동기화 실패",
+        "saveFirst": "먼저 설정을 저장해주세요."
       }
     },
     "githubOAuth": {
@@ -718,71 +697,6 @@
         "testFailed": "연결 테스트에 실패했습니다.",
         "saveSuccess": "GitHub 설정이 저장되었습니다!",
         "saveFailed": "설정 저장에 실패했습니다."
-      }
-    },
-    "githubSync": {
-      "title": "GitHub 연결 설정",
-      "description": "GitHub Personal Access Token을 사용하여 레포지토리에 연결합니다.",
-      "newTokenLink": "새 토큰 생성하기 (repo 권한 필요)",
-      "serverType": "Server Type",
-      "ghesUrl": "GHES URL",
-      "ghesUrlPlaceholder": "https://github.company.com",
-      "ghesUrlDescription": "GHES 인스턴스의 기본 URL을 입력하세요 (예: https://github.company.com)",
-      "token": "GitHub Personal Access Token",
-      "tokenPlaceholder": "ghp_xxxxxxxxxxxxxxxxxxxx",
-      "tokenDescription": "repo 권한이 있는 Personal Access Token이 필요합니다.",
-      "owner": "Owner (Organization 또는 User)",
-      "ownerPlaceholder": "my-org 또는 my-username",
-      "repo": "Repository",
-      "repoPlaceholder": "my-repo",
-      "branch": "Branch (기본값: main)",
-      "branchPlaceholder": "main",
-      "testConnection": "연결 테스트",
-      "testing": "연결 테스트 중...",
-      "save": "설정 저장",
-      "saving": "저장 중...",
-      "dataSync": "데이터 동기화",
-      "push": "Push",
-      "pushing": "Push 중...",
-      "syncAll": "전체 동기화 (활성화된 항목만)",
-      "syncAllProgress": "전체 동기화 중...",
-      "lastSync": {
-        "title": "마지막 동기화 정보",
-        "time": "시간",
-        "status": "상태",
-        "success": "성공",
-        "failed": "실패",
-        "error": "에러"
-      },
-      "errorReporting": {
-        "title": "에러 자동 리포팅",
-        "description": "프로그램 에러 발생 시 GitHub Issue로 자동 리포트하여 개선에 도움을 줍니다.",
-        "enable": "에러 자동 리포팅 활성화",
-        "enableDescription": "에러 발생 시 자동으로 GitHub Issue를 생성하여 개발팀에 전달합니다.\n에러 메시지, 스택 트레이스, 시스템 정보가 포함되며, 개인정보는 포함되지 않습니다.",
-        "infoTitle": "💡 에러 리포팅 정보",
-        "info1": "에러 메시지와 스택 트레이스가 GitHub Issue로 전송됩니다.",
-        "info2": "앱 버전, OS 플랫폼 등 기본 시스템 정보가 포함됩니다.",
-        "info3": "API 키, 토큰 등 민감한 정보는 절대 전송되지 않습니다.",
-        "info4": "프로그램 개선을 위해 매우 중요한 정보입니다.",
-        "info5": "이 기능은 GitHub Token이 설정된 경우에만 사용할 수 있습니다."
-      },
-      "security": {
-        "title": "🔒 보안 정보",
-        "item1": "민감한 정보(LLM API 키 등)는 AES-256-GCM으로 암호화되어 저장됩니다.",
-        "item2": "GitHub Token은 로컬에만 저장되며 동기화되지 않습니다.",
-        "item3": "동기화된 파일은 sepilot/ 폴더에 저장됩니다.",
-        "item4": "대화 및 이미지 동기화 시 개인정보 보호에 주의하세요."
-      },
-      "messages": {
-        "fillAll": "모든 필드를 입력해주세요.",
-        "ghesUrlRequired": "GHES URL을 입력해주세요.",
-        "testSuccess": "GitHub 레포지토리 연결 성공!",
-        "testFailed": "연결 테스트 실패",
-        "saveSuccess": "GitHub Sync 설정이 저장되었습니다!",
-        "saveFailed": "설정 저장 실패",
-        "syncSuccess": "{{type}} 동기화 완료!",
-        "syncFailed": "{{type}} 동기화 실패",
-        "saveFirst": "먼저 설정을 저장해주세요."
       }
     },
     "backup": {
@@ -982,7 +896,9 @@
     "copy": "복사",
     "copied": "복사됨!",
     "thinking": "생각 중...",
-    "streaming": "응답 생성 중...",
+    "streaming": {
+      "generating": "AI 응답 생성 중..."
+    },
     "error": "오류가 발생했습니다",
     "retry": "다시 시도",
     "searchPlaceholder": "대화 검색...",
@@ -1119,14 +1035,34 @@
       "collapse": "접기",
       "clickToShow": "클릭하여 대화창에 표시",
       "referenceDocument": "📄 참조 문서: {{title}}"
-    },
-    "streaming": {
-      "generating": "AI 응답 생성 중..."
     }
   },
   "sidebar": {
     "chat": "채팅",
-    "editor": "에디터",
+    "editor": {
+      "confirmations": {
+        "clearChat": "현재 대화 내역을 모두 삭제하시겠습니까?"
+      },
+      "tooltips": {
+        "setWorkingDirectoryFirst": "Working Directory를 먼저 설정해주세요",
+        "hideTerminal": "터미널 숨기기",
+        "openTerminal": "터미널 열기",
+        "toggleTheme": "테마 전환",
+        "aiAssistant": "AI 코딩 어시스턴트",
+        "newChat": "새 대화",
+        "autocompleteToolsStatus": "Autocomplete Tools ({{status}})",
+        "autocompleteRagStatus": "Autocomplete RAG ({{status}})",
+        "documentManagement": "문서 관리 (RAG)",
+        "workingDirectoryRequired": "Working Directory 설정 필요",
+        "settings": "설정",
+        "editorSettings": "에디터 설정",
+        "presentationMode": "Presentation 모드 (Beta)"
+      },
+      "status": {
+        "enabled": "켜짐",
+        "disabled": "꺼짐"
+      }
+    },
     "browser": "브라우저",
     "documents": "문서",
     "presentation": "프레젠테이션",
@@ -1462,7 +1398,7 @@
       "folderPath": "폴더 경로 (선택)",
       "folderPathPlaceholder": "예: 프로젝트/백엔드/API",
       "folderPathHint": "슬래시(/)로 하위 폴더를 구분할 수 있습니다",
-      "upload": "문서 업로드",
+      "upload": "업로드",
       "edit": "문서 편집",
       "uploadDescription": "새 문서를 추가하여 RAG 검색에 활용하세요.",
       "editDescription": "문서의 내용과 메타데이터를 수정합니다.",
@@ -1479,7 +1415,6 @@
       "notTeamDocs": "이 문서는 Team Docs에서 가져온 문서가 아닙니다.",
       "uploading": "업로드 중...",
       "aiProcessing": "AI 작업 중...",
-      "upload": "업로드",
       "save": "저장",
       "noTitle": "제목 없음",
       "systemPrompt": "당신은 문서 편집과 개선을 돕는 전문 AI 어시스턴트입니다.",
@@ -1516,14 +1451,13 @@
       "deleteFailed": "삭제 실패",
       "confirmDelete": "이 Team Docs 설정을 삭제하시겠습니까?",
       "title": "GitHub 동기화 설정",
-      "description": "Personal Docs와 Team Docs를 GitHub 레포지토리와 동기화합니다.",
+      "description": "설명",
       "saving": "저장 중...",
       "save": "설정 저장",
       "saveHint": "설정을 저장한 후 Document List에서 Pull/Push 작업을 수행할 수 있습니다.",
       "cancel": "취소",
       "teamName": "팀 이름 *",
       "teamNamePlaceholder": "예: Frontend Team",
-      "description": "설명",
       "descriptionPlaceholder": "이 Team Docs에 대한 설명",
       "enabled": "활성화",
       "add": "추가",
@@ -1536,8 +1470,8 @@
     "folderManageDialog": {
       "pathRequired": "폴더 경로를 입력해주세요.",
       "invalidPath": "유효한 폴더 경로를 입력해주세요.",
-      "create": "새 폴더 생성",
-      "rename": "폴더 이름 변경",
+      "create": "생성",
+      "rename": "변경",
       "createDescription": "폴더 경로를 입력하세요. 슬래시(/)로 하위 폴더를 구분할 수 있습니다.",
       "renameDescription": "새로운 폴더 경로를 입력하세요.",
       "folderPath": "폴더 경로",
@@ -1546,9 +1480,7 @@
       "tip1": "슬래시(/)로 하위 폴더를 구분할 수 있습니다",
       "tip2": "예: \"프로젝트/백엔드/API\"",
       "tip3": "폴더는 자동으로 생성됩니다",
-      "cancel": "취소",
-      "create": "생성",
-      "rename": "변경"
+      "cancel": "취소"
     },
     "refinementPromptDialog": {
       "title": "LLM 문서 정제 프롬프트",
@@ -1885,24 +1817,15 @@
     "moveFailed": "이동 실패",
     "pasteFailed": "붙여넣기 실패",
     "targetPathCreationFailed": "대상 경로 생성 실패",
-    "newFile": "새 파일",
-    "newFolder": "새 폴더",
-    "paste": "붙여넣기",
-    "refresh": "새로고침",
     "searchInFolder": "폴더에서 검색",
     "collapseAllSubfolders": "하위 폴더 모두 접기",
-    "copy": "복사",
-    "cut": "잘라내기",
-    "copyPath": "경로 복사",
     "copyAbsolutePath": "절대 경로 복사",
     "copyRelativePath": "상대 경로 복사",
     "copyFileName": "파일 이름 복사",
     "openInExplorer": "탐색기에서 열기",
     "openInTerminal": "터미널에서 열기",
     "openWithDefaultApp": "기본 앱으로 열기",
-    "duplicate": "복제",
-    "rename": "이름 변경",
-    "delete": "삭제"
+    "duplicate": "복제"
   },
   "editor": {
     "untitled": "제목 없음",
@@ -2019,13 +1942,136 @@
       "title": "사용 가능한 Editor Agent 도구",
       "approvalRequired": "승인 필요",
       "tip": "💡 Tip: Agent와 대화하면 필요한 도구를 자동으로 선택하여 실행합니다"
+    },
+    "shortcuts": {
+      "title": "키보드 단축키",
+      "categories": {
+        "basicEditing": "기본 편집",
+        "navigation": "탐색",
+        "selection": "선택",
+        "aiFeatures": "AI 기능",
+        "advanced": "고급",
+        "fileManagement": "파일 관리",
+        "general": "일반"
+      },
+      "save": "저장",
+      "undo": "실행 취소",
+      "redo": "다시 실행",
+      "cut": "잘라내기",
+      "copy": "복사",
+      "paste": "붙여넣기",
+      "selectAll": "전체 선택",
+      "toggleComment": "주석 토글",
+      "formatDocument": "문서 포맷",
+      "find": "찾기",
+      "replace": "바꾸기",
+      "goToLine": "줄로 이동",
+      "quickOpen": "빠른 열기",
+      "findNext": "다음 찾기",
+      "findPrevious": "이전 찾기",
+      "selectLine": "줄 선택",
+      "selectNextOccurrence": "다음 항목 선택",
+      "selectAllOccurrences": "모든 항목 선택",
+      "multiCursor": "다중 커서",
+      "aiContinueWriting": "계속 작성",
+      "aiMakeShorter": "짧게 만들기",
+      "aiMakeLonger": "길게 만들기",
+      "aiFixGrammar": "문법 수정",
+      "aiSummarize": "요약",
+      "aiExplainCode": "코드 설명",
+      "aiFixCode": "코드 수정",
+      "aiImproveCode": "코드 개선",
+      "aiCompleteCode": "코드 완성",
+      "aiAddComments": "주석 추가",
+      "aiGenerateTests": "테스트 생성",
+      "duplicateLine": "줄 복제",
+      "deleteLine": "줄 삭제",
+      "formatSelection": "선택 영역 포맷",
+      "closeFile": "파일 닫기",
+      "nextFile": "다음 파일",
+      "previousFile": "이전 파일",
+      "commandPalette": "명령 팔레트",
+      "showShortcuts": "단축키 표시",
+      "closeDialog": "다이얼로그 닫기"
+    },
+    "commands": {
+      "searchPlaceholder": "명령 검색...",
+      "noResults": "결과 없음",
+      "saveFile": "파일 저장",
+      "closeFile": "파일 닫기",
+      "closeAllFiles": "모든 파일 닫기",
+      "refreshFile": "파일 새로고침",
+      "undo": "실행 취소",
+      "redo": "다시 실행",
+      "formatDocument": "문서 포맷",
+      "toggleComment": "주석 토글",
+      "aiExplainCode": "코드 설명",
+      "aiFixCode": "코드 수정",
+      "aiImproveCode": "코드 개선",
+      "aiCompleteCode": "코드 완성",
+      "aiAddComments": "주석 추가",
+      "aiGenerateTests": "테스트 생성",
+      "aiContinueWriting": "계속 작성",
+      "aiMakeShorter": "짧게 만들기",
+      "aiMakeLonger": "길게 만들기",
+      "aiSimplify": "단순화",
+      "aiFixGrammar": "문법 수정",
+      "aiSummarize": "요약",
+      "showShortcuts": "단축키 표시",
+      "toggleTerminal": "터미널 토글",
+      "toggleSidebar": "사이드바 토글",
+      "find": "찾기",
+      "replace": "바꾸기",
+      "goToLine": "줄로 이동",
+      "categories": {
+        "file": "파일",
+        "edit": "편집",
+        "aiCode": "AI 코드",
+        "aiWriting": "AI 작문",
+        "view": "보기",
+        "navigation": "탐색"
+      }
+    },
+    "errors": {
+      "cannotRefreshFile": "파일을 새로고침할 수 없습니다: {{error}}",
+      "refreshError": "파일을 새로고침하는 중 오류가 발생했습니다.",
+      "cannotLoadImage": "이미지를 불러올 수 없습니다"
+    },
+    "confirmations": {
+      "closeUnsavedFile": "파일에 저장되지 않은 변경사항이 있습니다. 닫으시겠습니까?"
+    },
+    "dropzone": {
+      "dropFileHere": "파일을 여기에 드롭",
+      "openDraggedFile": "드래그한 파일을 에디터에서 엽니다",
+      "dropToOpen": "파일을 여기에 드롭하여 열기"
+    },
+    "emptyState": {
+      "selectOrDragFile": "파일 탐색기에서 파일을 선택하거나 드래그하세요"
+    },
+    "status": {
+      "unsavedChanges": "저장되지 않은 변경사항",
+      "refreshing": "새로고침 중...",
+      "saving": "저장 중...",
+      "loadingImage": "이미지 로딩 중..."
+    },
+    "actions": {
+      "refresh": "새로고침",
+      "save": "저장 (Ctrl+S)",
+      "ignore": "무시"
+    },
+    "warnings": {
+      "fileChangedExternally": "이 파일이 외부에서 수정되었습니다. 새로고침하시겠습니까?"
     }
   },
   "terminal": {
     "title": "터미널",
     "newTerminal": "새 터미널",
     "clear": "지우기",
-    "kill": "종료"
+    "kill": "종료",
+    "actions": {
+      "close": "닫기",
+      "newTerminal": "새 터미널 (Ctrl+Shift+`)"
+    }
   },
   "documents": {
     "title": "문서",
