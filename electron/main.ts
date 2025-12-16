@@ -421,6 +421,12 @@ export function getMainWindow(): BrowserWindow | null {
 
 // System Tray 생성
 function createTray() {
+  // Prevent duplicate tray creation
+  if (tray !== null) {
+    logger.info('[Tray] Tray already exists, skipping creation');
+    return;
+  }
+
   // Set tray icon based on platform and environment
   let trayIconPath: string;
   const isWindows = process.platform === 'win32';
@@ -437,6 +443,7 @@ function createTray() {
 
   const icon = nativeImage.createFromPath(trayIconPath);
   tray = new Tray(icon);
+  logger.info('[Tray] Tray created successfully');
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -479,6 +486,28 @@ function createTray() {
 // Configure DNS settings before app is ready
 // Disable built-in DNS client to use system DNS resolver
 app.commandLine.appendSwitch('disable-features', 'AsyncDns');
+
+// Single instance lock: Prevent multiple instances from running
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Another instance is already running, quit this one
+  logger.info('[Main] Another instance is already running, quitting...');
+  app.quit();
+} else {
+  // This is the first instance, listen for second-instance events
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    logger.info('[Main] Second instance detected, focusing main window');
+    // Someone tried to run a second instance, focus our window instead
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+      mainWindow.show();
+    }
+  });
+}
 
 app.whenReady().then(async () => {
   logger.info('App is ready');
@@ -685,6 +714,13 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   isQuitting = true;
   logger.info('App is quitting');
+
+  // Destroy tray icon
+  if (tray !== null) {
+    tray.destroy();
+    tray = null;
+    logger.info('[Tray] Tray destroyed');
+  }
 
   // Unregister all global shortcuts
   globalShortcut.unregisterAll();
