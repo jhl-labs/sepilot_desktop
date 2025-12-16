@@ -1,6 +1,7 @@
 import { ipcMain, shell } from 'electron';
 import { Octokit } from '@octokit/rest';
 import { tokenManager } from '../../services/token-manager';
+import { httpFetch, getNetworkConfig, createOctokitAgent } from '../../../lib/http';
 
 /**
  * Auth IPC 핸들러
@@ -31,7 +32,8 @@ export function setupAuthHandlers() {
         throw new Error('GITHUB_CLIENT_ID is not configured.');
       }
 
-      const response = await fetch('https://github.com/login/oauth/access_token', {
+      const networkConfig = await getNetworkConfig();
+      const response = await httpFetch('https://github.com/login/oauth/access_token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,6 +45,8 @@ export function setupAuthHandlers() {
           code_verifier: codeVerifier,
           redirect_uri: process.env.GITHUB_REDIRECT_URI,
         }),
+        networkConfig: networkConfig ?? undefined,
+        timeout: 30000,
       });
 
       if (!response.ok) {
@@ -85,7 +89,12 @@ export function setupAuthHandlers() {
    */
   ipcMain.handle('auth-get-user-info', async (_event, token: string) => {
     try {
-      const octokit = new Octokit({ auth: token });
+      const networkConfig = await getNetworkConfig();
+      const agent = await createOctokitAgent(networkConfig);
+      const octokit = new Octokit({
+        auth: token,
+        request: agent ? { agent } : undefined,
+      });
 
       const { data } = await octokit.users.getAuthenticated();
 

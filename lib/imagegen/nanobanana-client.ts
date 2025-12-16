@@ -5,6 +5,7 @@ import { logger } from '@/lib/utils/logger';
  */
 
 import type { NanoBananaConfig, NetworkConfig } from '@/types';
+import { httpFetch } from '@/lib/http';
 
 export interface NanoBananaGenerateParams {
   prompt: string;
@@ -94,10 +95,12 @@ async function generateWithNanoBananaAPI(
     });
 
     // Call NanoBananaAPI.ai
-    const response = await fetch(endpoint, {
+    const response = await httpFetch(endpoint, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
+      networkConfig: networkConfig ?? undefined,
+      timeout: 60000,
     });
 
     logger.info('[NanoBanana] Response status:', response.status, response.statusText);
@@ -169,9 +172,11 @@ async function pollForResults(
 
     logger.info(`[NanoBanana] Polling attempt ${attempt + 1}/${maxAttempts}`);
 
-    const response = await fetch(endpoint, {
+    const response = await httpFetch(endpoint, {
       method: 'GET',
       headers,
+      networkConfig: networkConfig ?? undefined,
+      timeout: 30000,
     });
 
     if (!response.ok) {
@@ -261,7 +266,11 @@ async function downloadImageAsBase64(
     });
   }
 
-  const response = await fetch(url, { headers });
+  const response = await httpFetch(url, {
+    headers,
+    networkConfig: networkConfig ?? undefined,
+    timeout: 120000, // 이미지 다운로드는 2분 타임아웃
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
@@ -346,10 +355,12 @@ async function generateWithVertexAI(
     });
 
     // Call Google Imagen API
-    const response = await fetch(endpoint, {
+    const response = await httpFetch(endpoint, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
+      networkConfig: networkConfig ?? undefined,
+      timeout: 120000, // Vertex AI는 이미지 생성에 시간이 걸림
     });
 
     if (!response.ok) {

@@ -1,9 +1,8 @@
 import { app, ipcMain, BrowserWindow } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import https from 'https';
-import http from 'http';
 import type { PresentationSlide, PresentationExportFormat } from '@/types/presentation';
+import { downloadImage, getNetworkConfig } from '../../../lib/http';
 
 interface ExportPayload {
   slides: PresentationSlide[];
@@ -28,19 +27,10 @@ async function downloadImageToTemp(url: string): Promise<string> {
   const filename = `img-${Date.now()}-${Math.random().toString(16).slice(2)}${path.extname(parsed.pathname) || '.png'}`;
   const targetPath = path.join(tempDir, filename);
 
-  const client = parsed.protocol === 'http:' ? http : https;
-
-  const buffer: Buffer = await new Promise((resolve, reject) => {
-    const req = client.get(url, (res) => {
-      if (res.statusCode && res.statusCode >= 400) {
-        reject(new Error(`HTTP ${res.statusCode}`));
-        return;
-      }
-      const chunks: Buffer[] = [];
-      res.on('data', (chunk) => chunks.push(chunk as Buffer));
-      res.on('end', () => resolve(Buffer.concat(chunks)));
-    });
-    req.on('error', reject);
+  const networkConfig = await getNetworkConfig();
+  const buffer = await downloadImage(url, {
+    networkConfig: networkConfig ?? undefined,
+    timeout: 60000,
   });
 
   fs.writeFileSync(targetPath, buffer);

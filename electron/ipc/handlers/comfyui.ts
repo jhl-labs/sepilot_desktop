@@ -6,6 +6,7 @@
 import { ipcMain } from 'electron';
 import { NetworkConfig } from '../../../types';
 import { logger } from '../../services/logger';
+import { httpFetch } from '../../../lib/http';
 
 /**
  * ComfyUI 연결 테스트
@@ -27,15 +28,10 @@ export function setupComfyUIHandlers() {
           headers.Authorization = `Bearer ${apiKey}`;
         }
 
-        // Network Config의 custom headers 추가
-        if (networkConfig?.customHeaders) {
-          Object.entries(networkConfig.customHeaders).forEach(([key, value]) => {
-            headers[key] = value;
-          });
-        }
-
-        const response = await fetch(`${normalizedUrl}/system_stats`, {
+        const response = await httpFetch(`${normalizedUrl}/system_stats`, {
           headers,
+          networkConfig: networkConfig ?? undefined,
+          timeout: 30000, // 30초 타임아웃
         });
 
         if (!response.ok) {
@@ -81,20 +77,15 @@ export function setupComfyUIHandlers() {
           headers.Authorization = `Bearer ${apiKey}`;
         }
 
-        // Network Config의 custom headers 추가
-        if (networkConfig?.customHeaders) {
-          Object.entries(networkConfig.customHeaders).forEach(([key, value]) => {
-            headers[key] = value;
-          });
-        }
-
-        const response = await fetch(`${normalizedUrl}/prompt`, {
+        const response = await httpFetch(`${normalizedUrl}/prompt`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
             prompt: workflow,
             client_id: clientId,
           }),
+          networkConfig: networkConfig ?? undefined,
+          timeout: 60000, // 60초 타임아웃
         });
 
         if (!response.ok) {
@@ -140,16 +131,13 @@ export function setupComfyUIHandlers() {
           headers.Authorization = `Bearer ${apiKey}`;
         }
 
-        // Network Config의 custom headers 추가
-        if (networkConfig?.customHeaders) {
-          Object.entries(networkConfig.customHeaders).forEach(([key, value]) => {
-            headers[key] = value;
-          });
-        }
-
         const imageUrl = `${normalizedUrl}/view?filename=${filename}&subfolder=${subfolder || ''}&type=${type || 'output'}`;
 
-        const response = await fetch(imageUrl, { headers });
+        const response = await httpFetch(imageUrl, {
+          headers,
+          networkConfig: networkConfig ?? undefined,
+          timeout: 60000, // 60초 타임아웃
+        });
 
         if (!response.ok) {
           throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);

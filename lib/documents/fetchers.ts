@@ -1,5 +1,7 @@
 /* eslint-disable no-undef */
 import { DocumentSource, FetchedDocument } from './types';
+import { httpFetch } from '@/lib/http';
+import type { NetworkConfig } from '@/types';
 
 /**
  * 지수 백오프로 대기
@@ -37,13 +39,18 @@ async function checkGitHubRateLimit(headers: Headers): Promise<void> {
 async function fetchWithRetry(
   url: string,
   headers: Record<string, string>,
-  maxRetries: number = 3
+  maxRetries: number = 3,
+  networkConfig?: NetworkConfig | null
 ): Promise<Response> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const response = await fetch(url, { headers });
+      const response = await httpFetch(url, {
+        headers,
+        networkConfig: networkConfig ?? undefined,
+        timeout: 30000,
+      });
 
       // Rate Limit 체크
       if (response.status === 429) {
@@ -82,9 +89,15 @@ async function fetchWithRetry(
 /**
  * HTTP를 통해 문서를 가져옵니다
  */
-export async function fetchHttpDocument(url: string): Promise<FetchedDocument> {
+export async function fetchHttpDocument(
+  url: string,
+  networkConfig?: NetworkConfig | null
+): Promise<FetchedDocument> {
   try {
-    const response = await fetch(url);
+    const response = await httpFetch(url, {
+      networkConfig: networkConfig ?? undefined,
+      timeout: 60000,
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -127,7 +140,8 @@ export async function fetchGitHubDocument(
   repoUrl: string,
   path: string,
   token?: string,
-  branch: string = 'main'
+  branch: string = 'main',
+  networkConfig?: NetworkConfig | null
 ): Promise<FetchedDocument> {
   try {
     // GitHub repo URL에서 owner와 repo 추출
@@ -151,7 +165,7 @@ export async function fetchGitHubDocument(
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetchWithRetry(apiUrl, headers);
+    const response = await fetchWithRetry(apiUrl, headers, 3, networkConfig);
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -202,7 +216,8 @@ export async function fetchGitHubDirectory(
   path: string,
   token?: string,
   branch: string = 'main',
-  fileExtensions: string[] = ['.md', '.txt', '.json', '.yaml', '.yml']
+  fileExtensions: string[] = ['.md', '.txt', '.json', '.yaml', '.yml'],
+  networkConfig?: NetworkConfig | null
 ): Promise<FetchedDocument[]> {
   try {
     const repoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
@@ -223,7 +238,7 @@ export async function fetchGitHubDirectory(
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetchWithRetry(apiUrl, headers);
+    const response = await fetchWithRetry(apiUrl, headers, 3, networkConfig);
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -251,7 +266,7 @@ export async function fetchGitHubDirectory(
 
         if (hasValidExtension) {
           try {
-            const doc = await fetchGitHubDocument(repoUrl, item.path, token, branch);
+            const doc = await fetchGitHubDocument(repoUrl, item.path, token, branch, networkConfig);
             documents.push(doc);
           } catch (error) {
             console.error(`Failed to fetch ${item.path}:`, error);
@@ -265,7 +280,8 @@ export async function fetchGitHubDirectory(
             item.path,
             token,
             branch,
-            fileExtensions
+            fileExtensions,
+            networkConfig
           );
           documents.push(...subDocs);
         } catch (error) {
@@ -283,13 +299,16 @@ export async function fetchGitHubDirectory(
 /**
  * 문서 소스에 따라 적절한 fetcher를 호출합니다
  */
-export async function fetchDocument(source: DocumentSource): Promise<FetchedDocument[]> {
+export async function fetchDocument(
+  source: DocumentSource,
+  networkConfig?: NetworkConfig | null
+): Promise<FetchedDocument[]> {
   switch (source.type) {
     case 'http':
       if (!source.url) {
         throw new Error('URL is required for HTTP documents');
       }
-      return [await fetchHttpDocument(source.url)];
+      return [await fetchHttpDocument(source.url, networkConfig)];
 
     case 'github': {
       if (!source.repoUrl || !source.path) {
@@ -306,7 +325,8 @@ export async function fetchDocument(source: DocumentSource): Promise<FetchedDocu
             source.repoUrl,
             source.path,
             source.token,
-            source.branch || 'main'
+            source.branch || 'main',
+            networkConfig
           ),
         ];
       } else {
@@ -315,7 +335,9 @@ export async function fetchDocument(source: DocumentSource): Promise<FetchedDocu
           source.repoUrl,
           source.path,
           source.token,
-          source.branch || 'main'
+          source.branch || 'main',
+          undefined, // fileExtensions - use default
+          networkConfig
         );
       }
     }

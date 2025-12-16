@@ -1,10 +1,12 @@
-import { logger } from '@/lib/utils/logger';
 /**
  * LLM HTTP 요청을 위한 유틸리티
- * 프록시, SSL 검증, 커스텀 헤더를 지원
+ *
+ * 이 모듈은 하위 호환성을 위해 유지됩니다.
+ * 새 코드에서는 @/lib/http 모듈의 httpFetch를 직접 사용하세요.
  */
 
 import { LLMConfig } from '@/types';
+import { httpFetch, VISION_TIMEOUT } from '@/lib/http';
 
 /**
  * LLM 설정에서 fetch 옵션 생성
@@ -35,137 +37,28 @@ export function createFetchOptions(config: LLMConfig, baseOptions: RequestInit =
  * Node.js 환경에서 프록시 및 SSL 설정을 포함한 fetch 함수
  * 브라우저 환경에서는 일반 fetch 사용
  *
+ * @param url - 요청 URL
+ * @param config - LLM 설정 (network 설정 포함)
+ * @param options - fetch 옵션
  * @param timeout - Timeout in milliseconds (default: 5 minutes for vision models)
+ *
+ * @deprecated 새 코드에서는 @/lib/http의 httpFetch 사용 권장
  */
 export async function fetchWithConfig(
   url: string,
   config: LLMConfig,
   options: RequestInit = {},
-  timeout: number = 300000 // 5 minutes default for vision models
+  timeout: number = VISION_TIMEOUT
 ): Promise<Response> {
-  // Check if running in Electron (both Main and Renderer process)
-  const isElectron = typeof process !== 'undefined' && process.versions?.electron;
+  // LLM 설정에서 헤더 생성
+  const fetchOptions = createFetchOptions(config, options);
 
-  // Pure browser environment (not Electron Renderer)
-  if (typeof window !== 'undefined' && !isElectron) {
-    const fetchOptions = createFetchOptions(config, options);
-
-    // Add timeout using AbortController
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    try {
-      const response = await fetch(url, {
-        ...fetchOptions,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error(
-          `Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`
-        );
-      }
-      // Provide more helpful error message
-      throw new Error(
-        `Failed to fetch from ${url}: ${error.message || error}. Check your network connection and server status.`
-      );
-    }
-  }
-
-  // Node.js/Electron 환경 (including Electron Renderer)
-  // 동적 import로 https-proxy-agent와 node:https 로드
-  try {
-    const fetchOptions = createFetchOptions(config, options);
-
-    // 프록시 설정
-    if (config.network?.proxy?.enabled && config.network.proxy.mode !== 'none') {
-      if (config.network.proxy.mode === 'manual' && config.network.proxy.url) {
-        // 동적 import로 https-proxy-agent 사용
-        try {
-          const { HttpsProxyAgent } = await import('https-proxy-agent' as any);
-          const agent = new (HttpsProxyAgent as any)(config.network.proxy.url, {
-            rejectUnauthorized: config.network.ssl?.verify ?? true,
-          });
-          (fetchOptions as any).agent = agent;
-        } catch {
-          console.warn('https-proxy-agent not available, using default fetch');
-        }
-      } else if (config.network.proxy.mode === 'system') {
-        // 시스템 프록시는 환경변수 HTTP_PROXY, HTTPS_PROXY 사용
-        // Node.js fetch는 자동으로 환경변수를 읽음
-        logger.info('Using system proxy from environment variables');
-      }
-    }
-
-    // SSL 검증 비활성화 (Node.js only)
-    if (config.network?.ssl?.verify === false && typeof window === 'undefined') {
-      // @ts-expect-error - Node.js specific option
-      if (!fetchOptions.agent) {
-        try {
-          const https = await import('node:https');
-          const agent = new https.Agent({
-            rejectUnauthorized: false,
-          });
-          (fetchOptions as any).agent = agent;
-        } catch {
-          console.warn('Could not create custom HTTPS agent');
-        }
-      }
-    }
-
-    // Add timeout using AbortController
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    try {
-      const response = await fetch(url, {
-        ...fetchOptions,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error(
-          `Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`
-        );
-      }
-      // Provide more helpful error message
-      throw new Error(
-        `Failed to fetch from ${url}: ${error.message || error}. Check your network connection and server status.`
-      );
-    }
-  } catch (error) {
-    console.error('Error creating fetch with config:', error);
-
-    // Fallback to basic fetch with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    try {
-      const response = await fetch(url, {
-        ...createFetchOptions(config, options),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
-      if (fetchError.name === 'AbortError') {
-        throw new Error(
-          `Request timeout after ${timeout}ms. Check if the LLM server is running at ${url}`
-        );
-      }
-      // Provide more helpful error message
-      throw new Error(
-        `Failed to fetch from ${url}: ${fetchError.message || fetchError}. Check your network connection and server status.`
-      );
-    }
-  }
+  // lib/http의 httpFetch 사용
+  return httpFetch(url, {
+    ...fetchOptions,
+    timeout,
+    networkConfig: config.network,
+  });
 }
 
 /**

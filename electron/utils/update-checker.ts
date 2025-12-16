@@ -1,5 +1,5 @@
 import { logger } from '../services/logger';
-import https from 'https';
+import { httpsGetJson, getNetworkConfig } from '../../lib/http';
 
 export interface ReleaseInfo {
   version: string;
@@ -25,73 +25,46 @@ const REPO_NAME = 'sepilot-desktop';
  * Fetch the latest release from GitHub
  */
 async function fetchLatestRelease(): Promise<ReleaseInfo | null> {
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: 'api.github.com',
-      path: `/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`,
-      method: 'GET',
+  try {
+    const url = `${GITHUB_API_URL}/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`;
+    const networkConfig = await getNetworkConfig();
+
+    const release = await httpsGetJson<any>(url, {
       headers: {
         'User-Agent': 'SEPilot-Desktop',
         Accept: 'application/vnd.github.v3+json',
       },
+      networkConfig: networkConfig ?? undefined,
+      timeout: 30000,
+    });
+
+    // Find Windows installer asset
+    let downloadUrl: string | undefined;
+    if (release.assets && Array.isArray(release.assets)) {
+      const windowsAsset = release.assets.find(
+        (asset: any) => asset.name.endsWith('.exe') && asset.name.includes('Setup')
+      );
+      downloadUrl = windowsAsset?.browser_download_url;
+    }
+
+    const releaseInfo: ReleaseInfo = {
+      version: release.tag_name?.replace(/^v/, '') || release.name,
+      name: release.name || release.tag_name,
+      publishedAt: release.published_at,
+      htmlUrl: release.html_url,
+      body: release.body || '',
+      downloadUrl,
     };
 
-    const req = https.request(options, (res) => {
-      let data = '';
-
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-
-      res.on('end', () => {
-        if (res.statusCode === 404) {
-          logger.info('[UpdateChecker] No releases found');
-          resolve(null);
-          return;
-        }
-
-        if (res.statusCode !== 200) {
-          logger.error(`[UpdateChecker] GitHub API error: ${res.statusCode}`);
-          reject(new Error(`GitHub API returned ${res.statusCode}`));
-          return;
-        }
-
-        try {
-          const release = JSON.parse(data);
-
-          // Find Windows installer asset
-          let downloadUrl: string | undefined;
-          if (release.assets && Array.isArray(release.assets)) {
-            const windowsAsset = release.assets.find(
-              (asset: any) => asset.name.endsWith('.exe') && asset.name.includes('Setup')
-            );
-            downloadUrl = windowsAsset?.browser_download_url;
-          }
-
-          const releaseInfo: ReleaseInfo = {
-            version: release.tag_name?.replace(/^v/, '') || release.name,
-            name: release.name || release.tag_name,
-            publishedAt: release.published_at,
-            htmlUrl: release.html_url,
-            body: release.body || '',
-            downloadUrl,
-          };
-
-          resolve(releaseInfo);
-        } catch (error) {
-          logger.error('[UpdateChecker] Failed to parse GitHub response:', error);
-          reject(error);
-        }
-      });
-    });
-
-    req.on('error', (error) => {
-      logger.error('[UpdateChecker] Request failed:', error);
-      reject(error);
-    });
-
-    req.end();
-  });
+    return releaseInfo;
+  } catch (error: any) {
+    if (error.message?.includes('404')) {
+      logger.info('[UpdateChecker] No releases found');
+      return null;
+    }
+    logger.error('[UpdateChecker] Failed to fetch release:', error);
+    throw error;
+  }
 }
 
 /**
