@@ -107,7 +107,9 @@ async function createSslOnlyAgent(
   agentOptions: Record<string, unknown>
 ): Promise<HttpAgentType | undefined> {
   try {
-    const https = await import('node:https');
+    // Use Function constructor to avoid webpack static analysis
+    const importModule = new Function('name', 'return import(name)');
+    const https = await importModule('node' + ':https');
     return new https.Agent(agentOptions);
   } catch (error) {
     logger.warn('[HTTP Agent] Failed to create HTTPS agent:', error);
