@@ -51,6 +51,7 @@ const electronAPI = {
     save: (config: any) => ipcRenderer.invoke('save-config', config),
     updateSetting: (key: string, value: any) => ipcRenderer.invoke('update-setting', key, value),
     getSetting: (key: string) => ipcRenderer.invoke('get-setting', key),
+    getNetworkEnvVars: () => ipcRenderer.invoke('get-network-env-vars'),
   },
 
   // MCP operations

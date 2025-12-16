@@ -1,12 +1,14 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NetworkConfig } from '@/types';
-import { Network } from 'lucide-react';
+import { Network, RefreshCw } from 'lucide-react';
 import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { isElectron } from '@/lib/platform';
 
 interface NetworkSettingsTabProps {
   networkConfig: NetworkConfig;
@@ -24,6 +26,35 @@ export function NetworkSettingsTab({
   message,
 }: NetworkSettingsTabProps) {
   const { t } = useTranslation();
+  const [envVars, setEnvVars] = useState<Record<string, string | undefined>>({});
+  const [isLoadingEnv, setIsLoadingEnv] = useState(false);
+
+  // 환경 변수 로드
+  const loadEnvVars = async () => {
+    if (!isElectron()) {
+      return;
+    }
+
+    setIsLoadingEnv(true);
+    try {
+      const result = await window.electronAPI.config.getNetworkEnvVars();
+      if (result.success && result.data) {
+        setEnvVars(result.data);
+      }
+    } catch (error) {
+      console.error('Failed to load environment variables:', error);
+    } finally {
+      setIsLoadingEnv(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 환경 변수 로드
+  useEffect(() => {
+    loadEnvVars();
+  }, []);
+
+  // 설정된 환경 변수만 필터링
+  const definedEnvVars = Object.entries(envVars).filter(([_, value]) => value !== undefined);
 
   return (
     <div className="space-y-6">
@@ -158,6 +189,58 @@ export function NetworkSettingsTab({
             </div>
           )}
         </div>
+      </div>
+
+      {/* Environment Variables */}
+      <div className="space-y-3 p-4 rounded-lg border">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-base font-semibold">환경 변수 (디버깅)</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              HTTP/HTTPS 통신에 영향을 줄 수 있는 환경 변수 목록
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadEnvVars}
+            disabled={isLoadingEnv}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoadingEnv ? 'animate-spin' : ''}`} />
+            새로고침
+          </Button>
+        </div>
+
+        {definedEnvVars.length > 0 ? (
+          <div className="mt-3 max-h-64 overflow-y-auto rounded border bg-muted/30">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-muted border-b">
+                <tr>
+                  <th className="text-left p-2 font-medium">변수명</th>
+                  <th className="text-left p-2 font-medium">값</th>
+                </tr>
+              </thead>
+              <tbody>
+                {definedEnvVars.map(([key, value]) => (
+                  <tr key={key} className="border-b last:border-b-0 hover:bg-muted/50">
+                    <td className="p-2 font-mono text-xs text-primary">{key}</td>
+                    <td className="p-2 font-mono text-xs break-all">{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="mt-3 text-center py-8 text-sm text-muted-foreground rounded border bg-muted/30">
+            {isLoadingEnv ? '환경 변수를 불러오는 중...' : '설정된 환경 변수가 없습니다.'}
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          <strong>참고:</strong> 위 환경 변수는 애플리케이션 실행 시점의 값입니다. 시스템 환경
+          변수를 변경한 경우 애플리케이션을 재시작해야 반영됩니다.
+        </p>
       </div>
 
       {/* Save Button */}

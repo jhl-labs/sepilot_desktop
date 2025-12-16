@@ -52,6 +52,7 @@ interface ConfigAPI {
   save: (config: AppConfig) => Promise<IPCResponse>;
   updateSetting: (key: string, value: unknown) => Promise<IPCResponse>;
   getSetting: (key: string) => Promise<IPCResponse<unknown>>;
+  getNetworkEnvVars: () => Promise<IPCResponse<Record<string, string | undefined>>>;
 }
 
 // MCP 관련 타입
