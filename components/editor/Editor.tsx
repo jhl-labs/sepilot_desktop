@@ -1,28 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type monaco from 'monaco-editor';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
-import {
-  X,
-  Save,
-  FileText,
-  Loader2,
-  Eye,
-  Code,
-  RefreshCw,
-  AlertCircle,
-  GripVertical,
-} from 'lucide-react';
+import { Save, FileText, Loader2, Eye, Code, RefreshCw, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isElectron } from '@/lib/platform';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
-import { EditorTabContextMenu } from './EditorTabContextMenu';
 import { useFileSystem } from '@/hooks/use-file-system';
 
 import { SingleFileEditor } from './SingleFileEditor';
 import { logger } from '@/lib/utils/logger';
+import { EditorTab } from './EditorTab';
 
 export function CodeEditor() {
   const {
@@ -58,6 +48,7 @@ export function CodeEditor() {
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath);
   const lastMtimeRef = useRef<Map<string, number>>(new Map());
+  const hasSavedFiles = useMemo(() => openFiles.some((f) => !f.isDirty), [openFiles]);
 
   // Markdown 파일인지 확인 (language가 'markdown'이거나 확장자가 .md, .mdx인 경우)
   const isMarkdownFile =
@@ -171,18 +162,21 @@ export function CodeEditor() {
     }
   };
 
-  const handleCloseFile = (path: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleCloseFile = useCallback(
+    (path: string, e: React.MouseEvent) => {
+      e.stopPropagation();
 
-    const fileToClose = openFiles.find((f) => f.path === path);
-    if (fileToClose?.isDirty) {
-      if (window.confirm('파일에 저장되지 않은 변경사항이 있습니다. 닫으시겠습니까?')) {
+      const fileToClose = openFiles.find((f) => f.path === path);
+      if (fileToClose?.isDirty) {
+        if (window.confirm('파일에 저장되지 않은 변경사항이 있습니다. 닫으시겠습니까?')) {
+          closeFile(path);
+        }
+      } else {
         closeFile(path);
       }
-    } else {
-      closeFile(path);
-    }
-  };
+    },
+    [openFiles, closeFile]
+  );
 
   // 파일 변경 감지 (5초마다 체크)
   useEffect(() => {
@@ -419,57 +413,27 @@ export function CodeEditor() {
       {/* File Tabs with Drag & Drop and Context Menu */}
       <div className="flex items-center border-b bg-muted/30 overflow-x-auto">
         {openFiles.map((file, index) => (
-          <EditorTabContextMenu
+          <EditorTab
             key={file.path}
-            filePath={file.path}
-            filename={file.filename}
-            isDirty={file.isDirty}
-            onClose={() => {
-              if (file.isDirty) {
-                if (window.confirm('파일에 저장되지 않은 변경사항이 있습니다. 닫으시겠습니까?')) {
-                  closeFile(file.path);
-                }
-              } else {
-                closeFile(file.path);
-              }
-            }}
-            onCloseOthers={openFiles.length > 1 ? () => closeOtherFiles(file.path) : undefined}
-            onCloseToRight={
-              index < openFiles.length - 1 ? () => closeFilesToRight(file.path) : undefined
-            }
-            onCloseSaved={openFiles.some((f) => !f.isDirty) ? closeSavedFiles : undefined}
-            onCloseAll={openFiles.length > 0 ? closeAllFiles : undefined}
-          >
-            <div
-              draggable
-              onDragStart={(e) => handleTabDragStart(e, index)}
-              onDragOver={(e) => handleTabDragOver(e, index)}
-              onDragLeave={handleTabDragLeave}
-              onDrop={(e) => handleTabDrop(e, index)}
-              onDragEnd={handleTabDragEnd}
-              onClick={() => setActiveFile(file.path)}
-              className={cn(
-                'group flex items-center gap-1 px-3 py-2 text-sm border-r hover:bg-accent transition-colors shrink-0 cursor-pointer select-none',
-                activeFilePath === file.path && 'bg-background font-medium',
-                draggedTabIndex === index && 'opacity-50',
-                dragOverTabIndex === index && 'border-l-2 border-l-primary'
-              )}
-            >
-              {/* Drag handle - visible on hover */}
-              <GripVertical className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-50 cursor-grab shrink-0" />
-              <span className="truncate max-w-[130px]" title={file.filename}>
-                {file.filename}
-              </span>
-              {file.isDirty && <span className="text-xs text-orange-500">●</span>}
-              <span
-                onClick={(e) => handleCloseFile(file.path, e)}
-                className="ml-1 hover:bg-muted rounded p-0.5 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-                title="닫기"
-              >
-                <X className="h-3 w-3" />
-              </span>
-            </div>
-          </EditorTabContextMenu>
+            file={file}
+            isActive={activeFilePath === file.path}
+            index={index}
+            totalFiles={openFiles.length}
+            hasSavedFiles={hasSavedFiles}
+            isDragging={draggedTabIndex === index}
+            isDragOver={dragOverTabIndex === index}
+            onTabClick={setActiveFile}
+            onTabClose={handleCloseFile}
+            onCloseOthers={closeOtherFiles}
+            onCloseToRight={closeFilesToRight}
+            onCloseSaved={closeSavedFiles}
+            onCloseAll={closeAllFiles}
+            onDragStart={handleTabDragStart}
+            onDragOver={handleTabDragOver}
+            onDragLeave={handleTabDragLeave}
+            onDrop={handleTabDrop}
+            onDragEnd={handleTabDragEnd}
+          />
         ))}
       </div>
 
