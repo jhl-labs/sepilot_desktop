@@ -489,6 +489,95 @@
       "title": "GitHub 同步",
       "description": "个人文档同步"
     },
+    "githubOAuth": {
+      "steps": {
+        "statusTitle": "GitHub App 设置进度",
+        "statusDescription": "按步骤进行以设置 GitHub 同步。",
+        "config": "1. 基本设置",
+        "install": "2. 安装 GitHub App",
+        "verify": "3. 验证 Installation",
+        "repository": "4. 选择存储库",
+        "complete": "5. 完成"
+      },
+      "config": {
+        "title": "1. 基本设置",
+        "description": "设置 GitHub 服务器类型和 App ID。",
+        "serverType": "GitHub 服务器类型",
+        "ghesUrl": "GHES URL",
+        "ghesUrlPlaceholder": "https://github.company.com",
+        "ghesUrlDescription": "输入 GitHub Enterprise Server 的完整 URL",
+        "appId": "GitHub App ID",
+        "appIdDescription": "可在 GitHub App 设置页面中找到的 App ID",
+        "privateKey": "Private Key 文件",
+        "privateKeyDescription": "上传 GitHub App 的 Private Key 文件 (.pem)",
+        "nextStep": "下一步",
+        "validation": {
+          "allFields": "请填写所有字段。"
+        }
+      },
+      "install": {
+        "title": "2. 安装 GitHub App",
+        "description": "在浏览器中安装 GitHub App。",
+        "guide": {
+          "title": "安装方法",
+          "step1": "点击下方按钮打开 GitHub App 安装页面。",
+          "step2": "选择要安装的存储库（所有存储库或特定存储库）。",
+          "step3": "点击 Install 按钮。",
+          "step4": "安装后从 URL 中确认 Installation ID（例如：/settings/installations/12345678）。"
+        },
+        "openPage": "打开 GitHub App 安装页面"
+      },
+      "verify": {
+        "title": "3. 验证 Installation",
+        "description": "输入 Installation ID 并确认连接。",
+        "installationId": "Installation ID",
+        "installationIdDescription": "安装 GitHub App 后获得的 Installation ID（仅数字）",
+        "verifyAndFetch": "验证 Installation 并获取存储库"
+      },
+      "repository": {
+        "title": "4. 选择同步存储库",
+        "description": "选择要同步设置和数据的存储库。",
+        "label": "存储库",
+        "placeholder": "选择存储库",
+        "private": "私有",
+        "public": "公开",
+        "selectedPrefix": "已选择的存储库：",
+        "noSelection": "请选择要保存加密设置的存储库。",
+        "testConnection": "测试连接",
+        "saveAll": "保存所有设置"
+      },
+      "complete": {
+        "title": "5. 设置完成！",
+        "description": "GitHub 同步已成功设置。",
+        "successMessage": "✅ 设置已完成",
+        "editSettings": "编辑设置"
+      },
+      "security": {
+        "title": "🔒 安全信息",
+        "description": "所有敏感信息（令牌、API 密钥、Private Key 等）都使用 AES-256-GCM 加密并同步到所选的 GitHub 存储库。Network 选项卡中设置的代理和 SSL 验证设置也适用于 GitHub 通信。"
+      },
+      "messages": {
+        "privateKeySaved": "Private Key 已安全保存。",
+        "privateKeySaveFailed": "Private Key 保存失败。",
+        "privateKeyUploadFailed": "Private Key 上传失败。",
+        "invalidPrivateKey": "无效的 Private Key 文件格式。",
+        "appIdRequired": "请输入 App ID。",
+        "ghesUrlRequired": "请输入 GHES URL。",
+        "privateKeyRequired": "请先上传 Private Key。",
+        "installPageOpened": "请在浏览器中安装 GitHub App。安装后输入 Installation ID。",
+        "installPageFailed": "无法打开 GitHub App 安装页面。",
+        "installationIdRequired": "请输入 Installation ID。",
+        "connectionSuccess": "连接成功！找到 {{count}} 个存储库。",
+        "repoFetchFailed": "无法获取存储库列表。",
+        "verificationFailed": "Installation 验证失败。",
+        "repoSelectRequired": "请先选择存储库。",
+        "testSuccess": "连接测试成功！可以访问存储库。",
+        "testFailed": "连接测试失败。",
+        "saveSuccess": "GitHub 设置已保存！",
+        "saveFailed": "设置保存失败。",
+        "electronApiUnavailable": "Electron API 不可用。"
+      }
+    },
     "githubSync": {
       "connectionTitle": "GitHub 连接设置",
       "connectionDescription": "使用 GitHub Personal Access Token 连接到存储库。",
