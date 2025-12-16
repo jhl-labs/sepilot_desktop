@@ -48,6 +48,9 @@ jobs:
             ${{ runner.os }}-deps-${{ hashFiles('**/pnpm-lock.yaml') }}-
             ${{ runner.os }}-deps-
 
+      - name: Configure git to use HTTPS instead of SSH
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
