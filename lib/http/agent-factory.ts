@@ -7,14 +7,12 @@
  * - Node.js 환경에서만 동작
  */
 
-import type { Agent as HttpAgent } from 'http';
-import type { Agent as HttpsAgent } from 'https';
 import { NetworkConfig } from '@/types';
 import { detectEnvironment } from './config';
 import { logger } from '@/lib/utils/logger';
 
 /** Agent 타입 (https-proxy-agent의 HttpsProxyAgent 포함) */
-export type HttpAgentType = HttpAgent | HttpsAgent | unknown;
+export type HttpAgentType = any;
 
 /**
  * NetworkConfig 기반으로 HTTP Agent 생성

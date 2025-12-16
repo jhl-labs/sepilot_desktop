@@ -42,9 +42,11 @@ export async function httpsRequest(
   const { networkConfig: injectedConfig, body, ...requestOptions } = options;
   const networkConfig = injectedConfig ?? (await getNetworkConfig());
 
-  const https = await import('node:https');
-  const http = await import('node:http');
-  const { URL } = await import('node:url');
+  // Use Function constructor to avoid webpack static analysis
+  const importModule = new Function('name', 'return import(name)');
+  const https = await importModule('node' + ':https');
+  const http = await importModule('node' + ':http');
+  const { URL } = await importModule('node' + ':url');
 
   const parsedUrl = new URL(url);
   const isHttps = parsedUrl.protocol === 'https:';
@@ -76,7 +78,7 @@ export async function httpsRequest(
       reqOptions.agent = agent as HttpAgentType;
     }
 
-    const req = client.request(reqOptions, (res) => {
+    const req = client.request(reqOptions, (res: any) => {
       const chunks: Buffer[] = [];
 
       res.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -90,7 +92,7 @@ export async function httpsRequest(
       });
     });
 
-    req.on('error', (error) => {
+    req.on('error', (error: any) => {
       logger.error('[Node HTTP] Request error:', error);
       reject(error);
     });

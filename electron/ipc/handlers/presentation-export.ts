@@ -28,12 +28,12 @@ async function downloadImageToTemp(url: string): Promise<string> {
   const targetPath = path.join(tempDir, filename);
 
   const networkConfig = await getNetworkConfig();
-  const buffer = await downloadImage(url, {
+  const result = await downloadImage(url, {
     networkConfig: networkConfig ?? undefined,
     timeout: 60000,
   });
 
-  fs.writeFileSync(targetPath, buffer);
+  fs.writeFileSync(targetPath, result.buffer);
   return targetPath;
 }
 

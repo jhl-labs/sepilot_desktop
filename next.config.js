@@ -25,6 +25,17 @@ const nextConfig = {
       type: 'webassembly/async',
     });
 
+    // Replace lib/http with browser stub in client-side builds
+    if (!isServer) {
+      const path = require('path');
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /lib\/http\/index\.ts$/,
+          path.resolve(__dirname, 'lib/http/browser-stub.ts')
+        )
+      );
+    }
+
     // Bundle analysis (only for client-side)
     if (!isServer && process.env.ANALYZE === 'true') {
       const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
@@ -58,6 +69,14 @@ const nextConfig = {
         'stream',
         'child_process',
         'sharp',
+        'dns',
+        'proxy-agent',
+        'pac-resolver',
+        'pac-proxy-agent',
+        'socks-proxy-agent',
+        'http-proxy-agent',
+        'https-proxy-agent',
+        'agent-base',
       ];
 
       // Add as externals to prevent bundling
@@ -81,6 +100,7 @@ const nextConfig = {
         fs: false,
         net: false,
         tls: false,
+        dns: false,
         child_process: false,
         stream: false,
         url: false,

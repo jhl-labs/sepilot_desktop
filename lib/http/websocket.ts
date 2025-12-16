@@ -93,7 +93,7 @@ async function createNodeWebSocket(
       wsOptions.handshakeTimeout = timeout;
     }
 
-    const ws = new WebSocket(url, protocols, wsOptions);
+    const ws = new (WebSocket as any)(url, protocols, wsOptions);
 
     // WebSocket 타입으로 반환 (Node.js ws는 브라우저 WebSocket과 호환)
     return ws as unknown as WebSocketType;
