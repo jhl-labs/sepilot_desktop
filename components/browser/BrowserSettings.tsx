@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ const AVAILABLE_FONTS = [
 ];
 
 export function BrowserSettings() {
+  const { t } = useTranslation();
   const [snapshotsPath, setSnapshotsPath] = useState<string>('');
   const [bookmarksPath, setBookmarksPath] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -61,16 +63,16 @@ export function BrowserSettings() {
       fontFamily,
       fontSize,
     });
-    window.alert('폰트 설정이 저장되었습니다.');
+    window.alert(t('settings.browser.settings.font.saveSuccess'));
   };
 
   // 폰트 설정 초기화
   const handleResetFontConfig = () => {
-    if (window.confirm('폰트 설정을 기본값으로 초기화하시겠습니까?')) {
+    if (window.confirm(t('settings.browser.settings.font.resetConfirm'))) {
       resetBrowserChatFontConfig();
       setFontFamily('system-ui, -apple-system, sans-serif');
       setFontSize(14);
-      window.alert('폰트 설정이 초기화되었습니다.');
+      window.alert(t('settings.browser.settings.font.resetSuccess'));
     }
   };
 
@@ -130,12 +132,12 @@ export function BrowserSettings() {
       topP,
       maxIterations,
     });
-    window.alert('Browser Agent LLM 설정이 저장되었습니다.');
+    window.alert(t('settings.browser.settings.llm.saveSuccess'));
   };
 
   // LLM 설정 초기화
   const handleResetLLMConfig = () => {
-    if (window.confirm('Browser Agent LLM 설정을 기본값으로 초기화하시겠습니까?')) {
+    if (window.confirm(t('settings.browser.settings.llm.resetConfirm'))) {
       resetBrowserAgentLLMConfig();
       const defaultConfig = {
         maxTokens: 4096,
@@ -147,7 +149,7 @@ export function BrowserSettings() {
       setTemperature(defaultConfig.temperature);
       setTopP(defaultConfig.topP);
       setMaxIterations(defaultConfig.maxIterations);
-      window.alert('Browser Agent LLM 설정이 초기화되었습니다.');
+      window.alert(t('settings.browser.settings.llm.resetSuccess'));
     }
   };
 
@@ -163,29 +165,31 @@ export function BrowserSettings() {
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h2 className="text-sm font-semibold">Browser 설정</h2>
+        <h2 className="text-sm font-semibold">{t('settings.browser.settings.title')}</h2>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3">
         {isLoading ? (
           <div className="flex items-center justify-center py-8 text-muted-foreground">
-            <p className="text-sm">로딩 중...</p>
+            <p className="text-sm">{t('settings.browser.settings.loading')}</p>
           </div>
         ) : (
           <div className="space-y-4">
             {/* 스냅샷 저장 경로 */}
             <div className="space-y-2">
-              <Label className="text-xs">스냅샷 저장 경로</Label>
+              <Label className="text-xs">
+                {t('settings.browser.settings.snapshotsPath.title')}
+              </Label>
               <div className="flex items-center gap-2">
                 <div className="flex-1 rounded-md border bg-muted px-2 py-1.5 text-xs break-all">
-                  {snapshotsPath || '경로를 불러오는 중...'}
+                  {snapshotsPath || t('settings.browser.settings.snapshotsPath.loading')}
                 </div>
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={handleOpenSnapshotsFolder}
-                  title="폴더 열기"
+                  title={t('settings.browser.settings.snapshotsPath.openFolder')}
                   disabled={!snapshotsPath}
                   className="h-8 w-8 shrink-0"
                 >
@@ -193,35 +197,41 @@ export function BrowserSettings() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                페이지 캡처로 저장된 스냅샷 파일이 저장되는 위치입니다.
+                {t('settings.browser.settings.snapshotsPath.description')}
               </p>
             </div>
 
             {/* 북마크 저장 경로 */}
             <div className="space-y-2">
-              <Label className="text-xs">북마크 저장 경로</Label>
+              <Label className="text-xs">
+                {t('settings.browser.settings.bookmarksPath.title')}
+              </Label>
               <div className="flex items-center gap-2">
                 <div className="flex-1 rounded-md border bg-muted px-2 py-1.5 text-xs break-all">
-                  {bookmarksPath || '경로를 불러오는 중...'}
+                  {bookmarksPath || t('settings.browser.settings.bookmarksPath.loading')}
                 </div>
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={handleOpenBookmarksFolder}
-                  title="폴더 열기"
+                  title={t('settings.browser.settings.bookmarksPath.openFolder')}
                   disabled={!bookmarksPath}
                   className="h-8 w-8 shrink-0"
                 >
                   <FolderOpen className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">북마크 데이터가 저장되는 위치입니다.</p>
+              <p className="text-xs text-muted-foreground">
+                {t('settings.browser.settings.bookmarksPath.description')}
+              </p>
             </div>
 
             {/* Browser Agent LLM 설정 */}
             <div className="border-t pt-4 space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold">Browser Agent LLM 설정</Label>
+                <Label className="text-xs font-semibold">
+                  {t('settings.browser.settings.llm.title')}
+                </Label>
                 <Button
                   variant="outline"
                   size="sm"
@@ -229,7 +239,7 @@ export function BrowserSettings() {
                   className="h-7 text-xs gap-1"
                 >
                   <RotateCcw className="h-3 w-3" />
-                  초기화
+                  {t('settings.browser.settings.llm.reset')}
                 </Button>
               </div>
 
@@ -246,7 +256,7 @@ export function BrowserSettings() {
                   className="h-8 text-xs"
                 />
                 <p className="text-xs text-muted-foreground">
-                  응답 최대 길이 (256-16384, 기본값: 4096)
+                  {t('settings.browser.settings.llm.maxTokens')}
                 </p>
               </div>
 
@@ -263,7 +273,7 @@ export function BrowserSettings() {
                   className="h-8 text-xs"
                 />
                 <p className="text-xs text-muted-foreground">
-                  창의성 조절 (0-2, 기본값: 0.7, 낮을수록 일관적)
+                  {t('settings.browser.settings.llm.temperature')}
                 </p>
               </div>
 
@@ -279,7 +289,9 @@ export function BrowserSettings() {
                   step={0.1}
                   className="h-8 text-xs"
                 />
-                <p className="text-xs text-muted-foreground">응답 다양성 (0-1, 기본값: 1.0)</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('settings.browser.settings.llm.topP')}
+                </p>
               </div>
 
               {/* Max Iterations */}
@@ -294,19 +306,23 @@ export function BrowserSettings() {
                   step={1}
                   className="h-8 text-xs"
                 />
-                <p className="text-xs text-muted-foreground">최대 반복 횟수 (1-50, 기본값: 30)</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('settings.browser.settings.llm.maxIterations')}
+                </p>
               </div>
 
               {/* 저장 버튼 */}
               <Button onClick={handleSaveLLMConfig} className="w-full h-8 text-xs">
-                설정 저장
+                {t('settings.browser.settings.llm.save')}
               </Button>
             </div>
 
             {/* Browser Chat 폰트 설정 */}
             <div className="border-t pt-4 space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold">Browser Chat 폰트 설정</Label>
+                <Label className="text-xs font-semibold">
+                  {t('settings.browser.settings.font.title')}
+                </Label>
                 <Button
                   variant="outline"
                   size="sm"
@@ -314,16 +330,18 @@ export function BrowserSettings() {
                   className="h-7 text-xs gap-1"
                 >
                   <RotateCcw className="h-3 w-3" />
-                  초기화
+                  {t('settings.browser.settings.font.reset')}
                 </Button>
               </div>
 
               {/* Font Family */}
               <div className="space-y-1.5">
-                <Label className="text-xs">폰트</Label>
+                <Label className="text-xs">{t('settings.browser.settings.font.family')}</Label>
                 <Select value={fontFamily} onValueChange={setFontFamily}>
                   <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="폰트를 선택하세요" />
+                    <SelectValue
+                      placeholder={t('settings.browser.settings.font.familyPlaceholder')}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {AVAILABLE_FONTS.map((font) => (
@@ -334,13 +352,13 @@ export function BrowserSettings() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  채팅 메시지에 사용할 폰트를 선택하세요.
+                  {t('settings.browser.settings.font.familyDescription')}
                 </p>
               </div>
 
               {/* Font Size */}
               <div className="space-y-1.5">
-                <Label className="text-xs">폰트 크기 (px)</Label>
+                <Label className="text-xs">{t('settings.browser.settings.font.size')}</Label>
                 <Input
                   type="number"
                   value={fontSize}
@@ -351,13 +369,13 @@ export function BrowserSettings() {
                   className="h-8 text-xs"
                 />
                 <p className="text-xs text-muted-foreground">
-                  채팅 메시지의 폰트 크기 (10-24px, 기본값: 14px)
+                  {t('settings.browser.settings.font.sizeDescription')}
                 </p>
               </div>
 
               {/* 미리보기 */}
               <div className="space-y-1.5">
-                <Label className="text-xs">미리보기</Label>
+                <Label className="text-xs">{t('settings.browser.settings.font.preview')}</Label>
                 <div
                   className="rounded-md border bg-muted p-2 text-xs"
                   style={{
@@ -365,8 +383,8 @@ export function BrowserSettings() {
                     fontSize: `${fontSize}px`,
                   }}
                 >
-                  <p>사용자: 안녕하세요!</p>
-                  <p className="mt-1">AI: 안녕하세요! 무엇을 도와드릴까요?</p>
+                  <p>{t('settings.browser.settings.font.previewUser')}</p>
+                  <p className="mt-1">{t('settings.browser.settings.font.previewAi')}</p>
                   <p className="mt-1">English: Hello, how can I help you?</p>
                   <p className="mt-1">日本語: こんにちは、お手伝いできますか？</p>
                 </div>
@@ -374,7 +392,7 @@ export function BrowserSettings() {
 
               {/* 저장 버튼 */}
               <Button onClick={handleSaveFontConfig} className="w-full h-8 text-xs">
-                폰트 설정 저장
+                {t('settings.browser.settings.font.save')}
               </Button>
             </div>
           </div>
