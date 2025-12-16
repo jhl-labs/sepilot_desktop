@@ -204,6 +204,28 @@
       },
       "saved": "네트워크 설정이 저장되었습니다!"
     },
+    "sync": {
+      "settings": {
+        "title": "설정",
+        "description": "LLM, VectorDB, MCP 등의 애플리케이션 설정 파일 동기화",
+        "warning": ""
+      },
+      "personas": {
+        "title": "페르소나",
+        "description": "사용자 정의 페르소나 설정 파일 동기화",
+        "warning": ""
+      },
+      "images": {
+        "title": "이미지",
+        "description": "생성된 이미지 파일 동기화",
+        "warning": "대용량"
+      },
+      "conversations": {
+        "title": "대화 기록",
+        "description": "채팅 대화 기록 파일 동기화",
+        "warning": "대용량"
+      }
+    },
     "vectordb": {
       "title": "VectorDB",
       "description": "벡터 데이터베이스 및 임베딩",

@@ -201,6 +201,28 @@
       },
       "saved": "Network settings saved!"
     },
+    "sync": {
+      "settings": {
+        "title": "Settings",
+        "description": "Synchronize application settings files (LLM, VectorDB, MCP, etc.)",
+        "warning": ""
+      },
+      "personas": {
+        "title": "Personas",
+        "description": "Synchronize custom persona configuration files",
+        "warning": ""
+      },
+      "images": {
+        "title": "Images",
+        "description": "Synchronize generated image files",
+        "warning": "Large files"
+      },
+      "conversations": {
+        "title": "Conversations",
+        "description": "Synchronize chat conversation history files",
+        "warning": "Large files"
+      }
+    },
     "vectordb": {
       "title": "VectorDB",
       "description": "Vector database and embeddings",

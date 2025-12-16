@@ -204,6 +204,28 @@
       },
       "saved": "网络设置已保存！"
     },
+    "sync": {
+      "settings": {
+        "title": "设置",
+        "description": "同步应用程序设置文件（LLM、VectorDB、MCP 等）",
+        "warning": ""
+      },
+      "personas": {
+        "title": "人物角色",
+        "description": "同步自定义人物角色配置文件",
+        "warning": ""
+      },
+      "images": {
+        "title": "图像",
+        "description": "同步生成的图像文件",
+        "warning": "大文件"
+      },
+      "conversations": {
+        "title": "对话记录",
+        "description": "同步聊天对话历史文件",
+        "warning": "大文件"
+      }
+    },
     "vectordb": {
       "title": "VectorDB",
       "description": "向量数据库和嵌入",
