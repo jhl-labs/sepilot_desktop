@@ -192,6 +192,16 @@
         "key": "请求头键",
         "value": "请求头值"
       },
+      "envVars": {
+        "title": "环境变量（调试）",
+        "description": "可能影响 HTTP/HTTPS 通信的环境变量列表",
+        "refresh": "刷新",
+        "variableName": "变量名",
+        "value": "值",
+        "noVars": "未配置环境变量。",
+        "loading": "加载环境变量中...",
+        "note": "这些环境变量是应用程序启动时的值。如果更改系统环境变量，必须重新启动应用程序才能生效。"
+      },
       "saved": "网络设置已保存！"
     },
     "vectordb": {

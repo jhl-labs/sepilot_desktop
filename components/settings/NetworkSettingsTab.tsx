@@ -195,9 +195,9 @@ export function NetworkSettingsTab({
       <div className="space-y-3 p-4 rounded-lg border">
         <div className="flex items-center justify-between">
           <div>
-            <Label className="text-base font-semibold">환경 변수 (디버깅)</Label>
+            <Label className="text-base font-semibold">{t('settings.network.envVars.title')}</Label>
             <p className="text-xs text-muted-foreground mt-1">
-              HTTP/HTTPS 통신에 영향을 줄 수 있는 환경 변수 목록
+              {t('settings.network.envVars.description')}
             </p>
           </div>
           <Button
@@ -208,7 +208,7 @@ export function NetworkSettingsTab({
             className="gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${isLoadingEnv ? 'animate-spin' : ''}`} />
-            새로고침
+            {t('settings.network.envVars.refresh')}
           </Button>
         </div>
 
@@ -217,8 +217,12 @@ export function NetworkSettingsTab({
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-muted border-b">
                 <tr>
-                  <th className="text-left p-2 font-medium">변수명</th>
-                  <th className="text-left p-2 font-medium">값</th>
+                  <th className="text-left p-2 font-medium">
+                    {t('settings.network.envVars.variableName')}
+                  </th>
+                  <th className="text-left p-2 font-medium">
+                    {t('settings.network.envVars.value')}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -233,14 +237,13 @@ export function NetworkSettingsTab({
           </div>
         ) : (
           <div className="mt-3 text-center py-8 text-sm text-muted-foreground rounded border bg-muted/30">
-            {isLoadingEnv ? '환경 변수를 불러오는 중...' : '설정된 환경 변수가 없습니다.'}
+            {isLoadingEnv
+              ? t('settings.network.envVars.loading')
+              : t('settings.network.envVars.noVars')}
           </div>
         )}
 
-        <p className="text-xs text-muted-foreground">
-          <strong>참고:</strong> 위 환경 변수는 애플리케이션 실행 시점의 값입니다. 시스템 환경
-          변수를 변경한 경우 애플리케이션을 재시작해야 반영됩니다.
-        </p>
+        <p className="text-xs text-muted-foreground">{t('settings.network.envVars.note')}</p>
       </div>
 
       {/* Save Button */}

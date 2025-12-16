@@ -189,6 +189,16 @@
         "key": "Header Key",
         "value": "Header Value"
       },
+      "envVars": {
+        "title": "Environment Variables (Debugging)",
+        "description": "List of environment variables that may affect HTTP/HTTPS communication",
+        "refresh": "Refresh",
+        "variableName": "Variable Name",
+        "value": "Value",
+        "noVars": "No environment variables configured.",
+        "loading": "Loading environment variables...",
+        "note": "These environment variables are the values at application startup. If you change system environment variables, you must restart the application for them to take effect."
+      },
       "saved": "Network settings saved!"
     },
     "vectordb": {
