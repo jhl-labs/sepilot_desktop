@@ -29,7 +29,10 @@ describe('title-generator', () => {
       const title = await generateConversationTitle(messages);
 
       expect(title).toBe('Generated Title');
-      expect(mockElectronAPI.llm.generateTitle).toHaveBeenCalledWith(messages.slice(0, 3));
+      expect(mockElectronAPI.llm.generateTitle).toHaveBeenCalledWith(
+        messages.slice(0, 3),
+        undefined
+      );
     });
 
     it('should use first 3 messages only', async () => {
@@ -52,7 +55,10 @@ describe('title-generator', () => {
 
       expect(title).toBeDefined();
       // Should only pass first 3 messages to IPC
-      expect(mockElectronAPI.llm.generateTitle).toHaveBeenCalledWith(messages.slice(0, 3));
+      expect(mockElectronAPI.llm.generateTitle).toHaveBeenCalledWith(
+        messages.slice(0, 3),
+        undefined
+      );
     });
 
     it('should use generated title as-is (no quote cleaning)', async () => {
