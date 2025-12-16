@@ -429,6 +429,73 @@ export function SingleFileEditor({
       run: (ed) => ed.getAction('editor.action.commentLine')?.run(),
     });
 
+    // === AI Writing Actions (Submenu - Higher Priority) ===
+    const aiWritingActions = [
+      {
+        id: 'ai-continue',
+        label: 'Continue Writing',
+        action: 'continue',
+        keybindings: [
+          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
+          monacoInstance.KeyCode.KeyC,
+        ],
+      },
+      {
+        id: 'ai-shorten',
+        label: 'Make Shorter',
+        action: 'make-shorter',
+        keybindings: [
+          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
+          monacoInstance.KeyCode.KeyS,
+        ],
+      },
+      {
+        id: 'ai-longer',
+        label: 'Make Longer',
+        action: 'make-longer',
+        keybindings: [
+          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
+          monacoInstance.KeyCode.KeyL,
+        ],
+      },
+      { id: 'ai-simplify', label: 'Simplify', action: 'simplify' },
+      {
+        id: 'ai-grammar',
+        label: 'Fix Grammar',
+        action: 'fix-grammar',
+        keybindings: [
+          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
+          monacoInstance.KeyCode.KeyG,
+        ],
+      },
+      {
+        id: 'ai-summarize',
+        label: 'Summarize',
+        action: 'summarize',
+        keybindings: [
+          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
+          monacoInstance.KeyCode.KeyM,
+        ],
+      },
+    ];
+
+    aiWritingActions.forEach((item, index) => {
+      editor.addAction({
+        id: item.id,
+        label: item.label,
+        keybindings: item.keybindings,
+        contextMenuGroupId: '2_ai_writing',
+        contextMenuOrder: index + 1,
+        run: async (ed) => {
+          const selection = ed.getSelection();
+          if (selection && !selection.isEmpty()) {
+            const selectedText = ed.getModel()?.getValueInRange(selection) || '';
+            await handleEditorAction(item.action as any, selectedText);
+          }
+        },
+      });
+    });
+
     // === AI Code Actions (Submenu) ===
     const aiCodeActions = [
       {
@@ -458,9 +525,33 @@ export function SingleFileEditor({
           monacoInstance.KeyCode.KeyI,
         ],
       },
-      { id: 'ai-complete', label: 'Complete Code', action: 'complete' },
-      { id: 'ai-comments', label: 'Add Comments', action: 'add-comments' },
-      { id: 'ai-tests', label: 'Generate Tests', action: 'generate-tests' },
+      {
+        id: 'ai-complete',
+        label: 'Complete Code',
+        action: 'complete',
+        keybindings: [
+          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
+          monacoInstance.KeyCode.KeyP,
+        ],
+      },
+      {
+        id: 'ai-comments',
+        label: 'Add Comments',
+        action: 'add-comments',
+        keybindings: [
+          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
+          monacoInstance.KeyCode.KeyD,
+        ],
+      },
+      {
+        id: 'ai-tests',
+        label: 'Generate Tests',
+        action: 'generate-tests',
+        keybindings: [
+          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
+          monacoInstance.KeyCode.KeyT,
+        ],
+      },
     ];
 
     aiCodeActions.forEach((item, index) => {
@@ -468,33 +559,7 @@ export function SingleFileEditor({
         id: item.id,
         label: item.label,
         keybindings: item.keybindings,
-        contextMenuGroupId: '2_ai_code',
-        contextMenuOrder: index + 1,
-        run: async (ed) => {
-          const selection = ed.getSelection();
-          if (selection && !selection.isEmpty()) {
-            const selectedText = ed.getModel()?.getValueInRange(selection) || '';
-            await handleEditorAction(item.action as any, selectedText);
-          }
-        },
-      });
-    });
-
-    // === AI Writing Actions (Submenu) ===
-    const aiWritingActions = [
-      { id: 'ai-continue', label: 'Continue Writing', action: 'continue' },
-      { id: 'ai-shorten', label: 'Make Shorter', action: 'make-shorter' },
-      { id: 'ai-longer', label: 'Make Longer', action: 'make-longer' },
-      { id: 'ai-simplify', label: 'Simplify', action: 'simplify' },
-      { id: 'ai-grammar', label: 'Fix Grammar', action: 'fix-grammar' },
-      { id: 'ai-summarize', label: 'Summarize', action: 'summarize' },
-    ];
-
-    aiWritingActions.forEach((item, index) => {
-      editor.addAction({
-        id: item.id,
-        label: item.label,
-        contextMenuGroupId: '3_ai_writing',
+        contextMenuGroupId: '3_ai_code',
         contextMenuOrder: index + 1,
         run: async (ed) => {
           const selection = ed.getSelection();
@@ -523,36 +588,7 @@ export function SingleFileEditor({
       });
     });
 
-    // === Advanced Actions (Submenu) ===
-    // Navigation
-    editor.addAction({
-      id: 'go-to-line',
-      label: 'Go to Line...',
-      keybindings: [monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyG],
-      contextMenuGroupId: '9_advanced/1_navigation',
-      contextMenuOrder: 1,
-      run: (ed) => ed.getAction('editor.action.gotoLine')?.run(),
-    });
-
-    editor.addAction({
-      id: 'go-to-definition',
-      label: 'Go to Definition',
-      keybindings: [monacoInstance.KeyCode.F12],
-      contextMenuGroupId: '9_advanced/1_navigation',
-      contextMenuOrder: 2,
-      run: (ed) => ed.getAction('editor.action.revealDefinition')?.run(),
-    });
-
-    editor.addAction({
-      id: 'find-references',
-      label: 'Find All References',
-      keybindings: [monacoInstance.KeyMod.Shift | monacoInstance.KeyCode.F12],
-      contextMenuGroupId: '9_advanced/1_navigation',
-      contextMenuOrder: 3,
-      run: (ed) => ed.getAction('editor.action.goToReferences')?.run(),
-    });
-
-    // Advanced Editing
+    // === Advanced Actions (Submenu - Only Essential Editing) ===
     editor.addAction({
       id: 'format-selection',
       label: 'Format Selection',
@@ -560,20 +596,9 @@ export function SingleFileEditor({
         monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
         monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyF,
       ],
-      contextMenuGroupId: '9_advanced/2_editing',
+      contextMenuGroupId: '9_advanced',
       contextMenuOrder: 1,
       run: (ed) => ed.getAction('editor.action.formatSelection')?.run(),
-    });
-
-    editor.addAction({
-      id: 'block-comment',
-      label: 'Toggle Block Comment',
-      keybindings: [
-        monacoInstance.KeyMod.Shift | monacoInstance.KeyMod.Alt | monacoInstance.KeyCode.KeyA,
-      ],
-      contextMenuGroupId: '9_advanced/2_editing',
-      contextMenuOrder: 2,
-      run: (ed) => ed.getAction('editor.action.blockComment')?.run(),
     });
 
     editor.addAction({
@@ -582,8 +607,8 @@ export function SingleFileEditor({
       keybindings: [
         monacoInstance.KeyMod.Shift | monacoInstance.KeyMod.Alt | monacoInstance.KeyCode.DownArrow,
       ],
-      contextMenuGroupId: '9_advanced/2_editing',
-      contextMenuOrder: 3,
+      contextMenuGroupId: '9_advanced',
+      contextMenuOrder: 2,
       run: (ed) => ed.getAction('editor.action.copyLinesDownAction')?.run(),
     });
 
@@ -593,177 +618,20 @@ export function SingleFileEditor({
       keybindings: [
         monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyMod.Shift | monacoInstance.KeyCode.KeyK,
       ],
-      contextMenuGroupId: '9_advanced/2_editing',
-      contextMenuOrder: 4,
+      contextMenuGroupId: '9_advanced',
+      contextMenuOrder: 3,
       run: (ed) => ed.getAction('editor.action.deleteLines')?.run(),
     });
 
-    editor.addAction({
-      id: 'move-line-up',
-      label: 'Move Line Up',
-      keybindings: [monacoInstance.KeyMod.Alt | monacoInstance.KeyCode.UpArrow],
-      contextMenuGroupId: '9_advanced/2_editing',
-      contextMenuOrder: 5,
-      run: (ed) => ed.getAction('editor.action.moveLinesUpAction')?.run(),
-    });
-
-    editor.addAction({
-      id: 'move-line-down',
-      label: 'Move Line Down',
-      keybindings: [monacoInstance.KeyMod.Alt | monacoInstance.KeyCode.DownArrow],
-      contextMenuGroupId: '9_advanced/2_editing',
-      contextMenuOrder: 6,
-      run: (ed) => ed.getAction('editor.action.moveLinesDownAction')?.run(),
-    });
-
-    // Selection
     editor.addAction({
       id: 'select-all-occurrences',
       label: 'Select All Occurrences',
       keybindings: [
         monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyMod.Shift | monacoInstance.KeyCode.KeyL,
       ],
-      contextMenuGroupId: '9_advanced/3_selection',
-      contextMenuOrder: 1,
+      contextMenuGroupId: '9_advanced',
+      contextMenuOrder: 4,
       run: (ed) => ed.getAction('editor.action.selectHighlights')?.run(),
-    });
-
-    editor.addAction({
-      id: 'expand-selection',
-      label: 'Expand Selection',
-      keybindings: [
-        monacoInstance.KeyMod.Shift | monacoInstance.KeyMod.Alt | monacoInstance.KeyCode.RightArrow,
-      ],
-      contextMenuGroupId: '9_advanced/3_selection',
-      contextMenuOrder: 2,
-      run: (ed) => ed.getAction('editor.action.smartSelect.expand')?.run(),
-    });
-
-    editor.addAction({
-      id: 'shrink-selection',
-      label: 'Shrink Selection',
-      keybindings: [
-        monacoInstance.KeyMod.Shift | monacoInstance.KeyMod.Alt | monacoInstance.KeyCode.LeftArrow,
-      ],
-      contextMenuGroupId: '9_advanced/3_selection',
-      contextMenuOrder: 3,
-      run: (ed) => ed.getAction('editor.action.smartSelect.shrink')?.run(),
-    });
-
-    editor.addAction({
-      id: 'add-cursor-above',
-      label: 'Add Cursor Above',
-      keybindings: [
-        monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyMod.Alt | monacoInstance.KeyCode.UpArrow,
-      ],
-      contextMenuGroupId: '9_advanced/3_selection',
-      contextMenuOrder: 4,
-      run: (ed) => ed.getAction('editor.action.insertCursorAbove')?.run(),
-    });
-
-    editor.addAction({
-      id: 'add-cursor-below',
-      label: 'Add Cursor Below',
-      keybindings: [
-        monacoInstance.KeyMod.CtrlCmd |
-          monacoInstance.KeyMod.Alt |
-          monacoInstance.KeyCode.DownArrow,
-      ],
-      contextMenuGroupId: '9_advanced/3_selection',
-      contextMenuOrder: 5,
-      run: (ed) => ed.getAction('editor.action.insertCursorBelow')?.run(),
-    });
-
-    // Transform
-    editor.addAction({
-      id: 'transform-uppercase',
-      label: 'Transform to UPPERCASE',
-      contextMenuGroupId: '9_advanced/4_transform',
-      contextMenuOrder: 1,
-      run: (ed) => ed.getAction('editor.action.transformToUppercase')?.run(),
-    });
-
-    editor.addAction({
-      id: 'transform-lowercase',
-      label: 'Transform to lowercase',
-      contextMenuGroupId: '9_advanced/4_transform',
-      contextMenuOrder: 2,
-      run: (ed) => ed.getAction('editor.action.transformToLowercase')?.run(),
-    });
-
-    editor.addAction({
-      id: 'transform-titlecase',
-      label: 'Transform to Title Case',
-      contextMenuGroupId: '9_advanced/4_transform',
-      contextMenuOrder: 3,
-      run: (ed) => ed.getAction('editor.action.transformToTitlecase')?.run(),
-    });
-
-    editor.addAction({
-      id: 'sort-lines-asc',
-      label: 'Sort Lines Ascending',
-      contextMenuGroupId: '9_advanced/4_transform',
-      contextMenuOrder: 4,
-      run: (ed) => ed.getAction('editor.action.sortLinesAscending')?.run(),
-    });
-
-    editor.addAction({
-      id: 'sort-lines-desc',
-      label: 'Sort Lines Descending',
-      contextMenuGroupId: '9_advanced/4_transform',
-      contextMenuOrder: 5,
-      run: (ed) => ed.getAction('editor.action.sortLinesDescending')?.run(),
-    });
-
-    // Folding
-    editor.addAction({
-      id: 'fold',
-      label: 'Fold Region',
-      keybindings: [
-        monacoInstance.KeyMod.CtrlCmd |
-          monacoInstance.KeyMod.Shift |
-          monacoInstance.KeyCode.BracketLeft,
-      ],
-      contextMenuGroupId: '9_advanced/5_folding',
-      contextMenuOrder: 1,
-      run: (ed) => ed.getAction('editor.fold')?.run(),
-    });
-
-    editor.addAction({
-      id: 'unfold',
-      label: 'Unfold Region',
-      keybindings: [
-        monacoInstance.KeyMod.CtrlCmd |
-          monacoInstance.KeyMod.Shift |
-          monacoInstance.KeyCode.BracketRight,
-      ],
-      contextMenuGroupId: '9_advanced/5_folding',
-      contextMenuOrder: 2,
-      run: (ed) => ed.getAction('editor.unfold')?.run(),
-    });
-
-    editor.addAction({
-      id: 'fold-all',
-      label: 'Fold All',
-      keybindings: [
-        monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-        monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.Digit0,
-      ],
-      contextMenuGroupId: '9_advanced/5_folding',
-      contextMenuOrder: 3,
-      run: (ed) => ed.getAction('editor.foldAll')?.run(),
-    });
-
-    editor.addAction({
-      id: 'unfold-all',
-      label: 'Unfold All',
-      keybindings: [
-        monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-        monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyJ,
-      ],
-      contextMenuGroupId: '9_advanced/5_folding',
-      contextMenuOrder: 4,
-      run: (ed) => ed.getAction('editor.unfoldAll')?.run(),
     });
   }, [editor, monacoInstance, handleEditorAction]);
 
