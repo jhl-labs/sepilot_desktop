@@ -80,6 +80,7 @@ export function ModelListView({
         });
       } catch (error: any) {
         console.error(`Failed to fetch models from ${connection.name}:`, error);
+        // error.message에 이미 자세한 정보가 포함되어 있음 (IPC 핸들러에서 생성)
         errors.push({
           connection: connection.name,
           error: error.message || t('settings.llm.models.validation.unknownError'),
@@ -91,8 +92,14 @@ export function ModelListView({
     setIsLoadingModels(false);
 
     if (errors.length > 0) {
-      const errorMsg = errors.map((e) => `- ${e.connection}: ${e.error}`).join('\n');
-      setLoadError(t('settings.llm.models.validation.fetchError', { error: errorMsg }));
+      // 오류 메시지를 개별적으로 표시 (줄바꿈 포함)
+      const errorMsg = errors
+        .map((e) => {
+          const lines = e.error.split('\n');
+          return `[${e.connection}]\n${lines.join('\n')}`;
+        })
+        .join('\n\n─────────────────────────\n\n');
+      setLoadError(errorMsg);
     } else if (allModels.length === 0) {
       setLoadError(t('settings.llm.models.validation.fetchErrorAll'));
     }
@@ -208,7 +215,16 @@ export function ModelListView({
           </Button>
         </div>
 
-        {loadError && <p className="text-sm text-destructive">{loadError}</p>}
+        {loadError && (
+          <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="flex items-start gap-2">
+              <span className="font-semibold">⚠️ 오류:</span>
+              <div className="flex-1">
+                <pre className="whitespace-pre-wrap break-words font-sans text-sm">{loadError}</pre>
+              </div>
+            </div>
+          </div>
+        )}
 
         {duplicateError && <p className="text-sm text-destructive">{duplicateError}</p>}
 

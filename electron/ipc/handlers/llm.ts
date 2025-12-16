@@ -390,6 +390,28 @@ export function setupLLMHandlers() {
           };
         }
 
+        // Log environment variables for debugging
+        const envInfo = {
+          HTTPS_PROXY: process.env.HTTPS_PROXY || process.env.https_proxy,
+          HTTP_PROXY: process.env.HTTP_PROXY || process.env.http_proxy,
+          NO_PROXY: process.env.NO_PROXY || process.env.no_proxy,
+          NODE_TLS_REJECT_UNAUTHORIZED: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
+        };
+
+        logger.info('[LLM IPC] Fetch models request:', {
+          provider,
+          baseURL: baseURL || 'default',
+          hasApiKey: !!apiKey,
+          hasCustomHeaders: !!customHeaders && Object.keys(customHeaders).length > 0,
+          networkConfig: {
+            proxyEnabled: networkConfig?.proxy?.enabled,
+            proxyMode: networkConfig?.proxy?.mode,
+            proxyUrl: networkConfig?.proxy?.enabled ? networkConfig?.proxy?.url : undefined,
+            sslVerify: networkConfig?.ssl?.verify,
+          },
+          environment: envInfo,
+        });
+
         // Normalize base URL
         const normalizedBaseURL = baseURL?.trim()
           ? baseURL.trim().replace(/\/+$/, '')
@@ -418,33 +440,32 @@ export function setupLLMHandlers() {
           });
         }
 
-        // Build fetch options with network config
-        const fetchOptions: RequestInit = {
-          method: 'GET',
-          headers,
-        };
-
-        // Add proxy support if configured
-        if (networkConfig?.proxy) {
-          // Note: fetch API doesn't support proxy directly
-          // In production, you would use a library like node-fetch with proxy support
-          // or configure system proxy
-          logger.info('[LLM IPC] Proxy configured:', networkConfig.proxy);
-        }
-
-        // SSL verification
-        if (networkConfig?.ssl?.verify === false) {
-          logger.warn('[LLM IPC] SSL verification disabled');
-          // Note: In production, you'd need to configure SSL rejection
-        }
-
         logger.info('[LLM IPC] Fetching models from:', endpoint);
 
-        const response = await fetch(endpoint, fetchOptions);
+        // Use httpFetch with network config support
+        const { httpFetch } = await import('../../../lib/http/fetch');
+        const response = await httpFetch(endpoint, {
+          method: 'GET',
+          headers,
+          networkConfig: networkConfig || undefined,
+          timeout: 30000, // 30 seconds timeout
+        });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to fetch models: ${response.status} ${errorText}`);
+          const errorText = await response.text().catch(() => 'Unable to read error response');
+          const errorDetails = {
+            status: response.status,
+            statusText: response.statusText,
+            url: endpoint,
+            provider,
+            responseBody: errorText.substring(0, 500), // Limit to first 500 chars
+          };
+
+          logger.error('[LLM IPC] Fetch models HTTP error:', errorDetails);
+
+          throw new Error(
+            `모델 목록을 가져오는데 실패했습니다.\n\nHTTP ${response.status} ${response.statusText}\n응답: ${errorText.substring(0, 200)}${errorText.length > 200 ? '...' : ''}`
+          );
         }
 
         const payload = await response.json();
@@ -452,12 +473,70 @@ export function setupLLMHandlers() {
         // Extract model IDs from response
         const models = extractModelIds(payload);
 
+        logger.info('[LLM IPC] Successfully fetched models:', {
+          count: models.length,
+          provider,
+        });
+
         return {
           success: true,
           data: Array.from(new Set(models)).sort(),
         };
       } catch (error: any) {
-        logger.error('[LLM IPC] Fetch models error:', error);
+        // HttpError인 경우 상세 정보 로깅
+        if (error instanceof HttpError) {
+          const errorDetails = {
+            type: error.type,
+            message: error.message,
+            url: error.url,
+            statusCode: error.statusCode,
+            userMessage: error.getUserMessage(),
+            debugInfo: error.getDebugInfo(),
+          };
+
+          logger.error('[LLM IPC] Fetch models HttpError:', errorDetails);
+
+          // 사용자에게 자세한 오류 메시지 반환
+          let detailedError = `모델 목록을 가져오는데 실패했습니다.\n\n`;
+          detailedError += `오류 유형: ${error.type}\n`;
+          if (error.statusCode) {
+            detailedError += `HTTP 상태 코드: ${error.statusCode}\n`;
+          }
+          detailedError += `URL: ${error.url}\n\n`;
+          detailedError += `상세 정보:\n${error.getUserMessage()}\n\n`;
+
+          // 네트워크 설정 정보 추가
+          if (config.networkConfig) {
+            detailedError += `네트워크 설정:\n`;
+            if (config.networkConfig.proxy?.enabled) {
+              detailedError += `- 프록시: ${config.networkConfig.proxy.mode} (${config.networkConfig.proxy.url})\n`;
+            }
+            detailedError += `- SSL 검증: ${config.networkConfig.ssl?.verify !== false ? '활성화' : '비활성화'}\n`;
+          }
+
+          // 환경 변수 정보 추가
+          const envProxy =
+            process.env.HTTPS_PROXY ||
+            process.env.https_proxy ||
+            process.env.HTTP_PROXY ||
+            process.env.http_proxy;
+          if (envProxy) {
+            detailedError += `\n시스템 프록시 환경 변수: ${envProxy}`;
+          }
+
+          return {
+            success: false,
+            error: detailedError,
+          };
+        }
+
+        // 일반 에러 처리
+        logger.error('[LLM IPC] Fetch models error:', {
+          message: error.message,
+          stack: error.stack,
+          provider: config.provider,
+        });
+
         return {
           success: false,
           error: error.message || 'Failed to fetch models',
