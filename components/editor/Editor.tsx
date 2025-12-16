@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type monaco from 'monaco-editor';
+import { useTranslation } from 'react-i18next';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Button } from '@/components/ui/button';
 import { Save, FileText, Loader2, Eye, Code, RefreshCw, AlertCircle } from 'lucide-react';
@@ -15,6 +16,7 @@ import { logger } from '@/lib/utils/logger';
 import { EditorTab } from './EditorTab';
 
 export function CodeEditor() {
+  const { t } = useTranslation();
   const {
     openFiles,
     activeFilePath,
@@ -152,11 +154,11 @@ export function CodeEditor() {
         logger.info('File refreshed successfully:', activeFile.path);
       } else {
         console.error('Failed to refresh file:', result.error);
-        window.alert(`파일을 새로고침할 수 없습니다: ${result.error}`);
+        window.alert(t('editor.errors.cannotRefreshFile', { error: result.error }));
       }
     } catch (error) {
       console.error('Failed to refresh file:', error);
-      window.alert('파일을 새로고침하는 중 오류가 발생했습니다.');
+      window.alert(t('editor.errors.refreshError'));
     } finally {
       setIsRefreshing(false);
     }
@@ -168,14 +170,14 @@ export function CodeEditor() {
 
       const fileToClose = openFiles.find((f) => f.path === path);
       if (fileToClose?.isDirty) {
-        if (window.confirm('파일에 저장되지 않은 변경사항이 있습니다. 닫으시겠습니까?')) {
+        if (window.confirm(t('editor.confirmations.closeUnsavedFile'))) {
           closeFile(path);
         }
       } else {
         closeFile(path);
       }
     },
-    [openFiles, closeFile]
+    [openFiles, closeFile, t]
   );
 
   // 파일 변경 감지 (5초마다 체크)
@@ -377,14 +379,18 @@ export function CodeEditor() {
         {isFileDragOver ? (
           <div className="text-center">
             <FileText className="mb-4 h-16 w-16 text-primary mx-auto" />
-            <h2 className="mb-2 text-xl font-semibold text-primary">파일을 여기에 드롭</h2>
-            <p className="text-center text-sm text-primary/80">드래그한 파일을 에디터에서 엽니다</p>
+            <h2 className="mb-2 text-xl font-semibold text-primary">
+              {t('editor.dropzone.dropFileHere')}
+            </h2>
+            <p className="text-center text-sm text-primary/80">
+              {t('editor.dropzone.openDraggedFile')}
+            </p>
           </div>
         ) : (
           <>
             <FileText className="mb-4 h-16 w-16 opacity-20" />
             <h2 className="mb-2 text-xl font-semibold">SEPilot Editor</h2>
-            <p className="text-center text-sm">파일 탐색기에서 파일을 선택하거나 드래그하세요</p>
+            <p className="text-center text-sm">{t('editor.emptyState.selectOrDragFile')}</p>
           </>
         )}
       </div>
@@ -406,7 +412,7 @@ export function CodeEditor() {
         <div className="absolute inset-0 bg-primary/10 z-50 flex items-center justify-center pointer-events-none">
           <div className="bg-background border-2 border-dashed border-primary rounded-lg p-8 text-center">
             <FileText className="h-12 w-12 mx-auto mb-2 text-primary" />
-            <p className="text-lg font-medium text-primary">파일을 여기에 드롭하여 열기</p>
+            <p className="text-lg font-medium text-primary">{t('editor.dropzone.dropToOpen')}</p>
           </div>
         </div>
       )}
@@ -444,7 +450,9 @@ export function CodeEditor() {
             {activeFile.path}
           </div>
           <div className="flex items-center gap-2">
-            {activeFile.isDirty && <span className="text-xs text-orange-500">Unsaved changes</span>}
+            {activeFile.isDirty && (
+              <span className="text-xs text-orange-500">{t('editor.status.unsavedChanges')}</span>
+            )}
             {/* Markdown Preview Toggle Buttons */}
             {isMarkdownFile && (
               <div className="flex items-center gap-1 border-r pr-2 mr-2">
@@ -484,10 +492,10 @@ export function CodeEditor() {
               size="sm"
               disabled={isRefreshing}
               className="h-7"
-              title="새로고침 (Refresh)"
+              title={t('editor.actions.refresh')}
             >
               <RefreshCw className={cn('h-3.5 w-3.5 mr-1', isRefreshing && 'animate-spin')} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              {isRefreshing ? t('editor.status.refreshing') : t('editor.actions.refresh')}
             </Button>
             <Button
               onClick={handleSaveFile}
@@ -497,7 +505,7 @@ export function CodeEditor() {
               className="h-7"
             >
               <Save className="h-3.5 w-3.5 mr-1" />
-              {isSaving ? 'Saving...' : 'Save (Ctrl+S)'}
+              {isSaving ? t('editor.status.saving') : t('editor.actions.save')}
             </Button>
           </div>
         </div>
@@ -509,7 +517,7 @@ export function CodeEditor() {
           <div className="flex items-center gap-2 text-sm">
             <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             <span className="text-yellow-800 dark:text-yellow-200">
-              이 파일이 외부에서 수정되었습니다. 새로고침하시겠습니까?
+              {t('editor.warnings.fileChangedExternally')}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -521,7 +529,7 @@ export function CodeEditor() {
               className="h-7 bg-yellow-600 hover:bg-yellow-700 text-white"
             >
               <RefreshCw className={cn('h-3.5 w-3.5 mr-1', isRefreshing && 'animate-spin')} />
-              새로고침
+              {t('editor.actions.refresh')}
             </Button>
             <Button
               onClick={() => setFileChangedExternally(false)}
@@ -529,7 +537,7 @@ export function CodeEditor() {
               size="sm"
               className="h-7"
             >
-              무시
+              {t('editor.actions.ignore')}
             </Button>
           </div>
         </div>
@@ -544,7 +552,7 @@ export function CodeEditor() {
               {isLoadingImage ? (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Loader2 className="h-8 w-8 animate-spin" />
-                  <span>이미지 로딩 중...</span>
+                  <span>{t('editor.status.loadingImage')}</span>
                 </div>
               ) : imageDataUrl ? (
                 <div className="flex flex-col items-center gap-4 max-w-full max-h-full">
@@ -561,7 +569,7 @@ export function CodeEditor() {
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <FileText className="h-16 w-16 opacity-20" />
-                  <span>이미지를 불러올 수 없습니다</span>
+                  <span>{t('editor.errors.cannotLoadImage')}</span>
                 </div>
               )}
             </div>

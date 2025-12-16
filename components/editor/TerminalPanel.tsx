@@ -8,6 +8,7 @@ import { logger } from '@/lib/utils/logger';
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -31,6 +32,7 @@ export interface TerminalPanelProps {
 }
 
 export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
+  const { t } = useTranslation();
   logger.info('[TerminalPanel] Component rendering, workingDirectory:', workingDirectory);
   const containerRef = useRef<HTMLDivElement>(null);
   const tabListRef = useRef<HTMLDivElement>(null);
@@ -432,7 +434,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
                     ? 'opacity-0 hover:bg-accent hover:text-accent-foreground group-hover:opacity-100'
                     : 'opacity-0 hover:bg-accent/80 hover:text-accent-foreground group-hover:opacity-100'
                 }`}
-                title="닫기"
+                title={t('terminal.actions.close')}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -458,7 +460,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
           size="icon"
           className="mb-1 h-7 w-7 shrink-0 rounded-md hover:bg-accent/50 ml-1"
           onClick={handleNewTab}
-          title="새 터미널 (Ctrl+Shift+`)"
+          title={t('terminal.actions.newTerminal')}
         >
           <Plus className="h-4 w-4" />
         </Button>

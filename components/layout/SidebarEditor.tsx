@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Settings,
   Terminal,
@@ -29,6 +30,7 @@ interface SidebarEditorProps {
 }
 
 export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
+  const { t } = useTranslation();
   const {
     editorViewMode,
     setEditorViewMode,
@@ -115,7 +117,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
   };
 
   const handleNewChat = () => {
-    const confirmed = window.confirm('현재 대화 내역을 모두 삭제하시겠습니까?');
+    const confirmed = window.confirm(t('sidebar.editor.confirmations.clearChat'));
     if (confirmed) {
       clearEditorChat();
       setEditorViewMode('chat');
@@ -127,10 +129,10 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
   };
 
   const terminalButtonTitle = !workingDirectory
-    ? 'Working Directory를 먼저 설정해주세요'
+    ? t('sidebar.editor.tooltips.setWorkingDirectoryFirst')
     : showTerminalPanel
-      ? '터미널 숨기기'
-      : '터미널 열기';
+      ? t('sidebar.editor.tooltips.hideTerminal')
+      : t('sidebar.editor.tooltips.openTerminal');
 
   return (
     <>
@@ -161,7 +163,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>테마 전환</p>
+                  <p>{t('sidebar.editor.tooltips.toggleTheme')}</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -172,13 +174,13 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                     size="icon"
                     onClick={handleAiAssistantClick}
                     className={cn('flex-1', editorViewMode === 'chat' && 'bg-accent')}
-                    title="AI 코딩 어시스턴트"
+                    title={t('sidebar.editor.tooltips.aiAssistant')}
                   >
                     <Sparkles className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>AI 코딩 어시스턴트</p>
+                  <p>{t('sidebar.editor.tooltips.aiAssistant')}</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -190,13 +192,13 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                       size="icon"
                       onClick={handleNewChat}
                       className="flex-1"
-                      title="새 대화"
+                      title={t('sidebar.editor.tooltips.newChat')}
                     >
                       <MessageSquarePlus className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <p>새 대화</p>
+                    <p>{t('sidebar.editor.tooltips.newChat')}</p>
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -213,13 +215,23 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                         ? 'bg-accent text-accent-foreground'
                         : 'text-muted-foreground'
                     )}
-                    title={`Autocomplete Tools ${editorUseToolsInAutocomplete ? '(켜짐)' : '(꺼짐)'}`}
+                    title={t('sidebar.editor.tooltips.autocompleteToolsStatus', {
+                      status: editorUseToolsInAutocomplete
+                        ? t('sidebar.editor.status.enabled')
+                        : t('sidebar.editor.status.disabled'),
+                    })}
                   >
                     <Wrench className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>Autocomplete Tools {editorUseToolsInAutocomplete ? '(켜짐)' : '(꺼짐)'}</p>
+                  <p>
+                    {t('sidebar.editor.tooltips.autocompleteToolsStatus', {
+                      status: editorUseToolsInAutocomplete
+                        ? t('sidebar.editor.status.enabled')
+                        : t('sidebar.editor.status.disabled'),
+                    })}
+                  </p>
                 </TooltipContent>
               </Tooltip>
 
@@ -235,13 +247,23 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                         ? 'bg-accent text-accent-foreground'
                         : 'text-muted-foreground'
                     )}
-                    title={`Autocomplete RAG ${editorUseRagInAutocomplete ? '(켜짐)' : '(꺼짐)'}`}
+                    title={t('sidebar.editor.tooltips.autocompleteRagStatus', {
+                      status: editorUseRagInAutocomplete
+                        ? t('sidebar.editor.status.enabled')
+                        : t('sidebar.editor.status.disabled'),
+                    })}
                   >
                     <Database className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>Autocomplete RAG {editorUseRagInAutocomplete ? '(켜짐)' : '(꺼짐)'}</p>
+                  <p>
+                    {t('sidebar.editor.tooltips.autocompleteRagStatus', {
+                      status: editorUseRagInAutocomplete
+                        ? t('sidebar.editor.status.enabled')
+                        : t('sidebar.editor.status.disabled'),
+                    })}
+                  </p>
                 </TooltipContent>
               </Tooltip>
 
@@ -252,13 +274,13 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                     size="icon"
                     onClick={onDocumentsClick}
                     className="flex-1"
-                    title="문서 관리 (RAG)"
+                    title={t('sidebar.editor.tooltips.documentManagement')}
                   >
                     <FileText className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>문서 관리 (RAG)</p>
+                  <p>{t('sidebar.editor.tooltips.documentManagement')}</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -282,10 +304,10 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                 <TooltipContent side="top">
                   <p>
                     {!workingDirectory
-                      ? 'Working Directory 설정 필요'
+                      ? t('sidebar.editor.tooltips.workingDirectoryRequired')
                       : showTerminalPanel
-                        ? '터미널 숨기기'
-                        : '터미널 열기'}
+                        ? t('sidebar.editor.tooltips.hideTerminal')
+                        : t('sidebar.editor.tooltips.openTerminal')}
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -297,13 +319,13 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                     size="icon"
                     onClick={() => setEditorViewMode('settings')}
                     className={cn('flex-1', editorViewMode === 'settings' && 'bg-accent')}
-                    title="설정"
+                    title={t('sidebar.editor.tooltips.settings')}
                   >
                     <Settings className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>에디터 설정</p>
+                  <p>{t('sidebar.editor.tooltips.editorSettings')}</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -315,13 +337,13 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                       size="icon"
                       onClick={() => setAppMode('presentation')}
                       className="flex-1"
-                      title="Presentation 모드 (Beta)"
+                      title={t('sidebar.editor.tooltips.presentationMode')}
                     >
                       <Presentation className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <p>Presentation 모드 (Beta)</p>
+                    <p>{t('sidebar.editor.tooltips.presentationMode')}</p>
                   </TooltipContent>
                 </Tooltip>
               )}
