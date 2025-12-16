@@ -273,11 +273,11 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
         {/* Server Count Header */}
         <div className="flex items-center justify-between px-1">
           <p className="text-sm text-muted-foreground">
-            총 <span className="font-semibold text-foreground">{servers.length}</span>개 서버
+            {t('settings.mcp.serverList.totalServers', { count: servers.length })}
           </p>
           <Button variant="ghost" size="sm" onClick={loadServers} className="h-8 gap-1.5">
             <RefreshCw className={cn('h-3.5 w-3.5', isLoading && 'animate-spin')} />
-            새로고침
+            {t('settings.mcp.serverList.refresh')}
           </Button>
         </div>
 
@@ -347,7 +347,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                     {server.toolCount !== undefined && server.toolCount > 0 && (
                       <span className="flex items-center gap-1">
                         <Wrench className="h-3 w-3" />
-                        {server.toolCount}개 도구
+                        {t('settings.mcp.serverList.toolCount', { count: server.toolCount })}
                       </span>
                     )}
                     {server.transport === 'sse' && server.url && (
@@ -376,7 +376,9 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                         <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>서버 재연결</TooltipContent>
+                    <TooltipContent>
+                      {t('settings.mcp.serverList.tooltips.reconnect')}
+                    </TooltipContent>
                   </Tooltip>
 
                   {/* Toggle Switch */}
@@ -396,7 +398,13 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                         )}
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent>{isEnabled ? '비활성화' : '활성화'}</TooltipContent>
+                    <TooltipContent>
+                      {t(
+                        isEnabled
+                          ? 'settings.mcp.serverList.tooltips.deactivate'
+                          : 'settings.mcp.serverList.tooltips.activate'
+                      )}
+                    </TooltipContent>
                   </Tooltip>
 
                   {/* Expand Button */}
@@ -488,7 +496,11 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                         </p>
                         <div className="flex items-center gap-1.5">
                           <Wrench className="h-4 w-4 text-orange-500" />
-                          <span className="text-sm font-medium">{server.toolCount ?? 0}개</span>
+                          <span className="text-sm font-medium">
+                            {t('settings.mcp.serverList.toolsUnit', {
+                              count: server.toolCount ?? 0,
+                            })}
+                          </span>
                         </div>
                       </div>
                       {server.transport === 'stdio' && (

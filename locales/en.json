@@ -968,6 +968,7 @@
           "stdio": "stdio"
         },
         "toolCount": "{{count}} Tools",
+        "toolsUnit": "{{count}}",
         "deleteDialog": {
           "title": "Delete Server",
           "question": "Are you sure you want to delete server '{{name}}'?",
@@ -977,7 +978,9 @@
         },
         "tooltips": {
           "reconnect": "Reconnect Server",
-          "delete": "Delete Server"
+          "delete": "Delete Server",
+          "activate": "Activate",
+          "deactivate": "Deactivate"
         },
         "agentInfo": "Tools on this server can be used by LLM in Agent mode. Enable server to use tools.",
         "expand": {

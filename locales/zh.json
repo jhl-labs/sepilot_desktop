@@ -803,7 +803,59 @@
     "mcp": {
       "title": "MCP",
       "description": "Model Context Protocol 服务器设置",
-      "addServer": "添加新服务器"
+      "addServer": "添加新服务器",
+      "serverList": {
+        "count": "共 <1>{{count}}</1> 个服务器",
+        "totalServers": "共 {{count}} 个服务器",
+        "refresh": "刷新",
+        "loading": "正在加载服务器列表...",
+        "emptyTitle": "添加 MCP 服务器",
+        "emptyDescription": "注册 MCP 服务器以允许 AI 助手使用文件系统、数据库、网络搜索等各种工具。",
+        "deleteDialog": {
+          "title": "删除服务器",
+          "question": "确定要删除服务器 '{{name}}' 吗？",
+          "warning": "此操作无法撤销。",
+          "cancel": "取消",
+          "confirm": "删除"
+        },
+        "status": {
+          "connected": "已连接",
+          "connecting": "连接中...",
+          "error": "错误",
+          "disconnected": "已断开连接",
+          "active": "活动",
+          "inactive": "非活动",
+          "waiting": "等待中"
+        },
+        "labels": {
+          "transport": "传输方式",
+          "status": "状态",
+          "registeredTools": "已注册工具",
+          "argCount": "参数数量",
+          "execCommand": "执行命令",
+          "execArgs": "执行参数",
+          "sseUrl": "SSE URL",
+          "headers": "HTTP 标头",
+          "availableTools": "可用工具"
+        },
+        "transport": {
+          "sse": "SSE",
+          "stdio": "stdio"
+        },
+        "toolCount": "{{count}} 个工具",
+        "toolsUnit": "{{count}}个",
+        "tooltips": {
+          "reconnect": "重新连接服务器",
+          "delete": "删除服务器",
+          "activate": "激活",
+          "deactivate": "停用"
+        },
+        "agentInfo": "LLM 可以在代理模式下使用此服务器的工具。必须启用服务器才能使用工具。",
+        "expand": {
+          "show": "详细信息",
+          "hide": "隐藏"
+        }
+      }
     }
   },
   "chat": {
