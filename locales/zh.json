@@ -89,28 +89,70 @@
       "settingsV2Description": "基于连接的 LLM 模型管理系统",
       "connections": {
         "title": "连接",
-        "add": "添加连接",
-        "edit": "编辑连接",
-        "delete": "删除连接",
-        "name": "连接名称",
+        "description": "管理 LLM 服务连接。可以注册多个连接并使用每个连接的模型。",
+        "add": "添加",
+        "edit": "编辑",
+        "delete": "删除",
+        "cancel": "取消",
+        "save": "保存",
+        "name": "名称",
+        "namePlaceholder": "My OpenAI、Local Ollama 等",
         "provider": "提供商",
         "baseURL": "Base URL",
         "apiKey": "API Key",
-        "enabled": "启用"
+        "enabled": "已启用",
+        "disabled": "已禁用",
+        "customHeaders": "自定义 HTTP 请求头",
+        "headerKey": "请求头名称",
+        "headerValue": "请求头值",
+        "addHeader": "添加请求头",
+        "validation": {
+          "url": "Base URL 必须以 http:// 或 https:// 开头。",
+          "apiKey": "API 密钥必须至少 20 个字符。",
+          "deleteConfirm": "有 {{count}} 个模型正在使用此连接：\n{{models}}\n\n确定要删除吗？（模型也将一起删除）"
+        }
       },
       "models": {
         "title": "模型",
-        "add": "添加模型",
-        "edit": "编辑模型",
-        "delete": "删除模型",
-        "modelId": "模型 ID",
-        "displayName": "显示名称",
-        "tags": "标签",
+        "available": {
+          "title": "可用模型",
+          "description": "从已启用的连接中获取模型列表并添加。",
+          "fetch": "获取模型列表",
+          "fetching": "获取中...",
+          "add": "添加",
+          "added": "已添加"
+        },
+        "configured": {
+          "title": "已配置的模型",
+          "description": "为已添加的模型指定标签并配置详细设置。",
+          "empty": "没有已配置的模型。",
+          "emptyHint": "从上方获取模型列表并添加。"
+        },
+        "displayName": "显示名称（可选）",
+        "customHeaders": {
+          "title": "自定义 HTTP 请求头（模型专用）",
+          "description": "默认使用连接中设置的请求头，如果添加同名请求头，则仅在此模型中覆盖。",
+          "inherited": "继承的请求头",
+          "modelSpecific": "模型专用请求头",
+          "restore": "恢复",
+          "remove": "从模型中删除"
+        },
+        "active": {
+          "title": "指定活动模型",
+          "base": "设为默认模型",
+          "vision": "设为视觉模型",
+          "autocomplete": "设为自动补全模型"
+        },
+        "streaming": "启用流式响应",
+        "delete": "删除",
         "temperature": "Temperature",
         "maxTokens": "最大 Token 数",
-        "setAsDefault": "设为默认",
-        "setAsVision": "设为视觉模型",
-        "setAsAutocomplete": "设为自动补全模型"
+        "validation": {
+          "duplicate": "\"{{modelId}}\" 已添加。",
+          "fetchError": "从某些连接获取模型失败：\n{{error}}",
+          "fetchErrorAll": "从已启用的连接获取模型失败。",
+          "unknownError": "未知错误"
+        }
       },
       "validation": {
         "noConfig": "配置未初始化。",
@@ -118,7 +160,8 @@
         "noBaseModel": "请选择默认对话模型。",
         "conversionFailed": "配置转换失败。",
         "noActiveBaseModel": "未选择默认模型。请在模型标签页中选择带有 'base' 标签的模型，然后点击「设为默认」按钮。",
-        "connectionNotFound": "模型引用的连接不存在。请检查连接标签页。"
+        "connectionNotFound": "模型引用的连接不存在。请检查连接标签页。",
+        "conversionError": "配置转换错误：{{error}}"
       }
     },
     "network": {
