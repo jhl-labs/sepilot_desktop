@@ -10,6 +10,8 @@ import { hasImages, createVisionProvider } from '../../../lib/llm/vision-utils';
 import { logger } from '../../services/logger';
 import { databaseService } from '../../services/database';
 import { isLLMConfigV2, convertV2ToV1 } from '../../../lib/config/llm-config-migration';
+import { getLLMErrorMessage, getErrorMessage } from '../../../lib/utils/error-handler';
+import { HttpError } from '../../../lib/http';
 
 /**
  * Get vision provider from database config (Electron main process)
@@ -155,11 +157,21 @@ export function setupLLMHandlers() {
           }
         }
       } catch (streamError: any) {
-        logger.error('[LLM IPC] Stream error details:', {
-          message: streamError.message,
-          stack: streamError.stack,
-          name: streamError.name,
-        });
+        // HttpError인 경우 상세 로깅
+        if (streamError instanceof HttpError) {
+          logger.error('[LLM IPC] Stream HTTP error:', {
+            type: streamError.type,
+            message: streamError.message,
+            userMessage: streamError.getUserMessage(),
+            debugInfo: streamError.getDebugInfo(),
+          });
+        } else {
+          logger.error('[LLM IPC] Stream error details:', {
+            message: streamError.message,
+            stack: streamError.stack,
+            name: streamError.name,
+          });
+        }
         throw streamError;
       }
 
@@ -171,11 +183,31 @@ export function setupLLMHandlers() {
         content: chunks.join(''),
       };
     } catch (error: any) {
-      logger.error('LLM stream chat error:', error);
-      event.sender.send('llm-stream-error', error.message);
+      // 사용자 친화적 에러 메시지 생성
+      const userMessage = getLLMErrorMessage(error);
+
+      // 상세 로깅
+      if (error instanceof HttpError) {
+        logger.error('[LLM IPC] Stream chat HTTP error:', {
+          type: error.type,
+          url: error.url,
+          statusCode: error.statusCode,
+          message: error.message,
+          userMessage,
+          debugInfo: error.getDebugInfo(),
+        });
+      } else {
+        logger.error('[LLM IPC] Stream chat error:', {
+          message: getErrorMessage(error),
+          userMessage,
+          stack: error.stack,
+        });
+      }
+
+      event.sender.send('llm-stream-error', userMessage);
       return {
         success: false,
-        error: error.message || 'Failed to stream chat',
+        error: userMessage,
       };
     }
   });
@@ -252,14 +284,30 @@ export function setupLLMHandlers() {
         data: response,
       };
     } catch (error: any) {
-      console.log('[LLM IPC] ===== Error occurred =====');
-      console.log('[LLM IPC] Error:', error);
-      console.log('[LLM IPC] Error stack:', error.stack);
-      logger.error('[LLM IPC] Chat error:', error);
-      logger.error('[LLM IPC] Error stack:', error.stack);
+      // 사용자 친화적 에러 메시지 생성
+      const userMessage = getLLMErrorMessage(error);
+
+      // 상세 로깅
+      if (error instanceof HttpError) {
+        logger.error('[LLM IPC] Chat HTTP error:', {
+          type: error.type,
+          url: error.url,
+          statusCode: error.statusCode,
+          message: error.message,
+          userMessage,
+          debugInfo: error.getDebugInfo(),
+        });
+      } else {
+        logger.error('[LLM IPC] Chat error:', {
+          message: getErrorMessage(error),
+          userMessage,
+          stack: error.stack,
+        });
+      }
+
       return {
         success: false,
-        error: error.message || 'Failed to chat',
+        error: userMessage,
       };
     }
   });

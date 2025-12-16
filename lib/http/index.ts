@@ -59,7 +59,9 @@ export {
   httpFetchStream,
   fetchWithNetworkConfig,
   VISION_TIMEOUT,
+  HttpError,
 } from './fetch';
+export type { HttpErrorType } from './fetch';
 
 // WebSocket
 export { createWebSocket, wsToHttpUrl, httpToWsUrl } from './websocket';
