@@ -530,16 +530,80 @@ export function setupLLMHandlers() {
           };
         }
 
-        // 일반 에러 처리
+        // 일반 에러 처리 (네트워크 에러 등)
         logger.error('[LLM IPC] Fetch models error:', {
           message: error.message,
+          code: error.code,
+          errno: error.errno,
+          syscall: error.syscall,
           stack: error.stack,
           provider: config.provider,
+          baseURL: config.baseURL,
         });
+
+        // 네트워크 에러를 사용자 친화적인 메시지로 변환
+        let userFriendlyError = '모델 목록을 가져오는데 실패했습니다.\n\n';
+
+        if (error.code === 'ENOTFOUND') {
+          userFriendlyError += `오류: 서버를 찾을 수 없습니다.\n`;
+          userFriendlyError += `URL: ${endpoint}\n\n`;
+          userFriendlyError += `가능한 원인:\n`;
+          userFriendlyError += `- Base URL이 올바르지 않습니다.\n`;
+          userFriendlyError += `- 인터넷 연결이 끊겼습니다.\n`;
+          userFriendlyError += `- DNS 서버가 응답하지 않습니다.\n`;
+        } else if (error.code === 'ECONNREFUSED') {
+          userFriendlyError += `오류: 서버가 연결을 거부했습니다.\n`;
+          userFriendlyError += `URL: ${endpoint}\n\n`;
+          userFriendlyError += `가능한 원인:\n`;
+          userFriendlyError += `- 서버가 실행되지 않고 있습니다.\n`;
+          userFriendlyError += `- 포트 번호가 올바르지 않습니다.\n`;
+          userFriendlyError += `- 방화벽이 연결을 차단하고 있습니다.\n`;
+        } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKETTIMEDOUT') {
+          userFriendlyError += `오류: 서버 응답 시간이 초과되었습니다.\n`;
+          userFriendlyError += `URL: ${endpoint}\n\n`;
+          userFriendlyError += `가능한 원인:\n`;
+          userFriendlyError += `- 서버가 느리게 응답하고 있습니다.\n`;
+          userFriendlyError += `- 네트워크 연결이 불안정합니다.\n`;
+          userFriendlyError += `- 프록시 설정에 문제가 있습니다.\n`;
+        } else if (
+          error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' ||
+          error.code === 'CERT_HAS_EXPIRED'
+        ) {
+          userFriendlyError += `오류: SSL 인증서 검증 실패\n`;
+          userFriendlyError += `URL: ${endpoint}\n\n`;
+          userFriendlyError += `가능한 원인:\n`;
+          userFriendlyError += `- 서버의 SSL 인증서가 유효하지 않습니다.\n`;
+          userFriendlyError += `- 자체 서명된 인증서를 사용 중입니다.\n`;
+          userFriendlyError += `\n해결 방법:\n`;
+          userFriendlyError += `- 네트워크 설정에서 SSL 검증을 비활성화하세요.\n`;
+        } else if (error.message) {
+          userFriendlyError += `오류: ${error.message}\n`;
+          userFriendlyError += `URL: ${endpoint}\n`;
+        } else {
+          userFriendlyError += `알 수 없는 오류가 발생했습니다.\n`;
+          userFriendlyError += `URL: ${endpoint}\n`;
+          userFriendlyError += `오류 코드: ${error.code || 'UNKNOWN'}\n`;
+        }
+
+        // 설정 정보 추가
+        userFriendlyError += `\n설정 정보:\n`;
+        userFriendlyError += `- Provider: ${config.provider}\n`;
+        userFriendlyError += `- Base URL: ${config.baseURL || 'default'}\n`;
+        userFriendlyError += `- API Key: ${config.apiKey ? '설정됨 (' + config.apiKey.substring(0, 10) + '...)' : '설정되지 않음'}\n`;
+
+        if (config.networkConfig) {
+          userFriendlyError += `\n네트워크 설정:\n`;
+          if (config.networkConfig.proxy?.enabled) {
+            userFriendlyError += `- 프록시: ${config.networkConfig.proxy.mode} (${config.networkConfig.proxy.url})\n`;
+          } else {
+            userFriendlyError += `- 프록시: 비활성화\n`;
+          }
+          userFriendlyError += `- SSL 검증: ${config.networkConfig.ssl?.verify !== false ? '활성화' : '비활성화'}\n`;
+        }
 
         return {
           success: false,
-          error: error.message || 'Failed to fetch models',
+          error: userFriendlyError,
         };
       }
     }
