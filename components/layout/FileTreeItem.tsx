@@ -63,6 +63,7 @@ export const FileTreeItem = memo(function FileTreeItem({
   const workingDirectory = useChatStore((state) => state.workingDirectory);
   const expandedFolderPaths = useChatStore((state) => state.expandedFolderPaths);
   const toggleExpandedFolder = useChatStore((state) => state.toggleExpandedFolder);
+  const activeFilePath = useChatStore((state) => state.activeFilePath);
 
   // Get expanded state from store - memoize to prevent unnecessary re-renders
   const isExpanded = useMemo(
@@ -310,7 +311,7 @@ export const FileTreeItem = memo(function FileTreeItem({
   // Find in folder - opens search panel with folder scope
   const handleFindInFolder = useCallback(() => {
     // TODO: Implement setSearchScope in ChatStore for folder-scoped search
-    useChatStore.getState().setActiveEditorTab?.('search');
+    useChatStore.getState().setEditorViewMode('search');
     logger.info('[FileTreeItem] Find in folder:', node.path);
   }, [node.path]);
 
@@ -551,7 +552,7 @@ export const FileTreeItem = memo(function FileTreeItem({
               key={child.path}
               node={child}
               level={level + 1}
-              isActive={isActive}
+              isActive={activeFilePath === child.path}
               onFileClick={onFileClick}
               onRefresh={onRefresh}
               parentPath={node.path}

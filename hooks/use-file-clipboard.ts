@@ -11,7 +11,6 @@
 import { useCallback } from 'react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useFileSystem } from './use-file-system';
-import path from 'path-browserify';
 
 interface UseFileClipboardReturn {
   clipboard: { operation: 'copy' | 'cut'; paths: string[] } | null;
@@ -41,17 +40,30 @@ export function useFileClipboard(): UseFileClipboardReturn {
           return targetPath;
         }
 
-        // File exists, generate unique name
-        const dir = path.dirname(targetPath);
-        const ext = path.extname(targetPath);
-        const basename = path.basename(targetPath, ext);
+        // File exists, generate unique name using path-browserify fallback
+        // Extract directory, extension, and basename
+        const lastSlash = Math.max(targetPath.lastIndexOf('/'), targetPath.lastIndexOf('\\'));
+        const dir = targetPath.substring(0, lastSlash);
+        const filename = targetPath.substring(lastSlash + 1);
+        const lastDot = filename.lastIndexOf('.');
+        const ext = lastDot >= 0 ? filename.substring(lastDot) : '';
+        const basename = lastDot >= 0 ? filename.substring(0, lastDot) : filename;
 
         let counter = 1;
         let newPath = targetPath;
 
         // Keep incrementing until we find a unique name
         while (true) {
-          newPath = path.join(dir, `${basename}(${counter})${ext}`);
+          // Construct new path using IPC resolve-path
+          const newFilename = `${basename}(${counter})${ext}`;
+          const resolveResult = await window.electronAPI.fs.resolvePath(dir, newFilename);
+
+          if (!resolveResult.success || !resolveResult.data) {
+            console.error('[FileClipboard] Failed to resolve path:', resolveResult.error);
+            return targetPath;
+          }
+
+          newPath = resolveResult.data;
           const checkResult = await window.electronAPI.fs.readFile(newPath);
 
           if (!checkResult.success && (checkResult as any).code === 'ENOENT') {
@@ -79,8 +91,17 @@ export function useFileClipboard(): UseFileClipboardReturn {
 
       try {
         for (const sourcePath of paths) {
-          const filename = path.basename(sourcePath);
-          let destPath = path.join(destDir, filename);
+          // Extract filename from source path
+          const lastSlash = Math.max(sourcePath.lastIndexOf('/'), sourcePath.lastIndexOf('\\'));
+          const filename = sourcePath.substring(lastSlash + 1);
+
+          // Construct destination path using IPC resolve-path
+          const resolveResult = await window.electronAPI.fs.resolvePath(destDir, filename);
+          if (!resolveResult.success || !resolveResult.data) {
+            throw new Error(`Failed to resolve destination path: ${resolveResult.error}`);
+          }
+
+          let destPath = resolveResult.data;
 
           // Check for name conflicts and generate unique name if needed
           destPath = await generateUniquePath(destPath);
