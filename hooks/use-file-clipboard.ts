@@ -40,14 +40,28 @@ export function useFileClipboard(): UseFileClipboardReturn {
           return targetPath;
         }
 
-        // File exists, generate unique name using path-browserify fallback
-        // Extract directory, extension, and basename
-        const lastSlash = Math.max(targetPath.lastIndexOf('/'), targetPath.lastIndexOf('\\'));
-        const dir = targetPath.substring(0, lastSlash);
-        const filename = targetPath.substring(lastSlash + 1);
-        const lastDot = filename.lastIndexOf('.');
-        const ext = lastDot >= 0 ? filename.substring(lastDot) : '';
-        const basename = lastDot >= 0 ? filename.substring(0, lastDot) : filename;
+        // File exists, generate unique name using IPC path utilities
+        // Get directory, extension, and basename from IPC
+        const dirResult = await window.electronAPI.fs.dirname(targetPath);
+        if (!dirResult.success || !dirResult.data) {
+          console.error('[FileClipboard] Failed to get dirname:', dirResult.error);
+          return targetPath;
+        }
+        const dir = dirResult.data;
+
+        const extResult = await window.electronAPI.fs.extname(targetPath);
+        if (!extResult.success || extResult.data === undefined) {
+          console.error('[FileClipboard] Failed to get extname:', extResult.error);
+          return targetPath;
+        }
+        const ext = extResult.data;
+
+        const basenameResult = await window.electronAPI.fs.basename(targetPath, ext);
+        if (!basenameResult.success || !basenameResult.data) {
+          console.error('[FileClipboard] Failed to get basename:', basenameResult.error);
+          return targetPath;
+        }
+        const basename = basenameResult.data;
 
         let counter = 1;
         let newPath = targetPath;
@@ -71,6 +85,12 @@ export function useFileClipboard(): UseFileClipboardReturn {
           }
 
           counter++;
+
+          // Safety check to prevent infinite loop
+          if (counter > 1000) {
+            console.error('[FileClipboard] Too many conflicts, giving up');
+            return targetPath;
+          }
         }
       } catch (error) {
         console.error('[FileClipboard] Error generating unique path:', error);
@@ -91,9 +111,12 @@ export function useFileClipboard(): UseFileClipboardReturn {
 
       try {
         for (const sourcePath of paths) {
-          // Extract filename from source path
-          const lastSlash = Math.max(sourcePath.lastIndexOf('/'), sourcePath.lastIndexOf('\\'));
-          const filename = sourcePath.substring(lastSlash + 1);
+          // Extract filename using IPC basename
+          const basenameResult = await window.electronAPI.fs.basename(sourcePath);
+          if (!basenameResult.success || !basenameResult.data) {
+            throw new Error(`Failed to get basename: ${basenameResult.error}`);
+          }
+          const filename = basenameResult.data;
 
           // Construct destination path using IPC resolve-path
           const resolveResult = await window.electronAPI.fs.resolvePath(destDir, filename);

@@ -653,6 +653,57 @@ export function registerFileHandlers() {
     }
   });
 
+  // 경로에서 파일명 추출 (basename)
+  ipcMain.handle('fs:basename', async (_event, filePath: string, ext?: string) => {
+    try {
+      const basename = ext !== undefined ? path.basename(filePath, ext) : path.basename(filePath);
+      return {
+        success: true,
+        data: basename,
+      };
+    } catch (error: any) {
+      console.error('[File] Error getting basename:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get basename',
+      };
+    }
+  });
+
+  // 경로에서 디렉토리 추출 (dirname)
+  ipcMain.handle('fs:dirname', async (_event, filePath: string) => {
+    try {
+      const dirname = path.dirname(filePath);
+      return {
+        success: true,
+        data: dirname,
+      };
+    } catch (error: any) {
+      console.error('[File] Error getting dirname:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get dirname',
+      };
+    }
+  });
+
+  // 경로에서 확장자 추출 (extname)
+  ipcMain.handle('fs:extname', async (_event, filePath: string) => {
+    try {
+      const extname = path.extname(filePath);
+      return {
+        success: true,
+        data: extname,
+      };
+    } catch (error: any) {
+      console.error('[File] Error getting extname:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get extname',
+      };
+    }
+  });
+
   // 시스템 탐색기에서 파일/폴더 열기
   ipcMain.handle('fs:show-in-folder', async (_event, itemPath: string) => {
     try {

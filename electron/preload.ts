@@ -298,6 +298,9 @@ const electronAPI = {
       ipcRenderer.invoke('fs:get-relative-path', from, to),
     resolvePath: (basePath: string, relativePath: string) =>
       ipcRenderer.invoke('fs:resolve-path', basePath, relativePath),
+    basename: (filePath: string, ext?: string) => ipcRenderer.invoke('fs:basename', filePath, ext),
+    dirname: (filePath: string) => ipcRenderer.invoke('fs:dirname', filePath),
+    extname: (filePath: string) => ipcRenderer.invoke('fs:extname', filePath),
     showInFolder: (itemPath: string) => ipcRenderer.invoke('fs:show-in-folder', itemPath),
     openWithDefaultApp: (itemPath: string) =>
       ipcRenderer.invoke('fs:open-with-default-app', itemPath),

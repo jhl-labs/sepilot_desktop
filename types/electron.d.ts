@@ -507,6 +507,9 @@ interface FileSystemAPI {
   getAbsolutePath: (filePath: string) => Promise<IPCResponse<string>>;
   getRelativePath: (from: string, to: string) => Promise<IPCResponse<string>>;
   resolvePath: (basePath: string, relativePath: string) => Promise<IPCResponse<string>>;
+  basename: (filePath: string, ext?: string) => Promise<IPCResponse<string>>;
+  dirname: (filePath: string) => Promise<IPCResponse<string>>;
+  extname: (filePath: string) => Promise<IPCResponse<string>>;
   showInFolder: (itemPath: string) => Promise<IPCResponse>;
   openWithDefaultApp: (itemPath: string) => Promise<IPCResponse>;
   duplicate: (sourcePath: string) => Promise<IPCResponse<string>>;
