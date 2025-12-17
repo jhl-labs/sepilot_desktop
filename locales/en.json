@@ -2306,6 +2306,49 @@
     "confirmCancel": "Changes will not be saved. Continue?",
     "unsavedChanges": "You have unsaved changes"
   },
+  "unifiedInput": {
+    "placeholder": {
+      "generating": "Generating response... (Press ESC to stop)",
+      "ultraCompact": "Message...",
+      "default": "Type a message... (Shift+Enter for new line)"
+    },
+    "settings": "Settings",
+    "thinking": {
+      "instant": "Instant",
+      "instant.desc": "Quick response",
+      "sequential": "Sequential",
+      "sequential.desc": "Step-by-step thinking",
+      "treeOfThought": "Tree of Thought",
+      "treeOfThought.desc": "Multi-path exploration",
+      "deep": "Deep",
+      "deep.desc": "In-depth analysis",
+      "deepWebResearch": "Deep Web Research",
+      "deepWebResearch.desc": "Web search-based deep research",
+      "coding": "Coding",
+      "coding.desc": "Coding optimization"
+    },
+    "tools": {
+      "status": "{{active}}/{{total}} enabled",
+      "enableAll": "Enable all",
+      "disableAll": "Disable all",
+      "loading": "Loading tools..."
+    },
+    "imageGen": "Image Generation",
+    "fileDrop": {
+      "title": "Drop files here",
+      "subtitle": "Text files or images"
+    },
+    "agentProgress": {
+      "thinking": "🤔 Thinking...",
+      "executing": "⚙️ Executing...",
+      "working": "🔄 Working...",
+      "stop": "Stop"
+    },
+    "actions": {
+      "stop": "Stop (Esc)",
+      "send": "Send (Enter)"
+    }
+  },
   "quickInput": {
     "placeholder": "How can I help you?"
   }

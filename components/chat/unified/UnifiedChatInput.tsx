@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import {
@@ -92,6 +93,7 @@ export function UnifiedChatInput({
   mounted = true,
   agentProgress = null,
 }: UnifiedChatInputProps) {
+  const { t } = useTranslation();
   const { mode, features, style } = config;
   const containerRef = useRef<HTMLDivElement>(null);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('full');
@@ -458,10 +460,10 @@ export function UnifiedChatInput({
   };
 
   const placeholderText = isStreaming
-    ? '응답 생성 중... (ESC로 중단 가능)'
+    ? t('unifiedInput.placeholder.generating')
     : effectiveLayoutMode === 'ultra-compact'
-      ? '메시지...'
-      : '메시지를 입력하세요... (Shift+Enter로 줄바꿈)';
+      ? t('unifiedInput.placeholder.ultraCompact')
+      : t('unifiedInput.placeholder.default');
 
   // Thinking mode icon mapping
   const thinkingModeIcon = {
@@ -487,7 +489,7 @@ export function UnifiedChatInput({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
                 <Brain className="h-3 w-3 mr-1" />
-                설정
+                {t('unifiedInput.settings')}
                 <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
@@ -632,8 +634,10 @@ export function UnifiedChatInput({
                 >
                   <Zap className="h-4 w-4 mr-2" />
                   <div>
-                    <div className="font-medium">Instant</div>
-                    <div className="text-xs text-muted-foreground">빠른 응답</div>
+                    <div className="font-medium">{t('unifiedInput.thinking.instant')}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('unifiedInput.thinking.instant.desc')}
+                    </div>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -642,8 +646,10 @@ export function UnifiedChatInput({
                 >
                   <Brain className="h-4 w-4 mr-2" />
                   <div>
-                    <div className="font-medium">Sequential</div>
-                    <div className="text-xs text-muted-foreground">단계별 사고</div>
+                    <div className="font-medium">{t('unifiedInput.thinking.sequential')}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('unifiedInput.thinking.sequential.desc')}
+                    </div>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -652,8 +658,10 @@ export function UnifiedChatInput({
                 >
                   <Network className="h-4 w-4 mr-2" />
                   <div>
-                    <div className="font-medium">Tree of Thought</div>
-                    <div className="text-xs text-muted-foreground">다중 경로 탐색</div>
+                    <div className="font-medium">{t('unifiedInput.thinking.treeOfThought')}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('unifiedInput.thinking.treeOfThought.desc')}
+                    </div>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -662,8 +670,10 @@ export function UnifiedChatInput({
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
                   <div>
-                    <div className="font-medium">Deep</div>
-                    <div className="text-xs text-muted-foreground">깊이 있는 분석</div>
+                    <div className="font-medium">{t('unifiedInput.thinking.deep')}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('unifiedInput.thinking.deep.desc')}
+                    </div>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -672,8 +682,10 @@ export function UnifiedChatInput({
                 >
                   <Globe className="h-4 w-4 mr-2" />
                   <div>
-                    <div className="font-medium">Deep Web Research</div>
-                    <div className="text-xs text-muted-foreground">웹 검색 기반 심층 조사</div>
+                    <div className="font-medium">{t('unifiedInput.thinking.deepWebResearch')}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('unifiedInput.thinking.deepWebResearch.desc')}
+                    </div>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -682,8 +694,10 @@ export function UnifiedChatInput({
                 >
                   <Code className="h-4 w-4 mr-2" />
                   <div>
-                    <div className="font-medium">Coding</div>
-                    <div className="text-xs text-muted-foreground">코딩 최적화</div>
+                    <div className="font-medium">{t('unifiedInput.thinking.coding')}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {t('unifiedInput.thinking.coding.desc')}
+                    </div>
                   </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -739,7 +753,10 @@ export function UnifiedChatInput({
                 {/* Tools header with bulk actions */}
                 <div className="px-2 py-2 flex items-center justify-between border-b">
                   <span className="text-xs text-muted-foreground">
-                    {enabledTools.size}/{tools.length} 활성화
+                    {t('unifiedInput.tools.status', {
+                      active: enabledTools.size,
+                      total: tools.length,
+                    })}
                   </span>
                   <div className="flex gap-1">
                     <Button
@@ -753,7 +770,7 @@ export function UnifiedChatInput({
                         setEnableTools(true);
                       }}
                     >
-                      전체 활성화
+                      {t('unifiedInput.tools.enableAll')}
                     </Button>
                     <Button
                       variant="ghost"
@@ -765,7 +782,7 @@ export function UnifiedChatInput({
                         disableAllTools();
                       }}
                     >
-                      전체 비활성화
+                      {t('unifiedInput.tools.disableAll')}
                     </Button>
                   </div>
                 </div>
@@ -807,7 +824,7 @@ export function UnifiedChatInput({
 
                 {tools.length === 0 && (
                   <div className="px-2 py-4 text-center text-xs text-muted-foreground">
-                    도구를 불러오는 중...
+                    {t('unifiedInput.tools.loading')}
                   </div>
                 )}
               </DropdownMenuContent>
@@ -841,7 +858,7 @@ export function UnifiedChatInput({
                     className="cursor-pointer"
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span>이미지 생성</span>
+                      <span>{t('unifiedInput.imageGen')}</span>
                       <div
                         className={`h-4 w-4 rounded-sm border-2 ${
                           enableImageGeneration
@@ -946,8 +963,10 @@ export function UnifiedChatInput({
         {isDragging && (
           <div className="absolute inset-0 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg z-10 pointer-events-none">
             <div className="text-center">
-              <p className="text-sm font-medium text-primary">파일을 여기에 드롭하세요</p>
-              <p className="text-xs text-muted-foreground mt-1">텍스트 파일 또는 이미지</p>
+              <p className="text-sm font-medium text-primary">{t('unifiedInput.fileDrop.title')}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('unifiedInput.fileDrop.subtitle')}
+              </p>
             </div>
           </div>
         )}
@@ -969,11 +988,13 @@ export function UnifiedChatInput({
                 <div className="flex items-center gap-2 text-xs font-medium text-primary">
                   <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                   <span>
-                    {agentProgress.status === 'thinking' && '🤔 생각 중...'}
-                    {agentProgress.status === 'executing' && '⚙️ 실행 중...'}
+                    {agentProgress.status === 'thinking' &&
+                      t('unifiedInput.agentProgress.thinking')}
+                    {agentProgress.status === 'executing' &&
+                      t('unifiedInput.agentProgress.executing')}
                     {agentProgress.status !== 'thinking' &&
                       agentProgress.status !== 'executing' &&
-                      '🔄 작업 중...'}
+                      t('unifiedInput.agentProgress.working')}
                   </span>
                   <span className="text-muted-foreground">
                     ({agentProgress.iteration}/{agentProgress.maxIterations})
@@ -989,9 +1010,9 @@ export function UnifiedChatInput({
                   variant="ghost"
                   size="sm"
                   className="h-6 shrink-0 text-xs"
-                  title="중단"
+                  title={t('unifiedInput.agentProgress.stop')}
                 >
-                  중단
+                  {t('unifiedInput.agentProgress.stop')}
                 </Button>
               )}
             </div>
@@ -1078,7 +1099,7 @@ export function UnifiedChatInput({
                       ? 'h-6 w-6 rounded-sm'
                       : 'h-7 w-7 rounded-md'
                   } shrink-0`}
-                  title="중지 (Esc)"
+                  title={t('unifiedInput.actions.stop')}
                 >
                   <Square
                     className={`${
@@ -1096,7 +1117,7 @@ export function UnifiedChatInput({
                       ? 'h-6 w-6 rounded-sm'
                       : 'h-7 w-7 rounded-md'
                   } shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-50`}
-                  title="전송 (Enter)"
+                  title={t('unifiedInput.actions.send')}
                 >
                   <Send
                     className={`${

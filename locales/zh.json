@@ -2323,6 +2323,49 @@
     "confirmCancel": "更改将不会保存。继续吗？",
     "unsavedChanges": "您有未保存的更改"
   },
+  "unifiedInput": {
+    "placeholder": {
+      "generating": "正在生成响应... (按 ESC 停止)",
+      "ultraCompact": "消息...",
+      "default": "输入消息... (Shift+Enter 换行)"
+    },
+    "settings": "设置",
+    "thinking": {
+      "instant": "Instant",
+      "instant.desc": "快速响应",
+      "sequential": "Sequential",
+      "sequential.desc": "逐步思考",
+      "treeOfThought": "Tree of Thought",
+      "treeOfThought.desc": "多路径探索",
+      "deep": "Deep",
+      "deep.desc": "深入分析",
+      "deepWebResearch": "Deep Web Research",
+      "deepWebResearch.desc": "基于网络搜索的深入研究",
+      "coding": "Coding",
+      "coding.desc": "编码优化"
+    },
+    "tools": {
+      "status": "{{active}}/{{total}} 已启用",
+      "enableAll": "全部启用",
+      "disableAll": "全部禁用",
+      "loading": "加载工具中..."
+    },
+    "imageGen": "图像生成",
+    "fileDrop": {
+      "title": "将文件拖放到此处",
+      "subtitle": "文本文件或图像"
+    },
+    "agentProgress": {
+      "thinking": "🤔 思考中...",
+      "executing": "⚙️ 执行中...",
+      "working": "🔄 工作中...",
+      "stop": "停止"
+    },
+    "actions": {
+      "stop": "停止 (Esc)",
+      "send": "发送 (Enter)"
+    }
+  },
   "quickInput": {
     "placeholder": "我能为您做些什么？"
   }

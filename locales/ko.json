@@ -2296,7 +2296,129 @@
     "confirmCancel": "변경사항이 저장되지 않습니다. 계속하시겠습니까?",
     "unsavedChanges": "저장되지 않은 변경사항이 있습니다"
   },
+  "unifiedInput": {
+    "placeholder": {
+      "generating": "응답 생성 중... (ESC로 중단 가능)",
+      "ultraCompact": "메시지...",
+      "default": "메시지를 입력하세요... (Shift+Enter로 줄바꿈)"
+    },
+    "settings": "설정",
+    "thinking": {
+      "instant": "Instant",
+      "instant.desc": "빠른 응답",
+      "sequential": "Sequential",
+      "sequential.desc": "단계별 사고",
+      "treeOfThought": "Tree of Thought",
+      "treeOfThought.desc": "다중 경로 탐색",
+      "deep": "Deep",
+      "deep.desc": "깊이 있는 분석",
+      "deepWebResearch": "Deep Web Research",
+      "deepWebResearch.desc": "웹 검색 기반 심층 조사",
+      "coding": "Coding",
+      "coding.desc": "코딩 최적화"
+    },
+    "tools": {
+      "status": "{{active}}/{{total}} 활성화",
+      "enableAll": "전체 활성화",
+      "disableAll": "전체 비활성화",
+      "loading": "도구를 불러오는 중..."
+    },
+    "imageGen": "이미지 생성",
+    "fileDrop": {
+      "title": "파일을 여기에 드롭하세요",
+      "subtitle": "텍스트 파일 또는 이미지"
+    },
+    "agentProgress": {
+      "thinking": "🤔 생각 중...",
+      "executing": "⚙️ 실행 중...",
+      "working": "🔄 작업 중...",
+      "stop": "중단"
+    },
+    "actions": {
+      "stop": "중지 (Esc)",
+      "send": "전송 (Enter)"
+    }
+  },
   "quickInput": {
     "placeholder": "무엇을 도와드릴까요?"
+  },
+  "inputBox": {
+    "errors": {
+      "imageUploadDesktopOnly": "이미지 업로드는 데스크톱 앱에서만 사용할 수 있습니다",
+      "imageSelectFailed": "이미지 선택에 실패했습니다",
+      "clipboardRead": "클립보드 이미지를 읽는 중 오류가 발생했습니다",
+      "clipboardProcess": "클립보드 이미지를 처리하는 중 오류가 발생했습니다",
+      "fileRead": "파일을 읽는 중 오류가 발생했습니다: {{filename}}",
+      "unsupportedFile": "지원하지 않는 파일 형식입니다: {{filename}}"
+    },
+    "imageGen": {
+      "error": "❌ 이미지 생성 오류: {{message}}"
+    },
+    "tools": {
+      "waiting": "🔔 도구 실행 승인을 기다리는 중...",
+      "rejected": "❌ 도구 실행이 거부되었습니다.",
+      "enable": "Tools 활성화",
+      "disable": "Tools 비활성화",
+      "tooltip": "MCP Tools",
+      "description": "AI가 외부 도구를 사용할 수 있습니다"
+    },
+    "nodes": {
+      "generating": "🤖 AI가 응답을 생성하고 있습니다...",
+      "generatingTools": "🤖 AI가 도구 사용을 계획하고 있습니다: {{tools}}",
+      "executingTools": "🔧 도구를 실행하고 있습니다...",
+      "toolsComplete": "✅ 도구 실행 완료: {{tools}}",
+      "toolsError": "⚠️ 도구 실행 중 일부 오류 발생: {{tools}}",
+      "generatingImage": "🎨 이미지를 생성하고 있습니다...",
+      "reporter": "📊 최종 결과를 정리하고 있습니다...",
+      "toolsCompleteGenerating": "✅ 도구 실행 완료: {{tools}}\n\n답변을 생성하고 있습니다..."
+    },
+    "fileDrop": {
+      "title": "텍스트 파일을 여기에 드롭하세요",
+      "subtitle": ".txt, .md, .json, .js, .ts 등"
+    },
+    "images": {
+      "label": "이미지 #{{number}}",
+      "remove": "이미지 제거"
+    },
+    "placeholder": {
+      "withImages": "이미지에 대한 질문을 입력하세요...",
+      "default": "메시지를 입력하세요...",
+      "ariaLabel": "메시지 입력"
+    },
+    "thinking": {
+      "mode": "사고 모드: {{mode}}",
+      "instant": "Instant",
+      "instant.desc": "즉시 응답 - 빠른 대화",
+      "sequential": "Sequential Thinking",
+      "sequential.desc": "순차적 사고 - 단계별 추론",
+      "treeOfThought": "Tree of Thought",
+      "treeOfThought.desc": "다중 경로 탐색",
+      "deep": "Deep Thinking",
+      "deep.desc": "깊은 사고 - 최고 품질 (느림)",
+      "coding": "Coding (beta)",
+      "coding.desc": "복잡한 코딩 작업 - ReAct Agent",
+      "imageGenOnly": "이미지 생성 모드에서는 Instant 모드만 사용 가능합니다"
+    },
+    "rag": {
+      "tooltip": "RAG 검색",
+      "description": "문서 데이터베이스에서 관련 정보를 검색합니다",
+      "enable": "RAG 활성화",
+      "disable": "RAG 비활성화"
+    },
+    "imageUpload": {
+      "tooltip": "이미지 추가",
+      "ariaLabel": "이미지 파일 선택"
+    },
+    "imageGen": {
+      "tooltip": "이미지 생성",
+      "enable": "이미지 생성 활성화 (Tools 자동 활성화)",
+      "disable": "이미지 생성 비활성화"
+    },
+    "actions": {
+      "stop": "중지 (Esc)",
+      "stopAria": "스트리밍 중지",
+      "send": "전송 (Enter)",
+      "sendAria": "메시지 전송"
+    }
   }
 }
