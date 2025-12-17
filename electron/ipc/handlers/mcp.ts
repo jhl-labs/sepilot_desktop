@@ -131,6 +131,13 @@ export function setupMCPHandlers() {
    * MCP 서버 추가
    */
   ipcMain.handle('mcp-add-server', async (_event, config: MCPServerConfig) => {
+    console.log('[MCP] Adding server:', {
+      name: config.name,
+      transport: config.transport,
+      command: config.command,
+      argsCount: config.args?.length || 0,
+    });
+
     try {
       let client: MCPClient;
 
@@ -140,6 +147,7 @@ export function setupMCPHandlers() {
           throw new Error('SSE transport requires "url" field');
         }
 
+        console.log('[MCP] Creating SSE client...');
         client = new SSEMCPClient(config);
         await client.connect();
       } else {
@@ -151,21 +159,30 @@ export function setupMCPHandlers() {
           throw new Error('stdio transport requires "args" field');
         }
 
+        console.log('[MCP] Creating stdio client...');
         const stdioClient = new StdioMCPClient(config);
+        console.log('[MCP] Connecting to process...');
         await stdioClient.connectInMainProcess(spawn);
+        console.log('[MCP] Process connected successfully');
         client = stdioClient;
       }
 
       // 초기화
+      console.log('[MCP] Initializing client...');
       await client.initialize();
+      console.log('[MCP] Client initialized successfully');
 
       // 도구 목록 가져오기
+      console.log('[MCP] Fetching tools list...');
       const tools = await client.listTools();
+      console.log(`[MCP] Fetched ${tools.length} tools`);
 
       // Server Manager에 추가
+      console.log('[MCP] Adding to server manager...');
       await MCPServerManager.addServerInMainProcess(client);
 
       // Tool Registry에 도구 등록
+      console.log('[MCP] Registering tools...');
       ToolRegistry.registerTools(tools);
 
       // Config 저장 (메모리 + DB)
@@ -173,7 +190,7 @@ export function setupMCPHandlers() {
       saveMCPConfigs(Array.from(serverConfigs.values()));
 
       console.log(
-        `[MCP] Server added: ${config.name} (${tools.length} tools, transport: ${config.transport})`
+        `[MCP] Server added successfully: ${config.name} (${tools.length} tools, transport: ${config.transport})`
       );
 
       return {
@@ -181,7 +198,11 @@ export function setupMCPHandlers() {
         data: tools,
       };
     } catch (error: any) {
-      console.error('[MCP] Failed to add MCP server:', error);
+      console.error('[MCP] Failed to add MCP server:', {
+        name: config.name,
+        error: error.message,
+        stack: error.stack,
+      });
       return {
         success: false,
         error: error.message || 'Failed to add MCP server',
