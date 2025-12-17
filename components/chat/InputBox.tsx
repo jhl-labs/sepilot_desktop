@@ -46,9 +46,11 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { useLanguage } from '@/components/providers/i18n-provider';
+import { useTranslation } from 'react-i18next';
 
 export function InputBox() {
   const { language } = useLanguage();
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [selectedImages, setSelectedImages] = useState<ImageAttachment[]>([]);
@@ -465,7 +467,7 @@ export function InputBox() {
   // Handle image selection
   const handleImageSelect = async () => {
     if (!isElectron() || !window.electronAPI) {
-      setError('Image upload is only available in the desktop app');
+      setError(t('inputBox.errors.imageUploadDesktopOnly'));
       return;
     }
 
@@ -476,7 +478,7 @@ export function InputBox() {
       }
     } catch (error: any) {
       console.error('Failed to select images:', error);
-      setError(error.message || 'Failed to select images');
+      setError(error.message || t('inputBox.errors.imageSelectFailed'));
     }
   };
 
@@ -528,12 +530,12 @@ export function InputBox() {
           setSelectedImages((prev) => [...prev, newImage]);
         };
         reader.onerror = () => {
-          setError('클립보드 이미지를 읽는 중 오류가 발생했습니다');
+          setError(t('inputBox.errors.clipboardRead'));
         };
         reader.readAsDataURL(file);
       } catch (error: any) {
         console.error('Failed to read clipboard image:', error);
-        setError(error.message || '클립보드 이미지를 처리하는 중 오류가 발생했습니다');
+        setError(error.message || t('inputBox.errors.clipboardProcess'));
       }
     }
   };
@@ -579,7 +581,7 @@ export function InputBox() {
           textContents.push(`📄 **${file.name}**\n\`\`\`\n${text}\n\`\`\``);
         } catch (error) {
           console.error(`Failed to read file ${file.name}:`, error);
-          setError(`파일을 읽는 중 오류가 발생했습니다: ${file.name}`);
+          setError(t('inputBox.errors.fileRead', { filename: file.name }));
         }
       } else if (file.type.startsWith('image/')) {
         // 이미지 파일 처리
@@ -601,7 +603,7 @@ export function InputBox() {
           console.error(`Failed to read image ${file.name}:`, error);
         }
       } else {
-        setError(`지원하지 않는 파일 형식입니다: ${file.name}`);
+        setError(t('inputBox.errors.unsupportedFile', { filename: file.name }));
       }
     }
 
@@ -814,7 +816,7 @@ export function InputBox() {
                   clearImageGenerationProgress(conversationId);
                   // Append error message to existing content
                   scheduleUpdate({
-                    content: `${accumulatedMessage.content || ''}\n\n❌ 이미지 생성 오류: ${progress.message}`,
+                    content: `${accumulatedMessage.content || ''}\n\n${t('inputBox.imageGen.error', { message: progress.message })}`,
                   });
                 }
                 return;
@@ -857,7 +859,7 @@ export function InputBox() {
                 });
                 // Append approval waiting message to existing content
                 scheduleUpdate({
-                  content: `${accumulatedMessage.content || ''}\n\n🔔 도구 실행 승인을 기다리는 중...`,
+                  content: `${accumulatedMessage.content || ''}\n\n${t('inputBox.tools.waiting')}`,
                 });
                 return;
               }
@@ -867,7 +869,7 @@ export function InputBox() {
                 console.log('[InputBox] Tool approval result:', event.approved);
                 clearPendingToolApproval();
                 if (!event.approved) {
-                  scheduleUpdate({ content: '❌ 도구 실행이 거부되었습니다.' });
+                  scheduleUpdate({ content: t('inputBox.tools.rejected') });
                 }
                 return;
               }
@@ -878,14 +880,14 @@ export function InputBox() {
 
                 // Generate node: Show AI thinking
                 if (event.node === 'generate') {
-                  nodeStatusMessage = '🤖 AI가 응답을 생성하고 있습니다...';
+                  nodeStatusMessage = t('inputBox.nodes.generating');
 
                   // If there are tool calls, show them
                   if (event.data?.messages?.[0]?.tool_calls) {
                     const toolNames = event.data.messages[0].tool_calls
                       .map((tc: any) => tc.name)
                       .join(', ');
-                    nodeStatusMessage = `🤖 AI가 도구 사용을 계획하고 있습니다: ${toolNames}`;
+                    nodeStatusMessage = t('inputBox.nodes.generatingTools', { tools: toolNames });
                   }
                 }
 
@@ -903,9 +905,9 @@ export function InputBox() {
                     }
 
                     if (hasError) {
-                      nodeStatusMessage = `⚠️ 도구 실행 중 일부 오류 발생: ${toolNames}`;
+                      nodeStatusMessage = t('inputBox.nodes.toolsError', { tools: toolNames });
                     } else {
-                      nodeStatusMessage = `✅ 도구 실행 완료: ${toolNames}`;
+                      nodeStatusMessage = t('inputBox.nodes.toolsComplete', { tools: toolNames });
                     }
                   } else {
                     // 도구 실행 시작 - 메시지에서 이미지 생성 여부 확인
@@ -915,23 +917,23 @@ export function InputBox() {
                     );
 
                     if (hasImageGenCall) {
-                      nodeStatusMessage = '🎨 이미지를 생성하고 있습니다...';
+                      nodeStatusMessage = t('inputBox.nodes.generatingImage');
                       setImageGenerationProgress({
                         conversationId,
                         messageId: assistantMessageId,
                         status: 'queued',
-                        message: '🎨 이미지 생성 요청을 준비하는 중...',
+                        message: t('inputBox.nodes.generatingImage'),
                         progress: 0,
                       });
                     } else {
-                      nodeStatusMessage = '🔧 도구를 실행하고 있습니다...';
+                      nodeStatusMessage = t('inputBox.nodes.executingTools');
                     }
                   }
                 }
 
                 // Reporter node: Final summary
                 else if (event.node === 'reporter') {
-                  nodeStatusMessage = '📊 최종 결과를 정리하고 있습니다...';
+                  nodeStatusMessage = t('inputBox.nodes.reporter');
                 }
 
                 if (nodeStatusMessage) {
@@ -1117,7 +1119,9 @@ export function InputBox() {
                   clearImageGenerationProgress(conversationId);
                 }
 
-                const statusMessage = `✅ 도구 실행 완료: ${toolNames}\n\n답변을 생성하고 있습니다...`;
+                const statusMessage = t('inputBox.nodes.toolsCompleteGenerating', {
+                  tools: toolNames,
+                });
                 // Append to existing content instead of replacing it
                 scheduleUpdate({
                   content: `${accumulatedMessage.content || ''}\n\n${statusMessage}`,
@@ -1505,8 +1509,10 @@ export function InputBox() {
           {isDragging && (
             <div className="absolute inset-0 flex items-center justify-center bg-primary/5 border-2 border-dashed border-primary rounded-lg z-10 pointer-events-none">
               <div className="text-center">
-                <p className="text-sm font-medium text-primary">텍스트 파일을 여기에 드롭하세요</p>
-                <p className="text-xs text-muted-foreground mt-1">.txt, .md, .json, .js, .ts 등</p>
+                <p className="text-sm font-medium text-primary">{t('inputBox.fileDrop.title')}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('inputBox.fileDrop.subtitle')}
+                </p>
               </div>
             </div>
           )}
@@ -1526,13 +1532,15 @@ export function InputBox() {
                       <TooltipTrigger asChild>
                         <div className="relative inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm group hover:bg-accent/80 transition-colors">
                           <ImagePlus className="h-3.5 w-3.5" />
-                          <span className="font-medium">이미지 #{index + 1}</span>
+                          <span className="font-medium">
+                            {t('inputBox.images.label', { number: index + 1 })}
+                          </span>
                           <button
                             onClick={() => handleRemoveImage(image.id)}
                             className="ml-1 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
                             disabled={isStreaming}
-                            title="이미지 제거"
-                            aria-label="이미지 제거"
+                            title={t('inputBox.images.remove')}
+                            aria-label={t('inputBox.images.remove')}
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -1561,13 +1569,15 @@ export function InputBox() {
                     className="relative inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm group hover:bg-accent/80 transition-colors"
                   >
                     <ImagePlus className="h-3.5 w-3.5" />
-                    <span className="font-medium">이미지 #{index + 1}</span>
+                    <span className="font-medium">
+                      {t('inputBox.images.label', { number: index + 1 })}
+                    </span>
                     <button
                       onClick={() => handleRemoveImage(image.id)}
                       className="ml-1 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
                       disabled={isStreaming}
-                      title="이미지 제거"
-                      aria-label="이미지 제거"
+                      title={t('inputBox.images.remove')}
+                      aria-label={t('inputBox.images.remove')}
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -1621,13 +1631,13 @@ export function InputBox() {
               onCompositionEnd={() => setIsComposing(false)}
               placeholder={
                 selectedImages.length > 0
-                  ? '이미지에 대한 질문을 입력하세요...'
-                  : '메시지를 입력하세요...'
+                  ? t('inputBox.placeholder.withImages')
+                  : t('inputBox.placeholder.default')
               }
               className="flex-1 min-h-[52px] max-h-[200px] resize-none border-0 bg-transparent px-4 py-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
               disabled={isStreaming}
               rows={1}
-              aria-label="메시지 입력"
+              aria-label={t('inputBox.placeholder.ariaLabel')}
               aria-disabled={isStreaming}
             />
             <div className="flex items-center gap-1 pb-2 pr-2">
@@ -1641,18 +1651,19 @@ export function InputBox() {
                       className="h-9 w-9 rounded-xl shrink-0"
                       title={
                         enableImageGeneration
-                          ? '이미지 생성 모드에서는 Instant 모드만 사용 가능합니다'
-                          : `사고 모드: ${
-                              thinkingMode === 'instant'
-                                ? 'Instant'
-                                : thinkingMode === 'sequential'
-                                  ? 'Sequential'
-                                  : thinkingMode === 'tree-of-thought'
-                                    ? 'Tree of Thought'
-                                    : thinkingMode === 'deep'
-                                      ? 'Deep Thinking'
-                                      : 'Coding (beta)'
-                            }`
+                          ? t('inputBox.thinking.imageGenOnly')
+                          : t('inputBox.thinking.mode', {
+                              mode:
+                                thinkingMode === 'instant'
+                                  ? t('inputBox.thinking.instant')
+                                  : thinkingMode === 'sequential'
+                                    ? t('inputBox.thinking.sequential')
+                                    : thinkingMode === 'tree-of-thought'
+                                      ? t('inputBox.thinking.treeOfThought')
+                                      : thinkingMode === 'deep'
+                                        ? t('inputBox.thinking.deep')
+                                        : t('inputBox.thinking.coding'),
+                            })
                       }
                       disabled={isStreaming || enableImageGeneration}
                     >
@@ -1671,8 +1682,10 @@ export function InputBox() {
                     >
                       <Zap className="mr-2 h-4 w-4 text-yellow-500" />
                       <div className="flex flex-col">
-                        <span className="font-medium">Instant</span>
-                        <span className="text-xs text-muted-foreground">즉시 응답 - 빠른 대화</span>
+                        <span className="font-medium">{t('inputBox.thinking.instant')}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t('inputBox.thinking.instant.desc')}
+                        </span>
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -1681,9 +1694,9 @@ export function InputBox() {
                     >
                       <Brain className="mr-2 h-4 w-4 text-blue-500" />
                       <div className="flex flex-col">
-                        <span className="font-medium">Sequential Thinking</span>
+                        <span className="font-medium">{t('inputBox.thinking.sequential')}</span>
                         <span className="text-xs text-muted-foreground">
-                          순차적 사고 - 단계별 추론
+                          {t('inputBox.thinking.sequential.desc')}
                         </span>
                       </div>
                     </DropdownMenuItem>
@@ -1693,8 +1706,10 @@ export function InputBox() {
                     >
                       <Network className="mr-2 h-4 w-4 text-purple-500" />
                       <div className="flex flex-col">
-                        <span className="font-medium">Tree of Thought</span>
-                        <span className="text-xs text-muted-foreground">다중 경로 탐색</span>
+                        <span className="font-medium">{t('inputBox.thinking.treeOfThought')}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t('inputBox.thinking.treeOfThought.desc')}
+                        </span>
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -1703,9 +1718,9 @@ export function InputBox() {
                     >
                       <Sparkles className="mr-2 h-4 w-4 text-pink-500" />
                       <div className="flex flex-col">
-                        <span className="font-medium">Deep Thinking</span>
+                        <span className="font-medium">{t('inputBox.thinking.deep')}</span>
                         <span className="text-xs text-muted-foreground">
-                          깊은 사고 - 최고 품질 (느림)
+                          {t('inputBox.thinking.deep.desc')}
                         </span>
                       </div>
                     </DropdownMenuItem>
@@ -1719,9 +1734,9 @@ export function InputBox() {
                     >
                       <Code className="mr-2 h-4 w-4 text-green-500" />
                       <div className="flex flex-col">
-                        <span className="font-medium">Coding (beta)</span>
+                        <span className="font-medium">{t('inputBox.thinking.coding')}</span>
                         <span className="text-xs text-muted-foreground">
-                          복잡한 코딩 작업 - ReAct Agent
+                          {t('inputBox.thinking.coding.desc')}
                         </span>
                       </div>
                     </DropdownMenuItem>
@@ -1741,17 +1756,19 @@ export function InputBox() {
                         className={`h-9 w-9 rounded-xl shrink-0 transition-colors ${
                           enableRAG ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20' : ''
                         }`}
-                        title={enableRAG ? 'RAG 비활성화' : 'RAG 활성화'}
-                        aria-label={enableRAG ? 'RAG 비활성화' : 'RAG 활성화'}
+                        title={enableRAG ? t('inputBox.rag.disable') : t('inputBox.rag.enable')}
+                        aria-label={
+                          enableRAG ? t('inputBox.rag.disable') : t('inputBox.rag.enable')
+                        }
                         disabled={isStreaming}
                       >
                         <Database className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top">
-                      <p className="font-medium">RAG 검색</p>
+                      <p className="font-medium">{t('inputBox.rag.tooltip')}</p>
                       <p className="text-xs text-muted-foreground">
-                        문서 데이터베이스에서 관련 정보를 검색합니다
+                        {t('inputBox.rag.description')}
                       </p>
                     </TooltipContent>
                   </Tooltip>
@@ -1772,17 +1789,21 @@ export function InputBox() {
                             ? 'bg-orange-500/10 text-orange-500 hover:bg-orange-500/20'
                             : ''
                         }`}
-                        title={enableTools ? 'Tools 비활성화' : 'Tools 활성화'}
-                        aria-label={enableTools ? 'Tools 비활성화' : 'Tools 활성화'}
+                        title={
+                          enableTools ? t('inputBox.tools.disable') : t('inputBox.tools.enable')
+                        }
+                        aria-label={
+                          enableTools ? t('inputBox.tools.disable') : t('inputBox.tools.enable')
+                        }
                         disabled={isStreaming}
                       >
                         <Wrench className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top">
-                      <p className="font-medium">MCP Tools</p>
+                      <p className="font-medium">{t('inputBox.tools.tooltip')}</p>
                       <p className="text-xs text-muted-foreground">
-                        AI가 외부 도구를 사용할 수 있습니다
+                        {t('inputBox.tools.description')}
                       </p>
                     </TooltipContent>
                   </Tooltip>
@@ -1796,8 +1817,8 @@ export function InputBox() {
                   variant="ghost"
                   size="icon"
                   className="h-9 w-9 rounded-xl shrink-0"
-                  title="이미지 추가"
-                  aria-label="이미지 파일 선택"
+                  title={t('inputBox.imageUpload.tooltip')}
+                  aria-label={t('inputBox.imageUpload.ariaLabel')}
                   disabled={isStreaming}
                 >
                   <ImagePlus className="h-4 w-4" />
@@ -1821,10 +1842,14 @@ export function InputBox() {
                   }`}
                   title={
                     enableImageGeneration
-                      ? '이미지 생성 비활성화'
-                      : '이미지 생성 활성화 (Tools 자동 활성화)'
+                      ? t('inputBox.imageGen.disable')
+                      : t('inputBox.imageGen.enable')
                   }
-                  aria-label={enableImageGeneration ? '이미지 생성 비활성화' : '이미지 생성 활성화'}
+                  aria-label={
+                    enableImageGeneration
+                      ? t('inputBox.imageGen.disable')
+                      : t('inputBox.imageGen.tooltip')
+                  }
                   aria-pressed={enableImageGeneration}
                   disabled={isStreaming}
                 >
@@ -1839,8 +1864,8 @@ export function InputBox() {
                   variant="destructive"
                   size="icon"
                   className="h-9 w-9 rounded-xl shrink-0"
-                  title="중지 (Esc)"
-                  aria-label="스트리밍 중지"
+                  title={t('inputBox.actions.stop')}
+                  aria-label={t('inputBox.actions.stopAria')}
                 >
                   <Square className="h-4 w-4" />
                 </Button>
@@ -1850,8 +1875,8 @@ export function InputBox() {
                   disabled={!input.trim() && selectedImages.length === 0}
                   size="icon"
                   className="h-9 w-9 rounded-xl shrink-0 bg-primary hover:bg-primary/90 disabled:opacity-50"
-                  title="전송 (Enter)"
-                  aria-label="메시지 전송"
+                  title={t('inputBox.actions.send')}
+                  aria-label={t('inputBox.actions.sendAria')}
                   data-send-button
                 >
                   <Send className="h-4 w-4" />

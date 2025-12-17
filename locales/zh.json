@@ -2368,5 +2368,84 @@
   },
   "quickInput": {
     "placeholder": "我能为您做些什么？"
+  },
+  "inputBox": {
+    "errors": {
+      "imageUploadDesktopOnly": "图片上传仅在桌面应用中可用",
+      "imageSelectFailed": "选择图片失败",
+      "clipboardRead": "读取剪贴板图片时出错",
+      "clipboardProcess": "处理剪贴板图片时出错",
+      "fileRead": "读取文件时出错：{{filename}}",
+      "unsupportedFile": "不支持的文件类型：{{filename}}"
+    },
+    "imageGen": {
+      "error": "❌ 图像生成错误：{{message}}"
+    },
+    "tools": {
+      "waiting": "🔔 等待工具执行批准...",
+      "rejected": "❌ 工具执行被拒绝。",
+      "enable": "启用工具",
+      "disable": "禁用工具",
+      "tooltip": "MCP工具",
+      "description": "AI可以使用外部工具"
+    },
+    "nodes": {
+      "generating": "🤖 AI正在生成响应...",
+      "generatingTools": "🤖 AI正在计划使用工具：{{tools}}",
+      "executingTools": "🔧 正在执行工具...",
+      "toolsComplete": "✅ 工具执行完成：{{tools}}",
+      "toolsError": "⚠️ 工具执行期间出现一些错误：{{tools}}",
+      "generatingImage": "🎨 正在生成图像...",
+      "reporter": "📊 正在整理最终结果...",
+      "toolsCompleteGenerating": "✅ 工具执行完成：{{tools}}\n\n正在生成响应..."
+    },
+    "fileDrop": {
+      "title": "将文本文件拖放到此处",
+      "subtitle": ".txt, .md, .json, .js, .ts等"
+    },
+    "images": {
+      "label": "图片 #{{number}}",
+      "remove": "删除图片"
+    },
+    "placeholder": {
+      "withImages": "询问有关图片的问题...",
+      "default": "输入消息...",
+      "ariaLabel": "消息输入"
+    },
+    "thinking": {
+      "mode": "思考模式：{{mode}}",
+      "instant": "Instant",
+      "instant.desc": "即时响应 - 快速对话",
+      "sequential": "Sequential Thinking",
+      "sequential.desc": "顺序思考 - 逐步推理",
+      "treeOfThought": "Tree of Thought",
+      "treeOfThought.desc": "多路径探索",
+      "deep": "Deep Thinking",
+      "deep.desc": "深度思考 - 最高质量(慢)",
+      "coding": "Coding (beta)",
+      "coding.desc": "复杂编码任务 - ReAct Agent",
+      "imageGenOnly": "图像生成模式下仅可使用即时模式"
+    },
+    "rag": {
+      "tooltip": "RAG搜索",
+      "description": "在文档数据库中搜索相关信息",
+      "enable": "启用RAG",
+      "disable": "禁用RAG"
+    },
+    "imageUpload": {
+      "tooltip": "添加图片",
+      "ariaLabel": "选择图片文件"
+    },
+    "imageGen": {
+      "tooltip": "图像生成",
+      "enable": "启用图像生成(自动启用工具)",
+      "disable": "禁用图像生成"
+    },
+    "actions": {
+      "stop": "停止 (Esc)",
+      "stopAria": "停止流式传输",
+      "send": "发送 (Enter)",
+      "sendAria": "发送消息"
+    }
   }
 }

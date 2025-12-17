@@ -2351,5 +2351,84 @@
   },
   "quickInput": {
     "placeholder": "How can I help you?"
+  },
+  "inputBox": {
+    "errors": {
+      "imageUploadDesktopOnly": "Image upload is only available in the desktop app",
+      "imageSelectFailed": "Failed to select images",
+      "clipboardRead": "Failed to read clipboard image",
+      "clipboardProcess": "Failed to process clipboard image",
+      "fileRead": "Failed to read file: {{filename}}",
+      "unsupportedFile": "Unsupported file type: {{filename}}"
+    },
+    "imageGen": {
+      "error": "❌ Image generation error: {{message}}"
+    },
+    "tools": {
+      "waiting": "🔔 Waiting for tool execution approval...",
+      "rejected": "❌ Tool execution was rejected.",
+      "enable": "Enable Tools",
+      "disable": "Disable Tools",
+      "tooltip": "MCP Tools",
+      "description": "AI can use external tools"
+    },
+    "nodes": {
+      "generating": "🤖 AI is generating response...",
+      "generatingTools": "🤖 AI is planning to use tools: {{tools}}",
+      "executingTools": "🔧 Executing tools...",
+      "toolsComplete": "✅ Tools execution completed: {{tools}}",
+      "toolsError": "⚠️ Some errors occurred during tool execution: {{tools}}",
+      "generatingImage": "🎨 Generating image...",
+      "reporter": "📊 Organizing final results...",
+      "toolsCompleteGenerating": "✅ Tools execution completed: {{tools}}\n\nGenerating response..."
+    },
+    "fileDrop": {
+      "title": "Drop text files here",
+      "subtitle": ".txt, .md, .json, .js, .ts, etc"
+    },
+    "images": {
+      "label": "Image #{{number}}",
+      "remove": "Remove image"
+    },
+    "placeholder": {
+      "withImages": "Ask a question about the images...",
+      "default": "Type a message...",
+      "ariaLabel": "Message input"
+    },
+    "thinking": {
+      "mode": "Thinking mode: {{mode}}",
+      "instant": "Instant",
+      "instant.desc": "Instant response - Quick conversation",
+      "sequential": "Sequential Thinking",
+      "sequential.desc": "Sequential thinking - Step-by-step reasoning",
+      "treeOfThought": "Tree of Thought",
+      "treeOfThought.desc": "Multi-path exploration",
+      "deep": "Deep Thinking",
+      "deep.desc": "Deep thinking - Highest quality (slow)",
+      "coding": "Coding (beta)",
+      "coding.desc": "Complex coding tasks - ReAct Agent",
+      "imageGenOnly": "Only Instant mode is available in image generation mode"
+    },
+    "rag": {
+      "tooltip": "RAG Search",
+      "description": "Search for relevant information in document database",
+      "enable": "Enable RAG",
+      "disable": "Disable RAG"
+    },
+    "imageUpload": {
+      "tooltip": "Add image",
+      "ariaLabel": "Select image file"
+    },
+    "imageGen": {
+      "tooltip": "Image generation",
+      "enable": "Enable image generation (Tools auto-enabled)",
+      "disable": "Disable image generation"
+    },
+    "actions": {
+      "stop": "Stop (Esc)",
+      "stopAria": "Stop streaming",
+      "send": "Send (Enter)",
+      "sendAria": "Send message"
+    }
   }
 }
