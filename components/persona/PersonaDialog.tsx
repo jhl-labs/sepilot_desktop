@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ interface PersonaDialogProps {
 }
 
 export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
+  const { t } = useTranslation();
   const { personas, activePersonaId, setActivePersona, addPersona, updatePersona, deletePersona } =
     useChatStore();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
 
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.systemPrompt.trim()) {
-      window.alert('이름과 시스템 프롬프트는 필수입니다.');
+      window.alert(t('personaDialog.errors.requiredFields'));
       return;
     }
 
@@ -70,16 +72,16 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
       setEditingId(null);
       setFormData({ name: '', description: '', systemPrompt: '', avatar: '🤖' });
     } catch (error: any) {
-      window.alert(error.message || '저장 실패');
+      window.alert(error.message || t('personaDialog.errors.saveFailed'));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('정말로 이 페르소나를 삭제하시겠습니까?')) {
+    if (window.confirm(t('personaDialog.confirm.delete'))) {
       try {
         await deletePersona(id);
       } catch (error: any) {
-        window.alert(error.message || '삭제 실패');
+        window.alert(error.message || t('personaDialog.errors.deleteFailed'));
       }
     }
   };
@@ -97,7 +99,7 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
           <DialogTitle>
             <div className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              <span>AI 페르소나 관리</span>
+              <span>{t('personaDialog.title')}</span>
             </div>
           </DialogTitle>
         </DialogHeader>
@@ -106,13 +108,13 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
           {/* 페르소나 목록 */}
           <div className="w-1/3 border-r pr-4">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium">페르소나 목록</h3>
+              <h3 className="text-sm font-medium">{t('personaDialog.list.title')}</h3>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
                 onClick={handleStartCreate}
-                title="새 페르소나 추가"
+                title={t('personaDialog.list.addNew')}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -177,11 +179,11 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
             {isCreating || editingId ? (
               <div className="space-y-4">
                 <h3 className="text-sm font-medium">
-                  {isCreating ? '새 페르소나 추가' : '페르소나 수정'}
+                  {isCreating ? t('personaDialog.form.create') : t('personaDialog.form.edit')}
                 </h3>
 
                 <div>
-                  <label className="text-sm font-medium">아바타 (이모지)</label>
+                  <label className="text-sm font-medium">{t('personaDialog.form.avatar')}</label>
                   <Input
                     value={formData.avatar}
                     onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
@@ -192,41 +194,45 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">이름 *</label>
+                  <label className="text-sm font-medium">{t('personaDialog.form.name')}</label>
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="예: 번역가, 영어 선생님, 시니어 개발자"
+                    placeholder={t('personaDialog.form.namePlaceholder')}
                     className="mt-1"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">설명</label>
+                  <label className="text-sm font-medium">
+                    {t('personaDialog.form.description')}
+                  </label>
                   <Input
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="간단한 설명"
+                    placeholder={t('personaDialog.form.descriptionPlaceholder')}
                     className="mt-1"
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">시스템 프롬프트 *</label>
+                  <label className="text-sm font-medium">
+                    {t('personaDialog.form.systemPrompt')}
+                  </label>
                   <Textarea
                     value={formData.systemPrompt}
                     onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
-                    placeholder="AI의 역할과 행동 방식을 정의하세요..."
+                    placeholder={t('personaDialog.form.systemPromptPlaceholder')}
                     className="mt-1 min-h-[200px]"
                   />
                 </div>
 
                 <div className="flex gap-2">
                   <Button onClick={handleSave} className="flex-1">
-                    저장
+                    {t('personaDialog.form.save')}
                   </Button>
                   <Button onClick={handleCancel} variant="outline" className="flex-1">
-                    취소
+                    {t('personaDialog.form.cancel')}
                   </Button>
                 </div>
               </div>
@@ -241,7 +247,9 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium">시스템 프롬프트</label>
+                  <label className="text-sm font-medium">
+                    {t('personaDialog.view.systemPrompt')}
+                  </label>
                   <ScrollArea className="mt-2 h-[300px] rounded-md border p-3 bg-muted/30">
                     <p className="text-sm whitespace-pre-wrap">{activePersona.systemPrompt}</p>
                   </ScrollArea>
@@ -249,13 +257,13 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
 
                 {activePersona.isBuiltin && (
                   <p className="text-xs text-muted-foreground">
-                    * 기본 제공 페르소나는 수정할 수 없습니다.
+                    {t('personaDialog.view.builtinNote')}
                   </p>
                 )}
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>페르소나를 선택하거나 새로 추가하세요</p>
+                <p>{t('personaDialog.view.emptyState')}</p>
               </div>
             )}
           </div>

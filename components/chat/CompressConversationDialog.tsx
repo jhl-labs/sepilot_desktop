@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ export function CompressConversationDialog({
   messages,
   onCompress,
 }: CompressConversationDialogProps) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<'analyzing' | 'review' | 'compressing' | 'done'>('analyzing');
   const [compressedMessages, setCompressedMessages] = useState<Message[]>([]);
   const [stats, setStats] = useState({
@@ -99,7 +101,7 @@ export function CompressConversationDialog({
       ]);
 
       if (!result.success || !result.data) {
-        throw new Error(result.error || '대화 압축에 실패했습니다.');
+        throw new Error(result.error || t('compressDialog.errors.analysisFailed'));
       }
 
       const compressedText = result.data.content;
@@ -148,7 +150,7 @@ export function CompressConversationDialog({
       logger.info('[CompressDialog] Parsed messages:', parsedMessages.length);
 
       if (parsedMessages.length === 0) {
-        throw new Error('압축된 메시지를 파싱하는데 실패했습니다.');
+        throw new Error(t('compressDialog.errors.parseFailed'));
       }
 
       setCompressedMessages(parsedMessages);
@@ -169,7 +171,7 @@ export function CompressConversationDialog({
 
   const handleCompress = async () => {
     if (compressedMessages.length === 0) {
-      setError('압축된 메시지가 없습니다.');
+      setError(t('compressDialog.errors.noMessages'));
       return;
     }
 
@@ -190,7 +192,7 @@ export function CompressConversationDialog({
       }, 1500);
     } catch (err: any) {
       console.error('Failed to save compressed conversation:', err);
-      setError(err.message || '압축된 대화 저장에 실패했습니다.');
+      setError(err.message || t('compressDialog.errors.saveFailed'));
       setStep('review');
     }
   };
@@ -202,21 +204,19 @@ export function CompressConversationDialog({
           <DialogTitle>
             <div className="flex items-center gap-2">
               <FileArchive className="h-5 w-5 text-primary" />
-              대화 압축
+              {t('compressDialog.title')}
             </div>
           </DialogTitle>
-          <DialogDescription>
-            LLM이 대화 내용을 분석하여 핵심만 남기고 압축합니다.
-          </DialogDescription>
+          <DialogDescription>{t('compressDialog.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4 flex-1 overflow-y-auto">
           {step === 'analyzing' && (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-              <p className="text-lg font-medium">대화 내용 분석 중...</p>
+              <p className="text-lg font-medium">{t('compressDialog.analyzing.title')}</p>
               <p className="text-sm text-muted-foreground mt-2">
-                LLM이 핵심 내용을 추출하고 있습니다
+                {t('compressDialog.analyzing.description')}
               </p>
             </div>
           )}
@@ -228,7 +228,9 @@ export function CompressConversationDialog({
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium text-yellow-600 dark:text-yellow-400">압축 실패</p>
+                      <p className="font-medium text-yellow-600 dark:text-yellow-400">
+                        {t('compressDialog.review.failed')}
+                      </p>
                       <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">{error}</p>
                     </div>
                   </div>
@@ -240,15 +242,21 @@ export function CompressConversationDialog({
                   {/* Stats */}
                   <div className="grid grid-cols-3 gap-4">
                     <div className="rounded-md border bg-card p-4">
-                      <p className="text-xs text-muted-foreground mb-1">원본 메시지</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {t('compressDialog.stats.original')}
+                      </p>
                       <p className="text-2xl font-bold">{stats.originalCount}개</p>
                     </div>
                     <div className="rounded-md border bg-card p-4">
-                      <p className="text-xs text-muted-foreground mb-1">압축 후</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {t('compressDialog.stats.compressed')}
+                      </p>
                       <p className="text-2xl font-bold text-primary">{stats.compressedCount}개</p>
                     </div>
                     <div className="rounded-md border bg-card p-4">
-                      <p className="text-xs text-muted-foreground mb-1">감소율</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {t('compressDialog.stats.reduction')}
+                      </p>
                       <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                         {stats.reductionPercent}%
                       </p>
@@ -257,12 +265,15 @@ export function CompressConversationDialog({
 
                   {/* Preview */}
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">압축된 메시지 미리보기:</p>
+                    <p className="text-sm font-medium">{t('compressDialog.preview.title')}</p>
                     <div className="rounded-md border bg-muted/30 p-4 max-h-[400px] overflow-y-auto space-y-3">
                       {compressedMessages.map((msg, idx) => (
                         <div key={idx} className="text-sm">
                           <span className="font-semibold">
-                            {msg.role === 'user' ? '사용자' : '어시스턴트'}:
+                            {msg.role === 'user'
+                              ? t('compressDialog.preview.user')
+                              : t('compressDialog.preview.assistant')}
+                            :
                           </span>{' '}
                           <span className="text-muted-foreground">{msg.content}</span>
                         </div>
@@ -275,8 +286,7 @@ export function CompressConversationDialog({
                     <div className="flex items-start gap-2">
                       <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                       <p className="text-xs text-blue-600 dark:text-blue-400">
-                        <strong>안내:</strong> 압축된 대화는 원본 대화를 대체합니다. 압축 전 중요한
-                        내용이 있다면 먼저 &quot;대화 복제&quot;를 통해 백업하세요.
+                        {t('compressDialog.info.message')}
                       </p>
                     </div>
                   </div>
@@ -288,9 +298,9 @@ export function CompressConversationDialog({
           {step === 'compressing' && (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-              <p className="text-lg font-medium">대화 압축 중...</p>
+              <p className="text-lg font-medium">{t('compressDialog.compressing.title')}</p>
               <p className="text-sm text-muted-foreground mt-2">
-                압축된 메시지로 교체하고 있습니다
+                {t('compressDialog.compressing.description')}
               </p>
             </div>
           )}
@@ -298,8 +308,12 @@ export function CompressConversationDialog({
           {step === 'done' && (
             <div className="flex flex-col items-center justify-center py-12">
               <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" />
-              <p className="text-lg font-medium text-green-600 dark:text-green-400">압축 완료!</p>
-              <p className="text-sm text-muted-foreground mt-2">대화가 성공적으로 압축되었습니다</p>
+              <p className="text-lg font-medium text-green-600 dark:text-green-400">
+                {t('compressDialog.done.title')}
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {t('compressDialog.done.description')}
+              </p>
             </div>
           )}
         </div>
@@ -310,12 +324,12 @@ export function CompressConversationDialog({
             onClick={() => onOpenChange(false)}
             disabled={step === 'analyzing' || step === 'compressing' || step === 'done'}
           >
-            취소
+            {t('compressDialog.actions.cancel')}
           </Button>
           {step === 'review' && !error && (
             <Button onClick={handleCompress} disabled={compressedMessages.length === 0}>
               <FileArchive className="mr-2 h-4 w-4" />
-              압축 적용
+              {t('compressDialog.actions.apply')}
             </Button>
           )}
         </DialogFooter>

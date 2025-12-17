@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ export function SaveKnowledgeDialog({
   messages,
   onSave,
 }: SaveKnowledgeDialogProps) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<'analyzing' | 'review' | 'saving' | 'done'>('analyzing');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -102,23 +104,23 @@ export function SaveKnowledgeDialog({
       ]);
 
       if (!result.success || !result.data) {
-        throw new Error(result.error || '대화 분석에 실패했습니다.');
+        throw new Error(result.error || t('saveKnowledgeDialog.errors.analysisFailed'));
       }
 
       const analysisText = result.data.content;
 
       // 제목 추출 (제목: 형식)
       const titleMatch = analysisText.match(/^제목:\s*(.+)$/m);
-      const extractedTitle = titleMatch ? titleMatch[1].trim() : conversation?.title || '지식';
+      const extractedTitle = titleMatch
+        ? titleMatch[1].trim()
+        : conversation?.title || t('saveKnowledgeDialog.defaultTitle');
 
       // "이 대화에는 저장할 만한 확실한 지식이 부족합니다" 체크
       if (
         analysisText.includes('저장할 만한 확실한 지식이 부족') ||
         analysisText.includes('확실한 지식을 추출할 수 없')
       ) {
-        setError(
-          '이 대화에는 저장할 만한 확실한 사실 기반의 지식이 부족합니다. 더 구체적이고 객관적인 정보가 필요합니다.'
-        );
+        setError(t('saveKnowledgeDialog.errors.insufficientKnowledge'));
         setStep('review');
         return;
       }
@@ -135,7 +137,7 @@ export function SaveKnowledgeDialog({
 
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
-      setError('제목과 내용을 모두 입력해주세요.');
+      setError(t('saveKnowledgeDialog.errors.requiredFields'));
       return;
     }
 
@@ -166,7 +168,7 @@ export function SaveKnowledgeDialog({
       }, 1500);
     } catch (err: any) {
       console.error('Failed to save knowledge:', err);
-      setError(err.message || '지식 저장에 실패했습니다.');
+      setError(err.message || t('saveKnowledgeDialog.errors.saveFailed'));
       setStep('review');
     }
   };
@@ -178,21 +180,19 @@ export function SaveKnowledgeDialog({
           <DialogTitle>
             <div className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" />
-              대화 내용을 지식으로 저장
+              {t('saveKnowledgeDialog.title')}
             </div>
           </DialogTitle>
-          <DialogDescription>
-            LLM이 대화 내용을 분석하여 확실한 사실 기반의 지식을 추출하고 RAG 문서로 저장합니다.
-          </DialogDescription>
+          <DialogDescription>{t('saveKnowledgeDialog.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4 flex-1 overflow-y-auto">
           {step === 'analyzing' && (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-              <p className="text-lg font-medium">대화 내용 분석 중...</p>
+              <p className="text-lg font-medium">{t('saveKnowledgeDialog.analyzing.title')}</p>
               <p className="text-sm text-muted-foreground mt-2">
-                LLM이 확실한 사실 기반의 지식을 추출하고 있습니다
+                {t('saveKnowledgeDialog.analyzing.description')}
               </p>
             </div>
           )}
@@ -205,7 +205,7 @@ export function SaveKnowledgeDialog({
                     <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-yellow-600 dark:text-yellow-400">
-                        지식 추출 실패
+                        {t('saveKnowledgeDialog.review.failed')}
                       </p>
                       <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">{error}</p>
                     </div>
@@ -216,27 +216,29 @@ export function SaveKnowledgeDialog({
               {!error && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="knowledge-title">제목</Label>
+                    <Label htmlFor="knowledge-title">{t('saveKnowledgeDialog.form.title')}</Label>
                     <Input
                       id="knowledge-title"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder="지식 제목"
+                      placeholder={t('saveKnowledgeDialog.form.titlePlaceholder')}
                       className="h-10"
                     />
                   </div>
 
                   <div className="space-y-2 flex-1 flex flex-col">
-                    <Label htmlFor="knowledge-content">추출된 지식</Label>
+                    <Label htmlFor="knowledge-content">
+                      {t('saveKnowledgeDialog.form.content')}
+                    </Label>
                     <Textarea
                       id="knowledge-content"
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
-                      placeholder="LLM이 추출한 지식 내용"
+                      placeholder={t('saveKnowledgeDialog.form.contentPlaceholder')}
                       className="flex-1 min-h-[400px] font-mono text-sm resize-none"
                     />
                     <p className="text-xs text-muted-foreground">
-                      LLM이 분석한 내용을 확인하고 필요시 수정할 수 있습니다
+                      {t('saveKnowledgeDialog.form.hint')}
                     </p>
                   </div>
 
@@ -244,8 +246,7 @@ export function SaveKnowledgeDialog({
                     <div className="flex items-start gap-2">
                       <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                       <p className="text-xs text-blue-600 dark:text-blue-400">
-                        <strong>팁:</strong> LLM이 추출한 지식은 확실한 사실 기반으로 구성되어
-                        있습니다. 내용을 확인하고 필요시 수정한 후 저장하세요.
+                        {t('saveKnowledgeDialog.info.tip')}
                       </p>
                     </div>
                   </div>
@@ -257,9 +258,9 @@ export function SaveKnowledgeDialog({
           {step === 'saving' && (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-              <p className="text-lg font-medium">지식 저장 중...</p>
+              <p className="text-lg font-medium">{t('saveKnowledgeDialog.saving.title')}</p>
               <p className="text-sm text-muted-foreground mt-2">
-                RAG 문서 데이터베이스에 등록하고 있습니다
+                {t('saveKnowledgeDialog.saving.description')}
               </p>
             </div>
           )}
@@ -268,10 +269,10 @@ export function SaveKnowledgeDialog({
             <div className="flex flex-col items-center justify-center py-12">
               <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" />
               <p className="text-lg font-medium text-green-600 dark:text-green-400">
-                지식 저장 완료!
+                {t('saveKnowledgeDialog.done.title')}
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                RAG 시스템에서 이 지식을 활용할 수 있습니다
+                {t('saveKnowledgeDialog.done.description')}
               </p>
             </div>
           )}
@@ -283,12 +284,12 @@ export function SaveKnowledgeDialog({
             onClick={() => onOpenChange(false)}
             disabled={step === 'analyzing' || step === 'saving' || step === 'done'}
           >
-            취소
+            {t('saveKnowledgeDialog.actions.cancel')}
           </Button>
           {step === 'review' && !error && (
             <Button onClick={handleSave} disabled={!title.trim() || !content.trim()}>
               <BookOpen className="mr-2 h-4 w-4" />
-              지식으로 저장
+              {t('saveKnowledgeDialog.actions.save')}
             </Button>
           )}
         </DialogFooter>
