@@ -576,13 +576,33 @@ export function setupLLMHandlers() {
           userFriendlyError += `- 자체 서명된 인증서를 사용 중입니다.\n`;
           userFriendlyError += `\n해결 방법:\n`;
           userFriendlyError += `- 네트워크 설정에서 SSL 검증을 비활성화하세요.\n`;
-        } else if (error.message) {
-          userFriendlyError += `오류: ${error.message}\n`;
-          userFriendlyError += `URL: ${endpoint}\n`;
         } else {
-          userFriendlyError += `알 수 없는 오류가 발생했습니다.\n`;
-          userFriendlyError += `URL: ${endpoint}\n`;
-          userFriendlyError += `오류 코드: ${error.code || 'UNKNOWN'}\n`;
+          // 기타 모든 에러 - 상세한 디버깅 정보 제공
+          userFriendlyError += `오류: ${error.message || '알 수 없는 오류'}\n`;
+          userFriendlyError += `URL: ${endpoint}\n\n`;
+
+          // 디버깅 정보 섹션
+          userFriendlyError += `디버깅 정보:\n`;
+          if (error.code) userFriendlyError += `- Code: ${error.code}\n`;
+          if (error.errno) userFriendlyError += `- Errno: ${error.errno}\n`;
+          if (error.syscall) userFriendlyError += `- Syscall: ${error.syscall}\n`;
+          if (error.name) userFriendlyError += `- Name: ${error.name}\n`;
+
+          // 에러 객체의 모든 속성 출력 (추가 정보가 있을 수 있음)
+          try {
+            const errorKeys = Object.keys(error).filter(
+              (key) => !['stack', 'message', 'code', 'errno', 'syscall', 'name'].includes(key)
+            );
+            if (errorKeys.length > 0) {
+              userFriendlyError += `- 추가 정보: ${JSON.stringify(
+                errorKeys.reduce((acc, key) => ({ ...acc, [key]: error[key] }), {}),
+                null,
+                2
+              )}\n`;
+            }
+          } catch (e) {
+            // JSON.stringify 실패해도 계속 진행
+          }
         }
 
         // 설정 정보 추가
