@@ -541,89 +541,72 @@ export function setupLLMHandlers() {
           baseURL: config.baseURL,
         });
 
-        // 네트워크 에러를 사용자 친화적인 메시지로 변환
-        let userFriendlyError = '모델 목록을 가져오는데 실패했습니다.\n\n';
+        // Build structured error message with error code for frontend i18n
+        let errorMessage = '';
 
         if (error.code === 'ENOTFOUND') {
-          userFriendlyError += `오류: 서버를 찾을 수 없습니다.\n`;
-          userFriendlyError += `URL: ${endpoint}\n\n`;
-          userFriendlyError += `가능한 원인:\n`;
-          userFriendlyError += `- Base URL이 올바르지 않습니다.\n`;
-          userFriendlyError += `- 인터넷 연결이 끊겼습니다.\n`;
-          userFriendlyError += `- DNS 서버가 응답하지 않습니다.\n`;
+          errorMessage += `ENOTFOUND: DNS lookup failed\n`;
+          errorMessage += `URL: ${endpoint}\n`;
         } else if (error.code === 'ECONNREFUSED') {
-          userFriendlyError += `오류: 서버가 연결을 거부했습니다.\n`;
-          userFriendlyError += `URL: ${endpoint}\n\n`;
-          userFriendlyError += `가능한 원인:\n`;
-          userFriendlyError += `- 서버가 실행되지 않고 있습니다.\n`;
-          userFriendlyError += `- 포트 번호가 올바르지 않습니다.\n`;
-          userFriendlyError += `- 방화벽이 연결을 차단하고 있습니다.\n`;
+          errorMessage += `ECONNREFUSED: Connection refused\n`;
+          errorMessage += `URL: ${endpoint}\n`;
         } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKETTIMEDOUT') {
-          userFriendlyError += `오류: 서버 응답 시간이 초과되었습니다.\n`;
-          userFriendlyError += `URL: ${endpoint}\n\n`;
-          userFriendlyError += `가능한 원인:\n`;
-          userFriendlyError += `- 서버가 느리게 응답하고 있습니다.\n`;
-          userFriendlyError += `- 네트워크 연결이 불안정합니다.\n`;
-          userFriendlyError += `- 프록시 설정에 문제가 있습니다.\n`;
+          errorMessage += `ETIMEDOUT: Request timed out\n`;
+          errorMessage += `URL: ${endpoint}\n`;
         } else if (
           error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' ||
           error.code === 'CERT_HAS_EXPIRED'
         ) {
-          userFriendlyError += `오류: SSL 인증서 검증 실패\n`;
-          userFriendlyError += `URL: ${endpoint}\n\n`;
-          userFriendlyError += `가능한 원인:\n`;
-          userFriendlyError += `- 서버의 SSL 인증서가 유효하지 않습니다.\n`;
-          userFriendlyError += `- 자체 서명된 인증서를 사용 중입니다.\n`;
-          userFriendlyError += `\n해결 방법:\n`;
-          userFriendlyError += `- 네트워크 설정에서 SSL 검증을 비활성화하세요.\n`;
+          errorMessage += `SSL_ERROR: Certificate verification failed\n`;
+          errorMessage += `URL: ${endpoint}\n`;
         } else {
-          // 기타 모든 에러 - 상세한 디버깅 정보 제공
-          userFriendlyError += `오류: ${error.message || '알 수 없는 오류'}\n`;
-          userFriendlyError += `URL: ${endpoint}\n\n`;
+          // Generic error with full debugging info
+          const errorCode = error.code || 'UNKNOWN';
+          errorMessage += `${errorCode}: ${error.message || 'Unknown error'}\n`;
+          errorMessage += `URL: ${endpoint}\n`;
 
-          // 디버깅 정보 섹션
-          userFriendlyError += `디버깅 정보:\n`;
-          if (error.code) userFriendlyError += `- Code: ${error.code}\n`;
-          if (error.errno) userFriendlyError += `- Errno: ${error.errno}\n`;
-          if (error.syscall) userFriendlyError += `- Syscall: ${error.syscall}\n`;
-          if (error.name) userFriendlyError += `- Name: ${error.name}\n`;
+          // Debugging section
+          errorMessage += `\nDebug Info:\n`;
+          if (error.errno) errorMessage += `- Errno: ${error.errno}\n`;
+          if (error.syscall) errorMessage += `- Syscall: ${error.syscall}\n`;
+          if (error.name) errorMessage += `- Name: ${error.name}\n`;
 
-          // 에러 객체의 모든 속성 출력 (추가 정보가 있을 수 있음)
+          // Additional error properties
           try {
             const errorKeys = Object.keys(error).filter(
               (key) => !['stack', 'message', 'code', 'errno', 'syscall', 'name'].includes(key)
             );
             if (errorKeys.length > 0) {
-              userFriendlyError += `- 추가 정보: ${JSON.stringify(
+              errorMessage += `- Additional Info: ${JSON.stringify(
                 errorKeys.reduce((acc, key) => ({ ...acc, [key]: error[key] }), {}),
                 null,
                 2
               )}\n`;
             }
           } catch (e) {
-            // JSON.stringify 실패해도 계속 진행
+            // Continue even if JSON.stringify fails
           }
         }
 
-        // 설정 정보 추가
-        userFriendlyError += `\n설정 정보:\n`;
-        userFriendlyError += `- Provider: ${config.provider}\n`;
-        userFriendlyError += `- Base URL: ${config.baseURL || 'default'}\n`;
-        userFriendlyError += `- API Key: ${config.apiKey ? '설정됨 (' + config.apiKey.substring(0, 10) + '...)' : '설정되지 않음'}\n`;
+        // Configuration info
+        errorMessage += `\nConfiguration:\n`;
+        errorMessage += `- Provider: ${config.provider}\n`;
+        errorMessage += `- Base URL: ${config.baseURL || 'default'}\n`;
+        errorMessage += `- API Key: ${config.apiKey ? 'Set (' + config.apiKey.substring(0, 10) + '...)' : 'Not set'}\n`;
 
         if (config.networkConfig) {
-          userFriendlyError += `\n네트워크 설정:\n`;
+          errorMessage += `\nNetwork Settings:\n`;
           if (config.networkConfig.proxy?.enabled) {
-            userFriendlyError += `- 프록시: ${config.networkConfig.proxy.mode} (${config.networkConfig.proxy.url})\n`;
+            errorMessage += `- Proxy: ${config.networkConfig.proxy.mode} (${config.networkConfig.proxy.url})\n`;
           } else {
-            userFriendlyError += `- 프록시: 비활성화\n`;
+            errorMessage += `- Proxy: Disabled\n`;
           }
-          userFriendlyError += `- SSL 검증: ${config.networkConfig.ssl?.verify !== false ? '활성화' : '비활성화'}\n`;
+          errorMessage += `- SSL Verify: ${config.networkConfig.ssl?.verify !== false ? 'Enabled' : 'Disabled'}\n`;
         }
 
         return {
           success: false,
-          error: userFriendlyError,
+          error: errorMessage,
         };
       }
     }

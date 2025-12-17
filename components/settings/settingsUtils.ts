@@ -248,7 +248,7 @@ export const fetchAvailableModels = async ({
     });
 
     if (!result.success || !result.data) {
-      throw new Error(result.error || '모델 목록을 불러오지 못했습니다.');
+      throw new Error(result.error || 'Failed to fetch models');
     }
 
     return result.data;
@@ -281,7 +281,7 @@ export const fetchAvailableModels = async ({
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`모델 목록을 불러오지 못했습니다. (${response.status} ${errorText})`);
+    throw new Error(`Failed to fetch models (${response.status} ${errorText})`);
   }
 
   const payload = await response.json();

@@ -45,7 +45,8 @@
     "refresh": "Refresh",
     "ignore": "Ignore",
     "testing": "Testing...",
-    "testConnection": "Test Connection"
+    "testConnection": "Test Connection",
+    "technicalDetails": "Technical Details"
   },
   "languages": {
     "ko": "한국어",
@@ -135,7 +136,9 @@
           "inherited": "Inherited Headers",
           "modelSpecific": "Model Specific Headers",
           "restore": "Restore",
-          "remove": "Remove from Model"
+          "remove": "Remove from Model",
+          "restoreAriaLabel": "Restore {{key}} header",
+          "removeAriaLabel": "Remove {{key}} header"
         },
         "active": {
           "title": "Set Active Model",
@@ -2103,7 +2106,14 @@
     "serverError": "Server error occurred",
     "validationError": "Please check your input",
     "fileNotFound": "File not found",
-    "permissionDenied": "Permission denied"
+    "permissionDenied": "Permission denied",
+    "llm": {
+      "enotfound": "Server not found. Please check the Base URL or your internet connection.",
+      "econnrefused": "Connection refused by server. Please check if the server is running and the port number is correct.",
+      "etimedout": "Server response timed out. Please check your network connection or proxy settings.",
+      "ssl_error": "SSL certificate verification failed. Please disable SSL verification in network settings or use a valid certificate.",
+      "unknown": "An unknown error occurred ({{code}}). Please check the technical details."
+    }
   },
   "dialog": {
     "confirmDelete": "Are you sure you want to delete?",

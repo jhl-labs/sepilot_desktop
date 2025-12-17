@@ -48,6 +48,45 @@ export function ModelListView({
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Parse error message and translate error code
+  const parseErrorMessage = (
+    errorMessage: string
+  ): { code: string; message: string; details: string } => {
+    const lines = errorMessage.split('\n');
+    const firstLine = lines[0] || '';
+
+    // Extract error code (format: "ERRORCODE: message")
+    const match = firstLine.match(/^([A-Z_]+):/);
+    if (match) {
+      const errorCode = match[1];
+      const translated = getTranslatedErrorMessage(errorCode);
+      return {
+        code: errorCode,
+        message: translated,
+        details: lines.slice(1).join('\n'),
+      };
+    }
+
+    // Fallback: return original error
+    return {
+      code: 'UNKNOWN',
+      message: t('errors.llm.unknown'),
+      details: errorMessage,
+    };
+  };
+
+  const getTranslatedErrorMessage = (errorCode: string): string => {
+    const key = `errors.llm.${errorCode.toLowerCase()}`;
+    const translated = t(key);
+
+    // If translation key doesn't exist, return default message
+    if (translated === key) {
+      return t('errors.llm.unknown', { code: errorCode });
+    }
+
+    return translated;
+  };
+
   // Fetch models from all enabled connections
   const handleFetchAllModels = async () => {
     setIsLoadingModels(true);
@@ -92,11 +131,17 @@ export function ModelListView({
     setIsLoadingModels(false);
 
     if (errors.length > 0) {
-      // 오류 메시지를 개별적으로 표시 (줄바꿈 포함)
+      // Parse and translate error messages
       const errorMsg = errors
         .map((e) => {
-          const lines = e.error.split('\n');
-          return `[${e.connection}]\n${lines.join('\n')}`;
+          const parsed = parseErrorMessage(e.error);
+          let msg = `[${e.connection}]\n${parsed.message}`;
+
+          if (parsed.details.trim()) {
+            msg += `\n\n${t('common.technicalDetails')}:\n${parsed.details}`;
+          }
+
+          return msg;
         })
         .join('\n\n─────────────────────────\n\n');
       setLoadError(errorMsg);
@@ -218,7 +263,7 @@ export function ModelListView({
         {loadError && (
           <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
             <div className="flex items-start gap-2">
-              <span className="font-semibold">⚠️ 오류:</span>
+              <span className="font-semibold">⚠️ {t('common.error')}:</span>
               <div className="flex-1">
                 <pre className="whitespace-pre-wrap break-words font-sans text-sm">{loadError}</pre>
               </div>
@@ -467,7 +512,7 @@ function ModelSettings({
                     variant="secondary"
                     size="sm"
                     onClick={() => handleRestoreInheritedHeader(key)}
-                    aria-label={`${key} 헤더 복원`}
+                    aria-label={t('settings.llm.models.customHeaders.restoreAriaLabel', { key })}
                   >
                     {t('settings.llm.models.customHeaders.restore')}
                   </Button>
@@ -476,7 +521,7 @@ function ModelSettings({
                     variant="ghost"
                     size="sm"
                     onClick={() => handleExcludeInheritedHeader(key)}
-                    aria-label={`${key} 헤더 제거`}
+                    aria-label={t('settings.llm.models.customHeaders.removeAriaLabel', { key })}
                   >
                     {t('settings.llm.models.customHeaders.remove')}
                   </Button>

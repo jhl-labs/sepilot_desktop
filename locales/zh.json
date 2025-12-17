@@ -45,7 +45,8 @@
     "refresh": "刷新",
     "ignore": "忽略",
     "testing": "测试中...",
-    "testConnection": "测试连接"
+    "testConnection": "测试连接",
+    "technicalDetails": "技术详情"
   },
   "languages": {
     "ko": "한국어",
@@ -135,7 +136,9 @@
           "inherited": "继承的请求头",
           "modelSpecific": "模型专用请求头",
           "restore": "恢复",
-          "remove": "从模型中删除"
+          "remove": "从模型中删除",
+          "restoreAriaLabel": "恢复 {{key}} 请求头",
+          "removeAriaLabel": "删除 {{key}} 请求头"
         },
         "active": {
           "title": "指定活动模型",
@@ -2045,7 +2048,14 @@
     "serverError": "服务器错误",
     "validationError": "请检查输入",
     "fileNotFound": "文件未找到",
-    "permissionDenied": "权限不足"
+    "permissionDenied": "权限不足",
+    "llm": {
+      "enotfound": "找不到服务器。请检查 Base URL 或您的网络连接。",
+      "econnrefused": "服务器拒绝连接。请检查服务器是否正在运行以及端口号是否正确。",
+      "etimedout": "服务器响应超时。请检查您的网络连接或代理设置。",
+      "ssl_error": "SSL 证书验证失败。请在网络设置中禁用 SSL 验证或使用有效证书。",
+      "unknown": "发生未知错误 ({{code}})。请检查技术详情。"
+    }
   },
   "dialog": {
     "confirmDelete": "确定要删除吗？",
