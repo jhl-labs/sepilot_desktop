@@ -437,32 +437,27 @@ export function SingleFileEditor({
         id: 'ai-continue',
         label: 'Continue Writing',
         action: 'continue',
-        keybindings: undefined,
       },
       {
         id: 'ai-shorten',
         label: 'Make Shorter',
         action: 'make-shorter',
-        keybindings: undefined,
       },
       {
         id: 'ai-longer',
         label: 'Make Longer',
         action: 'make-longer',
-        keybindings: undefined,
       },
       { id: 'ai-simplify', label: 'Simplify', action: 'simplify' },
       {
         id: 'ai-grammar',
         label: 'Fix Grammar',
         action: 'fix-grammar',
-        keybindings: undefined,
       },
       {
         id: 'ai-summarize',
         label: 'Summarize',
         action: 'summarize',
-        keybindings: undefined,
       },
     ];
 
@@ -470,7 +465,6 @@ export function SingleFileEditor({
       editor.addAction({
         id: item.id,
         label: item.label,
-        keybindings: item.keybindings,
         contextMenuGroupId: '2_ai_writing',
         contextMenuOrder: index + 1,
         run: async (ed) => {
@@ -491,37 +485,31 @@ export function SingleFileEditor({
         id: 'ai-explain',
         label: 'Explain Code',
         action: 'explain',
-        keybindings: undefined,
       },
       {
         id: 'ai-fix',
         label: 'Fix Code',
         action: 'fix',
-        keybindings: undefined,
       },
       {
         id: 'ai-improve',
         label: 'Improve Code',
         action: 'improve',
-        keybindings: undefined,
       },
       {
         id: 'ai-complete',
         label: 'Complete Code',
         action: 'complete',
-        keybindings: undefined,
       },
       {
         id: 'ai-comments',
         label: 'Add Comments',
         action: 'add-comments',
-        keybindings: undefined,
       },
       {
         id: 'ai-tests',
         label: 'Generate Tests',
         action: 'generate-tests',
-        keybindings: undefined,
       },
     ];
 
@@ -529,7 +517,6 @@ export function SingleFileEditor({
       editor.addAction({
         id: item.id,
         label: item.label,
-        keybindings: item.keybindings,
         contextMenuGroupId: '3_ai_code',
         contextMenuOrder: index + 1,
         run: async (ed) => {

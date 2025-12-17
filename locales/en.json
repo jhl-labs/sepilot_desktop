@@ -2001,7 +2001,8 @@
       "previousFile": "Previous File",
       "commandPalette": "Command Palette",
       "showShortcuts": "Show Shortcuts",
-      "closeDialog": "Close Dialog"
+      "closeDialog": "Close Dialog",
+      "aiAccessNote": "AI features are available via right-click context menu after selecting text"
     },
     "commands": {
       "searchPlaceholder": "Search commands...",
