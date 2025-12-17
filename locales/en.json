@@ -702,6 +702,7 @@
           "status": "Status",
           "registeredTools": "Registered Tools",
           "argCount": "Arg Count",
+          "argCountValue": "{{count}}",
           "execCommand": "Command",
           "execArgs": "Args",
           "sseUrl": "SSE URL",
@@ -765,6 +766,7 @@
         "placeholders": {
           "name": "e.g., my-filesystem",
           "command": "e.g., npx, node, python",
+          "args": "-y\\n@modelcontextprotocol/server-filesystem\\n/path/to/directory",
           "sseUrl": "e.g., http://localhost:3001/sse",
           "headers": "Authorization: Bearer YOUR_API_KEY\\nX-Custom-Header: value",
           "env": "GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxxx\\nBRAVE_API_KEY=BSA_xxxx\\nCUSTOM_VAR=value"

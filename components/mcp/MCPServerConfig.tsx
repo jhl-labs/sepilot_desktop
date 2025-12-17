@@ -260,7 +260,7 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
         if (result.success) {
           setMessage({
             type: 'success',
-            text: `'${config.name}' 서버가 추가되었습니다!`,
+            text: t('settings.mcp.config.messages.success', { name: config.name }),
           });
 
           // 입력 필드 초기화
@@ -391,7 +391,7 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
         <TabsContent value="sse" className="space-y-6 mt-6">
           {/* SSE Presets */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">빠른 시작 템플릿</Label>
+            <Label className="text-sm font-medium">{t('settings.mcp.config.presets.title')}</Label>
             <div className="grid grid-cols-2 gap-2">
               {currentPresets.map((preset) => {
                 const Icon = preset.icon;
@@ -431,28 +431,30 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
       <div className="rounded-xl border-2 bg-card overflow-hidden">
         <div className="bg-muted/30 px-4 py-3 border-b flex items-center gap-2">
           <Settings2 className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium text-sm">서버 설정</span>
+          <span className="font-medium text-sm">
+            {t('settings.mcp.config.section.serverConfig')}
+          </span>
         </div>
 
         <div className="p-4 space-y-4">
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="server-name" className="text-sm font-medium flex items-center gap-1.5">
-              서버 이름
+              {t('settings.mcp.config.labels.name')}
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">
-                필수
+                {t('settings.mcp.config.labels.required')}
               </Badge>
             </Label>
             <Input
               id="server-name"
               value={config.name}
               onChange={(e) => setConfig({ ...config, name: e.target.value })}
-              placeholder="예: my-filesystem"
+              placeholder={t('settings.mcp.config.placeholders.name')}
               disabled={isAdding}
               className="font-mono h-10"
             />
             <p className="text-[11px] text-muted-foreground">
-              Agent 모드에서 표시될 서버 식별자입니다
+              {t('settings.mcp.config.helpers.name')}
             </p>
           </div>
 
@@ -466,16 +468,16 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
                   className="text-sm font-medium flex items-center gap-1.5"
                 >
                   <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
-                  실행 명령어
+                  {t('settings.mcp.config.labels.command')}
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">
-                    필수
+                    {t('settings.mcp.config.labels.required')}
                   </Badge>
                 </Label>
                 <Input
                   id="server-command"
                   value={config.command || ''}
                   onChange={(e) => setConfig({ ...config, command: e.target.value })}
-                  placeholder="예: npx, node, python"
+                  placeholder={t('settings.mcp.config.placeholders.command')}
                   disabled={isAdding}
                   className="font-mono h-10"
                 />
@@ -488,18 +490,18 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
                   className="text-sm font-medium flex items-center gap-1.5"
                 >
                   <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                  실행 인자
+                  {t('settings.mcp.config.labels.args')}
                 </Label>
                 <Textarea
                   id="server-args"
                   value={argsText}
                   onChange={(e) => setArgsText(e.target.value)}
-                  placeholder={`-y\n@modelcontextprotocol/server-filesystem\nC:/path/to/directory`}
+                  placeholder={t('settings.mcp.config.placeholders.args')}
                   className="min-h-[100px] font-mono text-sm resize-none"
                   disabled={isAdding}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  각 인자를 새 줄에 입력하세요. 경로는 절대 경로를 사용하세요.
+                  {t('settings.mcp.config.helpers.args')}
                 </p>
               </div>
             </>
@@ -515,21 +517,21 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
                   className="text-sm font-medium flex items-center gap-1.5"
                 >
                   <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  SSE URL
+                  {t('settings.mcp.config.labels.sseUrl')}
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">
-                    필수
+                    {t('settings.mcp.config.labels.required')}
                   </Badge>
                 </Label>
                 <Input
                   id="server-url"
                   value={config.url || ''}
                   onChange={(e) => setConfig({ ...config, url: e.target.value })}
-                  placeholder="예: http://localhost:3001/sse"
+                  placeholder={t('settings.mcp.config.placeholders.sseUrl')}
                   disabled={isAdding}
                   className="font-mono h-10"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  MCP 서버의 SSE 엔드포인트 URL을 입력하세요
+                  {t('settings.mcp.config.helpers.sseUrl')}
                 </p>
               </div>
 
@@ -540,21 +542,21 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
                   className="text-sm font-medium flex items-center gap-1.5"
                 >
                   <Key className="h-3.5 w-3.5 text-muted-foreground" />
-                  HTTP 헤더
+                  {t('settings.mcp.config.labels.headers')}
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
-                    선택
+                    {t('settings.mcp.config.labels.optional')}
                   </Badge>
                 </Label>
                 <Textarea
                   id="server-headers"
                   value={headersText}
                   onChange={(e) => setHeadersText(e.target.value)}
-                  placeholder={`Authorization: Bearer YOUR_API_KEY\nX-Custom-Header: value`}
+                  placeholder={t('settings.mcp.config.placeholders.headers')}
                   className="min-h-[80px] font-mono text-sm resize-none"
                   disabled={isAdding}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  각 헤더를 &quot;키: 값&quot; 형식으로 새 줄에 입력하세요
+                  {t('settings.mcp.config.helpers.headers')}
                 </p>
               </div>
             </>
@@ -566,7 +568,9 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
       <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-between h-10 px-3">
-            <span className="text-sm text-muted-foreground">고급 옵션</span>
+            <span className="text-sm text-muted-foreground">
+              {t('settings.mcp.config.section.advanced')}
+            </span>
             <ChevronRight
               className={cn('h-4 w-4 transition-transform', showAdvanced && 'rotate-90')}
             />
@@ -576,26 +580,25 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
           <div className="rounded-xl border-2 bg-card overflow-hidden">
             <div className="bg-muted/30 px-4 py-3 border-b flex items-center gap-2">
               <Key className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium text-sm">환경 변수</span>
+              <span className="font-medium text-sm">{t('settings.mcp.config.labels.env')}</span>
             </div>
             <div className="p-4 space-y-2">
               <Label htmlFor="server-env" className="text-sm font-medium flex items-center gap-1.5">
-                환경 변수
+                {t('settings.mcp.config.labels.env')}
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
-                  선택
+                  {t('settings.mcp.config.labels.optional')}
                 </Badge>
               </Label>
               <Textarea
                 id="server-env"
                 value={envText}
                 onChange={(e) => setEnvText(e.target.value)}
-                placeholder={`GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxxx\nBRAVE_API_KEY=BSA_xxxx\nCUSTOM_VAR=value`}
+                placeholder={t('settings.mcp.config.placeholders.env')}
                 className="min-h-[100px] font-mono text-sm resize-none"
                 disabled={isAdding}
               />
               <p className="text-[11px] text-muted-foreground">
-                각 환경 변수를 &quot;키=값&quot; 형식으로 새 줄에 입력하세요. API 키 등 민감한
-                정보에 사용됩니다.
+                {t('settings.mcp.config.helpers.env')}
               </p>
             </div>
           </div>
@@ -607,35 +610,35 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
         <div className="flex gap-3">
           <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div className="space-y-2 text-sm">
-            <p className="font-medium text-primary">MCP 서버 정보</p>
+            <p className="font-medium text-primary">{t('settings.mcp.config.info.title')}</p>
             {transport === 'stdio' ? (
               <ul className="space-y-1.5 text-muted-foreground text-xs">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
-                  stdio 프로토콜을 통해 로컬 프로세스와 통신합니다
+                  {t('settings.mcp.config.info.stdio.item1')}
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
-                  추가 시 자동으로 초기화되며 사용 가능한 도구가 로드됩니다
+                  {t('settings.mcp.config.info.stdio.item2')}
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
-                  Agent 모드에서 등록된 도구를 LLM이 사용할 수 있습니다
+                  {t('settings.mcp.config.info.stdio.item3')}
                 </li>
               </ul>
             ) : (
               <ul className="space-y-1.5 text-muted-foreground text-xs">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
-                  SSE를 통해 HTTP 기반 MCP 서버와 통신합니다
+                  {t('settings.mcp.config.info.sse.item1')}
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
-                  원격 서버나 클라우드 서비스에 연결할 수 있습니다
+                  {t('settings.mcp.config.info.sse.item2')}
                 </li>
                 <li className="flex items-start gap-2">
                   <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 mt-0.5 shrink-0" />
-                  서버가 실행 중인지 확인한 후 추가하세요
+                  {t('settings.mcp.config.info.sse.item3')}
                 </li>
               </ul>
             )}
@@ -677,12 +680,12 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
         {isAdding ? (
           <>
             <Loader2 className="h-5 w-5 animate-spin" />
-            서버 추가 중...
+            {t('settings.mcp.config.buttons.adding')}
           </>
         ) : (
           <>
             <Plus className="h-5 w-5" />
-            MCP 서버 추가
+            {t('settings.mcp.config.buttons.add')}
           </>
         )}
       </Button>

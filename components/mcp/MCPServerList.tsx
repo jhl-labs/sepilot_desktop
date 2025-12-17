@@ -508,7 +508,11 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                           <p className="text-xs font-medium text-muted-foreground">
                             {t('settings.mcp.serverList.labels.argCount')}
                           </p>
-                          <span className="text-sm font-medium">{server.args?.length ?? 0}개</span>
+                          <span className="text-sm font-medium">
+                            {t('settings.mcp.serverList.labels.argCountValue', {
+                              count: server.args?.length ?? 0,
+                            })}
+                          </span>
                         </div>
                       )}
                     </div>

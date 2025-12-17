@@ -390,6 +390,7 @@
           "status": "状态",
           "registeredTools": "已注册工具",
           "argCount": "参数数量",
+          "argCountValue": "{{count}}个",
           "execCommand": "执行命令",
           "execArgs": "执行参数",
           "sseUrl": "SSE URL",
@@ -413,7 +414,84 @@
           "show": "详细信息",
           "hide": "隐藏"
         }
-      }
+      },
+      "config": {
+        "title": "添加新 MCP 服务器",
+        "subtitle": "为 AI 助手提供新工具",
+        "tabs": {
+          "stdio": "stdio",
+          "stdioDesc": "本地进程",
+          "sse": "SSE",
+          "sseDesc": "HTTP 服务器"
+        },
+        "presets": {
+          "title": "快速入门模板",
+          "filesystem": "本地文件读/写",
+          "github": "GitHub 存储库管理",
+          "sqlite": "SQLite 数据库查询",
+          "websearch": "网络搜索工具（Tavily Remote）",
+          "git": "Git 存储库操作",
+          "context7": "最新代码示例和文档搜索",
+          "memory": "基于知识图谱的长期记忆",
+          "thinking": "解决复杂问题的顺序思维",
+          "puppeteer": "浏览器自动化和网络抓取",
+          "customSse": "HTTP SSE MCP 服务器"
+        },
+        "section": {
+          "serverConfig": "服务器配置",
+          "advanced": "高级选项"
+        },
+        "labels": {
+          "name": "服务器名称",
+          "required": "必填",
+          "optional": "可选",
+          "command": "命令",
+          "args": "参数",
+          "sseUrl": "SSE URL",
+          "headers": "HTTP 标头",
+          "env": "环境变量"
+        },
+        "placeholders": {
+          "name": "例如：my-filesystem",
+          "command": "例如：npx、node、python",
+          "args": "-y\\n@modelcontextprotocol/server-filesystem\\n/path/to/directory",
+          "sseUrl": "例如：http://localhost:3001/sse",
+          "headers": "Authorization: Bearer YOUR_API_KEY\\nX-Custom-Header: value",
+          "env": "GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxxx\\nBRAVE_API_KEY=BSA_xxxx\\nCUSTOM_VAR=value"
+        },
+        "helpers": {
+          "name": "在代理模式下显示的服务器标识符",
+          "args": "每行输入一个参数。使用绝对路径。",
+          "sseUrl": "输入 MCP 服务器的 SSE 端点 URL",
+          "headers": "以 \\\"键: 值\\\" 的格式每行输入一个标头",
+          "env": "以 \\\"键=值\\\" 的格式每行输入一个环境变量。用于 API 密钥等敏感信息。"
+        },
+        "info": {
+          "title": "MCP 服务器信息",
+          "stdio": {
+            "item1": "通过 stdio 协议与本地进程通信",
+            "item2": "添加时自动初始化并加载工具",
+            "item3": "已注册的工具可在代理模式下由 LLM 使用"
+          },
+          "sse": {
+            "item1": "通过 SSE 与基于 HTTP 的 MCP 服务器通信",
+            "item2": "可以连接到远程服务器或云服务",
+            "item3": "添加前确保服务器正在运行"
+          }
+        },
+        "messages": {
+          "nameRequired": "请输入服务器名称。",
+          "commandRequired": "请输入命令。",
+          "urlRequired": "请输入 SSE URL。",
+          "success": "服务器 '{{name}}' 已添加！",
+          "failed": "添加服务器失败。"
+        },
+        "buttons": {
+          "adding": "正在添加服务器...",
+          "add": "添加 MCP 服务器"
+        }
+      },
+      "addNew": "添加新服务器"
     },
     "quickinput": {
       "title": "快速输入",

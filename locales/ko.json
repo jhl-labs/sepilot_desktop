@@ -794,6 +794,7 @@
           "status": "상태",
           "registeredTools": "등록된 도구",
           "argCount": "인자 개수",
+          "argCountValue": "{{count}}개",
           "execCommand": "실행 명령어",
           "execArgs": "실행 인자",
           "sseUrl": "SSE URL",
@@ -857,6 +858,7 @@
         "placeholders": {
           "name": "예: my-filesystem",
           "command": "예: npx, node, python",
+          "args": "-y\\n@modelcontextprotocol/server-filesystem\\nC:/path/to/directory",
           "sseUrl": "예: http://localhost:3001/sse",
           "headers": "Authorization: Bearer YOUR_API_KEY\\nX-Custom-Header: value",
           "env": "GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxxx\\nBRAVE_API_KEY=BSA_xxxx\\nCUSTOM_VAR=value"
