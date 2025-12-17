@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DocumentList } from '@/components/rag/DocumentList';
 import { DocumentDialog } from '@/components/rag/DocumentDialog';
 import {
@@ -32,6 +33,7 @@ type DocumentWithMetadata = {
 };
 
 export function DocumentsPage({ onBack }: DocumentsPageProps) {
+  const { t } = useTranslation();
   const [vectorDBConfig, setVectorDBConfig] = useState<VectorDBConfig | null>(null);
   const [embeddingConfig, setEmbeddingConfig] = useState<EmbeddingConfig | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -144,9 +146,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
 
       // 브라우저 환경에서 SQLite-vec 사용 시 경고
       if (!isElectron() && vectorDBConfig?.type === 'sqlite-vec') {
-        throw new Error(
-          'SQLite-vec는 Electron 환경에서만 사용 가능합니다. 웹 브라우저에서는 문서를 업로드할 수 없습니다.'
-        );
+        throw new Error(t('documentsPage.errors.sqliteElectronOnly'));
       }
 
       // Raw documents 생성
@@ -169,7 +169,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         const result = await window.electronAPI.vectorDB.indexDocuments(rawDocs, indexingOptions);
 
         if (!result.success) {
-          throw new Error(result.error || '문서 인덱싱 실패');
+          throw new Error(result.error || t('documents.errors.indexFailed'));
         }
 
         logger.info('[DocumentsPage] Documents indexed successfully via IPC');
@@ -182,9 +182,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         try {
           embedder = getEmbeddingProvider();
         } catch {
-          throw new Error(
-            'Embedding이 초기화되지 않았습니다. 먼저 설정에서 Embedding 설정을 완료해주세요.'
-          );
+          throw new Error(t('documentsPage.errors.embeddingNotInitialized'));
         }
 
         // VectorDB가 초기화되었는지 확인
@@ -192,13 +190,11 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         try {
           vectorDB = getVectorDB();
         } catch {
-          throw new Error(
-            'VectorDB가 초기화되지 않았습니다. 먼저 설정에서 VectorDB 설정을 완료해주세요.'
-          );
+          throw new Error(t('documentsPage.errors.vectorDBNotInitialized'));
         }
 
         if (!vectorDB || !embedder) {
-          throw new Error('VectorDB 또는 Embedding이 초기화되지 않았습니다.');
+          throw new Error(t('documentsPage.errors.notInitialized'));
         }
 
         // 인덱싱
@@ -220,9 +216,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
     try {
       // 브라우저 환경에서 SQLite-vec 사용 시 경고
       if (!isElectron() && vectorDBConfig?.type === 'sqlite-vec') {
-        throw new Error(
-          'SQLite-vec는 Electron 환경에서만 사용 가능합니다. 웹 브라우저에서는 문서를 편집할 수 없습니다.'
-        );
+        throw new Error(t('documentsPage.errors.sqliteElectronOnly'));
       }
 
       // 새 문서 데이터
@@ -260,7 +254,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         const result = await window.electronAPI.vectorDB.indexDocuments(rawDocs, indexingOptions);
 
         if (!result.success) {
-          throw new Error(result.error || '문서 편집 실패');
+          throw new Error(result.error || t('documentsPage.errors.editFailed'));
         }
       } else {
         // Web 환경에서는 직접 처리
@@ -268,7 +262,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         const embedder = getEmbeddingProvider();
 
         if (!vectorDB || !embedder) {
-          throw new Error('VectorDB 또는 Embedding이 초기화되지 않았습니다.');
+          throw new Error(t('documentsPage.errors.notInitialized'));
         }
 
         // 기존 문서의 모든 청크 삭제
@@ -300,15 +294,18 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {onBack && (
-              <Button variant="ghost" size="icon" onClick={onBack} title="대화로 돌아가기">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onBack}
+                title={t('documentsPage.backToChat')}
+              >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
             <div>
-              <h1 className="text-2xl font-bold">문서 관리</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                문서를 업로드하고 관리하여 RAG 검색에 활용하세요
-              </p>
+              <h1 className="text-2xl font-bold">{t('documentsPage.title')}</h1>
+              <p className="text-sm text-muted-foreground mt-1">{t('documentsPage.description')}</p>
             </div>
           </div>
           <Button
@@ -317,7 +314,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
             size="default"
           >
             <Plus className="h-5 w-5 mr-2" />
-            문서 추가
+            {t('documentsPage.addDocument')}
           </Button>
         </div>
       </div>
@@ -343,10 +340,8 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
                   />
                 </svg>
                 <div>
-                  <p className="font-medium">VectorDB 설정 필요</p>
-                  <p className="mt-1">
-                    문서를 업로드하려면 먼저 설정에서 VectorDB와 Embedding 설정을 완료해주세요.
-                  </p>
+                  <p className="font-medium">{t('documentsPage.warnings.setupRequired.title')}</p>
+                  <p className="mt-1">{t('documentsPage.warnings.setupRequired.message')}</p>
                 </div>
               </div>
             </div>
@@ -367,11 +362,10 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
                   />
                 </svg>
                 <div>
-                  <p className="font-medium">SQLite-vec는 Electron 전용</p>
-                  <p className="mt-1">
-                    웹 브라우저에서는 SQLite-vec를 사용할 수 없습니다. Electron 앱을 사용하거나 다른
-                    VectorDB(OpenSearch, Elasticsearch 등)를 선택해주세요.
+                  <p className="font-medium">
+                    {t('documentsPage.warnings.sqliteElectronOnly.title')}
                   </p>
+                  <p className="mt-1">{t('documentsPage.warnings.sqliteElectronOnly.message')}</p>
                 </div>
               </div>
             </div>
@@ -392,7 +386,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
                   />
                 </svg>
                 <div>
-                  <p className="font-medium">VectorDB 설정 완료</p>
+                  <p className="font-medium">{t('documentsPage.success.configured')}</p>
                   <p className="mt-1">
                     {vectorDBConfig.type === 'sqlite-vec' ? 'SQLite-vec' : vectorDBConfig.type} /{' '}
                     {embeddingConfig.provider === 'openai'

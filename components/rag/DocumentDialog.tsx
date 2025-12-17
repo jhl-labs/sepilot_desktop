@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SingleFileEditor } from '@/components/editor/SingleFileEditor';
 
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -55,6 +56,7 @@ export function DocumentDialog({
   onSave,
   onUpload,
 }: DocumentDialogProps) {
+  const { t } = useTranslation();
   // Common states
   const [title, setTitle] = useState('');
   const [source, setSource] = useState('');
@@ -154,7 +156,7 @@ export function DocumentDialog({
     // Handling Edit Mode Save
     if (mode === 'edit') {
       if (!content.trim()) {
-        setMessage({ type: 'error', text: '문서 내용을 입력해주세요.' });
+        setMessage({ type: 'error', text: t('documentDialog.errors.contentRequired') });
         return;
       }
       if (!document || !onSave) {
@@ -167,7 +169,7 @@ export function DocumentDialog({
       try {
         const updatedMetadata: Record<string, any> = {
           ...document.metadata,
-          title: title.trim() || '제목 없음',
+          title: title.trim() || t('documents.untitled'),
           source: source.trim() || 'manual',
           folderPath: folderPath.trim() || undefined,
           updatedAt: Date.now(),
@@ -185,11 +187,11 @@ export function DocumentDialog({
 
         if (pushToGitHub && document.metadata?.docGroup === 'team') {
           if (!document.metadata.teamDocsId) {
-            throw new Error('Team Docs ID 누락');
+            throw new Error(t('documentDialog.errors.teamDocsIdMissing'));
           }
           setIsPushing(true);
           try {
-            const newTitle = title.trim() || '제목 없음';
+            const newTitle = title.trim() || t('documents.untitled');
             const newFolderPath = folderPath.trim();
             let githubPath = document.metadata.githubPath as string;
             const oldTitle = document.metadata.title as string;
@@ -212,25 +214,25 @@ export function DocumentDialog({
             });
             if (!result.success) {
               if (result.error === 'CONFLICT') {
-                throw new Error('문서 충돌 감지! GitHub에 변경사항이 있습니다.');
+                throw new Error(t('documentDialog.errors.conflict'));
               }
-              throw new Error(result.error || 'Push 실패');
+              throw new Error(result.error || t('documents.errors.pushFailed'));
             }
-            setMessage({ type: 'success', text: 'GitHub 업로드 완료' });
+            setMessage({ type: 'success', text: t('documentDialog.success.githubUpload') });
           } catch (e: any) {
             console.error(e);
-            setMessage({ type: 'error', text: e.message || 'GitHub Push 실패' });
+            setMessage({ type: 'error', text: e.message || t('documents.errors.pushFailed') });
             return; // Stop here if push failed
           } finally {
             setIsPushing(false);
           }
         } else {
-          setMessage({ type: 'success', text: '저장 완료' });
+          setMessage({ type: 'success', text: t('documentDialog.success.saved') });
         }
 
         setTimeout(() => onOpenChange(false), 800);
       } catch (error: any) {
-        setMessage({ type: 'error', text: error.message || '저장 실패' });
+        setMessage({ type: 'error', text: error.message || t('documentDialog.errors.saveFailed') });
       } finally {
         setIsSaving(false);
       }
@@ -243,7 +245,7 @@ export function DocumentDialog({
       setMessage(null);
       try {
         if (docGroup === 'team' && !selectedTeamDocsId) {
-          throw new Error('Team Docs를 선택해주세요.');
+          throw new Error(t('documentDialog.errors.selectTeamDocs'));
         }
 
         let documentsToUpload: { content: string; metadata: Record<string, any> }[] = [];
@@ -264,21 +266,21 @@ export function DocumentDialog({
 
         if (sourceType === 'manual') {
           if (!content.trim()) {
-            throw new Error('내용을 입력해주세요.');
+            throw new Error(t('documentDialog.errors.contentRequired'));
           }
           documentsToUpload = [
             {
               content: content.trim(),
               metadata: {
                 ...getBaseMetadata(),
-                title: title.trim() || '제목 없음',
+                title: title.trim() || t('documents.untitled'),
                 source: source.trim() || 'manual',
               },
             },
           ];
         } else if (sourceType === 'http') {
           if (!httpUrl.trim()) {
-            throw new Error('URL을 입력해주세요.');
+            throw new Error(t('documentDialog.errors.urlRequired'));
           }
           const fetched = await fetchDocument({ type: 'http', url: httpUrl.trim() });
           documentsToUpload = fetched.map((doc) => ({
@@ -291,7 +293,7 @@ export function DocumentDialog({
           }));
         } else if (sourceType === 'github') {
           if (!githubRepoUrl.trim() || !githubPath.trim()) {
-            throw new Error('Repo URL과 경로를 입력해주세요.');
+            throw new Error(t('documentDialog.errors.repoAndPathRequired'));
           }
           const fetched = await fetchDocument({
             type: 'github',
@@ -311,17 +313,20 @@ export function DocumentDialog({
         }
 
         if (cleanWithLLM && documentsToUpload.length > 0) {
-          setMessage({ type: 'success', text: 'LLM 문서 정제 중...' });
+          setMessage({ type: 'success', text: t('documentDialog.processing.cleaning') });
           documentsToUpload = await cleanDocumentsWithLLM(documentsToUpload, (c, t) =>
             setUploadProgress({ current: c, total: t })
           );
         }
 
         await onUpload(documentsToUpload, chunkStrategy);
-        setMessage({ type: 'success', text: `${documentsToUpload.length}개 문서 업로드 완료` });
+        setMessage({
+          type: 'success',
+          text: t('documentDialog.success.uploaded', { count: documentsToUpload.length }),
+        });
         setTimeout(() => onOpenChange(false), 1000);
       } catch (e: any) {
-        setMessage({ type: 'error', text: e.message || '업로드 실패' });
+        setMessage({ type: 'error', text: e.message || t('documentDialog.errors.uploadFailed') });
       } finally {
         setIsSaving(false);
         setUploadProgress(null);
@@ -344,7 +349,7 @@ export function DocumentDialog({
                 ref={titleInputRef}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="문서 제목을 입력하세요 (Untitled)"
+                placeholder={t('documentDialog.placeholder.title')}
                 className="flex-1 text-lg font-semibold bg-transparent border-none outline-none placeholder:text-muted-foreground/50 focus:placeholder:text-muted-foreground/30 truncate"
               />
             </div>
@@ -364,11 +369,15 @@ export function DocumentDialog({
                     ) : (
                       <Users className="w-3.5 h-3.5 text-orange-500" />
                     )}
-                    {docGroup === 'personal' ? 'Personal Docs' : 'Team Docs'}
+                    {docGroup === 'personal'
+                      ? t('documents.tabs.personal')
+                      : t('documents.tabs.team')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-60 p-2" align="start">
-                  <Label className="text-xs text-muted-foreground mb-2 block">문서 그룹 선택</Label>
+                  <Label className="text-xs text-muted-foreground mb-2 block">
+                    {t('documentDialog.labels.selectGroup')}
+                  </Label>
                   <div className="grid gap-1">
                     <Button
                       variant="ghost"
@@ -376,7 +385,7 @@ export function DocumentDialog({
                       className={cn('justify-start gap-2', docGroup === 'personal' && 'bg-accent')}
                       onClick={() => setDocGroup('personal')}
                     >
-                      <User className="w-4 h-4" /> Personal Docs
+                      <User className="w-4 h-4" /> {t('documents.tabs.personal')}
                     </Button>
                     <Button
                       variant="ghost"
@@ -384,7 +393,7 @@ export function DocumentDialog({
                       className={cn('justify-start gap-2', docGroup === 'team' && 'bg-accent')}
                       onClick={() => setDocGroup('team')}
                     >
-                      <Users className="w-4 h-4" /> Team Docs
+                      <Users className="w-4 h-4" /> {t('documents.tabs.team')}
                     </Button>
                   </div>
                   {docGroup === 'team' && (
@@ -420,19 +429,21 @@ export function DocumentDialog({
                     ) : (
                       <FolderOpen className="w-3.5 h-3.5" />
                     )}
-                    {folderPath || '루트 폴더'}
+                    {folderPath || t('documentDialog.labels.rootFolder')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-72 p-3" align="start">
                   <div className="space-y-2">
-                    <Label className="text-xs">폴더 경로</Label>
+                    <Label className="text-xs">{t('documentDialog.labels.folderPath')}</Label>
                     <Input
                       value={folderPath}
                       onChange={(e) => setFolderPath(e.target.value)}
-                      placeholder="예: Project/Backend (없으면 루트)"
+                      placeholder={t('documentDialog.placeholder.folderPath')}
                       className="h-8 text-sm"
                     />
-                    <p className="text-[10px] text-muted-foreground">슬래시(/)로 하위 폴더 구분</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {t('documentDialog.hints.folderSeparator')}
+                    </p>
                   </div>
                 </PopoverContent>
               </Popover>
@@ -448,16 +459,16 @@ export function DocumentDialog({
                     className="h-7 px-2 gap-1.5 text-xs font-normal border-dashed text-muted-foreground hover:text-foreground"
                   >
                     <Tag className="w-3.5 h-3.5" />
-                    {source || '소스 없음'}
+                    {source || t('documentDialog.labels.noSource')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-72 p-3" align="start">
                   <div className="space-y-2">
-                    <Label className="text-xs">출처 (Source)</Label>
+                    <Label className="text-xs">{t('documentDialog.labels.source')}</Label>
                     <Input
                       value={source}
                       onChange={(e) => setSource(e.target.value)}
-                      placeholder="예: Wikipedia, Notion 등"
+                      placeholder={t('documentDialog.placeholder.source')}
                       className="h-8 text-sm"
                     />
                   </div>
@@ -468,7 +479,7 @@ export function DocumentDialog({
 
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-              취소
+              {t('documentDialog.actions.cancel')}
             </Button>
             <Button
               onClick={() => handleSave(false)}
@@ -480,14 +491,16 @@ export function DocumentDialog({
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              {mode === 'create' ? '업로드' : '저장'}
+              {mode === 'create'
+                ? t('documentDialog.actions.upload')
+                : t('documentDialog.actions.save')}
             </Button>
             {mode === 'edit' && docGroup === 'team' && (
               <Button
                 variant="secondary"
                 onClick={() => handleSave(true)}
                 disabled={isSaving || isPushing}
-                title="GitHub에 Push"
+                title={t('documentDialog.actions.pushToGitHub')}
               >
                 {isPushing ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -535,19 +548,19 @@ export function DocumentDialog({
                     value="manual"
                     className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 border-b-2 border-transparent"
                   >
-                    <FileText className="w-4 h-4 mr-2" /> 직접 작성
+                    <FileText className="w-4 h-4 mr-2" /> {t('documentDialog.sourceType.manual')}
                   </TabsTrigger>
                   <TabsTrigger
                     value="http"
                     className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 border-b-2 border-transparent"
                   >
-                    <Globe className="w-4 h-4 mr-2" /> 웹 페이지 (HTTP)
+                    <Globe className="w-4 h-4 mr-2" /> {t('documentDialog.sourceType.http')}
                   </TabsTrigger>
                   <TabsTrigger
                     value="github"
                     className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 border-b-2 border-transparent"
                   >
-                    <Github className="w-4 h-4 mr-2" /> GitHub Repository
+                    <Github className="w-4 h-4 mr-2" /> {t('documentDialog.sourceType.github')}
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -583,7 +596,7 @@ export function DocumentDialog({
               >
                 <div className="space-y-6 pt-10">
                   <div className="space-y-2">
-                    <Label>문서 URL (웹 페이지)</Label>
+                    <Label>{t('documentDialog.labels.documentUrl')}</Label>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Globe className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -596,13 +609,15 @@ export function DocumentDialog({
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      웹 페이지의 텍스트 콘텐츠를 추출하여 저장합니다.
+                      {t('documentDialog.hints.webPageExtract')}
                     </p>
                   </div>
                   <div className="p-4 border rounded-lg bg-background space-y-3">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-purple-500" />
-                      <Label className="font-semibold">AI 전처리 옵션</Label>
+                      <Label className="font-semibold">
+                        {t('documentDialog.labels.aiOptions')}
+                      </Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <input
@@ -613,7 +628,7 @@ export function DocumentDialog({
                         className="rounded border-gray-300"
                       />
                       <Label htmlFor="clean" className="font-normal cursor-pointer">
-                        LLM으로 불필요한 내용(광고, 네비게이션 등) 제거
+                        {t('documentDialog.options.cleanWithLLM')}
                       </Label>
                     </div>
                   </div>
@@ -622,7 +637,10 @@ export function DocumentDialog({
                     <div className="mt-4 p-4 bg-muted rounded-lg text-center">
                       <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                       <p className="text-sm font-medium">
-                        처리 중... ({uploadProgress.current}/{uploadProgress.total})
+                        {t('documentDialog.processing.general', {
+                          current: uploadProgress.current,
+                          total: uploadProgress.total,
+                        })}
                       </p>
                     </div>
                   )}
@@ -687,7 +705,7 @@ export function DocumentDialog({
                         className="rounded border-gray-300"
                       />
                       <Label htmlFor="clean-git" className="font-normal cursor-pointer">
-                        LLM으로 코드/주석 정리 및 핵심 추출
+                        {t('documentDialog.options.cleanGitCode')}
                       </Label>
                     </div>
                   </div>
@@ -696,7 +714,10 @@ export function DocumentDialog({
                     <div className="mt-4 p-4 bg-muted rounded-lg text-center">
                       <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                       <p className="text-sm font-medium">
-                        처리 중... ({uploadProgress.current}/{uploadProgress.total})
+                        {t('documentDialog.processing.general', {
+                          current: uploadProgress.current,
+                          total: uploadProgress.total,
+                        })}
                       </p>
                     </div>
                   )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -51,6 +52,7 @@ interface DocumentListProps {
 }
 
 export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: DocumentListProps) {
+  const { t } = useTranslation();
   const [documents, setDocuments] = useState<VectorDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -226,7 +228,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       );
     } catch (error: any) {
       console.error('Failed to load documents:', error);
-      setMessage({ type: 'error', text: error.message || '문서 목록 로드 실패' });
+      setMessage({ type: 'error', text: error.message || t('documents.errors.loadFailed') });
     } finally {
       setIsLoading(false);
     }
@@ -285,7 +287,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     if (!onDelete) {
       return;
     }
-    if (!window.confirm('이 문서를 삭제하시겠습니까?')) {
+    if (!window.confirm(t('documents.delete.confirm'))) {
       return;
     }
 
@@ -301,11 +303,11 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       // 모든 청크 삭제
       await onDelete(chunkIdsToDelete.length > 0 ? chunkIdsToDelete : [id]);
-      setMessage({ type: 'success', text: '문서가 삭제되었습니다.' });
+      setMessage({ type: 'success', text: t('documents.delete.success') });
       await loadDocuments(); // Reload list
     } catch (error: any) {
       console.error('Failed to delete document:', error);
-      setMessage({ type: 'error', text: error.message || '문서 삭제 실패' });
+      setMessage({ type: 'error', text: error.message || t('documents.errors.deleteFailed') });
     }
   };
 
@@ -341,11 +343,11 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       setMessage({
         type: 'success',
-        text: `${exportData.totalCount}개의 문서를 Export했습니다.`,
+        text: t('documents.export.success', { count: exportData.totalCount }),
       });
     } catch (error: any) {
       console.error('Failed to export documents:', error);
-      setMessage({ type: 'error', text: error.message || '문서 Export 실패' });
+      setMessage({ type: 'error', text: error.message || t('documents.errors.exportFailed') });
     } finally {
       setIsLoading(false);
     }
@@ -373,14 +375,18 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       setMessage({
         type: 'success',
-        text: `Import 완료: 신규 ${result.imported}개, 덮어쓰기 ${result.overwritten}개, 건너뛰기 ${result.skipped}개`,
+        text: t('documents.import.success', {
+          imported: result.imported,
+          overwritten: result.overwritten,
+          skipped: result.skipped,
+        }),
       });
 
       // 문서 목록 새로고침
       await loadDocuments();
     } catch (error: any) {
       console.error('Failed to import documents:', error);
-      setMessage({ type: 'error', text: error.message || '문서 Import 실패' });
+      setMessage({ type: 'error', text: error.message || t('documents.errors.importFailed') });
     } finally {
       setIsLoading(false);
       // 파일 입력 초기화
@@ -464,7 +470,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       const docNode: DocumentTreeNode = {
         id: doc.id,
         type: 'document',
-        name: (doc.metadata?.title as string) || '제목 없음',
+        name: (doc.metadata?.title as string) || t('documents.untitled'),
         document: doc,
         parentId: folderPath ? `folder:${folderPath}` : null,
       };
@@ -526,7 +532,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         if (hasDocuments) {
           setMessage({
             type: 'error',
-            text: '문서가 있는 폴더는 삭제할 수 없습니다. 먼저 문서를 이동하거나 삭제해주세요.',
+            text: t('documents.folder.deleteNotEmpty'),
           });
           return;
         }
@@ -537,11 +543,14 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       setMessage({
         type: 'success',
-        text: `폴더 "${folderPath}"가 삭제되었습니다.`,
+        text: t('documents.folder.deleteSuccess', { folderPath }),
       });
     } catch (error: any) {
       console.error('Failed to delete folder:', error);
-      setMessage({ type: 'error', text: error.message || '폴더 삭제 실패' });
+      setMessage({
+        type: 'error',
+        text: error.message || t('documents.errors.folderDeleteFailed'),
+      });
     }
   };
 
@@ -551,13 +560,13 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       // 빈 폴더 목록에 추가
       const trimmedPath = folderPath.trim();
       if (!trimmedPath) {
-        setMessage({ type: 'error', text: '폴더 경로를 입력해주세요.' });
+        setMessage({ type: 'error', text: t('documents.folder.pathRequired') });
         return;
       }
 
       // 이미 존재하는 폴더인지 확인
       if (emptyFolders.includes(trimmedPath)) {
-        setMessage({ type: 'error', text: '이미 존재하는 폴더입니다.' });
+        setMessage({ type: 'error', text: t('documents.folder.alreadyExists') });
         return;
       }
 
@@ -568,7 +577,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       });
 
       if (existingFolder) {
-        setMessage({ type: 'error', text: '이미 문서가 있는 폴더입니다.' });
+        setMessage({ type: 'error', text: t('documents.folder.hasDocuments') });
         return;
       }
 
@@ -577,11 +586,14 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       setMessage({
         type: 'success',
-        text: `폴더 "${trimmedPath}"가 생성되었습니다.`,
+        text: t('documents.folder.createSuccess', { folderPath: trimmedPath }),
       });
     } catch (error: any) {
       console.error('Failed to create folder:', error);
-      setMessage({ type: 'error', text: error.message || '폴더 생성 실패' });
+      setMessage({
+        type: 'error',
+        text: error.message || t('documents.errors.folderCreateFailed'),
+      });
     }
   };
 
@@ -622,14 +634,17 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       setMessage({
         type: 'success',
-        text: `"${doc.metadata?.title || doc.id}"를 "${targetFolderPath}"로 이동했습니다.`,
+        text: t('documents.move.success', {
+          title: doc.metadata?.title || doc.id,
+          folderPath: targetFolderPath,
+        }),
       });
 
       // 문서 목록 새로고침
       await loadDocuments();
     } catch (error: any) {
       console.error('Failed to move document:', error);
-      setMessage({ type: 'error', text: error.message || '문서 이동 실패' });
+      setMessage({ type: 'error', text: error.message || t('documents.errors.moveFailed') });
     } finally {
       setIsLoading(false);
     }
@@ -682,40 +697,43 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
             <div className="flex items-center gap-2 mb-1">
               <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
               <h4 className={`font-medium truncate ${compact ? 'text-xs' : 'text-sm'}`}>
-                {doc.metadata?.title || '제목 없음'}
+                {doc.metadata?.title || t('documents.untitled')}
               </h4>
             </div>
             <p className="text-xs text-muted-foreground mb-2">
               {doc.metadata?.docGroup === 'team' ? (
                 <>
                   <Users className="h-3 w-3 inline mr-1" />
-                  팀: {(doc.metadata?.teamName as string) || 'Unknown'}
+                  {t('documents.labels.team')}: {(doc.metadata?.teamName as string) || 'Unknown'}
                   {' • '}
-                  출처: {(doc.metadata?.source as string) || 'manual'}
+                  {t('documents.labels.source')}: {(doc.metadata?.source as string) || 'manual'}
                 </>
               ) : (
                 <>
                   <User className="h-3 w-3 inline mr-1" />
-                  개인 문서
+                  {t('documents.labels.personalDoc')}
                   {doc.metadata?.source && (doc.metadata.source as string) !== 'manual' && (
-                    <> • 출처: {doc.metadata.source as string}</>
+                    <>
+                      {' '}
+                      • {t('documents.labels.source')}: {doc.metadata.source as string}
+                    </>
                   )}
                 </>
               )}
               {doc.metadata?.cleaned && (
                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                  LLM 정제됨
+                  {t('documents.labels.llmCleaned')}
                 </span>
               )}
               {doc.metadata?.docGroup === 'team' && !!doc.metadata?.modifiedLocally && (
                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                  로컬 수정됨 (Push 필요)
+                  {t('documents.labels.modifiedLocally')}
                 </span>
               )}
               {' • '}
               {doc.metadata?.uploadedAt
                 ? new Date(doc.metadata.uploadedAt).toLocaleString('ko-KR')
-                : '알 수 없음'}
+                : t('documents.labels.unknown')}
             </p>
             {!compact && (
               <>
@@ -730,7 +748,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                     onClick={() => toggleExpand(doc.id)}
                     className="text-xs text-primary hover:underline mt-1"
                   >
-                    {isExpanded ? '접기' : '더 보기'}
+                    {isExpanded ? t('documents.actions.collapse') : t('documents.actions.showMore')}
                   </button>
                 )}
               </>
@@ -742,7 +760,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               size="sm"
               onClick={() => onEdit?.(doc)}
               disabled={!onEdit || disabled}
-              title="편집"
+              title={t('documents.actions.edit')}
             >
               <Edit className="h-4 w-4" />
             </Button>
@@ -751,7 +769,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               size="sm"
               onClick={() => handleDelete(doc.id)}
               disabled={!onDelete || disabled}
-              title="삭제"
+              title={t('documents.actions.delete')}
             >
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
@@ -829,7 +847,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                     e.stopPropagation();
                     handleDeleteFolder(folderPath);
                   }}
-                  title="빈 폴더 삭제"
+                  title={t('documents.folder.deleteEmpty')}
                 >
                   <Trash2 className="h-3 w-3 text-destructive" />
                 </Button>
@@ -858,7 +876,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   // Personal Docs Pull 핸들러
   const handlePullPersonalDocs = async () => {
     if (!personalRepo) {
-      setMessage({ type: 'error', text: 'Personal Docs 설정이 필요합니다.' });
+      setMessage({ type: 'error', text: t('documents.personal.setupRequired') });
       return;
     }
 
@@ -911,20 +929,23 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         if (indexResult.success) {
           setMessage({
             type: 'success',
-            text: `${result.documents.length}개의 Personal 문서를 동기화했습니다!`,
+            text: t('documents.personal.syncSuccess', { count: result.documents.length }),
           });
           await loadDocuments();
         } else {
-          throw new Error(indexResult.error || '문서 인덱싱 실패');
+          throw new Error(indexResult.error || t('documents.errors.indexFailed'));
         }
       } else if (result.success && result.documents && result.documents.length === 0) {
-        setMessage({ type: 'success', text: '동기화할 Personal 문서가 없습니다.' });
+        setMessage({ type: 'success', text: t('documents.personal.noDocsToSync') });
       } else {
-        throw new Error(result.error || '문서 가져오기 실패');
+        throw new Error(result.error || t('documents.errors.fetchFailed'));
       }
     } catch (error: any) {
       console.error('Failed to pull personal docs:', error);
-      setMessage({ type: 'error', text: error.message || 'Personal 문서 동기화 실패' });
+      setMessage({
+        type: 'error',
+        text: error.message || t('documents.errors.personalSyncFailed'),
+      });
     } finally {
       setSyncingPersonal(null);
     }
@@ -933,7 +954,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   // Personal Docs Push 핸들러
   const handlePushPersonalDocs = async () => {
     if (!personalRepo) {
-      setMessage({ type: 'error', text: 'Personal Docs 설정이 필요합니다.' });
+      setMessage({ type: 'error', text: t('documents.personal.setupRequired') });
       return;
     }
 
@@ -946,14 +967,17 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       if (result.success) {
         setMessage({
           type: 'success',
-          text: result.message || 'Personal 문서를 GitHub에 Push했습니다!',
+          text: result.message || t('documents.personal.pushSuccess'),
         });
       } else {
-        throw new Error(result.error || 'Push 실패');
+        throw new Error(result.error || t('documents.errors.pushFailed'));
       }
     } catch (error: any) {
       console.error('Failed to push personal docs:', error);
-      setMessage({ type: 'error', text: error.message || 'Personal 문서 Push 실패' });
+      setMessage({
+        type: 'error',
+        text: error.message || t('documents.errors.personalPushFailed'),
+      });
     } finally {
       setSyncingPersonal(null);
     }
@@ -972,15 +996,18 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       logger.info('[DocumentList] Pull result:', result);
 
       if (result.success) {
-        setMessage({ type: 'success', text: result.message || `${config.name} Pull 완료!` });
+        setMessage({
+          type: 'success',
+          text: result.message || t('documents.team.pullSuccess', { name: config.name }),
+        });
         await loadDocuments();
         await loadTeamDocsConfigs();
       } else {
-        throw new Error(result.error || '동기화 실패');
+        throw new Error(result.error || t('documents.errors.syncFailed'));
       }
     } catch (error: any) {
       console.error('Failed to sync team doc:', error);
-      setMessage({ type: 'error', text: error.message || '동기화 실패' });
+      setMessage({ type: 'error', text: error.message || t('documents.errors.syncFailed') });
     } finally {
       setSyncingTeamId(null);
     }
@@ -1005,13 +1032,16 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       const result = await window.electronAPI.teamDocs.pushDocuments(config);
 
       if (result.success) {
-        setMessage({ type: 'success', text: result.message || `${config.name} Push 완료!` });
+        setMessage({
+          type: 'success',
+          text: result.message || t('documents.team.pushSuccess', { name: config.name }),
+        });
       } else {
-        throw new Error(result.error || 'Push 실패');
+        throw new Error(result.error || t('documents.errors.pushFailed'));
       }
     } catch (error: any) {
       console.error('Failed to push team doc:', error);
-      setMessage({ type: 'error', text: error.message || 'Push 실패' });
+      setMessage({ type: 'error', text: error.message || t('documents.errors.pushFailed') });
     } finally {
       setSyncingTeamId(null);
     }
@@ -1027,11 +1057,11 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="personal" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            Personal
+            {t('documents.tabs.personal')}
           </TabsTrigger>
           <TabsTrigger value="team" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Team Docs
+            {t('documents.tabs.team')}
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -1067,11 +1097,11 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                         {currentTeam && (
                           <>
                             <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
-                              {teamDocCount}개
+                              {t('documents.labels.count', { count: teamDocCount })}
                             </span>
                             {hasModifiedDocs && (
                               <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-2 py-1 rounded whitespace-nowrap">
-                                수정됨
+                                {t('documents.labels.modified')}
                               </span>
                             )}
                           </>
@@ -1082,7 +1112,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                 </>
               ) : (
                 <div className="text-sm text-muted-foreground">
-                  Team Docs Repository를 추가하여 팀 문서를 동기화하세요
+                  {t('documents.team.addRepository')}
                 </div>
               )}
             </div>
@@ -1142,7 +1172,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                 size="sm"
                 onClick={() => setSyncDialogOpen(true)}
                 disabled={isLoading || disabled}
-                title="GitHub Sync 설정"
+                title={t('documents.sync.settings')}
               >
                 <Github className="h-4 w-4" />
               </Button>
@@ -1154,10 +1184,11 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               return (
                 currentTeam && (
                   <p className="text-xs text-muted-foreground mt-2">
-                    {currentTeam.description || 'Team Documents Repository'}
+                    {currentTeam.description || t('documents.team.repositoryDefault')}
                     {currentTeam.lastSyncAt && (
                       <span className="ml-2">
-                        • 마지막 동기화: {new Date(currentTeam.lastSyncAt).toLocaleString('ko-KR')}
+                        • {t('documents.sync.lastSync')}:{' '}
+                        {new Date(currentTeam.lastSyncAt).toLocaleString('ko-KR')}
                       </span>
                     )}
                   </p>
@@ -1180,7 +1211,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">
-                  GitHub Repository를 연결하여 문서를 동기화하세요
+                  {t('documents.personal.connectRepository')}
                 </div>
               )}
             </div>
@@ -1230,7 +1261,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                 size="sm"
                 onClick={() => setSyncDialogOpen(true)}
                 disabled={isLoading || disabled}
-                title="GitHub Sync 설정"
+                title={t('documents.sync.settings')}
               >
                 <Github className="h-4 w-4" />
               </Button>
@@ -1244,7 +1275,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="제목, 폴더, 내용 검색..."
+          placeholder={t('documents.search.placeholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10 pr-10"
@@ -1254,7 +1285,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           <button
             onClick={() => setSearchQuery('')}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            title="검색 초기화"
+            title={t('documents.search.clear')}
           >
             <X className="h-4 w-4" />
           </button>
@@ -1264,10 +1295,10 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-lg font-semibold">
           <FileText className="h-5 w-5" />
-          <h3>업로드된 문서</h3>
+          <h3>{t('documents.title')}</h3>
           <span className="text-sm font-normal text-muted-foreground">
-            ({filteredDocuments.length}
-            {searchQuery && ` / ${documents.length}`}개)
+            ({t('documents.labels.count', { count: filteredDocuments.length })}
+            {searchQuery && ` / ${t('documents.labels.count', { count: documents.length })}`})
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -1278,7 +1309,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               size="sm"
               onClick={() => setViewMode('grid')}
               disabled={isLoading || disabled}
-              title="그리드 뷰"
+              title={t('documents.view.grid')}
               className="h-7 px-2"
             >
               <LayoutGrid className="h-4 w-4" />
@@ -1288,7 +1319,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               size="sm"
               onClick={() => setViewMode('list')}
               disabled={isLoading || disabled}
-              title="리스트 뷰"
+              title={t('documents.view.list')}
               className="h-7 px-2"
             >
               <ListIcon className="h-4 w-4" />
@@ -1298,7 +1329,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               size="sm"
               onClick={() => setViewMode('tree')}
               disabled={isLoading || disabled}
-              title="트리 뷰"
+              title={t('documents.view.tree')}
               className="h-7 px-2"
             >
               <FolderTree className="h-4 w-4" />
@@ -1315,7 +1346,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                 size="sm"
                 onClick={() => setFolderDialogOpen(true)}
                 disabled={isLoading || disabled}
-                title="새 폴더 생성"
+                title={t('documents.folder.create')}
               >
                 <FolderPlus className="h-4 w-4" />
               </Button>
@@ -1328,7 +1359,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
             size="sm"
             onClick={handleExport}
             disabled={isLoading || disabled || documents.length === 0}
-            title="문서 Export (JSON)"
+            title={t('documents.actions.export')}
           >
             <Download className="h-4 w-4" />
           </Button>
@@ -1337,7 +1368,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
             size="sm"
             onClick={handleImportClick}
             disabled={isLoading || disabled}
-            title="문서 Import (JSON)"
+            title={t('documents.actions.import')}
           >
             <Upload className="h-4 w-4" />
           </Button>
@@ -1346,7 +1377,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
             size="sm"
             onClick={loadDocuments}
             disabled={isLoading || disabled}
-            title="문서 새로고침"
+            title={t('documents.actions.refresh')}
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -1355,7 +1386,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       {/* Hidden file input for import */}
       <input
-        title="문서 Import (JSON)"
+        title={t('documents.actions.import')}
         ref={fileInputRef}
         type="file"
         accept=".json"
@@ -1379,20 +1410,22 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       {/* Document List */}
       {documents.length === 0 ? (
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-          업로드된 문서가 없습니다.
+          {t('documents.empty.noDocuments')}
         </div>
       ) : filteredDocuments.length === 0 ? (
         <div className="rounded-md border border-dashed p-8 text-center">
           {searchQuery ? (
-            <div className="text-sm text-muted-foreground">검색 결과가 없습니다.</div>
+            <div className="text-sm text-muted-foreground">
+              {t('documents.empty.noSearchResults')}
+            </div>
           ) : activeTab === 'team' ? (
             teamDocs.length === 0 ? (
               <div className="space-y-4">
                 <Users className="h-12 w-12 mx-auto opacity-20" />
                 <div>
-                  <p className="text-sm text-muted-foreground">등록된 Team Docs가 없습니다.</p>
+                  <p className="text-sm text-muted-foreground">{t('documents.empty.noTeamDocs')}</p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Settings → System → Team Docs에서 팀 레포지토리를 추가하고 동기화하세요.
+                    {t('documents.empty.addTeamDocsHint')}
                   </p>
                 </div>
               </div>
@@ -1401,15 +1434,15 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                 <Users className="h-12 w-12 mx-auto opacity-20" />
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    선택한 Repository
-                    {(() => {
-                      const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
-                      return currentTeam ? ` (${currentTeam.name})` : '';
-                    })()}
-                    에 문서가 없습니다.
+                    {t('documents.empty.noDocsInRepository', {
+                      name: (() => {
+                        const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
+                        return currentTeam ? currentTeam.name : '';
+                      })(),
+                    })}
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Pull을 통해 동기화하거나 새 문서를 업로드하세요.
+                    {t('documents.empty.pullOrUploadHint')}
                   </p>
                 </div>
               </div>
@@ -1418,9 +1451,11 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
             <div className="space-y-4">
               <User className="h-12 w-12 mx-auto opacity-20" />
               <div>
-                <p className="text-sm text-muted-foreground">개인 문서가 없습니다.</p>
+                <p className="text-sm text-muted-foreground">
+                  {t('documents.empty.noPersonalDocs')}
+                </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  문서를 업로드하거나 GitHub에서 동기화하세요.
+                  {t('documents.empty.uploadOrSyncHint')}
                 </p>
               </div>
             </div>
