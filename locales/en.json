@@ -83,6 +83,12 @@
       },
       "saved": "General settings saved!"
     },
+    "editor": {
+      "saved": "Editor settings saved!"
+    },
+    "browser": {
+      "saved": "Browser settings saved!"
+    },
     "llm": {
       "title": "LLM",
       "description": "LLM provider and model settings",
@@ -107,6 +113,9 @@
         "headerKey": "Header Name",
         "headerValue": "Header Value",
         "addHeader": "Add Header",
+        "toggleAriaLabel": "Toggle connection enabled/disabled",
+        "editAriaLabel": "Edit connection",
+        "deleteAriaLabel": "Delete connection",
         "validation": {
           "url": "Base URL must start with http:// or https://",
           "apiKey": "API Key must be at least 20 characters long.",
@@ -163,7 +172,9 @@
         "noBaseModel": "Please select a default model for conversation.",
         "conversionFailed": "Failed to convert configuration.",
         "noActiveBaseModel": "No default model selected. Please select a model with 'base' tag in the Models tab and click 'Set as Default' button.",
-        "connectionNotFound": "The connection referenced by the model does not exist. Please check the Connections tab."
+        "connectionNotFound": "The connection referenced by the model does not exist. Please check the Connections tab.",
+        "connectionNotExists": "The connection referenced by the model does not exist. Please check the Connections tab.",
+        "conversionError": "Configuration conversion error: {{error}}"
       }
     },
     "network": {
@@ -853,6 +864,8 @@
         "title": "5. Setup Complete!",
         "description": "GitHub synchronization has been successfully configured.",
         "successMessage": "✅ Configuration Complete",
+        "server": "Server",
+        "repository": "Repository",
         "editSettings": "Edit Settings"
       },
       "security": {

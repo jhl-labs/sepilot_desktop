@@ -83,6 +83,12 @@
       },
       "saved": "일반 설정이 저장되었습니다!"
     },
+    "editor": {
+      "saved": "Editor 설정이 저장되었습니다!"
+    },
+    "browser": {
+      "saved": "Browser 설정이 저장되었습니다!"
+    },
     "llm": {
       "title": "LLM",
       "description": "LLM 제공자 및 모델 설정",
@@ -107,6 +113,9 @@
         "headerKey": "헤더 이름",
         "headerValue": "헤더 값",
         "addHeader": "헤더 추가",
+        "toggleAriaLabel": "Connection 활성/비활성 전환",
+        "editAriaLabel": "Connection 수정",
+        "deleteAriaLabel": "Connection 삭제",
         "validation": {
           "url": "Base URL은 http:// 또는 https://로 시작해야 합니다.",
           "apiKey": "API 키는 최소 20자 이상이어야 합니다.",
@@ -163,6 +172,7 @@
         "noBaseModel": "기본 대화용 모델을 선택해주세요.",
         "conversionFailed": "설정 변환에 실패했습니다.",
         "noActiveBaseModel": "기본 대화용 모델이 선택되지 않았습니다. Models 탭에서 base 태그가 있는 모델을 선택하고 \"기본 모델로 사용\" 버튼을 클릭해주세요.",
+        "connectionNotExists": "모델이 참조하는 Connection이 존재하지 않습니다. Connections 탭을 확인해주세요.",
         "connectionNotFound": "모델이 참조하는 Connection이 존재하지 않습니다. Connections 탭을 확인해주세요.",
         "conversionError": "설정 변환 오류: {{error}}"
       }
@@ -675,6 +685,8 @@
         "title": "5. 설정 완료!",
         "description": "GitHub 동기화가 성공적으로 설정되었습니다.",
         "successMessage": "✅ 설정이 완료되었습니다",
+        "server": "서버",
+        "repository": "레포지토리",
         "editSettings": "설정 수정하기"
       },
       "security": {

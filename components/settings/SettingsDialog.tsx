@@ -387,14 +387,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
       // Validate connections
       if (configV2.connections.length === 0) {
-        setMessage({ type: 'error', text: '최소 하나의 Connection을 추가해주세요.' });
+        setMessage({ type: 'error', text: t('settings.llm.validation.noConnection') });
         setIsSaving(false);
         return;
       }
 
       // Validate active base model
       if (!configV2.activeBaseModelId) {
-        setMessage({ type: 'error', text: '기본 대화용 모델을 선택해주세요.' });
+        setMessage({ type: 'error', text: t('settings.llm.validation.noBaseModel') });
         setIsSaving(false);
         return;
       }
@@ -410,11 +410,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
         // Provide specific error messages
         if (error.message?.includes('No active base model')) {
-          userMessage =
-            '기본 대화용 모델이 선택되지 않았습니다. Models 탭에서 base 태그가 있는 모델을 선택하고 "기본 모델로 사용" 버튼을 클릭해주세요.';
+          userMessage = t('settings.llm.validation.noActiveBaseModel');
         } else if (error.message?.includes('connection')) {
-          userMessage =
-            '모델이 참조하는 Connection이 존재하지 않습니다. Connections 탭을 확인해주세요.';
+          userMessage = t('settings.llm.validation.connectionNotExists');
         } else {
           userMessage = t('settings.conversionError', { error: error.message });
         }
@@ -555,14 +553,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       // Validation based on selected provider
       if (imageGenConfig.provider === 'comfyui' && imageGenConfig.comfyui?.enabled) {
         if (!imageGenConfig.comfyui.httpUrl.trim()) {
-          throw new Error('ComfyUI HTTP URL을 입력해주세요.');
+          throw new Error(t('settings.imagegen.validation.httpUrlRequired'));
         }
         if (!imageGenConfig.comfyui.workflowId.trim()) {
-          throw new Error('기본 워크플로우 ID를 입력해주세요.');
+          throw new Error(t('settings.imagegen.validation.workflowIdRequired'));
         }
       } else if (imageGenConfig.provider === 'nanobanana' && imageGenConfig.nanobanana?.enabled) {
         if (!imageGenConfig.nanobanana.apiKey.trim()) {
-          throw new Error('NanoBanana API Key를 입력해주세요.');
+          throw new Error(t('settings.imagegen.validation.apiKeyRequired'));
         }
       }
 
@@ -605,7 +603,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     try {
       // Validation
       if (!quickInputConfig.quickInputShortcut.trim()) {
-        setMessage({ type: 'error', text: 'Quick Input 단축키를 입력해주세요.' });
+        setMessage({ type: 'error', text: t('settings.quickinput.validation.shortcutRequired') });
         setIsSaving(false);
         return;
       }
@@ -616,17 +614,20 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
       for (const question of quickInputConfig.quickQuestions) {
         if (!question.name.trim()) {
-          setMessage({ type: 'error', text: 'Quick Question의 이름을 입력해주세요.' });
+          setMessage({ type: 'error', text: t('settings.quickinput.validation.nameRequired') });
           setIsSaving(false);
           return;
         }
         if (!question.shortcut.trim()) {
-          setMessage({ type: 'error', text: 'Quick Question의 단축키를 입력해주세요.' });
+          setMessage({
+            type: 'error',
+            text: t('settings.quickinput.validation.questionShortcutRequired'),
+          });
           setIsSaving(false);
           return;
         }
         if (!question.prompt.trim()) {
-          setMessage({ type: 'error', text: 'Quick Question의 프롬프트를 입력해주세요.' });
+          setMessage({ type: 'error', text: t('settings.quickinput.validation.promptRequired') });
           setIsSaving(false);
           return;
         }
@@ -635,7 +636,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         if (usedShortcuts.has(question.shortcut)) {
           setMessage({
             type: 'error',
-            text: `"${question.name}"의 단축키가 다른 단축키와 중복됩니다.`,
+            text: t('settings.quickinput.validation.duplicateShortcut', { name: question.name }),
           });
           setIsSaving(false);
           return;
@@ -967,7 +968,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                           );
                         }
                       }
-                      setMessage({ type: 'success', text: '일반 설정이 저장되었습니다!' });
+                      setMessage({ type: 'success', text: t('settings.general.saved') });
                     }}
                     isSaving={isSaving}
                     message={message}
@@ -1105,9 +1106,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
                 {activeTab === 'editor' && (
                   <EditorSettingsTab
-                    onSave={() =>
-                      setMessage({ type: 'success', text: 'Editor 설정이 저장되었습니다!' })
-                    }
+                    onSave={() => setMessage({ type: 'success', text: t('settings.editor.saved') })}
                     isSaving={isSaving}
                     message={message}
                   />
@@ -1116,7 +1115,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 {activeTab === 'browser' && (
                   <BrowserSettingsTab
                     onSave={() =>
-                      setMessage({ type: 'success', text: 'Browser 설정이 저장되었습니다!' })
+                      setMessage({ type: 'success', text: t('settings.browser.saved') })
                     }
                     isSaving={isSaving}
                     message={message}

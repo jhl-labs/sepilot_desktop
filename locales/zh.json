@@ -83,6 +83,12 @@
       },
       "saved": "通用设置已保存！"
     },
+    "editor": {
+      "saved": "编辑器设置已保存！"
+    },
+    "browser": {
+      "saved": "浏览器设置已保存！"
+    },
     "llm": {
       "title": "LLM",
       "description": "LLM 提供商和模型设置",
@@ -107,6 +113,9 @@
         "headerKey": "请求头名称",
         "headerValue": "请求头值",
         "addHeader": "添加请求头",
+        "toggleAriaLabel": "切换连接启用/禁用",
+        "editAriaLabel": "编辑连接",
+        "deleteAriaLabel": "删除连接",
         "validation": {
           "url": "Base URL 必须以 http:// 或 https:// 开头。",
           "apiKey": "API 密钥必须至少 20 个字符。",
@@ -164,6 +173,7 @@
         "conversionFailed": "配置转换失败。",
         "noActiveBaseModel": "未选择默认模型。请在模型标签页中选择带有 'base' 标签的模型，然后点击「设为默认」按钮。",
         "connectionNotFound": "模型引用的连接不存在。请检查连接标签页。",
+        "connectionNotExists": "模型引用的连接不存在。请检查连接标签页。",
         "conversionError": "配置转换错误：{{error}}"
       }
     },
@@ -668,6 +678,8 @@
         "title": "5. 设置完成！",
         "description": "GitHub 同步已成功设置。",
         "successMessage": "✅ 设置已完成",
+        "server": "服务器",
+        "repository": "存储库",
         "editSettings": "编辑设置"
       },
       "security": {

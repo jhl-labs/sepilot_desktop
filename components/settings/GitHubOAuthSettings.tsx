@@ -559,7 +559,7 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
               <div className="space-y-2">
                 <Label htmlFor="selectedRepo">{t('settings.githubOAuth.repository.label')}</Label>
                 <select
-                  title="레포지토리"
+                  title={t('settings.githubOAuth.repository.label')}
                   id="selectedRepo"
                   value={selectedRepo}
                   onChange={(e) => setSelectedRepo(e.target.value)}
@@ -626,10 +626,15 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
             <div className="rounded-md bg-green-500/10 border border-green-500/20 px-4 py-3 text-sm text-green-600 dark:text-green-400">
               <p className="font-medium">{t('settings.githubOAuth.complete.successMessage')}</p>
               <ul className="mt-2 space-y-1 text-xs list-disc list-inside">
-                <li>서버: {serverType === 'ghes' ? ghesUrl : 'GitHub.com'}</li>
+                <li>
+                  {t('settings.githubOAuth.complete.server')}:{' '}
+                  {serverType === 'ghes' ? ghesUrl : 'GitHub.com'}
+                </li>
                 <li>App ID: {appId}</li>
                 <li>Installation ID: {installationId}</li>
-                <li>레포지토리: {selectedRepo}</li>
+                <li>
+                  {t('settings.githubOAuth.complete.repository')}: {selectedRepo}
+                </li>
               </ul>
             </div>
 

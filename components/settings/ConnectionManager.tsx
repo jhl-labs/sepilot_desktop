@@ -269,7 +269,7 @@ export function ConnectionManager({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Connection 활성/비활성 전환"
+                    aria-label={t('settings.llm.connections.toggleAriaLabel')}
                     onClick={() => handleToggleEnabled(connection.id)}
                     disabled={editingId !== null || isAdding}
                   >
@@ -283,7 +283,7 @@ export function ConnectionManager({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Connection 수정"
+                    aria-label={t('settings.llm.connections.editAriaLabel')}
                     onClick={() => handleEdit(connection)}
                     disabled={editingId !== null || isAdding}
                   >
@@ -292,7 +292,7 @@ export function ConnectionManager({
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Connection 삭제"
+                    aria-label={t('settings.llm.connections.deleteAriaLabel')}
                     onClick={() => handleDelete(connection.id)}
                     disabled={editingId !== null || isAdding}
                   >
