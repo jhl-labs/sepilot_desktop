@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   X,
   Download,
@@ -41,6 +42,7 @@ interface GalleryViewProps {
 }
 
 export function GalleryView({ onClose }: GalleryViewProps) {
+  const { t } = useTranslation();
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
@@ -243,8 +245,10 @@ export function GalleryView({ onClose }: GalleryViewProps) {
       <div className="flex items-center justify-between border-b px-6 py-4">
         <div className="flex items-center gap-3">
           <ImageIcon className="h-6 w-6 text-primary" />
-          <h2 className="text-xl font-semibold">이미지 갤러리</h2>
-          <span className="text-sm text-muted-foreground">({filteredImages.length}개)</span>
+          <h2 className="text-xl font-semibold">{t('gallery.title')}</h2>
+          <span className="text-sm text-muted-foreground">
+            {t('gallery.count', { count: filteredImages.length })}
+          </span>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-5 w-5" />
@@ -259,7 +263,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
             size="sm"
             onClick={() => setFilter('all')}
           >
-            전체 ({images.length})
+            {t('gallery.filters.all', { count: images.length })}
           </Button>
           <Button
             variant={filter === 'pasted' ? 'default' : 'outline'}
@@ -268,7 +272,9 @@ export function GalleryView({ onClose }: GalleryViewProps) {
             className="gap-1"
           >
             <Clipboard className="h-4 w-4" />
-            붙여넣기 ({images.filter((i) => i.type === 'pasted').length})
+            {t('gallery.filters.pasted', {
+              count: images.filter((i) => i.type === 'pasted').length,
+            })}
           </Button>
           <Button
             variant={filter === 'generated' ? 'default' : 'outline'}
@@ -277,7 +283,9 @@ export function GalleryView({ onClose }: GalleryViewProps) {
             className="gap-1"
           >
             <Sparkles className="h-4 w-4" />
-            생성됨 ({images.filter((i) => i.type === 'generated').length})
+            {t('gallery.filters.generated', {
+              count: images.filter((i) => i.type === 'generated').length,
+            })}
           </Button>
           <Button
             variant={filter === 'linked' ? 'default' : 'outline'}
@@ -286,7 +294,9 @@ export function GalleryView({ onClose }: GalleryViewProps) {
             className="gap-1"
           >
             <Link className="h-4 w-4" />
-            링크 ({images.filter((i) => i.type === 'linked').length})
+            {t('gallery.filters.linked', {
+              count: images.filter((i) => i.type === 'linked').length,
+            })}
           </Button>
         </div>
       </div>
@@ -300,15 +310,15 @@ export function GalleryView({ onClose }: GalleryViewProps) {
         ) : filteredImages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
             <ImageIcon className="mb-4 h-16 w-16 opacity-30" />
-            <p className="text-lg font-medium">이미지가 없습니다</p>
+            <p className="text-lg font-medium">{t('gallery.noImages')}</p>
             <p className="mt-2 text-sm">
               {filter === 'all'
-                ? '채팅에서 이미지를 붙여넣거나 생성하면 여기에 표시됩니다'
+                ? t('gallery.noImagesHint.all')
                 : filter === 'pasted'
-                  ? '아직 붙여넣기한 이미지가 없습니다'
+                  ? t('gallery.noImagesHint.pasted')
                   : filter === 'generated'
-                    ? '아직 생성한 이미지가 없습니다'
-                    : '아직 링크된 이미지가 없습니다'}
+                    ? t('gallery.noImagesHint.generated')
+                    : t('gallery.noImagesHint.linked')}
             </p>
           </div>
         ) : (
@@ -338,10 +348,10 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                           )}
                           <span>
                             {image.type === 'generated'
-                              ? '생성됨'
+                              ? t('gallery.type.generated')
                               : image.type === 'linked'
-                                ? '링크'
-                                : '붙여넣기'}
+                                ? t('gallery.type.linked')
+                                : t('gallery.type.pasted')}
                           </span>
                         </div>
                         <p className="text-white text-xs mt-1 line-clamp-1">
@@ -381,18 +391,18 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                     className="cursor-pointer"
                   >
                     <Copy className="mr-2 h-4 w-4" />
-                    이미지 복사
+                    {t('gallery.copyImage')}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() => handleSaveAsFile(image)}
                     className="cursor-pointer"
                   >
                     <Save className="mr-2 h-4 w-4" />
-                    파일로 저장
+                    {t('gallery.saveAsFile')}
                   </ContextMenuItem>
                   <ContextMenuItem onClick={() => handleDownload(image)} className="cursor-pointer">
                     <Download className="mr-2 h-4 w-4" />
-                    다운로드
+                    {t('gallery.download')}
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
@@ -423,10 +433,10 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                 )}
                 <span className="font-medium">
                   {selectedImage.type === 'generated'
-                    ? 'AI 생성 이미지'
+                    ? t('gallery.typeLabel.generated')
                     : selectedImage.type === 'linked'
-                      ? '링크 이미지'
-                      : '붙여넣기 이미지'}
+                      ? t('gallery.typeLabel.linked')
+                      : t('gallery.typeLabel.pasted')}
                 </span>
                 <span className="text-sm text-muted-foreground">
                   • {formatDate(selectedImage.createdAt)}
@@ -437,7 +447,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDownload(selectedImage)}
-                  title="다운로드"
+                  title={t('gallery.download')}
                 >
                   <Download className="h-4 w-4" />
                 </Button>
@@ -457,8 +467,8 @@ export function GalleryView({ onClose }: GalleryViewProps) {
             {/* Modal Footer */}
             <div className="border-t px-4 py-3 text-sm text-muted-foreground">
               <p>
-                <span className="font-medium">대화:</span>{' '}
-                {selectedImage.conversationTitle || '알 수 없음'}
+                <span className="font-medium">{t('gallery.conversationLabel')}:</span>{' '}
+                {selectedImage.conversationTitle || t('gallery.unknown')}
               </p>
               {selectedImage.type === 'linked' && selectedImage.url ? (
                 <p className="line-clamp-1">
@@ -474,12 +484,13 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                 </p>
               ) : (
                 <p className="line-clamp-1">
-                  <span className="font-medium">파일명:</span> {selectedImage.filename}
+                  <span className="font-medium">{t('gallery.filename')}:</span>{' '}
+                  {selectedImage.filename}
                 </p>
               )}
               {selectedImage.type === 'generated' && selectedImage.provider && (
                 <p>
-                  <span className="font-medium">생성 출처:</span>{' '}
+                  <span className="font-medium">{t('gallery.provider')}:</span>{' '}
                   {selectedImage.provider === 'comfyui' ? 'ComfyUI' : 'NanoBanana (Google Imagen)'}
                 </p>
               )}
