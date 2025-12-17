@@ -86,45 +86,8 @@ export function KeyboardShortcutsDialog({ open, onOpenChange }: KeyboardShortcut
       title: t('editor.shortcuts.categories.aiFeatures'),
       shortcuts: [
         {
-          key: `${modKey}+K, C`,
-          description: t('editor.shortcuts.aiContinueWriting'),
-        },
-        {
-          key: `${modKey}+K, S`,
-          description: t('editor.shortcuts.aiMakeShorter'),
-        },
-        {
-          key: `${modKey}+K, L`,
-          description: t('editor.shortcuts.aiMakeLonger'),
-        },
-        {
-          key: `${modKey}+K, G`,
-          description: t('editor.shortcuts.aiFixGrammar'),
-        },
-        {
-          key: `${modKey}+K, M`,
-          description: t('editor.shortcuts.aiSummarize'),
-        },
-        {
-          key: `${modKey}+K, E`,
-          description: t('editor.shortcuts.aiExplainCode'),
-        },
-        { key: `${modKey}+K, F`, description: t('editor.shortcuts.aiFixCode') },
-        {
-          key: `${modKey}+K, I`,
-          description: t('editor.shortcuts.aiImproveCode'),
-        },
-        {
-          key: `${modKey}+K, P`,
-          description: t('editor.shortcuts.aiCompleteCode'),
-        },
-        {
-          key: `${modKey}+K, D`,
-          description: t('editor.shortcuts.aiAddComments'),
-        },
-        {
-          key: `${modKey}+K, T`,
-          description: t('editor.shortcuts.aiGenerateTests'),
+          key: `${modKey}+.`,
+          description: 'AI Autocomplete (inline suggestions)',
         },
       ],
     },
@@ -185,6 +148,13 @@ export function KeyboardShortcutsDialog({ open, onOpenChange }: KeyboardShortcut
         </DialogHeader>
         <ScrollArea className="h-[60vh] pr-4">
           <div className="space-y-6">
+            {/* AI Features Access Note */}
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                💡 {t('editor.shortcuts.aiAccessNote')}
+              </p>
+            </div>
+
             {categories.map((category, idx) => (
               <div key={idx}>
                 <h3 className="text-lg font-semibold mb-3 text-primary">{category.title}</h3>

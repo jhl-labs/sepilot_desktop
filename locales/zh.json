@@ -1943,7 +1943,8 @@
       "previousFile": "上一个文件",
       "commandPalette": "命令面板",
       "showShortcuts": "显示快捷键",
-      "closeDialog": "关闭对话框"
+      "closeDialog": "关闭对话框",
+      "aiAccessNote": "选择文本后，可通过右键菜单使用AI功能"
     },
     "commands": {
       "searchPlaceholder": "搜索命令...",

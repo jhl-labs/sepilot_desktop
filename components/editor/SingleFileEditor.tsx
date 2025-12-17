@@ -430,52 +430,34 @@ export function SingleFileEditor({
     });
 
     // === AI Writing Actions (Submenu - Higher Priority) ===
+    // Note: Chord keybindings disabled to prevent interference with normal typing
+    // Users should use context menu instead
     const aiWritingActions = [
       {
         id: 'ai-continue',
         label: 'Continue Writing',
         action: 'continue',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyC,
-        ],
       },
       {
         id: 'ai-shorten',
         label: 'Make Shorter',
         action: 'make-shorter',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyS,
-        ],
       },
       {
         id: 'ai-longer',
         label: 'Make Longer',
         action: 'make-longer',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyL,
-        ],
       },
       { id: 'ai-simplify', label: 'Simplify', action: 'simplify' },
       {
         id: 'ai-grammar',
         label: 'Fix Grammar',
         action: 'fix-grammar',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyG,
-        ],
       },
       {
         id: 'ai-summarize',
         label: 'Summarize',
         action: 'summarize',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyM,
-        ],
       },
     ];
 
@@ -483,7 +465,6 @@ export function SingleFileEditor({
       editor.addAction({
         id: item.id,
         label: item.label,
-        keybindings: item.keybindings,
         contextMenuGroupId: '2_ai_writing',
         contextMenuOrder: index + 1,
         run: async (ed) => {
@@ -497,60 +478,38 @@ export function SingleFileEditor({
     });
 
     // === AI Code Actions (Submenu) ===
+    // Note: Chord keybindings disabled to prevent interference with normal typing
+    // Users should use context menu instead
     const aiCodeActions = [
       {
         id: 'ai-explain',
         label: 'Explain Code',
         action: 'explain',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyE,
-        ],
       },
       {
         id: 'ai-fix',
         label: 'Fix Code',
         action: 'fix',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyF,
-        ],
       },
       {
         id: 'ai-improve',
         label: 'Improve Code',
         action: 'improve',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyI,
-        ],
       },
       {
         id: 'ai-complete',
         label: 'Complete Code',
         action: 'complete',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyP,
-        ],
       },
       {
         id: 'ai-comments',
         label: 'Add Comments',
         action: 'add-comments',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyD,
-        ],
       },
       {
         id: 'ai-tests',
         label: 'Generate Tests',
         action: 'generate-tests',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyT,
-        ],
       },
     ];
 
@@ -558,7 +517,6 @@ export function SingleFileEditor({
       editor.addAction({
         id: item.id,
         label: item.label,
-        keybindings: item.keybindings,
         contextMenuGroupId: '3_ai_code',
         contextMenuOrder: index + 1,
         run: async (ed) => {

@@ -1992,7 +1992,8 @@
       "previousFile": "이전 파일",
       "commandPalette": "명령 팔레트",
       "showShortcuts": "단축키 표시",
-      "closeDialog": "다이얼로그 닫기"
+      "closeDialog": "다이얼로그 닫기",
+      "aiAccessNote": "AI 기능은 텍스트를 선택한 후 우클릭 메뉴에서 사용할 수 있습니다"
     },
     "commands": {
       "searchPlaceholder": "명령 검색...",
