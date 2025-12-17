@@ -1052,6 +1052,48 @@
       "referenceDocument": "📄 Referenced Document: {{title}}"
     }
   },
+  "compressDialog": {
+    "title": "Compress Conversation",
+    "description": "LLM analyzes the conversation and compresses it to keep only the key points.",
+    "analyzing": {
+      "title": "Analyzing conversation...",
+      "description": "LLM is extracting key content"
+    },
+    "review": {
+      "failed": "Compression Failed"
+    },
+    "stats": {
+      "original": "Original Messages",
+      "compressed": "After Compression",
+      "reduction": "Reduction Rate"
+    },
+    "preview": {
+      "title": "Compressed Messages Preview:",
+      "user": "User",
+      "assistant": "Assistant"
+    },
+    "info": {
+      "message": "Note: Compressed conversation will replace the original. If there is important content, back it up via \"Duplicate Conversation\" first."
+    },
+    "compressing": {
+      "title": "Compressing conversation...",
+      "description": "Replacing with compressed messages"
+    },
+    "done": {
+      "title": "Compression Complete!",
+      "description": "Conversation has been successfully compressed"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "apply": "Apply Compression"
+    },
+    "errors": {
+      "analysisFailed": "Failed to compress conversation.",
+      "parseFailed": "Failed to parse compressed messages.",
+      "noMessages": "No compressed messages.",
+      "saveFailed": "Failed to save compressed conversation."
+    }
+  },
   "sidebar": {
     "chat": "Chat",
     "editor": {
@@ -1802,6 +1844,79 @@
     "saveFailed": "Save failed",
     "confirmDelete": "Are you sure you want to delete this persona?",
     "deleteFailed": "Delete failed"
+  },
+  "personaDialog": {
+    "title": "AI Persona Management",
+    "list": {
+      "title": "Persona List",
+      "addNew": "Add New Persona"
+    },
+    "form": {
+      "create": "Add New Persona",
+      "edit": "Edit Persona",
+      "avatar": "Avatar (Emoji)",
+      "name": "Name *",
+      "namePlaceholder": "e.g., Translator, English Teacher, Senior Developer",
+      "description": "Description",
+      "descriptionPlaceholder": "Brief description",
+      "systemPrompt": "System Prompt *",
+      "systemPromptPlaceholder": "Define the AI's role and behavior...",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "requiredFields": "Name and system prompt are required.",
+      "saveFailed": "Failed to save",
+      "deleteFailed": "Failed to delete"
+    },
+    "confirm": {
+      "delete": "Are you sure you want to delete this persona?"
+    },
+    "view": {
+      "systemPrompt": "System Prompt",
+      "builtinNote": "* Built-in personas cannot be modified.",
+      "emptyState": "Select a persona or add a new one"
+    }
+  },
+  "saveKnowledgeDialog": {
+    "title": "Save Conversation as Knowledge",
+    "description": "LLM analyzes the conversation to extract fact-based knowledge and save it as a RAG document.",
+    "defaultTitle": "Knowledge",
+    "analyzing": {
+      "title": "Analyzing conversation...",
+      "description": "LLM is extracting fact-based knowledge"
+    },
+    "review": {
+      "failed": "Knowledge Extraction Failed"
+    },
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "Knowledge title",
+      "content": "Extracted Knowledge",
+      "contentPlaceholder": "Knowledge content extracted by LLM",
+      "hint": "You can review and modify the LLM-analyzed content if needed"
+    },
+    "info": {
+      "tip": "Tip: The knowledge extracted by LLM is fact-based. Review the content and modify if needed before saving."
+    },
+    "saving": {
+      "title": "Saving knowledge...",
+      "description": "Registering in RAG document database"
+    },
+    "done": {
+      "title": "Knowledge Saved!",
+      "description": "This knowledge is now available in the RAG system"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "save": "Save as Knowledge"
+    },
+    "errors": {
+      "analysisFailed": "Failed to analyze conversation.",
+      "insufficientKnowledge": "This conversation lacks sufficient fact-based knowledge to save. More specific and objective information is needed.",
+      "requiredFields": "Please enter both title and content.",
+      "saveFailed": "Failed to save knowledge."
+    }
   },
   "fileExplorer": {
     "title": "File Explorer",
