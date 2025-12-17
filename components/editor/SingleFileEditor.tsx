@@ -430,52 +430,39 @@ export function SingleFileEditor({
     });
 
     // === AI Writing Actions (Submenu - Higher Priority) ===
+    // Note: Chord keybindings disabled to prevent interference with normal typing
+    // Users should use context menu instead
     const aiWritingActions = [
       {
         id: 'ai-continue',
         label: 'Continue Writing',
         action: 'continue',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyC,
-        ],
+        keybindings: undefined,
       },
       {
         id: 'ai-shorten',
         label: 'Make Shorter',
         action: 'make-shorter',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyS,
-        ],
+        keybindings: undefined,
       },
       {
         id: 'ai-longer',
         label: 'Make Longer',
         action: 'make-longer',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyL,
-        ],
+        keybindings: undefined,
       },
       { id: 'ai-simplify', label: 'Simplify', action: 'simplify' },
       {
         id: 'ai-grammar',
         label: 'Fix Grammar',
         action: 'fix-grammar',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyG,
-        ],
+        keybindings: undefined,
       },
       {
         id: 'ai-summarize',
         label: 'Summarize',
         action: 'summarize',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyM,
-        ],
+        keybindings: undefined,
       },
     ];
 
@@ -497,60 +484,44 @@ export function SingleFileEditor({
     });
 
     // === AI Code Actions (Submenu) ===
+    // Note: Chord keybindings disabled to prevent interference with normal typing
+    // Users should use context menu instead
     const aiCodeActions = [
       {
         id: 'ai-explain',
         label: 'Explain Code',
         action: 'explain',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyE,
-        ],
+        keybindings: undefined,
       },
       {
         id: 'ai-fix',
         label: 'Fix Code',
         action: 'fix',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyF,
-        ],
+        keybindings: undefined,
       },
       {
         id: 'ai-improve',
         label: 'Improve Code',
         action: 'improve',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyI,
-        ],
+        keybindings: undefined,
       },
       {
         id: 'ai-complete',
         label: 'Complete Code',
         action: 'complete',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyP,
-        ],
+        keybindings: undefined,
       },
       {
         id: 'ai-comments',
         label: 'Add Comments',
         action: 'add-comments',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyD,
-        ],
+        keybindings: undefined,
       },
       {
         id: 'ai-tests',
         label: 'Generate Tests',
         action: 'generate-tests',
-        keybindings: [
-          monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyK,
-          monacoInstance.KeyCode.KeyT,
-        ],
+        keybindings: undefined,
       },
     ];
 
