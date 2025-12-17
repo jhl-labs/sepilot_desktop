@@ -2102,14 +2102,185 @@
     }
   },
   "documents": {
-    "title": "Documents",
-    "upload": "Upload",
-    "delete": "Delete",
-    "search": "Search Documents",
-    "noDocuments": "No documents",
-    "uploadDocument": "Upload a document",
-    "indexing": "Indexing...",
-    "indexed": "Indexed"
+    "untitled": "Untitled",
+    "title": "Uploaded Documents",
+    "tabs": {
+      "personal": "Personal",
+      "team": "Team Docs"
+    },
+    "delete": {
+      "confirm": "Are you sure you want to delete this document?",
+      "success": "Document deleted successfully."
+    },
+    "export": {
+      "success": "Exported {{count}} documents."
+    },
+    "import": {
+      "success": "Import completed: {{imported}} new, {{overwritten}} overwritten, {{skipped}} skipped"
+    },
+    "folder": {
+      "deleteNotEmpty": "Cannot delete folder with documents. Please move or delete documents first.",
+      "deleteSuccess": "Folder \"{{folderPath}}\" deleted successfully.",
+      "pathRequired": "Please enter a folder path.",
+      "alreadyExists": "Folder already exists.",
+      "hasDocuments": "Folder already contains documents.",
+      "createSuccess": "Folder \"{{folderPath}}\" created successfully.",
+      "deleteEmpty": "Delete empty folder",
+      "create": "Create new folder"
+    },
+    "move": {
+      "success": "Moved \"{{title}}\" to \"{{folderPath}}\"."
+    },
+    "labels": {
+      "team": "Team",
+      "source": "Source",
+      "personalDoc": "Personal Document",
+      "llmCleaned": "LLM Cleaned",
+      "modifiedLocally": "Modified locally (Push needed)",
+      "unknown": "Unknown",
+      "count": "{{count}} items",
+      "modified": "Modified"
+    },
+    "actions": {
+      "collapse": "Collapse",
+      "showMore": "Show more",
+      "edit": "Edit",
+      "delete": "Delete",
+      "export": "Export documents (JSON)",
+      "import": "Import documents (JSON)",
+      "refresh": "Refresh documents"
+    },
+    "personal": {
+      "setupRequired": "Personal Docs setup required.",
+      "syncSuccess": "Synced {{count}} personal documents!",
+      "noDocsToSync": "No personal documents to sync.",
+      "pushSuccess": "Personal documents pushed to GitHub!",
+      "connectRepository": "Connect GitHub Repository to sync documents"
+    },
+    "team": {
+      "pullSuccess": "{{name}} pull completed!",
+      "pushSuccess": "{{name}} push completed!",
+      "addRepository": "Add Team Docs Repository to sync team documents",
+      "repositoryDefault": "Team Documents Repository"
+    },
+    "sync": {
+      "settings": "GitHub Sync Settings",
+      "lastSync": "Last sync"
+    },
+    "search": {
+      "placeholder": "Search by title, folder, content...",
+      "clear": "Clear search"
+    },
+    "view": {
+      "grid": "Grid view",
+      "list": "List view",
+      "tree": "Tree view"
+    },
+    "empty": {
+      "noDocuments": "No uploaded documents.",
+      "noSearchResults": "No search results.",
+      "noTeamDocs": "No registered Team Docs.",
+      "addTeamDocsHint": "Add and sync team repository at Settings → System → Team Docs.",
+      "noDocsInRepository": "No documents in selected Repository ({{name}}).",
+      "pullOrUploadHint": "Sync via pull or upload new documents.",
+      "noPersonalDocs": "No personal documents.",
+      "uploadOrSyncHint": "Upload documents or sync from GitHub."
+    },
+    "errors": {
+      "loadFailed": "Failed to load documents",
+      "deleteFailed": "Failed to delete document",
+      "exportFailed": "Failed to export documents",
+      "importFailed": "Failed to import documents",
+      "indexFailed": "Failed to index documents",
+      "fetchFailed": "Failed to fetch documents",
+      "personalSyncFailed": "Failed to sync personal documents",
+      "personalPushFailed": "Failed to push personal documents",
+      "pushFailed": "Push failed",
+      "syncFailed": "Sync failed",
+      "moveFailed": "Failed to move document",
+      "folderDeleteFailed": "Failed to delete folder",
+      "folderCreateFailed": "Failed to create folder"
+    }
+  },
+  "documentsPage": {
+    "backToChat": "Back to chat",
+    "title": "Document Management",
+    "description": "Upload and manage documents for RAG search",
+    "addDocument": "Add document",
+    "warnings": {
+      "setupRequired": {
+        "title": "VectorDB setup required",
+        "message": "Please complete VectorDB and Embedding settings before uploading documents."
+      },
+      "sqliteElectronOnly": {
+        "title": "SQLite-vec is Electron only",
+        "message": "SQLite-vec is not available in web browsers. Use Electron app or choose another VectorDB (OpenSearch, Elasticsearch, etc)."
+      }
+    },
+    "success": {
+      "configured": "VectorDB configured successfully"
+    },
+    "errors": {
+      "sqliteElectronOnly": "SQLite-vec is only available in Electron environment. Cannot upload documents in web browser.",
+      "embeddingNotInitialized": "Embedding not initialized. Please complete embedding settings first.",
+      "vectorDBNotInitialized": "VectorDB not initialized. Please complete VectorDB settings first.",
+      "notInitialized": "VectorDB or Embedding not initialized.",
+      "editFailed": "Failed to edit document"
+    }
+  },
+  "documentDialog": {
+    "placeholder": {
+      "title": "Enter document title (Untitled)",
+      "folderPath": "e.g. Project/Backend (optional)",
+      "source": "e.g. Wikipedia, Notion, etc"
+    },
+    "labels": {
+      "selectGroup": "Select document group",
+      "rootFolder": "Root folder",
+      "folderPath": "Folder path",
+      "noSource": "No source",
+      "source": "Source",
+      "documentUrl": "Document URL (webpage)",
+      "aiOptions": "AI preprocessing options"
+    },
+    "hints": {
+      "folderSeparator": "Use slash (/) to separate subfolders",
+      "webPageExtract": "Extract and save text content from web page."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "upload": "Upload",
+      "save": "Save",
+      "pushToGitHub": "Push to GitHub"
+    },
+    "sourceType": {
+      "manual": "Manual entry",
+      "http": "Web page (HTTP)",
+      "github": "GitHub Repository"
+    },
+    "options": {
+      "cleanWithLLM": "Remove unnecessary content (ads, navigation, etc) with LLM",
+      "cleanGitCode": "Clean up code/comments and extract key content with LLM"
+    },
+    "processing": {
+      "cleaning": "Cleaning document with LLM...",
+      "general": "Processing... ({{current}}/{{total}})"
+    },
+    "success": {
+      "githubUpload": "GitHub upload completed",
+      "saved": "Saved successfully",
+      "uploaded": "{{count}} documents uploaded"
+    },
+    "errors": {
+      "contentRequired": "Please enter document content.",
+      "teamDocsIdMissing": "Team Docs ID missing",
+      "conflict": "Document conflict detected! Changes exist on GitHub.",
+      "selectTeamDocs": "Please select Team Docs.",
+      "urlRequired": "Please enter URL.",
+      "repoAndPathRequired": "Please enter Repo URL and path.",
+      "saveFailed": "Save failed",
+      "uploadFailed": "Upload failed"
+    }
   },
   "errors": {
     "generic": "An error occurred",
