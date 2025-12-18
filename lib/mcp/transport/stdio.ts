@@ -94,13 +94,15 @@ export class StdioMCPClient extends MCPClient {
         }, 30000);
 
         let processStarted = false;
+        let connectionResolved = false;
 
         // 프로세스 생성
         try {
           this.process = spawn(command, args, {
             env: {
               ...process.env,
-              ...this.config.env,
+              PYTHONUNBUFFERED: '1', // Python 버퍼링 비활성화 (블로킹 방지)
+              ...this.config.env, // 사용자 설정이 우선
             },
             stdio: ['pipe', 'pipe', 'pipe'],
             shell: isWindows, // Windows에서는 shell을 사용
@@ -120,7 +122,7 @@ export class StdioMCPClient extends MCPClient {
           return;
         }
 
-        // stdout 처리
+        // stdout 처리 - 첫 데이터 수신 시 연결 성공으로 간주
         this.process.stdout.on('data', (data: Buffer) => {
           if (!processStarted) {
             processStarted = true;
@@ -128,6 +130,18 @@ export class StdioMCPClient extends MCPClient {
               server: this.config.name,
             });
           }
+
+          // 첫 stdout 데이터 수신 시 연결 성공
+          if (!connectionResolved) {
+            connectionResolved = true;
+            clearTimeout(connectionTimeout);
+            this.isConnected = true;
+            logger.info('MCP server connection established (first stdout received)', {
+              server: this.config.name,
+            });
+            resolve();
+          }
+
           this.handleStdout(data);
         });
 
@@ -142,7 +156,6 @@ export class StdioMCPClient extends MCPClient {
 
         // 프로세스 종료
         this.process.on('exit', (code: number | null, signal: string | null) => {
-          clearTimeout(connectionTimeout);
           logger.warn('MCP server exited', {
             server: this.config.name,
             code,
@@ -150,12 +163,15 @@ export class StdioMCPClient extends MCPClient {
           });
           this.isConnected = false;
 
-          // 프로세스가 시작되지 않고 종료된 경우
-          if (!processStarted) {
+          // 프로세스가 시작되지 않고 종료된 경우 (연결도 성공하지 않음)
+          if (!connectionResolved) {
+            connectionResolved = true;
+            clearTimeout(connectionTimeout);
             reject(
               new Error(
-                `MCP server process exited immediately with code ${code}. ` +
-                  `This usually means the command or arguments are incorrect, or the server failed to start.`
+                `MCP server process exited before sending data (code: ${code}). ` +
+                  `This usually means the command or arguments are incorrect, or the server failed to start. ` +
+                  `For Python servers, try using 'python -u' flag.`
               )
             );
           }
@@ -163,31 +179,21 @@ export class StdioMCPClient extends MCPClient {
 
         // 프로세스 에러
         this.process.on('error', (error: Error) => {
-          clearTimeout(connectionTimeout);
-          logger.error('MCP server process error', {
-            server: this.config.name,
-            error: error.message,
-          });
-          reject(
-            new Error(
-              `MCP server process error: ${error.message}. ` +
-                `Please check if the command exists and is executable.`
-            )
-          );
-        });
-
-        // 프로세스가 성공적으로 시작되면 즉시 resolve
-        // (실제 초기화는 initialize() 메서드에서 수행)
-        setTimeout(() => {
-          if (this.process && !this.process.killed) {
+          if (!connectionResolved) {
+            connectionResolved = true;
             clearTimeout(connectionTimeout);
-            this.isConnected = true;
-            logger.info('MCP server connection established', {
+            logger.error('MCP server process error', {
               server: this.config.name,
+              error: error.message,
             });
-            resolve();
+            reject(
+              new Error(
+                `MCP server process error: ${error.message}. ` +
+                  `Please check if the command exists and is executable.`
+              )
+            );
           }
-        }, 1000); // 1초 대기 후 프로세스가 살아있으면 연결 성공으로 간주
+        });
       } catch (error) {
         reject(error);
       }
@@ -211,9 +217,9 @@ export class StdioMCPClient extends MCPClient {
       const timeout = setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id);
-          reject(new Error('Request timeout (10m)'));
+          reject(new Error('Request timeout (30s)'));
         }
-      }, 600000); // 10분 = 600초 = 600000ms
+      }, 30000); // 30초 = 30000ms
 
       this.pendingRequests.set(id, { resolve, reject, timeout });
 

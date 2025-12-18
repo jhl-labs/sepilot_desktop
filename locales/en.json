@@ -796,7 +796,10 @@
           "commandRequired": "Please enter command.",
           "urlRequired": "Please enter SSE URL.",
           "success": "Server '{{name}}' added!",
-          "failed": "Failed to add server."
+          "failed": "Failed to add server.",
+          "timeout": "Server response timeout (30s). {{hint}}",
+          "timeoutHintStdio": "For Python servers, use 'python -u' flag or verify the command and arguments are correct.",
+          "timeoutHintSse": "Please check if the server URL is correct and the server is running."
         },
         "buttons": {
           "adding": "Adding server...",

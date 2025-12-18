@@ -288,9 +288,21 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
       }
     } catch (error: any) {
       console.error('Failed to add MCP server:', error);
+
+      // 타임아웃 에러 감지 및 특별 처리
+      let errorMessage = error.message || t('settings.mcp.config.messages.failed');
+      if (error.message?.includes('timeout')) {
+        errorMessage = t('settings.mcp.config.messages.timeout', {
+          hint:
+            transport === 'stdio'
+              ? t('settings.mcp.config.messages.timeoutHintStdio')
+              : t('settings.mcp.config.messages.timeoutHintSse'),
+        });
+      }
+
       setMessage({
         type: 'error',
-        text: error.message || t('settings.mcp.config.messages.failed'),
+        text: errorMessage,
       });
     } finally {
       setIsAdding(false);

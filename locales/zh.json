@@ -484,7 +484,10 @@
           "commandRequired": "请输入命令。",
           "urlRequired": "请输入 SSE URL。",
           "success": "服务器 '{{name}}' 已添加！",
-          "failed": "添加服务器失败。"
+          "failed": "添加服务器失败。",
+          "timeout": "服务器响应超时 (30秒)。{{hint}}",
+          "timeoutHintStdio": "对于 Python 服务器，请使用 'python -u' 标志，或验证命令和参数是否正确。",
+          "timeoutHintSse": "请检查服务器 URL 是否正确以及服务器是否正在运行。"
         },
         "buttons": {
           "adding": "正在添加服务器...",

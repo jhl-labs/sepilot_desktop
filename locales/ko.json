@@ -888,7 +888,10 @@
           "commandRequired": "실행 명령어를 입력해주세요.",
           "urlRequired": "SSE URL을 입력해주세요.",
           "success": "'{{name}}' 서버가 추가되었습니다!",
-          "failed": "서버 추가에 실패했습니다."
+          "failed": "서버 추가에 실패했습니다.",
+          "timeout": "서버 응답 시간 초과 (30초). {{hint}}",
+          "timeoutHintStdio": "Python 서버의 경우 'python -u' 플래그를 사용하거나, 명령어와 인자가 올바른지 확인하세요.",
+          "timeoutHintSse": "서버 URL이 올바르고 서버가 실행 중인지 확인하세요."
         },
         "buttons": {
           "adding": "서버 추가 중...",
