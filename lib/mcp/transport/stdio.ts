@@ -79,7 +79,8 @@ export class StdioMCPClient extends MCPClient {
         // Windows에서는 shell: true를 사용하여 .cmd 파일을 올바르게 실행
         const isWindows = process.platform === 'win32';
 
-        // 연결 타임아웃 (30초)
+        // 프로세스 시작 확인 타임아웃 (5초)
+        // MCP 서버는 시작 후 stdin 요청을 대기하므로 stdout 출력이 없을 수 있음
         const connectionTimeout = setTimeout(() => {
           if (this.process) {
             this.process.kill();
@@ -87,14 +88,13 @@ export class StdioMCPClient extends MCPClient {
           }
           reject(
             new Error(
-              `Connection timeout: MCP server '${this.config.name}' did not respond within 30 seconds. ` +
+              `Process start timeout: MCP server '${this.config.name}' failed to start within 5 seconds. ` +
                 `Please check if the command is correct and the server is properly configured.`
             )
           );
-        }, 30000);
+        }, 5000);
 
         let processStarted = false;
-        let connectionResolved = false;
 
         // 프로세스 생성
         try {
@@ -122,7 +122,7 @@ export class StdioMCPClient extends MCPClient {
           return;
         }
 
-        // stdout 처리 - 첫 데이터 수신 시 연결 성공으로 간주
+        // stdout 처리
         this.process.stdout.on('data', (data: Buffer) => {
           if (!processStarted) {
             processStarted = true;
@@ -130,18 +130,6 @@ export class StdioMCPClient extends MCPClient {
               server: this.config.name,
             });
           }
-
-          // 첫 stdout 데이터 수신 시 연결 성공
-          if (!connectionResolved) {
-            connectionResolved = true;
-            clearTimeout(connectionTimeout);
-            this.isConnected = true;
-            logger.info('MCP server connection established (first stdout received)', {
-              server: this.config.name,
-            });
-            resolve();
-          }
-
           this.handleStdout(data);
         });
 
@@ -156,6 +144,7 @@ export class StdioMCPClient extends MCPClient {
 
         // 프로세스 종료
         this.process.on('exit', (code: number | null, signal: string | null) => {
+          clearTimeout(connectionTimeout);
           logger.warn('MCP server exited', {
             server: this.config.name,
             code,
@@ -163,15 +152,13 @@ export class StdioMCPClient extends MCPClient {
           });
           this.isConnected = false;
 
-          // 프로세스가 시작되지 않고 종료된 경우 (연결도 성공하지 않음)
-          if (!connectionResolved) {
-            connectionResolved = true;
-            clearTimeout(connectionTimeout);
+          // 프로세스가 시작 직후 종료된 경우
+          if (!processStarted) {
             reject(
               new Error(
-                `MCP server process exited before sending data (code: ${code}). ` +
+                `MCP server process exited immediately (code: ${code}). ` +
                   `This usually means the command or arguments are incorrect, or the server failed to start. ` +
-                  `For Python servers, try using 'python -u' flag.`
+                  `For Python servers, ensure 'python' or 'python3' is in PATH.`
               )
             );
           }
@@ -179,21 +166,32 @@ export class StdioMCPClient extends MCPClient {
 
         // 프로세스 에러
         this.process.on('error', (error: Error) => {
-          if (!connectionResolved) {
-            connectionResolved = true;
-            clearTimeout(connectionTimeout);
-            logger.error('MCP server process error', {
-              server: this.config.name,
-              error: error.message,
-            });
-            reject(
-              new Error(
-                `MCP server process error: ${error.message}. ` +
-                  `Please check if the command exists and is executable.`
-              )
-            );
-          }
+          clearTimeout(connectionTimeout);
+          logger.error('MCP server process error', {
+            server: this.config.name,
+            error: error.message,
+          });
+          reject(
+            new Error(
+              `MCP server process error: ${error.message}. ` +
+                `Please check if the command exists and is executable.`
+            )
+          );
         });
+
+        // 프로세스 시작 대기 (2초)
+        // MCP 서버는 시작 후 stdin 요청을 기다리므로 stdout 출력이 없을 수 있음
+        // 실제 통신 확인은 initialize() 메서드에서 수행됨
+        setTimeout(() => {
+          if (this.process && !this.process.killed) {
+            clearTimeout(connectionTimeout);
+            this.isConnected = true;
+            logger.info('MCP server process started, ready for initialization', {
+              server: this.config.name,
+            });
+            resolve();
+          }
+        }, 2000); // 2초 대기 후 프로세스가 살아있으면 연결 성공으로 간주
       } catch (error) {
         reject(error);
       }
