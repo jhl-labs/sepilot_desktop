@@ -546,24 +546,24 @@ export function setupLLMHandlers() {
 
         if (error.code === 'ENOTFOUND') {
           errorMessage += `ENOTFOUND: DNS lookup failed\n`;
-          errorMessage += `URL: ${endpoint}\n`;
+          errorMessage += `URL: ${config.baseURL}\n`;
         } else if (error.code === 'ECONNREFUSED') {
           errorMessage += `ECONNREFUSED: Connection refused\n`;
-          errorMessage += `URL: ${endpoint}\n`;
+          errorMessage += `URL: ${config.baseURL}\n`;
         } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKETTIMEDOUT') {
           errorMessage += `ETIMEDOUT: Request timed out\n`;
-          errorMessage += `URL: ${endpoint}\n`;
+          errorMessage += `URL: ${config.baseURL}\n`;
         } else if (
           error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' ||
           error.code === 'CERT_HAS_EXPIRED'
         ) {
           errorMessage += `SSL_ERROR: Certificate verification failed\n`;
-          errorMessage += `URL: ${endpoint}\n`;
+          errorMessage += `URL: ${config.baseURL}\n`;
         } else {
           // Generic error with full debugging info
           const errorCode = error.code || 'UNKNOWN';
           errorMessage += `${errorCode}: ${error.message || 'Unknown error'}\n`;
-          errorMessage += `URL: ${endpoint}\n`;
+          errorMessage += `URL: ${config.baseURL}\n`;
 
           // Debugging section
           errorMessage += `\nDebug Info:\n`;
