@@ -43,6 +43,7 @@ import {
   ContextMenuSubContent,
 } from '@/components/ui/context-menu';
 import { useFileClipboard } from '@/hooks/use-file-clipboard';
+import { useTranslation } from 'react-i18next';
 
 interface FileTreeContextMenuProps {
   children: ReactNode;
@@ -92,6 +93,7 @@ export function FileTreeContextMenu({
   onCopyFileName,
 }: FileTreeContextMenuProps) {
   const { canPaste } = useFileClipboard();
+  const { t } = useTranslation();
 
   return (
     <ContextMenu>
@@ -102,12 +104,14 @@ export function FileTreeContextMenu({
           <>
             {onNewFile && (
               <ContextMenuItem onClick={onNewFile}>
-                <FilePlus className="mr-2 h-4 w-4" />새 파일
+                <FilePlus className="mr-2 h-4 w-4" />
+                {t('fileExplorer.newFile')}
               </ContextMenuItem>
             )}
             {onNewFolder && (
               <ContextMenuItem onClick={onNewFolder}>
-                <FolderPlus className="mr-2 h-4 w-4" />새 폴더
+                <FolderPlus className="mr-2 h-4 w-4" />
+                {t('fileExplorer.newFolder')}
               </ContextMenuItem>
             )}
             {canPaste && onPaste && (
@@ -115,7 +119,7 @@ export function FileTreeContextMenu({
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={onPaste}>
                   <ClipboardPaste className="mr-2 h-4 w-4" />
-                  붙여넣기
+                  {t('fileExplorer.paste')}
                   <ContextMenuShortcut>Ctrl+V</ContextMenuShortcut>
                 </ContextMenuItem>
               </>
@@ -125,7 +129,7 @@ export function FileTreeContextMenu({
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={onRefresh}>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  새로고침
+                  {t('fileExplorer.refresh')}
                   <ContextMenuShortcut>F5</ContextMenuShortcut>
                 </ContextMenuItem>
               </>
@@ -138,25 +142,27 @@ export function FileTreeContextMenu({
               <>
                 {onNewFile && (
                   <ContextMenuItem onClick={onNewFile}>
-                    <FilePlus className="mr-2 h-4 w-4" />새 파일
+                    <FilePlus className="mr-2 h-4 w-4" />
+                    {t('fileExplorer.newFile')}
                   </ContextMenuItem>
                 )}
                 {onNewFolder && (
                   <ContextMenuItem onClick={onNewFolder}>
-                    <FolderPlus className="mr-2 h-4 w-4" />새 폴더
+                    <FolderPlus className="mr-2 h-4 w-4" />
+                    {t('fileExplorer.newFolder')}
                   </ContextMenuItem>
                 )}
                 {onFindInFolder && (
                   <ContextMenuItem onClick={onFindInFolder}>
                     <Search className="mr-2 h-4 w-4" />
-                    폴더에서 검색
+                    {t('fileExplorer.searchInFolder')}
                     <ContextMenuShortcut>Ctrl+Shift+F</ContextMenuShortcut>
                   </ContextMenuItem>
                 )}
                 {onCollapseAll && (
                   <ContextMenuItem onClick={onCollapseAll}>
                     <FolderMinus className="mr-2 h-4 w-4" />
-                    하위 폴더 모두 접기
+                    {t('fileExplorer.collapseAllSubfolders')}
                   </ContextMenuItem>
                 )}
                 <ContextMenuSeparator />
@@ -167,21 +173,21 @@ export function FileTreeContextMenu({
             {onCopy && (
               <ContextMenuItem onClick={onCopy}>
                 <Copy className="mr-2 h-4 w-4" />
-                복사
+                {t('fileExplorer.copy')}
                 <ContextMenuShortcut>Ctrl+C</ContextMenuShortcut>
               </ContextMenuItem>
             )}
             {onCut && (
               <ContextMenuItem onClick={onCut}>
                 <Scissors className="mr-2 h-4 w-4" />
-                잘라내기
+                {t('fileExplorer.cut')}
                 <ContextMenuShortcut>Ctrl+X</ContextMenuShortcut>
               </ContextMenuItem>
             )}
             {canPaste && onPaste && isDirectory && (
               <ContextMenuItem onClick={onPaste}>
                 <ClipboardPaste className="mr-2 h-4 w-4" />
-                붙여넣기
+                {t('fileExplorer.paste')}
                 <ContextMenuShortcut>Ctrl+V</ContextMenuShortcut>
               </ContextMenuItem>
             )}
@@ -193,26 +199,26 @@ export function FileTreeContextMenu({
                 <ContextMenuSub>
                   <ContextMenuSubTrigger>
                     <FileText className="mr-2 h-4 w-4" />
-                    경로 복사
+                    {t('fileExplorer.copyPath')}
                   </ContextMenuSubTrigger>
                   <ContextMenuSubContent>
                     {onCopyPath && (
                       <ContextMenuItem onClick={onCopyPath}>
                         <FileCode className="mr-2 h-4 w-4" />
-                        절대 경로 복사
+                        {t('fileExplorer.copyAbsolutePath')}
                         <ContextMenuShortcut>Shift+Alt+C</ContextMenuShortcut>
                       </ContextMenuItem>
                     )}
                     {onCopyRelativePath && (
                       <ContextMenuItem onClick={onCopyRelativePath}>
                         <FileText className="mr-2 h-4 w-4" />
-                        상대 경로 복사
+                        {t('fileExplorer.copyRelativePath')}
                       </ContextMenuItem>
                     )}
                     {onCopyFileName && (
                       <ContextMenuItem onClick={onCopyFileName}>
                         <FileText className="mr-2 h-4 w-4" />
-                        파일 이름 복사
+                        {t('fileExplorer.copyFileName')}
                       </ContextMenuItem>
                     )}
                   </ContextMenuSubContent>
@@ -227,25 +233,25 @@ export function FileTreeContextMenu({
                 {onShowInFolder && (
                   <ContextMenuItem onClick={onShowInFolder}>
                     <FolderOpen className="mr-2 h-4 w-4" />
-                    탐색기에서 열기
+                    {t('fileExplorer.openInExplorer')}
                   </ContextMenuItem>
                 )}
                 {onOpenInTerminal && (
                   <ContextMenuItem onClick={onOpenInTerminal}>
                     <Terminal className="mr-2 h-4 w-4" />
-                    터미널에서 열기
+                    {t('fileExplorer.openInTerminal')}
                   </ContextMenuItem>
                 )}
                 {onOpenWith && !isDirectory && (
                   <ContextMenuItem onClick={onOpenWith}>
                     <ExternalLink className="mr-2 h-4 w-4" />
-                    기본 앱으로 열기
+                    {t('fileExplorer.openWithDefaultApp')}
                   </ContextMenuItem>
                 )}
                 {onDuplicate && (
                   <ContextMenuItem onClick={onDuplicate}>
                     <Files className="mr-2 h-4 w-4" />
-                    복제
+                    {t('fileExplorer.duplicate')}
                   </ContextMenuItem>
                 )}
               </>
@@ -256,7 +262,7 @@ export function FileTreeContextMenu({
             {onRename && (
               <ContextMenuItem onClick={onRename}>
                 <Edit3 className="mr-2 h-4 w-4" />
-                이름 변경
+                {t('fileExplorer.rename')}
                 <ContextMenuShortcut>F2</ContextMenuShortcut>
               </ContextMenuItem>
             )}
@@ -266,7 +272,7 @@ export function FileTreeContextMenu({
                 className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                삭제
+                {t('fileExplorer.delete')}
                 <ContextMenuShortcut>Del</ContextMenuShortcut>
               </ContextMenuItem>
             )}
@@ -275,7 +281,7 @@ export function FileTreeContextMenu({
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={onRefresh}>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  새로고침
+                  {t('fileExplorer.refresh')}
                   <ContextMenuShortcut>F5</ContextMenuShortcut>
                 </ContextMenuItem>
               </>

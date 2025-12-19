@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import type { BrowserAgentLogEntry, BrowserAgentLogLevel } from '@/types/browser-agent';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Browser Agent 로그 전체 화면 뷰
@@ -24,7 +25,7 @@ import { cn } from '@/lib/utils';
 export function BrowserAgentLogsView() {
   const { browserAgentLogs, browserAgentIsRunning, clearBrowserAgentLogs, setBrowserViewMode } =
     useChatStore();
-
+  const { t } = useTranslation();
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   // 자동 스크롤 (새 로그가 추가되면 아래로)
@@ -44,17 +45,17 @@ export function BrowserAgentLogsView() {
             size="icon"
             className="h-8 w-8"
             onClick={() => setBrowserViewMode('chat')}
-            title="뒤로 가기"
+            title={t('common.back')}
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
-            <span className="text-base font-semibold">Agent 실행 로그</span>
+            <span className="text-base font-semibold">{t('browser.agentLogs.title')}</span>
             {browserAgentIsRunning && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <span className="inline-flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                실행 중
+                {t('browser.agentLogs.running')}
               </span>
             )}
           </div>
@@ -64,7 +65,7 @@ export function BrowserAgentLogsView() {
           size="icon"
           className="h-8 w-8"
           onClick={clearBrowserAgentLogs}
-          title="로그 전체 삭제"
+          title={t('browser.agentLogs.clearAll')}
         >
           <X className="h-5 w-5" />
         </Button>
@@ -75,10 +76,8 @@ export function BrowserAgentLogsView() {
         {browserAgentLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
             <Brain className="h-12 w-12 mb-3 opacity-50" />
-            <p className="text-sm">Agent 실행 로그가 여기에 표시됩니다</p>
-            <p className="text-xs mt-1">
-              Browser Agent를 실행하면 상세한 실행 과정을 확인할 수 있습니다.
-            </p>
+            <p className="text-sm">{t('browser.agentLogs.emptyMessage')}</p>
+            <p className="text-xs mt-1">{t('browser.agentLogs.emptyHint')}</p>
           </div>
         ) : (
           browserAgentLogs.map((log) => <LogEntry key={log.id} log={log} />)
@@ -92,9 +91,10 @@ export function BrowserAgentLogsView() {
  * 개별 로그 엔트리 컴포넌트
  */
 function LogEntry({ log }: { log: BrowserAgentLogEntry }) {
+  const { t } = useTranslation();
   const icon = getLogIcon(log.phase);
   const levelColor = getLevelColor(log.level);
-  const phaseLabel = getPhaseLabel(log.phase);
+  const phaseLabel = getPhaseLabel(log.phase, t);
 
   return (
     <div className={cn('p-3 rounded-lg border-l-4', levelColor)}>
@@ -148,7 +148,7 @@ function LogEntry({ log }: { log: BrowserAgentLogEntry }) {
               <div className="flex items-center gap-2 mb-1">
                 <CheckCircle2 className="h-3 w-3 text-green-600" />
                 <span className="text-xs text-green-700 dark:text-green-400 font-semibold">
-                  결과
+                  {t('browser.agentLogs.result')}
                 </span>
               </div>
               <pre className="text-[10px] text-foreground/80 overflow-x-auto max-h-32 bg-background/50 p-2 rounded mt-1">
@@ -163,7 +163,9 @@ function LogEntry({ log }: { log: BrowserAgentLogEntry }) {
             <div className="bg-red-500/10 p-2 rounded border border-red-500/20">
               <div className="flex items-center gap-2 mb-1">
                 <XCircle className="h-3 w-3 text-red-600" />
-                <span className="text-xs text-red-700 dark:text-red-400 font-semibold">오류</span>
+                <span className="text-xs text-red-700 dark:text-red-400 font-semibold">
+                  {t('browser.agentLogs.error')}
+                </span>
               </div>
               <pre className="text-[10px] text-red-600 dark:text-red-400 bg-background/50 p-2 rounded mt-1">
                 {log.details.toolError}
@@ -176,9 +178,11 @@ function LogEntry({ log }: { log: BrowserAgentLogEntry }) {
             <div className="flex items-center gap-2 text-xs">
               <Zap className="h-3 w-3 text-yellow-600" />
               <span>
-                다음:{' '}
+                {t('browser.agentLogs.next')}:{' '}
                 <span className="font-semibold">
-                  {log.details.decision === 'continue' ? '계속 진행' : '완료'}
+                  {log.details.decision === 'continue'
+                    ? t('browser.agentLogs.continue')
+                    : t('browser.agentLogs.complete')}
                 </span>
               </span>
               {log.details.nextAction && (
@@ -237,21 +241,21 @@ function getLevelColor(level: BrowserAgentLogLevel) {
 /**
  * 페이즈별 라벨
  */
-function getPhaseLabel(phase: BrowserAgentLogEntry['phase']) {
+function getPhaseLabel(phase: BrowserAgentLogEntry['phase'], t: (key: string) => string) {
   switch (phase) {
     case 'thinking':
-      return '🧠 사고 중';
+      return t('browser.agentLogs.phase.thinking');
     case 'tool_call':
-      return '🔧 도구 호출';
+      return t('browser.agentLogs.phase.toolCall');
     case 'tool_result':
-      return '✅ 도구 결과';
+      return t('browser.agentLogs.phase.toolResult');
     case 'decision':
-      return '⚡ 결정';
+      return t('browser.agentLogs.phase.decision');
     case 'completion':
-      return '🎉 완료';
+      return t('browser.agentLogs.phase.completion');
     case 'error':
-      return '❌ 오류';
+      return t('browser.agentLogs.phase.error');
     default:
-      return '📝 로그';
+      return t('browser.agentLogs.phase.log');
   }
 }

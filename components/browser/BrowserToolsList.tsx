@@ -14,12 +14,14 @@ import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Browser Agent 사용 가능한 도구 목록 전체 화면
  */
 export function BrowserToolsList() {
   const { setBrowserViewMode } = useChatStore();
+  const { t } = useTranslation();
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -30,20 +32,20 @@ export function BrowserToolsList() {
           size="icon"
           className="h-8 w-8"
           onClick={() => setBrowserViewMode('chat')}
-          title="뒤로 가기"
+          title={t('common.back')}
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">
           <Wrench className="h-5 w-5" />
-          <span className="text-base font-semibold">Browser Agent 도구</span>
+          <span className="text-base font-semibold">{t('browser.toolsList.title')}</span>
         </div>
       </div>
 
       {/* Tools List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         <div className="text-xs text-muted-foreground mb-3">
-          Browser Agent가 사용할 수 있는 총 27개의 도구입니다.
+          {t('browser.toolsList.description')}
         </div>
 
         {/* Navigation Tools */}
@@ -51,15 +53,16 @@ export function BrowserToolsList() {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Navigation className="h-4 w-4" />
-              <CardTitle className="text-sm">Navigation (1)</CardTitle>
+              <CardTitle className="text-sm">
+                {t('browser.toolsList.categories.navigation')}
+              </CardTitle>
             </div>
-            <CardDescription className="text-xs">페이지 이동</CardDescription>
+            <CardDescription className="text-xs">
+              {t('browser.toolsList.categories.navigationDesc')}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <ToolItem
-              name="browser_navigate"
-              description="URL로 직접 이동 (http/https 자동 추가)"
-            />
+            <ToolItem name="browser_navigate" description={t('browser.toolsList.tools.navigate')} />
           </CardContent>
         </Card>
 
@@ -68,22 +71,36 @@ export function BrowserToolsList() {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Eye className="h-4 w-4" />
-              <CardTitle className="text-sm">Page Inspection (5)</CardTitle>
+              <CardTitle className="text-sm">
+                {t('browser.toolsList.categories.pageInspection')}
+              </CardTitle>
             </div>
-            <CardDescription className="text-xs">페이지 정보 파악</CardDescription>
+            <CardDescription className="text-xs">
+              {t('browser.toolsList.categories.pageInspectionDesc')}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <ToolItem
               name="get_page_content"
-              description="현재 페이지의 내용 파악 (제목, URL, 텍스트, HTML)"
+              description={t('browser.toolsList.tools.getPageContent')}
             />
             <ToolItem
               name="get_interactive_elements"
-              description="클릭/입력 가능한 요소 찾기 (버튼, 링크, 입력창 등)"
+              description={t('browser.toolsList.tools.getInteractiveElements')}
             />
-            <ToolItem name="search_elements" description="자연어로 요소 검색" badge="NEW" />
-            <ToolItem name="get_selected_text" description="사용자가 선택/드래그한 텍스트 읽기" />
-            <ToolItem name="take_screenshot" description="화면 캡처 + 텍스트 미리보기" />
+            <ToolItem
+              name="search_elements"
+              description={t('browser.toolsList.tools.searchElements')}
+              badge="NEW"
+            />
+            <ToolItem
+              name="get_selected_text"
+              description={t('browser.toolsList.tools.getSelectedText')}
+            />
+            <ToolItem
+              name="take_screenshot"
+              description={t('browser.toolsList.tools.takeScreenshot')}
+            />
           </CardContent>
         </Card>
 
@@ -92,14 +109,21 @@ export function BrowserToolsList() {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <MousePointer className="h-4 w-4" />
-              <CardTitle className="text-sm">Page Interaction (3)</CardTitle>
+              <CardTitle className="text-sm">
+                {t('browser.toolsList.categories.pageInteraction')}
+              </CardTitle>
             </div>
-            <CardDescription className="text-xs">페이지 조작</CardDescription>
+            <CardDescription className="text-xs">
+              {t('browser.toolsList.categories.pageInteractionDesc')}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <ToolItem name="click_element" description="특정 요소 클릭 (가시성/상태 검증)" />
-            <ToolItem name="type_text" description="입력창에 텍스트 입력 (이벤트 트리거링)" />
-            <ToolItem name="scroll" description="페이지 스크롤 (위/아래)" />
+            <ToolItem
+              name="click_element"
+              description={t('browser.toolsList.tools.clickElement')}
+            />
+            <ToolItem name="type_text" description={t('browser.toolsList.tools.typeText')} />
+            <ToolItem name="scroll" description={t('browser.toolsList.tools.scroll')} />
           </CardContent>
         </Card>
 
@@ -108,15 +132,19 @@ export function BrowserToolsList() {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Layers className="h-4 w-4" />
-              <CardTitle className="text-sm">Tab Management (4)</CardTitle>
+              <CardTitle className="text-sm">
+                {t('browser.toolsList.categories.tabManagement')}
+              </CardTitle>
             </div>
-            <CardDescription className="text-xs">탭 관리</CardDescription>
+            <CardDescription className="text-xs">
+              {t('browser.toolsList.categories.tabManagementDesc')}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <ToolItem name="list_tabs" description="열린 탭 목록 조회 (ID, 제목, URL)" />
-            <ToolItem name="create_tab" description="새 탭 열기" />
-            <ToolItem name="switch_tab" description="특정 탭으로 전환" />
-            <ToolItem name="close_tab" description="탭 닫기 (마지막 탭 제외)" />
+            <ToolItem name="list_tabs" description={t('browser.toolsList.tools.listTabs')} />
+            <ToolItem name="create_tab" description={t('browser.toolsList.tools.createTab')} />
+            <ToolItem name="switch_tab" description={t('browser.toolsList.tools.switchTab')} />
+            <ToolItem name="close_tab" description={t('browser.toolsList.tools.closeTab')} />
           </CardContent>
         </Card>
 
@@ -125,26 +153,36 @@ export function BrowserToolsList() {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Camera className="h-4 w-4" />
-              <CardTitle className="text-sm">Vision-based Tools (5)</CardTitle>
+              <CardTitle className="text-sm">{t('browser.toolsList.categories.vision')}</CardTitle>
             </div>
-            <CardDescription className="text-xs">시각 기반 도구</CardDescription>
+            <CardDescription className="text-xs">
+              {t('browser.toolsList.categories.visionDesc')}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <ToolItem
               name="capture_annotated_screenshot"
-              description="Set-of-Mark 스크린샷 캡처"
+              description={t('browser.toolsList.tools.captureAnnotatedScreenshot')}
               badge="NEW"
             />
-            <ToolItem name="click_coordinate" description="좌표로 클릭" badge="NEW" />
-            <ToolItem name="click_marker" description="마커로 클릭" badge="NEW" />
+            <ToolItem
+              name="click_coordinate"
+              description={t('browser.toolsList.tools.clickCoordinate')}
+              badge="NEW"
+            />
+            <ToolItem
+              name="click_marker"
+              description={t('browser.toolsList.tools.clickMarker')}
+              badge="NEW"
+            />
             <ToolItem
               name="get_clickable_coordinate"
-              description="클릭 가능한 좌표 추출"
+              description={t('browser.toolsList.tools.getClickableCoordinate')}
               badge="NEW"
             />
             <ToolItem
               name="analyze_with_vision"
-              description="Vision LLM으로 화면 분석 (향후 지원)"
+              description={t('browser.toolsList.tools.analyzeWithVision')}
               badge="SOON"
             />
           </CardContent>
@@ -155,60 +193,78 @@ export function BrowserToolsList() {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4" />
-              <CardTitle className="text-sm">Google Search Tools (9)</CardTitle>
+              <CardTitle className="text-sm">
+                {t('browser.toolsList.categories.googleSearch')}
+              </CardTitle>
             </div>
-            <CardDescription className="text-xs">Perplexity 수준의 고급 검색 도구</CardDescription>
+            <CardDescription className="text-xs">
+              {t('browser.toolsList.categories.googleSearchDesc')}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="text-xs font-semibold text-muted-foreground mb-1">Search (5)</div>
+            <div className="text-xs font-semibold text-muted-foreground mb-1">
+              {t('browser.toolsList.categories.search')}
+            </div>
             <ToolItem
               name="google_search"
-              description="기본 웹 검색 (날짜, 언어/지역, 사이트/파일타입 필터)"
+              description={t('browser.toolsList.tools.googleSearch')}
               badge="NEW"
             />
-            <ToolItem name="google_search_news" description="뉴스 검색" badge="NEW" />
+            <ToolItem
+              name="google_search_news"
+              description={t('browser.toolsList.tools.googleSearchNews')}
+              badge="NEW"
+            />
             <ToolItem
               name="google_search_scholar"
-              description="학술 검색 (Google Scholar)"
+              description={t('browser.toolsList.tools.googleSearchScholar')}
               badge="NEW"
             />
-            <ToolItem name="google_search_images" description="이미지 검색" badge="NEW" />
+            <ToolItem
+              name="google_search_images"
+              description={t('browser.toolsList.tools.googleSearchImages')}
+              badge="NEW"
+            />
             <ToolItem
               name="google_search_advanced"
-              description="고급 검색 (정확한 문구, 제외 단어, OR 연산)"
+              description={t('browser.toolsList.tools.googleSearchAdvanced')}
               badge="NEW"
             />
 
             <div className="text-xs font-semibold text-muted-foreground mt-3 mb-1">
-              Extraction (2)
+              {t('browser.toolsList.categories.extraction')}
             </div>
             <ToolItem
               name="google_extract_results"
-              description="검색 결과 추출 (제목, URL, 스니펫, 날짜, 출처)"
+              description={t('browser.toolsList.tools.googleExtractResults')}
               badge="NEW"
             />
             <ToolItem
               name="google_get_related_searches"
-              description="관련 검색어 추출"
+              description={t('browser.toolsList.tools.googleGetRelatedSearches')}
               badge="NEW"
             />
 
             <div className="text-xs font-semibold text-muted-foreground mt-3 mb-1">
-              Navigation (2)
+              {t('browser.toolsList.categories.searchNavigation')}
             </div>
             <ToolItem
               name="google_visit_result"
-              description="검색 결과 방문 및 콘텐츠 추출 (text/markdown/summary)"
+              description={t('browser.toolsList.tools.googleVisitResult')}
               badge="NEW"
             />
-            <ToolItem name="google_next_page" description="다음 페이지 이동" badge="NEW" />
+            <ToolItem
+              name="google_next_page"
+              description={t('browser.toolsList.tools.googleNextPage')}
+              badge="NEW"
+            />
           </CardContent>
         </Card>
 
         {/* Info */}
         <div className="text-xs text-muted-foreground text-center p-4 bg-muted/20 rounded-lg">
-          <p>이 도구들은 Browser Agent가 자동으로 선택하여 사용합니다.</p>
-          <p className="mt-1">사용자는 자연어로 명령만 입력하면 됩니다.</p>
+          <p>{t('browser.toolsList.info.autoSelect')}</p>
+          <p className="mt-1">{t('browser.toolsList.info.naturalLanguage')}</p>
         </div>
       </div>
     </div>

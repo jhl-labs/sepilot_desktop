@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
+import { useTranslation } from 'react-i18next';
 import { logger } from '@/lib/utils/logger';
 interface Bookmark {
   id: string;
@@ -36,6 +36,7 @@ export function BookmarksList() {
   const [newFolderName, setNewFolderName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { setBrowserViewMode } = useChatStore();
+  const { t } = useTranslation();
 
   // Load bookmarks and folders on mount
   useEffect(() => {
@@ -82,16 +83,16 @@ export function BookmarksList() {
         setIsAddingFolder(false);
       } else {
         console.error('[BookmarksList] Failed to add folder:', result.error);
-        window.alert(`폴더 추가 실패: ${result.error}`);
+        window.alert(t('browser.bookmarks.addFolderFailed', { error: result.error }));
       }
     } catch (error) {
       console.error('[BookmarksList] Error adding folder:', error);
-      window.alert('폴더 추가 중 오류가 발생했습니다.');
+      window.alert(t('browser.bookmarks.addFolderError'));
     }
   };
 
   const handleDeleteFolder = async (id: string) => {
-    if (!window.confirm('이 폴더와 포함된 북마크를 모두 삭제하시겠습니까?')) {
+    if (!window.confirm(t('browser.bookmarks.deleteFolderConfirm'))) {
       return;
     }
     if (!isElectron() || !window.electronAPI) {
@@ -108,16 +109,16 @@ export function BookmarksList() {
         }
       } else {
         console.error('[BookmarksList] Failed to delete folder:', result.error);
-        window.alert(`폴더 삭제 실패: ${result.error}`);
+        window.alert(t('browser.bookmarks.deleteFolderFailed', { error: result.error }));
       }
     } catch (error) {
       console.error('[BookmarksList] Error deleting folder:', error);
-      window.alert('폴더 삭제 중 오류가 발생했습니다.');
+      window.alert(t('browser.bookmarks.deleteFolderError'));
     }
   };
 
   const handleDeleteBookmark = async (id: string) => {
-    if (!window.confirm('이 북마크를 삭제하시겠습니까?')) {
+    if (!window.confirm(t('browser.bookmarks.deleteBookmarkConfirm'))) {
       return;
     }
     if (!isElectron() || !window.electronAPI) {
@@ -130,11 +131,11 @@ export function BookmarksList() {
         setBookmarks((prev) => prev.filter((b) => b.id !== id));
       } else {
         console.error('[BookmarksList] Failed to delete bookmark:', result.error);
-        window.alert(`북마크 삭제 실패: ${result.error}`);
+        window.alert(t('browser.bookmarks.deleteBookmarkFailed', { error: result.error }));
       }
     } catch (error) {
       console.error('[BookmarksList] Error deleting bookmark:', error);
-      window.alert('북마크 삭제 중 오류가 발생했습니다.');
+      window.alert(t('browser.bookmarks.deleteBookmarkError'));
     }
   };
 
@@ -150,11 +151,11 @@ export function BookmarksList() {
         setBrowserViewMode('chat');
       } else {
         console.error('[BookmarksList] Failed to open bookmark:', result.error);
-        window.alert(`북마크 열기 실패: ${result.error}`);
+        window.alert(t('browser.bookmarks.openFailed', { error: result.error }));
       }
     } catch (error) {
       console.error('[BookmarksList] Error opening bookmark:', error);
-      window.alert('북마크 열기 중 오류가 발생했습니다.');
+      window.alert(t('browser.bookmarks.openError'));
     }
   };
 
@@ -171,14 +172,14 @@ export function BookmarksList() {
       if (result.success && result.data) {
         const newBookmark = result.data;
         setBookmarks((prev) => [...prev, newBookmark]);
-        window.alert('현재 페이지가 북마크에 추가되었습니다.');
+        window.alert(t('browser.bookmarks.addSuccess'));
       } else {
         console.error('[BookmarksList] Failed to add bookmark:', result.error);
-        window.alert(`북마크 추가 실패: ${result.error}`);
+        window.alert(t('browser.bookmarks.addFailed', { error: result.error }));
       }
     } catch (error) {
       console.error('[BookmarksList] Error adding bookmark:', error);
-      window.alert('북마크 추가 중 오류가 발생했습니다.');
+      window.alert(t('browser.bookmarks.addError'));
     }
   };
 
@@ -188,7 +189,7 @@ export function BookmarksList() {
 
   const selectedFolderName = selectedFolderId
     ? folders.find((f) => f.id === selectedFolderId)?.name
-    : '전체';
+    : t('browser.bookmarks.all');
 
   return (
     <div className="flex h-full flex-col">
@@ -202,7 +203,7 @@ export function BookmarksList() {
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h2 className="text-sm font-semibold">북마크 관리</h2>
+        <h2 className="text-sm font-semibold">{t('browser.bookmarks.title')}</h2>
       </div>
 
       {/* Folder Selector & Actions */}
@@ -219,7 +220,7 @@ export function BookmarksList() {
             <DropdownMenuContent align="start" className="w-48">
               <DropdownMenuItem onClick={() => setSelectedFolderId(null)}>
                 <Globe className="mr-2 h-4 w-4" />
-                전체
+                {t('browser.bookmarks.all')}
               </DropdownMenuItem>
               {folders.map((folder) => (
                 <DropdownMenuItem key={folder.id} onClick={() => setSelectedFolderId(folder.id)}>
@@ -260,7 +261,7 @@ export function BookmarksList() {
         {/* Folder Input */}
         {isAddingFolder && (
           <Input
-            placeholder="폴더 이름"
+            placeholder={t('browser.bookmarks.folderNamePlaceholder')}
             value={newFolderName}
             onChange={(e) => setNewFolderName(e.target.value)}
             onKeyDown={(e) => {
@@ -281,16 +282,12 @@ export function BookmarksList() {
       <div className="flex-1 overflow-y-auto p-3">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <p className="text-sm">로딩 중...</p>
+            <p className="text-sm">{t('browser.bookmarks.loading')}</p>
           </div>
         ) : filteredBookmarks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <p className="text-sm">북마크가 없습니다</p>
-            <p className="mt-2 text-xs text-center">
-              현재 페이지를
-              <br />
-              북마크에 추가하세요
-            </p>
+            <p className="text-sm">{t('browser.bookmarks.noBookmarks')}</p>
+            <p className="mt-2 text-xs text-center">{t('browser.bookmarks.noBookmarksHint')}</p>
           </div>
         ) : (
           <div className="space-y-2">

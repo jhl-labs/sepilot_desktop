@@ -11,7 +11,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-
+import { useTranslation } from 'react-i18next';
 import { logger } from '@/lib/utils/logger';
 interface Snapshot {
   id: string;
@@ -27,6 +27,7 @@ export function SnapshotsList() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { setBrowserViewMode } = useChatStore();
+  const { t } = useTranslation();
 
   // Load snapshots on mount
   useEffect(() => {
@@ -54,7 +55,7 @@ export function SnapshotsList() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('이 스냅샷을 삭제하시겠습니까?')) {
+    if (!window.confirm(t('browser.snapshots.deleteConfirm'))) {
       return;
     }
 
@@ -69,11 +70,11 @@ export function SnapshotsList() {
         setSnapshots((prev) => prev.filter((s) => s.id !== id));
       } else {
         console.error('[SnapshotsList] Failed to delete snapshot:', result.error);
-        window.alert(`스냅샷 삭제 실패: ${result.error}`);
+        window.alert(t('browser.snapshots.deleteFailed', { error: result.error }));
       }
     } catch (error) {
       console.error('[SnapshotsList] Error deleting snapshot:', error);
-      window.alert('스냅샷 삭제 중 오류가 발생했습니다.');
+      window.alert(t('browser.snapshots.deleteError'));
     }
   };
 
@@ -89,11 +90,11 @@ export function SnapshotsList() {
         setBrowserViewMode('chat');
       } else {
         console.error('[SnapshotsList] Failed to open snapshot:', result.error);
-        window.alert(`스냅샷 열기 실패: ${result.error}`);
+        window.alert(t('browser.snapshots.openFailed', { error: result.error }));
       }
     } catch (error) {
       console.error('[SnapshotsList] Error opening snapshot:', error);
-      window.alert('스냅샷 열기 중 오류가 발생했습니다.');
+      window.alert(t('browser.snapshots.openError'));
     }
   };
 
@@ -109,23 +110,19 @@ export function SnapshotsList() {
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h2 className="text-sm font-semibold">스냅샷 관리</h2>
+        <h2 className="text-sm font-semibold">{t('browser.snapshots.title')}</h2>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <p className="text-sm">로딩 중...</p>
+            <p className="text-sm">{t('browser.snapshots.loading')}</p>
           </div>
         ) : snapshots.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <p className="text-sm">저장된 스냅샷이 없습니다</p>
-            <p className="mt-2 text-xs text-center">
-              페이지 캡처 버튼을 눌러
-              <br />
-              현재 페이지를 저장하세요
-            </p>
+            <p className="text-sm">{t('browser.snapshots.noSnapshots')}</p>
+            <p className="mt-2 text-xs text-center">{t('browser.snapshots.noSnapshotsHint')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -165,14 +162,14 @@ export function SnapshotsList() {
                 <ContextMenuContent className="w-56">
                   <ContextMenuItem onClick={() => handleOpen(snapshot)}>
                     <ExternalLink className="mr-2 h-4 w-4" />
-                    <span>스냅샷 열기</span>
+                    <span>{t('browser.snapshots.open')}</span>
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() => handleDelete(snapshot.id)}
                     className="text-destructive focus:text-destructive"
                   >
                     <Trash className="mr-2 h-4 w-4" />
-                    <span>삭제</span>
+                    <span>{t('common.delete')}</span>
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>

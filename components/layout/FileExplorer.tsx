@@ -32,8 +32,10 @@ import { getLanguageFromFilename } from '@/lib/utils/file-language';
 import { FileTreeItem, type FileNode } from './FileTreeItem';
 import { FileTreeContextMenu } from './FileTreeContextMenu';
 import { isElectron } from '@/lib/platform';
+import { useTranslation } from 'react-i18next';
 
 export function FileExplorer() {
+  const { t } = useTranslation();
   const {
     workingDirectory,
     setWorkingDirectory,
@@ -170,7 +172,9 @@ export function FileExplorer() {
     );
     if (!itemPathResult.success || !itemPathResult.data) {
       console.error('[FileExplorer] Failed to resolve item path:', itemPathResult.error);
-      window.alert(`${newItemType === 'file' ? '파일' : '폴더'} 생성 실패: 경로 생성 오류`);
+      window.alert(
+        t('fileExplorer.createFailedPathError', { type: t(`fileExplorer.${newItemType}`) })
+      );
       return;
     }
 
@@ -187,7 +191,7 @@ export function FileExplorer() {
         loadFileTree(workingDirectory);
       }
     } else {
-      window.alert(`${newItemType === 'file' ? '파일' : '폴더'} 생성 실패`);
+      window.alert(t('fileExplorer.createFailed', { type: t(`fileExplorer.${newItemType}`) }));
     }
   };
 
@@ -250,13 +254,13 @@ export function FileExplorer() {
                       size="icon"
                       onClick={handleSelectDirectory}
                       className="h-7 w-7"
-                      title="디렉토리 선택"
+                      title={t('fileExplorer.selectDirectory')}
                     >
                       <Folder className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    <p>디렉토리 선택</p>
+                    <p>{t('fileExplorer.selectDirectory')}</p>
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -269,13 +273,13 @@ export function FileExplorer() {
                         workingDirectory && openNewItemDialog('file', workingDirectory)
                       }
                       className="h-7 w-7"
-                      title="새 파일"
+                      title={t('fileExplorer.newFile')}
                     >
                       <FilePlus className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    <p>새 파일</p>
+                    <p>{t('fileExplorer.newFile')}</p>
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -288,13 +292,13 @@ export function FileExplorer() {
                         workingDirectory && openNewItemDialog('folder', workingDirectory)
                       }
                       className="h-7 w-7"
-                      title="새 폴더"
+                      title={t('fileExplorer.newFolder')}
                     >
                       <FolderPlus className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    <p>새 폴더</p>
+                    <p>{t('fileExplorer.newFolder')}</p>
                   </TooltipContent>
                 </Tooltip>
                 {workingDirectory && (
@@ -311,7 +315,7 @@ export function FileExplorer() {
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>첫 번째 레벨 폴더 펼치기</p>
+                        <p>{t('fileExplorer.expandFirstLevel')}</p>
                       </TooltipContent>
                     </Tooltip>
                     <Tooltip>
@@ -327,7 +331,7 @@ export function FileExplorer() {
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>모두 접기</p>
+                        <p>{t('fileExplorer.collapseAll')}</p>
                       </TooltipContent>
                     </Tooltip>
                     <Tooltip>
@@ -342,7 +346,7 @@ export function FileExplorer() {
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>새로고침 (F5)</p>
+                        <p>{t('fileExplorer.refreshShortcut')}</p>
                       </TooltipContent>
                     </Tooltip>
                   </>
@@ -355,7 +359,9 @@ export function FileExplorer() {
               {workingDirectory}
             </div>
           ) : (
-            <div className="text-xs text-muted-foreground italic">디렉토리를 선택하세요</div>
+            <div className="text-xs text-muted-foreground italic">
+              {t('fileExplorer.selectDirectoryHint')}
+            </div>
           )}
         </div>
       </div>
@@ -373,13 +379,13 @@ export function FileExplorer() {
         <div className="flex-1 overflow-y-auto px-2 py-2">
           {isLoading ? (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              로딩 중...
+              {t('fileExplorer.loading')}
             </div>
           ) : !workingDirectory ? (
             <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
               <Folder className="mb-2 h-8 w-8 opacity-50" />
-              <p className="text-sm">디렉토리를 선택하세요</p>
-              <p className="mt-1 text-xs">파일 탐색을 시작합니다</p>
+              <p className="text-sm">{t('fileExplorer.selectDirectoryMessage')}</p>
+              <p className="mt-1 text-xs">{t('fileExplorer.selectDirectoryDescription')}</p>
             </div>
           ) : fileTree && fileTree.length > 0 ? (
             <div className="space-y-0.5">
@@ -399,7 +405,7 @@ export function FileExplorer() {
             </div>
           ) : (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              빈 디렉토리
+              {t('fileExplorer.emptyDirectory')}
             </div>
           )}
         </div>
@@ -409,11 +415,13 @@ export function FileExplorer() {
       <Dialog open={showNewItemDialog} onOpenChange={setShowNewItemDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>새 {newItemType === 'file' ? '파일' : '폴더'} 생성</DialogTitle>
+            <DialogTitle>
+              {t('fileExplorer.createNewItem', { type: t(`fileExplorer.${newItemType}`) })}
+            </DialogTitle>
             <DialogDescription>
               {newItemType === 'file'
-                ? '파일 이름을 입력하세요 (확장자 포함)'
-                : '폴더 이름을 입력하세요'}
+                ? t('fileExplorer.enterFileName')
+                : t('fileExplorer.enterFolderName')}
             </DialogDescription>
           </DialogHeader>
           <Input
@@ -425,13 +433,17 @@ export function FileExplorer() {
                 handleCreateItem();
               }
             }}
-            placeholder={newItemType === 'file' ? '예: example.txt' : '예: my-folder'}
+            placeholder={
+              newItemType === 'file'
+                ? t('fileExplorer.fileNameExample')
+                : t('fileExplorer.folderNameExample')
+            }
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewItemDialog(false)}>
-              취소
+              {t('common.cancel')}
             </Button>
-            <Button onClick={handleCreateItem}>생성</Button>
+            <Button onClick={handleCreateItem}>{t('common.create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
