@@ -9,6 +9,7 @@ import { PersonaDialog } from '@/components/persona/PersonaDialog';
 import { isElectron } from '@/lib/platform';
 import { BetaConfig } from '@/types';
 import { useChatStore } from '@/lib/store/chat-store';
+import { useTranslation } from 'react-i18next';
 
 interface SidebarChatProps {
   onGalleryClick?: () => void;
@@ -23,6 +24,7 @@ export function SidebarChat({
   onSettingsClick,
   onDocumentsClick,
 }: SidebarChatProps) {
+  const { t } = useTranslation();
   const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
   const [betaConfig, setBetaConfig] = useState<BetaConfig>({ enablePresentationMode: false });
   const { setAppMode } = useChatStore();
@@ -75,7 +77,7 @@ export function SidebarChat({
             onClick={() => {
               setPersonaDialogOpen(true);
             }}
-            title="AI 페르소나 관리"
+            title={t('app.sidebarChat.personaManagement')}
             className="flex-1"
           >
             <User className="h-5 w-5" />
@@ -84,7 +86,7 @@ export function SidebarChat({
             variant="ghost"
             size="icon"
             onClick={onDocumentsClick}
-            title="문서 관리"
+            title={t('app.sidebarChat.documentManagement')}
             className="flex-1"
             data-testid="sidebar-documents-btn"
           >
@@ -102,7 +104,7 @@ export function SidebarChat({
               }
               onGalleryClick?.();
             }}
-            title="이미지 갤러리"
+            title={t('app.sidebarChat.imageGallery')}
             className="flex-1"
           >
             <Image className="h-5 w-5" />
@@ -112,7 +114,7 @@ export function SidebarChat({
               variant="ghost"
               size="icon"
               onClick={() => setAppMode('presentation')}
-              title="Presentation 모드 (Beta - 개발 중)"
+              title={t('app.sidebarChat.presentationMode')}
               className="flex-1"
             >
               <Presentation className="h-5 w-5" />
@@ -130,7 +132,7 @@ export function SidebarChat({
               }
               onSettingsClick?.();
             }}
-            title="설정"
+            title={t('app.sidebarChat.settings')}
             className="flex-1"
           >
             <Settings className="h-5 w-5" />
