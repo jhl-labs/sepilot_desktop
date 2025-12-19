@@ -376,6 +376,9 @@
       "title": "MCP",
       "description": "Model Context Protocol 服务器设置",
       "addServer": "添加新服务器",
+      "serverConfig": {
+        "title": "添加服务器"
+      },
       "serverList": {
         "count": "共 <1>{{count}}</1> 个服务器",
         "totalServers": "共 {{count}} 个服务器",

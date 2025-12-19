@@ -780,6 +780,9 @@
     "mcp": {
       "title": "MCP",
       "description": "Model Context Protocol 서버 설정",
+      "serverConfig": {
+        "title": "서버 추가"
+      },
       "serverList": {
         "count": "총 <1>{{count}}</1>개 서버",
         "totalServers": "총 {{count}}개 서버",
