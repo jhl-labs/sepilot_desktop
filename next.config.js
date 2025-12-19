@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const { version } = require('./package.json');
+
 const nextConfig = {
   output: 'export',
   distDir: 'out',
@@ -7,6 +9,11 @@ const nextConfig = {
   // Disable all external traffic for offline usage
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
+
+  // Environment variables
+  env: {
+    NEXT_PUBLIC_APP_VERSION: version,
+  },
 
   images: {
     unoptimized: true,

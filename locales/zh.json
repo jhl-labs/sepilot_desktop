@@ -75,6 +75,20 @@
     "general": {
       "title": "通用设置",
       "description": "配置语言和基本设置。",
+      "version": {
+        "title": "版本信息",
+        "currentVersion": "当前版本",
+        "latestVersion": "最新版本",
+        "checkForUpdates": "检查更新",
+        "checking": "检查中...",
+        "upToDate": "您正在使用最新版本",
+        "updateAvailable": "发现新版本：{{version}}",
+        "checkFailed": "检查更新失败",
+        "downloadUpdate": "下载",
+        "releaseNotes": "发行说明",
+        "warning": "⚠️ 警告",
+        "developmentWarning": "此应用程序目前正在开发中。最新版本可能无法保证稳定运行。如果当前版本运行良好，请谨慎更新。"
+      },
       "language": {
         "title": "语言",
         "description": "选择应用程序的显示语言。",

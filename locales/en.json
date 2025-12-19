@@ -75,6 +75,20 @@
     "general": {
       "title": "General",
       "description": "Configure language and basic settings.",
+      "version": {
+        "title": "Version Information",
+        "currentVersion": "Current Version",
+        "latestVersion": "Latest Version",
+        "checkForUpdates": "Check for Updates",
+        "checking": "Checking...",
+        "upToDate": "You are using the latest version",
+        "updateAvailable": "New version available: {{version}}",
+        "checkFailed": "Failed to check for updates",
+        "downloadUpdate": "Download",
+        "releaseNotes": "Release Notes",
+        "warning": "⚠️ Warning",
+        "developmentWarning": "This application is currently under development. The latest version may not always guarantee stable operation. If your current version works fine, please update with caution."
+      },
       "language": {
         "title": "Language",
         "description": "Select the display language for the application.",
