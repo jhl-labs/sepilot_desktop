@@ -104,7 +104,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.1",
+    "@electron/rebuild": "^4.0.2",
     "@eslint/eslintrc": "^3.3.3",
     "@lhci/cli": "^0.15.1",
     "@next/bundle-analyzer": "^16.0.10",
