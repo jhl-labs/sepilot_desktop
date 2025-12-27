@@ -284,8 +284,8 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0
       dependency-cruiser:
-        specifier: ^17.3.3
-        version: 17.3.3
+        specifier: ^17.3.5
+        version: 17.3.5
       electron:
         specifier: ^39.2.7
         version: 39.2.7
@@ -3814,8 +3814,8 @@ packages:
     resolution: {integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==}
     engines: {node: '>= 0.8'}
 
-  dependency-cruiser@17.3.3:
-    resolution: {integrity: sha512-ieIwWLp0Yo9JtEUi90vD/ZzftrB8abMSf88t264XQrw4OOvOAcMFOiT5VWHa1Y2/LiDaWPhT9aQTz6dmbWj9AQ==}
+  dependency-cruiser@17.3.5:
+    resolution: {integrity: sha512-eAkyhfopzKfwes9ZZcuTPtrAJrdSRX1ASnRbgCN5Dvf69XshhGspRDUGhO6ugqKZyyVfEm8IF81UFWMTEzGXCw==}
     engines: {node: ^20.12||^22||>=24}
     hasBin: true
 
@@ -12161,7 +12161,7 @@ snapshots:
 
   depd@2.0.0: {}
 
-  dependency-cruiser@17.3.3:
+  dependency-cruiser@17.3.5:
     dependencies:
       acorn: 8.15.0
       acorn-jsx: 5.3.2(acorn@8.15.0)
