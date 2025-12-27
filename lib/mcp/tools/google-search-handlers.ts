@@ -23,6 +23,35 @@ async function naturalDelay(minMs = 500, maxMs = 1500) {
 }
 
 /**
+ * 현재 URL이 Google 도메인인지 여부를 확인합니다.
+ *
+ * NOTE:
+ *  - 호스트명을 기준으로 검사하여 `google.com` 이 단순 부분 문자열로 포함된
+ *    악의적인 도메인(e.g. `evil-google.com`, `google.com.evil.net`)을 허용하지 않습니다.
+ *  - `google.com` 및 그 하위 도메인(e.g. `www.google.com`, `news.google.com`)을 허용합니다.
+ */
+function isGoogleUrl(currentUrl: string): boolean {
+  try {
+    const url = new URL(currentUrl);
+    const hostname = url.hostname.toLowerCase();
+
+    // 정확히 google.com 이거나 *.google.com 인 경우만 허용
+    if (hostname === 'google.com') {
+      return true;
+    }
+
+    if (hostname.endsWith('.google.com')) {
+      return true;
+    }
+
+    return false;
+  } catch {
+    // 잘못된 URL 형식인 경우 Google URL 이 아니라고 간주
+    return false;
+  }
+}
+
+/**
  * Google 검색 URL 생성
  */
 function buildGoogleSearchURL(options: GoogleSearchOptions): string {
@@ -285,7 +314,7 @@ export async function handleGoogleSearch(options: GoogleSearchOptions): Promise<
         const title = browserView.webContents.getTitle();
 
         // Google 페이지에 있고 제목이 있으면 부분 성공으로 간주
-        if (currentURL.includes('google.com') && title) {
+        if (isGoogleUrl(currentURL) && title) {
           logger.warn(
             '[GoogleSearch] Partial page load detected, continuing with available content'
           );
