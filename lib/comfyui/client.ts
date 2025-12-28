@@ -277,6 +277,11 @@ export class ComfyUIClient {
 
   /**
    * WebSocket으로 완료 대기
+   *
+   * 주의: 브라우저 환경에서는 WebSocket이 NetworkConfig(프록시/SSL)를 직접 적용할 수 없습니다.
+   * 브라우저의 WebSocket은 시스템 프록시 설정을 자동으로 따릅니다.
+   * Electron Main Process에서는 createWebSocket을 통해 NetworkConfig를 적용할 수 있습니다.
+   * (lib/langgraph/nodes/tools.ts 참고)
    */
   private async waitForCompletion(
     promptId: string,
@@ -284,6 +289,7 @@ export class ComfyUIClient {
     onProgress?: (progress: ComfyUIProgress) => void
   ): Promise<string> {
     return new Promise((resolve, reject) => {
+      // 브라우저 WebSocket - 시스템 프록시 설정 자동 적용
       const ws = new WebSocket(`${this.config.wsUrl}?clientId=${this.clientId}`);
       let currentStep = 0;
       const totalSteps = this.config.steps || 4;

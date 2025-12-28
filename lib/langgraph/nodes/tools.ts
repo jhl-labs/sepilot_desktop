@@ -10,8 +10,7 @@ import {
 } from '@/lib/llm/streaming-callback';
 import type { ComfyUIConfig, NetworkConfig } from '@/types';
 import { generateWithNanoBanana } from '@/lib/imagegen/nanobanana-client';
-import WebSocket from 'ws';
-import { httpPost, httpFetch } from '@/lib/http';
+import { httpPost, httpFetch, createWebSocket } from '@/lib/http';
 
 import { logger } from '@/lib/utils/logger';
 /**
@@ -158,6 +157,7 @@ async function generateImageInMainProcess(
       normalizedUrl,
       headers,
       config.steps || 4,
+      networkConfig,
       conversationId
     );
 
@@ -180,17 +180,22 @@ async function generateImageInMainProcess(
 /**
  * WebSocket으로 이미지 생성 완료 대기 (Main Process)
  */
-function waitForCompletionInMainProcess(
+async function waitForCompletionInMainProcess(
   wsUrl: string,
   clientId: string,
   promptId: string,
   httpUrl: string,
   headers: Record<string, string>,
   totalSteps: number,
+  networkConfig: NetworkConfig | null,
   conversationId?: string
 ): Promise<string> {
+  // Create WebSocket with NetworkConfig support
+  const ws = (await createWebSocket(`${wsUrl}?clientId=${clientId}`, {
+    networkConfig: networkConfig ?? undefined,
+  })) as any;
+
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`${wsUrl}?clientId=${clientId}`);
     const timeout = setTimeout(() => {
       ws.close();
       reject(new Error('Image generation timeout (10m)'));
