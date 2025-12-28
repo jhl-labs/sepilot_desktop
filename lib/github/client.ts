@@ -687,7 +687,9 @@ export class GitHubSyncClient {
 
     // 폴더 경로 추출 (docsPath 이후 경로)
     const normalizedDocsPath = docsPath.endsWith('/') ? docsPath.slice(0, -1) : docsPath;
-    const pathRegex = new RegExp(`${normalizedDocsPath.replace(/\//g, '/')}/(.+)\\.md$`);
+    // Escape special regex characters in path
+    const escapedDocsPath = normalizedDocsPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pathRegex = new RegExp(`${escapedDocsPath}/(.+)\\.md$`);
     const pathMatch = filepath.match(pathRegex);
     if (pathMatch) {
       const fullPath = pathMatch[1];
