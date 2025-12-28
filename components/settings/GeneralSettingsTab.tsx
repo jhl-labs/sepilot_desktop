@@ -24,6 +24,7 @@ import {
 import { useState } from 'react';
 import type { SupportedLanguage } from '@/lib/i18n';
 import { logger } from '@/lib/utils/logger';
+import { httpFetch } from '@/lib/http';
 
 interface GeneralSettingsTabProps {
   onSave?: (language?: string) => void;
@@ -86,7 +87,7 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
     setUpdateCheckError(null);
 
     try {
-      const response = await fetch(
+      const response = await httpFetch(
         'https://api.github.com/repos/jhl-labs/sepilot_desktop/releases/latest'
       );
 

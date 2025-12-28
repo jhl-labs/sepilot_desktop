@@ -1,4 +1,5 @@
 import { ComfyUIConfig } from '@/types';
+import { httpFetch, httpPost } from '@/lib/http';
 
 export interface ComfyUIGenerateOptions {
   prompt: string;
@@ -101,20 +102,19 @@ export class ComfyUIClient {
           imageBase64: imageData,
         };
       } else {
-        // 브라우저 환경 (fallback): 직접 fetch
-        console.warn(
-          '[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied'
-        );
-        const queueResponse = await fetch(`${this.config.httpUrl}/prompt`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        // 브라우저 환경 (fallback): httpFetch 사용 (Network Config 적용)
+        console.warn('[ComfyUI] Running in browser mode - using httpFetch');
+
+        const queueResponse = await httpPost(
+          `${this.config.httpUrl}/prompt`,
+          {
             prompt: workflow,
             client_id: this.clientId,
-          }),
-        });
+          },
+          {
+            networkConfig: networkConfig ?? undefined,
+          }
+        );
 
         if (!queueResponse.ok) {
           throw new Error(`Failed to queue prompt: ${queueResponse.statusText}`);
@@ -277,6 +277,11 @@ export class ComfyUIClient {
 
   /**
    * WebSocket으로 완료 대기
+   *
+   * 주의: 브라우저 환경에서는 WebSocket이 NetworkConfig(프록시/SSL)를 직접 적용할 수 없습니다.
+   * 브라우저의 WebSocket은 시스템 프록시 설정을 자동으로 따릅니다.
+   * Electron Main Process에서는 createWebSocket을 통해 NetworkConfig를 적용할 수 있습니다.
+   * (lib/langgraph/nodes/tools.ts 참고)
    */
   private async waitForCompletion(
     promptId: string,
@@ -284,6 +289,7 @@ export class ComfyUIClient {
     onProgress?: (progress: ComfyUIProgress) => void
   ): Promise<string> {
     return new Promise((resolve, reject) => {
+      // 브라우저 WebSocket - 시스템 프록시 설정 자동 적용
       const ws = new WebSocket(`${this.config.wsUrl}?clientId=${this.clientId}`);
       let currentStep = 0;
       const totalSteps = this.config.steps || 4;
@@ -400,13 +406,11 @@ export class ComfyUIClient {
 
       return result.data;
     } else {
-      // 브라우저 환경 (fallback): 직접 fetch
-      console.warn(
-        '[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied'
-      );
+      // 브라우저 환경 (fallback): httpFetch 사용 (Network Config 적용)
+      console.warn('[ComfyUI] Running in browser mode - using httpFetch');
       const imageUrl = `${this.config.httpUrl}/view?filename=${imageInfo.filename}&subfolder=${imageInfo.subfolder || ''}&type=${imageInfo.type || 'output'}`;
 
-      const response = await fetch(imageUrl);
+      const response = await httpFetch(imageUrl);
       if (!response.ok) {
         throw new Error('Failed to fetch generated image');
       }
@@ -432,7 +436,7 @@ export class ComfyUIClient {
    */
   async testConnection(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.config.httpUrl}/system_stats`);
+      const response = await httpFetch(`${this.config.httpUrl}/system_stats`);
       return response.ok;
     } catch {
       return false;

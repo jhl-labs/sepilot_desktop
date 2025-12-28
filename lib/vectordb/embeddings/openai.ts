@@ -1,6 +1,7 @@
 import { getErrorMessage } from '@/lib/utils/error-handler';
 import { EmbeddingProvider } from './interface';
 import { LLMConfig } from '@/types';
+import { httpPost } from '@/lib/http';
 
 import { logger } from '@/lib/utils/logger';
 export interface OpenAIEmbeddingConfig {
@@ -70,19 +71,22 @@ export class OpenAIEmbeddings extends EmbeddingProvider {
         return result.data;
       }
 
-      // 브라우저 환경: 직접 fetch (CORS 주의 필요)
-      logger.warn('[OpenAI Embeddings] Running in browser mode - CORS may occur');
-      const response = await fetch(`${this.baseURL}/embeddings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
+      // 브라우저 환경: httpPost 사용 (NetworkConfig 자동 적용)
+      logger.warn('[OpenAI Embeddings] Running in browser mode - using httpPost');
+      const response = await httpPost(
+        `${this.baseURL}/embeddings`,
+        {
           model: this.model,
           input: text,
-        }),
-      });
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          networkConfig: this.networkConfig,
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`OpenAI API error: ${response.statusText}`);
@@ -119,19 +123,22 @@ export class OpenAIEmbeddings extends EmbeddingProvider {
         return result.data;
       }
 
-      // 브라우저 환경: 직접 fetch (CORS 주의 필요)
-      logger.warn('[OpenAI Embeddings] Running in browser mode - CORS may occur');
-      const response = await fetch(`${this.baseURL}/embeddings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
+      // 브라우저 환경: httpPost 사용 (NetworkConfig 자동 적용)
+      logger.warn('[OpenAI Embeddings] Running in browser mode - using httpPost');
+      const response = await httpPost(
+        `${this.baseURL}/embeddings`,
+        {
           model: this.model,
           input: texts,
-        }),
-      });
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          networkConfig: this.networkConfig,
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`OpenAI API error: ${response.statusText}`);

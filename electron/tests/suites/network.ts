@@ -1,6 +1,7 @@
 import { TestResult, TestSuiteResult } from '../../ipc/handlers/test-runner';
 import { logger } from '../../services/logger';
 import { net } from 'electron';
+import { httpFetch } from '@/lib/http';
 
 /**
  * Network Connectivity 테스트 스위트

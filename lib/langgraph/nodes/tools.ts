@@ -10,7 +10,7 @@ import {
 } from '@/lib/llm/streaming-callback';
 import type { ComfyUIConfig, NetworkConfig } from '@/types';
 import { generateWithNanoBanana } from '@/lib/imagegen/nanobanana-client';
-import WebSocket from 'ws';
+import { httpPost, httpFetch, createWebSocket } from '@/lib/http';
 
 import { logger } from '@/lib/utils/logger';
 /**
@@ -130,11 +130,11 @@ async function generateImageInMainProcess(
       conversationId
     );
 
-    const queueResponse = await fetch(`${normalizedUrl}/prompt`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ prompt: workflow, client_id: clientId }),
-    });
+    const queueResponse = await httpPost(
+      `${normalizedUrl}/prompt`,
+      { prompt: workflow, client_id: clientId },
+      { headers, networkConfig: networkConfig ?? undefined }
+    );
 
     if (!queueResponse.ok) {
       const errorText = await queueResponse.text();
@@ -157,6 +157,7 @@ async function generateImageInMainProcess(
       normalizedUrl,
       headers,
       config.steps || 4,
+      networkConfig,
       conversationId
     );
 
@@ -179,17 +180,22 @@ async function generateImageInMainProcess(
 /**
  * WebSocket으로 이미지 생성 완료 대기 (Main Process)
  */
-function waitForCompletionInMainProcess(
+async function waitForCompletionInMainProcess(
   wsUrl: string,
   clientId: string,
   promptId: string,
   httpUrl: string,
   headers: Record<string, string>,
   totalSteps: number,
+  networkConfig: NetworkConfig | null,
   conversationId?: string
 ): Promise<string> {
+  // Create WebSocket with NetworkConfig support
+  const ws = (await createWebSocket(`${wsUrl}?clientId=${clientId}`, {
+    networkConfig: networkConfig ?? undefined,
+  })) as any;
+
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`${wsUrl}?clientId=${clientId}`);
     const timeout = setTimeout(() => {
       ws.close();
       reject(new Error('Image generation timeout (10m)'));
@@ -242,7 +248,7 @@ function waitForCompletionInMainProcess(
             const imageInfo = images[0];
             const imageUrl = `${httpUrl}/view?filename=${imageInfo.filename}&subfolder=${imageInfo.subfolder || ''}&type=${imageInfo.type || 'output'}`;
 
-            const imageResponse = await fetch(imageUrl, { headers });
+            const imageResponse = await httpFetch(imageUrl, { headers });
             if (!imageResponse.ok) {
               throw new Error(`Failed to fetch image: ${imageResponse.status}`);
             }

@@ -132,6 +132,9 @@ async function loadViaIPC(): Promise<NetworkConfig | null> {
 
     if (electronAPI?.config) {
       const result = await electronAPI.config.load();
+      if (result.success !== false && result?.data?.network) {
+        return result.data.network;
+      }
       if (result.success !== false && result?.network) {
         return result.network;
       }
@@ -140,10 +143,13 @@ async function loadViaIPC(): Promise<NetworkConfig | null> {
         return result.network || null;
       }
     }
+
+    // Fallback: localStorage 읽기 (IPC 실패 시)
+    return loadFromLocalStorage();
   } catch (error) {
-    logger.warn('[HTTP Config] Failed to load via IPC:', error);
+    logger.warn('[HTTP Config] Failed to load via IPC, trying localStorage:', error);
+    return loadFromLocalStorage();
   }
-  return null;
 }
 
 /**
@@ -151,9 +157,16 @@ async function loadViaIPC(): Promise<NetworkConfig | null> {
  */
 function loadFromLocalStorage(): NetworkConfig | null {
   try {
-    const configStr = localStorage.getItem('sepilot_app_config');
-    if (configStr) {
-      const appConfig = JSON.parse(configStr);
+    // 먼저 별도 저장된 network config 확인 (우선순위 높음)
+    const networkConfigStr = localStorage.getItem('sepilot_network_config');
+    if (networkConfigStr) {
+      return JSON.parse(networkConfigStr);
+    }
+
+    // Fallback: app_config에서 network 필드 읽기
+    const appConfigStr = localStorage.getItem('sepilot_app_config');
+    if (appConfigStr) {
+      const appConfig = JSON.parse(appConfigStr);
       return appConfig.network || null;
     }
   } catch (error) {

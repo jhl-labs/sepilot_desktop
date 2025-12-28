@@ -7,8 +7,7 @@ import { Octokit } from '@octokit/rest';
 import type { GitHubSyncConfig, AppConfig } from '@/types';
 import { encryptData } from './encryption';
 import crypto from 'crypto';
-import https from 'https';
-import { ProxyAgent } from 'proxy-agent';
+import { createOctokitAgent } from '@/lib/http';
 
 export interface GitHubFileContent {
   sha: string;
@@ -31,58 +30,63 @@ export class GitHubSyncClient {
   private owner: string;
   private repo: string;
   private branch: string;
+  private initPromise: Promise<void>;
 
   constructor(config: GitHubSyncConfig) {
+    this.owner = config.owner;
+    this.repo = config.repo;
+    this.branch = config.branch || 'main';
+
     // GHES 지원: baseUrl 설정
     const baseUrl =
       config.serverType === 'ghes' && config.ghesUrl
         ? `${config.ghesUrl}/api/v3`
         : 'https://api.github.com';
 
-    // Network 설정 적용
-    const requestOptions: any = {};
-
-    if (config.networkConfig) {
-      // Proxy와 SSL 설정을 함께 처리
-      const agentOptions: any = {};
-
-      // SSL 검증 설정
-      if (config.networkConfig.ssl?.verify === false) {
-        agentOptions.rejectUnauthorized = false;
-      }
-
-      // Proxy 설정
-      if (config.networkConfig.proxy?.enabled && config.networkConfig.proxy.mode !== 'none') {
-        if (config.networkConfig.proxy.mode === 'manual' && config.networkConfig.proxy.url) {
-          // 수동 프록시 설정
-          requestOptions.agent = new ProxyAgent({
-            ...agentOptions,
-            getProxyForUrl: () => config.networkConfig!.proxy!.url!,
-          });
-        } else if (config.networkConfig.proxy.mode === 'system') {
-          // 시스템 프록시 (환경 변수에서 자동 감지)
-          requestOptions.agent = new ProxyAgent(agentOptions);
-        }
-      } else if (config.networkConfig.ssl?.verify === false) {
-        // Proxy 없이 SSL만 비활성화
-        requestOptions.agent = new https.Agent(agentOptions);
-      }
-    }
-
+    // 임시 Octokit 인스턴스 생성 (NetworkConfig 없이)
     this.octokit = new Octokit({
       auth: config.token,
       baseUrl,
-      request: requestOptions,
     });
-    this.owner = config.owner;
-    this.repo = config.repo;
-    this.branch = config.branch || 'main';
+
+    // NetworkConfig 적용된 Octokit으로 비동기 교체
+    this.initPromise = this.initializeOctokit(config.token, baseUrl, config.networkConfig);
+  }
+
+  /**
+   * Octokit 초기화 (async - NetworkConfig 적용)
+   */
+  private async initializeOctokit(
+    token: string,
+    baseUrl: string,
+    networkConfig: GitHubSyncConfig['networkConfig']
+  ): Promise<void> {
+    try {
+      const requestOptions = await createOctokitAgent(networkConfig);
+
+      this.octokit = new Octokit({
+        auth: token,
+        baseUrl,
+        request: requestOptions,
+      });
+    } catch (error) {
+      console.error('[GitHubSync] Failed to initialize Octokit with network config:', error);
+      // Fallback은 이미 설정된 기본 octokit 사용
+    }
+  }
+
+  /**
+   * Octokit 초기화 완료 대기
+   */
+  private async ensureInitialized(): Promise<void> {
+    await this.initPromise;
   }
 
   /**
    * 파일이 존재하는지 확인하고 내용을 가져옴
    */
   async getFile(path: string): Promise<GitHubFileContent | null> {
+    await this.ensureInitialized();
     try {
       const { data } = await this.octokit.repos.getContent({
         owner: this.owner,
@@ -119,6 +123,7 @@ export class GitHubSyncClient {
     message: string,
     existingSha?: string
   ): Promise<GitHubSyncResult> {
+    await this.ensureInitialized();
     try {
       // Base64 인코딩
       const encodedContent = Buffer.from(content, 'utf-8').toString('base64');
@@ -165,6 +170,7 @@ export class GitHubSyncClient {
    * 파일 삭제
    */
   async deleteFile(path: string, message: string, sha?: string): Promise<GitHubSyncResult> {
+    await this.ensureInitialized();
     try {
       // SHA가 제공되지 않으면 먼저 파일 정보를 가져옴
       let fileSha = sha;
@@ -206,6 +212,7 @@ export class GitHubSyncClient {
    * 폴더 내 모든 파일 가져오기
    */
   async listFiles(path: string): Promise<string[]> {
+    await this.ensureInitialized();
     try {
       const { data } = await this.octokit.repos.getContent({
         owner: this.owner,
@@ -490,6 +497,7 @@ export class GitHubSyncClient {
     message?: string;
     error?: string;
   }> {
+    await this.ensureInitialized();
     try {
       // 지정된 디렉토리의 모든 파일 가져오기
       const { data: tree } = await this.octokit.git.getTree({
@@ -874,6 +882,7 @@ export class GitHubSyncClient {
    * 레포지토리 연결 테스트
    */
   async testConnection(): Promise<GitHubSyncResult> {
+    await this.ensureInitialized();
     try {
       // 레포지토리 정보 가져오기
       const { data } = await this.octokit.repos.get({

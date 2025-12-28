@@ -1,18 +1,12 @@
-import { EventSource } from 'eventsource';
-
 import { getErrorMessage } from '@/lib/utils/error-handler';
 import { logger } from '@/lib/utils/logger';
+import { createEventSource, httpPost } from '@/lib/http';
 
 import { MCPClient } from '../client';
 import { JSONRPCRequest, JSONRPCResponse } from '../types';
 
-// EventSource 인터페이스 정의
-interface IEventSource {
-  onmessage: ((event: any) => void) | null;
-  onopen: ((event: any) => void) | null;
-  onerror: ((error: any) => void) | null;
-  close(): void;
-}
+// EventSource 타입 (브라우저 또는 Node.js eventsource)
+type EventSourceType = EventSource;
 
 /**
  * SSE (Server-Sent Events) MCP Client
@@ -21,7 +15,7 @@ interface IEventSource {
  * Main Process에서 동작합니다 (Node.js EventSource 사용).
  */
 export class SSEMCPClient extends MCPClient {
-  private eventSource: IEventSource | null = null;
+  private eventSource: EventSourceType | null = null;
   private sessionId: string | null = null;
   private pendingRequests: Map<
     string | number,
@@ -56,33 +50,37 @@ export class SSEMCPClient extends MCPClient {
             logger.debug('[SSE MCP] Connecting with headers', this.config.headers ?? {});
             logger.info('[SSE MCP] Connecting via SSE', { url: url.toString() });
 
-            const eventSource = new EventSource(url.toString(), {
+            // NetworkConfig 적용된 EventSource 생성
+            createEventSource(url.toString(), {
               headers: this.config.headers || {},
-            } as any);
-            this.eventSource = eventSource;
+            })
+              .then((eventSource) => {
+                this.eventSource = eventSource;
 
-            // 메시지 수신
-            eventSource.onmessage = (event: any) => {
-              this.handleMessage(event.data);
-            };
+                // 메시지 수신
+                eventSource.onmessage = (event: any) => {
+                  this.handleMessage(event.data);
+                };
 
-            // 연결 성공
-            eventSource.onopen = () => {
-              logger.info('[SSE MCP] Connected', { server: this.config.name });
-              this.isConnected = true;
-              resolve();
-            };
+                // 연결 성공
+                eventSource.onopen = () => {
+                  logger.info('[SSE MCP] Connected', { server: this.config.name });
+                  this.isConnected = true;
+                  resolve();
+                };
 
-            // 에러 처리
-            eventSource.onerror = (error: Event) => {
-              logger.error('[SSE MCP] Connection error', { server: this.config.name, error });
-              if (!this.isConnected) {
-                reject(new Error('Failed to connect to SSE endpoint'));
-              } else {
-                // 연결 중 에러 발생 시 재연결 시도
-                this.isConnected = false;
-              }
-            };
+                // 에러 처리
+                eventSource.onerror = (error: Event) => {
+                  logger.error('[SSE MCP] Connection error', { server: this.config.name, error });
+                  if (!this.isConnected) {
+                    reject(new Error('Failed to connect to SSE endpoint'));
+                  } else {
+                    // 연결 중 에러 발생 시 재연결 시도
+                    this.isConnected = false;
+                  }
+                };
+              })
+              .catch(reject);
           })
           .catch(reject);
       } catch (error) {
@@ -157,16 +155,19 @@ export class SSEMCPClient extends MCPClient {
       logger.debug('[SSE MCP] initializeSession headers', headers);
       logger.info('[SSE MCP] Session URL', { url: sessionUrl.toString() });
 
-      const response = await fetch(sessionUrl.toString(), {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
+      // NetworkConfig 적용된 httpPost 사용
+      const response = await httpPost(
+        sessionUrl.toString(),
+        {
           clientInfo: {
             name: 'sepilot-desktop',
             version: '0.1.0',
           },
-        }),
-      });
+        },
+        {
+          headers,
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -202,10 +203,9 @@ export class SSEMCPClient extends MCPClient {
       headers['X-Session-ID'] = this.sessionId;
     }
 
-    const response = await fetch(baseUrl, {
-      method: 'POST',
+    // NetworkConfig 적용된 httpPost 사용
+    const response = await httpPost(baseUrl, request, {
       headers,
-      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
