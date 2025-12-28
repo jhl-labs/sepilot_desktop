@@ -1,18 +1,10 @@
 import { logger } from '@/lib/utils/logger';
+import { httpFetchStream } from '@/lib/http';
 /**
  * 웹 브라우저 환경에서 사용할 LLM 클라이언트
- * OpenAI Compatible API를 직접 호출
+ * OpenAI Compatible API를 호출
  *
- * ⚠️ WARNING: CORS 문제가 발생할 수 있습니다!
- *
- * 이 클라이언트는 브라우저에서 직접 외부 API를 호출하므로 CORS 정책에 의해 차단될 수 있습니다.
- *
- * Electron 앱에서는 다음을 사용하세요:
- * - LLM 호출: electron/ipc/handlers/llm.ts (window.electronAPI.llm)
- * - Embeddings: electron/ipc/handlers/embeddings.ts (window.electronAPI.embeddings)
- *
- * Main Process에서 API를 호출하면 CORS 문제가 발생하지 않으며,
- * Network Config (프록시, SSL 검증, 커스텀 헤더)도 지원됩니다.
+ * httpFetchStream을 사용하여 NetworkConfig (프록시, SSL, 커스텀 헤더)가 자동 적용됩니다.
  */
 
 import { LLMConfig } from '@/types';
@@ -93,7 +85,7 @@ export class WebLLMClient {
     };
 
     try {
-      const response = await fetch(url, {
+      const response = await httpFetchStream(url, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),

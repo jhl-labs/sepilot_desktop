@@ -7,6 +7,7 @@ import {
   ImageGenConfig,
   NanoBananaConfig,
 } from '@/types';
+import { httpFetch } from '@/lib/http';
 
 export const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
@@ -274,7 +275,7 @@ export const fetchAvailableModels = async ({
     });
   }
 
-  const response = await fetch(endpoint, {
+  const response = await httpFetch(endpoint, {
     method: 'GET',
     headers,
   });

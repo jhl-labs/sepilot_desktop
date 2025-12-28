@@ -10,6 +10,7 @@ import { ImageGenConfig, NetworkConfig } from '@/types';
 import { Image, Sparkles } from 'lucide-react';
 import { SettingsSectionHeader } from './SettingsSectionHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { httpFetch } from '@/lib/http';
 
 interface ImageGenSettingsTabProps {
   imageGenConfig: ImageGenConfig;
@@ -70,7 +71,7 @@ export function ImageGenSettingsTab({
           '[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied'
         );
         const normalizedUrl = imageGenConfig.comfyui.httpUrl.replace(/\/$/, '');
-        const response = await fetch(`${normalizedUrl}/system_stats`, {
+        const response = await httpFetch(`${normalizedUrl}/system_stats`, {
           headers: imageGenConfig.comfyui.apiKey
             ? {
                 Authorization: `Bearer ${imageGenConfig.comfyui.apiKey}`,

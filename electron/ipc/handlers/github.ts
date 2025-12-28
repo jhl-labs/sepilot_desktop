@@ -1,11 +1,9 @@
 import { ipcMain, shell, safeStorage } from 'electron';
 import { Octokit } from '@octokit/rest';
 import * as crypto from 'crypto';
-import { HttpsProxyAgent } from 'https-proxy-agent';
-import { Agent as HttpAgent } from 'http';
-import { Agent as HttpsAgent } from 'https';
 import { NetworkConfig } from '../../../types';
 import { databaseService } from '../../services/database';
+import { httpFetch, httpPost, getNetworkConfig, createOctokitAgent } from '@/lib/http';
 
 // Private Key를 메모리에 캐싱 (프로세스 재시작 시 DB에서 로드)
 let cachedPrivateKey: string | null = null;
@@ -121,20 +119,17 @@ export function setupGitHubHandlers() {
         // JWT 생성 (GitHub App 인증)
         const jwt = generateJWT(appId, privateKey);
 
-        // HTTP Agent 설정 (proxy, SSL 검증 등)
-        const agent = createHttpAgent(networkConfig);
-
-        // Installation Access Token 획득
-        const tokenResponse = await fetch(
+        // Installation Access Token 획득 (NetworkConfig 자동 적용)
+        const tokenResponse = await httpPost(
           `${baseUrl}/api/v3/app/installations/${installationId}/access_tokens`,
+          null,
           {
-            method: 'POST',
             headers: {
               Authorization: `Bearer ${jwt}`,
               Accept: 'application/vnd.github+json',
               'X-GitHub-Api-Version': '2022-11-28',
             },
-            ...(agent ? { agent } : {}),
+            networkConfig,
           }
         );
 
@@ -149,10 +144,11 @@ export function setupGitHubHandlers() {
         const installationToken = tokenData.token;
 
         // Octokit으로 레포지토리 목록 가져오기
+        const requestOptions = await createOctokitAgent(networkConfig);
         const octokit = new Octokit({
           auth: installationToken,
           baseUrl: `${baseUrl}/api/v3`,
-          request: agent ? { agent } : undefined,
+          request: requestOptions,
         });
 
         const { data } = await octokit.apps.listReposAccessibleToInstallation();
@@ -214,19 +210,18 @@ export function setupGitHubHandlers() {
         }
 
         const jwt = generateJWT(appId, privateKey);
-        const agent = createHttpAgent(networkConfig);
 
-        // Installation Access Token 획득
-        const tokenResponse = await fetch(
+        // Installation Access Token 획득 (NetworkConfig 자동 적용)
+        const tokenResponse = await httpPost(
           `${baseUrl}/api/v3/app/installations/${installationId}/access_tokens`,
+          null,
           {
-            method: 'POST',
             headers: {
               Authorization: `Bearer ${jwt}`,
               Accept: 'application/vnd.github+json',
               'X-GitHub-Api-Version': '2022-11-28',
             },
-            ...(agent ? { agent } : {}),
+            networkConfig,
           }
         );
 
@@ -238,10 +233,11 @@ export function setupGitHubHandlers() {
         const installationToken = tokenData.token;
 
         // Octokit으로 파일 가져오기
+        const requestOptions = await createOctokitAgent(networkConfig);
         const octokit = new Octokit({
           auth: installationToken,
           baseUrl: `${baseUrl}/api/v3`,
-          request: agent ? { agent } : undefined,
+          request: requestOptions,
         });
 
         const [owner, repoName] = repo.split('/');
@@ -308,19 +304,18 @@ export function setupGitHubHandlers() {
         }
 
         const jwt = generateJWT(appId, privateKey);
-        const agent = createHttpAgent(networkConfig);
 
-        // Installation Access Token 획득
-        const tokenResponse = await fetch(
+        // Installation Access Token 획득 (NetworkConfig 자동 적용)
+        const tokenResponse = await httpPost(
           `${baseUrl}/api/v3/app/installations/${installationId}/access_tokens`,
+          null,
           {
-            method: 'POST',
             headers: {
               Authorization: `Bearer ${jwt}`,
               Accept: 'application/vnd.github+json',
               'X-GitHub-Api-Version': '2022-11-28',
             },
-            ...(agent ? { agent } : {}),
+            networkConfig,
           }
         );
 
@@ -332,10 +327,11 @@ export function setupGitHubHandlers() {
         const installationToken = tokenData.token;
 
         // Octokit으로 파일 저장
+        const requestOptions = await createOctokitAgent(networkConfig);
         const octokit = new Octokit({
           auth: installationToken,
           baseUrl: `${baseUrl}/api/v3`,
-          request: agent ? { agent } : undefined,
+          request: requestOptions,
         });
 
         const [owner, repoName] = repo.split('/');
@@ -444,33 +440,7 @@ function generateJWT(appId: string, privateKey: string): string {
   return `${encodedHeader}.${encodedPayload}.${signature}`;
 }
 
-/**
- * Network 설정 기반 HTTP Agent 생성
- */
-function createHttpAgent(networkConfig: NetworkConfig | null): HttpsAgent | HttpAgent | undefined {
-  if (!networkConfig) {
-    return undefined;
-  }
-
-  // Proxy 설정
-  if (
-    networkConfig.proxy?.enabled &&
-    networkConfig.proxy.mode === 'manual' &&
-    networkConfig.proxy.url
-  ) {
-    const proxyAgent = new HttpsProxyAgent(networkConfig.proxy.url);
-    return proxyAgent as any;
-  }
-
-  // SSL 검증 비활성화
-  if (networkConfig.ssl && !networkConfig.ssl.verify) {
-    return new HttpsAgent({
-      rejectUnauthorized: false,
-    });
-  }
-
-  return undefined;
-}
+// createHttpAgent는 @/lib/http에서 import하여 사용
 
 /**
  * 설정 암호화 (AES-256-GCM)

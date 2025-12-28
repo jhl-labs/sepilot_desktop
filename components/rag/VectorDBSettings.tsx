@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { VectorDBConfig, EmbeddingConfig } from '@/lib/vectordb';
 
 import { logger } from '@/lib/utils/logger';
+import { httpFetch } from '@/lib/http';
 interface VectorDBSettingsProps {
   onSave: (vectorDBConfig: VectorDBConfig, embeddingConfig: EmbeddingConfig) => Promise<void>;
   initialVectorDBConfig?: VectorDBConfig;
@@ -95,7 +96,7 @@ export function VectorDBSettings({
 
     try {
       const baseURL = embeddingConfig.baseURL.replace(/\/$/, ''); // 끝의 / 제거
-      const response = await fetch(`${baseURL}/models`, {
+      const response = await httpFetch(`${baseURL}/models`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

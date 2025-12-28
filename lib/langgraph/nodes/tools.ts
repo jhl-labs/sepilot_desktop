@@ -11,6 +11,7 @@ import {
 import type { ComfyUIConfig, NetworkConfig } from '@/types';
 import { generateWithNanoBanana } from '@/lib/imagegen/nanobanana-client';
 import WebSocket from 'ws';
+import { httpPost, httpFetch } from '@/lib/http';
 
 import { logger } from '@/lib/utils/logger';
 /**
@@ -130,11 +131,11 @@ async function generateImageInMainProcess(
       conversationId
     );
 
-    const queueResponse = await fetch(`${normalizedUrl}/prompt`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ prompt: workflow, client_id: clientId }),
-    });
+    const queueResponse = await httpPost(
+      `${normalizedUrl}/prompt`,
+      { prompt: workflow, client_id: clientId },
+      { headers, networkConfig: networkConfig ?? undefined }
+    );
 
     if (!queueResponse.ok) {
       const errorText = await queueResponse.text();
@@ -242,7 +243,7 @@ function waitForCompletionInMainProcess(
             const imageInfo = images[0];
             const imageUrl = `${httpUrl}/view?filename=${imageInfo.filename}&subfolder=${imageInfo.subfolder || ''}&type=${imageInfo.type || 'output'}`;
 
-            const imageResponse = await fetch(imageUrl, { headers });
+            const imageResponse = await httpFetch(imageUrl, { headers });
             if (!imageResponse.ok) {
               throw new Error(`Failed to fetch image: ${imageResponse.status}`);
             }

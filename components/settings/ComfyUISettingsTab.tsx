@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ComfyUIConfig, NetworkConfig } from '@/types';
 import { Image } from 'lucide-react';
 import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { httpFetch } from '@/lib/http';
 
 interface ComfyUISettingsTabProps {
   comfyConfig: ComfyUIConfig;
@@ -65,7 +66,7 @@ export function ComfyUISettingsTab({
           '[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied'
         );
         const normalizedUrl = comfyConfig.httpUrl.replace(/\/$/, '');
-        const response = await fetch(`${normalizedUrl}/system_stats`, {
+        const response = await httpFetch(`${normalizedUrl}/system_stats`, {
           headers: comfyConfig.apiKey
             ? {
                 Authorization: `Bearer ${comfyConfig.apiKey}`,

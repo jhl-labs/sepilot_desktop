@@ -6,6 +6,7 @@ import { promisify } from 'util';
 import sharp from 'sharp';
 import TurndownService from 'turndown';
 import mammoth from 'mammoth';
+import { httpFetch } from '@/lib/http';
 
 const execAsync = promisify(exec);
 
@@ -184,7 +185,7 @@ export function registerFileHandlers() {
     try {
       console.log('[File] Fetching URL:', url);
 
-      const response = await fetch(url);
+      const response = await httpFetch(url);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
