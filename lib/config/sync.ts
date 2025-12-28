@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import { encryptConfig, decryptConfig } from './encryption';
+import { createOctokitAgent, getNetworkConfig } from '../http';
 
 /**
  * 앱 설정 인터페이스
@@ -26,7 +27,14 @@ export class ConfigSync {
    * 초기화
    */
   async initialize(token: string): Promise<void> {
-    this.octokit = new Octokit({ auth: token });
+    // NetworkConfig 적용된 Octokit 생성
+    const networkConfig = await getNetworkConfig();
+    const requestOptions = await createOctokitAgent(networkConfig);
+
+    this.octokit = new Octokit({
+      auth: token,
+      request: requestOptions,
+    });
 
     // 사용자 정보 가져오기
     const { data } = await this.octokit.users.getAuthenticated();
