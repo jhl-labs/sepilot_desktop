@@ -32,6 +32,33 @@ const nextConfig = {
       type: 'webassembly/async',
     });
 
+    // Handle node: protocol imports
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'node:assert': 'assert',
+      'node:async_hooks': 'async_hooks',
+      'node:buffer': 'buffer',
+      'node:console': 'console',
+      'node:crypto': 'crypto',
+      'node:diagnostics_channel': 'diagnostics_channel',
+      'node:events': 'events',
+      'node:fs': 'fs',
+      'node:http': 'http',
+      'node:https': 'https',
+      'node:module': 'module',
+      'node:net': 'net',
+      'node:os': 'os',
+      'node:path': 'path',
+      'node:process': 'process',
+      'node:stream': 'stream',
+      'node:string_decoder': 'string_decoder',
+      'node:tls': 'tls',
+      'node:url': 'url',
+      'node:util': 'util',
+      'node:worker_threads': 'worker_threads',
+      'node:zlib': 'zlib',
+    };
+
     // Replace lib/http with browser stub in client-side builds
     if (!isServer) {
       const path = require('path');
