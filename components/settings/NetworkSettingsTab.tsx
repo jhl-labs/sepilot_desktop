@@ -77,16 +77,22 @@ export function NetworkSettingsTab({
                 id="proxyEnabled"
                 type="checkbox"
                 checked={networkConfig.proxy?.enabled ?? false}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const isEnabled = e.target.checked;
                   setNetworkConfig({
                     ...networkConfig,
                     proxy: {
                       ...networkConfig.proxy,
-                      enabled: e.target.checked,
-                      mode: networkConfig.proxy?.mode || 'none',
+                      enabled: isEnabled,
+                      // 비활성화 시 mode를 'none'으로, 활성화 시 기존 mode 유지 (단, 'none'이면 'system'으로)
+                      mode: !isEnabled
+                        ? 'none'
+                        : networkConfig.proxy?.mode === 'none'
+                          ? 'system'
+                          : networkConfig.proxy?.mode || 'system',
                     } as any,
-                  })
-                }
+                  });
+                }}
                 className="sr-only peer"
               />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
@@ -113,9 +119,6 @@ export function NetworkSettingsTab({
                   }
                   className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
                 >
-                  <option value="none" className="bg-background text-foreground">
-                    {t('settings.network.proxy.modeNone')}
-                  </option>
                   <option value="system" className="bg-background text-foreground">
                     {t('settings.network.proxy.modeSystem')}
                   </option>
