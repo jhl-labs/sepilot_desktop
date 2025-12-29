@@ -108,7 +108,7 @@
     "@electron/rebuild": "^4.0.2",
     "@eslint/eslintrc": "^3.3.3",
     "@lhci/cli": "^0.15.1",
-    "@next/bundle-analyzer": "^16.0.10",
+    "@next/bundle-analyzer": "^16.1.1",
     "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
