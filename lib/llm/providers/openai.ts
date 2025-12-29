@@ -1,6 +1,7 @@
 import { BaseLLMProvider, LLMOptions, LLMResponse, StreamChunk } from '../base';
 import { Message } from '@/types';
 import { fetchWithConfig, createAuthHeader } from '../http-utils';
+import { safeJsonParse } from '@/lib/http';
 
 // Logger that works in both Electron Main Process and Browser
 import { logger } from '@/lib/utils/logger';
@@ -417,7 +418,10 @@ export class OpenAIProvider extends BaseLLMProvider {
         throw new Error(`Failed to fetch models: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await safeJsonParse<{ data: Array<{ id: string }> }>(
+        response,
+        `${this.baseURL}/models`
+      );
       return data.data.map((model: any) => model.id);
     } catch (error) {
       log.error('Failed to fetch models:', error);

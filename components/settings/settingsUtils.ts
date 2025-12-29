@@ -7,7 +7,7 @@ import {
   ImageGenConfig,
   NanoBananaConfig,
 } from '@/types';
-import { httpFetch } from '@/lib/http';
+import { httpFetch, safeJsonParse } from '@/lib/http';
 
 export const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
@@ -285,7 +285,7 @@ export const fetchAvailableModels = async ({
     throw new Error(`Failed to fetch models (${response.status} ${errorText})`);
   }
 
-  const payload = await response.json();
+  const payload = await safeJsonParse<any>(response, endpoint);
   const models = extractModelIds(payload);
   return Array.from(new Set(models)).sort();
 };

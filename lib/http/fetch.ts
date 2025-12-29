@@ -480,6 +480,60 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
+ * Response를 안전하게 JSON으로 파싱
+ * 프록시 에러 페이지(HTML) 등을 감지하고 명확한 에러 메시지 제공
+ */
+export async function safeJsonParse<T>(response: Response, url: string): Promise<T> {
+  const contentType = response.headers.get('content-type') || '';
+
+  // Content-Type이 JSON이 아닌 경우
+  if (!contentType.includes('application/json')) {
+    const text = await response.text().catch(() => '');
+
+    // HTML 응답 감지 (프록시 에러 페이지)
+    if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+      throw new Error(
+        `서버가 HTML 페이지를 반환했습니다 (HTTP ${response.status}, URL: ${url}). ` +
+          `프록시 설정이나 네트워크 연결을 확인해주세요. ` +
+          `예상: JSON 응답, 실제: HTML 페이지`
+      );
+    }
+
+    // 빈 응답
+    if (!text || text.trim() === '') {
+      throw new Error(
+        `서버가 빈 응답을 반환했습니다 (HTTP ${response.status}, URL: ${url}). ` +
+          `프록시나 방화벽이 연결을 차단했을 수 있습니다.`
+      );
+    }
+
+    // 기타 텍스트 응답
+    throw new Error(
+      `서버가 예상과 다른 형식의 응답을 반환했습니다 (HTTP ${response.status}, URL: ${url}). ` +
+        `Content-Type: ${contentType}. ` +
+        `응답 미리보기: ${text.substring(0, 200)}...`
+    );
+  }
+
+  // JSON 파싱 시도
+  try {
+    const text = await response.text();
+    return JSON.parse(text) as T;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      const text = await response.text().catch(() => '');
+      throw new Error(
+        `JSON 파싱 실패 (HTTP ${response.status}, URL: ${url}). ` +
+          `서버 응답이 올바른 JSON 형식이 아닙니다. ` +
+          `프록시나 중간 서버가 응답을 수정했을 수 있습니다. ` +
+          `응답 미리보기: ${text.substring(0, 200)}...`
+      );
+    }
+    throw error;
+  }
+}
+
+/**
  * JSON 응답을 파싱하는 편의 함수
  *
  * @param url - 요청 URL
@@ -494,7 +548,7 @@ export async function httpFetchJson<T>(url: string, options: HttpRequestOptions 
     throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
 
-  return response.json();
+  return safeJsonParse<T>(response, url);
 }
 
 /**
@@ -541,7 +595,7 @@ export async function httpPostJson<T>(
     throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
 
-  return response.json();
+  return safeJsonParse<T>(response, url);
 }
 
 /**

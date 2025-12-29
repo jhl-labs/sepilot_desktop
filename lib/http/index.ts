@@ -58,6 +58,7 @@ export {
   httpPostJson,
   httpFetchStream,
   fetchWithNetworkConfig,
+  safeJsonParse,
   VISION_TIMEOUT,
   HttpError,
 } from './fetch';

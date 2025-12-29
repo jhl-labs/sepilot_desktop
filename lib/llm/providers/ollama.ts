@@ -1,6 +1,7 @@
 import { BaseLLMProvider, LLMOptions, LLMResponse, StreamChunk } from '../base';
 import { Message } from '@/types';
 import { fetchWithConfig } from '../http-utils';
+import { safeJsonParse } from '@/lib/http';
 
 import { logger } from '@/lib/utils/logger';
 /**
@@ -33,7 +34,10 @@ export class OllamaProvider extends BaseLLMProvider {
         throw new Error(`Ollama API error: ${response.status} - ${error}`);
       }
 
-      const data = await response.json();
+      const data = await safeJsonParse<{ message?: { content: string }; model: string }>(
+        response,
+        `${this.baseURL}/api/chat`
+      );
 
       return {
         content: data.message?.content || '',
@@ -119,7 +123,10 @@ export class OllamaProvider extends BaseLLMProvider {
         throw new Error(`Failed to fetch models: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await safeJsonParse<{ models?: Array<{ name: string }> }>(
+        response,
+        `${this.baseURL}/api/tags`
+      );
       return data.models?.map((model: any) => model.name) || [];
     } catch (error) {
       console.error('Failed to fetch Ollama models:', error);
