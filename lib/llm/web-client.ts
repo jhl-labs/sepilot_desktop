@@ -89,6 +89,7 @@ export class WebLLMClient {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
+        networkConfig: this.config.network,
       });
 
       if (!response.ok) {
