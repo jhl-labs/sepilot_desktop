@@ -134,19 +134,26 @@ async function createNoProxyAgent(
   agentOptions: Record<string, unknown>
 ): Promise<HttpAgentType | undefined> {
   try {
-    // Use Function constructor to avoid webpack static analysis
-    const importModule = new Function('name', 'return import(name)');
-    const https = await importModule('node' + ':https');
+    // undici Agent 사용 - 환경 변수를 무시하도록 설정
+    const { Agent } = await import('undici');
 
-    // 환경 변수 프록시를 무시하도록 명시적으로 설정
-    const noProxyOptions = {
-      ...agentOptions,
-      // 환경 변수에서 프록시를 읽지 않도록 설정
-      // proxy-from-env 모듈이나 global-agent가 설치되어 있어도 무시
+    // undici Agent 옵션 변환
+    const connectOptions: Record<string, unknown> = {};
+
+    // SSL 검증 설정 변환 (rejectUnauthorized는 connect 옵션 내부)
+    if (agentOptions.rejectUnauthorized === false) {
+      connectOptions.rejectUnauthorized = false;
+    }
+
+    // connections.proxy를 빈 객체로 설정하여 환경 변수 프록시 무시
+    const noProxyOptions: Record<string, unknown> = {
+      connect: connectOptions,
     };
 
-    logger.debug('[HTTP Agent] Creating no-proxy agent (ignores env vars)');
-    return new https.Agent(noProxyOptions);
+    logger.debug('[HTTP Agent] Creating undici no-proxy agent (ignores env vars)', {
+      sslVerify: agentOptions.rejectUnauthorized !== false,
+    });
+    return new Agent(noProxyOptions);
   } catch (error) {
     logger.warn('[HTTP Agent] Failed to create no-proxy agent:', error);
     return undefined;

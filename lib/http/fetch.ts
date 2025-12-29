@@ -316,7 +316,8 @@ export async function httpFetch(url: string, options: HttpRequestOptions = {}): 
   if (env === 'electron-main' || env === 'node') {
     const agent = await createHttpAgent(networkConfig, url);
     if (agent) {
-      (fetchOptions as any).agent = agent;
+      // Node.js v18+ 기본 fetch (undici)는 dispatcher 옵션 사용
+      (fetchOptions as any).dispatcher = agent;
     }
   }
 
