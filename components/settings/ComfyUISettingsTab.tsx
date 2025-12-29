@@ -62,9 +62,6 @@ export function ComfyUISettingsTab({
         setMessage({ type: 'success', text: t('settings.imagegen.comfyui.connectionSuccess') });
       } else {
         // 브라우저 환경 (fallback): 직접 fetch
-        console.warn(
-          '[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied'
-        );
         const normalizedUrl = comfyConfig.httpUrl.replace(/\/$/, '');
         const response = await httpFetch(`${normalizedUrl}/system_stats`, {
           headers: comfyConfig.apiKey
@@ -72,6 +69,7 @@ export function ComfyUISettingsTab({
                 Authorization: `Bearer ${comfyConfig.apiKey}`,
               }
             : undefined,
+          networkConfig,
         });
 
         if (!response.ok) {
