@@ -66,6 +66,30 @@ export const fetchWithNetworkConfig = async () => {
   throw new Error('fetchWithNetworkConfig is only available in Node.js/Electron context');
 };
 
+export const safeJsonParse = async () => {
+  throw new Error('safeJsonParse is only available in Node.js/Electron context');
+};
+
+// HttpError class stub
+export class HttpError extends Error {
+  type: string = 'UNKNOWN';
+  url?: string;
+  status?: number;
+
+  constructor(options: any) {
+    super(options.message || 'HTTP Error');
+    this.type = options.type || 'UNKNOWN';
+    this.url = options.url;
+    this.status = options.status;
+  }
+
+  getUserMessage() {
+    return this.message;
+  }
+}
+
+export type { HttpErrorType } from './fetch';
+
 // WebSocket stubs
 export const createWebSocket = async () => {
   throw new Error('createWebSocket is only available in Node.js/Electron context');
