@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { VectorDBConfig, EmbeddingConfig } from '@/lib/vectordb';
 
 import { logger } from '@/lib/utils/logger';
-import { httpFetch } from '@/lib/http';
+import { httpFetch, safeJsonParse } from '@/lib/http';
 import type { NetworkConfig } from '@/types';
 interface VectorDBSettingsProps {
   onSave: (vectorDBConfig: VectorDBConfig, embeddingConfig: EmbeddingConfig) => Promise<void>;
@@ -118,7 +118,7 @@ export function VectorDBSettings({
         );
       }
 
-      const data = await response.json();
+      const data = await safeJsonParse<any>(response, `${baseURL}/models`);
 
       // 임베딩 모델 키워드 목록
       const embeddingKeywords = [
