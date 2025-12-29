@@ -48,11 +48,19 @@ export class AppLauncher {
 
     // Electron 앱 시작
     this.app = await electron.launch({
-      args: [electronPath],
+      args: [
+        electronPath,
+        '--no-sandbox',
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-setuid-sandbox',
+      ],
       env: {
         ...process.env,
         // 테스트용 사용자 데이터 디렉토리
         ELECTRON_USER_DATA_PATH: this.userDataDir,
+        // Headless 환경을 위한 디스플레이 설정
+        DISPLAY: process.env.DISPLAY || ':99',
         // 디버그 모드
         ...(debug ? { DEBUG: '*' } : {}),
         // 추가 환경 변수
@@ -62,6 +70,7 @@ export class AppLauncher {
         E2E_TEST: 'true',
       },
       timeout,
+      executablePath: undefined, // Use default Electron path
     });
 
     // 앱 초기화 대기
