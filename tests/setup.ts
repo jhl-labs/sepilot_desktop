@@ -260,5 +260,51 @@ jest.mock('nanoid', () => ({
   nanoid: jest.fn(() => 'mock-nano-id-123456'),
 }));
 
+// Load translation file for i18n mock
+const koTranslations = require('../locales/ko.json');
+
+// Helper function to get nested translation with interpolation support
+function getNestedTranslation(obj: any, path: string, params?: any): string {
+  const keys = path.split('.');
+  let result = obj;
+  for (const key of keys) {
+    if (result && typeof result === 'object' && key in result) {
+      result = result[key];
+    } else {
+      return path; // Return key if not found
+    }
+  }
+
+  if (typeof result !== 'string') {
+    return path;
+  }
+
+  // Handle interpolation (e.g., "{{count}}개" with {count: 2} => "2개")
+  if (params) {
+    return result.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+      return params[key] !== undefined ? String(params[key]) : match;
+    });
+  }
+
+  return result;
+}
+
+// Mock react-i18next with actual Korean translations
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, params?: any) => getNestedTranslation(koTranslations, key, params),
+    i18n: {
+      changeLanguage: jest.fn(),
+      language: 'ko',
+    },
+  }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: jest.fn(),
+  },
+  I18nextProvider: ({ children }: any) => children,
+  Trans: ({ children }: any) => children,
+}));
+
 // Export localStorage mock for direct access
 export { mockLocalStorage, mockSessionStorage };
