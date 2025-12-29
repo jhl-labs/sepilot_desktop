@@ -104,6 +104,7 @@ const nextConfig = {
         'child_process',
         'sharp',
         'dns',
+        'undici',
         'proxy-agent',
         'pac-resolver',
         'pac-proxy-agent',
