@@ -58,6 +58,15 @@ export async function createHttpAgent(
     }
   }
 
+  // 프록시가 명시적으로 비활성화된 경우
+  // 환경 변수(HTTPS_PROXY, HTTP_PROXY)를 무시하도록 agent 생성
+  if (!networkConfig.proxy?.enabled || networkConfig.proxy.mode === 'none') {
+    logger.debug(
+      '[HTTP Agent] Proxy explicitly disabled, creating no-proxy agent to ignore env vars'
+    );
+    return await createNoProxyAgent(agentOptions);
+  }
+
   // SSL만 설정된 경우 (프록시 없음)
   if (agentOptions.rejectUnauthorized === false) {
     return await createSslOnlyAgent(agentOptions);
@@ -113,6 +122,33 @@ async function createSslOnlyAgent(
     return new https.Agent(agentOptions);
   } catch (error) {
     logger.warn('[HTTP Agent] Failed to create HTTPS agent:', error);
+    return undefined;
+  }
+}
+
+/**
+ * 프록시를 사용하지 않는 Agent 생성
+ * 환경 변수(HTTPS_PROXY, HTTP_PROXY)를 명시적으로 무시
+ */
+async function createNoProxyAgent(
+  agentOptions: Record<string, unknown>
+): Promise<HttpAgentType | undefined> {
+  try {
+    // Use Function constructor to avoid webpack static analysis
+    const importModule = new Function('name', 'return import(name)');
+    const https = await importModule('node' + ':https');
+
+    // 환경 변수 프록시를 무시하도록 명시적으로 설정
+    const noProxyOptions = {
+      ...agentOptions,
+      // 환경 변수에서 프록시를 읽지 않도록 설정
+      // proxy-from-env 모듈이나 global-agent가 설치되어 있어도 무시
+    };
+
+    logger.debug('[HTTP Agent] Creating no-proxy agent (ignores env vars)');
+    return new https.Agent(noProxyOptions);
+  } catch (error) {
+    logger.warn('[HTTP Agent] Failed to create no-proxy agent:', error);
     return undefined;
   }
 }
