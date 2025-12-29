@@ -7,7 +7,7 @@ import {
   ImageGenConfig,
   NanoBananaConfig,
 } from '@/types';
-import { httpFetch } from '@/lib/http';
+import { httpFetch, safeJsonParse } from '@/lib/http';
 
 export const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
@@ -255,8 +255,7 @@ export const fetchAvailableModels = async ({
     return result.data;
   }
 
-  // 브라우저 환경 (fallback): 직접 fetch (CORS 주의)
-  console.warn('[Settings] Running in browser mode - CORS may occur, Network Config not applied');
+  // 브라우저 환경 (fallback): 직접 fetch
   const endpoint = `${normalizeBaseUrl(baseURL)}/models`;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -278,6 +277,7 @@ export const fetchAvailableModels = async ({
   const response = await httpFetch(endpoint, {
     method: 'GET',
     headers,
+    networkConfig,
   });
 
   if (!response.ok) {
@@ -285,7 +285,7 @@ export const fetchAvailableModels = async ({
     throw new Error(`Failed to fetch models (${response.status} ${errorText})`);
   }
 
-  const payload = await response.json();
+  const payload = await safeJsonParse<any>(response, endpoint);
   const models = extractModelIds(payload);
   return Array.from(new Set(models)).sort();
 };

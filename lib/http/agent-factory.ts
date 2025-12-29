@@ -58,6 +58,15 @@ export async function createHttpAgent(
     }
   }
 
+  // 프록시가 명시적으로 비활성화된 경우
+  // 환경 변수(HTTPS_PROXY, HTTP_PROXY)를 무시하도록 agent 생성
+  if (!networkConfig.proxy?.enabled || networkConfig.proxy.mode === 'none') {
+    logger.debug(
+      '[HTTP Agent] Proxy explicitly disabled, creating no-proxy agent to ignore env vars'
+    );
+    return await createNoProxyAgent(agentOptions);
+  }
+
   // SSL만 설정된 경우 (프록시 없음)
   if (agentOptions.rejectUnauthorized === false) {
     return await createSslOnlyAgent(agentOptions);
@@ -113,6 +122,40 @@ async function createSslOnlyAgent(
     return new https.Agent(agentOptions);
   } catch (error) {
     logger.warn('[HTTP Agent] Failed to create HTTPS agent:', error);
+    return undefined;
+  }
+}
+
+/**
+ * 프록시를 사용하지 않는 Agent 생성
+ * 환경 변수(HTTPS_PROXY, HTTP_PROXY)를 명시적으로 무시
+ */
+async function createNoProxyAgent(
+  agentOptions: Record<string, unknown>
+): Promise<HttpAgentType | undefined> {
+  try {
+    // undici Agent 사용 - 환경 변수를 무시하도록 설정
+    const { Agent } = await import('undici');
+
+    // undici Agent 옵션 변환
+    const connectOptions: Record<string, unknown> = {};
+
+    // SSL 검증 설정 변환 (rejectUnauthorized는 connect 옵션 내부)
+    if (agentOptions.rejectUnauthorized === false) {
+      connectOptions.rejectUnauthorized = false;
+    }
+
+    // connections.proxy를 빈 객체로 설정하여 환경 변수 프록시 무시
+    const noProxyOptions: Record<string, unknown> = {
+      connect: connectOptions,
+    };
+
+    logger.debug('[HTTP Agent] Creating undici no-proxy agent (ignores env vars)', {
+      sslVerify: agentOptions.rejectUnauthorized !== false,
+    });
+    return new Agent(noProxyOptions);
+  } catch (error) {
+    logger.warn('[HTTP Agent] Failed to create no-proxy agent:', error);
     return undefined;
   }
 }

@@ -115,7 +115,7 @@ async function loadFromDatabase(): Promise<NetworkConfig | null> {
 
     if (configStr) {
       const appConfig = JSON.parse(configStr);
-      return appConfig.network || null;
+      return normalizeNetworkConfig(appConfig.network);
     }
   } catch (error) {
     logger.warn('[HTTP Config] Failed to load from database:', error);
@@ -133,14 +133,14 @@ async function loadViaIPC(): Promise<NetworkConfig | null> {
     if (electronAPI?.config) {
       const result = await electronAPI.config.load();
       if (result.success !== false && result?.data?.network) {
-        return result.data.network;
+        return normalizeNetworkConfig(result.data.network);
       }
       if (result.success !== false && result?.network) {
-        return result.network;
+        return normalizeNetworkConfig(result.network);
       }
       // result가 직접 AppConfig인 경우
       if (result && typeof result === 'object' && 'network' in result) {
-        return result.network || null;
+        return normalizeNetworkConfig(result.network);
       }
     }
 
@@ -160,14 +160,14 @@ function loadFromLocalStorage(): NetworkConfig | null {
     // 먼저 별도 저장된 network config 확인 (우선순위 높음)
     const networkConfigStr = localStorage.getItem('sepilot_network_config');
     if (networkConfigStr) {
-      return JSON.parse(networkConfigStr);
+      return normalizeNetworkConfig(JSON.parse(networkConfigStr));
     }
 
     // Fallback: app_config에서 network 필드 읽기
     const appConfigStr = localStorage.getItem('sepilot_app_config');
     if (appConfigStr) {
       const appConfig = JSON.parse(appConfigStr);
-      return appConfig.network || null;
+      return normalizeNetworkConfig(appConfig.network);
     }
   } catch (error) {
     logger.warn('[HTTP Config] Failed to load from localStorage:', error);
@@ -199,6 +199,45 @@ function loadFromEnvironment(): NetworkConfig | null {
   }
 
   return null;
+}
+
+/**
+ * NetworkConfig 정규화 (잘못된 설정 자동 수정)
+ *
+ * 문제 케이스:
+ * - enabled: true, mode: 'none' → enabled: false, mode: 'none'
+ * - enabled: false, mode: 'manual' or 'system' → enabled: false, mode: 'none'
+ */
+function normalizeNetworkConfig(config: NetworkConfig | null): NetworkConfig | null {
+  if (!config) {
+    return null;
+  }
+
+  const normalized = { ...config };
+
+  if (normalized.proxy) {
+    const proxy = { ...normalized.proxy };
+
+    // 케이스 1: enabled: true + mode: 'none' → enabled: false
+    if (proxy.enabled && proxy.mode === 'none') {
+      logger.warn(
+        '[HTTP Config] Normalizing invalid config: enabled: true + mode: none → enabled: false'
+      );
+      proxy.enabled = false;
+    }
+
+    // 케이스 2: enabled: false + mode: 'manual' or 'system' → mode: 'none'
+    if (!proxy.enabled && proxy.mode !== 'none') {
+      logger.warn(
+        `[HTTP Config] Normalizing invalid config: enabled: false + mode: ${proxy.mode} → mode: none`
+      );
+      proxy.mode = 'none';
+    }
+
+    normalized.proxy = proxy;
+  }
+
+  return normalized;
 }
 
 /**

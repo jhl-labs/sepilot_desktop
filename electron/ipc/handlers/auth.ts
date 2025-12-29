@@ -1,7 +1,7 @@
 import { ipcMain, shell } from 'electron';
 import { Octokit } from '@octokit/rest';
 import { tokenManager } from '../../services/token-manager';
-import { httpFetch, getNetworkConfig, createOctokitAgent } from '../../../lib/http';
+import { httpFetch, getNetworkConfig, createOctokitAgent, safeJsonParse } from '../../../lib/http';
 
 /**
  * Auth IPC 핸들러
@@ -49,14 +49,16 @@ export function setupAuthHandlers() {
         timeout: 30000,
       });
 
+      const data = await safeJsonParse<any>(
+        response,
+        'https://github.com/login/oauth/access_token'
+      );
+
       if (!response.ok) {
-        const errorData = await response.json();
         throw new Error(
-          `Failed to exchange code: ${errorData.error_description || response.statusText}`
+          `Failed to exchange code: ${data.error_description || response.statusText}`
         );
       }
-
-      const data = await response.json();
 
       if (data.error) {
         throw new Error(data.error_description || 'Unknown error during token exchange');

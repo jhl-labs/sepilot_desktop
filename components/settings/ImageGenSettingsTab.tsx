@@ -67,9 +67,6 @@ export function ImageGenSettingsTab({
 
         setMessage({ type: 'success', text: t('settings.imagegen.comfyui.connectionSuccess') });
       } else {
-        console.warn(
-          '[ComfyUI] Running in browser mode - CORS may occur, Network Config not applied'
-        );
         const normalizedUrl = imageGenConfig.comfyui.httpUrl.replace(/\/$/, '');
         const response = await httpFetch(`${normalizedUrl}/system_stats`, {
           headers: imageGenConfig.comfyui.apiKey
@@ -77,6 +74,7 @@ export function ImageGenSettingsTab({
                 Authorization: `Bearer ${imageGenConfig.comfyui.apiKey}`,
               }
             : undefined,
+          networkConfig,
         });
 
         if (!response.ok) {

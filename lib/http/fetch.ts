@@ -316,9 +316,15 @@ export async function httpFetch(url: string, options: HttpRequestOptions = {}): 
   if (env === 'electron-main' || env === 'node') {
     const agent = await createHttpAgent(networkConfig, url);
     if (agent) {
-      (fetchOptions as any).agent = agent;
+      // Node.js v18+ 기본 fetch (undici)는 dispatcher 옵션 사용
+      (fetchOptions as any).dispatcher = agent;
     }
   }
+
+  // 프록시가 명시적으로 비활성화된 경우 환경 변수 무시
+  // Node.js 내장 fetch는 agent를 지원하지 않으므로, 환경 변수를 임시로 제거
+  const shouldIgnoreEnvProxy =
+    !!networkConfig && (!networkConfig.proxy?.enabled || networkConfig.proxy.mode === 'none');
 
   // AbortController로 타임아웃 처리
   const controller = new AbortController();
@@ -330,7 +336,8 @@ export async function httpFetch(url: string, options: HttpRequestOptions = {}): 
       { ...fetchOptions, signal: controller.signal },
       retries,
       retryDelay,
-      networkConfig
+      networkConfig,
+      shouldIgnoreEnvProxy
     );
     clearTimeout(timeoutId);
     return response;
@@ -381,95 +388,133 @@ async function fetchWithRetry(
   options: RequestInit,
   retries: number,
   retryDelay: number,
-  networkConfig: NetworkConfig | null | undefined
+  networkConfig: NetworkConfig | null | undefined,
+  shouldIgnoreEnvProxy: boolean = false
 ): Promise<Response> {
   let lastError: Error | null = null;
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const response = await fetch(url, options);
-
-      // 429 (Too Many Requests) 처리
-      if (response.status === 429 && attempt < retries) {
-        const retryAfter = response.headers.get('retry-after');
-        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : retryDelay;
-        logger.warn(`[HTTP Fetch] Rate limited (429), waiting ${waitTime}ms before retry`, {
-          url,
-          attempt: attempt + 1,
-          maxRetries: retries,
-        });
-        await delay(waitTime);
-        continue;
+  // 환경 변수 프록시를 임시로 제거 (프록시 비활성화 시)
+  const savedEnvProxy = shouldIgnoreEnvProxy
+    ? {
+        HTTP_PROXY: process.env.HTTP_PROXY,
+        HTTPS_PROXY: process.env.HTTPS_PROXY,
+        http_proxy: process.env.http_proxy,
+        https_proxy: process.env.https_proxy,
       }
+    : null;
 
-      // 5xx 서버 에러에 대한 재시도
-      if (response.status >= 500 && attempt < retries) {
-        logger.warn(`[HTTP Fetch] Server error ${response.status}, retrying...`, {
-          url,
-          status: response.status,
-          statusText: response.statusText,
-          attempt: attempt + 1,
-          maxRetries: retries,
-        });
-        await delay(retryDelay * Math.pow(2, attempt)); // 지수 백오프
-        continue;
-      }
+  if (shouldIgnoreEnvProxy) {
+    logger.debug('[HTTP Fetch] Temporarily removing proxy env vars (proxy disabled)');
+    delete process.env.HTTP_PROXY;
+    delete process.env.HTTPS_PROXY;
+    delete process.env.http_proxy;
+    delete process.env.https_proxy;
+  }
 
-      return response;
-    } catch (error: unknown) {
-      lastError = error as Error;
+  try {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(url, options);
 
-      // AbortError는 재시도하지 않음
-      if ((error as Error & { name?: string }).name === 'AbortError') {
-        throw error;
-      }
+        // 429 (Too Many Requests) 처리
+        if (response.status === 429 && attempt < retries) {
+          const retryAfter = response.headers.get('retry-after');
+          const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : retryDelay;
+          logger.warn(`[HTTP Fetch] Rate limited (429), waiting ${waitTime}ms before retry`, {
+            url,
+            attempt: attempt + 1,
+            maxRetries: retries,
+          });
+          await delay(waitTime);
+          continue;
+        }
 
-      // 에러 분류하여 상세 로깅
-      const httpError = classifyError(lastError, url);
+        // 5xx 서버 에러에 대한 재시도
+        if (response.status >= 500 && attempt < retries) {
+          logger.warn(`[HTTP Fetch] Server error ${response.status}, retrying...`, {
+            url,
+            status: response.status,
+            statusText: response.statusText,
+            attempt: attempt + 1,
+            maxRetries: retries,
+          });
+          await delay(retryDelay * Math.pow(2, attempt)); // 지수 백오프
+          continue;
+        }
 
-      if (attempt < retries) {
-        const waitTime = retryDelay * Math.pow(2, attempt); // 지수 백오프
-        logger.warn(
-          `[HTTP Fetch] Request failed (${httpError.type}), retrying in ${waitTime}ms...`,
-          {
+        return response;
+      } catch (error: unknown) {
+        lastError = error as Error;
+
+        // AbortError는 재시도하지 않음
+        if ((error as Error & { name?: string }).name === 'AbortError') {
+          throw error;
+        }
+
+        // 에러 분류하여 상세 로깅
+        const httpError = classifyError(lastError, url);
+
+        if (attempt < retries) {
+          const waitTime = retryDelay * Math.pow(2, attempt); // 지수 백오프
+          logger.warn(
+            `[HTTP Fetch] Request failed (${httpError.type}), retrying in ${waitTime}ms...`,
+            {
+              url,
+              errorType: httpError.type,
+              message: httpError.message,
+              attempt: attempt + 1,
+              maxRetries: retries,
+              proxyEnabled: networkConfig?.proxy?.enabled,
+              proxyMode: networkConfig?.proxy?.mode,
+              sslVerify: networkConfig?.ssl?.verify,
+            }
+          );
+          await delay(waitTime);
+        } else {
+          // 마지막 시도에서 실패
+          logger.error(`[HTTP Fetch] Request failed after ${retries + 1} attempts`, {
             url,
             errorType: httpError.type,
             message: httpError.message,
-            attempt: attempt + 1,
-            maxRetries: retries,
+            userMessage: httpError.getUserMessage(),
             proxyEnabled: networkConfig?.proxy?.enabled,
             proxyMode: networkConfig?.proxy?.mode,
+            proxyUrl: networkConfig?.proxy?.enabled ? networkConfig?.proxy?.url : undefined,
             sslVerify: networkConfig?.ssl?.verify,
-          }
-        );
-        await delay(waitTime);
-      } else {
-        // 마지막 시도에서 실패
-        logger.error(`[HTTP Fetch] Request failed after ${retries + 1} attempts`, {
-          url,
-          errorType: httpError.type,
-          message: httpError.message,
-          userMessage: httpError.getUserMessage(),
-          proxyEnabled: networkConfig?.proxy?.enabled,
-          proxyMode: networkConfig?.proxy?.mode,
-          proxyUrl: networkConfig?.proxy?.enabled ? networkConfig?.proxy?.url : undefined,
-          sslVerify: networkConfig?.ssl?.verify,
-        });
+          });
+        }
+      }
+    }
+
+    // 마지막 에러를 HttpError로 변환하여 던지기
+    if (lastError) {
+      const httpError = classifyError(lastError, url);
+      throw httpError;
+    }
+
+    throw new HttpError({
+      type: 'UNKNOWN',
+      message: 'Request failed after all retries',
+      url,
+    });
+  } finally {
+    // 환경 변수 복원
+    if (savedEnvProxy) {
+      logger.debug('[HTTP Fetch] Restoring proxy env vars');
+      if (savedEnvProxy.HTTP_PROXY !== undefined) {
+        process.env.HTTP_PROXY = savedEnvProxy.HTTP_PROXY;
+      }
+      if (savedEnvProxy.HTTPS_PROXY !== undefined) {
+        process.env.HTTPS_PROXY = savedEnvProxy.HTTPS_PROXY;
+      }
+      if (savedEnvProxy.http_proxy !== undefined) {
+        process.env.http_proxy = savedEnvProxy.http_proxy;
+      }
+      if (savedEnvProxy.https_proxy !== undefined) {
+        process.env.https_proxy = savedEnvProxy.https_proxy;
       }
     }
   }
-
-  // 마지막 에러를 HttpError로 변환하여 던지기
-  if (lastError) {
-    const httpError = classifyError(lastError, url);
-    throw httpError;
-  }
-
-  throw new HttpError({
-    type: 'UNKNOWN',
-    message: 'Request failed after all retries',
-    url,
-  });
 }
 
 /**
@@ -477,6 +522,60 @@ async function fetchWithRetry(
  */
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Response를 안전하게 JSON으로 파싱
+ * 프록시 에러 페이지(HTML) 등을 감지하고 명확한 에러 메시지 제공
+ */
+export async function safeJsonParse<T>(response: Response, url: string): Promise<T> {
+  const contentType = response.headers.get('content-type') || '';
+
+  // Content-Type이 JSON이 아닌 경우
+  if (!contentType.includes('application/json')) {
+    const text = await response.text().catch(() => '');
+
+    // HTML 응답 감지 (프록시 에러 페이지)
+    if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+      throw new Error(
+        `서버가 HTML 페이지를 반환했습니다 (HTTP ${response.status}, URL: ${url}). ` +
+          `프록시 설정이나 네트워크 연결을 확인해주세요. ` +
+          `예상: JSON 응답, 실제: HTML 페이지`
+      );
+    }
+
+    // 빈 응답
+    if (!text || text.trim() === '') {
+      throw new Error(
+        `서버가 빈 응답을 반환했습니다 (HTTP ${response.status}, URL: ${url}). ` +
+          `프록시나 방화벽이 연결을 차단했을 수 있습니다.`
+      );
+    }
+
+    // 기타 텍스트 응답
+    throw new Error(
+      `서버가 예상과 다른 형식의 응답을 반환했습니다 (HTTP ${response.status}, URL: ${url}). ` +
+        `Content-Type: ${contentType}. ` +
+        `응답 미리보기: ${text.substring(0, 200)}...`
+    );
+  }
+
+  // JSON 파싱 시도
+  try {
+    const text = await response.text();
+    return JSON.parse(text) as T;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      const text = await response.text().catch(() => '');
+      throw new Error(
+        `JSON 파싱 실패 (HTTP ${response.status}, URL: ${url}). ` +
+          `서버 응답이 올바른 JSON 형식이 아닙니다. ` +
+          `프록시나 중간 서버가 응답을 수정했을 수 있습니다. ` +
+          `응답 미리보기: ${text.substring(0, 200)}...`
+      );
+    }
+    throw error;
+  }
 }
 
 /**
@@ -494,7 +593,7 @@ export async function httpFetchJson<T>(url: string, options: HttpRequestOptions 
     throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
 
-  return response.json();
+  return safeJsonParse<T>(response, url);
 }
 
 /**
@@ -541,7 +640,7 @@ export async function httpPostJson<T>(
     throw new Error(`HTTP ${response.status}: ${errorText}`);
   }
 
-  return response.json();
+  return safeJsonParse<T>(response, url);
 }
 
 /**

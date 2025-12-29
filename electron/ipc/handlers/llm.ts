@@ -11,7 +11,7 @@ import { logger } from '../../services/logger';
 import { databaseService } from '../../services/database';
 import { isLLMConfigV2, convertV2ToV1 } from '../../../lib/config/llm-config-migration';
 import { getLLMErrorMessage, getErrorMessage } from '../../../lib/utils/error-handler';
-import { HttpError } from '../../../lib/http';
+import { HttpError, safeJsonParse } from '../../../lib/http';
 
 /**
  * Get vision provider from database config (Electron main process)
@@ -468,7 +468,7 @@ export function setupLLMHandlers() {
           );
         }
 
-        const payload = await response.json();
+        const payload = await safeJsonParse<any>(response, endpoint);
 
         // Extract model IDs from response
         const models = extractModelIds(payload);

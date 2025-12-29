@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { VectorDBConfig, EmbeddingConfig } from '@/lib/vectordb';
 
 import { logger } from '@/lib/utils/logger';
-import { httpFetch } from '@/lib/http';
+import { httpFetch, safeJsonParse } from '@/lib/http';
+import type { NetworkConfig } from '@/types';
 interface VectorDBSettingsProps {
   onSave: (vectorDBConfig: VectorDBConfig, embeddingConfig: EmbeddingConfig) => Promise<void>;
   initialVectorDBConfig?: VectorDBConfig;
@@ -95,6 +96,12 @@ export function VectorDBSettings({
     setModelError(null);
 
     try {
+      // Load NetworkConfig from localStorage
+      const networkConfigStr = localStorage.getItem('sepilot_network_config');
+      const networkConfig: NetworkConfig | undefined = networkConfigStr
+        ? JSON.parse(networkConfigStr)
+        : undefined;
+
       const baseURL = embeddingConfig.baseURL.replace(/\/$/, ''); // 끝의 / 제거
       const response = await httpFetch(`${baseURL}/models`, {
         method: 'GET',
@@ -102,6 +109,7 @@ export function VectorDBSettings({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${embeddingConfig.apiKey}`,
         },
+        networkConfig,
       });
 
       if (!response.ok) {
@@ -110,7 +118,7 @@ export function VectorDBSettings({
         );
       }
 
-      const data = await response.json();
+      const data = await safeJsonParse<any>(response, `${baseURL}/models`);
 
       // 임베딩 모델 키워드 목록
       const embeddingKeywords = [
