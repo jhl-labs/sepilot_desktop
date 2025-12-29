@@ -6,7 +6,7 @@ import { promisify } from 'util';
 import sharp from 'sharp';
 import TurndownService from 'turndown';
 import mammoth from 'mammoth';
-import { httpFetch } from '@/lib/http';
+import { httpFetch, getNetworkConfig } from '@/lib/http';
 
 const execAsync = promisify(exec);
 
@@ -185,7 +185,8 @@ export function registerFileHandlers() {
     try {
       console.log('[File] Fetching URL:', url);
 
-      const response = await httpFetch(url);
+      const networkConfig = await getNetworkConfig();
+      const response = await httpFetch(url, { networkConfig: networkConfig ?? undefined });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

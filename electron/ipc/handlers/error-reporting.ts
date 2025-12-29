@@ -7,6 +7,7 @@ import { ipcMain, app } from 'electron';
 import type { ErrorReportData, GitHubSyncConfig } from '../../../types';
 import { databaseService } from '../../services/database';
 import { Octokit } from '@octokit/rest';
+import { getNetworkConfig, createOctokitAgent } from '@/lib/http';
 import os from 'os';
 
 /**
@@ -174,9 +175,12 @@ export function setupErrorReportingHandlers() {
       // 민감한 정보 제거
       const sanitizedData = sanitizeErrorData(errorData);
 
-      // Octokit 인스턴스 생성
+      // NetworkConfig 적용된 Octokit 인스턴스 생성
+      const networkConfig = await getNetworkConfig();
+      const requestOptions = await createOctokitAgent(networkConfig);
       const octokit = new Octokit({
         auth: githubSync.token,
+        request: requestOptions,
       });
 
       // 중복 이슈 확인
