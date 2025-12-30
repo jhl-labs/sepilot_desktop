@@ -13,7 +13,7 @@ import { logger } from '@/lib/utils/logger';
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Folder, FolderMinus, FolderOpen, RefreshCw } from 'lucide-react';
+import { Folder, FolderMinus, FolderOpen, RefreshCw, FileText, FolderTree } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -31,6 +31,7 @@ import { useFileClipboard } from '@/hooks/use-file-clipboard';
 import { getLanguageFromFilename } from '@/lib/utils/file-language';
 import { FileTreeItem, type FileNode } from './FileTreeItem';
 import { FileTreeContextMenu } from './FileTreeContextMenu';
+import { WikiTree } from './WikiTree';
 import { isElectron } from '@/lib/platform';
 import { useTranslation } from 'react-i18next';
 
@@ -46,6 +47,8 @@ export function FileExplorer() {
     refreshFileTree,
     expandedFolderPaths,
     clearExpandedFolders,
+    editorViewMode,
+    setEditorViewMode,
   } = useChatStore();
   const [fileTree, setFileTree] = useState<FileNode[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -247,6 +250,42 @@ export function FileExplorer() {
             </span>
             <TooltipProvider delayDuration={200}>
               <div className="flex items-center gap-0.5">
+                {/* Files/Wiki Toggle */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={editorViewMode === 'files' ? 'default' : 'ghost'}
+                      size="icon"
+                      onClick={() => setEditorViewMode('files')}
+                      className="h-7 w-7"
+                    >
+                      <FolderTree className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>{t('fileExplorer.filesView')}</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={editorViewMode === 'wiki' ? 'default' : 'ghost'}
+                      size="icon"
+                      onClick={() => setEditorViewMode('wiki')}
+                      className="h-7 w-7"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>{t('fileExplorer.wikiView')}</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Divider */}
+                <div className="h-4 w-px bg-border mx-1" />
+
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -329,50 +368,56 @@ export function FileExplorer() {
         </div>
       </div>
 
-      {/* File Tree */}
-      <FileTreeContextMenu
-        isRootContext
-        onNewFile={workingDirectory ? () => openNewItemDialog('file', workingDirectory) : undefined}
-        onNewFolder={
-          workingDirectory ? () => openNewItemDialog('folder', workingDirectory) : undefined
-        }
-        onPaste={workingDirectory ? handlePasteInRoot : undefined}
-        onRefresh={refreshFileTree}
-      >
+      {/* File Tree or Wiki Tree */}
+      {editorViewMode === 'wiki' ? (
         <div className="flex-1 overflow-y-auto px-2 py-2">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              {t('fileExplorer.loading')}
-            </div>
-          ) : !workingDirectory ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-              <Folder className="mb-2 h-8 w-8 opacity-50" />
-              <p className="text-sm">{t('fileExplorer.selectDirectoryMessage')}</p>
-              <p className="mt-1 text-xs">{t('fileExplorer.selectDirectoryDescription')}</p>
-            </div>
-          ) : fileTree && fileTree.length > 0 ? (
-            <div className="space-y-0.5">
-              {fileTree.map((node) => (
-                <FileTreeItem
-                  key={node.path}
-                  node={node}
-                  level={0}
-                  isActive={activeFilePath === node.path}
-                  onFileClick={handleFileClick}
-                  onRefresh={refreshFileTree}
-                  parentPath={workingDirectory!}
-                  onNewFile={(parentPath) => openNewItemDialog('file', parentPath)}
-                  onNewFolder={(parentPath) => openNewItemDialog('folder', parentPath)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              {t('fileExplorer.emptyDirectory')}
-            </div>
-          )}
+          <WikiTree />
         </div>
-      </FileTreeContextMenu>
+      ) : (
+        <FileTreeContextMenu
+          isRootContext
+          onNewFile={workingDirectory ? () => openNewItemDialog('file', workingDirectory) : undefined}
+          onNewFolder={
+            workingDirectory ? () => openNewItemDialog('folder', workingDirectory) : undefined
+          }
+          onPaste={workingDirectory ? handlePasteInRoot : undefined}
+          onRefresh={refreshFileTree}
+        >
+          <div className="flex-1 overflow-y-auto px-2 py-2">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                {t('fileExplorer.loading')}
+              </div>
+            ) : !workingDirectory ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                <Folder className="mb-2 h-8 w-8 opacity-50" />
+                <p className="text-sm">{t('fileExplorer.selectDirectoryMessage')}</p>
+                <p className="mt-1 text-xs">{t('fileExplorer.selectDirectoryDescription')}</p>
+              </div>
+            ) : fileTree && fileTree.length > 0 ? (
+              <div className="space-y-0.5">
+                {fileTree.map((node) => (
+                  <FileTreeItem
+                    key={node.path}
+                    node={node}
+                    level={0}
+                    isActive={activeFilePath === node.path}
+                    onFileClick={handleFileClick}
+                    onRefresh={refreshFileTree}
+                    parentPath={workingDirectory!}
+                    onNewFile={(parentPath) => openNewItemDialog('file', parentPath)}
+                    onNewFolder={(parentPath) => openNewItemDialog('folder', parentPath)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                {t('fileExplorer.emptyDirectory')}
+              </div>
+            )}
+          </div>
+        </FileTreeContextMenu>
+      )}
 
       {/* New Item Dialog */}
       <Dialog open={showNewItemDialog} onOpenChange={setShowNewItemDialog}>

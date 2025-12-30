@@ -307,6 +307,8 @@ const electronAPI = {
     duplicate: (sourcePath: string) => ipcRenderer.invoke('fs:duplicate', sourcePath),
     searchFiles: (query: string, dirPath: string, options?: any) =>
       ipcRenderer.invoke('fs:search-files', query, dirPath, options),
+    findFiles: (rootPath: string, pattern: string) =>
+      ipcRenderer.invoke('fs:find-files', rootPath, pattern),
     saveClipboardImage: (destDir: string) => ipcRenderer.invoke('fs:save-clipboard-image', destDir),
     readImageAsBase64: (filePath: string) =>
       ipcRenderer.invoke('fs:read-image-as-base64', filePath),

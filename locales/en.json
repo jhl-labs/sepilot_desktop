@@ -2064,7 +2064,15 @@
     "openInExplorer": "Open in Explorer",
     "openInTerminal": "Open in Terminal",
     "openWithDefaultApp": "Open with Default App",
-    "duplicate": "Duplicate"
+    "duplicate": "Duplicate",
+    "filesView": "Files Tree View",
+    "wikiView": "Wiki Tree View"
+  },
+  "wikiTree": {
+    "title": "Wiki Tree",
+    "loading": "Loading markdown files...",
+    "selectDirectoryMessage": "Select a directory to start Wiki tree",
+    "noMarkdownFiles": "No markdown files found"
   },
   "editor": {
     "untitled": "Untitled",

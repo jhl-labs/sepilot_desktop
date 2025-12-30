@@ -1172,6 +1172,66 @@ export function registerFileHandlers() {
     }
   );
 
+  // Find files by glob pattern
+  ipcMain.handle(
+    'fs:find-files',
+    async (_event, rootPath: string, pattern: string): Promise<{ success: boolean; data?: string[]; error?: string }> => {
+      try {
+        console.log(`[File] Finding files: ${rootPath} with pattern: ${pattern}`);
+
+        // Simple implementation for **/*.md pattern
+        const results: string[] = [];
+
+        async function walkDir(dir: string): Promise<void> {
+          try {
+            const entries = await fs.readdir(dir, { withFileTypes: true });
+
+            for (const entry of entries) {
+              const fullPath = path.join(dir, entry.name);
+
+              if (entry.isDirectory()) {
+                // Skip node_modules, .git, and other common ignore directories
+                if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
+                  await walkDir(fullPath);
+                }
+              } else if (entry.isFile()) {
+                // Check if file matches pattern (simple .md check for now)
+                if (pattern === '**/*.md' && entry.name.endsWith('.md')) {
+                  results.push(fullPath);
+                } else if (pattern.includes('*')) {
+                  // Handle other glob patterns if needed
+                  const ext = path.extname(entry.name);
+                  const patternExt = pattern.split('*').pop();
+                  if (patternExt && ext === patternExt) {
+                    results.push(fullPath);
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            // Skip directories we can't access
+            console.warn(`[File] Could not access directory: ${dir}`, error);
+          }
+        }
+
+        await walkDir(rootPath);
+
+        console.log(`[File] Found ${results.length} files matching ${pattern}`);
+
+        return {
+          success: true,
+          data: results,
+        };
+      } catch (error: any) {
+        console.error('[File] Error finding files:', error);
+        return {
+          success: false,
+          error: `Failed to find files: ${error.message}`,
+        };
+      }
+    }
+  );
+
   console.log('[File] IPC handlers registered');
 }
 

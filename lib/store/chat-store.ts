@@ -174,7 +174,7 @@ interface ChatStore {
 
   // Editor Mode Chat (simple side chat for AI coding assistant)
   editorChatMessages: Message[];
-  editorViewMode: 'files' | 'search' | 'chat' | 'settings'; // files, search, chat, or settings view in Editor sidebar
+  editorViewMode: 'files' | 'wiki' | 'search' | 'chat' | 'settings'; // files, wiki, search, chat, or settings view in Editor sidebar
   editorChatStreaming: boolean; // Editor chat streaming 상태 (백그라운드 스트리밍 지원)
   fileTreeRefreshTrigger: number; // File tree refresh trigger (timestamp)
   expandedFolderPaths: Set<string>; // Expanded folder paths in file tree

@@ -520,6 +520,7 @@ interface FileSystemAPI {
     dirPath: string,
     options?: SearchOptions
   ) => Promise<IPCResponse<SearchResponse>>;
+  findFiles: (rootPath: string, pattern: string) => Promise<IPCResponse<string[]>>;
   saveClipboardImage: (
     destDir: string
   ) => Promise<IPCResponse<{ filename: string; path: string; dataUrl: string }>>;
