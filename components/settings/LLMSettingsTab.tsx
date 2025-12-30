@@ -13,6 +13,7 @@ interface LLMSettingsTabProps {
   config: LLMConfigV2;
   setConfig: React.Dispatch<React.SetStateAction<LLMConfigV2>>;
   networkConfig: NetworkConfig;
+  setNetworkConfig?: React.Dispatch<React.SetStateAction<NetworkConfig>>;
   onSave: () => Promise<void>;
   isSaving: boolean;
   message: { type: 'success' | 'error'; text: string } | null;
@@ -22,6 +23,7 @@ export function LLMSettingsTab({
   config,
   setConfig,
   networkConfig,
+  setNetworkConfig,
   onSave,
   isSaving,
   message,
@@ -57,6 +59,41 @@ export function LLMSettingsTab({
         description={t('settings.llm.settingsV2Description')}
         icon={Settings}
       />
+
+      {/* Network Override Settings */}
+      {setNetworkConfig && (
+        <div className="flex items-center space-x-2 p-4 border rounded-lg bg-muted/20">
+          <input
+            id="ignore-env-vars"
+            type="checkbox"
+            checked={networkConfig?.proxy?.ignoreEnvVars ?? false}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setNetworkConfig((prev) => ({
+                ...prev,
+                proxy: {
+                  enabled: prev.proxy?.enabled ?? false,
+                  mode: prev.proxy?.mode ?? 'none',
+                  url: prev.proxy?.url ?? '',
+                  ignoreEnvVars: checked,
+                },
+              }));
+            }}
+            className="h-4 w-4 rounded border-input cursor-pointer"
+          />
+          <div className="flex-1">
+            <label
+              htmlFor="ignore-env-vars"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer block"
+            >
+              환경 변수 무시하기 (Ignore Environment Variables)
+            </label>
+            <p className="text-xs text-muted-foreground mt-1">
+              시스템에 https_proxy 등이 설정되어 있어도 무시하고 애플리케이션 설정을 따릅니다.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b">

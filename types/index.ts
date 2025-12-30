@@ -169,6 +169,7 @@ export interface NetworkConfig {
     enabled: boolean;
     mode: 'system' | 'manual' | 'none';
     url?: string; // For manual mode: http://proxy.example.com:8080
+    ignoreEnvVars?: boolean; // Force ignore standard proxy environment variables (HTTP_PROXY, etc.)
   };
   ssl?: {
     verify: boolean; // SSL certificate verification

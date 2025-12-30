@@ -324,7 +324,10 @@ export async function httpFetch(url: string, options: HttpRequestOptions = {}): 
   // 프록시가 명시적으로 비활성화된 경우 환경 변수 무시
   // Node.js 내장 fetch는 agent를 지원하지 않으므로, 환경 변수를 임시로 제거
   const shouldIgnoreEnvProxy =
-    !!networkConfig && (!networkConfig.proxy?.enabled || networkConfig.proxy.mode === 'none');
+    !!networkConfig &&
+    (networkConfig.proxy?.ignoreEnvVars ||
+      !networkConfig.proxy?.enabled ||
+      networkConfig.proxy.mode === 'none');
 
   // AbortController로 타임아웃 처리
   const controller = new AbortController();
