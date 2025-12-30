@@ -86,10 +86,10 @@ export function LLMSettingsTab({
               htmlFor="ignore-env-vars"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer block"
             >
-              환경 변수 무시하기 (Ignore Environment Variables)
+              {t('settings.network.proxy.ignoreEnvVars')}
             </label>
             <p className="text-xs text-muted-foreground mt-1">
-              시스템에 https_proxy 등이 설정되어 있어도 무시하고 애플리케이션 설정을 따릅니다.
+              {t('settings.network.proxy.ignoreEnvVarsDescription')}
             </p>
           </div>
         </div>

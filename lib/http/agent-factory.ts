@@ -157,7 +157,9 @@ async function createNoProxyAgent(
 ): Promise<HttpAgentType | undefined> {
   try {
     // undici Agent 사용 - 환경 변수를 무시하도록 설정
-    const { Agent } = await import('undici');
+    // Use dynamic import via new Function to avoid webpack bundling and type errors
+    const importModule = new Function('name', 'return import(name)');
+    const { Agent } = await importModule('undici');
 
     // undici Agent 옵션 변환
     const connectOptions: Record<string, unknown> = {};

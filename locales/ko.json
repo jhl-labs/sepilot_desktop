@@ -204,6 +204,8 @@
         "url": "프록시 URL",
         "urlPlaceholder": "http://proxy.example.com:8080",
         "urlExample": "예: http://proxy.example.com:8080 또는 socks5://127.0.0.1:1080",
+        "ignoreEnvVars": "환경 변수 무시하기 (Ignore Environment Variables)",
+        "ignoreEnvVarsDescription": "시스템에 https_proxy 등이 설정되어 있어도 무시하고 애플리케이션 설정을 따릅니다.",
         "description": "프록시 및 SSL 인증서 검증 설정을 관리합니다. 이 설정은 LLM, ComfyUI, VectorDB, MCP 등 모든 외부 연결에 적용됩니다."
       },
       "ssl": {
