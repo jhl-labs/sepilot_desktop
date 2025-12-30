@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, RotateCcw, Code, FileText } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Code, FileText, Link } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,77 @@ export function EditorSettings() {
   const [minimap, setMinimap] = useState(editorAppearanceConfig.minimap);
   const [lineNumbers, setLineNumbers] = useState(editorAppearanceConfig.lineNumbers);
 
+  // LLM Configuration State
+  const [llmConfig, setLlmConfig] = useState<any>(null); // Using any for simplicity as we need deep access
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      try {
+        let configData = null;
+
+        // Try to load from localStorage first (Web/Electron fallback)
+        const savedConfigV2 = localStorage.getItem('sepilot_llm_config_v2');
+        if (savedConfigV2) {
+          configData = JSON.parse(savedConfigV2);
+        } else {
+          // Fallback to V1 config if V2 is missing
+          const savedConfig = localStorage.getItem('sepilot_llm_config');
+          if (savedConfig) {
+            configData = JSON.parse(savedConfig);
+          }
+        }
+
+        // If in Electron, try to load specific config but usually localStorage cache is enough for display
+        // We stick to localStorage for speed and simplicity in this UI component
+        // assuming SettingsDialog updates localStorage on save.
+
+        if (configData) {
+          setLlmConfig(configData);
+        }
+      } catch (error) {
+        console.error('Failed to load LLM config for display:', error);
+      }
+    };
+    loadConfig();
+
+    // Listen for config updates
+    const handleConfigUpdate = (event: CustomEvent) => {
+      if (event.detail?.llm) {
+        setLlmConfig(event.detail.llm);
+      }
+    };
+
+    window.addEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
+    return () => {
+      window.removeEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
+    };
+  }, []);
+
+  // Derive model names
+  const getModelName = (modelId?: string) => {
+    if (!modelId || !llmConfig) {
+      return null;
+    }
+
+    // Check if V2 config (has models array)
+    if (llmConfig.models && Array.isArray(llmConfig.models)) {
+      const model = llmConfig.models.find((m: any) => m.id === modelId);
+      return model ? model.name || model.modelId : modelId;
+    }
+
+    // Fallback for V1 config (less likely to be strictly correct for IDs but best effort)
+    return modelId;
+  };
+
+  const activeBaseModelName = getModelName(llmConfig?.activeBaseModelId || llmConfig?.model);
+  const activeAutocompleteModelName = getModelName(
+    llmConfig?.activeAutocompleteModelId || llmConfig?.autocomplete?.model
+  );
+
   // 코드용 AI 프롬프트 로컬 상태
   const [explainCodePrompt, setExplainCodePrompt] = useState(
     editorLLMPromptsConfig.explainCodePrompt
@@ -65,7 +136,7 @@ export function EditorSettings() {
     editorLLMPromptsConfig.makeShorterPrompt
   );
   const [makeLongerPrompt, setMakeLongerPrompt] = useState(editorLLMPromptsConfig.makeLongerPrompt);
-  const [simplifyPrompt, setSimplifyPrompt] = useState(editorLLMPromptsConfig.simplifyPrompt);
+
   const [fixGrammarPrompt, setFixGrammarPrompt] = useState(editorLLMPromptsConfig.fixGrammarPrompt);
   const [summarizePrompt, setSummarizePrompt] = useState(editorLLMPromptsConfig.summarizePrompt);
   const [translatePrompt, setTranslatePrompt] = useState(editorLLMPromptsConfig.translatePrompt);
@@ -116,7 +187,7 @@ export function EditorSettings() {
       continueWritingPrompt,
       makeShorterPrompt,
       makeLongerPrompt,
-      simplifyPrompt,
+
       fixGrammarPrompt,
       summarizePrompt,
       translatePrompt,
@@ -141,7 +212,7 @@ export function EditorSettings() {
       setContinueWritingPrompt(config.continueWritingPrompt);
       setMakeShorterPrompt(config.makeShorterPrompt);
       setMakeLongerPrompt(config.makeLongerPrompt);
-      setSimplifyPrompt(config.simplifyPrompt);
+
       setFixGrammarPrompt(config.fixGrammarPrompt);
       setSummarizePrompt(config.summarizePrompt);
       setTranslatePrompt(config.translatePrompt);
@@ -168,6 +239,33 @@ export function EditorSettings() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-3 space-y-6">
+        {/* LLM Configuration (Read-only) */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold">LLM Configuration</Label>
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1" disabled>
+              <Link className="h-3 w-3" />
+              Read Only
+            </Button>
+          </div>
+
+          <div className="grid gap-3 p-3 border rounded-md bg-muted/30">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Autocomplete Model</Label>
+              <div className="text-xs font-medium">
+                {activeAutocompleteModelName || 'Not configured'}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Editor Chat Model</Label>
+              <div className="text-xs font-medium">{activeBaseModelName || 'Not configured'}</div>
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-1">
+              * Managed in Settings &gt; LLM
+            </div>
+          </div>
+        </div>
+
         {/* 외형 설정 */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -368,8 +466,78 @@ export function EditorSettings() {
             {t('settings.editor.settings.prompts.description')}
           </p>
 
-          {/* 코드용 AI 프롬프트 */}
+          {/* Group 1: Basic AI Editing (Writing AI) */}
           <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-primary">
+              <FileText className="h-3.5 w-3.5" />
+              {t('settings.editor.settings.prompts.writingAi')}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                {t('settings.editor.settings.prompts.continueWriting')}
+              </Label>
+              <Textarea
+                value={continueWritingPrompt}
+                onChange={(e) => setContinueWritingPrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder={t('settings.editor.settings.prompts.continueWritingPlaceholder')}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('settings.editor.settings.prompts.makeShorter')}</Label>
+              <Textarea
+                value={makeShorterPrompt}
+                onChange={(e) => setMakeShorterPrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder={t('settings.editor.settings.prompts.makeShorterPlaceholder')}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('settings.editor.settings.prompts.makeLonger')}</Label>
+              <Textarea
+                value={makeLongerPrompt}
+                onChange={(e) => setMakeLongerPrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder={t('settings.editor.settings.prompts.makeLongerPlaceholder')}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('settings.editor.settings.prompts.fixGrammar')}</Label>
+              <Textarea
+                value={fixGrammarPrompt}
+                onChange={(e) => setFixGrammarPrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder={t('settings.editor.settings.prompts.fixGrammarPlaceholder')}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('settings.editor.settings.prompts.summarize')}</Label>
+              <Textarea
+                value={summarizePrompt}
+                onChange={(e) => setSummarizePrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder={t('settings.editor.settings.prompts.summarizePlaceholder')}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('settings.editor.settings.prompts.translate')}</Label>
+              <Textarea
+                value={translatePrompt}
+                onChange={(e) => setTranslatePrompt(e.target.value)}
+                className="min-h-[60px] text-xs font-mono"
+                placeholder={t('settings.editor.settings.prompts.translatePlaceholder')}
+              />
+            </div>
+          </div>
+
+          {/* Group 2: Code AI Editing */}
+          <div className="space-y-3 border-t pt-3">
             <div className="flex items-center gap-2 text-xs font-medium text-primary">
               <Code className="h-3.5 w-3.5" />
               {t('settings.editor.settings.prompts.codeAi')}
@@ -436,86 +604,6 @@ export function EditorSettings() {
                 onChange={(e) => setGenerateTestPrompt(e.target.value)}
                 className="min-h-[60px] text-xs font-mono"
                 placeholder={t('settings.editor.settings.prompts.generateTestPlaceholder')}
-              />
-            </div>
-          </div>
-
-          {/* 문서용 AI 프롬프트 */}
-          <div className="space-y-3 border-t pt-3">
-            <div className="flex items-center gap-2 text-xs font-medium text-primary">
-              <FileText className="h-3.5 w-3.5" />
-              {t('settings.editor.settings.prompts.writingAi')}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">
-                {t('settings.editor.settings.prompts.continueWriting')}
-              </Label>
-              <Textarea
-                value={continueWritingPrompt}
-                onChange={(e) => setContinueWritingPrompt(e.target.value)}
-                className="min-h-[60px] text-xs font-mono"
-                placeholder={t('settings.editor.settings.prompts.continueWritingPlaceholder')}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('settings.editor.settings.prompts.makeShorter')}</Label>
-              <Textarea
-                value={makeShorterPrompt}
-                onChange={(e) => setMakeShorterPrompt(e.target.value)}
-                className="min-h-[60px] text-xs font-mono"
-                placeholder={t('settings.editor.settings.prompts.makeShorterPlaceholder')}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('settings.editor.settings.prompts.makeLonger')}</Label>
-              <Textarea
-                value={makeLongerPrompt}
-                onChange={(e) => setMakeLongerPrompt(e.target.value)}
-                className="min-h-[60px] text-xs font-mono"
-                placeholder={t('settings.editor.settings.prompts.makeLongerPlaceholder')}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('settings.editor.settings.prompts.simplify')}</Label>
-              <Textarea
-                value={simplifyPrompt}
-                onChange={(e) => setSimplifyPrompt(e.target.value)}
-                className="min-h-[60px] text-xs font-mono"
-                placeholder={t('settings.editor.settings.prompts.simplifyPlaceholder')}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('settings.editor.settings.prompts.fixGrammar')}</Label>
-              <Textarea
-                value={fixGrammarPrompt}
-                onChange={(e) => setFixGrammarPrompt(e.target.value)}
-                className="min-h-[60px] text-xs font-mono"
-                placeholder={t('settings.editor.settings.prompts.fixGrammarPlaceholder')}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('settings.editor.settings.prompts.summarize')}</Label>
-              <Textarea
-                value={summarizePrompt}
-                onChange={(e) => setSummarizePrompt(e.target.value)}
-                className="min-h-[60px] text-xs font-mono"
-                placeholder={t('settings.editor.settings.prompts.summarizePlaceholder')}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t('settings.editor.settings.prompts.translate')}</Label>
-              <Textarea
-                value={translatePrompt}
-                onChange={(e) => setTranslatePrompt(e.target.value)}
-                className="min-h-[60px] text-xs font-mono"
-                placeholder={t('settings.editor.settings.prompts.translatePlaceholder')}
               />
             </div>
           </div>

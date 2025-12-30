@@ -234,7 +234,7 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
                     <div
                       className={`max-w-[${maxWidth}] rounded-lg px-${style?.compact ? '2' : '2.5'} py-${style?.compact ? '1.5' : '1.5'} ${
                         style?.compact ? 'text-[11px]' : 'text-xs'
-                      } ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+                      } ${message.role === 'user' ? 'bg-primary text-primary-foreground' : ''}`}
                     >
                       {message.role === 'assistant' ? (
                         <>

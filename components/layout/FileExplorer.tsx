@@ -13,7 +13,7 @@ import { logger } from '@/lib/utils/logger';
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Folder, FolderMinus, FolderOpen, RefreshCw, FilePlus, FolderPlus } from 'lucide-react';
+import { Folder, FolderMinus, FolderOpen, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -263,44 +263,7 @@ export function FileExplorer() {
                     <p>{t('fileExplorer.selectDirectory')}</p>
                   </TooltipContent>
                 </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={!workingDirectory}
-                      onClick={() =>
-                        workingDirectory && openNewItemDialog('file', workingDirectory)
-                      }
-                      className="h-7 w-7"
-                      title={t('fileExplorer.newFile')}
-                    >
-                      <FilePlus className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>{t('fileExplorer.newFile')}</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={!workingDirectory}
-                      onClick={() =>
-                        workingDirectory && openNewItemDialog('folder', workingDirectory)
-                      }
-                      className="h-7 w-7"
-                      title={t('fileExplorer.newFolder')}
-                    >
-                      <FolderPlus className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>{t('fileExplorer.newFolder')}</p>
-                  </TooltipContent>
-                </Tooltip>
+
                 {workingDirectory && (
                   <>
                     <Tooltip>

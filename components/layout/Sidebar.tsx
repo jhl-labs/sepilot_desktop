@@ -11,7 +11,6 @@ import {
   FolderOpen,
   Bot,
   Presentation,
-  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -62,7 +61,6 @@ export function Sidebar({
     clearEditorChat,
     editorAgentMode,
     setEditorAgentMode,
-    refreshFileTree,
     clearPresentationSession,
   } = useChatStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -222,8 +220,8 @@ export function Sidebar({
                 }
                 title={
                   editorAgentMode === 'editor'
-                    ? 'Editor Agent 모드 (클릭하여 Coding Agent로 전환)'
-                    : 'Coding Agent 모드 (클릭하여 Editor Agent로 전환)'
+                    ? 'Chat 모드 (클릭하여 Agent 모드로 전환)'
+                    : 'Agent 모드 (클릭하여 Chat 모드로 전환)'
                 }
                 className={
                   editorAgentMode === 'coding'
@@ -231,7 +229,11 @@ export function Sidebar({
                     : 'bg-accent text-accent-foreground'
                 }
               >
-                <Bot className="h-5 w-5" />
+                {editorAgentMode === 'editor' ? (
+                  <MessageSquare className="h-5 w-5" />
+                ) : (
+                  <Bot className="h-5 w-5" />
+                )}
               </Button>
             )}
             <Button
@@ -243,16 +245,7 @@ export function Sidebar({
             >
               <FolderOpen className="h-5 w-5" />
             </Button>
-            {editorViewMode === 'files' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={refreshFileTree}
-                title="파일 목록 새로고침"
-              >
-                <RefreshCw className="h-5 w-5" />
-              </Button>
-            )}
+
             {editorViewMode !== 'chat' && (
               <Button
                 variant="ghost"

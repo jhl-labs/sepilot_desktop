@@ -14,7 +14,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { useTerminal } from '@/lib/hooks/use-terminal';
 import { Button } from '@/components/ui/button';
-import { Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, X, ChevronLeft, ChevronRight, SquareTerminal } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import '@xterm/xterm/css/xterm.css';
 
@@ -398,45 +398,50 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       style={{ backgroundColor: getTerminalTheme().background }}
     >
       {/* 탭 바 */}
-      <div className="flex items-end border-b border-border bg-muted/30 px-2 pt-1">
+      <div className="flex h-9 shrink-0 items-center border-b border-border bg-muted/40 px-2 gap-1">
         {/* 좌측 스크롤 버튼 */}
         {canScrollLeft && (
           <Button
             variant="ghost"
             size="icon"
-            className="mb-1 h-7 w-7 shrink-0 rounded-md hover:bg-accent/50"
+            className="h-6 w-6 shrink-0 rounded-md hover:bg-accent/50"
             onClick={() => scrollTabs('left')}
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-3.5 w-3.5" />
           </Button>
         )}
 
         {/* 탭 목록 */}
         <div
           ref={tabListRef}
-          className="scrollbar-hide flex flex-1 items-end gap-1 overflow-x-auto"
+          className="scrollbar-hide flex h-full flex-1 items-center gap-1 overflow-x-auto py-1"
         >
           {tabs.map((tab) => (
             <div
               key={tab.id}
               onClick={() => handleSwitchTab(tab.id)}
-              className={`group relative flex cursor-pointer items-center gap-2 rounded-t-lg px-4 py-2 text-sm transition-all duration-200 ${
+              className={`group relative flex h-7 min-w-[140px] max-w-[200px] cursor-pointer items-center justify-between gap-2 rounded-md border px-2.5 text-xs font-medium transition-all duration-200 ${
                 tab.isActive
-                  ? 'bg-background text-foreground shadow-sm border-t border-x border-border -mb-[1px]'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground mb-0.5'
+                  ? 'border-border bg-background text-foreground shadow-sm'
+                  : 'border-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground'
               }`}
             >
-              <span className="whitespace-nowrap font-medium">{tab.title}</span>
+              <div className="flex items-center gap-2 overflow-hidden">
+                <SquareTerminal
+                  className={`h-3.5 w-3.5 shrink-0 ${tab.isActive ? 'text-primary' : 'opacity-70'}`}
+                />
+                <span className="truncate">{tab.title}</span>
+              </div>
               <button
                 onClick={(e) => handleCloseTab(tab.id, e)}
-                className={`flex h-5 w-5 items-center justify-center rounded-md transition-all ${
+                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm transition-all hover:bg-destructive/10 hover:text-destructive ${
                   tab.isActive
-                    ? 'opacity-0 hover:bg-accent hover:text-accent-foreground group-hover:opacity-100'
-                    : 'opacity-0 hover:bg-accent/80 hover:text-accent-foreground group-hover:opacity-100'
+                    ? 'opacity-0 group-hover:opacity-100'
+                    : 'opacity-0 group-hover:opacity-100'
                 }`}
                 title={t('terminal.actions.close')}
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3 w-3" />
               </button>
             </div>
           ))}
@@ -447,10 +452,10 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="mb-1 h-7 w-7 shrink-0 rounded-md hover:bg-accent/50"
+            className="h-6 w-6 shrink-0 rounded-md hover:bg-accent/50"
             onClick={() => scrollTabs('right')}
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         )}
 
@@ -458,11 +463,11 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="mb-1 h-7 w-7 shrink-0 rounded-md hover:bg-accent/50 ml-1"
+          className="h-6 w-6 shrink-0 rounded-md hover:bg-accent"
           onClick={handleNewTab}
           title={t('terminal.actions.newTerminal')}
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-3.5 w-3.5" />
         </Button>
       </div>
 

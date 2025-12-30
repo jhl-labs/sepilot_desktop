@@ -309,8 +309,23 @@ export class GraphFactory {
       return;
     }
 
+    // Editor Agent의 경우 (Custom Graph Implementation)
+    if (config.thinkingMode === 'editor-agent') {
+      yield* this.streamEditorAgentGraph(config, messages, options);
+      return;
+    }
+
     const { graph, stateType } = await this.getGraphByConfig(config);
     const initialState = await this.createInitialState(stateType, messages, conversationId);
+
+    // Inject Editor Context if applicable
+    if (stateType === 'editor-agent') {
+      (initialState as any).editorContext = {
+        ...(initialState as any).editorContext,
+        useTools: config.enableTools,
+        workingDirectory: config.workingDirectory,
+      };
+    }
 
     try {
       logger.info('[GraphFactory] Starting stream with config:', config);
@@ -694,18 +709,51 @@ export class GraphFactory {
   }
 
   /**
-   * Editor Agent 스트리밍 실행
+   * Editor Agent 스트리밍 실행 (Raw State)
+   * used by llm-editor-autocomplete and llm-editor-action
    */
   static async *streamEditorAgent(
     initialState: any,
     toolApprovalCallback?: ToolApprovalCallback
-  ): AsyncGenerator<any> {
+  ): AsyncGenerator<StreamEvent> {
+    try {
+      const graph = await this.getEditorAgentGraph();
+      for await (const event of graph.stream(initialState, toolApprovalCallback)) {
+        yield event;
+      }
+    } catch (error: any) {
+      console.error('[GraphFactory] Editor Agent stream error:', error);
+      yield {
+        type: 'error',
+        error: error.message || 'Editor Agent execution failed',
+      };
+    }
+  }
+
+  /**
+   * Editor Agent 스트리밍 실행 (Graph Config 기반)
+   * used by streamWithConfig for Chat Interface
+   */
+  static async *streamEditorAgentGraph(
+    config: GraphConfig,
+    messages: Message[],
+    options?: GraphOptions
+  ): AsyncGenerator<StreamEvent> {
     logger.info('[GraphFactory] Starting Editor Agent stream');
+    const conversationId = options?.conversationId || '';
 
     try {
       const graph = await this.getEditorAgentGraph();
+      const initialState = await this.createInitialState('editor-agent', messages, conversationId);
 
-      for await (const event of graph.stream(initialState, toolApprovalCallback)) {
+      // Inject Editor Context
+      (initialState as any).editorContext = {
+        ...(initialState as any).editorContext,
+        useTools: config.enableTools,
+        workingDirectory: config.workingDirectory,
+      };
+
+      for await (const event of graph.stream(initialState, options?.toolApprovalCallback)) {
         yield event;
       }
     } catch (error: any) {

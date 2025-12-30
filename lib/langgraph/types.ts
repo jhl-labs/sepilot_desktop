@@ -96,7 +96,9 @@ export interface StreamEvent {
     | 'tool_approval_request'
     | 'tool_approval_result'
     | 'progress'
-    | 'completion';
+    | 'completion'
+    | 'message' // For direct message events (EditorAgent)
+    | 'streaming'; // For token streaming
   node?: string;
   data?: any;
   error?: string;
@@ -106,4 +108,8 @@ export interface StreamEvent {
   approved?: boolean;
   // Completion specific fields
   iterations?: number;
+  // Message specific fields
+  message?: any; // Message object
+  // Streaming specific fields
+  chunk?: string;
 }

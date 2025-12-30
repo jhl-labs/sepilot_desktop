@@ -7,6 +7,9 @@ import { loader } from '@monaco-editor/react';
 import { logger } from '@/lib/utils/logger';
 import { useChatStore } from '@/lib/store/chat-store';
 import { isElectron } from '@/lib/platform';
+import { EditorContextMenu } from './EditorContextMenu';
+import { TranslateDialog } from './TranslateDialog';
+import { CustomPromptDialog } from './CustomPromptDialog';
 
 // Configure Monaco to use local files from public/monaco/vs
 loader.config({
@@ -57,7 +60,10 @@ export function SingleFileEditor({
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingAction, setProcessingAction] = useState<string>('');
 
-  // Editor Actions Logic
+  // Custom Context Menu State
+  const [hasSelection, setHasSelection] = useState(false);
+  const [isTranslateDialogOpen, setIsTranslateDialogOpen] = useState(false);
+  const [isCustomPromptDialogOpen, setIsCustomPromptDialogOpen] = useState(false);
   const handleEditorAction = useCallback(
     async (
       action: // 코드용 AI 액션
@@ -74,9 +80,11 @@ export function SingleFileEditor({
         | 'simplify'
         | 'fix-grammar'
         | 'summarize'
-        | 'translate',
+        | 'translate'
+        | 'custom',
       selectedText: string,
-      targetLanguage?: string
+      targetLanguage?: string,
+      customPrompt?: string
     ) => {
       if (!window.electronAPI?.llm) {
         console.error('LLM API is not available. Please check your settings.');
@@ -106,6 +114,7 @@ export function SingleFileEditor({
         'fix-grammar': '문법 수정',
         summarize: '요약',
         translate: '번역',
+        custom: '사용자 지정',
       };
 
       setIsProcessing(true);
@@ -149,6 +158,7 @@ export function SingleFileEditor({
           text: selectedText,
           language: language,
           targetLanguage,
+          customPrompt,
           // 추가 컨텍스트 정보
           context: {
             before: textBefore,
@@ -663,45 +673,144 @@ export function SingleFileEditor({
     return undefined;
   }, [editor, language, workingDirectory, filePath]);
 
-  return (
-    <div className="w-full h-full relative group">
-      <MonacoEditor
-        height="100%"
-        language={language}
-        theme={theme}
-        value={content}
-        onChange={onChange}
-        onMount={(ed, m) => {
-          setEditor(ed);
-          setMonacoInstance(m);
-          if (onMount) {
-            onMount(ed, m);
-          }
+  // Handle Context Menu Actions
+  const handleContextMenuAction = useCallback(
+    (action: string, data?: any) => {
+      if (!editor) {
+        return;
+      }
 
-          // Update options from store
-          ed.updateOptions({
-            fontSize: editorAppearanceConfig.fontSize,
-            fontFamily: editorAppearanceConfig.fontFamily,
-            minimap: { enabled: editorAppearanceConfig.minimap },
-            wordWrap: editorAppearanceConfig.wordWrap,
-            tabSize: editorAppearanceConfig.tabSize,
-            lineNumbers: editorAppearanceConfig.lineNumbers,
-            ...options,
-          });
-        }}
-        options={{
-          automaticLayout: true,
-          padding: { top: 16, bottom: 16 },
-          ...options,
+      switch (action) {
+        case 'format':
+          editor.getAction('editor.action.formatDocument')?.run();
+          break;
+        case 'format-selection':
+          editor.getAction('editor.action.formatSelection')?.run();
+          break;
+        case 'change-all-occurrences':
+          editor.getAction('editor.action.changeAll')?.run();
+          break;
+
+        case 'cut':
+          editor.focus();
+          // document.execCommand('cut') might work, or trigger Monaco action
+          // Modern browsers restrict execCommand. Monaco action is safer if available.
+          // But web clipboard API usually requires user gesture (click), which we have.
+          document.execCommand('cut');
+          break;
+        case 'copy':
+          editor.focus();
+          document.execCommand('copy');
+          break;
+        case 'paste':
+          editor.focus();
+          // Paste is often blocked by browser for security (requires permission)
+          // If navigator.clipboard.readText is used.
+          // document.execCommand('paste') is deprecated.
+          // Monaco doesn't have a simple 'paste' action runnable from code due to browser limits.
+          // Best effort:
+          document.execCommand('paste');
+          break;
+        default:
+          // AI Actions
+          if (hasSelection) {
+            const selection = editor.getSelection();
+            if (selection) {
+              const selectedText = editor.getModel()?.getValueInRange(selection) || '';
+              handleEditorAction(action as any, selectedText, data);
+            }
+          }
+          break;
+      }
+    },
+    [editor, hasSelection, handleEditorAction]
+  );
+
+  // Track selection state
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+
+    const disposable = editor.onDidChangeCursorSelection((e) => {
+      setHasSelection(!e.selection.isEmpty());
+    });
+
+    return () => disposable.dispose();
+  }, [editor]);
+
+  return (
+    <>
+      <EditorContextMenu
+        onAction={handleContextMenuAction}
+        onTranslate={() => setIsTranslateDialogOpen(true)}
+        onCustomPrompt={() => setIsCustomPromptDialogOpen(true)}
+        hasSelection={hasSelection}
+      >
+        <div className="w-full h-full relative group">
+          <MonacoEditor
+            height="100%"
+            language={language}
+            theme={theme}
+            value={content}
+            onChange={onChange}
+            onMount={(ed, m) => {
+              setEditor(ed);
+              setMonacoInstance(m);
+              if (onMount) {
+                onMount(ed, m);
+              }
+
+              // Update options from store
+              ed.updateOptions({
+                fontSize: editorAppearanceConfig.fontSize,
+                fontFamily: editorAppearanceConfig.fontFamily,
+                minimap: { enabled: editorAppearanceConfig.minimap },
+                wordWrap: editorAppearanceConfig.wordWrap,
+                tabSize: editorAppearanceConfig.tabSize,
+                lineNumbers: editorAppearanceConfig.lineNumbers,
+                // Disable native context menu
+                contextmenu: false,
+                ...options,
+              });
+            }}
+            options={{
+              automaticLayout: true,
+              padding: { top: 16, bottom: 16 },
+              // Disable native context menu
+              contextmenu: false,
+              ...options,
+            }}
+          />
+
+          {isProcessing && (
+            <div className="absolute top-2 right-4 z-50 bg-background/80 backdrop-blur border rounded-full px-3 py-1 flex items-center gap-2 text-primary shadow-lg animate-in slide-in-from-top-2">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <span className="text-xs font-medium">{processingAction || 'AI 처리 중...'}</span>
+            </div>
+          )}
+        </div>
+      </EditorContextMenu>
+
+      <TranslateDialog
+        open={isTranslateDialogOpen}
+        onOpenChange={setIsTranslateDialogOpen}
+        onTranslate={(lang) => handleContextMenuAction('translate', lang)}
+      />
+      <CustomPromptDialog
+        open={isCustomPromptDialogOpen}
+        onOpenChange={setIsCustomPromptDialogOpen}
+        onRun={(prompt) => {
+          if (!editor) {
+            return;
+          }
+          const selection = editor.getSelection();
+          if (selection && !selection.isEmpty()) {
+            const selectedText = editor.getModel()?.getValueInRange(selection) || '';
+            handleEditorAction('custom', selectedText, undefined, prompt);
+          }
         }}
       />
-
-      {isProcessing && (
-        <div className="absolute top-2 right-4 z-50 bg-background/80 backdrop-blur border rounded-full px-3 py-1 flex items-center gap-2 text-primary shadow-lg animate-in slide-in-from-top-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          <span className="text-xs font-medium">{processingAction || 'AI 처리 중...'}</span>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

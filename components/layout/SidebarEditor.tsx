@@ -2,16 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Settings,
-  Terminal,
-  FileText,
-  Database,
-  Wrench,
-  Presentation,
-  Sparkles,
-  MessageSquarePlus,
-} from 'lucide-react';
+import { Settings, Terminal, FileText, Database, Wrench, Presentation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -37,6 +28,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
     showTerminalPanel,
     setShowTerminalPanel,
     workingDirectory,
+    loadWorkingDirectory,
     editorUseRagInAutocomplete,
     setEditorUseRagInAutocomplete,
     editorUseToolsInAutocomplete,
@@ -45,10 +37,14 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
     clearPendingToolApproval,
     setAlwaysApproveToolsForSession,
     setAppMode,
-    clearEditorChat,
   } = useChatStore();
 
   const [betaConfig, setBetaConfig] = useState<BetaConfig>({ enablePresentationMode: false });
+
+  // Load working directory on mount
+  useEffect(() => {
+    loadWorkingDirectory();
+  }, [loadWorkingDirectory]);
 
   // Load beta config
   useEffect(() => {
@@ -116,18 +112,6 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
     clearPendingToolApproval();
   };
 
-  const handleNewChat = () => {
-    const confirmed = window.confirm(t('sidebar.editor.confirmations.clearChat'));
-    if (confirmed) {
-      clearEditorChat();
-      setEditorViewMode('chat');
-    }
-  };
-
-  const handleAiAssistantClick = () => {
-    setEditorViewMode('chat');
-  };
-
   const terminalButtonTitle = !workingDirectory
     ? t('sidebar.editor.tooltips.setWorkingDirectoryFirst')
     : showTerminalPanel
@@ -166,42 +150,6 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                   <p>{t('sidebar.editor.tooltips.toggleTheme')}</p>
                 </TooltipContent>
               </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleAiAssistantClick}
-                    className={cn('flex-1', editorViewMode === 'chat' && 'bg-accent')}
-                    title={t('sidebar.editor.tooltips.aiAssistant')}
-                  >
-                    <Sparkles className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t('sidebar.editor.tooltips.aiAssistant')}</p>
-                </TooltipContent>
-              </Tooltip>
-
-              {editorViewMode === 'chat' && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleNewChat}
-                      className="flex-1"
-                      title={t('sidebar.editor.tooltips.newChat')}
-                    >
-                      <MessageSquarePlus className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p>{t('sidebar.editor.tooltips.newChat')}</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
 
               <Tooltip>
                 <TooltipTrigger asChild>

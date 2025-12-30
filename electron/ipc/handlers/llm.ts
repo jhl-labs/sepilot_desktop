@@ -960,10 +960,12 @@ CRITICAL RULES:
           | 'change-tone-casual'
           | 'change-tone-friendly'
           | 'find-action-items'
-          | 'create-outline';
+          | 'create-outline'
+          | 'custom';
         text: string;
         language?: string;
         targetLanguage?: string; // for translate
+        customPrompt?: string;
         context?: {
           before: string;
           after: string;
@@ -1241,6 +1243,17 @@ Rules:
 - Keep it concise but comprehensive`;
 
             userPrompt = `Create an outline for this text:\n\n${params.text}`;
+            break;
+
+          case 'custom':
+            systemPrompt = `You are a helpful AI assistant.
+Follow the user's specific instructions for the selected text.
+Return ONLY the result of the instruction.`;
+
+            if (!params.customPrompt) {
+              throw new Error('Custom prompt is required for custom action');
+            }
+            userPrompt = `${params.customPrompt}:\n\n${params.text}`;
             break;
 
           default:

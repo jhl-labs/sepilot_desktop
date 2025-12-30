@@ -313,35 +313,38 @@ export class AdvancedEditorAgentGraph {
       });
     }
 
-    parts.push('');
-    parts.push('# Available Tools:');
-    parts.push('');
-    parts.push('## File Operations (READ - no approval needed):');
-    parts.push('- read_file: Read file contents');
-    parts.push('- list_files: List files in directory');
-    parts.push('- search_files: Search for text in files (ripgrep)');
-    parts.push('- read_directory: Get directory structure');
-    parts.push('');
-    parts.push('## File Operations (WRITE - requires approval):');
-    parts.push('- write_file: Create or overwrite entire file');
-    parts.push('- edit_file: Apply precise edits to file (search & replace)');
-    parts.push('- create_directory: Create new directory');
-    parts.push('- delete_file: Delete file or directory');
-    parts.push('');
-    parts.push('## Terminal Operations:');
-    parts.push('- execute_command: Run shell command (requires approval)');
-    parts.push('- get_terminal_output: Read terminal output (no approval)');
-    parts.push('');
-    parts.push('## Git Operations:');
-    parts.push('- get_git_status: Check git status (no approval)');
-    parts.push('- git_diff: View git diff (no approval)');
-    parts.push('');
-    parts.push('# Guidelines:');
-    parts.push('- Always read files before modifying them');
-    parts.push('- Use edit_file for small changes, write_file for complete rewrites');
-    parts.push('- Test changes with terminal commands when appropriate');
-    parts.push("- Explain what you're doing before making changes");
-    parts.push('- Be careful with file operations - they require user approval');
+    if (context?.useTools !== false) {
+      parts.push('');
+      parts.push('# Available Tools:');
+      parts.push('');
+      parts.push('## File Operations (READ - no approval needed):');
+      parts.push('- read_file: Read file contents');
+      parts.push('- list_files: List files in directory');
+      parts.push('- search_files: Search for text in files (ripgrep)');
+      parts.push('- read_directory: Get directory structure');
+      parts.push('');
+      parts.push('## File Operations (WRITE - requires approval):');
+      parts.push('- write_file: Create or overwrite entire file');
+      parts.push('- edit_file: Apply precise edits to file (search & replace)');
+      parts.push('- create_directory: Create new directory');
+      parts.push('- delete_file: Delete file or directory');
+      parts.push('');
+      parts.push('## Terminal Operations:');
+      parts.push('- execute_command: Run shell command (requires approval)');
+      parts.push('- get_terminal_output: Read terminal output (no approval)');
+      parts.push('');
+      parts.push('## Git Operations:');
+      parts.push('- get_git_status: Check git status (no approval)');
+      parts.push('- git_diff: View git diff (no approval)');
+      parts.push('');
+      parts.push('# Guidelines:');
+      parts.push('- Always read files before modifying them');
+      parts.push('- Use edit_file for small changes, write_file for complete rewrites');
+      parts.push('- Test changes with terminal commands when appropriate');
+      parts.push("- Explain what you're doing before making changes");
+      parts.push('- Be careful with file operations - they require user approval');
+    }
+
     parts.push('- Respond in Korean and using markdown.');
 
     // RAG Documents Context
@@ -473,7 +476,9 @@ export class AdvancedEditorAgentGraph {
     const provider = client.getProvider();
 
     // Get all editor tools
-    const tools = this.getEditorTools();
+    // Check if tools are enabled in context (default to true if undefined)
+    const useTools = state.editorContext?.useTools !== false;
+    const tools = useTools ? this.getEditorTools() : [];
 
     const response = await provider.chat(state.messages, {
       tools: tools.length > 0 ? tools : undefined,

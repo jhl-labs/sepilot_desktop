@@ -197,10 +197,12 @@ interface LLMAPI {
       | 'simplify'
       | 'fix-grammar'
       | 'summarize'
-      | 'translate';
+      | 'translate'
+      | 'custom';
     text: string;
     language?: string;
     targetLanguage?: string;
+    customPrompt?: string;
     context?: {
       before: string;
       after: string;

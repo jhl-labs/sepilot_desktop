@@ -5,7 +5,6 @@
  * Handles session lifecycle, shell detection, and data streaming.
  */
 
-import * as pty from 'node-pty';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -13,9 +12,20 @@ import { randomUUID } from 'crypto';
 import { logger } from './logger';
 import { BrowserWindow } from 'electron';
 
+// Dynamic import for node-pty to handle potential loading errors gracefully
+let pty: any;
+try {
+  pty = require('node-pty');
+} catch (error) {
+  logger.error(
+    '[PTYManager] Failed to load node-pty module. Terminal features will be disabled.',
+    error
+  );
+}
+
 export interface PTYSession {
   id: string;
-  pty: pty.IPty;
+  pty: any; // pty.IPty - using any to avoid namespace issues with dynamic import
   cwd: string;
   shell: string;
   createdAt: number;
@@ -89,6 +99,10 @@ export class PTYManager {
    * 새로운 PTY 세션 생성
    */
   createSession(options: CreateSessionOptions = {}): CreateSessionResult {
+    if (!pty) {
+      throw new Error('Terminal functionality is not available (node-pty failed to load).');
+    }
+
     const sessionId = randomUUID();
     const { shell, args } = this.getDefaultShell();
     const cwd = this.validateCwd(options.cwd);
@@ -116,7 +130,7 @@ export class PTYManager {
       });
 
       // PTY 데이터 이벤트 → Renderer로 전송
-      ptyProcess.onData((data) => {
+      ptyProcess.on('data', (data) => {
         logger.info(`[PTYManager] Session ${sessionId} data:`, {
           length: data.length,
           preview: data.substring(0, 50),
@@ -136,7 +150,7 @@ export class PTYManager {
       });
 
       // PTY 프로세스 종료 이벤트
-      ptyProcess.onExit(({ exitCode, signal }) => {
+      ptyProcess.on('exit', (exitCode, signal) => {
         logger.info(`[PTYManager] Session ${sessionId} exited:`, {
           exitCode,
           signal,

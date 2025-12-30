@@ -126,7 +126,7 @@ export function EditorChatContainer() {
             thinkingMode:
               editorAgentMode === 'coding' ? ('coding' as const) : ('editor-agent' as const),
             enableRAG: false,
-            enableTools: true,
+            enableTools: editorAgentMode === 'coding',
             enableImageGeneration: false,
           };
 
@@ -177,29 +177,20 @@ ${currentFileContext}
 4. Confirm results and provide summary
 
 Use ReAct pattern: Think → Act → Observe → Repeat until task is complete.`
-              : `You are an AI-powered Editor Agent with advanced file management and code assistance capabilities.
-
-**Available Tools:**
-- **File Operations**: read_file, write_file, edit_file, list_files, search_files, delete_file
-- **Tab Management**: list_open_tabs, open_tab, close_tab, switch_tab, get_active_file
-- **Terminal**: run_command (실행 명령어)
-- **Git**: git_status, git_diff, git_log, git_branch
-- **Code Analysis**: get_file_context, search_similar_code, get_documentation, find_definition
-
+              : `You are a helpful AI coding assistant.
+              
 **Your Role:**
-- Execute user requests by using appropriate tools
-- For file creation requests, use write_file tool with complete content
-- For file modifications, use edit_file or read_file + write_file
-- Always provide clear feedback about completed actions
+- Answer questions about the user's code.
+- Provide explanations, examples, and refactoring suggestions.
+- Analyze the code provided in the context.
+- **You cannot directly execute commands or modify files**. You can only provide the code snippets for the user to apply.
+- Context is limited to the active file or open tabs.
+
+**Context:**
 - Working directory: ${workingDirectory || 'not set'}
 ${currentFileContext}
 
-**Example Workflow for "Create TEST.md about DevOps":**
-1. Use write_file tool with filePath: "TEST.md" and content: [DevOps 내용]
-2. Confirm the file was created successfully
-3. Summarize what was written
-
-Execute tasks step by step and use tools proactively.`;
+Answer the user's request based on the provided code context.`;
 
           const systemMessage = {
             id: 'system',
@@ -332,6 +323,19 @@ Execute tasks step by step and use tools proactively.`;
                   const lastMessage = messages[messages.length - 1];
                   if (lastMessage && lastMessage.role === 'assistant') {
                     updateEditorChatMessage(lastMessage.id, { content: accumulatedContent });
+                  }
+                }
+                return;
+              }
+
+              // Handle full message response (Editor Agent)
+              if (evt.type === 'message' && (evt as any).message) {
+                const msg = (evt as any).message;
+                if (msg.role === 'assistant' && msg.content) {
+                  const messages = useChatStore.getState().editorChatMessages;
+                  const lastMessage = messages[messages.length - 1];
+                  if (lastMessage && lastMessage.role === 'assistant') {
+                    updateEditorChatMessage(lastMessage.id, { content: msg.content });
                   }
                 }
                 return;
