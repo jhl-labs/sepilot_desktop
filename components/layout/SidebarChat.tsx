@@ -77,7 +77,7 @@ export function SidebarChat({
             onClick={() => {
               setPersonaDialogOpen(true);
             }}
-            title={t('app.sidebarChat.personaManagement')}
+            title={t('sidebarChat.personaManagement')}
             className="flex-1"
           >
             <User className="h-5 w-5" />
@@ -86,7 +86,7 @@ export function SidebarChat({
             variant="ghost"
             size="icon"
             onClick={onDocumentsClick}
-            title={t('app.sidebarChat.documentManagement')}
+            title={t('sidebarChat.documentManagement')}
             className="flex-1"
             data-testid="sidebar-documents-btn"
           >
@@ -104,7 +104,7 @@ export function SidebarChat({
               }
               onGalleryClick?.();
             }}
-            title={t('app.sidebarChat.imageGallery')}
+            title={t('sidebarChat.imageGallery')}
             className="flex-1"
           >
             <Image className="h-5 w-5" />
@@ -114,7 +114,7 @@ export function SidebarChat({
               variant="ghost"
               size="icon"
               onClick={() => setAppMode('presentation')}
-              title={t('app.sidebarChat.presentationMode')}
+              title={t('sidebarChat.presentationMode')}
               className="flex-1"
             >
               <Presentation className="h-5 w-5" />
@@ -132,7 +132,7 @@ export function SidebarChat({
               }
               onSettingsClick?.();
             }}
-            title={t('app.sidebarChat.settings')}
+            title={t('sidebarChat.settings')}
             className="flex-1"
           >
             <Settings className="h-5 w-5" />
