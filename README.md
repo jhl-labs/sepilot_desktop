@@ -125,6 +125,36 @@ _Turn your documents into AI's knowledge._
 
 Download the latest installer from [Releases](https://github.com/jhl-labs/sepilot_desktop/releases).
 
+### 🧪 Development & Testing
+
+#### Running Tests
+
+**Unit Tests**:
+
+```bash
+pnpm run test              # Run all unit tests
+pnpm run test:frontend     # Frontend tests only
+pnpm run test:backend      # Backend tests only
+pnpm run test:coverage     # With coverage report
+```
+
+**E2E Tests**:
+
+E2E tests require a display server. For headless environments (e.g., CI/CD):
+
+```bash
+# Install Xvfb (Ubuntu/Debian)
+sudo apt-get install xvfb
+
+# Install Xvfb (Fedora/RHEL)
+sudo dnf install xorg-x11-server-Xvfb
+
+# Run E2E tests
+pnpm run test:e2e
+```
+
+For GUI environments (macOS, Windows, Linux Desktop), tests will run directly without Xvfb.
+
 ---
 
 <a name="korean"></a>
@@ -211,6 +241,36 @@ _당신의 문서를 AI의 지식으로._
 ### 📦 설치
 
 [Releases](https://github.com/jhl-labs/sepilot_desktop/releases) 페이지에서 최신 설치 파일을 다운로드하세요.
+
+### 🧪 개발 & 테스트
+
+#### 테스트 실행
+
+**단위 테스트**:
+
+```bash
+pnpm run test              # 전체 단위 테스트 실행
+pnpm run test:frontend     # 프론트엔드 테스트만
+pnpm run test:backend      # 백엔드 테스트만
+pnpm run test:coverage     # 커버리지 리포트 포함
+```
+
+**E2E 테스트**:
+
+E2E 테스트는 디스플레이 서버가 필요합니다. headless 환경 (예: CI/CD)에서는:
+
+```bash
+# Xvfb 설치 (Ubuntu/Debian)
+sudo apt-get install xvfb
+
+# Xvfb 설치 (Fedora/RHEL)
+sudo dnf install xorg-x11-server-Xvfb
+
+# E2E 테스트 실행
+pnpm run test:e2e
+```
+
+GUI 환경(macOS, Windows, Linux Desktop)에서는 Xvfb 없이 바로 실행됩니다.
 
 ### 📄 License
 

@@ -41,7 +41,9 @@ export function ToolApprovalDialog({
       return;
     }
 
+    let isMounted = true;
     const toolCalls = pendingToolApproval.toolCalls;
+
     const loadFileContents = async () => {
       const newContents = new Map<string, FileToolContent>();
       const loading = new Set<string>();
@@ -94,11 +96,18 @@ export function ToolApprovalDialog({
         loading.delete(tool.id);
       }
 
-      setFileContents(newContents);
-      setLoadingFiles(loading);
+      // Only update state if component is still mounted
+      if (isMounted) {
+        setFileContents(newContents);
+        setLoadingFiles(loading);
+      }
     };
 
     loadFileContents();
+
+    return () => {
+      isMounted = false;
+    };
   }, [pendingToolApproval]);
 
   if (!pendingToolApproval) {

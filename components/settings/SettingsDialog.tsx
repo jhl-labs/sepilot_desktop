@@ -1002,6 +1002,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                       }
                     }}
                     networkConfig={networkConfig}
+                    setNetworkConfig={setNetworkConfig}
                     onSave={handleSave}
                     isSaving={isSaving}
                     message={message}

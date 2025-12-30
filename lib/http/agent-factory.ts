@@ -49,20 +49,42 @@ export async function createHttpAgent(
     logger.debug('[HTTP Agent] SSL verification disabled');
   }
 
-  // 프록시 설정
-  if (networkConfig.proxy?.enabled && networkConfig.proxy.mode !== 'none') {
-    if (networkConfig.proxy.mode === 'manual' && networkConfig.proxy.url) {
-      return await createManualProxyAgent(networkConfig.proxy.url, agentOptions);
-    } else if (networkConfig.proxy.mode === 'system') {
-      return await createSystemProxyAgent(agentOptions);
-    }
+  // 1. Manual Proxy (Highest Priority)
+  // 사용자가 직접 입력한 프록시 설정을 최우선으로 적용
+  if (
+    networkConfig.proxy?.enabled &&
+    networkConfig.proxy.mode === 'manual' &&
+    networkConfig.proxy.url
+  ) {
+    logger.debug('[HTTP Agent] Using Manual Proxy (Priority: High)');
+    return await createManualProxyAgent(networkConfig.proxy.url, agentOptions);
   }
 
-  // 프록시가 명시적으로 비활성화된 경우
-  // 환경 변수(HTTPS_PROXY, HTTP_PROXY)를 무시하도록 agent 생성
-  if (!networkConfig.proxy?.enabled || networkConfig.proxy.mode === 'none') {
+  // 2. System Proxy
+  // 시스템/환경 설정 사용 (ignoreEnvVars가 true이면 환경 변수 무시)
+  if (networkConfig.proxy?.enabled && networkConfig.proxy.mode === 'system') {
+    if (!networkConfig.proxy.ignoreEnvVars) {
+      logger.debug('[HTTP Agent] Using System Proxy (Priority: Medium)');
+      return await createSystemProxyAgent(agentOptions);
+    }
+    // Note: If ignoreEnvVars is true for System Proxy, it effectively behaves like No Proxy
+    // regarding Env Vars, though proxy-agent might still read OS registry.
+    // However, since we nuke env vars in fetch.ts, proxy-agent will rely on OS settings only.
+    // For consistency with "Ignore Env Vars" intent, we still use System Agent but rely on cleared Env.
+    logger.debug('[HTTP Agent] Using System Proxy with Env Vars Ignored (Priority: Medium)');
+    return await createSystemProxyAgent(agentOptions);
+  }
+
+  // 3. No Proxy / Disabled (Lowest Priority)
+  // 프록시가 명시적으로 비활성화되었거나, ignoreEnvVars가 설정된 경우
+  // 직결(Direct) 연결을 강제하는 에이전트 생성
+  if (
+    networkConfig.proxy?.ignoreEnvVars ||
+    !networkConfig.proxy?.enabled ||
+    networkConfig.proxy?.mode === 'none'
+  ) {
     logger.debug(
-      '[HTTP Agent] Proxy explicitly disabled, creating no-proxy agent to ignore env vars'
+      '[HTTP Agent] Proxy explicitly disabled or ignored. Creating No-Proxy Agent (Priority: Low)'
     );
     return await createNoProxyAgent(agentOptions);
   }
@@ -135,7 +157,9 @@ async function createNoProxyAgent(
 ): Promise<HttpAgentType | undefined> {
   try {
     // undici Agent 사용 - 환경 변수를 무시하도록 설정
-    const { Agent } = await import('undici');
+    // Use dynamic import via new Function to avoid webpack bundling and type errors
+    const importModule = new Function('name', 'return import(name)');
+    const { Agent } = await importModule('undici');
 
     // undici Agent 옵션 변환
     const connectOptions: Record<string, unknown> = {};

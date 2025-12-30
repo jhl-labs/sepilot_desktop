@@ -324,7 +324,10 @@ export async function httpFetch(url: string, options: HttpRequestOptions = {}): 
   // 프록시가 명시적으로 비활성화된 경우 환경 변수 무시
   // Node.js 내장 fetch는 agent를 지원하지 않으므로, 환경 변수를 임시로 제거
   const shouldIgnoreEnvProxy =
-    !!networkConfig && (!networkConfig.proxy?.enabled || networkConfig.proxy.mode === 'none');
+    !!networkConfig &&
+    (networkConfig.proxy?.ignoreEnvVars ||
+      !networkConfig.proxy?.enabled ||
+      networkConfig.proxy.mode === 'none');
 
   // AbortController로 타임아웃 처리
   const controller = new AbortController();
@@ -400,11 +403,18 @@ async function fetchWithRetry(
         HTTPS_PROXY: process.env.HTTPS_PROXY,
         http_proxy: process.env.http_proxy,
         https_proxy: process.env.https_proxy,
+        NO_PROXY: process.env.NO_PROXY,
+        no_proxy: process.env.no_proxy,
       }
     : null;
 
   if (shouldIgnoreEnvProxy) {
-    logger.debug('[HTTP Fetch] Temporarily removing proxy env vars (proxy disabled)');
+    logger.debug('[HTTP Fetch] Setting NO_PROXY=* to bypass all proxy env vars (proxy disabled)');
+    // undici는 환경 변수를 캐싱하므로 삭제만으로는 부족
+    // NO_PROXY를 "*"로 설정하여 모든 호스트에 대해 프록시 사용 안 함
+    process.env.NO_PROXY = '*';
+    process.env.no_proxy = '*';
+    // 기존 프록시 환경 변수도 제거 (이중 방어)
     delete process.env.HTTP_PROXY;
     delete process.env.HTTPS_PROXY;
     delete process.env.http_proxy;
@@ -503,15 +513,33 @@ async function fetchWithRetry(
       logger.debug('[HTTP Fetch] Restoring proxy env vars');
       if (savedEnvProxy.HTTP_PROXY !== undefined) {
         process.env.HTTP_PROXY = savedEnvProxy.HTTP_PROXY;
+      } else {
+        delete process.env.HTTP_PROXY;
       }
       if (savedEnvProxy.HTTPS_PROXY !== undefined) {
         process.env.HTTPS_PROXY = savedEnvProxy.HTTPS_PROXY;
+      } else {
+        delete process.env.HTTPS_PROXY;
       }
       if (savedEnvProxy.http_proxy !== undefined) {
         process.env.http_proxy = savedEnvProxy.http_proxy;
+      } else {
+        delete process.env.http_proxy;
       }
       if (savedEnvProxy.https_proxy !== undefined) {
         process.env.https_proxy = savedEnvProxy.https_proxy;
+      } else {
+        delete process.env.https_proxy;
+      }
+      if (savedEnvProxy.NO_PROXY !== undefined) {
+        process.env.NO_PROXY = savedEnvProxy.NO_PROXY;
+      } else {
+        delete process.env.NO_PROXY;
+      }
+      if (savedEnvProxy.no_proxy !== undefined) {
+        process.env.no_proxy = savedEnvProxy.no_proxy;
+      } else {
+        delete process.env.no_proxy;
       }
     }
   }

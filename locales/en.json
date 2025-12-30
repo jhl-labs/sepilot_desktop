@@ -204,6 +204,8 @@
         "url": "Proxy URL",
         "urlPlaceholder": "http://proxy.example.com:8080",
         "urlExample": "e.g., http://proxy.example.com:8080 or socks5://127.0.0.1:1080",
+        "ignoreEnvVars": "Ignore Environment Variables",
+        "ignoreEnvVarsDescription": "Overrides system environment variables (e.g., https_proxy) and follows application settings.",
         "description": "Manage proxy and SSL certificate verification settings. These settings apply to all external connections including LLM, ComfyUI, VectorDB, MCP, etc."
       },
       "ssl": {
