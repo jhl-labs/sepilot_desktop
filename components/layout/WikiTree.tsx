@@ -113,71 +113,73 @@ function SortableFileItem({
         onChangeColor={(color) => onContextMenu(file, { ...config, color } as WikiTreeFile)}
         onChangeIcon={() => onContextMenu(file, config)}
       >
-        <div
-          className={`flex items-center gap-1 py-1 px-1 rounded cursor-pointer group ${
-            isActive ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'
-          }`}
-          onClick={() => onFileClick(file)}
-          {...listeners}
-        >
-          {/* Chevron */}
-          {hasHeadings ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleExpanded(file.path);
-              }}
-              className="shrink-0 p-0.5 hover:bg-muted rounded"
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-            </button>
-          ) : (
-            <div className="w-4" />
-          )}
+        <div>
+          <div
+            className={`flex items-center gap-1 py-1 px-1 rounded cursor-pointer group ${
+              isActive ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'
+            }`}
+            onClick={() => onFileClick(file)}
+            {...listeners}
+          >
+            {/* Chevron */}
+            {hasHeadings ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpanded(file.path);
+                }}
+                className="shrink-0 p-0.5 hover:bg-muted rounded"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+              </button>
+            ) : (
+              <div className="w-4" />
+            )}
 
-          {/* Icon */}
-          {CustomIcon ? (
-            <CustomIcon className="h-4 w-4 shrink-0" style={{ color: customColor }} />
-          ) : (
-            <FileText
-              className={`h-4 w-4 shrink-0`}
-              style={{ color: customColor || (isActive ? undefined : 'var(--muted-foreground)') }}
-            />
-          )}
+            {/* Icon */}
+            {CustomIcon ? (
+              <CustomIcon className="h-4 w-4 shrink-0" style={{ color: customColor }} />
+            ) : (
+              <FileText
+                className={`h-4 w-4 shrink-0`}
+                style={{ color: customColor || (isActive ? undefined : 'var(--muted-foreground)') }}
+              />
+            )}
 
-          {/* Title and badges */}
-          <div className="flex-1 flex items-center gap-2 min-w-0">
-            <span
-              className={`text-sm truncate ${isActive ? 'font-medium' : ''}`}
-              style={{ color: customColor }}
-            >
-              {config?.customTitle || file.title}
-            </span>
+            {/* Title and badges */}
+            <div className="flex-1 flex items-center gap-2 min-w-0">
+              <span
+                className={`text-sm truncate ${isActive ? 'font-medium' : ''}`}
+                style={{ color: customColor }}
+              >
+                {config?.customTitle || file.title}
+              </span>
 
-            {/* Badges */}
-            <div className="flex items-center gap-1 shrink-0">
-              {isPinned && <Pin className="h-3 w-3 text-orange-500" />}
-              {isFavorite && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
-              {file.linkCount > 0 && (
-                <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                  <ExternalLink className="h-3 w-3" />
-                  {file.linkCount}
-                </span>
-              )}
+              {/* Badges */}
+              <div className="flex items-center gap-1 shrink-0">
+                {isPinned && <Pin className="h-3 w-3 text-orange-500" />}
+                {isFavorite && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
+                {file.linkCount > 0 && (
+                  <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                    <ExternalLink className="h-3 w-3" />
+                    {file.linkCount}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Headings Tree */}
-        {isExpanded && hasHeadings && (
-          <div className="ml-5 mt-0.5 space-y-0.5">
-            {file.headings.map((headingNode) => renderHeadingNode(headingNode, isActive))}
-          </div>
-        )}
+          {/* Headings Tree */}
+          {isExpanded && hasHeadings && (
+            <div className="ml-5 mt-0.5 space-y-0.5">
+              {file.headings.map((headingNode) => renderHeadingNode(headingNode, isActive))}
+            </div>
+          )}
+        </div>
       </WikiTreeContextMenu>
     </div>
   );
