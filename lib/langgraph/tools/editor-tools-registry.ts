@@ -13,7 +13,7 @@ import type { EditorAgentState } from '../graphs/editor-agent';
 /**
  * Tool Category
  */
-export type ToolCategory = 'file' | 'tab' | 'terminal' | 'git' | 'code' | 'rag';
+export type ToolCategory = 'file' | 'tab' | 'terminal' | 'git' | 'code' | 'rag' | 'editor';
 
 /**
  * Tool 정의 인터페이스
@@ -191,6 +191,12 @@ export const CATEGORY_META: Record<ToolCategory, CategoryMeta> = {
     icon: '🧠',
     description: '벡터 DB에서 관련 문서 검색',
   },
+  editor: {
+    id: 'editor',
+    label: '에디터 조작',
+    icon: '📝',
+    description: '활성 에디터 내용 수정 (선택 영역 교체 등)',
+  },
 };
 
 /**
@@ -216,6 +222,7 @@ export function getToolCountByCategory(): Record<ToolCategory, number> {
     git: 0,
     code: 0,
     rag: 0,
+    editor: 0,
   };
 
   editorToolsRegistry.getAll().forEach((tool) => {

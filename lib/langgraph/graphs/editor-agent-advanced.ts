@@ -38,6 +38,7 @@ export interface EditorAgentState extends AgentState {
     action?: 'autocomplete' | 'code-action' | 'writing-tool';
     actionType?: string;
     selectedText?: string;
+    enabledTools?: string[];
   };
   // RAG 관련 상태
   ragDocuments?: Array<{
@@ -478,7 +479,7 @@ export class AdvancedEditorAgentGraph {
     // Get all editor tools
     // Check if tools are enabled in context (default to true if undefined)
     const useTools = state.editorContext?.useTools !== false;
-    const tools = useTools ? this.getEditorTools() : [];
+    const tools = useTools ? this.getEditorTools(state.editorContext?.enabledTools) : [];
 
     const response = await provider.chat(state.messages, {
       tools: tools.length > 0 ? tools : undefined,
@@ -561,8 +562,8 @@ export class AdvancedEditorAgentGraph {
   /**
    * Get all editor tools
    */
-  private getEditorTools(): any[] {
-    return [
+  private getEditorTools(enabledTools?: string[]): any[] {
+    const allTools = [
       // File Reading (no approval needed)
       {
         type: 'function',
@@ -767,6 +768,12 @@ export class AdvancedEditorAgentGraph {
         },
       },
     ];
+
+    if (!enabledTools || enabledTools.length === 0) {
+      return allTools;
+    }
+
+    return allTools.filter((tool) => enabledTools.includes(tool.function.name));
   }
 
   /**

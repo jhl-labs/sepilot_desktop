@@ -550,19 +550,42 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
 
   logger.info('[Planning] Creating execution plan');
 
+  /* Selection Awareness Logic */
+  let selectionContext = '';
+  if (state.activeFileSelection && state.activeFileSelection.text) {
+    selectionContext = `
+**CRITICAL: SELECTED TEXT DETECTED**
+The user has selected text in the active editor.
+- Text preview: "${state.activeFileSelection.text.substring(0, 50)}..."
+- Range: Line ${state.activeFileSelection.range?.startLineNumber}-${state.activeFileSelection.range?.endLineNumber}
+
+**PLANNING RULE FOR SELECTION:**
+1. The user request usually applies ONLY to the selected text.
+2. DO NOT plan \`file_read\`. The selected text is ALREADY provided to the execution agent.
+3. Plan to \`replace_selection\` directly.
+4. Your plan should be short (2-3 steps):
+   - Step 1: Analyze the selected text and user request.
+   - Step 2: Apply changes using \`replace_selection\`.
+   - Step 3: Verify the change.
+`;
+  }
+
   const planningSystemMessage: Message = {
     id: 'system-plan',
     role: 'system',
     content:
-      "You are SE Pilot, analyzing the user's request to create an execution plan.\n\n" +
-      'CRITICAL: Determine the task type first:\n\n' +
-      'READ-ONLY tasks (정보 요청):\n' +
-      '- Keywords: 요약, 설명, 분석, 리뷰, 검토, 확인, 보기\n' +
-      '- Action: Plan to READ files and RESPOND with analysis\n\n' +
-      'MODIFICATION tasks (작업 요청):\n' +
-      '- Keywords: 생성, 만들기, 작성, 수정, 편집, 변경, 실행\n' +
-      '- Action: Plan to EXECUTE changes using tools\n\n' +
-      'Create a focused execution plan (3-7 steps).',
+      `You are SE Pilot, analyzing the user's request to create an execution plan.\n\n${
+        selectionContext
+      }CRITICAL: Determine the task type first:\n\n` +
+      `READ-ONLY tasks (정보 요청):\n` +
+      `- Keywords: 요약, 설명, 분석, 리뷰, 검토, 확인, 보기\n` +
+      `- Action: Plan to READ files and RESPOND with analysis\n\n` +
+      `MODIFICATION tasks (작업 요청):\n` +
+      `- Keywords: 생성, 만들기, 작성, 수정, 편집, 변경, 실행\n` +
+      `- Action: Plan to EXECUTE changes using tools\n\n` +
+      `Create a focused execution plan (3-7 steps).${
+        selectionContext ? ' (or 2-3 steps for Selection tasks)' : ''
+      }`,
     created_at: Date.now(),
   };
 
@@ -570,10 +593,10 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
     id: 'planning-prompt',
     role: 'user',
     content:
-      `User request:\n${userPrompt}\n\n` +
+      `User request: \n${userPrompt} \n\n` +
       'Create an actionable execution plan:\n\n' +
       '1. First line: [READ-ONLY] or [MODIFICATION]\n' +
-      '2. List 3-7 specific steps',
+      '2. List steps',
     created_at: Date.now(),
   };
 
@@ -590,14 +613,14 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
     }
 
     const planResponse: Message = {
-      id: `plan-${Date.now()}`,
+      id: `plan - ${Date.now()} `,
       role: 'assistant',
       content: planContent,
       created_at: Date.now(),
     };
 
     const executionInstruction: Message = {
-      id: `exec-${Date.now()}`,
+      id: `exec - ${Date.now()} `,
       role: 'user',
       content: `위 계획을 참고하여 '${userPrompt}' 작업을 수행하세요.`,
       created_at: Date.now(),
@@ -621,7 +644,7 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
         5 // Top 5 recommendations
       );
       if (recommendedFiles.length > 0) {
-        logger.info(`[Planning] Recommended files:`, recommendedFiles);
+        logger.info(`[Planning] Recommended files: `, recommendedFiles);
       }
     } catch (error) {
       console.warn('[Planning] Failed to analyze codebase:', error);
@@ -643,7 +666,7 @@ async function planningNode(state: CodingAgentState): Promise<Partial<CodingAgen
   } catch (error: any) {
     console.error('[Planning] Error:', error);
     return {
-      planningNotes: [`Planning failed: ${error.message}`],
+      planningNotes: [`Planning failed: ${error.message} `],
     };
   }
 }
@@ -791,6 +814,26 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
       id: 'system-rag',
       role: 'system',
       content: `참고 문서:\n${ragContext}\n\n위 참고 문서를 작업에 활용하세요.`,
+      created_at: Date.now(),
+    });
+  }
+
+  // Add selection awareness
+  if (state.activeFileSelection && state.activeFileSelection.text) {
+    messagesWithContext.push({
+      id: 'system-selection',
+      role: 'system',
+      content: `**CRITICAL: SELECTED TEXT DETECTED**
+The user has selected the following text (Line ${state.activeFileSelection.range?.startLineNumber}-${state.activeFileSelection.range?.endLineNumber}):
+\`\`\`
+${state.activeFileSelection.text}
+\`\`\`
+
+**INSTRUCTIONS:**
+1. The user LIKELY wants you to modify ONLY this selected text.
+2. You MUST prioritize using the \`replace_selection(text="...")\` tool to update this text directly in the editor.
+3. DO NOT use \`file_edit\` or \`file_write\` unless you are certain the user wants to change files on disk that might mismatch the editor state.
+4. If you use \`replace_selection\`, simply provide the new text that should replace the selection.`,
       created_at: Date.now(),
     });
   }

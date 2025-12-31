@@ -145,6 +145,17 @@ interface ChatStore {
   pendingToolApproval: PendingToolApproval | null;
   alwaysApproveToolsForSession: boolean; // Session-wide auto-approval (like Claude Code)
 
+  // Editor Selection State (for Agent Interaction)
+  activeFileSelection: {
+    text: string;
+    range: {
+      startLineNumber: number;
+      startColumn: number;
+      endLineNumber: number;
+      endColumn: number;
+    } | null;
+  } | null;
+
   // Image Generation Progress (per conversation)
   imageGenerationProgress: Map<string, ImageGenerationProgress>; // conversationId -> progress
 
@@ -182,8 +193,9 @@ interface ChatStore {
   // Editor Settings
   editorAppearanceConfig: EditorAppearanceConfig;
   editorLLMPromptsConfig: EditorLLMPromptsConfig;
-  editorUseRagInAutocomplete: boolean; // RAG 문서 사용 여부 (autocomplete)
-  editorUseToolsInAutocomplete: boolean; // MCP Tools 사용 여부 (autocomplete)
+  editorChatUseRag: boolean; // RAG usage in editor chat
+  editorChatUseTools: boolean; // MCP Tools usage in editor chat
+  editorChatEnabledTools: Set<string>; // Enabled tools for editor chat
   editorAgentMode: 'editor' | 'coding'; // Agent 모드 (editor-agent 또는 coding-agent)
 
   // Chat Mode View
@@ -295,10 +307,11 @@ interface ChatStore {
   addEditorChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => void;
   updateEditorChatMessage: (id: string, updates: Partial<Message>) => void;
   clearEditorChat: () => void;
-  setEditorViewMode: (mode: 'files' | 'search' | 'chat' | 'settings') => void;
+  setEditorViewMode: (mode: 'files' | 'wiki' | 'search' | 'chat' | 'settings') => void;
   setEditorChatStreaming: (isStreaming: boolean) => void;
   refreshFileTree: () => void;
   toggleExpandedFolder: (path: string) => void;
+  addExpandedFolders: (paths: string[]) => void;
   clearExpandedFolders: () => void;
 
   // Actions - Editor Settings
@@ -306,8 +319,9 @@ interface ChatStore {
   resetEditorAppearanceConfig: () => void;
   setEditorLLMPromptsConfig: (config: Partial<EditorLLMPromptsConfig>) => void;
   resetEditorLLMPromptsConfig: () => void;
-  setEditorUseRagInAutocomplete: (enable: boolean) => void;
-  setEditorUseToolsInAutocomplete: (enable: boolean) => void;
+  setEditorChatUseRag: (enable: boolean) => void;
+  setEditorChatUseTools: (enable: boolean) => void;
+  toggleEditorChatTool: (toolName: string) => void;
   setEditorAgentMode: (mode: 'editor' | 'coding') => void;
 
   // Actions - Chat Mode View
@@ -353,6 +367,17 @@ interface ChatStore {
   clearInitialPosition: (path: string) => void;
   closeAllFiles: () => void;
   reorderFiles: (fromIndex: number, toIndex: number) => void;
+  setActiveFileSelection: (
+    selection: {
+      text: string;
+      range: {
+        startLineNumber: number;
+        startColumn: number;
+        endLineNumber: number;
+        endColumn: number;
+      } | null;
+    } | null
+  ) => void;
 
   // Deprecated: kept for backward compatibility
   setGraphType: (type: GraphType) => void;
@@ -394,6 +419,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Tool Approval (Human-in-the-loop)
   pendingToolApproval: null,
   alwaysApproveToolsForSession: false,
+  activeFileSelection: null,
 
   // Image Generation Progress
   imageGenerationProgress: new Map<string, ImageGenerationProgress>(),
@@ -507,13 +533,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     return DEFAULT_EDITOR_LLM_PROMPTS;
   })(),
 
-  // Editor Autocomplete Settings
-  editorUseRagInAutocomplete: (() => {
+  editorChatUseRag: (() => {
     if (typeof window === 'undefined') {
       return false;
     }
     try {
-      const saved = localStorage.getItem('sepilot_editor_use_rag_in_autocomplete');
+      const saved = localStorage.getItem('sepilot_editor_chat_use_rag');
       return saved === 'true';
     } catch (error) {
       console.error('Failed to load editor RAG setting from localStorage:', error);
@@ -521,18 +546,20 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     return false;
   })(),
 
-  editorUseToolsInAutocomplete: (() => {
+  editorChatUseTools: (() => {
     if (typeof window === 'undefined') {
       return false;
     }
     try {
-      const saved = localStorage.getItem('sepilot_editor_use_tools_in_autocomplete');
+      const saved = localStorage.getItem('sepilot_editor_chat_use_tools');
       return saved === 'true';
     } catch (error) {
       console.error('Failed to load editor Tools setting from localStorage:', error);
     }
     return false;
   })(),
+
+  editorChatEnabledTools: new Set<string>(),
 
   editorAgentMode: (() => {
     if (typeof window === 'undefined') {
@@ -1800,11 +1827,24 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }));
   },
 
-  clearEditorChat: () => {
-    set({ editorChatMessages: [], editorChatStreaming: false });
+  clearEditorChat: async () => {
+    const state = get();
+    // Abort streaming if active
+    if (state.editorChatStreaming && isElectron() && window.electronAPI?.langgraph) {
+      try {
+        await window.electronAPI.langgraph.abort('editor-chat-temp');
+      } catch (error) {
+        console.error('[clearEditorChat] Failed to abort streaming:', error);
+      }
+    }
+    set({
+      editorChatMessages: [],
+      editorChatStreaming: false,
+      pendingToolApproval: null, // Clear any pending approval that might block UI
+    });
   },
 
-  setEditorViewMode: (mode: 'files' | 'search' | 'chat' | 'settings') => {
+  setEditorViewMode: (mode: 'files' | 'wiki' | 'search' | 'chat' | 'settings') => {
     set({ editorViewMode: mode });
   },
 
@@ -1824,6 +1864,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       } else {
         newExpanded.add(path);
       }
+      return { expandedFolderPaths: newExpanded };
+    });
+  },
+
+  addExpandedFolders: (paths: string[]) => {
+    set((state) => {
+      const newExpanded = new Set(state.expandedFolderPaths);
+      paths.forEach((path) => newExpanded.add(path));
       return { expandedFolderPaths: newExpanded };
     });
   },
@@ -1867,18 +1915,31 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
-  setEditorUseRagInAutocomplete: (enable: boolean) => {
-    set({ editorUseRagInAutocomplete: enable });
+  setEditorChatUseRag: (enable: boolean) => {
+    set({ editorChatUseRag: enable });
     if (typeof window !== 'undefined') {
-      localStorage.setItem('sepilot_editor_use_rag_in_autocomplete', enable.toString());
+      localStorage.setItem('sepilot_editor_chat_use_rag', enable.toString());
     }
   },
 
-  setEditorUseToolsInAutocomplete: (enable: boolean) => {
-    set({ editorUseToolsInAutocomplete: enable });
+  setEditorChatUseTools: (enable: boolean) => {
+    set({ editorChatUseTools: enable });
     if (typeof window !== 'undefined') {
-      localStorage.setItem('sepilot_editor_use_tools_in_autocomplete', enable.toString());
+      localStorage.setItem('sepilot_editor_chat_use_tools', enable.toString());
     }
+  },
+
+  toggleEditorChatTool: (toolName: string) => {
+    set((state) => {
+      const newEnabled = new Set(state.editorChatEnabledTools);
+      if (newEnabled.has(toolName)) {
+        newEnabled.delete(toolName);
+      } else {
+        newEnabled.add(toolName);
+      }
+      // Save logic if needed, typically tool selection persists per session or project
+      return { editorChatEnabledTools: newEnabled };
+    });
   },
 
   setEditorAgentMode: (mode: 'editor' | 'coding') => {
@@ -2035,6 +2096,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       newFiles.splice(toIndex, 0, movedFile);
       return { openFiles: newFiles };
     });
+  },
+
+  setActiveFileSelection: (selection) => {
+    set({ activeFileSelection: selection });
   },
 
   // Persona Actions

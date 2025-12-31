@@ -12,11 +12,16 @@ import { registerTerminalTools } from './terminal-tools';
 import { registerGitTools } from './git-tools';
 import { registerCodeTools } from './code-tools';
 
+import { registerEditorActionTools } from './editor-actions';
+
 /**
  * 모든 Tool 등록
  */
 export function registerAllEditorTools(): void {
   logger.info('[EditorTools] Registering all tools...');
+
+  // Phase 1: Editor Action Tools 등록 (New)
+  registerEditorActionTools(editorToolsRegistry);
 
   // Phase 2: 파일 관리 Tools 등록
   registerFileTools(editorToolsRegistry);

@@ -219,6 +219,22 @@ export const CodingAgentStateAnnotation = Annotation.Root({
     reducer: (_existing: string, update: string) => update || _existing,
     default: () => '',
   }),
+  activeFileSelection: Annotation<
+    | {
+        text: string;
+        range: {
+          startLineNumber: number;
+          startColumn: number;
+          endLineNumber: number;
+          endColumn: number;
+        } | null;
+      }
+    | null
+    | undefined
+  >({
+    reducer: (_existing, update) => update,
+    default: () => null,
+  }),
   // Token & Cost Tracking
   totalTokensUsed: Annotation<number>({
     reducer: (existing: number, update: number) => existing + update,
@@ -291,7 +307,16 @@ export function createInitialCodingAgentState(
   messages: Message[] = [],
   conversationId: string = '',
   maxIterations: number = 50,
-  workingDirectory: string = ''
+  workingDirectory: string = '',
+  activeFileSelection: {
+    text: string;
+    range: {
+      startLineNumber: number;
+      startColumn: number;
+      endLineNumber: number;
+      endColumn: number;
+    } | null;
+  } | null = null
 ): CodingAgentState {
   return {
     messages,
@@ -322,5 +347,6 @@ export function createInitialCodingAgentState(
     totalTokensUsed: 0,
     estimatedCost: 0,
     workingDirectory,
+    activeFileSelection,
   };
 }

@@ -323,7 +323,9 @@ export class GraphFactory {
       (initialState as any).editorContext = {
         ...(initialState as any).editorContext,
         useTools: config.enableTools,
+        enabledTools: config.enabledTools,
         workingDirectory: config.workingDirectory,
+        activeFileSelection: config.activeFileSelection,
       };
     }
 
@@ -384,7 +386,8 @@ export class GraphFactory {
         messages,
         conversationId,
         options?.maxIterations || 50,
-        config.workingDirectory || process.cwd()
+        config.workingDirectory || process.cwd(),
+        config.activeFileSelection
       );
 
       // Use the CodingAgentGraph's stream method with tool approval callback
@@ -750,7 +753,9 @@ export class GraphFactory {
       (initialState as any).editorContext = {
         ...(initialState as any).editorContext,
         useTools: config.enableTools,
+        enabledTools: config.enabledTools,
         workingDirectory: config.workingDirectory,
+        activeFileSelection: config.activeFileSelection,
       };
 
       for await (const event of graph.stream(initialState, options?.toolApprovalCallback)) {

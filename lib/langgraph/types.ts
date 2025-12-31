@@ -26,6 +26,16 @@ export interface FeatureToggles {
 export interface GraphConfig extends FeatureToggles {
   thinkingMode: ThinkingMode;
   workingDirectory?: string;
+  enabledTools?: string[];
+  activeFileSelection?: {
+    text: string;
+    range: {
+      startLineNumber: number;
+      startColumn: number;
+      endLineNumber: number;
+      endColumn: number;
+    } | null;
+  } | null;
 }
 
 // State 타입은 client-types.ts에 정의됨 (state.ts는 런타임 코드 포함)

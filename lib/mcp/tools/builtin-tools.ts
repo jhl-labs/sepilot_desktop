@@ -405,8 +405,56 @@ export async function executeBuiltinTool(
       return await handleGoogleVisitResult(args as unknown as GoogleVisitResultOptions);
     case 'google_next_page':
       return await handleGoogleNextPage();
+    case 'replace_selection':
+      return await handleReplaceSelection(args as { text: string });
     default:
       throw new Error(`Unknown builtin tool: ${toolName}`);
+  }
+}
+
+/**
+ * Replace Selection Tool
+ */
+export const replaceSelectionTool: MCPTool = {
+  name: 'replace_selection',
+  description:
+    'Replace the currently selected text in the active editor with new text. Use this when the user has selected text they want to modify.',
+  serverName: 'builtin',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      text: {
+        type: 'string',
+        description: 'The new text to replace the selection with.',
+      },
+    },
+    required: ['text'],
+  },
+};
+
+/**
+ * Handle replace_selection
+ */
+async function handleReplaceSelection(args: { text: string }): Promise<string> {
+  // Dynamic import for Electron (safe for non-electron envs if needed, though this app is Electron-first)
+  try {
+    const { BrowserWindow } = await import('electron');
+    const windows = BrowserWindow.getAllWindows();
+    if (windows.length === 0) {
+      throw new Error('No active window found to send replace command');
+    }
+    // Assume main window is the first one or the focused one
+    const win = BrowserWindow.getFocusedWindow() || windows[0];
+    if (!win) {
+      throw new Error('No focused or available window found');
+    }
+
+    // We send the 'editor:replace-selection' event which SingleFileEditor.tsx listens to
+    win.webContents.send('editor:replace-selection', args.text);
+    return `Successfully sent replace command to editor with text length: ${args.text.length}`;
+  } catch (error: any) {
+    logger.error('[Builtin Tools] Failed to replace selection', error);
+    throw new Error(`Failed to replace selection: ${error.message}`);
   }
 }
 
@@ -1481,5 +1529,6 @@ export function getBuiltinTools(): MCPTool[] {
     googleGetRelatedSearchesTool,
     googleVisitResultTool,
     googleNextPageTool,
+    replaceSelectionTool,
   ];
 }

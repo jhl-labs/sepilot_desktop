@@ -38,6 +38,15 @@ export interface EditorAgentState extends AgentState {
     useRag?: boolean; // RAG 문서 사용 여부
     useTools?: boolean; // MCP Tools 사용 여부
     enabledTools?: string[]; // 활성화된 도구 목록
+    activeFileSelection?: {
+      text: string;
+      range: {
+        startLineNumber: number;
+        startColumn: number;
+        endLineNumber: number;
+        endColumn: number;
+      } | null;
+    } | null;
   };
   // RAG 관련 상태
   ragDocuments?: Array<{
@@ -411,6 +420,17 @@ export class EditorAgentGraph {
 - Current File: ${state.editorContext?.filePath || 'none'}
 - Language: ${state.editorContext?.language || 'unknown'}
 - Action Type: ${state.editorContext?.action || 'general'}
+- Selected Text: ${
+        state.editorContext?.activeFileSelection?.text
+          ? `\n\`\`\`\n${state.editorContext.activeFileSelection.text}\n\`\`\`\n(Line ${state.editorContext.activeFileSelection.range?.startLineNumber} - ${state.editorContext.activeFileSelection.range?.endLineNumber})`
+          : 'None'
+      }
+
+**CRITICAL INSTRUCTION FOR SELECTION:**
+If "Selected Text" is present above, the user likely wants to modify ONLY that specific part.
+- Use 'replace_selection' tool to replace the currently selected text directly.
+- Do NOT use write_file or edit_file unless you intend to modify parts outside the selection or the whole file.
+- Prioritize handling the selection over global file changes.
 
 **CRITICAL: Available Tools (LOCAL ONLY)**
 You ONLY have access to LOCAL file system tools. You CANNOT access external APIs or remote repositories.
@@ -609,6 +629,12 @@ ${ragContext}
       ])
     );
     tools.push(...codeTools);
+
+    // Always include editor action tools from registry
+    const editorActionTools = editorToolsRegistry.toOpenAIFormat(
+      filterTools(['replace_selection'])
+    );
+    tools.push(...editorActionTools);
 
     return tools;
   }
