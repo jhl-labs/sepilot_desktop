@@ -97,12 +97,6 @@
       },
       "saved": "General settings saved!"
     },
-    "editor": {
-      "saved": "Editor settings saved!"
-    },
-    "browser": {
-      "saved": "Browser settings saved!"
-    },
     "llm": {
       "title": "LLM",
       "description": "LLM provider and model settings",
@@ -1129,6 +1123,8 @@
         "toggleTheme": "Toggle Theme",
         "aiAssistant": "AI Coding Assistant",
         "newChat": "New Chat",
+        "chatRagStatus": "RAG: {{status}}",
+        "chatToolsStatus": "Tools: {{status}}",
         "autocompleteToolsStatus": "Autocomplete Tools ({{status}})",
         "autocompleteRagStatus": "Autocomplete RAG ({{status}})",
         "documentManagement": "Document Management (RAG)",
@@ -2029,7 +2025,7 @@
     "copyPath": "Copy Path",
     "revealInExplorer": "Reveal in Explorer",
     "selectDirectory": "Select Directory",
-    "expandFirstLevel": "Expand First Level Folders",
+    "expandAll": "Expand All Folders",
     "collapseAll": "Collapse All",
     "refreshShortcut": "Refresh (F5)",
     "selectDirectoryHint": "Select a directory",
@@ -2072,7 +2068,47 @@
     "title": "Wiki Tree",
     "loading": "Loading markdown files...",
     "selectDirectoryMessage": "Select a directory to start Wiki tree",
-    "noMarkdownFiles": "No markdown files found"
+    "noMarkdownFiles": "No markdown files found",
+    "contextMenu": {
+      "pin": "Pin to Top",
+      "unpin": "Unpin",
+      "addToFavorites": "Add to Favorites",
+      "removeFromFavorites": "Remove from Favorites",
+      "hide": "Hide",
+      "show": "Show",
+      "addToGroup": "Add to Group",
+      "removeFromGroup": "Remove from Group",
+      "createGroup": "Create New Group",
+      "changeColor": "Change Color",
+      "removeColor": "Remove Color",
+      "changeIcon": "Change Icon",
+      "move": "Move",
+      "rename": "Rename",
+      "deleteGroup": "Delete Group"
+    },
+    "groupDialog": {
+      "createTitle": "Create New Group",
+      "editTitle": "Edit Group",
+      "createDescription": "Create a new group to organize files in Wiki tree",
+      "editDescription": "Edit group information",
+      "name": "Group Name",
+      "namePlaceholder": "e.g., Getting Started, Tutorials...",
+      "icon": "Icon (Optional)",
+      "color": "Color (Optional)",
+      "selectedIcon": "Selected Icon",
+      "clearIcon": "Clear",
+      "selectedColor": "Selected Color",
+      "clearColor": "Clear",
+      "preview": "Preview",
+      "untitled": "Untitled"
+    },
+    "iconDialog": {
+      "title": "Select Icon",
+      "description": "Choose an icon for the file or group",
+      "selectIcon": "Select Icon",
+      "selected": "Selected",
+      "clear": "Clear"
+    }
   },
   "editor": {
     "untitled": "Untitled",

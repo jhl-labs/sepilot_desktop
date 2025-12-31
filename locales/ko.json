@@ -97,12 +97,6 @@
       },
       "saved": "일반 설정이 저장되었습니다!"
     },
-    "editor": {
-      "saved": "Editor 설정이 저장되었습니다!"
-    },
-    "browser": {
-      "saved": "Browser 설정이 저장되었습니다!"
-    },
     "llm": {
       "title": "LLM",
       "description": "LLM 제공자 및 모델 설정",
@@ -1131,6 +1125,8 @@
         "toggleTheme": "테마 전환",
         "aiAssistant": "AI 코딩 어시스턴트",
         "newChat": "새 대화",
+        "chatRagStatus": "RAG: {{status}}",
+        "chatToolsStatus": "도구: {{status}}",
         "autocompleteToolsStatus": "Autocomplete Tools ({{status}})",
         "autocompleteRagStatus": "Autocomplete RAG ({{status}})",
         "documentManagement": "문서 관리 (RAG)",
@@ -2019,7 +2015,7 @@
     "copyPath": "경로 복사",
     "revealInExplorer": "탐색기에서 보기",
     "selectDirectory": "디렉토리 선택",
-    "expandFirstLevel": "첫 번째 레벨 폴더 펼치기",
+    "expandAll": "모든 폴더 펼치기",
     "collapseAll": "모두 접기",
     "refreshShortcut": "새로고침 (F5)",
     "selectDirectoryHint": "디렉토리를 선택하세요",
@@ -2062,7 +2058,47 @@
     "title": "Wiki 트리",
     "loading": "마크다운 파일 로딩 중...",
     "selectDirectoryMessage": "디렉토리를 선택하여 Wiki 트리를 시작하세요",
-    "noMarkdownFiles": "마크다운 파일을 찾을 수 없습니다"
+    "noMarkdownFiles": "마크다운 파일을 찾을 수 없습니다",
+    "contextMenu": {
+      "pin": "상단에 고정",
+      "unpin": "고정 해제",
+      "addToFavorites": "즐겨찾기에 추가",
+      "removeFromFavorites": "즐겨찾기에서 제거",
+      "hide": "숨기기",
+      "show": "보이기",
+      "addToGroup": "그룹에 추가",
+      "removeFromGroup": "그룹에서 제거",
+      "createGroup": "새 그룹 만들기",
+      "changeColor": "색상 변경",
+      "removeColor": "색상 제거",
+      "changeIcon": "아이콘 변경",
+      "move": "이동",
+      "rename": "이름 변경",
+      "deleteGroup": "그룹 삭제"
+    },
+    "groupDialog": {
+      "createTitle": "새 그룹 만들기",
+      "editTitle": "그룹 편집",
+      "createDescription": "Wiki 트리에서 파일을 그룹화할 새 그룹을 만드세요",
+      "editDescription": "그룹 정보를 수정하세요",
+      "name": "그룹 이름",
+      "namePlaceholder": "예: Getting Started, Tutorials...",
+      "icon": "아이콘 (선택사항)",
+      "color": "색상 (선택사항)",
+      "selectedIcon": "선택된 아이콘",
+      "clearIcon": "제거",
+      "selectedColor": "선택된 색상",
+      "clearColor": "제거",
+      "preview": "미리보기",
+      "untitled": "제목 없음"
+    },
+    "iconDialog": {
+      "title": "아이콘 선택",
+      "description": "파일 또는 그룹에 사용할 아이콘을 선택하세요",
+      "selectIcon": "아이콘 선택",
+      "selected": "선택됨",
+      "clear": "제거"
+    }
   },
   "editor": {
     "untitled": "제목 없음",
@@ -2077,6 +2113,7 @@
     "replace": "바꾸기",
     "goToLine": "줄 이동",
     "formatDocument": "문서 서식",
+    "saved": "Editor 설정이 저장되었습니다!",
     "settings": {
       "title": "Editor 설정",
       "appearance": {
