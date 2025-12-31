@@ -610,6 +610,15 @@ const electronAPI = {
     executeScript: (script: string) => ipcRenderer.invoke('browser-control:execute-script', script),
   },
 
+  // Editor operations
+  editor: {
+    onReplaceSelection: (callback: (event: any, text: string) => void) => {
+      const handler = (_: any, text: string) => callback(_, text);
+      ipcRenderer.on('editor:replace-selection', handler);
+      return () => ipcRenderer.removeListener('editor:replace-selection', handler);
+    },
+  },
+
   // Terminal operations
   terminal: {
     // Session management
