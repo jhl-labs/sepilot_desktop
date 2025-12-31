@@ -123,7 +123,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
       <div className="flex h-full w-full flex-col">
         {/* Content Area */}
         <div className="flex-1 min-h-0">
-          {editorViewMode === 'files' ? (
+          {editorViewMode === 'files' || editorViewMode === 'wiki' ? (
             <FileExplorer />
           ) : editorViewMode === 'search' ? (
             <SearchPanel />
