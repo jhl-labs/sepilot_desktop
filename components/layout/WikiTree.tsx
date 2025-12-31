@@ -34,6 +34,7 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
+  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
@@ -66,6 +67,8 @@ interface SortableFileItemProps {
   config: WikiTreeFile | null;
   isActive: boolean;
   isExpanded: boolean;
+  childFiles?: WikiFileNode[]; // Child files for nesting
+  depth?: number; // Nesting depth
   onFileClick: (file: WikiFileNode) => void;
   onToggleExpanded: (filePath: string) => void;
   onPin: () => void;
@@ -81,6 +84,8 @@ function SortableFileItem({
   config,
   isActive,
   isExpanded,
+  childFiles = [],
+  depth = 0,
   onFileClick,
   onToggleExpanded,
   onPin,
@@ -101,6 +106,8 @@ function SortableFileItem({
   };
 
   const hasHeadings = file.headings.length > 0;
+  const hasChildren = childFiles.length > 0;
+  const hasExpandable = hasHeadings || hasChildren;
   const isPinned = config?.pinned || false;
   const isFavorite = config?.favorite || false;
   const customColor = config?.color ? WIKI_COLORS[config.color as WikiColor] : undefined;
@@ -123,7 +130,7 @@ function SortableFileItem({
         onChangeColor={onChangeColor}
         onChangeIcon={onChangeIcon}
       >
-        <div>
+        <div style={{ marginLeft: `${depth * 16}px` }}>
           <div
             className={`flex items-center gap-1 py-1 px-1 rounded cursor-pointer group ${
               isActive ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'
@@ -132,7 +139,7 @@ function SortableFileItem({
             {...listeners}
           >
             {/* Chevron */}
-            {hasHeadings ? (
+            {hasExpandable ? (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -187,6 +194,33 @@ function SortableFileItem({
           {isExpanded && hasHeadings && (
             <div className="ml-5 mt-0.5 space-y-0.5">
               {file.headings.map((headingNode) => renderHeadingNode(headingNode, isActive))}
+            </div>
+          )}
+
+          {/* Child Files (Nested Pages) */}
+          {isExpanded && hasChildren && (
+            <div className="mt-0.5 space-y-0.5">
+              {childFiles.map((childFile) => {
+                const childConfig = config || null;
+                return (
+                  <SortableFileItem
+                    key={childFile.path}
+                    file={childFile}
+                    config={childConfig}
+                    isActive={false}
+                    isExpanded={false}
+                    depth={depth + 1}
+                    onFileClick={onFileClick}
+                    onToggleExpanded={onToggleExpanded}
+                    onPin={onPin}
+                    onUnpin={onUnpin}
+                    onFavorite={onFavorite}
+                    onUnfavorite={onUnfavorite}
+                    onChangeColor={onChangeColor}
+                    onChangeIcon={onChangeIcon}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -352,6 +386,30 @@ export function WikiTree() {
     }
   };
 
+  // Get children files for nesting
+  const getChildren = useCallback(
+    (parentPath: string): WikiFileNode[] => {
+      return wikiFiles
+        .filter((file) => {
+          const fileConfig = wikiConfig.files[file.path];
+          return fileConfig?.parentId === parentPath && !fileConfig?.hidden;
+        })
+        .sort((a, b) => {
+          const aConfig = wikiConfig.files[a.path];
+          const bConfig = wikiConfig.files[b.path];
+          const aOrder = aConfig?.order ?? Infinity;
+          const bOrder = bConfig?.order ?? Infinity;
+
+          if (aOrder !== bOrder) {
+            return aOrder - bOrder;
+          }
+
+          return a.title.localeCompare(b.title);
+        });
+    },
+    [wikiFiles, wikiConfig]
+  );
+
   const toggleExpanded = (filePath: string) => {
     setExpandedFiles((prev) => {
       const next = new Set(prev);
@@ -481,8 +539,78 @@ export function WikiTree() {
       return;
     }
 
-    // TODO: Implement drag and drop logic
-    console.log('[WikiTree] Drag end:', active.id, over.id);
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Find which section the files belong to
+    const { pinnedFiles, ungroupedFiles, groupedFiles } = organizedFiles();
+
+    const isActivePinned = pinnedFiles.some((f) => f.path === activeId);
+    const isOverPinned = pinnedFiles.some((f) => f.path === overId);
+    const isActiveUngrouped = ungroupedFiles.some((f) => f.path === activeId);
+    const isOverUngrouped = ungroupedFiles.some((f) => f.path === overId);
+
+    let activeGroupId: string | undefined;
+    let overGroupId: string | undefined;
+
+    groupedFiles.forEach((files, groupId) => {
+      if (files.some((f) => f.path === activeId)) {
+        activeGroupId = groupId;
+      }
+      if (files.some((f) => f.path === overId)) {
+        overGroupId = groupId;
+      }
+    });
+
+    // Determine if this is reordering or nesting
+    const updatedFiles = { ...wikiConfig.files };
+
+    // Helper to update file order
+    const updateOrder = (filePaths: string[]) => {
+      filePaths.forEach((path, index) => {
+        if (!updatedFiles[path]) {
+          updatedFiles[path] = { id: path, order: index };
+        } else {
+          updatedFiles[path] = { ...updatedFiles[path], order: index };
+        }
+      });
+    };
+
+    // Reorder within the same section
+    if (isActivePinned && isOverPinned) {
+      // Reorder pinned files
+      const oldIndex = pinnedFiles.findIndex((f) => f.path === activeId);
+      const newIndex = pinnedFiles.findIndex((f) => f.path === overId);
+      const reordered = arrayMove(pinnedFiles, oldIndex, newIndex);
+      updateOrder(reordered.map((f) => f.path));
+      saveConfig({ ...wikiConfig, files: updatedFiles, pinnedFiles: reordered.map((f) => f.path) });
+    } else if (isActiveUngrouped && isOverUngrouped) {
+      // Reorder ungrouped files
+      const oldIndex = ungroupedFiles.findIndex((f) => f.path === activeId);
+      const newIndex = ungroupedFiles.findIndex((f) => f.path === overId);
+      const reordered = arrayMove(ungroupedFiles, oldIndex, newIndex);
+      updateOrder(reordered.map((f) => f.path));
+      saveConfig({ ...wikiConfig, files: updatedFiles });
+    } else if (activeGroupId && overGroupId && activeGroupId === overGroupId) {
+      // Reorder within the same group
+      const groupFiles = groupedFiles.get(activeGroupId)!;
+      const oldIndex = groupFiles.findIndex((f) => f.path === activeId);
+      const newIndex = groupFiles.findIndex((f) => f.path === overId);
+      const reordered = arrayMove(groupFiles, oldIndex, newIndex);
+      updateOrder(reordered.map((f) => f.path));
+      saveConfig({ ...wikiConfig, files: updatedFiles });
+    } else {
+      // Moving between sections or nesting - set as child of over
+      if (!updatedFiles[activeId]) {
+        updatedFiles[activeId] = { id: activeId, order: 0 };
+      }
+      updatedFiles[activeId] = {
+        ...updatedFiles[activeId],
+        parentId: overId,
+        order: 0,
+      };
+      saveConfig({ ...wikiConfig, files: updatedFiles });
+    }
   };
 
   // Organize files
@@ -497,6 +625,11 @@ export function WikiTree() {
 
       // Skip hidden files
       if (fileConfig?.hidden || config.hiddenFiles.includes(file.path)) {
+        return;
+      }
+
+      // Skip files that have a parent (they'll be rendered as children)
+      if (fileConfig?.parentId) {
         return;
       }
 
@@ -616,6 +749,7 @@ export function WikiTree() {
                   config={fileConfig}
                   isActive={activeFilePath === file.path}
                   isExpanded={expandedFiles.has(file.path)}
+                  childFiles={getChildren(file.path)}
                   onFileClick={handleFileClick}
                   onToggleExpanded={toggleExpanded}
                   onPin={() => handlePin(file.path)}
@@ -701,6 +835,7 @@ export function WikiTree() {
                       config={fileConfig}
                       isActive={activeFilePath === file.path}
                       isExpanded={expandedFiles.has(file.path)}
+                      childFiles={getChildren(file.path)}
                       onFileClick={handleFileClick}
                       onToggleExpanded={toggleExpanded}
                       onPin={() => handlePin(file.path)}
@@ -740,6 +875,7 @@ export function WikiTree() {
                       config={fileConfig}
                       isActive={activeFilePath === file.path}
                       isExpanded={expandedFiles.has(file.path)}
+                      childFiles={getChildren(file.path)}
                       onFileClick={handleFileClick}
                       onToggleExpanded={toggleExpanded}
                       onPin={() => handlePin(file.path)}

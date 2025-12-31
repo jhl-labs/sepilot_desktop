@@ -22,6 +22,7 @@ export interface WikiTreeFile {
   icon?: string; // Custom icon/emoji
   color?: string; // Custom color
   groupId?: string; // Parent group ID
+  parentId?: string; // Parent file path for nesting
   favorite?: boolean; // Starred/favorited
   customTitle?: string; // Override file title
 }
