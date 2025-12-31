@@ -32,6 +32,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -542,6 +543,9 @@ export function WikiTree() {
     const activeId = active.id as string;
     const overId = over.id as string;
 
+    // Check if overId is a group ID
+    const isOverGroup = groups.some((g) => g.id === overId);
+
     // Find which section the files belong to
     const { pinnedFiles, ungroupedFiles, groupedFiles } = organizedFiles();
 
@@ -576,6 +580,24 @@ export function WikiTree() {
       });
     };
 
+    // Moving to a group
+    if (isOverGroup) {
+      if (!updatedFiles[activeId]) {
+        updatedFiles[activeId] = { id: activeId, order: 0 };
+      }
+      updatedFiles[activeId] = {
+        ...updatedFiles[activeId],
+        groupId: overId,
+        parentId: undefined, // Remove parent if moving to group
+        pinned: false, // Remove pinned status
+        order: 0,
+      };
+      // Remove from pinnedFiles if it was pinned
+      const updatedPinnedFiles = wikiConfig.pinnedFiles.filter((f) => f !== activeId);
+      saveConfig({ ...wikiConfig, files: updatedFiles, pinnedFiles: updatedPinnedFiles });
+      return;
+    }
+
     // Reorder within the same section
     if (isActivePinned && isOverPinned) {
       // Reorder pinned files
@@ -607,6 +629,7 @@ export function WikiTree() {
       updatedFiles[activeId] = {
         ...updatedFiles[activeId],
         parentId: overId,
+        groupId: undefined, // Remove group if nesting as child
         order: 0,
       };
       saveConfig({ ...wikiConfig, files: updatedFiles });
@@ -678,65 +701,88 @@ export function WikiTree() {
 
   const { pinnedFiles, groups, groupedFiles, ungroupedFiles } = organizedFiles();
 
-  // Render group
-  const renderGroup = (group: WikiTreeGroup) => {
-    const isExpanded = expandedGroups.has(group.id);
-    const files = groupedFiles.get(group.id) || [];
+  // Group Header Component with droppable
+  const GroupHeader = ({
+    group,
+    isExpanded,
+    filesCount,
+  }: {
+    group: WikiTreeGroup;
+    isExpanded: boolean;
+    filesCount: number;
+  }) => {
+    const { setNodeRef, isOver } = useDroppable({
+      id: group.id,
+    });
+
     const GroupIcon = group.icon ? (Icons[group.icon as keyof typeof Icons] as any) : Folder;
     const groupColor = group.color ? WIKI_COLORS[group.color as WikiColor] : undefined;
 
     return (
-      <div key={group.id} className="mb-2">
-        <WikiTreeContextMenu
-          itemType="group"
-          itemId={group.id}
-          itemName={group.name}
-          currentColor={group.color}
-          onChangeColor={(color) => {
-            const updatedGroups = groups.map((g) => (g.id === group.id ? { ...g, color } : g));
-            saveConfig({ ...wikiConfig, groups: updatedGroups });
-          }}
-          onChangeIcon={() => {
-            setIconDialogTarget({ type: 'group', id: group.id });
-            setIconDialogOpen(true);
-          }}
-          onRename={() => {
-            setEditingGroup(group);
-            setGroupDialogMode('edit');
-            setGroupDialogOpen(true);
-          }}
-          onDelete={() => {
-            if (window.confirm(t('wikiTree.confirmDeleteGroup', { name: group.name }))) {
-              const updatedGroups = groups.filter((g) => g.id !== group.id);
-              // Remove group from files
-              const updatedFiles = { ...wikiConfig.files };
-              Object.keys(updatedFiles).forEach((filePath) => {
-                if (updatedFiles[filePath].groupId === group.id) {
-                  delete updatedFiles[filePath].groupId;
-                }
-              });
-              saveConfig({ ...wikiConfig, groups: updatedGroups, files: updatedFiles });
-            }
-          }}
+      <WikiTreeContextMenu
+        itemType="group"
+        itemId={group.id}
+        itemName={group.name}
+        currentColor={group.color}
+        onChangeColor={(color) => {
+          const updatedGroups = groups.map((g) => (g.id === group.id ? { ...g, color } : g));
+          saveConfig({ ...wikiConfig, groups: updatedGroups });
+        }}
+        onChangeIcon={() => {
+          setIconDialogTarget({ type: 'group', id: group.id });
+          setIconDialogOpen(true);
+        }}
+        onRename={() => {
+          setEditingGroup(group);
+          setGroupDialogMode('edit');
+          setGroupDialogOpen(true);
+        }}
+        onDelete={() => {
+          if (window.confirm(t('wikiTree.confirmDeleteGroup', { name: group.name }))) {
+            const updatedGroups = groups.filter((g) => g.id !== group.id);
+            // Remove group from files
+            const updatedFiles = { ...wikiConfig.files };
+            Object.keys(updatedFiles).forEach((filePath) => {
+              if (updatedFiles[filePath].groupId === group.id) {
+                delete updatedFiles[filePath].groupId;
+              }
+            });
+            saveConfig({ ...wikiConfig, groups: updatedGroups, files: updatedFiles });
+          }
+        }}
+      >
+        <div
+          ref={setNodeRef}
+          className={`flex items-center gap-1 py-1 px-1 rounded cursor-pointer hover:bg-muted/50 mb-1 ${
+            isOver ? 'bg-primary/20 ring-1 ring-primary' : ''
+          }`}
+          onClick={() => toggleGroupExpanded(group.id)}
         >
-          <div
-            className="flex items-center gap-1 py-1 px-1 rounded cursor-pointer hover:bg-muted/50 mb-1"
-            onClick={() => toggleGroupExpanded(group.id)}
-          >
-            <button className="shrink-0 p-0.5">
-              {isExpanded ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-            </button>
-            {GroupIcon && <GroupIcon className="h-4 w-4 shrink-0" style={{ color: groupColor }} />}
-            <span className="text-sm font-medium" style={{ color: groupColor }}>
-              {group.name}
-            </span>
-            <span className="text-xs text-muted-foreground ml-auto">{files.length}</span>
-          </div>
-        </WikiTreeContextMenu>
+          <button className="shrink-0 p-0.5">
+            {isExpanded ? (
+              <ChevronDown className="h-3 w-3" />
+            ) : (
+              <ChevronRight className="h-3 w-3" />
+            )}
+          </button>
+          {GroupIcon && <GroupIcon className="h-4 w-4 shrink-0" style={{ color: groupColor }} />}
+          <span className="text-sm font-medium" style={{ color: groupColor }}>
+            {group.name}
+          </span>
+          <span className="text-xs text-muted-foreground ml-auto">{filesCount}</span>
+        </div>
+      </WikiTreeContextMenu>
+    );
+  };
+
+  // Render group
+  const renderGroup = (group: WikiTreeGroup) => {
+    const isExpanded = expandedGroups.has(group.id);
+    const files = groupedFiles.get(group.id) || [];
+
+    return (
+      <div key={group.id} className="mb-2">
+        <GroupHeader group={group} isExpanded={isExpanded} filesCount={files.length} />
 
         {isExpanded && (
           <div className="ml-4 space-y-0.5">
