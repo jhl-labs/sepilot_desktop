@@ -2069,6 +2069,9 @@
     "loading": "Loading markdown files...",
     "selectDirectoryMessage": "Select a directory to start Wiki tree",
     "noMarkdownFiles": "No markdown files found",
+    "pinned": "Pinned",
+    "ungrouped": "Ungrouped",
+    "confirmDeleteGroup": "Delete \"{{name}}\" group?",
     "contextMenu": {
       "pin": "Pin to Top",
       "unpin": "Unpin",

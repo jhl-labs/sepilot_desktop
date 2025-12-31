@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { WIKI_COLORS, WIKI_ICONS, WikiColor, WikiIcon } from '@/types/wiki-tree';
+import { WIKI_COLORS, WIKI_ICONS, WikiColor } from '@/types/wiki-tree';
 import * as Icons from 'lucide-react';
 
 export interface WikiGroupDialogProps {
@@ -49,7 +49,9 @@ export function WikiGroupDialog({
   }, [open, initialData]);
 
   const handleSave = () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      return;
+    }
 
     onSave({
       name: name.trim(),
@@ -101,7 +103,9 @@ export function WikiGroupDialog({
             <div className="grid grid-cols-10 gap-2 p-4 border rounded-md max-h-60 overflow-y-auto">
               {WIKI_ICONS.map((iconName) => {
                 const IconComponent = Icons[iconName as keyof typeof Icons] as any;
-                if (!IconComponent) return null;
+                if (!IconComponent) {
+                  return null;
+                }
 
                 return (
                   <button
@@ -175,19 +179,20 @@ export function WikiGroupDialog({
             <Label>{t('wikiTree.groupDialog.preview')}</Label>
             <div className="p-4 border rounded-md bg-muted/30">
               <div className="flex items-center gap-2">
-                {selectedIcon && (() => {
-                  const IconComponent = Icons[selectedIcon as keyof typeof Icons] as any;
-                  return IconComponent ? (
-                    <IconComponent
-                      className="h-5 w-5"
-                      style={{
-                        color: selectedColor
-                          ? WIKI_COLORS[selectedColor as WikiColor]
-                          : undefined,
-                      }}
-                    />
-                  ) : null;
-                })()}
+                {selectedIcon &&
+                  (() => {
+                    const IconComponent = Icons[selectedIcon as keyof typeof Icons] as any;
+                    return IconComponent ? (
+                      <IconComponent
+                        className="h-5 w-5"
+                        style={{
+                          color: selectedColor
+                            ? WIKI_COLORS[selectedColor as WikiColor]
+                            : undefined,
+                        }}
+                      />
+                    ) : null;
+                  })()}
                 <span
                   className="font-medium"
                   style={{

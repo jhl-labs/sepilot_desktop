@@ -11,7 +11,10 @@ import { FileExplorer } from './FileExplorer';
 import { SearchPanel } from '@/components/editor/SearchPanel';
 import { EditorChatContainer } from '@/components/editor/EditorChatContainer';
 import { EditorSettings } from '@/components/editor/EditorSettings';
+import { EditorToolsList } from '@/components/editor/EditorToolsList';
 import { ToolApprovalDialog } from '@/components/chat/ToolApprovalDialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import { isElectron } from '@/lib/platform';
 import { BetaConfig } from '@/types';
 import { cn } from '@/lib/utils';
@@ -29,10 +32,12 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
     setShowTerminalPanel,
     workingDirectory,
     loadWorkingDirectory,
-    editorUseRagInAutocomplete,
-    setEditorUseRagInAutocomplete,
-    editorUseToolsInAutocomplete,
-    setEditorUseToolsInAutocomplete,
+    editorChatUseRag,
+    setEditorChatUseRag,
+    editorChatUseTools,
+    setEditorChatUseTools,
+    editorChatEnabledTools,
+    toggleEditorChatTool,
     pendingToolApproval,
     clearPendingToolApproval,
     setAlwaysApproveToolsForSession,
@@ -151,52 +156,71 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                 </TooltipContent>
               </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setEditorUseToolsInAutocomplete(!editorUseToolsInAutocomplete)}
-                    className={cn(
-                      'flex-1',
-                      editorUseToolsInAutocomplete
-                        ? 'bg-accent text-accent-foreground'
-                        : 'text-muted-foreground'
-                    )}
-                    title={t('sidebar.editor.tooltips.autocompleteToolsStatus', {
-                      status: editorUseToolsInAutocomplete
-                        ? t('sidebar.editor.status.enabled')
-                        : t('sidebar.editor.status.disabled'),
-                    })}
-                  >
-                    <Wrench className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>
-                    {t('sidebar.editor.tooltips.autocompleteToolsStatus', {
-                      status: editorUseToolsInAutocomplete
-                        ? t('sidebar.editor.status.enabled')
-                        : t('sidebar.editor.status.disabled'),
-                    })}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            'flex-1',
+                            editorChatUseTools
+                              ? 'bg-accent text-accent-foreground'
+                              : 'text-muted-foreground'
+                          )}
+                        >
+                          <Wrench className="h-5 w-5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>
+                          {t('sidebar.editor.tooltips.chatToolsStatus', {
+                            status: editorChatUseTools
+                              ? t('sidebar.editor.status.enabled')
+                              : t('sidebar.editor.status.disabled'),
+                          })}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent side="top" className="w-80 p-0" align="start">
+                  <div className="p-4 border-b">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium leading-none">Editor Tools</h4>
+                      <Switch
+                        checked={editorChatUseTools}
+                        onCheckedChange={setEditorChatUseTools}
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground">Enable tools for Editor Chat</p>
+                  </div>
+                  <div className="p-2 max-h-[400px] overflow-y-auto">
+                    <EditorToolsList
+                      selectable
+                      selectedTools={editorChatEnabledTools}
+                      onToggleTool={toggleEditorChatTool}
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
 
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setEditorUseRagInAutocomplete(!editorUseRagInAutocomplete)}
+                    onClick={() => setEditorChatUseRag(!editorChatUseRag)}
                     className={cn(
                       'flex-1',
-                      editorUseRagInAutocomplete
+                      editorChatUseRag
                         ? 'bg-accent text-accent-foreground'
                         : 'text-muted-foreground'
                     )}
-                    title={t('sidebar.editor.tooltips.autocompleteRagStatus', {
-                      status: editorUseRagInAutocomplete
+                    title={t('sidebar.editor.tooltips.chatRagStatus', {
+                      status: editorChatUseRag
                         ? t('sidebar.editor.status.enabled')
                         : t('sidebar.editor.status.disabled'),
                     })}
@@ -206,8 +230,8 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <p>
-                    {t('sidebar.editor.tooltips.autocompleteRagStatus', {
-                      status: editorUseRagInAutocomplete
+                    {t('sidebar.editor.tooltips.chatRagStatus', {
+                      status: editorChatUseRag
                         ? t('sidebar.editor.status.enabled')
                         : t('sidebar.editor.status.disabled'),
                     })}

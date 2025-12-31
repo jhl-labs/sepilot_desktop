@@ -2059,6 +2059,9 @@
     "loading": "마크다운 파일 로딩 중...",
     "selectDirectoryMessage": "디렉토리를 선택하여 Wiki 트리를 시작하세요",
     "noMarkdownFiles": "마크다운 파일을 찾을 수 없습니다",
+    "pinned": "고정됨",
+    "ungrouped": "그룹 없음",
+    "confirmDeleteGroup": "\"{{name}}\" 그룹을 삭제하시겠습니까?",
     "contextMenu": {
       "pin": "상단에 고정",
       "unpin": "고정 해제",

@@ -37,6 +37,7 @@ export interface EditorAgentState extends AgentState {
     actionType?: string; // 'fix', 'improve', 'continue', etc.
     useRag?: boolean; // RAG 문서 사용 여부
     useTools?: boolean; // MCP Tools 사용 여부
+    enabledTools?: string[]; // 활성화된 도구 목록
   };
   // RAG 관련 상태
   ragDocuments?: Array<{
@@ -553,50 +554,60 @@ ${ragContext}
    * Note: EditorAgent only uses builtin tools (local file system tools).
    * MCP tools are NOT available in EditorAgent to keep it focused on local development.
    */
-  private getEditorTools(_context?: EditorAgentState['editorContext']): any[] {
+  private getEditorTools(context?: EditorAgentState['editorContext']): any[] {
     const tools: any[] = [];
+    const enabledTools = context?.enabledTools;
+
+    const isToolEnabled = (toolName: string) => {
+      // If enabledTools is not provided or empty, all tools are enabled by default
+      if (!enabledTools || enabledTools.length === 0) {
+        return true;
+      }
+      return enabledTools.includes(toolName);
+    };
+
+    const filterTools = (toolNames: string[]) => {
+      return toolNames.filter(isToolEnabled);
+    };
 
     // Always include file management tools from registry
-    const fileTools = editorToolsRegistry.toOpenAIFormat([
-      'read_file',
-      'write_file',
-      'edit_file',
-      'list_files',
-      'search_files',
-      'delete_file',
-    ]);
+    const fileTools = editorToolsRegistry.toOpenAIFormat(
+      filterTools([
+        'read_file',
+        'write_file',
+        'edit_file',
+        'list_files',
+        'search_files',
+        'delete_file',
+      ])
+    );
     tools.push(...fileTools);
 
     // Always include tab management tools from registry
-    const tabTools = editorToolsRegistry.toOpenAIFormat([
-      'list_open_tabs',
-      'open_tab',
-      'close_tab',
-      'switch_tab',
-      'get_active_file',
-    ]);
+    const tabTools = editorToolsRegistry.toOpenAIFormat(
+      filterTools(['list_open_tabs', 'open_tab', 'close_tab', 'switch_tab', 'get_active_file'])
+    );
     tools.push(...tabTools);
 
     // Always include terminal tools from registry
-    const terminalTools = editorToolsRegistry.toOpenAIFormat(['run_command']);
+    const terminalTools = editorToolsRegistry.toOpenAIFormat(filterTools(['run_command']));
     tools.push(...terminalTools);
 
     // Always include git tools from registry
-    const gitTools = editorToolsRegistry.toOpenAIFormat([
-      'git_status',
-      'git_diff',
-      'git_log',
-      'git_branch',
-    ]);
+    const gitTools = editorToolsRegistry.toOpenAIFormat(
+      filterTools(['git_status', 'git_diff', 'git_log', 'git_branch'])
+    );
     tools.push(...gitTools);
 
     // Always include code analysis tools from registry
-    const codeTools = editorToolsRegistry.toOpenAIFormat([
-      'get_file_context',
-      'search_similar_code',
-      'get_documentation',
-      'find_definition',
-    ]);
+    const codeTools = editorToolsRegistry.toOpenAIFormat(
+      filterTools([
+        'get_file_context',
+        'search_similar_code',
+        'get_documentation',
+        'find_definition',
+      ])
+    );
     tools.push(...codeTools);
 
     return tools;

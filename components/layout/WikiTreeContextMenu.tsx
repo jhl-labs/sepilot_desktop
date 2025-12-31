@@ -25,7 +25,7 @@ import {
   Move,
   Circle,
 } from 'lucide-react';
-import { WIKI_COLORS, WikiColor } from '@/types/wiki-tree';
+import { WIKI_COLORS } from '@/types/wiki-tree';
 import { useTranslation } from 'react-i18next';
 
 export interface WikiTreeContextMenuProps {
@@ -57,8 +57,8 @@ export interface WikiTreeContextMenuProps {
 export function WikiTreeContextMenu({
   children,
   itemType,
-  itemId,
-  itemName,
+  itemId: _itemId,
+  itemName: _itemName,
   isPinned = false,
   isFavorite = false,
   isHidden = false,

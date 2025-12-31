@@ -47,6 +47,7 @@ export function FileExplorer() {
     refreshFileTree,
     expandedFolderPaths,
     clearExpandedFolders,
+    addExpandedFolders,
     editorViewMode,
     setEditorViewMode,
   } = useChatStore();
@@ -221,23 +222,46 @@ export function FileExplorer() {
     logger.info('[FileExplorer] Collapsed all folders');
   }, [clearExpandedFolders]);
 
-  // Expand all folders recursively (first level only for performance)
-  const handleExpandFirstLevel = useCallback(async () => {
-    if (!workingDirectory || !fileTree) {
+  // Expand all folders recursively
+  const handleExpandAll = useCallback(async () => {
+    if (!workingDirectory) {
       return;
     }
 
-    const store = useChatStore.getState();
+    logger.info('[FileExplorer] Expanding all folders...');
 
-    // Expand first level folders only (to avoid performance issues with deep trees)
-    for (const node of fileTree) {
-      if (node.isDirectory && !store.expandedFolderPaths.has(node.path)) {
-        store.toggleExpandedFolder(node.path);
+    // Recursive function to get all folder paths
+    const getAllFolderPaths = async (dirPath: string): Promise<string[]> => {
+      const paths: string[] = [];
+      try {
+        const nodes = await readDirectory(dirPath);
+        if (!nodes) {
+          return [];
+        }
+
+        for (const node of nodes) {
+          if (node.isDirectory) {
+            paths.push(node.path);
+            const subPaths = await getAllFolderPaths(node.path);
+            paths.push(...subPaths);
+          }
+        }
+      } catch (err) {
+        console.error(`[FileExplorer] Error reading directory ${dirPath}:`, err);
       }
-    }
+      return paths;
+    };
 
-    logger.info('[FileExplorer] Expanded first level folders');
-  }, [workingDirectory, fileTree]);
+    try {
+      const allPaths = await getAllFolderPaths(workingDirectory);
+      if (allPaths.length > 0) {
+        addExpandedFolders(allPaths);
+        logger.info(`[FileExplorer] Expanded ${allPaths.length} folders`);
+      }
+    } catch (error) {
+      console.error('[FileExplorer] Failed to expand all folders:', error);
+    }
+  }, [workingDirectory, readDirectory, addExpandedFolders]);
 
   return (
     <div className="flex h-full flex-col">
@@ -310,14 +334,14 @@ export function FileExplorer() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={handleExpandFirstLevel}
+                          onClick={handleExpandAll}
                           className="h-7 w-7"
                         >
                           <FolderOpen className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>{t('fileExplorer.expandFirstLevel')}</p>
+                        <p>{t('fileExplorer.expandAll')}</p>
                       </TooltipContent>
                     </Tooltip>
                     <Tooltip>
@@ -376,7 +400,9 @@ export function FileExplorer() {
       ) : (
         <FileTreeContextMenu
           isRootContext
-          onNewFile={workingDirectory ? () => openNewItemDialog('file', workingDirectory) : undefined}
+          onNewFile={
+            workingDirectory ? () => openNewItemDialog('file', workingDirectory) : undefined
+          }
           onNewFolder={
             workingDirectory ? () => openNewItemDialog('folder', workingDirectory) : undefined
           }

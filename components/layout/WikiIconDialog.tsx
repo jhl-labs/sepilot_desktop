@@ -56,7 +56,9 @@ export function WikiIconDialog({ open, currentIcon, onClose, onSelect }: WikiIco
             <div className="grid grid-cols-10 gap-2 p-4 border rounded-md max-h-80 overflow-y-auto">
               {WIKI_ICONS.map((iconName) => {
                 const IconComponent = Icons[iconName as keyof typeof Icons] as any;
-                if (!IconComponent) return null;
+                if (!IconComponent) {
+                  return null;
+                }
 
                 return (
                   <button
