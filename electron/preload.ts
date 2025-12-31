@@ -309,6 +309,9 @@ const electronAPI = {
       ipcRenderer.invoke('fs:search-files', query, dirPath, options),
     findFiles: (rootPath: string, pattern: string) =>
       ipcRenderer.invoke('fs:find-files', rootPath, pattern),
+    readWikiConfig: (dirPath: string) => ipcRenderer.invoke('fs:read-wiki-config', dirPath),
+    writeWikiConfig: (dirPath: string, config: any) =>
+      ipcRenderer.invoke('fs:write-wiki-config', dirPath, config),
     saveClipboardImage: (destDir: string) => ipcRenderer.invoke('fs:save-clipboard-image', destDir),
     readImageAsBase64: (filePath: string) =>
       ipcRenderer.invoke('fs:read-image-as-base64', filePath),

@@ -521,6 +521,8 @@ interface FileSystemAPI {
     options?: SearchOptions
   ) => Promise<IPCResponse<SearchResponse>>;
   findFiles: (rootPath: string, pattern: string) => Promise<IPCResponse<string[]>>;
+  readWikiConfig: (dirPath: string) => Promise<IPCResponse<any>>;
+  writeWikiConfig: (dirPath: string, config: any) => Promise<IPCResponse>;
   saveClipboardImage: (
     destDir: string
   ) => Promise<IPCResponse<{ filename: string; path: string; dataUrl: string }>>;

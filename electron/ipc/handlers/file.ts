@@ -1232,6 +1232,65 @@ export function registerFileHandlers() {
     }
   );
 
+  // Read wiki tree config (.sepilot_wikitree)
+  ipcMain.handle(
+    'fs:read-wiki-config',
+    async (_event, dirPath: string): Promise<{ success: boolean; data?: any; error?: string }> => {
+      try {
+        const configPath = path.join(dirPath, '.sepilot_wikitree');
+        console.log(`[File] Reading wiki config: ${configPath}`);
+
+        try {
+          const content = await fs.readFile(configPath, 'utf-8');
+          const config = JSON.parse(content);
+          return {
+            success: true,
+            data: config,
+          };
+        } catch (error: any) {
+          // File doesn't exist, return default config
+          if (error.code === 'ENOENT') {
+            return {
+              success: true,
+              data: null, // No config file exists yet
+            };
+          }
+          throw error;
+        }
+      } catch (error: any) {
+        console.error('[File] Error reading wiki config:', error);
+        return {
+          success: false,
+          error: `Failed to read wiki config: ${error.message}`,
+        };
+      }
+    }
+  );
+
+  // Write wiki tree config (.sepilot_wikitree)
+  ipcMain.handle(
+    'fs:write-wiki-config',
+    async (_event, dirPath: string, config: any): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const configPath = path.join(dirPath, '.sepilot_wikitree');
+        console.log(`[File] Writing wiki config: ${configPath}`);
+
+        const content = JSON.stringify(config, null, 2);
+        await fs.writeFile(configPath, content, 'utf-8');
+
+        return {
+          success: true,
+        };
+      } catch (error: any) {
+        console.error('[File] Error writing wiki config:', error);
+        return {
+          success: false,
+          error: `Failed to write wiki config: ${error.message}`,
+        };
+      }
+    }
+  );
+
   console.log('[File] IPC handlers registered');
 }
 
