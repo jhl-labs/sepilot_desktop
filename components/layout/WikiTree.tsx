@@ -70,6 +70,10 @@ interface SortableFileItemProps {
   isExpanded: boolean;
   childFiles?: WikiFileNode[]; // Child files for nesting
   depth?: number; // Nesting depth
+  wikiConfig: WikiTreeConfig; // For child rendering
+  activeFilePath: string | null; // For child rendering
+  expandedFiles: Set<string>; // For child rendering
+  getChildren: (parentPath: string) => WikiFileNode[]; // For child rendering
   onFileClick: (file: WikiFileNode) => void;
   onToggleExpanded: (filePath: string) => void;
   onPin: () => void;
@@ -87,6 +91,10 @@ function SortableFileItem({
   isExpanded,
   childFiles = [],
   depth = 0,
+  wikiConfig,
+  activeFilePath,
+  expandedFiles,
+  getChildren,
   onFileClick,
   onToggleExpanded,
   onPin,
@@ -202,15 +210,21 @@ function SortableFileItem({
           {isExpanded && hasChildren && (
             <div className="mt-0.5 space-y-0.5">
               {childFiles.map((childFile) => {
-                const childConfig = config || null;
+                const childConfig = wikiConfig.files[childFile.path] || null;
+                const childChildren = getChildren(childFile.path);
                 return (
                   <SortableFileItem
                     key={childFile.path}
                     file={childFile}
                     config={childConfig}
-                    isActive={false}
-                    isExpanded={false}
+                    isActive={activeFilePath === childFile.path}
+                    isExpanded={expandedFiles.has(childFile.path)}
+                    childFiles={childChildren}
                     depth={depth + 1}
+                    wikiConfig={wikiConfig}
+                    activeFilePath={activeFilePath}
+                    expandedFiles={expandedFiles}
+                    getChildren={getChildren}
                     onFileClick={onFileClick}
                     onToggleExpanded={onToggleExpanded}
                     onPin={onPin}
@@ -796,6 +810,10 @@ export function WikiTree() {
                   isActive={activeFilePath === file.path}
                   isExpanded={expandedFiles.has(file.path)}
                   childFiles={getChildren(file.path)}
+                  wikiConfig={wikiConfig}
+                  activeFilePath={activeFilePath}
+                  expandedFiles={expandedFiles}
+                  getChildren={getChildren}
                   onFileClick={handleFileClick}
                   onToggleExpanded={toggleExpanded}
                   onPin={() => handlePin(file.path)}
@@ -882,6 +900,10 @@ export function WikiTree() {
                       isActive={activeFilePath === file.path}
                       isExpanded={expandedFiles.has(file.path)}
                       childFiles={getChildren(file.path)}
+                      wikiConfig={wikiConfig}
+                      activeFilePath={activeFilePath}
+                      expandedFiles={expandedFiles}
+                      getChildren={getChildren}
                       onFileClick={handleFileClick}
                       onToggleExpanded={toggleExpanded}
                       onPin={() => handlePin(file.path)}
@@ -922,6 +944,10 @@ export function WikiTree() {
                       isActive={activeFilePath === file.path}
                       isExpanded={expandedFiles.has(file.path)}
                       childFiles={getChildren(file.path)}
+                      wikiConfig={wikiConfig}
+                      activeFilePath={activeFilePath}
+                      expandedFiles={expandedFiles}
+                      getChildren={getChildren}
                       onFileClick={handleFileClick}
                       onToggleExpanded={toggleExpanded}
                       onPin={() => handlePin(file.path)}
