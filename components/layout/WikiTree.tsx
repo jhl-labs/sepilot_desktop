@@ -68,7 +68,12 @@ interface SortableFileItemProps {
   isExpanded: boolean;
   onFileClick: (file: WikiFileNode) => void;
   onToggleExpanded: (filePath: string) => void;
-  onContextMenu: (file: WikiFileNode, config: WikiTreeFile | null) => void;
+  onPin: () => void;
+  onUnpin: () => void;
+  onFavorite: () => void;
+  onUnfavorite: () => void;
+  onChangeColor: (color: string) => void;
+  onChangeIcon: () => void;
 }
 
 function SortableFileItem({
@@ -78,7 +83,12 @@ function SortableFileItem({
   isExpanded,
   onFileClick,
   onToggleExpanded,
-  onContextMenu,
+  onPin,
+  onUnpin,
+  onFavorite,
+  onUnfavorite,
+  onChangeColor,
+  onChangeIcon,
 }: SortableFileItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: file.path,
@@ -106,12 +116,12 @@ function SortableFileItem({
         isFavorite={isFavorite}
         currentColor={config?.color}
         isInGroup={!!config?.groupId}
-        onPin={() => onContextMenu(file, config)}
-        onUnpin={() => onContextMenu(file, config)}
-        onFavorite={() => onContextMenu(file, config)}
-        onUnfavorite={() => onContextMenu(file, config)}
-        onChangeColor={(color) => onContextMenu(file, { ...config, color } as WikiTreeFile)}
-        onChangeIcon={() => onContextMenu(file, config)}
+        onPin={onPin}
+        onUnpin={onUnpin}
+        onFavorite={onFavorite}
+        onUnfavorite={onUnfavorite}
+        onChangeColor={onChangeColor}
+        onChangeIcon={onChangeIcon}
       >
         <div>
           <div
@@ -375,9 +385,69 @@ export function WikiTree() {
   };
 
   // Context menu handlers
-  const handleFileContextMenu = (file: WikiFileNode, currentConfig: WikiTreeFile | null) => {
-    // TODO: Implement context menu actions
-    console.log('[WikiTree] File context menu:', file, currentConfig);
+  // File actions
+  const handlePin = (filePath: string) => {
+    const updatedFiles = {
+      ...wikiConfig.files,
+      [filePath]: {
+        ...(wikiConfig.files[filePath] || {}),
+        pinned: true,
+      },
+    };
+    const updatedPinnedFiles = [...new Set([...wikiConfig.pinnedFiles, filePath])];
+    saveConfig({ ...wikiConfig, files: updatedFiles, pinnedFiles: updatedPinnedFiles });
+  };
+
+  const handleUnpin = (filePath: string) => {
+    const updatedFiles = {
+      ...wikiConfig.files,
+      [filePath]: {
+        ...(wikiConfig.files[filePath] || {}),
+        pinned: false,
+      },
+    };
+    const updatedPinnedFiles = wikiConfig.pinnedFiles.filter((f) => f !== filePath);
+    saveConfig({ ...wikiConfig, files: updatedFiles, pinnedFiles: updatedPinnedFiles });
+  };
+
+  const handleFavorite = (filePath: string) => {
+    const updatedFiles = {
+      ...wikiConfig.files,
+      [filePath]: {
+        ...(wikiConfig.files[filePath] || {}),
+        favorite: true,
+      },
+    };
+    const updatedFavorites = [...new Set([...wikiConfig.favorites, filePath])];
+    saveConfig({ ...wikiConfig, files: updatedFiles, favorites: updatedFavorites });
+  };
+
+  const handleUnfavorite = (filePath: string) => {
+    const updatedFiles = {
+      ...wikiConfig.files,
+      [filePath]: {
+        ...(wikiConfig.files[filePath] || {}),
+        favorite: false,
+      },
+    };
+    const updatedFavorites = wikiConfig.favorites.filter((f) => f !== filePath);
+    saveConfig({ ...wikiConfig, files: updatedFiles, favorites: updatedFavorites });
+  };
+
+  const handleChangeColor = (filePath: string, color: string) => {
+    const updatedFiles = {
+      ...wikiConfig.files,
+      [filePath]: {
+        ...(wikiConfig.files[filePath] || {}),
+        color: color || undefined,
+      },
+    };
+    saveConfig({ ...wikiConfig, files: updatedFiles });
+  };
+
+  const handleChangeIcon = (filePath: string) => {
+    setIconDialogTarget({ type: 'file', id: filePath });
+    setIconDialogOpen(true);
   };
 
   // Group management
@@ -548,7 +618,12 @@ export function WikiTree() {
                   isExpanded={expandedFiles.has(file.path)}
                   onFileClick={handleFileClick}
                   onToggleExpanded={toggleExpanded}
-                  onContextMenu={handleFileContextMenu}
+                  onPin={() => handlePin(file.path)}
+                  onUnpin={() => handleUnpin(file.path)}
+                  onFavorite={() => handleFavorite(file.path)}
+                  onUnfavorite={() => handleUnfavorite(file.path)}
+                  onChangeColor={(color) => handleChangeColor(file.path, color)}
+                  onChangeIcon={() => handleChangeIcon(file.path)}
                 />
               );
             })}
@@ -628,7 +703,12 @@ export function WikiTree() {
                       isExpanded={expandedFiles.has(file.path)}
                       onFileClick={handleFileClick}
                       onToggleExpanded={toggleExpanded}
-                      onContextMenu={handleFileContextMenu}
+                      onPin={() => handlePin(file.path)}
+                      onUnpin={() => handleUnpin(file.path)}
+                      onFavorite={() => handleFavorite(file.path)}
+                      onUnfavorite={() => handleUnfavorite(file.path)}
+                      onChangeColor={(color) => handleChangeColor(file.path, color)}
+                      onChangeIcon={() => handleChangeIcon(file.path)}
                     />
                   );
                 })}
@@ -662,7 +742,12 @@ export function WikiTree() {
                       isExpanded={expandedFiles.has(file.path)}
                       onFileClick={handleFileClick}
                       onToggleExpanded={toggleExpanded}
-                      onContextMenu={handleFileContextMenu}
+                      onPin={() => handlePin(file.path)}
+                      onUnpin={() => handleUnpin(file.path)}
+                      onFavorite={() => handleFavorite(file.path)}
+                      onUnfavorite={() => handleUnfavorite(file.path)}
+                      onChangeColor={(color) => handleChangeColor(file.path, color)}
+                      onChangeIcon={() => handleChangeIcon(file.path)}
                     />
                   );
                 })}
