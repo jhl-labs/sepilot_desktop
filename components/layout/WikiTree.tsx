@@ -615,25 +615,29 @@ export function WikiTree() {
     // Reorder within the same section
     if (isActivePinned && isOverPinned) {
       // Reorder pinned files
-      const oldIndex = pinnedFiles.findIndex((f) => f.path === activeId);
-      const newIndex = pinnedFiles.findIndex((f) => f.path === overId);
+      const oldIndex = pinnedFiles.findIndex((f: WikiFileNode) => f.path === activeId);
+      const newIndex = pinnedFiles.findIndex((f: WikiFileNode) => f.path === overId);
       const reordered = arrayMove(pinnedFiles, oldIndex, newIndex);
-      updateOrder(reordered.map((f) => f.path));
-      saveConfig({ ...wikiConfig, files: updatedFiles, pinnedFiles: reordered.map((f) => f.path) });
+      updateOrder(reordered.map((f: WikiFileNode) => f.path));
+      saveConfig({
+        ...wikiConfig,
+        files: updatedFiles,
+        pinnedFiles: reordered.map((f: WikiFileNode) => f.path),
+      });
     } else if (isActiveUngrouped && isOverUngrouped) {
       // Reorder ungrouped files
-      const oldIndex = ungroupedFiles.findIndex((f) => f.path === activeId);
-      const newIndex = ungroupedFiles.findIndex((f) => f.path === overId);
+      const oldIndex = ungroupedFiles.findIndex((f: WikiFileNode) => f.path === activeId);
+      const newIndex = ungroupedFiles.findIndex((f: WikiFileNode) => f.path === overId);
       const reordered = arrayMove(ungroupedFiles, oldIndex, newIndex);
-      updateOrder(reordered.map((f) => f.path));
+      updateOrder(reordered.map((f: WikiFileNode) => f.path));
       saveConfig({ ...wikiConfig, files: updatedFiles });
     } else if (activeGroupId && overGroupId && activeGroupId === overGroupId) {
       // Reorder within the same group
       const groupFiles = groupedFiles.get(activeGroupId)!;
-      const oldIndex = groupFiles.findIndex((f) => f.path === activeId);
-      const newIndex = groupFiles.findIndex((f) => f.path === overId);
+      const oldIndex = groupFiles.findIndex((f: WikiFileNode) => f.path === activeId);
+      const newIndex = groupFiles.findIndex((f: WikiFileNode) => f.path === overId);
       const reordered = arrayMove(groupFiles, oldIndex, newIndex);
-      updateOrder(reordered.map((f) => f.path));
+      updateOrder(reordered.map((f: WikiFileNode) => f.path));
       saveConfig({ ...wikiConfig, files: updatedFiles });
     } else {
       // Moving between sections or nesting - set as child of over

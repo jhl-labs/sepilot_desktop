@@ -24,14 +24,25 @@ interface CategoryToolsList {
   tools: ToolInfo[];
 }
 
+interface EditorToolsListProps {
+  selectable?: boolean;
+  selectedTools?: Set<string>;
+  onToggleTool?: (toolName: string) => void;
+}
+
 /**
  * Editor Tools List Component
  *
  * 사용 가능한 Tool을 Category별로 표시
  * - Collapsible UI (접기/펴기)
  * - 위험한 Tool은 경고 표시
+ * - Optional: 선택 가능한 모드 지원
  */
-export function EditorToolsList() {
+export function EditorToolsList({
+  selectable = false,
+  selectedTools,
+  onToggleTool,
+}: EditorToolsListProps = {}) {
   const [toolsByCategory, setToolsByCategory] = useState<CategoryToolsList[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<ToolCategory>>(
     new Set(['file', 'tab']) // 기본적으로 파일, 탭 카테고리 열기
@@ -138,9 +149,19 @@ export function EditorToolsList() {
                     key={tool.name}
                     className={cn(
                       'flex items-start gap-2 text-xs',
-                      tool.dangerous && 'text-orange-600 dark:text-orange-400'
+                      tool.dangerous && 'text-orange-600 dark:text-orange-400',
+                      selectable && 'cursor-pointer hover:bg-muted/50 rounded p-1 -mx-1'
                     )}
+                    onClick={() => selectable && onToggleTool?.(tool.name)}
                   >
+                    {selectable && (
+                      <input
+                        type="checkbox"
+                        checked={selectedTools?.has(tool.name) ?? false}
+                        onChange={() => onToggleTool?.(tool.name)}
+                        className="shrink-0 mt-1"
+                      />
+                    )}
                     <span className="shrink-0 mt-0.5">{tool.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium flex items-center gap-2">

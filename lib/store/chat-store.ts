@@ -197,6 +197,8 @@ interface ChatStore {
   editorChatUseTools: boolean; // MCP Tools usage in editor chat
   editorChatEnabledTools: Set<string>; // Enabled tools for editor chat
   editorAgentMode: 'editor' | 'coding'; // Agent 모드 (editor-agent 또는 coding-agent)
+  editorUseRagInAutocomplete: boolean; // RAG usage in autocomplete
+  editorUseToolsInAutocomplete: boolean; // Tools usage in autocomplete
 
   // Chat Mode View
   chatViewMode: 'history' | 'documents'; // history or documents view in Chat sidebar
@@ -573,6 +575,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
     return 'editor';
   })(),
+
+  editorUseRagInAutocomplete: false,
+  editorUseToolsInAutocomplete: false,
 
   // Chat Mode View
   chatViewMode: 'history',
