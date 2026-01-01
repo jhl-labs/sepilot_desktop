@@ -1175,7 +1175,11 @@ export function registerFileHandlers() {
   // Find files by glob pattern
   ipcMain.handle(
     'fs:find-files',
-    async (_event, rootPath: string, pattern: string): Promise<{ success: boolean; data?: string[]; error?: string }> => {
+    async (
+      _event,
+      rootPath: string,
+      pattern: string
+    ): Promise<{ success: boolean; data?: string[]; error?: string }> => {
       try {
         console.log(`[File] Finding files: ${rootPath} with pattern: ${pattern}`);
 
