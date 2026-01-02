@@ -117,3 +117,4 @@ coverage-*/
 
 .gemini/
 gha-creds-*.json
+jest-frontend.json
