@@ -4,7 +4,8 @@
   "description": "SEPilot Desktop - LLM Desktop Application with LangGraph, RAG, and MCP",
   "main": "dist/electron/electron/main.js",
   "scripts": {
-    "postinstall": "node scripts/copy-monaco.js && electron-rebuild -f -w node-pty || true",
+    "postinstall": "node scripts/copy-monaco.js",
+    "rebuild:node-pty": "electron-rebuild -f -w node-pty",
     "dev": "npm run clean:dev && npm run dev:electron-build-once && concurrently -n \"next,tsc,electron\" -c \"cyan,yellow,green\" \"npm run dev:next\" \"npm run dev:electron-build\" \"npm run dev:electron\"",
     "dev:next": "next dev --webpack",
     "clean:dev": "node scripts/clean-dev.js",
@@ -87,7 +88,6 @@
     "nanoid": "^5.1.6",
     "next": "^16.1.1",
     "next-themes": "^0.4.6",
-    "node-pty": "1.1.0",
     "pdf-parse": "^2.4.5",
     "plotly.js-dist-min": "^3.3.1",
     "pptxgenjs": "^4.0.1",
@@ -164,6 +164,9 @@
     "wait-on": "^9.0.3",
     "webpack-bundle-analyzer": "^5.1.0"
   },
+  "optionalDependencies": {
+    "node-pty": "1.1.0"
+  },
   "_moduleAliases": {
     "@": "dist/electron"
   },
@@ -174,7 +177,16 @@
     "overrides": {
       "app-builder-bin": "5.0.0-alpha.13",
       "tmp": "^0.2.4"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@vscode/ripgrep",
+      "canvas",
+      "electron-winstaller",
+      "es5-ext",
+      "node-pty",
+      "puppeteer",
+      "sharp"
+    ]
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

@@ -144,9 +144,6 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      node-pty:
-        specifier: 1.1.0
-        version: 1.1.0
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
@@ -367,6 +364,10 @@ importers:
       webpack-bundle-analyzer:
         specifier: ^5.1.0
         version: 5.1.0
+    optionalDependencies:
+      node-pty:
+        specifier: 1.1.0
+        version: 1.1.0
 
 packages:
 
@@ -15355,6 +15356,7 @@ snapshots:
   node-pty@1.1.0:
     dependencies:
       node-addon-api: 7.1.1
+    optional: true
 
   node-releases@2.0.27: {}
 
