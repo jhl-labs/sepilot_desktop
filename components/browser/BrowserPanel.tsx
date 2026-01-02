@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -50,6 +51,7 @@ interface Tab {
 }
 
 export function BrowserPanel() {
+  const { t } = useTranslation();
   const { appMode, activeEditorTab } = useChatStore();
   const [url, setUrl] = useState('https://euno.news');
   const [currentUrl, setCurrentUrl] = useState(url);
@@ -461,18 +463,23 @@ export function BrowserPanel() {
         {/* Settings 드롭다운 메뉴 */}
         <DropdownMenu onOpenChange={setDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" title="브라우저 설정">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              title={t('browser.panel.browserSettings')}
+            >
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem>
               <Bookmark className="mr-2 h-4 w-4" />
-              <span>북마크 관리</span>
+              <span>{t('browser.panel.manageBookmarks')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Save className="mr-2 h-4 w-4" />
-              <span>세션 저장</span>
+              <span>{t('browser.panel.saveSession')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
 
@@ -480,7 +487,7 @@ export function BrowserPanel() {
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <Terminal className="mr-2 h-4 w-4" />
-                <span>Browser Agent 도구</span>
+                <span>{t('browser.panel.browserAgentTools')}</span>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-64">
                 <DropdownMenuLabel className="text-xs text-muted-foreground">

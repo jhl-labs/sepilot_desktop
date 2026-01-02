@@ -100,7 +100,7 @@
     "llm": {
       "title": "LLM",
       "description": "LLM provider and model settings",
-      "settingsV2": "LLM Settings (v2)",
+      "settingsV2": "LLM Settings",
       "settingsV2Description": "Connection-based LLM model management system",
       "connections": {
         "title": "Connections",
@@ -192,14 +192,11 @@
         "title": "Proxy Settings",
         "enabled": "Use Proxy",
         "mode": "Proxy Mode",
-        "modeSystem": "Use System Settings",
         "modeManual": "Manual Configuration",
         "modeNone": "No Proxy",
         "url": "Proxy URL",
         "urlPlaceholder": "http://proxy.example.com:8080",
         "urlExample": "e.g., http://proxy.example.com:8080 or socks5://127.0.0.1:1080",
-        "ignoreEnvVars": "Ignore Environment Variables",
-        "ignoreEnvVarsDescription": "Overrides system environment variables (e.g., https_proxy) and follows application settings.",
         "description": "Manage proxy and SSL certificate verification settings. These settings apply to all external connections including LLM, ComfyUI, VectorDB, MCP, etc."
       },
       "ssl": {
@@ -280,7 +277,7 @@
       }
     },
     "imagegen": {
-      "title": "Image Generation Settings",
+      "title": "Image Gen Settings",
       "description": "Manage image generation settings using ComfyUI or NanoBanana (Google Imagen).",
       "providerSelection": "Select Image Generation Provider",
       "providerSelectionDescription": "Select the image generation service to use.",
@@ -464,7 +461,29 @@
           "summarizePlaceholder": "Prompt for summarizing...",
           "translate": "Translate Prompt",
           "translatePlaceholder": "Prompt for translating... (use {targetLanguage} variable)",
-          "save": "Save AI Prompts"
+          "save": "Save AI Prompts",
+          "defaults": {
+            "explainCode": "Please explain what the following code does in English. Write concisely and clearly.",
+            "fixCode": "Analyze and fix potential bugs in the following code. Return only the fixed code, and briefly explain the issues and solutions in comments.",
+            "improveCode": "Improve the readability, performance, and maintainability of the following code. Return only the improved code, and briefly explain the main changes in comments.",
+            "completeCode": "Complete the following code based on the context. Return only the completed code, and do not include explanations.",
+            "addComments": "Add clear and concise comments to the following code. Write comments in English, and explain the intent and logic of the code.",
+            "generateTest": "Generate unit tests for the following code. Use a test framework appropriate for the language.",
+            "continueWriting": "Please continue writing the following text naturally. Maintain the context and style.",
+            "makeShorter": "Please summarize the following text more concisely while retaining the core content.",
+            "makeLonger": "Please expand the following text in more detail and richness. Include additional explanations or examples.",
+            "simplify": "Please rewrite the following text in simpler and more understandable language.",
+            "fixGrammar": "Please correct the spelling and grammatical errors in the following text. Return only the corrected text.",
+            "summarize": "Please summarize the key points of the following content. Organize the main points concisely.",
+            "translate": "Please translate the following text to {targetLanguage}. Use natural expressions."
+          }
+        },
+        "tools": {
+          "loading": "Loading...",
+          "noTools": "No registered tools",
+          "availableTools": "Available Editor Agent Tools",
+          "approvalRequired": "Approval Required",
+          "tip": "💡 Tip: Chat with the Agent to automatically select and execute the tools you need"
         }
       }
     },
@@ -472,6 +491,44 @@
       "title": "Browser",
       "description": "Browser agent settings",
       "saved": "Browser settings saved!",
+      "sidebar": {
+        "agentLogs": "Agent Execution Logs",
+        "viewTools": "View Available Tools",
+        "clearChatConfirm": "Delete all current conversation history?",
+        "newChat": "New Chat",
+        "pageCaptureSuccess": "Page saved as snapshot.",
+        "pageCaptureFailed": "Page capture failed: {{error}}",
+        "pageCaptureError": "An error occurred while capturing the page.",
+        "pageCapture": "Capture Page",
+        "snapshots": "Manage Snapshots",
+        "bookmarks": "Bookmarks",
+        "presentationMode": "Presentation Mode (Beta - In Development)",
+        "settings": "Browser Settings"
+      },
+      "panel": {
+        "browserSettings": "Browser Settings",
+        "manageBookmarks": "Manage Bookmarks",
+        "saveSession": "Save Session",
+        "browserAgentTools": "Browser Agent Tools"
+      },
+      "chat": {
+        "availableTools": "Available Browser Agent Tools",
+        "tools": {
+          "navigate": "Page Navigation",
+          "readContent": "Read Page Content",
+          "findClickable": "Find Clickable Elements",
+          "clickElement": "Click Element",
+          "inputText": "Input Text",
+          "scroll": "Scroll",
+          "openTab": "Open New Tab",
+          "switchTab": "Switch Tab",
+          "closeTab": "Close Tab",
+          "listTabs": "List Tabs",
+          "screenshotSummary": "Screenshot + Text Summary",
+          "readSelected": "Read Selected Text"
+        },
+        "agentProcess": "Agent Execution Process"
+      },
       "settings": {
         "title": "Browser Settings",
         "loading": "Loading...",
@@ -913,6 +970,10 @@
     }
   },
   "chat": {
+    "welcome": {
+      "title": "Welcome to SEPilot",
+      "subtitle": "Start a new conversation or select an existing one"
+    },
     "newConversation": "New Conversation",
     "deleteConversation": "Delete Conversation",
     "clearHistory": "Clear History",
@@ -947,7 +1008,14 @@
     "noPersona": "None",
     "noPersonaDesc": "Don't use a persona",
     "confirmDelete": "Delete this conversation?",
+    "tools": {
+      "viewList": "View Available Tools",
+      "availableTools": "Available Tools ({{count}})",
+      "builtinTools": "Built-in Tools"
+    },
     "emptyState": {
+      "message": "Type a message to start a conversation",
+      "hint": "AI assistant will help you",
       "startConversation": "Type a message to start a conversation",
       "aiAssistantHelp": "AI assistant will help you",
       "browserAgentTools": "Browser Agent Tools",
@@ -1250,23 +1318,23 @@
     "agentLogs": {
       "title": "Agent Execution Logs",
       "back": "Go back",
-      "clearAllLogs": "Clear all logs",
+      "clearAll": "Clear all logs",
       "running": "Running",
-      "empty": "Agent execution logs will appear here",
+      "emptyMessage": "Agent execution logs will appear here",
       "emptyHint": "Run Browser Agent to see detailed execution process.",
       "result": "Result",
       "error": "Error",
       "next": "Next",
-      "continueAction": "Continue",
-      "finishAction": "Finish",
-      "phases": {
-        "thinking": "🧠 Thinking",
-        "toolCall": "🔧 Tool Call",
-        "toolResult": "✅ Tool Result",
-        "decision": "⚡ Decision",
-        "completion": "🎉 Completion",
-        "error": "❌ Error",
-        "default": "📝 Log"
+      "continue": "Continue",
+      "complete": "Finish",
+      "phase": {
+        "thinking": "Thinking",
+        "toolCall": "Tool Call",
+        "toolResult": "Tool Result",
+        "decision": "Decision",
+        "completion": "Completion",
+        "error": "Error",
+        "log": "Log"
       }
     },
     "toolsList": {
@@ -1936,7 +2004,29 @@
     "nameAndPromptRequired": "Name and system prompt are required.",
     "saveFailed": "Save failed",
     "confirmDelete": "Are you sure you want to delete this persona?",
-    "deleteFailed": "Delete failed"
+    "deleteFailed": "Delete failed",
+    "builtin": {
+      "default": {
+        "name": "General Assistant",
+        "description": "General-purpose AI Assistant",
+        "systemPrompt": "You are a helpful, accurate, and friendly AI assistant. Provide clear and useful answers to user questions. Write all answers in English."
+      },
+      "translator": {
+        "name": "Translator",
+        "description": "Professional Translation Service",
+        "systemPrompt": "You are a professional translator. Accurately and naturally translate the text provided by the user. Consider context and paraphrase when necessary, but accurately convey the meaning of the original text. Omit unnecessary explanations beyond translation and provide only the translation result. If additional explanations are needed beyond the translation result, write them in English."
+      },
+      "english-teacher": {
+        "name": "English Teacher",
+        "description": "English Learning Helper",
+        "systemPrompt": "You are a kind and professional English teacher. Help students learn English. Provide grammar explanations, vocabulary learning, writing corrections, conversation practice, etc., and explain in a way that students can easily understand. Correct mistakes and explain why they are wrong. Write all explanations and answers in English."
+      },
+      "senior-developer": {
+        "name": "Senior Developer",
+        "description": "Technical Mentoring and Code Review",
+        "systemPrompt": "You are a senior software engineer with over 10 years of experience. Provide advice on code reviews, architecture design, technical decision-making, best practices, etc. Provide practical, experience-based answers and clearly explain trade-offs. Write all answers in English."
+      }
+    }
   },
   "personaDialog": {
     "title": "AI Persona Management",
@@ -2620,9 +2710,6 @@
       "fileRead": "Failed to read file: {{filename}}",
       "unsupportedFile": "Unsupported file type: {{filename}}"
     },
-    "imageGen": {
-      "error": "❌ Image generation error: {{message}}"
-    },
     "tools": {
       "waiting": "🔔 Waiting for tool execution approval...",
       "rejected": "❌ Tool execution was rejected.",
@@ -2679,6 +2766,7 @@
       "ariaLabel": "Select image file"
     },
     "imageGen": {
+      "error": "❌ Image generation error: {{message}}",
       "tooltip": "Image generation",
       "enable": "Enable image generation (Tools auto-enabled)",
       "disable": "Disable image generation"

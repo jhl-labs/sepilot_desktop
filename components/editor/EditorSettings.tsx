@@ -27,7 +27,6 @@ export function EditorSettings() {
     resetEditorAppearanceConfig,
     editorLLMPromptsConfig,
     setEditorLLMPromptsConfig,
-    resetEditorLLMPromptsConfig,
   } = useChatStore();
 
   // 외형 설정 로컬 상태
@@ -187,7 +186,7 @@ export function EditorSettings() {
       continueWritingPrompt,
       makeShorterPrompt,
       makeLongerPrompt,
-
+      simplifyPrompt: editorLLMPromptsConfig.simplifyPrompt, // UI에 표시되지 않지만 타입에 필요
       fixGrammarPrompt,
       summarizePrompt,
       translatePrompt,
@@ -199,26 +198,119 @@ export function EditorSettings() {
   // LLM 프롬프트 초기화
   const handleResetPrompts = () => {
     if (window.confirm(t('settings.editor.settings.prompts.resetConfirm'))) {
-      resetEditorLLMPromptsConfig();
-      const config = useChatStore.getState().editorLLMPromptsConfig;
-      // 코드용 AI
-      setExplainCodePrompt(config.explainCodePrompt);
-      setFixCodePrompt(config.fixCodePrompt);
-      setImproveCodePrompt(config.improveCodePrompt);
-      setCompleteCodePrompt(config.completeCodePrompt);
-      setAddCommentsPrompt(config.addCommentsPrompt);
-      setGenerateTestPrompt(config.generateTestPrompt);
-      // 문서용 AI
-      setContinueWritingPrompt(config.continueWritingPrompt);
-      setMakeShorterPrompt(config.makeShorterPrompt);
-      setMakeLongerPrompt(config.makeLongerPrompt);
+      // 번역된 기본값 사용
+      const defaultPrompts = {
+        // 코드용 AI
+        explainCodePrompt: t('settings.editor.settings.prompts.defaults.explainCode'),
+        fixCodePrompt: t('settings.editor.settings.prompts.defaults.fixCode'),
+        improveCodePrompt: t('settings.editor.settings.prompts.defaults.improveCode'),
+        completeCodePrompt: t('settings.editor.settings.prompts.defaults.completeCode'),
+        addCommentsPrompt: t('settings.editor.settings.prompts.defaults.addComments'),
+        generateTestPrompt: t('settings.editor.settings.prompts.defaults.generateTest'),
+        // 문서용 AI
+        continueWritingPrompt: t('settings.editor.settings.prompts.defaults.continueWriting'),
+        makeShorterPrompt: t('settings.editor.settings.prompts.defaults.makeShorter'),
+        makeLongerPrompt: t('settings.editor.settings.prompts.defaults.makeLonger'),
+        simplifyPrompt: t('settings.editor.settings.prompts.defaults.simplify'),
+        fixGrammarPrompt: t('settings.editor.settings.prompts.defaults.fixGrammar'),
+        summarizePrompt: t('settings.editor.settings.prompts.defaults.summarize'),
+        translatePrompt: t('settings.editor.settings.prompts.defaults.translate'),
+      };
 
-      setFixGrammarPrompt(config.fixGrammarPrompt);
-      setSummarizePrompt(config.summarizePrompt);
-      setTranslatePrompt(config.translatePrompt);
+      // 번역된 기본값으로 설정 저장
+      setEditorLLMPromptsConfig({
+        ...defaultPrompts,
+        simplifyPrompt: defaultPrompts.simplifyPrompt,
+      });
+
+      // 로컬 상태 업데이트
+      setExplainCodePrompt(defaultPrompts.explainCodePrompt);
+      setFixCodePrompt(defaultPrompts.fixCodePrompt);
+      setImproveCodePrompt(defaultPrompts.improveCodePrompt);
+      setCompleteCodePrompt(defaultPrompts.completeCodePrompt);
+      setAddCommentsPrompt(defaultPrompts.addCommentsPrompt);
+      setGenerateTestPrompt(defaultPrompts.generateTestPrompt);
+      setContinueWritingPrompt(defaultPrompts.continueWritingPrompt);
+      setMakeShorterPrompt(defaultPrompts.makeShorterPrompt);
+      setMakeLongerPrompt(defaultPrompts.makeLongerPrompt);
+      setFixGrammarPrompt(defaultPrompts.fixGrammarPrompt);
+      setSummarizePrompt(defaultPrompts.summarizePrompt);
+      setTranslatePrompt(defaultPrompts.translatePrompt);
+
       window.alert(t('settings.editor.settings.prompts.resetSuccess'));
     }
   };
+
+  // 초기 로드 시 현재 설정이 기본값(한국어 하드코딩)인지 확인하고 번역된 값으로 업데이트
+  useEffect(() => {
+    const DEFAULT_KO_PROMPTS = {
+      explainCodePrompt:
+        '다음 코드가 무엇을 하는지 한국어로 설명해주세요. 간결하고 명확하게 작성해주세요.',
+      fixCodePrompt:
+        '다음 코드의 잠재적인 버그를 분석하고 수정해주세요. 수정된 코드만 반환하고, 문제점과 해결책을 주석으로 간략히 설명해주세요.',
+      improveCodePrompt:
+        '다음 코드의 가독성, 성능, 유지보수성을 개선해주세요. 개선된 코드만 반환하고, 주요 변경사항을 주석으로 간략히 설명해주세요.',
+      completeCodePrompt:
+        '컨텍스트를 기반으로 다음 코드를 완성해주세요. 완성할 코드만 반환하고, 설명은 포함하지 마세요.',
+      addCommentsPrompt:
+        '다음 코드에 명확하고 간결한 주석을 추가해주세요. 한국어로 주석을 작성하고, 코드의 의도와 로직을 설명해주세요.',
+      generateTestPrompt:
+        '다음 코드에 대한 단위 테스트를 생성해주세요. 해당 언어에 적합한 테스트 프레임워크를 사용하세요.',
+      continueWritingPrompt:
+        '다음 텍스트를 자연스럽게 이어서 작성해주세요. 문맥과 스타일을 유지하세요.',
+      makeShorterPrompt: '다음 텍스트를 핵심 내용을 유지하면서 더 짧게 요약해주세요.',
+      makeLongerPrompt:
+        '다음 텍스트를 더 자세하고 풍부하게 확장해주세요. 추가적인 설명이나 예시를 포함하세요.',
+      simplifyPrompt: '다음 텍스트를 더 간단하고 이해하기 쉬운 언어로 다시 작성해주세요.',
+      fixGrammarPrompt:
+        '다음 텍스트의 맞춤법과 문법 오류를 수정해주세요. 수정된 텍스트만 반환하세요.',
+      summarizePrompt: '다음 내용의 핵심을 요약해주세요. 주요 포인트를 간결하게 정리해주세요.',
+      translatePrompt:
+        '다음 텍스트를 {targetLanguage}로 번역해주세요. 자연스러운 표현을 사용하세요.',
+    };
+
+    // 현재 설정이 기본 한국어 값과 일치하는지 확인
+    const isDefaultKorean = Object.keys(DEFAULT_KO_PROMPTS).every(
+      (key) =>
+        editorLLMPromptsConfig[key as keyof typeof DEFAULT_KO_PROMPTS] ===
+        DEFAULT_KO_PROMPTS[key as keyof typeof DEFAULT_KO_PROMPTS]
+    );
+
+    // 기본 한국어 값이면 번역된 값으로 업데이트 (한 번만 실행)
+    if (isDefaultKorean) {
+      const translatedDefaults = {
+        explainCodePrompt: t('settings.editor.settings.prompts.defaults.explainCode'),
+        fixCodePrompt: t('settings.editor.settings.prompts.defaults.fixCode'),
+        improveCodePrompt: t('settings.editor.settings.prompts.defaults.improveCode'),
+        completeCodePrompt: t('settings.editor.settings.prompts.defaults.completeCode'),
+        addCommentsPrompt: t('settings.editor.settings.prompts.defaults.addComments'),
+        generateTestPrompt: t('settings.editor.settings.prompts.defaults.generateTest'),
+        continueWritingPrompt: t('settings.editor.settings.prompts.defaults.continueWriting'),
+        makeShorterPrompt: t('settings.editor.settings.prompts.defaults.makeShorter'),
+        makeLongerPrompt: t('settings.editor.settings.prompts.defaults.makeLonger'),
+        simplifyPrompt: t('settings.editor.settings.prompts.defaults.simplify'),
+        fixGrammarPrompt: t('settings.editor.settings.prompts.defaults.fixGrammar'),
+        summarizePrompt: t('settings.editor.settings.prompts.defaults.summarize'),
+        translatePrompt: t('settings.editor.settings.prompts.defaults.translate'),
+      };
+
+      setEditorLLMPromptsConfig(translatedDefaults);
+
+      // 로컬 상태도 업데이트
+      setExplainCodePrompt(translatedDefaults.explainCodePrompt);
+      setFixCodePrompt(translatedDefaults.fixCodePrompt);
+      setImproveCodePrompt(translatedDefaults.improveCodePrompt);
+      setCompleteCodePrompt(translatedDefaults.completeCodePrompt);
+      setAddCommentsPrompt(translatedDefaults.addCommentsPrompt);
+      setGenerateTestPrompt(translatedDefaults.generateTestPrompt);
+      setContinueWritingPrompt(translatedDefaults.continueWritingPrompt);
+      setMakeShorterPrompt(translatedDefaults.makeShorterPrompt);
+      setMakeLongerPrompt(translatedDefaults.makeLongerPrompt);
+      setFixGrammarPrompt(translatedDefaults.fixGrammarPrompt);
+      setSummarizePrompt(translatedDefaults.summarizePrompt);
+      setTranslatePrompt(translatedDefaults.translatePrompt);
+    }
+  }, []); // 초기 마운트 시 한 번만 실행
 
   return (
     <div className="flex h-full flex-col">

@@ -31,6 +31,20 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
 
   const activePersona = personas.find((p) => p.id === activePersonaId);
 
+  // Builtin persona의 번역된 이름, 설명, systemPrompt를 가져오는 헬퍼 함수
+  const getPersonaDisplayText = (
+    persona: Persona,
+    field: 'name' | 'description' | 'systemPrompt'
+  ) => {
+    if (persona.isBuiltin) {
+      const translationKey = `persona.builtin.${persona.id}.${field}`;
+      const translated = t(translationKey);
+      // 번역 키가 존재하면 사용, 없으면 원본 사용
+      return translated !== translationKey ? translated : persona[field];
+    }
+    return persona[field];
+  };
+
   const handleStartCreate = () => {
     setIsCreating(true);
     setEditingId(null);
@@ -134,9 +148,11 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
                   >
                     <span className="text-2xl">{persona.avatar || '🤖'}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{persona.name}</div>
+                      <div className="font-medium text-sm truncate">
+                        {getPersonaDisplayText(persona, 'name')}
+                      </div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {persona.description}
+                        {getPersonaDisplayText(persona, 'description')}
                       </div>
                     </div>
                     {activePersonaId === persona.id && (
@@ -241,8 +257,12 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
                 <div className="flex items-center gap-3">
                   <span className="text-4xl">{activePersona.avatar || '🤖'}</span>
                   <div>
-                    <h3 className="text-lg font-semibold">{activePersona.name}</h3>
-                    <p className="text-sm text-muted-foreground">{activePersona.description}</p>
+                    <h3 className="text-lg font-semibold">
+                      {getPersonaDisplayText(activePersona, 'name')}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {getPersonaDisplayText(activePersona, 'description')}
+                    </p>
                   </div>
                 </div>
 
@@ -251,7 +271,9 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
                     {t('personaDialog.view.systemPrompt')}
                   </label>
                   <ScrollArea className="mt-2 h-[300px] rounded-md border p-3 bg-muted/30">
-                    <p className="text-sm whitespace-pre-wrap">{activePersona.systemPrompt}</p>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {getPersonaDisplayText(activePersona, 'systemPrompt')}
+                    </p>
                   </ScrollArea>
                 </div>
 

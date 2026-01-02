@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 import type { ToolCategory, CategoryMeta } from '@/lib/langgraph/tools/editor-tools-registry';
 
 /**
@@ -31,18 +33,28 @@ interface EditorToolsListProps {
 }
 
 /**
+ * Editor Tools List Props
+ */
+interface EditorToolsListProps {
+  selectable?: boolean;
+  selectedTools?: Set<string>;
+  onToggleTool?: (toolName: string) => void;
+}
+
+/**
  * Editor Tools List Component
  *
  * 사용 가능한 Tool을 Category별로 표시
  * - Collapsible UI (접기/펴기)
  * - 위험한 Tool은 경고 표시
- * - Optional: 선택 가능한 모드 지원
+ * - selectable 모드: 도구 선택/해제 가능
  */
 export function EditorToolsList({
   selectable = false,
   selectedTools,
   onToggleTool,
 }: EditorToolsListProps = {}) {
+  const { t } = useTranslation();
   const [toolsByCategory, setToolsByCategory] = useState<CategoryToolsList[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<ToolCategory>>(
     new Set(['file', 'tab']) // 기본적으로 파일, 탭 카테고리 열기
@@ -101,7 +113,7 @@ export function EditorToolsList({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-        로딩 중...
+        {t('settings.editor.settings.tools.loading')}
       </div>
     );
   }
@@ -109,14 +121,16 @@ export function EditorToolsList({
   if (toolsByCategory.length === 0) {
     return (
       <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-        등록된 Tool이 없습니다
+        {t('settings.editor.settings.tools.noTools')}
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <div className="text-sm font-medium mb-3">사용 가능한 Editor Agent 도구</div>
+      <div className="text-sm font-medium mb-3">
+        {t('settings.editor.settings.tools.availableTools')}
+      </div>
 
       {toolsByCategory.map(({ category, tools }) => {
         const isExpanded = expandedCategories.has(category.id);
@@ -150,9 +164,10 @@ export function EditorToolsList({
                     className={cn(
                       'flex items-start gap-2 text-xs',
                       tool.dangerous && 'text-orange-600 dark:text-orange-400',
-                      selectable && 'cursor-pointer hover:bg-muted/50 rounded p-1 -mx-1'
+                      selectable &&
+                        'hover:bg-muted/50 rounded px-2 py-1.5 -mx-2 -my-0.5 cursor-pointer'
                     )}
-                    onClick={() => selectable && onToggleTool?.(tool.name)}
+                    onClick={selectable && onToggleTool ? () => onToggleTool(tool.name) : undefined}
                   >
                     {selectable && (
                       <input
@@ -168,12 +183,20 @@ export function EditorToolsList({
                         {tool.name}
                         {tool.dangerous && (
                           <span className="text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded">
-                            승인 필요
+                            {t('settings.editor.settings.tools.approvalRequired')}
                           </span>
                         )}
                       </div>
                       <div className="text-muted-foreground mt-0.5">{tool.description}</div>
                     </div>
+                    {selectable && selectedTools && (
+                      <Switch
+                        checked={selectedTools.has(tool.name)}
+                        onCheckedChange={() => onToggleTool?.(tool.name)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="ml-2"
+                      />
+                    )}
                   </div>
                 ))}
               </div>
@@ -183,7 +206,7 @@ export function EditorToolsList({
       })}
 
       <div className="text-[10px] text-muted-foreground mt-3 px-1">
-        💡 Tip: Agent와 대화하면 필요한 도구를 자동으로 선택하여 실행합니다
+        {t('settings.editor.settings.tools.tip')}
       </div>
     </div>
   );

@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageSquare, Brain, Wrench, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 
 export function SimpleChatArea() {
+  const { t } = useTranslation();
   const { browserChatMessages, browserChatFontConfig, browserAgentLogs, browserAgentIsRunning } =
     useChatStore();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -23,19 +25,19 @@ export function SimpleChatArea() {
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground px-4">
         <MessageSquare className="mb-4 h-12 w-12 opacity-10" />
         <div className="text-xs font-medium text-center space-y-2">
-          <p className="text-sm mb-3">사용 가능한 Browser Agent 도구</p>
-          <p>• 페이지 이동</p>
-          <p>• 페이지 내용 읽기</p>
-          <p>• 클릭 가능 요소 찾기</p>
-          <p>• 요소 클릭</p>
-          <p>• 텍스트 입력</p>
-          <p>• 스크롤</p>
-          <p>• 새 탭 열기</p>
-          <p>• 탭 전환</p>
-          <p>• 탭 닫기</p>
-          <p>• 탭 목록</p>
-          <p>• 스크린샷 + 텍스트 요약</p>
-          <p>• 선택 텍스트 읽기</p>
+          <p className="text-sm mb-3">{t('browser.chat.availableTools')}</p>
+          <p>• {t('browser.chat.tools.navigate')}</p>
+          <p>• {t('browser.chat.tools.readContent')}</p>
+          <p>• {t('browser.chat.tools.findClickable')}</p>
+          <p>• {t('browser.chat.tools.clickElement')}</p>
+          <p>• {t('browser.chat.tools.inputText')}</p>
+          <p>• {t('browser.chat.tools.scroll')}</p>
+          <p>• {t('browser.chat.tools.openTab')}</p>
+          <p>• {t('browser.chat.tools.switchTab')}</p>
+          <p>• {t('browser.chat.tools.closeTab')}</p>
+          <p>• {t('browser.chat.tools.listTabs')}</p>
+          <p>• {t('browser.chat.tools.screenshotSummary')}</p>
+          <p>• {t('browser.chat.tools.readSelected')}</p>
         </div>
       </div>
     );
@@ -73,7 +75,7 @@ export function SimpleChatArea() {
             <div className="max-w-[85%] rounded-lg px-3 py-2 bg-muted/50 border border-muted-foreground/20">
               <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-muted-foreground">
                 <Brain className="h-3 w-3" />
-                <span>Agent 실행 과정</span>
+                <span>{t('browser.chat.agentProcess')}</span>
                 {browserAgentIsRunning && <Loader2 className="h-3 w-3 animate-spin" />}
               </div>
               <div className="space-y-1.5 text-xs">

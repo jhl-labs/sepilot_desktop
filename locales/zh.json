@@ -97,16 +97,10 @@
       },
       "saved": "通用设置已保存！"
     },
-    "editor": {
-      "saved": "编辑器设置已保存！"
-    },
-    "browser": {
-      "saved": "浏览器设置已保存！"
-    },
     "llm": {
       "title": "LLM",
       "description": "LLM 提供商和模型设置",
-      "settingsV2": "LLM 设置 (v2)",
+      "settingsV2": "LLM 设置",
       "settingsV2Description": "基于连接的 LLM 模型管理系统",
       "connections": {
         "title": "连接",
@@ -198,7 +192,6 @@
         "title": "代理设置",
         "enabled": "使用代理",
         "mode": "代理模式",
-        "modeSystem": "使用系统设置",
         "modeManual": "手动配置",
         "modeNone": "不使用代理",
         "url": "代理 URL",
@@ -612,7 +605,29 @@
           "summarizePlaceholder": "用于总结的提示...",
           "translate": "翻译提示",
           "translatePlaceholder": "用于翻译的提示...（使用 {targetLanguage} 变量）",
-          "save": "保存 AI 提示"
+          "save": "保存 AI 提示",
+          "defaults": {
+            "explainCode": "请用中文解释以下代码的作用。请简洁清晰地编写。",
+            "fixCode": "分析并修复以下代码中的潜在错误。仅返回修复后的代码，并在注释中简要说明问题和解决方案。",
+            "improveCode": "改进以下代码的可读性、性能和可维护性。仅返回改进后的代码，并在注释中简要说明主要更改。",
+            "completeCode": "根据上下文完成以下代码。仅返回完成的代码，不要包含说明。",
+            "addComments": "为以下代码添加清晰简洁的注释。用中文编写注释，并解释代码的意图和逻辑。",
+            "generateTest": "为以下代码生成单元测试。使用适合该语言的测试框架。",
+            "continueWriting": "请自然地继续编写以下文本。保持上下文和风格。",
+            "makeShorter": "请在保留核心内容的同时更简洁地总结以下文本。",
+            "makeLonger": "请更详细、更丰富地扩展以下文本。包括额外的说明或示例。",
+            "simplify": "请用更简单、更容易理解的语言重写以下文本。",
+            "fixGrammar": "请纠正以下文本中的拼写和语法错误。仅返回纠正后的文本。",
+            "summarize": "请总结以下内容的要点。简洁地整理主要观点。",
+            "translate": "请将以下文本翻译成 {targetLanguage}。使用自然的表达方式。"
+          }
+        },
+        "tools": {
+          "loading": "加载中...",
+          "noTools": "没有注册的工具",
+          "availableTools": "可用的编辑器代理工具",
+          "approvalRequired": "需要批准",
+          "tip": "💡 提示：与代理对话可自动选择并执行所需的工具"
         }
       }
     },
@@ -620,6 +635,44 @@
       "title": "浏览器",
       "description": "浏览器代理设置",
       "saved": "浏览器设置已保存！",
+      "sidebar": {
+        "agentLogs": "代理执行日志",
+        "viewTools": "查看可用工具",
+        "clearChatConfirm": "删除所有当前对话历史？",
+        "newChat": "新对话",
+        "pageCaptureSuccess": "页面已保存为快照。",
+        "pageCaptureFailed": "页面捕获失败：{{error}}",
+        "pageCaptureError": "捕获页面时发生错误。",
+        "pageCapture": "捕获页面",
+        "snapshots": "管理快照",
+        "bookmarks": "书签",
+        "presentationMode": "演示模式（测试版 - 开发中）",
+        "settings": "浏览器设置"
+      },
+      "panel": {
+        "browserSettings": "浏览器设置",
+        "manageBookmarks": "管理书签",
+        "saveSession": "保存会话",
+        "browserAgentTools": "浏览器代理工具"
+      },
+      "chat": {
+        "availableTools": "可用的浏览器代理工具",
+        "tools": {
+          "navigate": "页面导航",
+          "readContent": "读取页面内容",
+          "findClickable": "查找可点击元素",
+          "clickElement": "点击元素",
+          "inputText": "输入文本",
+          "scroll": "滚动",
+          "openTab": "打开新标签页",
+          "switchTab": "切换标签页",
+          "closeTab": "关闭标签页",
+          "listTabs": "列出标签页",
+          "screenshotSummary": "截图 + 文本摘要",
+          "readSelected": "读取选定文本"
+        },
+        "agentProcess": "代理执行过程"
+      },
       "settings": {
         "title": "浏览器设置",
         "loading": "加载中...",
@@ -934,6 +987,10 @@
     }
   },
   "chat": {
+    "welcome": {
+      "title": "欢迎使用 SEPilot",
+      "subtitle": "开始新对话或选择现有对话"
+    },
     "newConversation": "新对话",
     "deleteConversation": "删除对话",
     "clearHistory": "清除历史记录",
@@ -968,7 +1025,14 @@
     "noPersona": "无",
     "noPersonaDesc": "不使用角色",
     "confirmDelete": "删除此对话？",
+    "tools": {
+      "viewList": "查看可用工具",
+      "availableTools": "可用工具 ({{count}})",
+      "builtinTools": "内置工具"
+    },
     "emptyState": {
+      "message": "输入消息以开始对话",
+      "hint": "AI 助手将帮助您",
       "startConversation": "输入消息以开始对话",
       "aiAssistantHelp": "AI 助手将帮助您",
       "browserAgentTools": "浏览器代理工具",
@@ -1269,23 +1333,23 @@
     "agentLogs": {
       "title": "Agent 执行日志",
       "back": "返回",
-      "clearAllLogs": "清除所有日志",
+      "clearAll": "清除所有日志",
       "running": "运行中",
-      "empty": "Agent 执行日志将显示在这里",
+      "emptyMessage": "Agent 执行日志将显示在这里",
       "emptyHint": "运行 Browser Agent 查看详细执行过程。",
       "result": "结果",
       "error": "错误",
       "next": "下一步",
-      "continueAction": "继续",
-      "finishAction": "完成",
-      "phases": {
-        "thinking": "🧠 思考中",
-        "toolCall": "🔧 工具调用",
-        "toolResult": "✅ 工具结果",
-        "decision": "⚡ 决策",
-        "completion": "🎉 完成",
-        "error": "❌ 错误",
-        "default": "📝 日志"
+      "continue": "继续",
+      "complete": "完成",
+      "phase": {
+        "thinking": "思考中",
+        "toolCall": "工具调用",
+        "toolResult": "工具结果",
+        "decision": "决策",
+        "completion": "完成",
+        "error": "错误",
+        "log": "日志"
       }
     },
     "toolsList": {
@@ -1955,7 +2019,29 @@
     "nameAndPromptRequired": "名称和系统提示词是必填项。",
     "saveFailed": "保存失败",
     "confirmDelete": "您确定要删除此角色吗？",
-    "deleteFailed": "删除失败"
+    "deleteFailed": "删除失败",
+    "builtin": {
+      "default": {
+        "name": "通用助手",
+        "description": "通用 AI 助手",
+        "systemPrompt": "你是一个有用、准确且友好的 AI 助手。为用户的问题提供清晰有用的答案。所有答案都用中文编写。"
+      },
+      "translator": {
+        "name": "翻译员",
+        "description": "专业翻译服务",
+        "systemPrompt": "你是一名专业翻译员。准确自然地翻译用户提供的文本。考虑上下文，在需要时适当意译，但准确传达原文的含义。省略翻译之外的不必要解释，只提供翻译结果。如果翻译结果之外需要额外解释，请用中文编写。"
+      },
+      "english-teacher": {
+        "name": "英语老师",
+        "description": "英语学习助手",
+        "systemPrompt": "你是一位友善且专业的英语老师。帮助学生学习英语。提供语法解释、词汇学习、写作批改、会话练习等，并以学生易于理解的方式解释。纠正错误并解释为什么错了。所有解释和答案都用中文编写。"
+      },
+      "senior-developer": {
+        "name": "高级开发人员",
+        "description": "技术指导和代码审查",
+        "systemPrompt": "你是一位拥有超过 10 年经验的高级软件工程师。就代码审查、架构设计、技术决策、最佳实践等提供建议。提供实用、基于经验的答案，并清楚地解释权衡。所有答案都用中文编写。"
+      }
+    }
   },
   "personaDialog": {
     "title": "AI 角色管理",
@@ -2588,9 +2674,6 @@
       "fileRead": "读取文件时出错：{{filename}}",
       "unsupportedFile": "不支持的文件类型：{{filename}}"
     },
-    "imageGen": {
-      "error": "❌ 图像生成错误：{{message}}"
-    },
     "tools": {
       "waiting": "🔔 等待工具执行批准...",
       "rejected": "❌ 工具执行被拒绝。",
@@ -2647,6 +2730,7 @@
       "ariaLabel": "选择图片文件"
     },
     "imageGen": {
+      "error": "❌ 图像生成错误：{{message}}",
       "tooltip": "图像生成",
       "enable": "启用图像生成(自动启用工具)",
       "disable": "禁用图像生成"

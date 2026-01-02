@@ -8,6 +8,7 @@
  */
 
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useChatStore } from '@/lib/store/chat-store';
 import { UnifiedChatArea } from './unified/UnifiedChatArea';
 import { UnifiedChatInput } from './unified/UnifiedChatInput';
@@ -19,6 +20,7 @@ import type { ChatConfig } from './unified/types';
 import type { ImageAttachment } from '@/types';
 
 export function ChatContainer() {
+  const { t } = useTranslation();
   const {
     messages,
     activeConversationId,
@@ -182,8 +184,8 @@ export function ChatContainer() {
   if (!activeConversationId) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-        <h2 className="mb-2 text-xl font-semibold">SEPilot에 오신 것을 환영합니다</h2>
-        <p className="text-center text-sm">새 대화를 시작하거나 기존 대화를 선택하세요</p>
+        <h2 className="mb-2 text-xl font-semibold">{t('chat.welcome.title')}</h2>
+        <p className="text-center text-sm">{t('chat.welcome.subtitle')}</p>
       </div>
     );
   }

@@ -44,6 +44,7 @@ import { SaveKnowledgeDialog } from '@/components/chat/SaveKnowledgeDialog';
 import { CompressConversationDialog } from '@/components/chat/CompressConversationDialog';
 import { isElectron } from '@/lib/platform';
 import { useTranslation } from 'react-i18next';
+import type { Persona } from '@/types/persona';
 
 import { logger } from '@/lib/utils/logger';
 interface ChatHistoryProps {
@@ -51,6 +52,7 @@ interface ChatHistoryProps {
 }
 
 export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
+  const { t } = useTranslation();
   const {
     conversations,
     activeConversationId,
@@ -63,6 +65,17 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     personas,
     clearMessagesCache,
   } = useChatStore();
+
+  // Builtin persona의 번역된 이름, 설명을 가져오는 헬퍼 함수
+  const getPersonaDisplayText = (persona: Persona, field: 'name' | 'description') => {
+    if (persona.isBuiltin) {
+      const translationKey = `persona.builtin.${persona.id}.${field}`;
+      const translated = t(translationKey);
+      // 번역 키가 존재하면 사용, 없으면 원본 사용
+      return translated !== translationKey ? translated : persona[field];
+    }
+    return persona[field];
+  };
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -336,8 +349,6 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     handleClearSearch();
     onConversationClick?.();
   };
-
-  const { t } = useTranslation();
 
   const selectedConversation = selectedConversationId
     ? conversations.find((c) => c.id === selectedConversationId)
@@ -621,9 +632,9 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                   {persona.avatar}
                 </div>
                 <div className="flex-1 text-left">
-                  <div className="font-medium">{persona.name}</div>
+                  <div className="font-medium">{getPersonaDisplayText(persona, 'name')}</div>
                   <div className="text-xs text-muted-foreground line-clamp-1">
-                    {persona.description}
+                    {getPersonaDisplayText(persona, 'description')}
                   </div>
                 </div>
                 {selectedConversation?.personaId === persona.id && (

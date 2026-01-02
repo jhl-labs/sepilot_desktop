@@ -34,6 +34,7 @@ import {
   LLMConfig,
   QuickInputMessageData,
 } from '@/types';
+import type { Persona } from '@/types/persona';
 import { ToolApprovalDialog } from './ToolApprovalDialog';
 import { ImageGenerationProgressBar } from './ImageGenerationProgressBar';
 import { LLMStatusBar, type ToolInfo } from './LLMStatusBar';
@@ -110,14 +111,28 @@ export function InputBox() {
   const activePersona = personas.find((p) => p.id === effectivePersonaId);
   const personaSystemPrompt = activePersona?.systemPrompt || null;
 
+  // Builtin persona의 번역된 이름, 설명을 가져오는 헬퍼 함수
+  const getPersonaDisplayText = (persona: Persona, field: 'name' | 'description') => {
+    if (persona.isBuiltin) {
+      const translationKey = `persona.builtin.${persona.id}.${field}`;
+      const translated = t(translationKey);
+      // 번역 키가 존재하면 사용, 없으면 원본 사용
+      return translated !== translationKey ? translated : persona[field];
+    }
+    return persona[field];
+  };
+
   // Detect slash command for persona switching
   const personaCommand = input.match(/^\/persona\s+(.*)$/);
   const filteredPersonas = personaCommand
-    ? personas.filter(
-        (p) =>
-          p.name.toLowerCase().includes(personaCommand[1].toLowerCase()) ||
-          p.description.toLowerCase().includes(personaCommand[1].toLowerCase())
-      )
+    ? personas.filter((p) => {
+        const name = getPersonaDisplayText(p, 'name');
+        const description = getPersonaDisplayText(p, 'description');
+        const searchTerm = personaCommand[1].toLowerCase();
+        return (
+          name.toLowerCase().includes(searchTerm) || description.toLowerCase().includes(searchTerm)
+        );
+      })
     : [];
 
   // Determine if any conversation is currently streaming
@@ -1608,9 +1623,11 @@ export function InputBox() {
                     >
                       <span className="text-2xl flex-shrink-0">{persona.avatar || '🤖'}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{persona.name}</div>
+                        <div className="font-medium text-sm truncate">
+                          {getPersonaDisplayText(persona, 'name')}
+                        </div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {persona.description}
+                          {getPersonaDisplayText(persona, 'description')}
                         </div>
                       </div>
                       {activePersonaId === persona.id && (

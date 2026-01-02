@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Minimize2, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -45,6 +46,7 @@ export function LLMStatusBar({
   onCompact,
   onConfigUpdate,
 }: LLMStatusBarProps) {
+  const { t } = useTranslation();
   const [editingField, setEditingField] = useState<'maxTokens' | 'temperature' | null>(null);
   const [editValue, setEditValue] = useState('');
   const [availableModels, setAvailableModels] = useState<ModelConfig[]>([]);
@@ -99,8 +101,8 @@ export function LLMStatusBar({
               setAvailableModels(result.data.llm.models);
             }
           } else {
-            // Fallback: If using LLMConfig (v1), create a dummy model entry
-            console.log('[LLMStatusBar] Using LLMConfig (v1), creating fallback model');
+            // Fallback: If using LLMConfig, create a dummy model entry
+            console.log('[LLMStatusBar] Using LLMConfig, creating fallback model');
             if (llmConfig) {
               setAvailableModels([
                 {
@@ -159,7 +161,7 @@ export function LLMStatusBar({
       return;
     }
 
-    // If using legacy LLMConfig (v1), just update the model directly
+    // If using legacy LLMConfig, just update the model directly
     if (!llmConfigV2) {
       const updatedConfig: LLMConfig = {
         ...llmConfig,
@@ -489,7 +491,7 @@ export function LLMStatusBar({
                   <PopoverTrigger asChild>
                     <button
                       className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors"
-                      title="사용 가능한 툴 목록 보기"
+                      title={t('chat.tools.viewList')}
                     >
                       <Wrench className="h-3 w-3" />
                       <span>{tools.length} tools</span>
@@ -502,12 +504,12 @@ export function LLMStatusBar({
                   >
                     <div className="space-y-3">
                       <div className="font-semibold text-sm border-b pb-2">
-                        사용 가능한 툴 ({tools.length}개)
+                        {t('chat.tools.availableTools', { count: tools.length })}
                       </div>
                       {Object.entries(groupedTools).map(([serverName, serverTools]) => (
                         <div key={serverName} className="space-y-1">
                           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            {serverName === 'builtin' ? 'Built-in Tools' : serverName}
+                            {serverName === 'builtin' ? t('chat.tools.builtinTools') : serverName}
                             <span className="ml-1 text-muted-foreground/70">
                               ({serverTools.length})
                             </span>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './MessageBubble';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -37,6 +38,7 @@ const FONT_SCALE_OPTIONS = [
 ];
 
 export function ChatArea() {
+  const { t } = useTranslation();
   const {
     messages,
     activeConversationId,
@@ -509,8 +511,8 @@ export function ChatArea() {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
         <MessageSquare className="mb-4 h-16 w-16 opacity-20" />
-        <h2 className="mb-2 text-xl font-semibold">SEPilot에 오신 것을 환영합니다</h2>
-        <p className="text-center text-sm">새 대화를 시작하거나 기존 대화를 선택하세요</p>
+        <h2 className="mb-2 text-xl font-semibold">{t('chat.welcome.title')}</h2>
+        <p className="text-center text-sm">{t('chat.welcome.subtitle')}</p>
       </div>
     );
   }
@@ -557,8 +559,8 @@ export function ChatArea() {
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-muted-foreground px-4">
             <MessageSquare className="mb-4 h-16 w-16 opacity-10" />
-            <p className="text-sm font-medium">메시지를 입력하여 대화를 시작하세요</p>
-            <p className="text-xs mt-1 opacity-60">AI 어시스턴트가 도와드리겠습니다</p>
+            <p className="text-sm font-medium">{t('chat.emptyState.message')}</p>
+            <p className="text-xs mt-1 opacity-60">{t('chat.emptyState.hint')}</p>
           </div>
         ) : (
           <div

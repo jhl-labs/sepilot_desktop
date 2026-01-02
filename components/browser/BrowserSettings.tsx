@@ -387,6 +387,7 @@ export function BrowserSettings() {
                   <p className="mt-1">{t('settings.browser.settings.font.previewAi')}</p>
                   <p className="mt-1">English: Hello, how can I help you?</p>
                   <p className="mt-1">日本語: こんにちは、お手伝いできますか？</p>
+                  <p className="mt-1">中文: 你好，有什么可以帮你的吗？</p>
                 </div>
               </div>
 

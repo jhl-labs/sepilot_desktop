@@ -95,6 +95,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     text: string;
   } | null>(null);
 
+  // 탭 변경 시 메시지 초기화
+  useEffect(() => {
+    setMessage(null);
+    setImageGenMessage(null);
+  }, [activeTab]);
+
   // VectorDB & Embedding 설정 상태
   const [vectorDBConfig, setVectorDBConfig] = useState<VectorDBConfig | null>(null);
   const [embeddingConfig, setEmbeddingConfig] = useState<EmbeddingConfig | null>(null);
@@ -956,7 +962,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     onSave={async (lang) => {
                       if (lang) {
                         setGeneralConfig({ language: lang as SupportedLanguage });
-                        changeLanguage(lang as SupportedLanguage);
+                        // 언어 변경이 완료된 후에 메시지를 설정
+                        await changeLanguage(lang as SupportedLanguage);
                         if (isElectron() && window.electronAPI) {
                           await persistAppConfig({
                             general: { language: lang as SupportedLanguage },
@@ -968,6 +975,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                           );
                         }
                       }
+                      // 언어 변경 완료 후 메시지 설정 (올바른 언어로 번역됨)
                       setMessage({ type: 'success', text: t('settings.general.saved') });
                     }}
                     isSaving={isSaving}

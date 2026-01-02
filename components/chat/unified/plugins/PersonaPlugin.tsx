@@ -9,6 +9,7 @@
 
 import { Check } from 'lucide-react';
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Persona } from '@/types/persona';
 
 interface PersonaPluginProps {
@@ -32,16 +33,31 @@ export function PersonaPlugin({
   selectedIndex,
   onIndexChange,
 }: PersonaPluginProps) {
+  const { t } = useTranslation();
   const autocompleteRef = useRef<HTMLDivElement>(null);
+
+  // Builtin persona의 번역된 이름, 설명을 가져오는 헬퍼 함수
+  const getPersonaDisplayText = (persona: Persona, field: 'name' | 'description') => {
+    if (persona.isBuiltin) {
+      const translationKey = `persona.builtin.${persona.id}.${field}`;
+      const translated = t(translationKey);
+      // 번역 키가 존재하면 사용, 없으면 원본 사용
+      return translated !== translationKey ? translated : persona[field];
+    }
+    return persona[field];
+  };
 
   // Detect slash command for persona switching
   const personaCommand = input.match(/^\/persona\s+(.*)$/);
   const filteredPersonas = personaCommand
-    ? personas.filter(
-        (p) =>
-          p.name.toLowerCase().includes(personaCommand[1].toLowerCase()) ||
-          p.description.toLowerCase().includes(personaCommand[1].toLowerCase())
-      )
+    ? personas.filter((p) => {
+        const name = getPersonaDisplayText(p, 'name');
+        const description = getPersonaDisplayText(p, 'description');
+        const searchTerm = personaCommand[1].toLowerCase();
+        return (
+          name.toLowerCase().includes(searchTerm) || description.toLowerCase().includes(searchTerm)
+        );
+      })
     : [];
 
   const showAutocomplete = personaCommand && filteredPersonas.length > 0;
@@ -73,8 +89,12 @@ export function PersonaPlugin({
           >
             <span className="text-2xl flex-shrink-0">{persona.avatar || '🤖'}</span>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm truncate">{persona.name}</div>
-              <div className="text-xs text-muted-foreground truncate">{persona.description}</div>
+              <div className="font-medium text-sm truncate">
+                {getPersonaDisplayText(persona, 'name')}
+              </div>
+              <div className="text-xs text-muted-foreground truncate">
+                {getPersonaDisplayText(persona, 'description')}
+              </div>
             </div>
             {activePersonaId === persona.id && (
               <Check className="h-4 w-4 text-primary flex-shrink-0" />
