@@ -95,7 +95,7 @@ export class LLMInteractionTestSuite {
             name: 'LLM Provider Configuration',
             status: 'fail',
             duration: Date.now() - startTime,
-            message: 'No LLM connections configured (V2)',
+            message: 'No LLM connections configured',
             timestamp: Date.now(),
           };
         }
@@ -105,7 +105,7 @@ export class LLMInteractionTestSuite {
           name: 'LLM Provider Configuration',
           status: 'pass',
           duration: Date.now() - startTime,
-          message: `Found ${connectionCount} connection(s), ${modelCount} model(s) (V2)`,
+          message: `Found ${connectionCount} connection(s), ${modelCount} model(s)`,
           timestamp: Date.now(),
         };
       }
@@ -129,7 +129,7 @@ export class LLMInteractionTestSuite {
         name: 'LLM Provider Configuration',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: `Found provider: ${provider} (V1)`,
+        message: `Found provider: ${provider}`,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -179,7 +179,7 @@ export class LLMInteractionTestSuite {
             name: 'API Key Validation',
             status: 'fail',
             duration: Date.now() - startTime,
-            message: 'No connections with API key configured (V2)',
+            message: 'No connections with API key configured',
             timestamp: Date.now(),
           };
         }
@@ -189,7 +189,7 @@ export class LLMInteractionTestSuite {
           name: 'API Key Validation',
           status: 'pass',
           duration: Date.now() - startTime,
-          message: `${connectionsWithKey.length} connection(s) with API key (V2)`,
+          message: `${connectionsWithKey.length} connection(s) with API key`,
           timestamp: Date.now(),
         };
       }
@@ -203,7 +203,7 @@ export class LLMInteractionTestSuite {
           name: 'API Key Validation',
           status: 'fail',
           duration: Date.now() - startTime,
-          message: 'No API key configured (V1)',
+          message: 'No API key configured',
           timestamp: Date.now(),
         };
       }
@@ -213,7 +213,7 @@ export class LLMInteractionTestSuite {
         name: 'API Key Validation',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: 'API key is configured (V1)',
+        message: 'API key is configured',
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -263,7 +263,7 @@ export class LLMInteractionTestSuite {
               name: 'Token Limits Configuration',
               status: 'fail',
               duration: Date.now() - startTime,
-              message: `Invalid defaultMaxTokens: ${defaultMaxTokens} (V2)`,
+              message: `Invalid defaultMaxTokens: ${defaultMaxTokens}`,
               timestamp: Date.now(),
             };
           }
@@ -274,7 +274,7 @@ export class LLMInteractionTestSuite {
           name: 'Token Limits Configuration',
           status: 'pass',
           duration: Date.now() - startTime,
-          message: `Default maxTokens: ${defaultMaxTokens} (V2)`,
+          message: `Default maxTokens: ${defaultMaxTokens}`,
           timestamp: Date.now(),
         };
       }
@@ -289,7 +289,7 @@ export class LLMInteractionTestSuite {
             name: 'Token Limits Configuration',
             status: 'fail',
             duration: Date.now() - startTime,
-            message: `Invalid maxTokens: ${maxTokens} (V1)`,
+            message: `Invalid maxTokens: ${maxTokens}`,
             timestamp: Date.now(),
           };
         }
@@ -300,7 +300,7 @@ export class LLMInteractionTestSuite {
         name: 'Token Limits Configuration',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: `maxTokens: ${maxTokens} (V1)`,
+        message: `maxTokens: ${maxTokens}`,
         timestamp: Date.now(),
       };
     } catch (error) {
@@ -350,7 +350,7 @@ export class LLMInteractionTestSuite {
               name: 'Temperature Settings',
               status: 'fail',
               duration: Date.now() - startTime,
-              message: `Invalid defaultTemperature: ${defaultTemperature} (V2)`,
+              message: `Invalid defaultTemperature: ${defaultTemperature}`,
               timestamp: Date.now(),
             };
           }
@@ -361,7 +361,7 @@ export class LLMInteractionTestSuite {
           name: 'Temperature Settings',
           status: 'pass',
           duration: Date.now() - startTime,
-          message: `Default temperature: ${defaultTemperature} (V2)`,
+          message: `Default temperature: ${defaultTemperature}`,
           timestamp: Date.now(),
         };
       }
@@ -376,7 +376,7 @@ export class LLMInteractionTestSuite {
             name: 'Temperature Settings',
             status: 'fail',
             duration: Date.now() - startTime,
-            message: `Invalid temperature: ${temperature} (V1)`,
+            message: `Invalid temperature: ${temperature}`,
             timestamp: Date.now(),
           };
         }
@@ -387,7 +387,7 @@ export class LLMInteractionTestSuite {
         name: 'Temperature Settings',
         status: 'pass',
         duration: Date.now() - startTime,
-        message: `Temperature: ${temperature} (V1)`,
+        message: `Temperature: ${temperature}`,
         timestamp: Date.now(),
       };
     } catch (error) {
