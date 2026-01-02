@@ -291,7 +291,7 @@ export class HealthCheckService {
         if (connectionCount === 0) {
           return {
             status: 'warn',
-            message: 'No LLM connections configured (V2)',
+            message: 'No LLM connections configured',
             details: { connectionCount: 0 },
             latency: Date.now() - startTime,
           };
@@ -300,7 +300,7 @@ export class HealthCheckService {
         if (connectionsWithKey.length === 0) {
           return {
             status: 'fail',
-            message: 'No LLM connections have API keys configured (V2)',
+            message: 'No LLM connections have API keys configured',
             details: { totalConnections: connectionCount, configuredCount: 0 },
             latency: Date.now() - startTime,
           };
@@ -308,7 +308,7 @@ export class HealthCheckService {
 
         return {
           status: 'pass',
-          message: `${connectionsWithKey.length}/${connectionCount} LLM connection(s) configured (V2)`,
+          message: `${connectionsWithKey.length}/${connectionCount} LLM connection(s) configured`,
           details: {
             totalConnections: connectionCount,
             configuredCount: connectionsWithKey.length,
@@ -324,7 +324,7 @@ export class HealthCheckService {
       if (!provider) {
         return {
           status: 'warn',
-          message: 'No LLM provider configured (V1)',
+          message: 'No LLM provider configured',
           latency: Date.now() - startTime,
         };
       }
@@ -332,7 +332,7 @@ export class HealthCheckService {
       if (!apiKey || apiKey.length === 0) {
         return {
           status: 'fail',
-          message: 'LLM provider has no API key configured (V1)',
+          message: 'LLM provider has no API key configured',
           details: { provider },
           latency: Date.now() - startTime,
         };
@@ -340,7 +340,7 @@ export class HealthCheckService {
 
       return {
         status: 'pass',
-        message: `LLM provider configured: ${provider} (V1)`,
+        message: `LLM provider configured: ${provider}`,
         details: { provider },
         latency: Date.now() - startTime,
       };

@@ -23,7 +23,16 @@ class Logger {
     const formatted = this.formatMessage(level, message, data);
 
     // Console output
-    console.log(formatted.trim());
+    try {
+      console.log(formatted.trim());
+    } catch (error) {
+      // Ignore EPIPE errors which happen when the parent process closes stdout
+      // This is common in Electron/Node.js when the pipe is broken
+      if ((error as any).code !== 'EPIPE') {
+        // If it's not EPIPE, it might be worth knowing, but we shouldn't crash
+        // We can't log to console if console logging failed, so just silently fail
+      }
+    }
 
     // File output
     try {
