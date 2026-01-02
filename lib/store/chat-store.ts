@@ -197,8 +197,8 @@ interface ChatStore {
   editorChatUseTools: boolean; // MCP Tools usage in editor chat
   editorChatEnabledTools: Set<string>; // Enabled tools for editor chat
   editorAgentMode: 'editor' | 'coding'; // Agent 모드 (editor-agent 또는 coding-agent)
-  editorUseRagInAutocomplete: boolean; // RAG usage in autocomplete
-  editorUseToolsInAutocomplete: boolean; // Tools usage in autocomplete
+  editorUseRagInAutocomplete: boolean; // RAG usage in editor autocomplete
+  editorUseToolsInAutocomplete: boolean; // Tools usage in editor autocomplete
 
   // Chat Mode View
   chatViewMode: 'history' | 'documents'; // history or documents view in Chat sidebar
@@ -325,6 +325,8 @@ interface ChatStore {
   setEditorChatUseTools: (enable: boolean) => void;
   toggleEditorChatTool: (toolName: string) => void;
   setEditorAgentMode: (mode: 'editor' | 'coding') => void;
+  setEditorUseRagInAutocomplete: (enable: boolean) => void;
+  setEditorUseToolsInAutocomplete: (enable: boolean) => void;
 
   // Actions - Chat Mode View
   setChatViewMode: (mode: 'history' | 'documents') => void;
@@ -576,8 +578,31 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     return 'editor';
   })(),
 
-  editorUseRagInAutocomplete: false,
-  editorUseToolsInAutocomplete: false,
+  editorUseRagInAutocomplete: (() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    try {
+      const saved = localStorage.getItem('sepilot_editor_use_rag_in_autocomplete');
+      return saved === 'true';
+    } catch (error) {
+      console.error('Failed to load editor autocomplete RAG setting from localStorage:', error);
+    }
+    return false;
+  })(),
+
+  editorUseToolsInAutocomplete: (() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    try {
+      const saved = localStorage.getItem('sepilot_editor_use_tools_in_autocomplete');
+      return saved === 'true';
+    } catch (error) {
+      console.error('Failed to load editor autocomplete Tools setting from localStorage:', error);
+    }
+    return false;
+  })(),
 
   // Chat Mode View
   chatViewMode: 'history',
@@ -1951,6 +1976,20 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ editorAgentMode: mode });
     if (typeof window !== 'undefined') {
       localStorage.setItem('sepilot_editor_agent_mode', mode);
+    }
+  },
+
+  setEditorUseRagInAutocomplete: (enable: boolean) => {
+    set({ editorUseRagInAutocomplete: enable });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sepilot_editor_use_rag_in_autocomplete', enable.toString());
+    }
+  },
+
+  setEditorUseToolsInAutocomplete: (enable: boolean) => {
+    set({ editorUseToolsInAutocomplete: enable });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sepilot_editor_use_tools_in_autocomplete', enable.toString());
     }
   },
 
