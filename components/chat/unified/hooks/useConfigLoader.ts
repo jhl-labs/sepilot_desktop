@@ -283,7 +283,7 @@ export function useConfigLoader() {
               finalConfig.llm = v2Config;
             } else {
               // Legacy V1: Overwrite normally
-              logger.info('[useConfigLoader] Overwriting legacy LLMConfig (V1)');
+              logger.info('[useConfigLoader] Overwriting legacy LLMConfig');
               finalConfig.llm = newConfig;
             }
 
