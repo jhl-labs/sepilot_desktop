@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NetworkConfig } from '@/types';
-import { Network, RefreshCw } from 'lucide-react';
+import { Network } from 'lucide-react';
 import { SettingsSectionHeader } from './SettingsSectionHeader';
-import { isElectron } from '@/lib/platform';
 
 interface NetworkSettingsTabProps {
   networkConfig: NetworkConfig;
@@ -26,35 +24,6 @@ export function NetworkSettingsTab({
   message,
 }: NetworkSettingsTabProps) {
   const { t } = useTranslation();
-  const [envVars, setEnvVars] = useState<Record<string, string | undefined>>({});
-  const [isLoadingEnv, setIsLoadingEnv] = useState(false);
-
-  // 환경 변수 로드
-  const loadEnvVars = async () => {
-    if (!isElectron()) {
-      return;
-    }
-
-    setIsLoadingEnv(true);
-    try {
-      const result = await window.electronAPI.config.getNetworkEnvVars();
-      if (result.success && result.data) {
-        setEnvVars(result.data);
-      }
-    } catch (error) {
-      console.error('Failed to load environment variables:', error);
-    } finally {
-      setIsLoadingEnv(false);
-    }
-  };
-
-  // 컴포넌트 마운트 시 환경 변수 로드
-  useEffect(() => {
-    loadEnvVars();
-  }, []);
-
-  // 설정된 환경 변수만 필터링
-  const definedEnvVars = Object.entries(envVars).filter(([_, value]) => value !== undefined);
 
   return (
     <div className="space-y-6">
@@ -84,12 +53,12 @@ export function NetworkSettingsTab({
                     proxy: {
                       ...networkConfig.proxy,
                       enabled: isEnabled,
-                      // 비활성화 시 mode를 'none'으로, 활성화 시 기존 mode 유지 (단, 'none'이면 'system'으로)
+                      // 비활성화 시 mode를 'none'으로, 활성화 시 기존 mode 유지 (단, 'none'이면 'manual'로)
                       mode: !isEnabled
                         ? 'none'
                         : networkConfig.proxy?.mode === 'none'
-                          ? 'system'
-                          : networkConfig.proxy?.mode || 'system',
+                          ? 'manual'
+                          : networkConfig.proxy?.mode || 'manual',
                     } as any,
                   });
                 }}
@@ -113,15 +82,12 @@ export function NetworkSettingsTab({
                       proxy: {
                         ...networkConfig.proxy,
                         enabled: networkConfig.proxy?.enabled ?? false,
-                        mode: e.target.value as 'system' | 'manual' | 'none',
+                        mode: e.target.value as 'manual' | 'none',
                       } as any,
                     })
                   }
                   className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
                 >
-                  <option value="system" className="bg-background text-foreground">
-                    {t('settings.network.proxy.modeSystem')}
-                  </option>
                   <option value="manual" className="bg-background text-foreground">
                     {t('settings.network.proxy.modeManual')}
                   </option>
@@ -192,61 +158,6 @@ export function NetworkSettingsTab({
             </div>
           )}
         </div>
-      </div>
-
-      {/* Environment Variables */}
-      <div className="space-y-3 p-4 rounded-lg border">
-        <div className="flex items-center justify-between">
-          <div>
-            <Label className="text-base font-semibold">{t('settings.network.envVars.title')}</Label>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('settings.network.envVars.description')}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadEnvVars}
-            disabled={isLoadingEnv}
-            className="gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoadingEnv ? 'animate-spin' : ''}`} />
-            {t('settings.network.envVars.refresh')}
-          </Button>
-        </div>
-
-        {definedEnvVars.length > 0 ? (
-          <div className="mt-3 max-h-64 overflow-y-auto rounded border bg-muted/30">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-muted border-b">
-                <tr>
-                  <th className="text-left p-2 font-medium">
-                    {t('settings.network.envVars.variableName')}
-                  </th>
-                  <th className="text-left p-2 font-medium">
-                    {t('settings.network.envVars.value')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {definedEnvVars.map(([key, value]) => (
-                  <tr key={key} className="border-b last:border-b-0 hover:bg-muted/50">
-                    <td className="p-2 font-mono text-xs text-primary">{key}</td>
-                    <td className="p-2 font-mono text-xs break-all">{value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="mt-3 text-center py-8 text-sm text-muted-foreground rounded border bg-muted/30">
-            {isLoadingEnv
-              ? t('settings.network.envVars.loading')
-              : t('settings.network.envVars.noVars')}
-          </div>
-        )}
-
-        <p className="text-xs text-muted-foreground">{t('settings.network.envVars.note')}</p>
       </div>
 
       {/* Save Button */}

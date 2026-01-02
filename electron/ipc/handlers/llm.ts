@@ -390,14 +390,6 @@ export function setupLLMHandlers() {
           };
         }
 
-        // Log environment variables for debugging
-        const envInfo = {
-          HTTPS_PROXY: process.env.HTTPS_PROXY || process.env.https_proxy,
-          HTTP_PROXY: process.env.HTTP_PROXY || process.env.http_proxy,
-          NO_PROXY: process.env.NO_PROXY || process.env.no_proxy,
-          NODE_TLS_REJECT_UNAUTHORIZED: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
-        };
-
         logger.info('[LLM IPC] Fetch models request:', {
           provider,
           baseURL: baseURL || 'default',
@@ -409,7 +401,6 @@ export function setupLLMHandlers() {
             proxyUrl: networkConfig?.proxy?.enabled ? networkConfig?.proxy?.url : undefined,
             sslVerify: networkConfig?.ssl?.verify,
           },
-          environment: envInfo,
         });
 
         // Normalize base URL
@@ -512,16 +503,6 @@ export function setupLLMHandlers() {
               detailedError += `- 프록시: ${config.networkConfig.proxy.mode} (${config.networkConfig.proxy.url})\n`;
             }
             detailedError += `- SSL 검증: ${config.networkConfig.ssl?.verify !== false ? '활성화' : '비활성화'}\n`;
-          }
-
-          // 환경 변수 정보 추가
-          const envProxy =
-            process.env.HTTPS_PROXY ||
-            process.env.https_proxy ||
-            process.env.HTTP_PROXY ||
-            process.env.http_proxy;
-          if (envProxy) {
-            detailedError += `\n시스템 프록시 환경 변수: ${envProxy}`;
           }
 
           return {

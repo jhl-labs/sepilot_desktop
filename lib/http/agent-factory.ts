@@ -60,32 +60,10 @@ export async function createHttpAgent(
     return await createManualProxyAgent(networkConfig.proxy.url, agentOptions);
   }
 
-  // 2. System Proxy
-  // 시스템/환경 설정 사용 (ignoreEnvVars가 true이면 환경 변수 무시)
-  if (networkConfig.proxy?.enabled && networkConfig.proxy.mode === 'system') {
-    if (!networkConfig.proxy.ignoreEnvVars) {
-      logger.debug('[HTTP Agent] Using System Proxy (Priority: Medium)');
-      return await createSystemProxyAgent(agentOptions);
-    }
-    // Note: If ignoreEnvVars is true for System Proxy, it effectively behaves like No Proxy
-    // regarding Env Vars, though proxy-agent might still read OS registry.
-    // However, since we nuke env vars in fetch.ts, proxy-agent will rely on OS settings only.
-    // For consistency with "Ignore Env Vars" intent, we still use System Agent but rely on cleared Env.
-    logger.debug('[HTTP Agent] Using System Proxy with Env Vars Ignored (Priority: Medium)');
-    return await createSystemProxyAgent(agentOptions);
-  }
-
-  // 3. No Proxy / Disabled (Lowest Priority)
-  // 프록시가 명시적으로 비활성화되었거나, ignoreEnvVars가 설정된 경우
-  // 직결(Direct) 연결을 강제하는 에이전트 생성
-  if (
-    networkConfig.proxy?.ignoreEnvVars ||
-    !networkConfig.proxy?.enabled ||
-    networkConfig.proxy?.mode === 'none'
-  ) {
-    logger.debug(
-      '[HTTP Agent] Proxy explicitly disabled or ignored. Creating No-Proxy Agent (Priority: Low)'
-    );
+  // 2. No Proxy / Disabled (Lowest Priority)
+  // 프록시가 명시적으로 비활성화된 경우 직결(Direct) 연결을 강제하는 에이전트 생성
+  if (!networkConfig.proxy?.enabled || networkConfig.proxy?.mode === 'none') {
+    logger.debug('[HTTP Agent] Proxy explicitly disabled. Creating No-Proxy Agent (Priority: Low)');
     return await createNoProxyAgent(agentOptions);
   }
 
@@ -110,23 +88,6 @@ async function createManualProxyAgent(
     return new HttpsProxyAgent(proxyUrl, agentOptions);
   } catch (error) {
     logger.warn('[HTTP Agent] https-proxy-agent not available:', error);
-    return undefined;
-  }
-}
-
-/**
- * 시스템 프록시 Agent 생성
- * 환경 변수 (HTTP_PROXY, HTTPS_PROXY) 자동 감지
- */
-async function createSystemProxyAgent(
-  agentOptions: Record<string, unknown>
-): Promise<HttpAgentType | undefined> {
-  try {
-    const { ProxyAgent } = await import('proxy-agent');
-    logger.debug('[HTTP Agent] Using system proxy (env variables)');
-    return new ProxyAgent(agentOptions);
-  } catch (error) {
-    logger.warn('[HTTP Agent] proxy-agent not available:', error);
     return undefined;
   }
 }

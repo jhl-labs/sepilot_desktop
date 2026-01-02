@@ -16,7 +16,6 @@ export const createDefaultNetworkConfig = (): NetworkConfig => ({
     enabled: false,
     mode: 'none',
     url: '',
-    ignoreEnvVars: false,
   },
   ssl: {
     verify: true,
@@ -142,7 +141,6 @@ export const mergeNetworkConfig = (incoming?: Partial<NetworkConfig>): NetworkCo
     enabled: false,
     mode: 'none' as const,
     url: '',
-    ignoreEnvVars: false,
   };
   const sslBase = base.ssl ?? { verify: true };
 
@@ -150,7 +148,6 @@ export const mergeNetworkConfig = (incoming?: Partial<NetworkConfig>): NetworkCo
     enabled: incoming.proxy?.enabled ?? proxyBase.enabled,
     mode: incoming.proxy?.mode ?? proxyBase.mode,
     url: incoming.proxy?.url ?? proxyBase.url,
-    ignoreEnvVars: incoming.proxy?.ignoreEnvVars ?? proxyBase.ignoreEnvVars,
   };
 
   const mergedSsl = {

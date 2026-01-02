@@ -8,6 +8,24 @@ const pathModule = require('path');
 // We need to point @ to resources/app.asar/dist/electron
 moduleAlias.addAlias('@', pathModule.join(__dirname, '..'));
 
+// 환경 변수에서 프록시 설정을 완전히 제거
+// NetworkSettingsTab.tsx의 설정만 사용하도록 강제
+function clearProxyEnvironmentVariables() {
+  delete process.env.HTTP_PROXY;
+  delete process.env.HTTPS_PROXY;
+  delete process.env.http_proxy;
+  delete process.env.https_proxy;
+  delete process.env.ALL_PROXY;
+  delete process.env.all_proxy;
+  delete process.env.NO_PROXY;
+  delete process.env.no_proxy;
+
+  console.log('[Main] Proxy environment variables cleared. Only NetworkConfig will be used.');
+}
+
+// 앱 시작 시 즉시 환경 변수 제거
+clearProxyEnvironmentVariables();
+
 import {
   app,
   BrowserWindow,

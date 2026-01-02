@@ -23,7 +23,7 @@ export function LLMSettingsTab({
   config,
   setConfig,
   networkConfig,
-  setNetworkConfig,
+  setNetworkConfig: _setNetworkConfig,
   onSave,
   isSaving,
   message,
@@ -59,41 +59,6 @@ export function LLMSettingsTab({
         description={t('settings.llm.settingsV2Description')}
         icon={Settings}
       />
-
-      {/* Network Override Settings */}
-      {setNetworkConfig && (
-        <div className="flex items-center space-x-2 p-4 border rounded-lg bg-muted/20">
-          <input
-            id="ignore-env-vars"
-            type="checkbox"
-            checked={networkConfig?.proxy?.ignoreEnvVars ?? false}
-            onChange={(e) => {
-              const checked = e.target.checked;
-              setNetworkConfig((prev) => ({
-                ...prev,
-                proxy: {
-                  enabled: prev.proxy?.enabled ?? false,
-                  mode: prev.proxy?.mode ?? 'none',
-                  url: prev.proxy?.url ?? '',
-                  ignoreEnvVars: checked,
-                },
-              }));
-            }}
-            className="h-4 w-4 rounded border-input cursor-pointer"
-          />
-          <div className="flex-1">
-            <label
-              htmlFor="ignore-env-vars"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer block"
-            >
-              {t('settings.network.proxy.ignoreEnvVars')}
-            </label>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('settings.network.proxy.ignoreEnvVarsDescription')}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b">

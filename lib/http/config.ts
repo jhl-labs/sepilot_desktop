@@ -73,8 +73,8 @@ export async function getNetworkConfig(forceRefresh = false): Promise<NetworkCon
         cachedConfig = loadFromLocalStorage();
         break;
       case 'node':
-        // 순수 Node.js 환경에서는 환경 변수 사용
-        cachedConfig = loadFromEnvironment();
+        // 순수 Node.js 환경에서는 프록시 없이 직결 연결
+        cachedConfig = null;
         break;
     }
 
@@ -176,32 +176,6 @@ function loadFromLocalStorage(): NetworkConfig | null {
 }
 
 /**
- * 순수 Node.js: 환경 변수에서 로드
- */
-function loadFromEnvironment(): NetworkConfig | null {
-  const proxyUrl =
-    process.env.HTTP_PROXY ||
-    process.env.HTTPS_PROXY ||
-    process.env.http_proxy ||
-    process.env.https_proxy;
-
-  if (proxyUrl) {
-    return {
-      proxy: {
-        enabled: true,
-        mode: 'manual',
-        url: proxyUrl,
-      },
-      ssl: {
-        verify: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0',
-      },
-    };
-  }
-
-  return null;
-}
-
-/**
  * NetworkConfig 정규화 (잘못된 설정 자동 수정)
  *
  * 문제 케이스:
@@ -232,6 +206,13 @@ function normalizeNetworkConfig(config: NetworkConfig | null): NetworkConfig | n
         `[HTTP Config] Normalizing invalid config: enabled: false + mode: ${proxy.mode} → mode: none`
       );
       proxy.mode = 'none';
+    }
+
+    // 케이스 3: mode: 'system' → mode: 'none' (마이그레이션)
+    if ((proxy.mode as string) === 'system') {
+      logger.warn('[HTTP Config] Migrating deprecated system mode to none');
+      proxy.mode = 'none';
+      proxy.enabled = false;
     }
 
     normalized.proxy = proxy;

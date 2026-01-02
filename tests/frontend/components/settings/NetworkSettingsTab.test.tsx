@@ -107,7 +107,7 @@ describe('NetworkSettingsTab', () => {
     const enabledConfig: NetworkConfig = {
       proxy: {
         enabled: true,
-        mode: 'none',
+        mode: 'manual',
       },
       ssl: { verify: true },
     };
@@ -123,13 +123,13 @@ describe('NetworkSettingsTab', () => {
     );
 
     const modeSelect = screen.getByLabelText('프록시 모드');
-    fireEvent.change(modeSelect, { target: { value: 'system' } });
+    fireEvent.change(modeSelect, { target: { value: 'manual' } });
 
     expect(mockSetNetworkConfig).toHaveBeenCalledWith({
       ...enabledConfig,
       proxy: {
         enabled: true,
-        mode: 'system',
+        mode: 'manual',
       },
     });
   });
@@ -313,28 +313,6 @@ describe('NetworkSettingsTab', () => {
 
     expect(proxyToggle.checked).toBe(false);
     expect(sslToggle.checked).toBe(true);
-  });
-
-  it('should not show proxy URL input when mode is system', () => {
-    const systemConfig: NetworkConfig = {
-      proxy: {
-        enabled: true,
-        mode: 'system',
-      },
-      ssl: { verify: true },
-    };
-
-    render(
-      <NetworkSettingsTab
-        networkConfig={systemConfig}
-        setNetworkConfig={mockSetNetworkConfig}
-        onSave={mockOnSave}
-        isSaving={false}
-        message={null}
-      />
-    );
-
-    expect(screen.queryByLabelText('프록시 URL')).not.toBeInTheDocument();
   });
 
   it('should show description text', () => {
