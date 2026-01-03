@@ -993,6 +993,7 @@
     "streaming": {
       "generating": "AI 응답 생성 중..."
     },
+    "generating": "AI 응답 생성 중...",
     "error": "오류가 발생했습니다",
     "retry": "다시 시도",
     "searchPlaceholder": "대화 검색...",
@@ -1022,6 +1023,29 @@
       "browserAgentFeatures": "• 페이지 이동 • 내용 읽기 • 요소 클릭\n• 텍스트 입력 • 스크롤 • 탭 관리\n• 스크린샷 • 텍스트 요약"
     },
     "report": {
+      "title": "대화 내용 리포트",
+      "description": "AI 응답이나 Agent 동작에 문제가 있나요? 전체 대화 내용을 개발팀에 전송하여 개선에 도움을 주세요.",
+      "conversationInfo": "대화 정보",
+      "totalMessages": "총 메시지: {{count}}개",
+      "userMessages": "사용자 메시지: {{count}}개",
+      "aiResponses": "AI 응답: {{count}}개",
+      "toolUsage": "Tool 사용: 있음",
+      "conversationId": "ID: {{id}}",
+      "issueLabel": "어떤 문제가 있었나요?",
+      "issuePlaceholder": "예시:\n- AI가 잘못된 정보를 제공했습니다\n- Agent가 예상과 다르게 동작했습니다\n- Tool 실행 결과가 이상합니다\n- 응답이 너무 느립니다",
+      "additionalInfoLabel": "추가 정보 (선택사항)",
+      "additionalInfoPlaceholder": "문제 재현 방법, 기대했던 동작, 추가 설명 등을 입력해주세요",
+      "sendingInfo": "전송되는 정보:",
+      "sendingInfoItems": {
+        "conversationHistory": "전체 대화 내역 (메시지, 응답, Tool 호출 등)",
+        "conversationId": "대화 ID 및 타임스탬프",
+        "appInfo": "앱 버전 및 운영체제 정보",
+        "modelInfo": "사용된 모델 정보 (설정된 경우)"
+      },
+      "privacyNote": "* API 키, 토큰, 개인정보는 자동으로 제거됩니다.",
+      "cancel": "취소",
+      "sending": "전송 중...",
+      "send": "리포트 전송",
       "errorReportingDisabled": "에러 리포팅 비활성화됨. Settings > System > GitHub Sync에서 에러 리포팅을 활성화해주세요.",
       "sendFailed": "리포트 전송 실패",
       "sendFailedWithError": "리포트 전송 실패: {{error}}",

@@ -199,6 +199,7 @@ interface ChatStore {
   editorAgentMode: 'editor' | 'coding'; // Agent 모드 (editor-agent 또는 coding-agent)
   editorUseRagInAutocomplete: boolean; // RAG usage in editor autocomplete
   editorUseToolsInAutocomplete: boolean; // Tools usage in editor autocomplete
+  editorEnableInlineAutocomplete: boolean; // Inline autocomplete enabled
 
   // Chat Mode View
   chatViewMode: 'history' | 'documents'; // history or documents view in Chat sidebar
@@ -327,6 +328,7 @@ interface ChatStore {
   setEditorAgentMode: (mode: 'editor' | 'coding') => void;
   setEditorUseRagInAutocomplete: (enable: boolean) => void;
   setEditorUseToolsInAutocomplete: (enable: boolean) => void;
+  setEditorEnableInlineAutocomplete: (enable: boolean) => void;
 
   // Actions - Chat Mode View
   setChatViewMode: (mode: 'history' | 'documents') => void;
@@ -600,6 +602,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       return saved === 'true';
     } catch (error) {
       console.error('Failed to load editor autocomplete Tools setting from localStorage:', error);
+    }
+    return false;
+  })(),
+
+  editorEnableInlineAutocomplete: (() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    try {
+      const saved = localStorage.getItem('sepilot_editor_enable_inline_autocomplete');
+      return saved === 'true';
+    } catch (error) {
+      console.error('Failed to load editor inline autocomplete setting from localStorage:', error);
     }
     return false;
   })(),
@@ -1990,6 +2005,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ editorUseToolsInAutocomplete: enable });
     if (typeof window !== 'undefined') {
       localStorage.setItem('sepilot_editor_use_tools_in_autocomplete', enable.toString());
+    }
+  },
+
+  setEditorEnableInlineAutocomplete: (enable: boolean) => {
+    set({ editorEnableInlineAutocomplete: enable });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sepilot_editor_enable_inline_autocomplete', enable.toString());
     }
   },
 

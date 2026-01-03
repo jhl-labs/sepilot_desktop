@@ -6,7 +6,8 @@ export interface EditorAppearanceConfig {
   fontFamily: string;
   theme: 'vs-dark' | 'vs-light'; // Monaco Editor 테마
   tabSize: number; // 2, 4, 8
-  wordWrap: 'on' | 'off';
+  wordWrap: 'on' | 'off' | 'wordWrapColumn' | 'bounded';
+  wordWrapColumn: number;
   minimap: boolean;
   lineNumbers: 'on' | 'off';
 }
@@ -56,6 +57,7 @@ export const DEFAULT_EDITOR_APPEARANCE: EditorAppearanceConfig = {
   theme: 'vs-dark',
   tabSize: 2,
   wordWrap: 'off',
+  wordWrapColumn: 80,
   minimap: true,
   lineNumbers: 'on',
 };

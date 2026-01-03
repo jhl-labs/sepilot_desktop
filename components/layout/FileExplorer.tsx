@@ -34,6 +34,7 @@ import { FileTreeContextMenu } from './FileTreeContextMenu';
 import { WikiTree } from './WikiTree';
 import { isElectron } from '@/lib/platform';
 import { useTranslation } from 'react-i18next';
+import { OverflowToolbar } from '@/components/ui/overflow-toolbar';
 
 export function FileExplorer() {
   const { t } = useTranslation();
@@ -268,12 +269,12 @@ export function FileExplorer() {
       {/* Working Directory Selection */}
       <div className="shrink-0 border-b px-3 py-3">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase">
-              Working Directory
-            </span>
-            <TooltipProvider delayDuration={200}>
-              <div className="flex items-center gap-0.5">
+          <span className="text-xs font-semibold text-muted-foreground uppercase">
+            Working Directory
+          </span>
+          <TooltipProvider delayDuration={200}>
+            <div className="flex-1 min-w-0">
+              <OverflowToolbar className="gap-0.5 justify-start w-full" itemWidth={30}>
                 {/* Files/Wiki Toggle */}
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -308,7 +309,7 @@ export function FileExplorer() {
                 </Tooltip>
 
                 {/* Divider */}
-                <div className="h-4 w-px bg-border mx-1" />
+                <div className="h-4 w-px bg-border mx-1 shrink-0" />
 
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -377,9 +378,9 @@ export function FileExplorer() {
                     </Tooltip>
                   </>
                 )}
-              </div>
-            </TooltipProvider>
-          </div>
+              </OverflowToolbar>
+            </div>
+          </TooltipProvider>
           {workingDirectory ? (
             <div className="text-xs text-muted-foreground break-all bg-muted/50 rounded px-2 py-1.5">
               {workingDirectory}

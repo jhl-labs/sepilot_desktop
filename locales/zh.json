@@ -1008,6 +1008,7 @@
     "streaming": {
       "generating": "AI 正在生成回复..."
     },
+    "generating": "AI 正在生成回复...",
     "error": "发生错误",
     "retry": "重试",
     "searchPlaceholder": "搜索对话...",
@@ -1039,6 +1040,29 @@
       "browserAgentFeatures": "• 页面导航 • 读取内容 • 点击元素\n• 输入文本 • 滚动 • 管理标签\n• 截图 • 文本摘要"
     },
     "report": {
+      "title": "报告对话",
+      "description": "AI 响应或代理行为有问题？将完整对话发送给开发团队以帮助改进。",
+      "conversationInfo": "对话信息",
+      "totalMessages": "总消息数：{{count}}",
+      "userMessages": "用户消息：{{count}}",
+      "aiResponses": "AI 响应：{{count}}",
+      "toolUsage": "工具使用：是",
+      "conversationId": "ID：{{id}}",
+      "issueLabel": "问题是什么？",
+      "issuePlaceholder": "示例：\n- AI 提供了错误信息\n- 代理行为异常\n- 工具执行结果异常\n- 响应太慢",
+      "additionalInfoLabel": "附加信息（可选）",
+      "additionalInfoPlaceholder": "请输入问题重现方法、预期行为、附加说明等",
+      "sendingInfo": "将发送的信息：",
+      "sendingInfoItems": {
+        "conversationHistory": "完整对话历史（消息、响应、工具调用等）",
+        "conversationId": "对话 ID 和时间戳",
+        "appInfo": "应用版本和操作系统信息",
+        "modelInfo": "使用的模型信息（如果已配置）"
+      },
+      "privacyNote": "* API 密钥、令牌和个人信息将自动删除。",
+      "cancel": "取消",
+      "sending": "发送中...",
+      "send": "发送报告",
       "errorReportingDisabled": "错误报告已禁用。请在设置 > 系统 > GitHub 同步中启用错误报告。",
       "sendFailed": "报告发送失败",
       "sendFailedWithError": "报告发送失败：{{error}}",

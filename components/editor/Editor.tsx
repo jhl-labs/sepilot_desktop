@@ -14,6 +14,7 @@ import { useFileSystem } from '@/hooks/use-file-system';
 import { SingleFileEditor } from './SingleFileEditor';
 import { logger } from '@/lib/utils/logger';
 import { EditorTab } from './EditorTab';
+import { EditorRuler } from './EditorRuler';
 
 export function CodeEditor() {
   const { t } = useTranslation();
@@ -36,6 +37,7 @@ export function CodeEditor() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [editor, setEditor] = useState<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const [monacoInstance, setMonacoInstance] = useState<typeof monaco | null>(null);
 
   const [previewMode, setPreviewMode] = useState<'editor' | 'preview' | 'split'>('editor');
   const [fileChangedExternally, setFileChangedExternally] = useState(false);
@@ -578,29 +580,36 @@ export function CodeEditor() {
               {/* Monaco Editor */}
               {(previewMode === 'editor' || previewMode === 'split') && (
                 <div
-                  className={cn('overflow-hidden', previewMode === 'split' ? 'flex-1' : 'w-full')}
+                  className={cn(
+                    'overflow-hidden flex flex-col',
+                    previewMode === 'split' ? 'flex-1' : 'w-full'
+                  )}
                 >
-                  <SingleFileEditor
-                    content={activeFile.content}
-                    language={activeFile.language || 'plaintext'}
-                    filePath={activeFile.path}
-                    theme={editorAppearanceConfig.theme}
-                    onChange={handleEditorChange}
-                    onSave={handleSaveFile}
-                    onMount={(editor, _monaco) => {
-                      setEditor(editor);
-                    }}
-                    options={{
-                      minimap: {
-                        enabled: previewMode === 'split' ? false : editorAppearanceConfig.minimap,
-                      },
-                      scrollBeyondLastLine: false,
-                      automaticLayout: true,
-                      insertSpaces: true,
-                      // Inline suggest config handled by SingleFileEditor defaults or merge?
-                      // SingleFileEditor sets options locally.
-                    }}
-                  />
+                  <EditorRuler editor={editor} monaco={monacoInstance} />
+                  <div className="flex-1 min-h-0">
+                    <SingleFileEditor
+                      content={activeFile.content}
+                      language={activeFile.language || 'plaintext'}
+                      filePath={activeFile.path}
+                      theme={editorAppearanceConfig.theme}
+                      onChange={handleEditorChange}
+                      onSave={handleSaveFile}
+                      onMount={(editor, _monaco) => {
+                        setEditor(editor);
+                        setMonacoInstance(_monaco);
+                      }}
+                      options={{
+                        minimap: {
+                          enabled: previewMode === 'split' ? false : editorAppearanceConfig.minimap,
+                        },
+                        scrollBeyondLastLine: false,
+                        automaticLayout: true,
+                        insertSpaces: true,
+                        // Inline suggest config handled by SingleFileEditor defaults or merge?
+                        // SingleFileEditor sets options locally.
+                      }}
+                    />
+                  </div>
                 </div>
               )}
 

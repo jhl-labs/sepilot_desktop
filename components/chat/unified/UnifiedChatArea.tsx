@@ -8,6 +8,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageSquare, Bug, Copy, Check, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ interface UnifiedChatAreaProps {
 }
 
 export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAreaProps) {
+  const { t } = useTranslation();
   const { mode, features, style, dataSource, activePersona, conversationId } = config;
   const { messages, isStreaming, scrollRef } = useChatMessages(dataSource);
 
@@ -354,7 +356,7 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
               >
                 <div className="flex items-center gap-2">
                   <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                  <span className="text-muted-foreground">AI 응답 생성 중...</span>
+                  <span className="text-muted-foreground">{t('chat.generating')}</span>
                 </div>
               </div>
             </div>
@@ -375,7 +377,7 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
                 className="text-xs text-muted-foreground hover:text-foreground"
               >
                 <Bug className="mr-2 h-3 w-3" />
-                AI 응답이나 Agent 동작에 문제가 있나요?
+                {t('chat.report.buttonText')}
               </Button>
             </div>
           )}

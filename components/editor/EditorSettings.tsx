@@ -27,6 +27,8 @@ export function EditorSettings() {
     resetEditorAppearanceConfig,
     editorLLMPromptsConfig,
     setEditorLLMPromptsConfig,
+    editorEnableInlineAutocomplete,
+    setEditorEnableInlineAutocomplete,
   } = useChatStore();
 
   // 외형 설정 로컬 상태
@@ -35,6 +37,7 @@ export function EditorSettings() {
   const [theme, setTheme] = useState(editorAppearanceConfig.theme);
   const [tabSize, setTabSize] = useState(editorAppearanceConfig.tabSize);
   const [wordWrap, setWordWrap] = useState(editorAppearanceConfig.wordWrap);
+  const [wordWrapColumn, setWordWrapColumn] = useState(editorAppearanceConfig.wordWrapColumn || 80);
   const [minimap, setMinimap] = useState(editorAppearanceConfig.minimap);
   const [lineNumbers, setLineNumbers] = useState(editorAppearanceConfig.lineNumbers);
 
@@ -148,6 +151,7 @@ export function EditorSettings() {
       theme,
       tabSize,
       wordWrap,
+      wordWrapColumn,
       minimap,
       lineNumbers,
     });
@@ -358,6 +362,22 @@ export function EditorSettings() {
           </div>
         </div>
 
+        {/* Inline Autocomplete Setting */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border p-3 rounded-md bg-background">
+            <div className="space-y-0.5">
+              <Label className="text-xs font-medium">Inline Autocomplete</Label>
+              <p className="text-[10px] text-muted-foreground">
+                Show suggestions automatically while typing
+              </p>
+            </div>
+            <Switch
+              checked={editorEnableInlineAutocomplete}
+              onCheckedChange={setEditorEnableInlineAutocomplete}
+            />
+          </div>
+        </div>
+
         {/* 외형 설정 */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -380,7 +400,7 @@ export function EditorSettings() {
             <Label className="text-xs">{t('settings.editor.settings.appearance.fontSize')}</Label>
             <Input
               type="number"
-              value={fontSize}
+              value={isNaN(fontSize) ? '' : fontSize}
               onChange={(e) => setFontSize(parseInt(e.target.value, 10))}
               min={10}
               max={24}
@@ -461,12 +481,37 @@ export function EditorSettings() {
 
           {/* Word Wrap */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">{t('settings.editor.settings.appearance.wordWrap')}</Label>
-              <Switch
-                checked={wordWrap === 'on'}
-                onCheckedChange={(checked) => setWordWrap(checked ? 'on' : 'off')}
-              />
+            <Label className="text-xs">{t('settings.editor.settings.appearance.wordWrap')}</Label>
+            <div className="flex items-center gap-2">
+              <Select
+                value={wordWrap === 'bounded' ? 'wordWrapColumn' : wordWrap}
+                onValueChange={(value: 'on' | 'off' | 'wordWrapColumn') => {
+                  setWordWrap(value);
+                  // If switching to Fixed Width, ensure we have a valid int
+                  if (value === 'wordWrapColumn' && !wordWrapColumn) {
+                    setWordWrapColumn(80);
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs flex-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="off">Off</SelectItem>
+                  <SelectItem value="on">Window Width</SelectItem>
+                  <SelectItem value="wordWrapColumn">Fixed Width</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {wordWrap === 'wordWrapColumn' && (
+                <Input
+                  type="number"
+                  value={wordWrapColumn}
+                  onChange={(e) => setWordWrapColumn(parseInt(e.target.value, 10) || 80)}
+                  className="h-8 w-20 text-xs"
+                  min={1}
+                />
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               {t('settings.editor.settings.appearance.wordWrapDescription')}

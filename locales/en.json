@@ -991,6 +991,7 @@
     "streaming": {
       "generating": "AI generating response..."
     },
+    "generating": "AI generating response...",
     "error": "An error occurred",
     "retry": "Retry",
     "searchPlaceholder": "Search conversations...",
@@ -1022,6 +1023,29 @@
       "browserAgentFeatures": "• Navigate pages • Read content • Click elements\n• Enter text • Scroll • Manage tabs\n• Screenshot • Summarize text"
     },
     "report": {
+      "title": "Report Conversation",
+      "description": "Having issues with AI responses or Agent behavior? Send the full conversation to the development team to help improve.",
+      "conversationInfo": "Conversation Info",
+      "totalMessages": "Total Messages: {{count}}",
+      "userMessages": "User Messages: {{count}}",
+      "aiResponses": "AI Responses: {{count}}",
+      "toolUsage": "Tool Usage: Yes",
+      "conversationId": "ID: {{id}}",
+      "issueLabel": "What was the problem?",
+      "issuePlaceholder": "Example:\n- AI provided incorrect information\n- Agent behaved unexpectedly\n- Tool execution results are abnormal\n- Response is too slow",
+      "additionalInfoLabel": "Additional Info (Optional)",
+      "additionalInfoPlaceholder": "Please enter how to reproduce the issue, expected behavior, additional explanations, etc.",
+      "sendingInfo": "Information to be sent:",
+      "sendingInfoItems": {
+        "conversationHistory": "Full conversation history (messages, responses, tool calls, etc.)",
+        "conversationId": "Conversation ID and timestamp",
+        "appInfo": "App version and OS information",
+        "modelInfo": "Model information used (if configured)"
+      },
+      "privacyNote": "* API keys, tokens, and personal information are automatically removed.",
+      "cancel": "Cancel",
+      "sending": "Sending...",
+      "send": "Send Report",
       "errorReportingDisabled": "Error reporting disabled. Please enable error reporting in Settings > System > GitHub Sync.",
       "sendFailed": "Report send failed",
       "sendFailedWithError": "Report send failed: {{error}}",

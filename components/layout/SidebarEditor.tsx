@@ -14,6 +14,7 @@ import { EditorSettings } from '@/components/editor/EditorSettings';
 import { EditorToolsList } from '@/components/editor/EditorToolsList';
 import { ToolApprovalDialog } from '@/components/chat/ToolApprovalDialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { OverflowToolbar } from '@/components/ui/overflow-toolbar';
 import { Switch } from '@/components/ui/switch';
 import { isElectron } from '@/lib/platform';
 import { BetaConfig } from '@/types';
@@ -141,10 +142,9 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
           )}
         </div>
 
-        {/* Footer - Quick Actions */}
         <div className="shrink-0 border-t p-2">
           <TooltipProvider delayDuration={300}>
-            <div className="flex gap-1">
+            <OverflowToolbar className="gap-1 justify-center" itemWidth={40}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex-shrink-0">
@@ -165,10 +165,8 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                           variant="ghost"
                           size="icon"
                           className={cn(
-                            'flex-1',
-                            editorChatUseTools
-                              ? 'bg-accent text-accent-foreground'
-                              : 'text-muted-foreground'
+                            'text-muted-foreground',
+                            editorChatUseTools && 'bg-accent text-accent-foreground'
                           )}
                         >
                           <Wrench className="h-5 w-5" />
@@ -214,7 +212,6 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                     size="icon"
                     onClick={() => setEditorChatUseRag(!editorChatUseRag)}
                     className={cn(
-                      'flex-1',
                       editorChatUseRag
                         ? 'bg-accent text-accent-foreground'
                         : 'text-muted-foreground'
@@ -245,7 +242,6 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                     variant="ghost"
                     size="icon"
                     onClick={onDocumentsClick}
-                    className="flex-1"
                     title={t('sidebar.editor.tooltips.documentManagement')}
                   >
                     <FileText className="h-5 w-5" />
@@ -267,7 +263,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                       }
                     }}
                     disabled={!workingDirectory}
-                    className={cn('flex-1', showTerminalPanel && 'bg-accent')}
+                    className={cn(showTerminalPanel && 'bg-accent')}
                     title={terminalButtonTitle}
                   >
                     <Terminal className="h-5 w-5" />
@@ -290,7 +286,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                     variant="ghost"
                     size="icon"
                     onClick={() => setEditorViewMode('settings')}
-                    className={cn('flex-1', editorViewMode === 'settings' && 'bg-accent')}
+                    className={cn(editorViewMode === 'settings' && 'bg-accent')}
                     title={t('sidebar.editor.tooltips.settings')}
                   >
                     <Settings className="h-5 w-5" />
@@ -308,7 +304,6 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                       variant="ghost"
                       size="icon"
                       onClick={() => setAppMode('presentation')}
-                      className="flex-1"
                       title={t('sidebar.editor.tooltips.presentationMode')}
                     >
                       <Presentation className="h-5 w-5" />
@@ -319,7 +314,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                   </TooltipContent>
                 </Tooltip>
               )}
-            </div>
+            </OverflowToolbar>
           </TooltipProvider>
         </div>
       </div>

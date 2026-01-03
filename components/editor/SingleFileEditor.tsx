@@ -51,6 +51,7 @@ export function SingleFileEditor({
     workingDirectory: storeWorkingDirectory,
     editorUseRagInAutocomplete,
     editorUseToolsInAutocomplete,
+    editorEnableInlineAutocomplete,
   } = useChatStore();
 
   const workingDirectory = propWorkingDirectory || storeWorkingDirectory;
@@ -196,10 +197,17 @@ export function SingleFileEditor({
         setProcessingAction('');
       }
     },
-    [editor, language, filePath, editorUseRagInAutocomplete, editorUseToolsInAutocomplete]
+    [
+      editor,
+      language,
+      filePath,
+      editorUseRagInAutocomplete,
+      editorUseToolsInAutocomplete,
+      editorEnableInlineAutocomplete,
+    ]
   );
 
-  // Register inline completion provider for autocomplete (triggered by Ctrl+.)
+  // Register inline completion provider for autocomplete (triggered by Ctrl+. or automatically if enabled)
   useEffect(() => {
     if (!editor || !monacoInstance) {
       logger.info('[Autocomplete] Editor or Monaco instance not ready');
@@ -245,8 +253,8 @@ export function SingleFileEditor({
           return { items: [] };
         }
 
-        // Ctrl+.로 수동 트리거한 경우가 아니면 자동 완성 제공 안함
-        if (!isManualTrigger) {
+        // Ctrl+.로 수동 트리거한 경우가 아니면 자동 완성 제공 안함 (설정에 따라 변경)
+        if (!isManualTrigger && !editorEnableInlineAutocomplete) {
           return { items: [] };
         }
 
@@ -410,7 +418,13 @@ export function SingleFileEditor({
       }
       provider.dispose();
     };
-  }, [editor, monacoInstance, editorUseRagInAutocomplete, editorUseToolsInAutocomplete]);
+  }, [
+    editor,
+    monacoInstance,
+    editorUseRagInAutocomplete,
+    editorUseToolsInAutocomplete,
+    editorEnableInlineAutocomplete,
+  ]);
 
   // Register Monaco context menu actions
   useEffect(() => {
@@ -767,6 +781,7 @@ export function SingleFileEditor({
                 fontFamily: editorAppearanceConfig.fontFamily,
                 minimap: { enabled: editorAppearanceConfig.minimap },
                 wordWrap: editorAppearanceConfig.wordWrap,
+                wordWrapColumn: editorAppearanceConfig.wordWrapColumn,
                 tabSize: editorAppearanceConfig.tabSize,
                 lineNumbers: editorAppearanceConfig.lineNumbers,
                 // Disable native context menu
