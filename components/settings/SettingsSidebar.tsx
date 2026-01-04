@@ -11,11 +11,11 @@ import {
   Users,
   HardDrive,
   Zap,
-  FileCode,
-  Globe,
   FlaskConical,
   Languages,
+  Bot,
 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useExtensions } from '@/lib/extensions/use-extensions';
 
@@ -30,9 +30,8 @@ export type SettingSection =
   | 'team-docs'
   | 'backup'
   | 'quickinput'
-  | 'editor'
-  | 'browser'
-  | 'beta';
+  | 'beta'
+  | string; // Allow Extension-provided Settings tabs dynamically
 
 interface SettingsCategory {
   id: string;
@@ -57,11 +56,7 @@ export function SettingsSidebar({
   className,
 }: SettingsSidebarProps) {
   const { t } = useTranslation();
-  const { isExtensionActive } = useExtensions();
-
-  // Check if Extension is active
-  const isEditorActive = isExtensionActive('editor');
-  const isBrowserActive = isExtensionActive('browser');
+  const { activeExtensions } = useExtensions();
 
   const categories: SettingsCategory[] = [
     {
@@ -122,27 +117,20 @@ export function SettingsSidebar({
           icon: Zap,
           description: t('settings.quickinput.description'),
         },
-        // Extension-based settings (only show if Extension is active)
-        ...(isEditorActive
-          ? [
-              {
-                id: 'editor' as SettingSection,
-                label: t('settings.editor.title'),
-                icon: FileCode,
-                description: t('settings.editor.description'),
-              },
-            ]
-          : []),
-        ...(isBrowserActive
-          ? [
-              {
-                id: 'browser' as SettingSection,
-                label: t('settings.browser.title'),
-                icon: Globe,
-                description: t('settings.browser.description'),
-              },
-            ]
-          : []),
+        // Extension-based settings (dynamically discovered from active Extensions)
+        ...activeExtensions
+          .filter((ext) => ext.manifest.settingsTab && ext.SettingsTabComponent)
+          .map((ext) => {
+            const settingsTab = ext.manifest.settingsTab!;
+            const IconComponent: React.ComponentType<{ className?: string }> =
+              (LucideIcons[settingsTab.icon as keyof typeof LucideIcons] as any) || Bot;
+            return {
+              id: settingsTab.id as SettingSection,
+              label: t(settingsTab.label),
+              icon: IconComponent,
+              description: t(settingsTab.description),
+            };
+          }),
       ],
     },
     {

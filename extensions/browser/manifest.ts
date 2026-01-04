@@ -30,6 +30,12 @@ export const manifest: ExtensionManifest = {
       description: 'Auto capture page snapshots',
     },
   },
+  settingsTab: {
+    id: 'browser',
+    label: 'settings.browser.title',
+    description: 'settings.browser.description',
+    icon: 'Globe',
+  },
 };
 
 export default manifest;

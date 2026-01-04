@@ -61,13 +61,15 @@ async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
   // Editor Extension
   try {
     const editorModule = await import('@/extensions/editor');
-    const { manifest, EditorWithTerminal, SidebarEditor, EditorHeaderActions } = editorModule;
+    const { manifest, EditorWithTerminal, SidebarEditor, EditorHeaderActions, EditorSettingsTab } =
+      editorModule;
 
     extensions.push({
       manifest,
       MainComponent: EditorWithTerminal,
       SidebarComponent: SidebarEditor,
       HeaderActionsComponent: EditorHeaderActions,
+      SettingsTabComponent: EditorSettingsTab,
     });
 
     logger.info('[ExtensionLoader] Loaded editor extension');
@@ -78,12 +80,13 @@ async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
   // Browser Extension
   try {
     const browserModule = await import('@/extensions/browser');
-    const { manifest, BrowserPanel, SidebarBrowser } = browserModule;
+    const { manifest, BrowserPanel, SidebarBrowser, BrowserSettingsTab } = browserModule;
 
     extensions.push({
       manifest,
       MainComponent: BrowserPanel,
       SidebarComponent: SidebarBrowser,
+      SettingsTabComponent: BrowserSettingsTab,
     });
 
     logger.info('[ExtensionLoader] Loaded browser extension');

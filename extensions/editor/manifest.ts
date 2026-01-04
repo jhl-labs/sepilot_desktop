@@ -34,6 +34,12 @@ export const manifest: ExtensionManifest = {
       description: 'Word wrap',
     },
   },
+  settingsTab: {
+    id: 'editor',
+    label: 'settings.editor.title',
+    description: 'settings.editor.description',
+    icon: 'FileCode',
+  },
 };
 
 export default manifest;

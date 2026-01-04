@@ -42,6 +42,17 @@ export interface ExtensionManifest {
     /** Extension이 등록할 IPC handler 채널 목록 */
     handlers: string[];
   };
+  /** Settings 탭 표시 정보 (Settings Dialog에 표시할 경우) */
+  settingsTab?: {
+    /** Settings 탭 ID (SettingSection에 추가될 값) */
+    id: string;
+    /** Settings 탭 레이블 (다국어 키 또는 직접 텍스트) */
+    label: string;
+    /** Settings 탭 설명 */
+    description: string;
+    /** Settings 탭 아이콘 (lucide-react 아이콘 이름) */
+    icon: string;
+  };
 }
 
 /**
@@ -65,6 +76,13 @@ export interface ExtensionDefinition {
   SettingsComponent?: ComponentType<{
     enabled: boolean;
     onEnabledChange: (enabled: boolean) => void;
+  }>;
+
+  /** Settings 탭 컴포넌트 (Settings Dialog에 표시될 전체 설정 탭) */
+  SettingsTabComponent?: ComponentType<{
+    onSave: () => void;
+    isSaving: boolean;
+    message: { type: 'success' | 'error'; text: string } | null;
   }>;
 
   /** Store slice 생성 함수 */
