@@ -484,6 +484,12 @@
     "browser": {
       "title": "Web Browser",
       "description": "AI Agent-based web browser settings",
+      "emptyState": {
+        "title": "Browser Agent Tools",
+        "row1": "• Navigate • Read Content • Click Elements",
+        "row2": "• Input Text • Scroll • Tab Management",
+        "row3": "• Screenshot • Text Summary"
+      },
       "saved": "Browser settings saved!",
       "settings": {
         "title": "Browser Settings",
@@ -2223,6 +2229,12 @@
       "snapshots": "Manage Snapshots",
       "bookmarks": "Bookmarks",
       "settings": "Browser Settings"
+    },
+    "emptyState": {
+      "title": "AI-Powered Web Browser Agent",
+      "row1": "🌐 AI performs web page navigation, information gathering, and automation tasks",
+      "row2": "💬 Request tasks via chat and AI Agent will control the browser",
+      "row3": "📸 Provides convenient features like snapshot saving and bookmark management"
     }
   }
 }

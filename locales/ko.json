@@ -486,6 +486,12 @@
     "browser": {
       "title": "웹 브라우저",
       "description": "AI Agent 기반 웹 브라우저 설정",
+      "emptyState": {
+        "title": "Browser Agent 도구",
+        "row1": "• 페이지 이동 • 내용 읽기 • 요소 클릭",
+        "row2": "• 텍스트 입력 • 스크롤 • 탭 관리",
+        "row3": "• 스크린샷 • 텍스트 요약"
+      },
       "saved": "브라우저 설정이 저장되었습니다!",
       "settings": {
         "title": "브라우저 설정",
@@ -2211,6 +2217,12 @@
       "snapshots": "스냅샷 관리",
       "bookmarks": "북마크",
       "settings": "Browser 설정"
+    },
+    "emptyState": {
+      "title": "AI 기반 웹 브라우저 에이전트",
+      "row1": "🌐 웹 페이지 탐색, 정보 수집, 자동화 작업을 AI가 대신 수행합니다",
+      "row2": "💬 원하는 작업을 채팅으로 요청하면 AI Agent가 브라우저를 제어합니다",
+      "row3": "📸 스냅샷 저장, 북마크 관리 등 편리한 기능을 제공합니다"
     }
   }
 }

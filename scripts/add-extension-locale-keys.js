@@ -112,6 +112,14 @@ ko.browser.sidebar = {
   settings: 'Browser 설정',
 };
 
+// Add Browser emptyState keys
+ko.browser.emptyState = {
+  title: 'AI 기반 웹 브라우저 에이전트',
+  row1: '🌐 웹 페이지 탐색, 정보 수집, 자동화 작업을 AI가 대신 수행합니다',
+  row2: '💬 원하는 작업을 채팅으로 요청하면 AI Agent가 브라우저를 제어합니다',
+  row3: '📸 스냅샷 저장, 북마크 관리 등 편리한 기능을 제공합니다',
+};
+
 // Add Browser settings keys
 ko.settings.browser.settings = {
   title: '브라우저 설정',
@@ -172,6 +180,13 @@ en.browser.sidebar = {
   snapshots: 'Manage Snapshots',
   bookmarks: 'Bookmarks',
   settings: 'Browser Settings',
+};
+
+en.browser.emptyState = {
+  title: 'AI-Powered Web Browser Agent',
+  row1: '🌐 AI performs web page navigation, information gathering, and automation tasks',
+  row2: '💬 Request tasks via chat and AI Agent will control the browser',
+  row3: '📸 Provides convenient features like snapshot saving and bookmark management',
 };
 
 en.settings.editor.settings = {
@@ -321,6 +336,13 @@ zh.browser.sidebar = {
   settings: '浏览器设置',
 };
 
+zh.browser.emptyState = {
+  title: '基于AI的网页浏览器代理',
+  row1: '🌐 AI执行网页导航、信息收集和自动化任务',
+  row2: '💬 通过聊天请求任务，AI Agent将控制浏览器',
+  row3: '📸 提供快照保存、书签管理等便捷功能',
+};
+
 zh.settings.editor.settings = {
   title: '编辑器设置',
   appearance: {
@@ -453,5 +475,6 @@ fs.writeFileSync(zhPath, JSON.stringify(zh, null, 2), 'utf-8');
 
 console.log('✅ Extension locale keys added successfully!');
 console.log('- browser.sidebar (tooltips)');
+console.log('- browser.emptyState (empty state messages)');
 console.log('- settings.editor.settings (appearance, prompts)');
 console.log('- settings.browser.settings (llm, font, paths)');
