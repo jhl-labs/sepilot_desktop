@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SingleFileEditor } from '@/components/editor/SingleFileEditor';
+import { SingleFileEditor } from '@/extensions/editor/components/SingleFileEditor';
 
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';

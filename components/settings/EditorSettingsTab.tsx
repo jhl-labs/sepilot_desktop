@@ -1,6 +1,6 @@
 'use client';
 
-import { EditorSettings } from '@/components/editor/EditorSettings';
+import { EditorSettings } from '@/extensions/editor/components/EditorSettings';
 
 interface EditorSettingsTabProps {
   onSave: () => void;

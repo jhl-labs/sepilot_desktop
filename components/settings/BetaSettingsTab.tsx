@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { BetaConfig } from '@/types';
+import { useExtensions } from '@/lib/extensions/use-extensions';
 
 import { useTranslation } from 'react-i18next';
 
@@ -27,6 +26,7 @@ export function BetaSettingsTab({
 }: BetaSettingsTabProps) {
   const { t } = useTranslation();
   const [localConfig, setLocalConfig] = useState<BetaConfig>(config);
+  const extensions = useExtensions();
 
   useEffect(() => {
     setLocalConfig(config);
@@ -64,27 +64,20 @@ export function BetaSettingsTab({
         </div>
       )}
 
-      {/* Presentation Mode */}
-      <div className="space-y-4 border rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="presentation-mode" className="text-base font-medium">
-              {t('settings.beta.presentationMode.title')}
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              {t('settings.beta.presentationMode.description')}
-            </p>
-            <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
-              {t('settings.beta.presentationMode.warning')}
-            </p>
-          </div>
-          <Switch
-            id="presentation-mode"
-            checked={localConfig.enablePresentationMode ?? false}
-            onCheckedChange={(checked) => handleChange('enablePresentationMode', checked)}
-          />
-        </div>
-      </div>
+      {/* Extension Settings - Dynamic Rendering */}
+      {extensions
+        .filter((ext) => ext.manifest.betaFlag && ext.SettingsComponent)
+        .map((ext) => {
+          const SettingsComponent = ext.SettingsComponent!;
+          const betaFlagKey = ext.manifest.betaFlag as keyof BetaConfig;
+          return (
+            <SettingsComponent
+              key={ext.manifest.id}
+              enabled={localConfig[betaFlagKey] ?? false}
+              onEnabledChange={(checked: boolean) => handleChange(betaFlagKey, checked)}
+            />
+          );
+        })}
 
       {/* Save Button */}
       <div className="flex justify-end pt-4 border-t">

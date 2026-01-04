@@ -36,7 +36,6 @@
     "components/**/*.ts",
     "components/**/*.tsx",
     "types/**/*.ts",
-    "e2e_tests/**/*.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "out/types/**/*.ts",

@@ -6,7 +6,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { FileTreeItem, FileNode } from '@/components/layout/FileTreeItem';
+import { FileTreeItem, FileNode } from '@/extensions/editor/components/FileTreeItem';
 import * as useFileSystemModule from '@/hooks/use-file-system';
 
 // Mock useFileSystem hook

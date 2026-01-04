@@ -1,0 +1,146 @@
+{
+  "modes": {
+    "presentation": "Presentation"
+  },
+  "presentation": {
+    "chat": {
+      "steps": {
+        "briefing": {
+          "title": "Briefing",
+          "description": "Understand topic, purpose, and audience"
+        },
+        "design": {
+          "title": "Design",
+          "description": "Set colors, fonts, and mood"
+        },
+        "structure": {
+          "title": "Structure",
+          "description": "Plan slide outline"
+        },
+        "writing": {
+          "title": "Writing",
+          "description": "Create slides one by one"
+        },
+        "review": {
+          "title": "Review",
+          "description": "Revise and finalize"
+        },
+        "complete": {
+          "title": "Complete",
+          "description": "Presentation is complete"
+        }
+      },
+      "quickPrompts": {
+        "briefing": {
+          "changeTopic": "Change Topic",
+          "adjustSlides": "Adjust Slide Count",
+          "nextStep": "Next Step"
+        },
+        "design": {
+          "selectOption1": "Select Option 1",
+          "selectOption2": "Select Option 2",
+          "customRequest": "Custom Request"
+        },
+        "structure": {
+          "approveStructure": "Approve Structure",
+          "modifySlide": "Modify Slide",
+          "addSlide": "Add Slide"
+        },
+        "slideCreation": {
+          "autoGenerate": "Auto Generate",
+          "nextSlide": "Next Slide",
+          "generateAll": "Generate All"
+        },
+        "review": {
+          "modifySlide": "Modify Specific Slide",
+          "verifyContent": "Verify Content",
+          "findErrors": "Find Errors",
+          "changeColor": "Change Color",
+          "complete": "Complete"
+        },
+        "complete": {
+          "exportPptx": "Export PPTX",
+          "exportPdf": "Export PDF"
+        }
+      },
+      "prompts": {
+        "changeTopic": "Please change the topic to \"[new topic]\".",
+        "adjustSlides": "Please adjust to [N] slides.",
+        "nextStep": "This looks good. Please proceed to the next step.",
+        "selectOption1": "I like the first option (Option 1)!",
+        "selectOption2": "Let's go with the second option (Option 2).",
+        "customRequest": "Let me try something different. Please make the background white and accent color green.",
+        "approveStructure": "Good! Let's proceed with this structure.",
+        "modifySlide": "Please change slide 3 from \"Tech Stack\" to \"System Architecture\".",
+        "addSlide": "Please add a \"Competitor Comparison\" slide between slides 5 and 6.",
+        "autoGenerate": "Please automatically generate slides according to the structure.",
+        "nextSlide": "Please create the next slide.",
+        "generateAll": "Please automatically generate all remaining slides.",
+        "modifySlideReview": "Please change the title of slide 3.",
+        "verifyContent": "Please verify the accuracy of all slide data and fix any incorrect content.",
+        "findErrors": "Please find and fix any incorrect or outdated information.",
+        "changeColor": "Please make the colors brighter overall.",
+        "complete": "Complete! Now I'll export.",
+        "exportPptx": "Please export as PPTX.",
+        "exportPdf": "Please save as PDF."
+      },
+      "templates": {
+        "profile": "Self Introduction",
+        "techSeminar": "Tech Seminar",
+        "paperSummary": "Paper Summary",
+        "projectIntro": "Project Introduction",
+        "profileDesc": "Interview, Networking",
+        "techSeminarDesc": "Developers, Engineers",
+        "paperSummaryDesc": "Students, Researchers",
+        "projectIntroDesc": "Team Members, Stakeholders"
+      },
+      "templateApplied": "✅ Template \"{{name}}\" has been applied!",
+      "briefingContent": "**Briefing Content:**",
+      "topic": "Topic: {{topic}}",
+      "slides": "Slides: {{count}}",
+      "audience": "Audience: {{audience}}",
+      "previewHint": "Check the preview on the right and let me know if you need any changes.",
+      "nextStepHint": "To proceed to the next step, click \"Next Step\" or the step button at the top.",
+      "errorOccurred": "An error occurred: {{error}}. Please try again.",
+      "unknownError": "An unknown error occurred. Please try again.",
+      "webSearch": "Web Search",
+      "stop": "Stop",
+      "currentStep": "Current Step",
+      "goToStep": "Go to This Step",
+      "notStarted": "Not Started Yet",
+      "slideStructure": "Slide Structure ({{count}} slides)",
+      "selectTemplate": "Quick Start with Template",
+      "changeTemplate": "Select Different Template",
+      "changeTemplateDesc": "You can select a different template to change.",
+      "selectTemplateDesc": "Select a completed template or enter directly below to create a custom presentation.",
+      "orCustomInput": "Or enter directly below to create a custom presentation",
+      "welcome": "Let's create a presentation together! 👋",
+      "welcomeHint": "Select Quick Actions below or enter directly.",
+      "generating": "Generating...",
+      "inputPlaceholder": "{{step}} step. Enter a message... (Enter: Send, Shift+Enter: New Line)",
+      "progress": "Progress: {{completed}} / {{total}} slides completed",
+      "currentSlide": " (Current: slide {{index}})"
+    },
+    "studio": {
+      "checkingImages": "Checking images...",
+      "missingImagePrompts": "{{count}} slides are missing image prompts.",
+      "imageWarnings": "Image warnings: {{errors}}",
+      "chartNotice": "Charts/timelines/tables are rendered with sample data. Actual data connection requires post-processing.",
+      "generatingFile": "Generating export file...",
+      "complete": "Complete",
+      "description": "Request design from ppt-agent via left chat, review slides on the right, then export.",
+      "preparing": "Preparing export...",
+      "working": "Generating images and building file...",
+      "exportFailed": "Export failed: {{error}}",
+      "retry": "Retry",
+      "exportComplete": "Export complete: {{path}}",
+      "openFolder": "Open Folder",
+      "currentProgress": "Current Progress",
+      "briefingComplete": "✅ Briefing complete: {{topic}}",
+      "designComplete": "✅ Design complete:",
+      "structureComplete": "✅ Structure complete: {{count}} slides",
+      "writingSlides": "⏳ Writing slides... ({{completed}} / {{total}})",
+      "autoGenerateHint": "💡 Click the \"Auto Generate\" button on the left to generate slides"
+    }
+  }
+}

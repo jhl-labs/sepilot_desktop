@@ -5,16 +5,20 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 import { WorkingDirectoryIndicator } from '@/components/chat/WorkingDirectoryIndicator';
 import { UpdateNotificationDialog } from '@/components/UpdateNotificationDialog';
-import { EditorWithTerminal } from '@/components/editor/EditorWithTerminal';
-import { BrowserPanel } from '@/components/browser/BrowserPanel';
-import { PresentationStudio } from '@/extensions/presentation/components';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
+import { useExtensionsInit, useExtension } from '@/lib/extensions/use-extensions';
 
 import { logger } from '@/lib/utils/logger';
 export default function Home() {
   const { appMode, createConversation, setActiveConversation, setAppMode, setActiveEditorTab } =
     useChatStore();
+
+  // Extension 시스템 초기화
+  const { isLoaded: extensionsLoaded } = useExtensionsInit();
+
+  // 현재 모드에 해당하는 extension 조회
+  const currentExtension = useExtension(appMode);
 
   // 앱 시작 시 세션 자동 복원
   const { user, isLoading: isRestoringSession } = useSessionRestore();
@@ -92,94 +96,35 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setAppMode, setActiveEditorTab]);
 
-  // Test Dashboard 관련 IPC 이벤트 리스너
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.electronAPI) {
-      logger.warn('[Home] electronAPI not available for test dashboard');
-      return;
+  // Extension 컴포넌트 렌더링
+  const renderExtensionContent = () => {
+    // Chat 모드 (built-in - 특수 처리)
+    if (appMode === 'chat') {
+      return (
+        <>
+          <ChatContainer />
+          <WorkingDirectoryIndicator />
+        </>
+      );
     }
 
-    const handleOpenTestDashboard = () => {
-      logger.info('[Home] Opening test dashboard');
-      window.location.href = '/test-dashboard';
-    };
+    // Extension 기반 모드 (Editor, Browser, Presentation 등 모두 동적 로딩)
+    if (extensionsLoaded && currentExtension?.MainComponent) {
+      const ExtensionComponent = currentExtension.MainComponent;
+      return <ExtensionComponent />;
+    }
 
-    const handleRunAllTests = () => {
-      logger.info('[Home] Run all tests triggered from menu; opening dashboard');
-      window.location.href = '/test-dashboard';
-      // 페이지 이동 후 테스트 실행 이벤트를 다시 발행
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('test:run-all-from-menu'));
-      }, 500);
-    };
-
-    const handleHealthCheck = () => {
-      logger.info('[Home] Health check triggered from menu; opening dashboard');
-      window.location.href = '/test-dashboard';
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('test:health-check-from-menu'));
-      }, 500);
-    };
-
-    const handleRunLLM = () => {
-      logger.info('[Home] LLM test triggered from menu; opening dashboard');
-      window.location.href = '/test-dashboard';
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('test:run-llm-from-menu'));
-      }, 500);
-    };
-
-    const handleRunDatabase = () => {
-      logger.info('[Home] Database test triggered from menu; opening dashboard');
-      window.location.href = '/test-dashboard';
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('test:run-database-from-menu'));
-      }, 500);
-    };
-
-    const handleRunMCP = () => {
-      logger.info('[Home] MCP test triggered from menu; opening dashboard');
-      window.location.href = '/test-dashboard';
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('test:run-mcp-from-menu'));
-      }, 500);
-    };
-
-    // IPC 이벤트 리스너 등록
-    logger.info('[Home] Registering test dashboard listeners');
-    window.electronAPI.on('test:open-dashboard', handleOpenTestDashboard);
-    window.electronAPI.on('test:run-all-from-menu', handleRunAllTests);
-    window.electronAPI.on('test:health-check-from-menu', handleHealthCheck);
-    window.electronAPI.on('test:run-llm-from-menu', handleRunLLM);
-    window.electronAPI.on('test:run-database-from-menu', handleRunDatabase);
-    window.electronAPI.on('test:run-mcp-from-menu', handleRunMCP);
-
-    return () => {
-      window.electronAPI.removeListener('test:open-dashboard', handleOpenTestDashboard);
-      window.electronAPI.removeListener('test:run-all-from-menu', handleRunAllTests);
-      window.electronAPI.removeListener('test:health-check-from-menu', handleHealthCheck);
-      window.electronAPI.removeListener('test:run-llm-from-menu', handleRunLLM);
-      window.electronAPI.removeListener('test:run-database-from-menu', handleRunDatabase);
-      window.electronAPI.removeListener('test:run-mcp-from-menu', handleRunMCP);
-    };
-  }, []);
+    // Extension이 로드되지 않았거나 컴포넌트가 없는 경우
+    return (
+      <div className="flex h-full items-center justify-center text-muted-foreground">
+        {extensionsLoaded ? `Extension for mode "${appMode}" not found` : 'Loading extensions...'}
+      </div>
+    );
+  };
 
   return (
     <MainLayout>
-      <div className="flex h-full flex-col">
-        {appMode === 'chat' ? (
-          <>
-            <ChatContainer />
-            <WorkingDirectoryIndicator />
-          </>
-        ) : appMode === 'editor' ? (
-          <EditorWithTerminal />
-        ) : appMode === 'presentation' ? (
-          <PresentationStudio />
-        ) : (
-          <BrowserPanel />
-        )}
-      </div>
+      <div className="flex h-full flex-col">{renderExtensionContent()}</div>
       <UpdateNotificationDialog />
     </MainLayout>
   );

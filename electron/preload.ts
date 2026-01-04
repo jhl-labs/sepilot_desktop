@@ -476,17 +476,7 @@ const electronAPI = {
 
   // 이벤트 리스너
   on: (channel: string, callback: (...args: unknown[]) => void) => {
-    const validChannels = [
-      'update-available',
-      'download-progress',
-      'create-new-chat-with-message',
-      'test:open-dashboard',
-      'test:run-all-from-menu',
-      'test:health-check-from-menu',
-      'test:run-llm-from-menu',
-      'test:run-database-from-menu',
-      'test:run-mcp-from-menu',
-    ];
+    const validChannels = ['update-available', 'download-progress', 'create-new-chat-with-message'];
 
     if (validChannels.includes(channel)) {
       // wrapper 함수 없이 직접 등록 (removeListener와 호환)
@@ -646,21 +636,6 @@ const electronAPI = {
     removeListener: (event: string, handler: any) => {
       ipcRenderer.removeListener(event, handler);
     },
-  },
-
-  // Test Runner operations
-  testRunner: {
-    // Health Check
-    healthCheck: () => ipcRenderer.invoke('test:health-check'),
-    getLastHealthCheck: () => ipcRenderer.invoke('test:get-last-health-check'),
-    startPeriodicHealthCheck: (intervalMs?: number) =>
-      ipcRenderer.invoke('test:start-periodic-health-check', intervalMs),
-    stopPeriodicHealthCheck: () => ipcRenderer.invoke('test:stop-periodic-health-check'),
-    // Test Suites
-    runAll: () => ipcRenderer.invoke('test:run-all'),
-    runLLM: () => ipcRenderer.invoke('test:run-llm'),
-    runDatabase: () => ipcRenderer.invoke('test:run-database'),
-    runMCP: () => ipcRenderer.invoke('test:run-mcp'),
   },
 
   // Presentation exports

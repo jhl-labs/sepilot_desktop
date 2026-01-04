@@ -1,36 +1,14 @@
 'use client';
 
-import {
-  ChevronDown,
-  MessageSquare,
-  Code,
-  Globe,
-  Plus,
-  Trash,
-  Search,
-  FolderOpen,
-  Bot,
-  Presentation,
-} from 'lucide-react';
+import { ChevronDown, MessageSquare, Plus, Trash, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useState, useEffect } from 'react';
 import { BetaConfig } from '@/types';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { SidebarChat } from './SidebarChat';
-import { SidebarEditor } from './SidebarEditor';
-import { SidebarBrowser } from './SidebarBrowser';
-import { SidebarPresentation } from './SidebarPresentation';
+import { useExtension, useExtensions } from '@/lib/extensions/use-extensions';
+import * as LucideIcons from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,17 +33,14 @@ export function Sidebar({
     conversations,
     createConversation,
     deleteConversation,
-    editorViewMode,
-    setEditorViewMode,
     setChatViewMode,
-    clearEditorChat,
-    editorAgentMode,
-    setEditorAgentMode,
-    clearPresentationSession,
   } = useChatStore();
+
+  // Get current extension for dynamic sidebar rendering
+  const currentExtension = useExtension(appMode);
+  const allExtensions = useExtensions();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [clearPresentationDialogOpen, setClearPresentationDialogOpen] = useState(false);
-  const [betaConfig, setBetaConfig] = useState<BetaConfig>({ enablePresentationMode: false });
+  const [betaConfig, setBetaConfig] = useState<BetaConfig>({});
 
   // Load beta config
   useEffect(() => {
@@ -98,14 +73,14 @@ export function Sidebar({
     };
   }, []);
 
-  const modeLabel =
-    appMode === 'chat'
-      ? 'Chat'
-      : appMode === 'editor'
-        ? 'Editor'
-        : appMode === 'presentation'
-          ? 'Presentation'
-          : 'Browser';
+  // Get mode label (chat built-in, others from extension)
+  const getModeLabel = () => {
+    if (appMode === 'chat') {
+      return 'Chat';
+    }
+    return currentExtension?.manifest.name || appMode;
+  };
+  const modeLabel = getModeLabel();
 
   const handleDeleteAll = async () => {
     if (conversations.length === 0) {
@@ -144,27 +119,36 @@ export function Sidebar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
+            {/* Chat mode (built-in) */}
             <DropdownMenuItem onClick={() => setAppMode('chat')} data-testid="mode-chat">
               <MessageSquare className="mr-2 h-4 w-4" />
               Chat
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setAppMode('editor')} data-testid="mode-editor">
-              <Code className="mr-2 h-4 w-4" />
-              Editor
-            </DropdownMenuItem>
-            {betaConfig.enablePresentationMode && (
-              <DropdownMenuItem
-                onClick={() => setAppMode('presentation')}
-                data-testid="mode-presentation"
-              >
-                <Presentation className="mr-2 h-4 w-4" />
-                Presentation
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={() => setAppMode('browser')} data-testid="mode-browser">
-              <Globe className="mr-2 h-4 w-4" />
-              Browser
-            </DropdownMenuItem>
+
+            {/* All other modes (Extension-based) */}
+            {allExtensions
+              .filter((ext) => {
+                // Check beta flag if exists
+                if (ext.manifest.betaFlag) {
+                  return betaConfig[ext.manifest.betaFlag as keyof BetaConfig] === true;
+                }
+                return true;
+              })
+              .sort((a, b) => (a.manifest.order || 999) - (b.manifest.order || 999))
+              .map((ext) => {
+                const IconComponent: React.ComponentType<{ className?: string }> =
+                  (LucideIcons[ext.manifest.icon as keyof typeof LucideIcons] as any) || Bot;
+                return (
+                  <DropdownMenuItem
+                    key={ext.manifest.id}
+                    onClick={() => setAppMode(ext.manifest.mode as any)}
+                    data-testid={`mode-${ext.manifest.id}`}
+                  >
+                    <IconComponent className="mr-2 h-4 w-4" />
+                    {ext.manifest.name}
+                  </DropdownMenuItem>
+                );
+              })}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -187,90 +171,12 @@ export function Sidebar({
             </Button>
           </div>
         )}
-        {appMode === 'editor' && (
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                if (editorViewMode === 'chat') {
-                  if (window.confirm('현재 대화 내역을 모두 삭제하시겠습니까?')) {
-                    clearEditorChat();
-                    setEditorViewMode('chat');
-                  }
-                } else {
-                  setEditorViewMode('chat');
-                }
-              }}
-              title={editorViewMode === 'chat' ? '새 대화' : 'AI 코딩 어시스턴트'}
-              className={editorViewMode === 'chat' ? 'bg-accent' : ''}
-            >
-              {editorViewMode === 'chat' ? (
-                <Plus className="h-5 w-5" />
-              ) : (
-                <MessageSquare className="h-5 w-5" />
-              )}
-            </Button>
-            {editorViewMode === 'chat' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  setEditorAgentMode(editorAgentMode === 'editor' ? 'coding' : 'editor')
-                }
-                title={
-                  editorAgentMode === 'editor'
-                    ? 'Chat 모드 (클릭하여 Agent 모드로 전환)'
-                    : 'Agent 모드 (클릭하여 Chat 모드로 전환)'
-                }
-                className={
-                  editorAgentMode === 'coding'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-accent text-accent-foreground'
-                }
-              >
-                {editorAgentMode === 'editor' ? (
-                  <MessageSquare className="h-5 w-5" />
-                ) : (
-                  <Bot className="h-5 w-5" />
-                )}
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setEditorViewMode('files')}
-              title="파일 탐색기"
-              className={editorViewMode === 'files' ? 'bg-accent' : ''}
-            >
-              <FolderOpen className="h-5 w-5" />
-            </Button>
-
-            {editorViewMode !== 'chat' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setEditorViewMode('search')}
-                title="전체 검색"
-                className={editorViewMode === 'search' ? 'bg-accent' : ''}
-              >
-                <Search className="h-5 w-5" />
-              </Button>
-            )}
-          </div>
-        )}
-        {appMode === 'presentation' && (
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setClearPresentationDialogOpen(true)}
-              title="새 프레젠테이션 세션"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
+        {/* Extension-based action buttons */}
+        {currentExtension?.HeaderActionsComponent &&
+          (() => {
+            const HeaderActions = currentExtension.HeaderActionsComponent;
+            return <HeaderActions />;
+          })()}
       </div>
 
       {/* Render mode-specific component */}
@@ -283,36 +189,17 @@ export function Sidebar({
             onDocumentsClick={onDocumentsClick}
           />
         )}
-        {appMode === 'editor' && <SidebarEditor onDocumentsClick={onDocumentsClick} />}
-        {appMode === 'presentation' && <SidebarPresentation />}
-        {appMode === 'browser' && <SidebarBrowser />}
+        {/* Extension-based sidebar rendering (Editor, Browser, Presentation 등) */}
+        {appMode !== 'chat' &&
+          currentExtension?.SidebarComponent &&
+          (() => {
+            const ExtensionSidebar = currentExtension.SidebarComponent;
+            return <ExtensionSidebar />;
+          })()}
       </div>
 
       {/* Settings Dialog */}
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-
-      {/* Clear Presentation Confirmation Dialog */}
-      <AlertDialog open={clearPresentationDialogOpen} onOpenChange={setClearPresentationDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>새 프레젠테이션 세션을 시작하시겠습니까?</AlertDialogTitle>
-            <AlertDialogDescription>
-              현재 작업 중인 프레젠테이션이 모두 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>아니오</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                clearPresentationSession();
-                setClearPresentationDialogOpen(false);
-              }}
-            >
-              예
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

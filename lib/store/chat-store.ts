@@ -13,20 +13,28 @@ import type {
   BrowserAgentLogEntry,
   BrowserAgentLLMConfig,
   BrowserChatFontConfig,
-} from '@/types/browser-agent';
+} from '@/extensions/browser/types';
 import type { Persona } from '@/types/persona';
 import { BUILTIN_PERSONAS } from '@/types/persona';
-import type { EditorAppearanceConfig, EditorLLMPromptsConfig } from '@/types/editor-settings';
-import { DEFAULT_EDITOR_APPEARANCE, DEFAULT_EDITOR_LLM_PROMPTS } from '@/types/editor-settings';
 import type {
-  PresentationSlide,
-  PresentationExportState,
-  PresentationAgentState,
-} from '@/extensions/presentation/types';
+  EditorAppearanceConfig,
+  EditorLLMPromptsConfig,
+} from '@/extensions/editor/types/editor-settings';
+import {
+  DEFAULT_EDITOR_APPEARANCE,
+  DEFAULT_EDITOR_LLM_PROMPTS,
+} from '@/extensions/editor/types/editor-settings';
+import {
+  mergeExtensionStoreSlices,
+  type ExtensionStoreState,
+  type AppMode,
+} from './extension-slices';
 
 // App mode types
 import { logger } from '@/lib/utils/logger';
-export type AppMode = 'chat' | 'editor' | 'browser' | 'presentation';
+
+// Re-export AppMode for backward compatibility
+export type { AppMode };
 
 // Open file tab interface
 export interface OpenFile {
@@ -108,7 +116,7 @@ async function loadWorkingDirectory(): Promise<string | null> {
   }
 }
 
-interface ChatStore {
+interface ChatStore extends ExtensionStoreState {
   // State
   conversations: Conversation[];
   activeConversationId: string | null;
@@ -162,15 +170,6 @@ interface ChatStore {
   // Browser Mode Chat (simple side chat)
   browserChatMessages: Message[];
   browserViewMode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs';
-
-  // Presentation Designer
-  presentationChatMessages: Message[];
-  presentationChatStreaming: boolean;
-  presentationSlides: PresentationSlide[];
-  activePresentationSlideId: string | null;
-  presentationViewMode: 'chat' | 'outline' | 'assets' | 'settings';
-  presentationExportState: PresentationExportState | null;
-  presentationAgentState: PresentationAgentState | null; // Step-by-step workflow state
 
   // Browser Agent Logs (실행 과정 가시성)
   browserAgentLogs: BrowserAgentLogEntry[];
@@ -275,22 +274,7 @@ interface ChatStore {
     mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs'
   ) => void;
 
-  // Actions - Presentation
-  addPresentationChatMessage: (
-    message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>
-  ) => void;
-  updatePresentationChatMessage: (id: string, updates: Partial<Message>) => void;
-  clearPresentationChat: () => void;
-  setPresentationChatStreaming: (isStreaming: boolean) => void;
-  setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets' | 'settings') => void;
-  setPresentationSlides: (slides: PresentationSlide[]) => void;
-  addPresentationSlide: (slide: PresentationSlide) => void;
-  updatePresentationSlide: (id: string, updates: Partial<PresentationSlide>) => void;
-  removePresentationSlide: (id: string) => void;
-  setActivePresentationSlide: (id: string | null) => void;
-  setPresentationExportState: (state: PresentationExportState | null) => void;
-  setPresentationAgentState: (state: PresentationAgentState | null) => void;
-  clearPresentationSession: () => void;
+  // Actions - Extension-specific: Provided by Extension Store Slices
 
   // Actions - Browser Agent Logs
   addBrowserAgentLog: (log: Omit<BrowserAgentLogEntry, 'id' | 'timestamp'>) => void;
@@ -390,6 +374,9 @@ interface ChatStore {
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
+  // Extension Slices: All extension store slices are integrated first
+  ...mergeExtensionStoreSlices(set as any, get as any),
+
   // Initial state
   conversations: [],
   activeConversationId: null,
@@ -434,14 +421,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   browserChatMessages: [],
   browserViewMode: 'chat',
 
-  // Presentation Designer
-  presentationChatMessages: [],
-  presentationChatStreaming: false,
-  presentationSlides: [],
-  activePresentationSlideId: null,
-  presentationViewMode: 'chat',
-  presentationExportState: null,
-  presentationAgentState: null,
+  // Extension Features: Provided by Extension Store Slices
 
   // Browser Agent Logs
   browserAgentLogs: [],
@@ -1678,102 +1658,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs'
   ) => {
     set({ browserViewMode: mode });
-  },
-
-  // Presentation Chat Actions
-  addPresentationChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => {
-    const newMessage: Message = {
-      ...message,
-      id: generateId(),
-      conversation_id: 'presentation-chat',
-      created_at: Date.now(),
-    };
-
-    set((state) => ({
-      presentationChatMessages: [...state.presentationChatMessages, newMessage],
-    }));
-  },
-
-  updatePresentationChatMessage: (id: string, updates: Partial<Message>) => {
-    set((state) => ({
-      presentationChatMessages: state.presentationChatMessages.map((m) =>
-        m.id === id ? { ...m, ...updates } : m
-      ),
-    }));
-  },
-
-  clearPresentationChat: () => {
-    set({ presentationChatMessages: [], presentationChatStreaming: false });
-  },
-
-  setPresentationChatStreaming: (isStreaming: boolean) => {
-    set({ presentationChatStreaming: isStreaming });
-  },
-
-  setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets' | 'settings') => {
-    set({ presentationViewMode: mode });
-  },
-
-  setPresentationSlides: (slides: PresentationSlide[]) => {
-    logger.info('[ChatStore] setPresentationSlides called with', slides.length, 'slides');
-    logger.info('[ChatStore] First slide:', slides[0]);
-    set({ presentationSlides: slides });
-  },
-
-  addPresentationSlide: (slide: PresentationSlide) => {
-    set((state) => {
-      const slides = [...state.presentationSlides, slide];
-      return {
-        presentationSlides: slides,
-        activePresentationSlideId: slide.id,
-      };
-    });
-  },
-
-  updatePresentationSlide: (id: string, updates: Partial<PresentationSlide>) => {
-    set((state) => ({
-      presentationSlides: state.presentationSlides.map((slide) =>
-        slide.id === id ? { ...slide, ...updates } : slide
-      ),
-    }));
-  },
-
-  removePresentationSlide: (id: string) => {
-    set((state) => {
-      const slides = state.presentationSlides.filter((slide) => slide.id !== id);
-      const activeId =
-        state.activePresentationSlideId === id
-          ? slides[0]?.id || null
-          : state.activePresentationSlideId;
-      return {
-        presentationSlides: slides,
-        activePresentationSlideId: activeId,
-      };
-    });
-  },
-
-  setActivePresentationSlide: (id: string | null) => {
-    set({ activePresentationSlideId: id });
-  },
-
-  setPresentationExportState: (stateValue: PresentationExportState | null) => {
-    set({ presentationExportState: stateValue });
-  },
-
-  setPresentationAgentState: (stateValue: PresentationAgentState | null) => {
-    set({ presentationAgentState: stateValue });
-  },
-
-  clearPresentationSession: () => {
-    set({
-      presentationChatMessages: [],
-      presentationSlides: [],
-      activePresentationSlideId: null,
-      presentationChatStreaming: false,
-      presentationExportState: null,
-      presentationAgentState: null,
-      presentationViewMode: 'chat',
-    });
   },
 
   // Browser Agent Logs Actions

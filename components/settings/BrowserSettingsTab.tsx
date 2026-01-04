@@ -1,6 +1,6 @@
 'use client';
 
-import { BrowserSettings } from '@/components/browser/BrowserSettings';
+import { BrowserSettings } from '@/extensions/browser/components/BrowserSettings';
 
 interface BrowserSettingsTabProps {
   onSave: () => void;

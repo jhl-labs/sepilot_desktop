@@ -49,7 +49,7 @@ import type {
   GoogleSearchOptions,
   GoogleExtractResultsOptions,
   GoogleVisitResultOptions,
-} from '@/types/browser-agent';
+} from '@/extensions/browser/types';
 
 const execPromise = promisify(exec);
 

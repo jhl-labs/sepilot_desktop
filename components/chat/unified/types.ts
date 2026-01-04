@@ -8,7 +8,7 @@
 import type { Message, ImageAttachment } from '@/types';
 import type { Persona } from '@/types/persona';
 import type { ThinkingMode } from '@/lib/langgraph';
-import type { BrowserAgentLogEntry } from '@/types/browser-agent';
+import type { BrowserAgentLogEntry } from '@/extensions/browser/types';
 
 /**
  * Chat 모드

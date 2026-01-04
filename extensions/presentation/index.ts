@@ -17,7 +17,6 @@
 
 // Manifest
 export { manifest } from './manifest';
-export type { ExtensionManifest } from './manifest';
 
 // Types
 export * from './types';

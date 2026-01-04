@@ -8,7 +8,7 @@
  */
 
 import { Brain, Wrench, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import type { BrowserAgentLogEntry } from '@/types/browser-agent';
+import type { BrowserAgentLogEntry } from '@/extensions/browser/types';
 
 interface AgentLogsPluginProps {
   logs: BrowserAgentLogEntry[];

@@ -12,7 +12,7 @@ import type {
   GoogleSearchResultItem,
   GoogleExtractResultsOptions,
   GoogleVisitResultOptions,
-} from '@/types/browser-agent';
+} from '@/extensions/browser/types';
 
 /**
  * 자연스러운 지연 (bot 감지 방지)

@@ -25,14 +25,16 @@ import { setupBrowserControlHandlers } from './handlers/browser-control';
 import { setupTerminalHandlers } from './handlers/terminal';
 import { setupPersonaHandlers } from './handlers/persona';
 import { setupErrorReportingHandlers } from './handlers/error-reporting';
-import { setupTestRunnerHandlers } from './handlers/test-runner';
 import { logger } from '../services/logger';
-import { setupPresentationExportHandlers } from './handlers/presentation-export';
+import { registerExtensionIpcHandlers } from '../../lib/extensions/loader-main';
 
 /**
  * Register all IPC handlers
  */
-export function setupIpcHandlers(mainWindow?: BrowserWindow) {
+export function setupIpcHandlers(
+  getMainWindow: () => BrowserWindow | null,
+  registerShortcuts: () => Promise<void>
+) {
   logger.info('Setting up IPC handlers');
 
   setupChatHandlers();
@@ -50,14 +52,15 @@ export function setupIpcHandlers(mainWindow?: BrowserWindow) {
   setupEmbeddingsHandlers();
   setupComfyUIHandlers();
   setupUpdateHandlers();
-  setupQuickInputHandlers();
+  setupQuickInputHandlers(getMainWindow, registerShortcuts);
   setupBrowserViewHandlers();
   setupBrowserControlHandlers();
-  setupTerminalHandlers(mainWindow);
+  setupTerminalHandlers(undefined);
   setupPersonaHandlers();
   setupErrorReportingHandlers();
-  setupTestRunnerHandlers();
-  setupPresentationExportHandlers();
+
+  // Extension IPC handlers
+  registerExtensionIpcHandlers();
 
   logger.info('IPC handlers setup complete');
 }

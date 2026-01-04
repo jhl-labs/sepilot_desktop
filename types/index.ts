@@ -399,10 +399,10 @@ export interface QuickInputMessageData {
 /**
  * Beta Features Configuration
  * 개발 중인 실험적 기능들의 활성화 여부를 관리
+ * Extension manifest의 betaFlag를 키로 사용하는 동적 타입
+ * 예: { enablePresentationMode: true, enableDiagramMode: false }
  */
-export interface BetaConfig {
-  enablePresentationMode?: boolean; // Presentation 모드 활성화 (기본값: false)
-}
+export type BetaConfig = Record<string, boolean>;
 
 export interface GeneralConfig {
   language: 'ko' | 'en' | 'zh';

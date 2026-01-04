@@ -8,7 +8,7 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { BrowserAgentLogsView } from '@/components/browser/BrowserAgentLogsView';
 import { useChatStore } from '@/lib/store/chat-store';
-import type { BrowserAgentLogEntry } from '@/types/browser-agent';
+import type { BrowserAgentLogEntry } from '@/extensions/browser/types';
 
 // Mock useChatStore
 jest.mock('@/lib/store/chat-store', () => ({

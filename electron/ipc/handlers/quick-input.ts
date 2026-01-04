@@ -1,8 +1,10 @@
 import { ipcMain, BrowserWindow, clipboard } from 'electron';
 import { logger } from '../../services/logger';
-import { registerShortcuts, getMainWindow } from '../../main';
 
-export function setupQuickInputHandlers() {
+export function setupQuickInputHandlers(
+  getMainWindow: () => BrowserWindow | null,
+  registerShortcuts: () => Promise<void>
+) {
   // Quick Input 제출 핸들러
   ipcMain.handle('quick-input-submit', async (event, message: string) => {
     try {

@@ -98,7 +98,7 @@ export class GraphFactory {
 
   private static async getBrowserAgentGraph() {
     if (!this._browserAgentGraph) {
-      const { createBrowserAgentGraph } = await import('./graphs/browser-agent');
+      const { createBrowserAgentGraph } = await import('@/extensions/browser/agents/browser-agent');
       this._browserAgentGraph = createBrowserAgentGraph();
     }
     return this._browserAgentGraph;
@@ -106,7 +106,8 @@ export class GraphFactory {
 
   private static async getEditorAgentGraph() {
     if (!this._editorAgentGraph) {
-      const { createAdvancedEditorAgentGraph } = await import('./graphs/editor-agent');
+      const { createAdvancedEditorAgentGraph } =
+        await import('@/extensions/editor/agents/editor-agent');
       this._editorAgentGraph = createAdvancedEditorAgentGraph(50); // Max 50 iterations for complex tasks
     }
     return this._editorAgentGraph;
@@ -463,7 +464,7 @@ export class GraphFactory {
     try {
       logger.info('[GraphFactory] Starting browser agent stream (automatic tool execution)');
 
-      const { BrowserAgentGraph } = await import('./graphs/browser-agent');
+      const { BrowserAgentGraph } = await import('@/extensions/browser/agents/browser-agent');
       const { createInitialAgentState } = await import('./state');
 
       const browserAgentGraph = new BrowserAgentGraph();

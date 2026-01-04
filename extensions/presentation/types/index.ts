@@ -207,14 +207,8 @@ export interface PresentationAgentState {
  * Extension Store State (for presentation)
  */
 export interface PresentationStoreState {
-  // Chat Messages
-  presentationChatMessages: Array<{
-    id: string;
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-    conversation_id: string;
-    created_at: number;
-  }>;
+  // Chat Messages (compatible with Message type from @/types)
+  presentationChatMessages: any[]; // Will be Message[] at runtime
   presentationChatStreaming: boolean;
 
   // Slides
@@ -233,13 +227,13 @@ export interface PresentationStoreState {
 
 /**
  * Extension Store Actions (for presentation)
+ *
+ * Note: message parameter uses 'any' for compatibility with Message type from @/types
+ * At runtime, it will be: Omit<Message, 'id' | 'created_at' | 'conversation_id'>
  */
 export interface PresentationStoreActions {
-  addPresentationChatMessage: (message: {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-  }) => void;
-  updatePresentationChatMessage: (id: string, updates: Partial<{ content: string }>) => void;
+  addPresentationChatMessage: (message: any) => void;
+  updatePresentationChatMessage: (id: string, updates: any) => void;
   clearPresentationChat: () => void;
   setPresentationChatStreaming: (isStreaming: boolean) => void;
   setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets' | 'settings') => void;

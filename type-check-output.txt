@@ -1,0 +1,4 @@
+
+> sepilot-desktop@0.6.20 type-check C:\git\sepilot_desktop
+> tsc --noEmit
+

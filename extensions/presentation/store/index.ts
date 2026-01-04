@@ -59,16 +59,14 @@ export function createPresentationSlice(
     // Actions
     addPresentationChatMessage: (message) => {
       const id = crypto.randomUUID();
+      const newMessage = {
+        ...message,
+        id,
+        conversation_id: 'presentation-chat',
+        created_at: Date.now(),
+      };
       set((state) => ({
-        presentationChatMessages: [
-          ...state.presentationChatMessages,
-          {
-            id,
-            ...message,
-            conversation_id: 'presentation-chat',
-            created_at: Date.now(),
-          },
-        ],
+        presentationChatMessages: [...state.presentationChatMessages, newMessage],
       }));
     },
 

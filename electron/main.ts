@@ -114,65 +114,6 @@ function toggleMenuVisibility() {
           ],
         },
         {
-          label: 'Test',
-          submenu: [
-            {
-              label: 'Run All Tests',
-              click: async () => {
-                if (mainWindow) {
-                  mainWindow.webContents.send('test:run-all-from-menu');
-                }
-              },
-            },
-            {
-              label: 'Health Check',
-              click: async () => {
-                if (mainWindow) {
-                  mainWindow.webContents.send('test:health-check-from-menu');
-                }
-              },
-            },
-            { type: 'separator' },
-            {
-              label: 'LLM Interaction Tests',
-              click: async () => {
-                if (mainWindow) {
-                  mainWindow.webContents.send('test:run-llm-from-menu');
-                }
-              },
-            },
-            {
-              label: 'Database Tests',
-              click: async () => {
-                if (mainWindow) {
-                  mainWindow.webContents.send('test:run-database-from-menu');
-                }
-              },
-            },
-            {
-              label: 'MCP Tool Tests',
-              click: async () => {
-                if (mainWindow) {
-                  mainWindow.webContents.send('test:run-mcp-from-menu');
-                }
-              },
-            },
-            { type: 'separator' },
-            {
-              label: 'Open Test Dashboard',
-              click: async () => {
-                logger.info('[Main] Open Test Dashboard menu clicked');
-                if (mainWindow) {
-                  logger.info('[Main] Sending test:open-dashboard event');
-                  mainWindow.webContents.send('test:open-dashboard');
-                } else {
-                  logger.error('[Main] mainWindow is null');
-                }
-              },
-            },
-          ],
-        },
-        {
           label: 'Help',
           submenu: [
             {
@@ -657,7 +598,13 @@ app.whenReady().then(async () => {
   }
 
   // Setup IPC handlers (terminal handlers will be set up after window creation)
-  setupIpcHandlers();
+  setupIpcHandlers(
+    () => mainWindow,
+    async () => {
+      // Wrap in async to match Promise<void> signature if needed, though registerShortcuts is already async
+      await registerShortcuts();
+    }
+  );
 
   // Initialize builtin tools (file_read, file_write, file_edit, file_list)
   initializeBuiltinTools();

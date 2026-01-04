@@ -5,28 +5,7 @@
  * 새 extension을 만들 때 이 파일을 참고하세요.
  */
 
-export interface ExtensionManifest {
-  /** 확장 기능 고유 식별자 */
-  id: string;
-  /** 표시 이름 */
-  name: string;
-  /** 설명 */
-  description: string;
-  /** 버전 (semver) */
-  version: string;
-  /** 작성자 */
-  author: string;
-  /** 아이콘 (lucide-react 아이콘 이름) */
-  icon: string;
-  /** 이 extension이 활성화할 모드 */
-  mode: string;
-  /** 사이드바에 표시할지 여부 */
-  showInSidebar: boolean;
-  /** 의존성 */
-  dependencies?: string[];
-  /** 설정 스키마 (옵션) */
-  settingsSchema?: Record<string, unknown>;
-}
+import type { ExtensionManifest } from '@/lib/extensions/types';
 
 /**
  * Presentation Extension Manifest
@@ -41,7 +20,12 @@ export const manifest: ExtensionManifest = {
   icon: 'Presentation',
   mode: 'presentation',
   showInSidebar: true,
+  order: 3, // Chat(1), Editor(2), Presentation(3), Browser(4)
+  betaFlag: 'enablePresentationMode',
   dependencies: [],
+  ipcChannels: {
+    handlers: ['presentation:export'],
+  },
   settingsSchema: {
     webSearchEnabled: {
       type: 'boolean',

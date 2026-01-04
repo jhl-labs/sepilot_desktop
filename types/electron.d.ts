@@ -924,63 +924,6 @@ interface TerminalAPI {
   removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
 }
 
-// Test Runner 관련 타입
-export interface HealthStatus {
-  status: 'pass' | 'fail' | 'warn';
-  message?: string;
-  details?: Record<string, unknown>;
-  latency?: number;
-}
-
-export interface HealthCheckResult {
-  status: 'healthy' | 'degraded' | 'unhealthy';
-  checks: {
-    database: HealthStatus;
-    vectordb: HealthStatus;
-    mcpTools: HealthStatus;
-    llmProviders: HealthStatus;
-  };
-  timestamp: number;
-  message?: string;
-}
-
-export interface TestResult {
-  id: string;
-  name: string;
-  status: 'pass' | 'fail' | 'skip';
-  duration: number;
-  message?: string;
-  error?: string;
-  timestamp: number;
-}
-
-export interface TestSuiteResult {
-  id: string;
-  name: string;
-  tests: TestResult[];
-  summary: {
-    total: number;
-    passed: number;
-    failed: number;
-    skipped: number;
-    duration: number;
-  };
-  timestamp: number;
-}
-
-interface TestRunnerAPI {
-  // Health Check
-  healthCheck: () => Promise<HealthCheckResult>;
-  getLastHealthCheck: () => Promise<HealthCheckResult | null>;
-  startPeriodicHealthCheck: (intervalMs?: number) => Promise<void>;
-  stopPeriodicHealthCheck: () => Promise<void>;
-  // Test Suites
-  runAll: () => Promise<TestSuiteResult>;
-  runLLM: () => Promise<TestSuiteResult>;
-  runDatabase: () => Promise<TestSuiteResult>;
-  runMCP: () => Promise<TestSuiteResult>;
-}
-
 interface PresentationAPI {
   exportSlides: (
     slides: import('./presentation').PresentationSlide[],
@@ -1013,7 +956,6 @@ interface ElectronAPI {
   browserView: BrowserViewAPI;
   browserControl: BrowserControlAPI;
   terminal: TerminalAPI;
-  testRunner: TestRunnerAPI; // 테스트 러너 API
   presentation: PresentationAPI;
   on: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => void;
