@@ -543,6 +543,16 @@
       "shortcutRecordingHint": "按下要使用的按键组合，或按 Escape 取消",
       "saved": "快速输入设置已保存！"
     },
+    "editor": {
+      "title": "代码编辑器",
+      "description": "基于 Monaco 的编辑器设置",
+      "saved": "编辑器设置已保存！"
+    },
+    "browser": {
+      "title": "网页浏览器",
+      "description": "基于 AI Agent 的网页浏览器设置",
+      "saved": "浏览器设置已保存！"
+    },
     "teamDocs": {
       "title": "团队文档",
       "description": "团队文档同步（多仓库）",

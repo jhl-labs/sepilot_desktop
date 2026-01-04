@@ -401,6 +401,16 @@
       "shortcutRecordingHint": "사용할 키 조합을 누르거나 Escape를 눌러 취소하세요",
       "saved": "Quick Input 설정이 저장되었습니다!"
     },
+    "editor": {
+      "title": "코드 에디터",
+      "description": "Monaco 기반 에디터 설정",
+      "saved": "에디터 설정이 저장되었습니다!"
+    },
+    "browser": {
+      "title": "웹 브라우저",
+      "description": "AI Agent 기반 웹 브라우저 설정",
+      "saved": "브라우저 설정이 저장되었습니다!"
+    },
     "teamDocs": {
       "title": "Team Docs",
       "description": "팀 문서 동기화 (다중 Repo)",

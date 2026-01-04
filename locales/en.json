@@ -399,6 +399,16 @@
       "shortcutRecordingHint": "Press the key combination you want to use, or press Escape to cancel",
       "saved": "Quick Input settings saved!"
     },
+    "editor": {
+      "title": "Code Editor",
+      "description": "Monaco-based editor settings",
+      "saved": "Editor settings saved!"
+    },
+    "browser": {
+      "title": "Web Browser",
+      "description": "AI Agent-based web browser settings",
+      "saved": "Browser settings saved!"
+    },
     "teamDocs": {
       "title": "Team Docs",
       "description": "Team document sync (Multiple Repos)",
