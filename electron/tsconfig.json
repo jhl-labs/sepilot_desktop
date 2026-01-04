@@ -29,7 +29,21 @@
     "../lib/mcp/**/*.ts",
     "../lib/vectordb/**/*.ts",
     "../lib/comfyui/**/*.ts",
-    "../lib/platform.ts"
+    "../lib/platform.ts",
+    "../lib/extensions/types.ts",
+    "../lib/extensions/loader-main.ts",
+    "../extensions/presentation/ipc/**/*.ts",
+    "../extensions/editor/agents/**/*.ts",
+    "../extensions/editor/tools/**/*.ts",
+    "../extensions/browser/agents/**/*.ts"
   ],
-  "exclude": ["node_modules", "**/*.spec.ts", "../components/**/*", "../app/**/*"]
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "../components/**/*",
+    "../app/**/*",
+    "../lib/extensions/loader.ts",
+    "../lib/extensions/use-extensions.ts",
+    "../lib/extensions/registry.ts"
+  ]
 }
