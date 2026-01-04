@@ -6,10 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useChatStore } from '@/lib/store/chat-store';
-import { runPresentationAgent, createInitialState } from '@/lib/presentation/ppt-agent';
-import type { PresentationWorkflowStep, PresentationDesignMaster } from '@/types/presentation';
+import { runPresentationAgent, createInitialState } from '../lib/ppt-agent';
+import type { PresentationWorkflowStep, PresentationDesignMaster } from '../types';
 import { generateId } from '@/lib/utils';
-import { PRESENTATION_TEMPLATES, type TemplateType } from '@/lib/presentation/templates';
+import { PRESENTATION_TEMPLATES, type TemplateType } from '../lib/templates';
 import {
   Loader2,
   Send,

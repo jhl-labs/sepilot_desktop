@@ -1,4 +1,4 @@
-import type { PresentationSlide, PresentationExportFormat } from '@/types/presentation';
+import type { PresentationSlide, PresentationExportFormat } from '../types';
 import { isElectron } from '@/lib/platform';
 
 function downloadBlob(content: BlobPart, type: string, filename: string) {

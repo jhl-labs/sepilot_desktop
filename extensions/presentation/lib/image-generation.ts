@@ -1,6 +1,6 @@
 import { getComfyUIClient, initializeComfyUIClient } from '@/lib/comfyui/client';
 import { generateWithNanoBanana } from '@/lib/imagegen/nanobanana-client';
-import type { PresentationSlide } from '@/types/presentation';
+import type { PresentationSlide } from '../types';
 import type { ComfyUIConfig, ImageGenConfig, NanoBananaConfig, NetworkConfig } from '@/types';
 
 function loadComfyConfig(): ComfyUIConfig | null {

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import mermaid from 'mermaid';
 import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
-import { Check, Copy, RefreshCw, Loader2 } from 'lucide-react';
+import { Check, Copy, Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { isElectron } from '@/lib/platform';
 import { copyToClipboard } from '@/lib/utils/clipboard';
@@ -26,6 +26,8 @@ interface FixAttempt {
 }
 
 export function MermaidDiagram({ chart, onChartFixed }: MermaidDiagramProps) {
+  const [textDiagram, setTextDiagram] = useState<string>('');
+  const [isConverting, setIsConverting] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -42,7 +44,53 @@ export function MermaidDiagram({ chart, onChartFixed }: MermaidDiagramProps) {
     setRetryCount(0);
     setError('');
     setFixHistory([]);
+    setTextDiagram('');
   }, [chart]);
+
+  // Convert to text representation using LLM
+  const convertToText = useCallback(async (brokenChart: string) => {
+    setIsConverting(true);
+    try {
+      const prompt = `The following Mermaid diagram failed to render. Please convert it into a clear text-based diagram (ASCII art or structured list) that conveys the same information.
+Return ONLY the text representation.
+
+Broken Mermaid code:
+${brokenChart}`;
+
+      const messages = [
+        { role: 'user' as const, content: prompt, id: 'convert-mermaid', created_at: Date.now() },
+      ];
+
+      if (isElectron() && window.electronAPI?.llm) {
+        const result = await window.electronAPI.llm.chat(messages, {
+          maxTokens: 2000,
+          temperature: 0.3,
+        });
+        if (result.success && result.data?.content) {
+          setTextDiagram(result.data.content);
+        }
+      } else {
+        const { getLLMClient } = await import('@/lib/llm/client');
+        const client = getLLMClient();
+        if (client.isConfigured()) {
+          const provider = client.getProvider();
+          const response = await provider.chat(messages, {
+            maxTokens: 2000,
+            temperature: 0.3,
+          });
+          if (response?.content) {
+            setTextDiagram(response.content);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[MermaidDiagram] Failed to convert to text:', err);
+      // Fallback to showing code if conversion fails
+      setTextDiagram(brokenChart);
+    } finally {
+      setIsConverting(false);
+    }
+  }, []);
 
   // Auto-fix mermaid syntax using LLM
   const fixMermaidSyntax = useCallback(
@@ -132,7 +180,16 @@ Corrected Mermaid code:`;
   // Try to auto-fix on error
   const attemptAutoFix = useCallback(
     async (brokenChart: string, errorMsg: string) => {
-      if (retryCount >= MAX_RETRY_COUNT || isFixing) {
+      // 이미 수정 중이거나, 최대 횟수 초과시
+      if (isFixing) {
+        return;
+      }
+
+      if (retryCount >= MAX_RETRY_COUNT) {
+        // 최대 재시도 횟수 도달 -> 텍스트 변환 시도
+        if (!textDiagram && !isConverting) {
+          await convertToText(brokenChart);
+        }
         return;
       }
 
@@ -146,14 +203,10 @@ Corrected Mermaid code:`;
           // 수정된 차트로 업데이트 (렌더링 시도)
           setCurrentChart(fixedChart);
           setRetryCount(currentAttempt);
-
           // 성공 시 onChartFixed 호출은 렌더링 성공 후에만
-          // (렌더링 실패 시 fixHistory에 기록됨)
         } else {
-          // LLM이 수정에 실패했거나 동일한 코드를 반환한 경우
+          // 수정 실패
           setRetryCount(currentAttempt);
-
-          // 실패한 시도 기록
           setFixHistory((prev) => [
             ...prev,
             {
@@ -162,12 +215,14 @@ Corrected Mermaid code:`;
               attemptedFix: fixedChart || brokenChart,
             },
           ]);
+          // 즉시 다음 단계(텍스트 변환)로 넘어갈지 판단
+          if (currentAttempt >= MAX_RETRY_COUNT) {
+            await convertToText(brokenChart);
+          }
         }
       } catch (err) {
         console.error(`[MermaidDiagram] Attempt ${currentAttempt} error:`, err);
         setRetryCount(currentAttempt);
-
-        // 예외 발생 시에도 기록
         setFixHistory((prev) => [
           ...prev,
           {
@@ -176,11 +231,14 @@ Corrected Mermaid code:`;
             attemptedFix: brokenChart,
           },
         ]);
+        if (currentAttempt >= MAX_RETRY_COUNT) {
+          await convertToText(brokenChart);
+        }
       } finally {
         setIsFixing(false);
       }
     },
-    [retryCount, isFixing, fixMermaidSyntax]
+    [retryCount, isFixing, fixMermaidSyntax, convertToText, textDiagram, isConverting]
   );
 
   useEffect(() => {
@@ -208,6 +266,11 @@ Corrected Mermaid code:`;
 
     const renderDiagram = async () => {
       if (!containerRef.current) {
+        return;
+      }
+
+      // 이미 텍스트로 변환된 상태면 렌더링 스킵
+      if (textDiagram) {
         return;
       }
 
@@ -244,10 +307,11 @@ Corrected Mermaid code:`;
           }
         });
 
-        // 렌더링 실패 - 수정 시도 중이었다면 실패 기록
+        // 렌더링 실패 - 수정 시도 필요
+
+        // 1. 실패 기록 업데이트
         if (retryCount > 0 && currentChart !== chart) {
           setFixHistory((prev) => {
-            // 이미 기록되어 있는지 확인 (중복 방지)
             const alreadyRecorded = prev.some((h) => h.attemptNumber === retryCount);
             if (!alreadyRecorded) {
               return [
@@ -263,7 +327,20 @@ Corrected Mermaid code:`;
           });
         }
 
-        // 자동 수정 제거 - 사용자가 수동으로 트리거해야 함
+        // 2. 자동 수정 시도 (재시도 횟수가 남았을 때)
+        // 주의: useEffect 내에서 상태 변경을 유발하는 함수 호출 시 순환 참조 주의
+        // 여기서는 에러 발생 시 즉시 복구를 시도해야 함
+        if (retryCount < MAX_RETRY_COUNT && !isFixing) {
+          // 비동기로 호출하여 렌더링 사이클 분리
+          setTimeout(() => {
+            attemptAutoFix(currentChart, errorMsg);
+          }, 0);
+        } else if (retryCount >= MAX_RETRY_COUNT && !textDiagram && !isConverting) {
+          // 더 이상 수정 불가능하면 텍스트 변환
+          setTimeout(() => {
+            convertToText(currentChart);
+          }, 0);
+        }
       }
     };
 
@@ -271,27 +348,31 @@ Corrected Mermaid code:`;
 
     // Cleanup on unmount
     return () => {
-      // Remove any leftover mermaid error elements
       document.querySelectorAll('svg[id^="mermaid-"]').forEach((el) => {
         if (el.textContent?.includes('Syntax error')) {
           el.remove();
         }
       });
     };
-  }, [currentChart, theme, retryCount, chart, onChartFixed]);
+  }, [
+    currentChart,
+    theme,
+    retryCount,
+    chart,
+    onChartFixed,
+    attemptAutoFix,
+    isFixing,
+    textDiagram,
+    isConverting,
+    convertToText,
+  ]);
 
   const handleCopy = async () => {
-    const success = await copyToClipboard(currentChart);
+    const contentToCopy = textDiagram || currentChart;
+    const success = await copyToClipboard(contentToCopy);
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  // Manual retry handler
-  const handleManualRetry = () => {
-    if (!isFixing && retryCount < MAX_RETRY_COUNT) {
-      attemptAutoFix(currentChart, error);
     }
   };
 
@@ -311,85 +392,68 @@ Corrected Mermaid code:`;
     );
   }
 
-  if (error) {
-    // 최대 재시도 실패 시 텍스트 fallback으로 전환
-    if (retryCount >= MAX_RETRY_COUNT) {
-      return (
-        <div className="my-4 overflow-hidden rounded-lg border border-muted bg-muted/30">
-          <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              Mermaid Code (렌더링 실패 - {MAX_RETRY_COUNT}회 수정 시도됨)
-            </span>
-            <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 gap-1 px-2">
-              {copied ? (
-                <>
-                  <Check className="h-3 w-3" />
-                  <span className="text-xs">복사됨</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3 w-3" />
-                  <span className="text-xs">복사</span>
-                </>
-              )}
-            </Button>
-          </div>
-          <div className="p-4 bg-background">
-            <pre className="overflow-x-auto text-xs">
-              <code>{currentChart}</code>
-            </pre>
-          </div>
+  if (isConverting) {
+    return (
+      <div className="my-4 overflow-hidden rounded-lg border border-primary/50 bg-primary/10">
+        <div className="flex items-center justify-between border-b border-primary/50 bg-primary/20 px-4 py-2">
+          <span className="text-xs font-medium text-primary flex items-center gap-2">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            텍스트로 변환 중...
+          </span>
         </div>
-      );
-    }
+        <div className="p-4">
+          <p className="text-sm text-primary">
+            다이어그램 렌더링 실패로 텍스트 버전으로 변환하고 있습니다.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-    // 재시도 가능한 경우 에러 UI 표시
+  if (textDiagram) {
+    return (
+      <div className="my-4 overflow-hidden rounded-lg border border-muted bg-muted/30">
+        <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
+          <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+            Mermaid Text Fallback (렌더링 실패)
+          </span>
+          <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 gap-1 px-2">
+            {copied ? (
+              <>
+                <Check className="h-3 w-3" />
+                <span className="text-xs">복사됨</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" />
+                <span className="text-xs">복사</span>
+              </>
+            )}
+          </Button>
+        </div>
+        <div className="p-4 bg-background overflow-x-auto">
+          <pre className="text-xs font-mono whitespace-pre-wrap">{textDiagram}</pre>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    // fallback to loading or just empty while waiting for auto actions
+    // But if we are here and not fixing/converting, it might mean we are stuck or logic missed something.
+    // However, the side effects in useEffect should trigger fix/convert.
+    // We show a transient error state if needed, or simply nothing if we expect a quick transition.
+    // Given the logic, we might briefly see this before 'isFixing' becomes true.
     return (
       <div className="my-4 overflow-hidden rounded-lg border border-destructive/50 bg-destructive/10">
         <div className="flex items-center justify-between border-b border-destructive/50 bg-destructive/20 px-4 py-2">
-          <span className="text-xs font-medium text-destructive">
-            Mermaid Diagram Error{' '}
-            {retryCount > 0 && `(수정 ${retryCount}/${MAX_RETRY_COUNT}회 시도됨)`}
-          </span>
-          <div className="flex gap-1">
-            {retryCount < MAX_RETRY_COUNT && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleManualRetry}
-                className="h-7 gap-1 px-2 text-destructive hover:text-destructive"
-                title="AI로 다시 수정 시도"
-              >
-                <RefreshCw className="h-3 w-3" />
-                <span className="text-xs">수정</span>
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCopy}
-              className="h-7 gap-1 px-2 text-destructive hover:text-destructive"
-            >
-              {copied ? (
-                <>
-                  <Check className="h-3 w-3" />
-                  <span className="text-xs">복사됨</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3 w-3" />
-                  <span className="text-xs">복사</span>
-                </>
-              )}
-            </Button>
-          </div>
+          <span className="text-xs font-medium text-destructive">Mermaid Render Error</span>
         </div>
         <div className="p-4">
-          <p className="text-sm text-destructive font-medium">다이어그램을 렌더링할 수 없습니다</p>
-          <p className="text-xs text-destructive/80 mt-1">
-            문법 오류가 있습니다. &apos;수정&apos; 버튼을 클릭하여 AI로 자동 수정할 수 있습니다.
-          </p>
-          {/* 에러 상세 정보는 콘솔에만 출력 - UI에서는 간결하게 */}
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-3 w-3 animate-spin text-destructive" />
+            <p className="text-sm text-destructive">오류 처리 중...</p>
+          </div>
         </div>
       </div>
     );

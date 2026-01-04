@@ -163,6 +163,12 @@ export function convertV2ToV1(configV2: LLMConfigV2): LLMConfig {
     const visionConnection = configV2.connections.find((c) => c.id === visionModel?.connectionId);
 
     if (visionModel && visionConnection) {
+      if (!visionModel.modelId) {
+        console.warn(
+          '[LLM Config Migration] Vision model found but modelId is empty:',
+          visionModel
+        );
+      }
       config.vision = {
         enabled: true,
         provider: visionConnection.provider,
@@ -173,11 +179,22 @@ export function convertV2ToV1(configV2: LLMConfigV2): LLMConfig {
             : baseConnection.baseURL,
         // apiKey: 항상 포함 (같은 connection 사용 시에도 필요)
         apiKey: visionConnection.apiKey || baseConnection.apiKey,
-        model: visionModel.modelId,
+        model: visionModel.modelId || '',
         maxImageTokens: visionModel.maxImageTokens,
         enableStreaming: visionModel.enableStreaming,
       };
+    } else {
+      console.warn(
+        '[LLM Config Migration] activeVisionModelId set but model or connection not found:',
+        {
+          activeVisionModelId: configV2.activeVisionModelId,
+          foundModel: !!visionModel,
+          foundConnection: !!visionConnection,
+        }
+      );
     }
+  } else {
+    console.info('[LLM Config Migration] No activeVisionModelId set in V2 config');
   }
 
   // Add Autocomplete config if active autocomplete model exists

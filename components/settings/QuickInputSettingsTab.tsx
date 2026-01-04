@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { KeyboardShortcutInput } from '@/components/ui/keyboard-shortcut-input';
 import { QuickInputConfig, QuickQuestion } from '@/types';
 import { Plus, Trash2, Zap } from 'lucide-react';
 import { SettingsSectionHeader } from './SettingsSectionHeader';
@@ -95,20 +96,18 @@ export function QuickInputSettingsTab({
           <Label htmlFor="quickInputShortcut" className="text-base font-semibold">
             {t('settings.quickinput.shortcut')}
           </Label>
-          <Input
+          <KeyboardShortcutInput
             id="quickInputShortcut"
             value={config.quickInputShortcut}
-            onChange={(e) =>
+            onChange={(value) =>
               setConfig({
                 ...config,
-                quickInputShortcut: e.target.value,
+                quickInputShortcut: value,
               })
             }
-            placeholder="CommandOrControl+Shift+Space"
+            placeholder={t('settings.quickinput.shortcutPlaceholder')}
           />
-          <p className="text-xs text-muted-foreground">
-            {t('settings.quickinput.shortcutExample')}
-          </p>
+          <p className="text-xs text-muted-foreground">{t('settings.quickinput.shortcutHint')}</p>
         </div>
 
         {/* Quick Questions */}
@@ -207,13 +206,11 @@ export function QuickInputSettingsTab({
                     <Label htmlFor={`qq-shortcut-${question.id}`}>
                       {t('settings.quickinput.questions.shortcut')}
                     </Label>
-                    <Input
+                    <KeyboardShortcutInput
                       id={`qq-shortcut-${question.id}`}
                       value={question.shortcut}
-                      onChange={(e) =>
-                        handleUpdateQuestion(question.id, { shortcut: e.target.value })
-                      }
-                      placeholder="CommandOrControl+Shift+1"
+                      onChange={(value) => handleUpdateQuestion(question.id, { shortcut: value })}
+                      placeholder={t('settings.quickinput.shortcutPlaceholder')}
                       className={
                         getShortcutConflict(question.shortcut, question.id)
                           ? 'border-destructive focus-visible:ring-destructive'

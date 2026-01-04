@@ -1,7 +1,7 @@
 import { app, ipcMain, BrowserWindow } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import type { PresentationSlide, PresentationExportFormat } from '@/types/presentation';
+import type { PresentationSlide, PresentationExportFormat } from '@/extensions/presentation/types';
 import { downloadImage, getNetworkConfig } from '../../../lib/http';
 
 interface ExportPayload {

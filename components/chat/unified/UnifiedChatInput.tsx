@@ -286,42 +286,78 @@ export function UnifiedChatInput({
   }, [input, isStreaming, selectedImages, clearInput, clearImages, onSendMessage, focusInput]);
 
   // Handle Quick Input message (auto-send)
+  // Only handle in Main Chat mode to prevent duplicate sends
+  const lastProcessedMessageRef = useRef<string | null>(null);
+  const processingRef = useRef(false);
+
   useEffect(() => {
+    // Only register listener for Main Chat mode
+    if (mode !== 'main') {
+      return;
+    }
+
     const handleAutoSendMessage = async (e: Event) => {
-      console.warn('[UnifiedChatInput] Received sepilot:auto-send-message event');
       const customEvent = e as CustomEvent<{ userMessage: string }>;
       const { userMessage } = customEvent.detail;
-      console.warn('[UnifiedChatInput] userMessage:', userMessage);
 
-      if (userMessage && userMessage.trim()) {
-        console.warn('[UnifiedChatInput] Setting input and sending message');
+      // Prevent duplicate processing
+      if (!userMessage || !userMessage.trim()) {
+        return;
+      }
+
+      // Check if this message was already processed
+      if (lastProcessedMessageRef.current === userMessage || processingRef.current) {
+        console.warn('[UnifiedChatInput] Message already processed, ignoring:', userMessage);
+        return;
+      }
+
+      // Mark as processing
+      processingRef.current = true;
+      lastProcessedMessageRef.current = userMessage;
+
+      console.warn('[UnifiedChatInput] Processing sepilot:auto-send-message event:', userMessage);
+
+      try {
         // Set input and immediately send
         setInput(userMessage);
 
         // Wait for input to be set, then trigger send
         setTimeout(() => {
-          console.warn('[UnifiedChatInput] Calling onSendMessage with:', userMessage);
-          // Directly call the send handler with the message
           if (onSendMessage) {
-            onSendMessage(userMessage, selectedImages).catch((error) => {
-              console.error('[UnifiedChatInput] Auto-send failed:', error);
-            });
-          } else {
-            console.warn('[UnifiedChatInput] onSendMessage is not defined!');
+            onSendMessage(userMessage, selectedImages)
+              .catch((error) => {
+                console.error('[UnifiedChatInput] Auto-send failed:', error);
+              })
+              .finally(() => {
+                // Reset processing flag after a delay to allow for rapid successive messages
+                setTimeout(() => {
+                  processingRef.current = false;
+                  // Clear the last processed message after a short delay
+                  setTimeout(() => {
+                    if (lastProcessedMessageRef.current === userMessage) {
+                      lastProcessedMessageRef.current = null;
+                    }
+                  }, 1000);
+                }, 500);
+              });
           }
         }, 100);
-      } else {
-        console.warn('[UnifiedChatInput] userMessage is empty or invalid');
+      } catch (error) {
+        console.error('[UnifiedChatInput] Error processing auto-send:', error);
+        processingRef.current = false;
+        lastProcessedMessageRef.current = null;
       }
     };
 
-    console.warn('[UnifiedChatInput] Registering sepilot:auto-send-message listener');
+    console.warn(
+      '[UnifiedChatInput] Registering sepilot:auto-send-message listener (Main Chat only)'
+    );
     window.addEventListener('sepilot:auto-send-message', handleAutoSendMessage);
     return () => {
       console.warn('[UnifiedChatInput] Removing sepilot:auto-send-message listener');
       window.removeEventListener('sepilot:auto-send-message', handleAutoSendMessage);
     };
-  }, [onSendMessage, selectedImages, setInput]);
+  }, [mode, onSendMessage, selectedImages, setInput]);
 
   // Handle file drop event from ChatArea
   useEffect(() => {

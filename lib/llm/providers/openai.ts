@@ -211,8 +211,12 @@ export class OpenAIProvider extends BaseLLMProvider {
       if (mergedOptions.temperature !== undefined) {
         requestBody.temperature = mergedOptions.temperature;
       }
-      if (mergedOptions.maxTokens !== undefined) {
+      // maxTokens는 0이어도 유효한 값이므로 !== undefined로 체크
+      if (mergedOptions.maxTokens !== undefined && mergedOptions.maxTokens !== null) {
         requestBody.max_tokens = mergedOptions.maxTokens;
+        log.info('[OpenAI] max_tokens set to:', mergedOptions.maxTokens);
+      } else {
+        log.warn('[OpenAI] maxTokens is undefined or null, not setting max_tokens');
       }
       if (mergedOptions.topP !== undefined) {
         requestBody.top_p = mergedOptions.topP;
@@ -241,6 +245,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         temperature: requestBody.temperature,
         max_tokens: requestBody.max_tokens,
         stream: requestBody.stream,
+        mergedOptions_maxTokens: mergedOptions.maxTokens,
         top_p: requestBody.top_p,
       });
       log.info('[OpenAI] Request body (first 1000 chars):', requestBodyStr.substring(0, 1000));
@@ -349,6 +354,20 @@ export class OpenAIProvider extends BaseLLMProvider {
             try {
               const data = JSON.parse(jsonStr);
               const delta = data.choices?.[0]?.delta;
+              const finishReason = data.choices?.[0]?.finish_reason;
+
+              // Log finish reason to understand why streaming stopped
+              if (finishReason) {
+                log.info('[OpenAI] Stream finished, reason:', finishReason, {
+                  maxTokens: mergedOptions.maxTokens,
+                  message:
+                    finishReason === 'length'
+                      ? 'Stopped due to max_tokens limit'
+                      : finishReason === 'stop'
+                        ? 'Stopped naturally (stop token)'
+                        : `Stopped: ${finishReason}`,
+                });
+              }
 
               // Handle content chunks
               const content = delta?.content;

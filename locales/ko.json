@@ -396,6 +396,9 @@
         "maxQuestionsReached": "최대 5개의 Quick Question만 등록할 수 있습니다."
       },
       "shortcutExample": "예: CommandOrControl+Shift+Space (기본값)",
+      "shortcutPlaceholder": "키를 눌러주세요...",
+      "shortcutHint": "필드를 클릭한 후 사용할 키 조합을 눌러주세요",
+      "shortcutRecordingHint": "사용할 키 조합을 누르거나 Escape를 눌러 취소하세요",
       "saved": "Quick Input 설정이 저장되었습니다!"
     },
     "editor": {

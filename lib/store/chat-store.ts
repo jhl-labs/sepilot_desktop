@@ -22,7 +22,7 @@ import type {
   PresentationSlide,
   PresentationExportState,
   PresentationAgentState,
-} from '@/types/presentation';
+} from '@/extensions/presentation/types';
 
 // App mode types
 import { logger } from '@/lib/utils/logger';

@@ -1,4 +1,4 @@
-import { renderHtml } from '@/lib/presentation/exporters';
+import { renderHtml } from '@/extensions/presentation/lib';
 
 describe('presentation exporters', () => {
   it('renders slides into HTML with bullets and prompts', () => {

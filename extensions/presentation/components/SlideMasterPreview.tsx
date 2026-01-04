@@ -1,6 +1,6 @@
 'use client';
 
-import type { PresentationDesignMaster } from '@/types/presentation';
+import type { PresentationDesignMaster } from '../types';
 import { Sparkles } from 'lucide-react';
 
 interface SlideMasterPreviewProps {

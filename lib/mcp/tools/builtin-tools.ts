@@ -488,7 +488,7 @@ async function handleFileWrite(args: { path: string; content: string }): Promise
     // Write file
     await fs.writeFile(absolutePath, args.content, 'utf-8');
 
-    return `Successfully wrote ${args.content.length} bytes to ${absolutePath}`;
+    return `Successfully wrote ${args.content.length} bytes to ${absolutePath}. If there are remaining steps in your plan, proceed with the next step immediately.`;
   } catch (error: unknown) {
     logger.error('[Builtin Tools] Failed to write file', error);
     throw new Error(`Failed to write file: ${getErrorMessage(error)}`);
@@ -510,27 +510,95 @@ async function handleFileEdit(args: {
     // Read file
     const content = await fs.readFile(absolutePath, 'utf-8');
 
-    // Check if old_str exists
-    if (!content.includes(args.old_str)) {
-      throw new Error(`String not found in file: ${args.old_str.substring(0, 50)}...`);
+    // Try multiple variations of line endings for the search string
+    let targetStr = args.old_str;
+    let matchFound = false;
+
+    // 1. Try exact match
+    if (content.includes(targetStr)) {
+      matchFound = true;
     }
 
-    // Check if old_str is unique
-    const occurrences = content.split(args.old_str).length - 1;
-    if (occurrences > 1) {
-      throw new Error(
-        `String appears ${occurrences} times in file. Must be unique for safe replacement.`
-      );
+    // 2. Try CRLF normalized (if logic 1 failed)
+    if (!matchFound) {
+      const crlfStr = args.old_str.replace(/\r?\n/g, '\r\n');
+      if (content.includes(crlfStr)) {
+        targetStr = crlfStr;
+        matchFound = true;
+      }
+    }
+
+    // 3. Try LF normalized (if logic 1 & 2 failed)
+    if (!matchFound) {
+      const lfStr = args.old_str.replace(/\r?\n/g, '\n');
+      if (content.includes(lfStr)) {
+        targetStr = lfStr;
+        matchFound = true;
+      }
+    }
+
+    if (!matchFound) {
+      // Create a snippet for error message
+      const snippet =
+        args.old_str.length > 50 ? `${args.old_str.substring(0, 50)}...` : args.old_str;
+      throw new Error(`String not found in file: ${snippet}`);
+    }
+
+    // Check if targetStr is unique
+    let matchIndex = -1;
+    const allIndices: number[] = [];
+    let pos = 0;
+    while (true) {
+      const idx = content.indexOf(targetStr, pos);
+      if (idx === -1) {
+        break;
+      }
+      allIndices.push(idx);
+      pos = idx + 1;
+    }
+
+    if (allIndices.length > 1) {
+      // Try to find a "strict" match (surrounded by newlines or BOF/EOF)
+      const strictIndices = allIndices.filter((idx) => {
+        const prevChar = idx > 0 ? content[idx - 1] : '\n';
+        const nextChar =
+          idx + targetStr.length < content.length ? content[idx + targetStr.length] : '\n';
+        const isStartBoundary = prevChar === '\n' || prevChar === '\r';
+        const isEndBoundary = nextChar === '\n' || nextChar === '\r';
+        return isStartBoundary && isEndBoundary;
+      });
+
+      if (strictIndices.length === 1) {
+        // Found exactly one strict match, use it
+        matchIndex = strictIndices[0];
+      } else {
+        // Ambiguous
+        const snippet =
+          args.old_str.length > 50 ? `${args.old_str.substring(0, 50)}...` : args.old_str;
+        throw new Error(
+          `String "${snippet}" appears ${allIndices.length} times in file. Please provide more context (e.g. surrounding newlines) to identify the correct instance.`
+        );
+      }
+    } else if (allIndices.length === 0) {
+      // Should have been caught by matchFound check earlier, but for safety
+      throw new Error(`String not found (unexpected internal error)`);
+    } else {
+      // Exactly one match
+      matchIndex = allIndices[0];
     }
 
     // Replace
-    const newContent = content.replace(args.old_str, args.new_str);
+    // Use substring concatenation instead of replace() to ensure we replace the correct instance (by index)
+    const newContent =
+      content.substring(0, matchIndex) +
+      args.new_str +
+      content.substring(matchIndex + targetStr.length);
 
     // Write back
     await fs.writeFile(absolutePath, newContent, 'utf-8');
 
     const linesChanged = args.new_str.split('\n').length;
-    return `Successfully edited ${absolutePath} (${linesChanged} lines changed)`;
+    return `Successfully edited ${absolutePath} (${linesChanged} lines changed). If there are remaining steps in your plan, proceed with the next step immediately.`;
   } catch (error: unknown) {
     logger.error('[Builtin Tools] Failed to edit file', error);
     throw new Error(`Failed to edit file: ${getErrorMessage(error)}`);

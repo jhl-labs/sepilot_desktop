@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { SlidePreview } from './SlidePreview';
 import { useChatStore } from '@/lib/store/chat-store';
-import type { PresentationExportFormat } from '@/types/presentation';
-import { exportPresentation } from '@/lib/presentation/exporters';
-import { generateImagesForSlides } from '@/lib/presentation/image-generation';
+import type { PresentationExportFormat } from '../types';
+import { exportPresentation } from '../lib/exporters';
+import { generateImagesForSlides } from '../lib/image-generation';
 import { Download, FileDown, FileType2 } from 'lucide-react';
 
 export function PresentationStudio() {

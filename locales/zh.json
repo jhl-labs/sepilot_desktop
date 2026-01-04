@@ -538,6 +538,9 @@
         "maxQuestionsReached": "最多只能注册 5 个快速问题。"
       },
       "shortcutExample": "例如：CommandOrControl+Shift+Space（默认值）",
+      "shortcutPlaceholder": "按下按键...",
+      "shortcutHint": "点击字段，然后按下要使用的按键组合",
+      "shortcutRecordingHint": "按下要使用的按键组合，或按 Escape 取消",
       "saved": "快速输入设置已保存！"
     },
     "editor": {

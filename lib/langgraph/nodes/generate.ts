@@ -1,16 +1,63 @@
 import { ChatState, RAGState, AgentState } from '../state';
 import { LLMService } from '@/lib/llm/service';
-import { Message } from '@/types';
+import { Message, AppConfig } from '@/types';
 import { MCPServerManager } from '@/lib/mcp/server-manager';
 import {
   getCurrentGraphConfig,
   emitStreamingChunk,
   getCurrentImageGenConfig,
+  getCurrentConversationId,
+  getStreamingCallback,
 } from '@/lib/llm/streaming-callback';
 import { createBaseSystemMessage } from '../utils/system-message';
 
 // Cache for MCP tools to reduce overhead
 import { logger } from '@/lib/utils/logger';
+
+// Main Process에서 LLM 설정 가져오기
+async function getLLMConfigFromDB(): Promise<{ maxTokens: number; temperature: number } | null> {
+  try {
+    // Main Process에서만 동작
+    if (typeof window !== 'undefined') {
+      return null;
+    }
+
+    const { databaseService } = await import('../../../electron/services/database');
+    const configStr = databaseService.getSetting('app_config');
+    if (!configStr) {
+      return null;
+    }
+
+    const config = JSON.parse(configStr) as AppConfig;
+    if (!config?.llm) {
+      return null;
+    }
+
+    // V2 설정인 경우 변환
+    let llmConfig = config.llm;
+    if ((llmConfig as any).connections) {
+      const { isLLMConfigV2, convertV2ToV1 } = await import('@/lib/config/llm-config-migration');
+      if (isLLMConfigV2(llmConfig)) {
+        llmConfig = convertV2ToV1(llmConfig);
+      }
+    }
+
+    return {
+      // maxTokens가 명시적으로 설정되어 있으면 그 값을 사용 (0도 유효한 값)
+      maxTokens:
+        llmConfig.maxTokens !== undefined && llmConfig.maxTokens !== null
+          ? llmConfig.maxTokens
+          : 2000,
+      temperature:
+        llmConfig.temperature !== undefined && llmConfig.temperature !== null
+          ? llmConfig.temperature
+          : 0.7,
+    };
+  } catch (error) {
+    logger.error('[generateWithToolsNode] Error getting LLM config from DB:', error);
+    return null;
+  }
+}
 let cachedTools: any[] | null = null;
 let lastCacheTime = 0;
 const TOOLS_CACHE_TTL = 10000; // 10 seconds
@@ -36,8 +83,60 @@ export async function* generateNode(state: ChatState): AsyncGenerator<Partial<Ch
     // LLM 호출 (스트리밍)
     let accumulatedContent = '';
 
-    for await (const chunk of LLMService.streamChat(messages)) {
-      accumulatedContent += chunk;
+    // Main Process에서 현재 LLM 설정 가져오기 (maxTokens, temperature)
+    const llmConfig = await getLLMConfigFromDB();
+    const llmOptions: any = {};
+    if (llmConfig) {
+      // maxTokens가 명시적으로 설정되어 있으면 전달 (0도 유효한 값)
+      if (llmConfig.maxTokens !== undefined && llmConfig.maxTokens !== null) {
+        llmOptions.maxTokens = llmConfig.maxTokens;
+      }
+      if (llmConfig.temperature !== undefined && llmConfig.temperature !== null) {
+        llmOptions.temperature = llmConfig.temperature;
+      }
+      logger.info('[generateNode] Using LLM config from DB:', {
+        maxTokens: llmOptions.maxTokens,
+        temperature: llmOptions.temperature,
+        rawMaxTokens: llmConfig.maxTokens,
+      });
+    } else {
+      logger.warn('[generateNode] Could not get LLM config from DB, maxTokens may not be set');
+    }
+
+    // Get conversationId for streaming
+    const conversationId = getCurrentConversationId();
+
+    // Get streaming callback directly to ensure it's available
+    const streamingCallback = getStreamingCallback(conversationId || undefined);
+
+    // Use streamChatWithChunks to get full chunk info and emit streaming events
+    let tokenCount = 0;
+    for await (const chunk of LLMService.streamChatWithChunks(messages, llmOptions)) {
+      if (!chunk.done && chunk.content) {
+        accumulatedContent += chunk.content;
+        // Rough token estimation (1 token ≈ 4 characters for Korean, 1 token ≈ 3-4 characters for English)
+        tokenCount += Math.ceil(chunk.content.length / 3);
+        // Emit streaming chunk for real-time UI updates
+        // Try direct callback first (faster), then fallback to emitStreamingChunk
+        if (streamingCallback) {
+          try {
+            streamingCallback(chunk.content);
+          } catch (error) {
+            logger.error('[generateNode] Error calling streaming callback:', error);
+          }
+        } else {
+          emitStreamingChunk(chunk.content, conversationId || undefined);
+        }
+      }
+
+      if (chunk.done) {
+        logger.info('[generateNode] Stream completed', {
+          estimatedTokens: tokenCount,
+          maxTokens: llmOptions.maxTokens,
+          contentLength: accumulatedContent.length,
+          wasLimited: llmOptions.maxTokens && tokenCount >= llmOptions.maxTokens * 0.9, // 90% threshold
+        });
+      }
 
       const assistantMessage: Message = {
         id: `msg-${Date.now()}`,
@@ -104,8 +203,49 @@ export async function* generateWithContextNode(state: RAGState): AsyncGenerator<
     // LLM 호출 (스트리밍)
     let accumulatedContent = '';
 
-    for await (const chunk of LLMService.streamChat(messages)) {
-      accumulatedContent += chunk;
+    // Main Process에서 현재 LLM 설정 가져오기 (maxTokens, temperature)
+    const llmConfig = await getLLMConfigFromDB();
+    const llmOptions: any = {};
+    if (llmConfig) {
+      // maxTokens가 명시적으로 설정되어 있으면 전달 (0도 유효한 값)
+      if (llmConfig.maxTokens !== undefined && llmConfig.maxTokens !== null) {
+        llmOptions.maxTokens = llmConfig.maxTokens;
+      }
+      if (llmConfig.temperature !== undefined && llmConfig.temperature !== null) {
+        llmOptions.temperature = llmConfig.temperature;
+      }
+      logger.info('[generateWithContextNode] Using LLM config from DB:', {
+        maxTokens: llmOptions.maxTokens,
+        temperature: llmOptions.temperature,
+      });
+    } else {
+      logger.warn(
+        '[generateWithContextNode] Could not get LLM config from DB, maxTokens may not be set'
+      );
+    }
+
+    // Get conversationId for streaming
+    const conversationId = getCurrentConversationId();
+
+    // Get streaming callback directly to ensure it's available
+    const streamingCallback = getStreamingCallback(conversationId || undefined);
+
+    // Use streamChatWithChunks to get full chunk info and emit streaming events
+    for await (const chunk of LLMService.streamChatWithChunks(messages, llmOptions)) {
+      if (!chunk.done && chunk.content) {
+        accumulatedContent += chunk.content;
+        // Emit streaming chunk for real-time UI updates
+        // Try direct callback first, then fallback to emitStreamingChunk
+        if (streamingCallback) {
+          try {
+            streamingCallback(chunk.content);
+          } catch (error) {
+            logger.error('[generateWithContextNode] Error calling streaming callback:', error);
+          }
+        } else {
+          emitStreamingChunk(chunk.content, conversationId || undefined);
+        }
+      }
 
       const assistantMessage: Message = {
         id: `msg-${Date.now()}`,
@@ -421,9 +561,29 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
 
     logger.info('[Agent] Starting streaming with tools...');
 
-    for await (const chunk of LLMService.streamChatWithChunks(messages, {
+    // Main Process에서 현재 LLM 설정 가져오기 (maxTokens, temperature)
+    const llmConfig = await getLLMConfigFromDB();
+    const llmOptions: any = {
       tools: toolsForLLM.length > 0 ? toolsForLLM : undefined,
-    })) {
+    };
+
+    if (llmConfig) {
+      // maxTokens가 명시적으로 설정되어 있으면 전달 (0도 유효한 값)
+      if (llmConfig.maxTokens !== undefined && llmConfig.maxTokens !== null) {
+        llmOptions.maxTokens = llmConfig.maxTokens;
+      }
+      if (llmConfig.temperature !== undefined && llmConfig.temperature !== null) {
+        llmOptions.temperature = llmConfig.temperature;
+      }
+      logger.info('[Agent] Using LLM config from DB:', {
+        maxTokens: llmOptions.maxTokens,
+        temperature: llmOptions.temperature,
+      });
+    } else {
+      logger.warn('[Agent] Could not get LLM config from DB, using defaults');
+    }
+
+    for await (const chunk of LLMService.streamChatWithChunks(messages, llmOptions)) {
       // Accumulate content and emit to renderer
       if (!chunk.done && chunk.content) {
         accumulatedContent += chunk.content;

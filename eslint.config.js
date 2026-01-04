@@ -32,6 +32,7 @@ module.exports = [
       'backstop.json',
       'lighthouserc.json',
       'components/_deprecated/**',
+      'extensions/**',
     ],
   },
 

@@ -394,6 +394,9 @@
         "maxQuestionsReached": "You can only register up to 5 Quick Questions."
       },
       "shortcutExample": "e.g., CommandOrControl+Shift+Space (default)",
+      "shortcutPlaceholder": "Press keys...",
+      "shortcutHint": "Click the field and press the key combination you want to use",
+      "shortcutRecordingHint": "Press the key combination you want to use, or press Escape to cancel",
       "saved": "Quick Input settings saved!"
     },
     "editor": {

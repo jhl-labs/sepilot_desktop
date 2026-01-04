@@ -17,7 +17,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
-import type { PresentationSlide } from '@/types/presentation';
+import type { PresentationSlide } from '../types';
 
 const ACCENT_COLORS = ['#7c3aed', '#0ea5e9', '#22c55e', '#f97316', '#06b6d4', '#ef4444'];
 

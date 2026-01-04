@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { PresentationSlide } from '@/types/presentation';
+import type { PresentationSlide } from '../types';
 import { CheckCircle2, TrendingUp, Calendar, Grid3x3, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';

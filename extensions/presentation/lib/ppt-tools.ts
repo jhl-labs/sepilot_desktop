@@ -1,4 +1,4 @@
-import type { PresentationSlide } from '@/types/presentation';
+import type { PresentationSlide } from '../types';
 
 /**
  * PPT Agent Tools
@@ -10,7 +10,7 @@ export interface PptTool {
   description: string;
   parameters: {
     type: 'object';
-    properties: Record<string, any>;
+    properties: Record<string, unknown>;
     required: string[];
   };
 }
@@ -236,39 +236,87 @@ export interface ToolExecutionResult {
   error?: string;
 }
 
+interface GeneratePresentationArgs {
+  topic: string;
+  language: 'ko' | 'en' | 'ja' | 'zh';
+  slideCount?: number;
+}
+
+interface ModifySlideArgs {
+  slideIndex: number;
+  modifications: Partial<PresentationSlide>;
+}
+
+interface AddSlideArgs {
+  position?: number;
+  slide: PresentationSlide;
+}
+
+interface DeleteSlideArgs {
+  slideIndex: number;
+}
+
+interface ReorderSlidesArgs {
+  newOrder: number[];
+}
+
+interface TranslatePresentationArgs {
+  targetLanguage: 'ko' | 'en' | 'ja' | 'zh';
+}
+
+interface ChangeDesignThemeArgs {
+  theme: {
+    name: string;
+    accentColor?: string;
+    backgroundColor?: string;
+    textColor?: string;
+    titleFont?: string;
+    bodyFont?: string;
+  };
+}
+
+interface AddChartToSlideArgs {
+  slideIndex: number;
+  chart: NonNullable<PresentationSlide['slots']>['chart'];
+}
+
+interface SuggestImprovementsArgs {
+  focus: 'design' | 'content' | 'structure' | 'data-viz' | 'all';
+}
+
 export async function executePptTool(
   toolName: string,
-  toolArgs: any,
+  toolArgs: unknown,
   context: ToolExecutionContext
 ): Promise<ToolExecutionResult> {
   try {
     switch (toolName) {
       case 'generate_presentation':
-        return await generatePresentation(toolArgs, context);
+        return await generatePresentation(toolArgs as GeneratePresentationArgs, context);
 
       case 'modify_slide':
-        return modifySlide(toolArgs, context);
+        return modifySlide(toolArgs as ModifySlideArgs, context);
 
       case 'add_slide':
-        return addSlide(toolArgs, context);
+        return addSlide(toolArgs as AddSlideArgs, context);
 
       case 'delete_slide':
-        return deleteSlide(toolArgs, context);
+        return deleteSlide(toolArgs as DeleteSlideArgs, context);
 
       case 'reorder_slides':
-        return reorderSlides(toolArgs, context);
+        return reorderSlides(toolArgs as ReorderSlidesArgs, context);
 
       case 'translate_presentation':
-        return translatePresentation(toolArgs, context);
+        return translatePresentation(toolArgs as TranslatePresentationArgs);
 
       case 'change_design_theme':
-        return changeDesignTheme(toolArgs, context);
+        return changeDesignTheme(toolArgs as ChangeDesignThemeArgs, context);
 
       case 'add_chart_to_slide':
-        return addChartToSlide(toolArgs, context);
+        return addChartToSlide(toolArgs as AddChartToSlideArgs, context);
 
       case 'suggest_improvements':
-        return suggestImprovements(toolArgs, context);
+        return suggestImprovements(toolArgs as SuggestImprovementsArgs);
 
       default:
         return {
@@ -288,7 +336,7 @@ export async function executePptTool(
 
 // Tool 구현
 async function generatePresentation(
-  args: any,
+  args: GeneratePresentationArgs,
   _context: ToolExecutionContext
 ): Promise<ToolExecutionResult> {
   // generate_presentation은 ppt-agent.ts에서 outline 요청으로 처리됨
@@ -302,7 +350,7 @@ async function generatePresentation(
   };
 }
 
-function modifySlide(args: any, context: ToolExecutionContext): ToolExecutionResult {
+function modifySlide(args: ModifySlideArgs, context: ToolExecutionContext): ToolExecutionResult {
   const { slideIndex, modifications } = args;
   const slides = [...context.currentSlides];
 
@@ -323,7 +371,7 @@ function modifySlide(args: any, context: ToolExecutionContext): ToolExecutionRes
   };
 }
 
-function addSlide(args: any, context: ToolExecutionContext): ToolExecutionResult {
+function addSlide(args: AddSlideArgs, context: ToolExecutionContext): ToolExecutionResult {
   const { position = -1, slide } = args;
   const slides = [...context.currentSlides];
 
@@ -340,7 +388,7 @@ function addSlide(args: any, context: ToolExecutionContext): ToolExecutionResult
   };
 }
 
-function deleteSlide(args: any, context: ToolExecutionContext): ToolExecutionResult {
+function deleteSlide(args: DeleteSlideArgs, context: ToolExecutionContext): ToolExecutionResult {
   const { slideIndex } = args;
   const slides = [...context.currentSlides];
 
@@ -361,7 +409,10 @@ function deleteSlide(args: any, context: ToolExecutionContext): ToolExecutionRes
   };
 }
 
-function reorderSlides(args: any, context: ToolExecutionContext): ToolExecutionResult {
+function reorderSlides(
+  args: ReorderSlidesArgs,
+  context: ToolExecutionContext
+): ToolExecutionResult {
   const { newOrder } = args;
   const slides = [...context.currentSlides];
 
@@ -382,7 +433,7 @@ function reorderSlides(args: any, context: ToolExecutionContext): ToolExecutionR
   };
 }
 
-function translatePresentation(args: any, _context: ToolExecutionContext): ToolExecutionResult {
+function translatePresentation(args: TranslatePresentationArgs): ToolExecutionResult {
   // 실제 번역은 LLM에게 요청
   return {
     success: true,
@@ -390,7 +441,10 @@ function translatePresentation(args: any, _context: ToolExecutionContext): ToolE
   };
 }
 
-function changeDesignTheme(args: any, context: ToolExecutionContext): ToolExecutionResult {
+function changeDesignTheme(
+  args: ChangeDesignThemeArgs,
+  context: ToolExecutionContext
+): ToolExecutionResult {
   const { theme } = args;
   const slides = context.currentSlides.map((slide) => ({
     ...slide,
@@ -408,7 +462,10 @@ function changeDesignTheme(args: any, context: ToolExecutionContext): ToolExecut
   };
 }
 
-function addChartToSlide(args: any, context: ToolExecutionContext): ToolExecutionResult {
+function addChartToSlide(
+  args: AddChartToSlideArgs,
+  context: ToolExecutionContext
+): ToolExecutionResult {
   const { slideIndex, chart } = args;
   const slides = [...context.currentSlides];
 
@@ -435,7 +492,7 @@ function addChartToSlide(args: any, context: ToolExecutionContext): ToolExecutio
   };
 }
 
-function suggestImprovements(args: any, _context: ToolExecutionContext): ToolExecutionResult {
+function suggestImprovements(args: SuggestImprovementsArgs): ToolExecutionResult {
   // LLM에게 개선 제안 요청
   return {
     success: true,

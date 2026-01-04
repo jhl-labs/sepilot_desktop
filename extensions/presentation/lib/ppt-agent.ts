@@ -7,7 +7,7 @@ import type {
   PresentationDesignMaster,
   PresentationStructure,
   PresentationWorkflowStep,
-} from '@/types/presentation';
+} from '../types';
 import type { Message } from '@/types';
 
 import { logger } from '@/lib/utils/logger';
@@ -846,7 +846,7 @@ function detectLanguage(text: string): 'ko' | 'en' | 'ja' | 'zh' {
 /**
  * LLM 응답에서 JSON Action 추출
  */
-function extractAction(text: string): Record<string, any> | null {
+function extractAction(text: string): Record<string, unknown> | null {
   try {
     // ```json ... ``` 블록 찾기 (non-greedy에서 최대한 긴 매치로 변경)
     const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)```/);
@@ -1024,15 +1024,15 @@ export async function runPresentationAgent(
         break;
 
       case 'create_slide': {
-        const slideData = action.slide;
+        const slideData = action.slide as Record<string, unknown>;
         logger.info('[ppt-agent] Creating slide with data:', slideData);
         const newSlide: PresentationSlide = {
           id: generateId(),
           ...slideData,
-        };
+        } as PresentationSlide;
         logger.info('[ppt-agent] Generated slide with ID:', newSlide.id);
 
-        const requestedIndex = action.slideIndex ?? newState.currentSlideIndex ?? 0;
+        const requestedIndex = (action.slideIndex as number) ?? newState.currentSlideIndex ?? 0;
         logger.info(
           '[ppt-agent] Requested slide index:',
           requestedIndex,
@@ -1081,8 +1081,8 @@ export async function runPresentationAgent(
         break;
 
       case 'modify_slide': {
-        const slideIndex = action.slideIndex;
-        const modifications = action.modifications;
+        const slideIndex = action.slideIndex as number;
+        const modifications = action.modifications as Partial<PresentationSlide>;
         const newSlides = [...newState.slides];
 
         // 인덱스 유효성 검증
@@ -1107,8 +1107,8 @@ export async function runPresentationAgent(
 
       case 'verify_and_correct': {
         // 슬라이드 검증 및 보정 (modify_slide와 동일하게 처리하되 findings 정보 포함)
-        const slideIndex = action.slideIndex;
-        const modifications = action.modifications;
+        const slideIndex = action.slideIndex as number;
+        const modifications = action.modifications as Partial<PresentationSlide>;
         const findings = action.findings; // 검증 결과 메시지
         const newSlides = [...newState.slides];
 

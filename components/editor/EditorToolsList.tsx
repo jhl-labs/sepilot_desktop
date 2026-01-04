@@ -26,12 +26,6 @@ interface CategoryToolsList {
   tools: ToolInfo[];
 }
 
-interface EditorToolsListProps {
-  selectable?: boolean;
-  selectedTools?: Set<string>;
-  onToggleTool?: (toolName: string) => void;
-}
-
 /**
  * Editor Tools List Props
  */

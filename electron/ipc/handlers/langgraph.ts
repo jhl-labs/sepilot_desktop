@@ -35,6 +35,10 @@ const pendingToolApprovals = new Map<
 // Map of conversationId -> AbortController for cancelling streams
 const streamingAbortControllers = new Map<string, AbortController>();
 
+// Track previous message content for each conversation to extract streaming chunks
+// Map of conversationId -> previous content string
+const previousMessageContent = new Map<string, string>();
+
 /**
  * Request tool approval from the user
  * Returns a promise that resolves when the user approves or rejects
@@ -153,6 +157,9 @@ export function setupLangGraphHandlers() {
         // Set current conversation ID for streaming context
         setCurrentConversationId(streamId);
 
+        // Initialize previous content tracking for this conversation
+        previousMessageContent.set(streamId, '');
+
         // Register abort signal so emitStreamingChunk can check it
         setAbortSignal(abortController.signal, streamId);
 
@@ -263,6 +270,39 @@ export function setupLangGraphHandlers() {
               continue;
             }
 
+            // Handle node events with messages - extract streaming chunks for real-time UI updates
+            // This is similar to how Editor Chat works - extract chunks from node events
+            if (streamEvent.type === 'node' && streamEvent.data?.messages) {
+              const messages = streamEvent.data.messages;
+              // Find the last assistant message and extract new content
+              const lastMessage = messages[messages.length - 1];
+              if (lastMessage?.role === 'assistant' && lastMessage.content) {
+                const content = lastMessage.content;
+                // Get previous content for this conversation
+                const previousContent = previousMessageContent.get(streamId) || '';
+
+                // Only send if content has changed and grown (new chunks arrived)
+                if (content !== previousContent && content.length > previousContent.length) {
+                  const newChunk = content.substring(previousContent.length);
+                  if (newChunk) {
+                    // Send as streaming event for real-time UI updates (like Editor Chat)
+                    // This ensures one character at a time streaming
+                    event.sender.send('langgraph-stream-event', {
+                      type: 'streaming',
+                      chunk: newChunk,
+                      conversationId: streamId,
+                    });
+                    // Streaming chunk sent successfully
+                  }
+                  // Update previous content
+                  previousMessageContent.set(streamId, content);
+                } else if (content.length < previousContent.length) {
+                  // Content decreased - reset tracking
+                  previousMessageContent.set(streamId, content);
+                }
+              }
+            }
+
             // Send each event to renderer with conversationId
             event.sender.send('langgraph-stream-event', {
               ...streamEvent,
@@ -273,12 +313,17 @@ export function setupLangGraphHandlers() {
           // Send completion event with conversationId
           event.sender.send('langgraph-stream-done', { conversationId: streamId });
 
+          // Clean up previous content tracking
+          previousMessageContent.delete(streamId);
+
           return {
             success: true,
             conversationId: streamId,
           };
         } catch (streamError: any) {
           logger.error('[LangGraph IPC] Stream error:', streamError);
+          // Clean up previous content tracking on error
+          previousMessageContent.delete(streamId);
           // Send error event with conversationId
           event.sender.send('langgraph-stream-error', {
             error: streamError.message,
@@ -296,6 +341,8 @@ export function setupLangGraphHandlers() {
       } catch (error: any) {
         logger.error('[LangGraph IPC] Error:', error);
         clearConversationCallbacks(streamId);
+        // Clean up previous content tracking on error
+        previousMessageContent.delete(streamId);
         return {
           success: false,
           error: error.message || 'Failed to execute LangGraph',
@@ -320,6 +367,8 @@ export function setupLangGraphHandlers() {
         // Clear callbacks and pending approvals
         clearConversationCallbacks(conversationId);
         pendingToolApprovals.delete(conversationId);
+        // Clean up previous content tracking
+        previousMessageContent.delete(conversationId);
 
         logger.info(`[LangGraph IPC] Stream aborted for conversationId: ${conversationId}`);
         return { success: true };

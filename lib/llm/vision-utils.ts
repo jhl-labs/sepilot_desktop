@@ -13,7 +13,17 @@ import { BaseLLMProvider } from './base';
  * Check if any message contains images
  */
 export function hasImages(messages: Message[]): boolean {
-  return messages.some((msg) => msg.images && msg.images.length > 0);
+  const result = messages.some((msg) => msg.images && msg.images.length > 0);
+  if (result) {
+    logger.info('[VisionUtils] hasImages: true', {
+      messageCount: messages.length,
+      messagesWithImages: messages.filter((msg) => msg.images && msg.images.length > 0).length,
+      imageCounts: messages
+        .filter((msg) => msg.images && msg.images.length > 0)
+        .map((msg) => ({ role: msg.role, imageCount: msg.images?.length || 0 })),
+    });
+  }
+  return result;
 }
 
 /**
@@ -41,11 +51,20 @@ export function createVisionProvider(
     model: visionConfig?.model,
     baseURL: visionConfig?.baseURL,
     provider: visionConfig?.provider,
+    hasVisionConfig: !!visionConfig,
+    visionConfigKeys: visionConfig ? Object.keys(visionConfig) : [],
   });
 
   // Only use vision model if it's enabled and configured
   if (!visionConfig?.enabled || !visionConfig?.model) {
-    logger.info('[VisionUtils] Vision provider disabled or not configured, returning null');
+    logger.warn('[VisionUtils] Vision provider disabled or not configured, returning null', {
+      hasVisionConfig: !!visionConfig,
+      enabled: visionConfig?.enabled,
+      model: visionConfig?.model,
+      modelType: typeof visionConfig?.model,
+      modelLength: visionConfig?.model?.length,
+      fullVisionConfig: JSON.stringify(visionConfig, null, 2),
+    });
     return null;
   }
 
@@ -116,6 +135,7 @@ export function createVisionProvider(
  */
 export async function getVisionProviderFromConfig(): Promise<BaseLLMProvider | null> {
   if (typeof window === 'undefined') {
+    logger.warn('[VisionUtils] getVisionProviderFromConfig called in non-window context');
     return null;
   }
 
@@ -124,23 +144,47 @@ export async function getVisionProviderFromConfig(): Promise<BaseLLMProvider | n
 
     if (window.electronAPI) {
       // Electron: SQLite에서 로드
+      logger.info('[VisionUtils] Loading config from Electron API');
       const result = await window.electronAPI.config.load();
+      logger.info('[VisionUtils] Electron API result:', {
+        success: result.success,
+        hasData: !!result.data,
+        hasLLM: !!result.data?.llm,
+        hasVision: !!result.data?.llm?.vision,
+      });
       if (result.success && result.data?.llm) {
         llmConfig = result.data.llm;
       }
     } else {
       // Web: localStorage에서 로드
+      logger.info('[VisionUtils] Loading config from localStorage');
       const savedConfig = localStorage.getItem('sepilot_llm_config');
       if (savedConfig) {
         llmConfig = JSON.parse(savedConfig);
+        logger.info('[VisionUtils] Loaded from localStorage:', {
+          hasVision: !!llmConfig?.vision,
+        });
       }
     }
 
     if (!llmConfig) {
+      logger.warn('[VisionUtils] No LLM config found');
       return null;
     }
 
-    return createVisionProvider(llmConfig);
+    logger.info('[VisionUtils] LLM config loaded, vision config:', {
+      hasVision: !!llmConfig.vision,
+      enabled: llmConfig.vision?.enabled,
+      model: llmConfig.vision?.model,
+    });
+
+    const provider = createVisionProvider(llmConfig);
+    if (!provider) {
+      logger.error(
+        '[VisionUtils] createVisionProvider returned null - check logs above for details'
+      );
+    }
+    return provider;
   } catch (error) {
     logger.error('[VisionUtils] Error getting vision provider:', error);
     return null;

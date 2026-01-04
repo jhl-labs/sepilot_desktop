@@ -7,7 +7,7 @@ import { WorkingDirectoryIndicator } from '@/components/chat/WorkingDirectoryInd
 import { UpdateNotificationDialog } from '@/components/UpdateNotificationDialog';
 import { EditorWithTerminal } from '@/components/editor/EditorWithTerminal';
 import { BrowserPanel } from '@/components/browser/BrowserPanel';
-import { PresentationStudio } from '@/components/presentation/PresentationStudio';
+import { PresentationStudio } from '@/extensions/presentation/components';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useSessionRestore } from '@/lib/auth/use-session-restore';
 

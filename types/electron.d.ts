@@ -153,7 +153,7 @@ interface LLMFetchModelsConfig {
 }
 
 interface LLMAPI {
-  streamChat: (messages: Message[]) => Promise<IPCResponse<string>>;
+  streamChat: (messages: Message[], options?: LLMChatOptions) => Promise<IPCResponse<string>>;
   chat: (messages: Message[], options?: LLMChatOptions) => Promise<IPCResponse<LLMChatResponse>>;
   init: (config: AppConfig) => Promise<IPCResponse>;
   validate: () => Promise<IPCResponse>;

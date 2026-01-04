@@ -53,20 +53,29 @@ export class OllamaProvider extends BaseLLMProvider {
     const mergedOptions = this.mergeOptions(options);
 
     try {
+      // num_predict는 0이어도 유효한 값이므로 !== undefined로 체크
+      const requestBody: any = {
+        model: this.model,
+        messages: this.formatMessagesForOllama(messages),
+        stream: true,
+        options: {
+          temperature: mergedOptions.temperature,
+        },
+      };
+
+      if (mergedOptions.maxTokens !== undefined && mergedOptions.maxTokens !== null) {
+        requestBody.options.num_predict = mergedOptions.maxTokens;
+        console.log('[Ollama] num_predict set to:', mergedOptions.maxTokens);
+      } else {
+        console.warn('[Ollama] maxTokens is undefined or null, not setting num_predict');
+      }
+
       const response = await fetchWithConfig(`${this.baseURL}/api/chat`, this.config, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: this.model,
-          messages: this.formatMessagesForOllama(messages),
-          stream: true,
-          options: {
-            temperature: mergedOptions.temperature,
-            num_predict: mergedOptions.maxTokens,
-          },
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {

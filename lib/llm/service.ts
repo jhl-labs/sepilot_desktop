@@ -3,6 +3,7 @@ import { getLLMClient } from './client';
 import { BaseLLMProvider, StreamChunk, LLMOptions, LLMResponse } from './base';
 import { hasImages, getVisionProviderFromConfig, createVisionProvider } from './vision-utils';
 import { isAborted, getCurrentConversationId } from './streaming-callback';
+import { isLLMConfigV2, convertV2ToV1 } from '@/lib/config/llm-config-migration';
 
 // Main Process에서 databaseService 사용 (동적 import로 브라우저 호환성 유지)
 import { logger } from '@/lib/utils/logger';
@@ -36,12 +37,36 @@ async function getVisionProviderForMainProcess(): Promise<BaseLLMProvider | null
     }
 
     const config = JSON.parse(configStr) as AppConfig;
-    if (!config?.llm?.vision) {
+    if (!config?.llm) {
+      return null;
+    }
+
+    // Convert V2 to V1 if needed
+    let llmConfig = config.llm;
+    if (isLLMConfigV2(llmConfig)) {
+      logger.info('[LLMService] Converting V2 config to V1 for vision provider');
+      llmConfig = convertV2ToV1(llmConfig);
+    }
+
+    logger.info('[LLMService] Main Process - LLM config after conversion:', {
+      hasVision: !!llmConfig.vision,
+      visionEnabled: llmConfig.vision?.enabled,
+      visionModel: llmConfig.vision?.model,
+      visionProvider: llmConfig.vision?.provider,
+      fullVisionConfig: JSON.stringify(llmConfig.vision, null, 2),
+    });
+
+    if (!llmConfig.vision) {
+      logger.warn('[LLMService] Main Process - No vision config found in LLM config');
       return null;
     }
 
     logger.info('[LLMService] Main Process - Creating vision provider');
-    return createVisionProvider(config.llm);
+    const provider = createVisionProvider(llmConfig);
+    if (!provider) {
+      logger.error('[LLMService] Main Process - createVisionProvider returned null');
+    }
+    return provider;
   } catch (error) {
     logger.error('[LLMService] Error getting vision provider in Main Process:', error);
     return null;
@@ -111,7 +136,7 @@ export class LLMService {
 
       try {
         // IPC를 통해 스트리밍 시작 (Promise는 백그라운드에서 실행)
-        const streamPromise = window.electronAPI.llm.streamChat(messages);
+        const streamPromise = window.electronAPI.llm.streamChat(messages, options);
 
         // 이벤트가 도착할 때마다 즉시 처리 (IPC 호출과 동시에 실행)
         let streamDone = false;

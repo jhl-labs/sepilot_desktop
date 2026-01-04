@@ -40,12 +40,21 @@ function getVisionProviderFromDB() {
     }
 
     logger.info('[LLM IPC] Vision provider config:', {
+      hasVision: !!config.llm.vision,
       baseURL: config.llm.vision?.baseURL || config.llm.baseURL,
       model: config.llm.vision?.model,
       provider: config.llm.vision?.provider,
       enabled: config.llm.vision?.enabled,
       enableStreaming: config.llm.vision?.enableStreaming ?? false,
+      modelType: typeof config.llm.vision?.model,
+      modelLength: config.llm.vision?.model?.length,
+      fullVisionConfig: JSON.stringify(config.llm.vision, null, 2),
     });
+
+    if (!config.llm.vision) {
+      logger.warn('[LLM IPC] No vision config found in LLM config');
+      return null;
+    }
 
     logger.info('[LLM IPC] Calling createVisionProvider...');
     const provider = createVisionProvider(config.llm, {
@@ -61,7 +70,7 @@ function getVisionProviderFromDB() {
         limited: Math.min(config.llm.vision?.maxImageTokens || config.llm.maxTokens, 4096),
       });
     } else {
-      logger.info('[LLM IPC] createVisionProvider returned null');
+      logger.error('[LLM IPC] createVisionProvider returned null - check logs above for details');
     }
 
     return provider;
@@ -83,7 +92,7 @@ export function setupLLMHandlers() {
   /**
    * LLM 스트리밍 채팅
    */
-  ipcMain.handle('llm-stream-chat', async (event, messages: Message[]) => {
+  ipcMain.handle('llm-stream-chat', async (event, messages: Message[], options?: any) => {
     try {
       // 디버깅: IPC로 받은 메시지 확인
       logger.info('[LLM IPC] Received messages count:', messages.length);
@@ -114,8 +123,9 @@ export function setupLLMHandlers() {
 
       // Check if messages contain images and use vision model if available
       let provider = client.getProvider();
+      const containsImages = hasImages(messages);
 
-      if (hasImages(messages)) {
+      if (containsImages) {
         logger.info('[LLM IPC] Images detected, attempting to use vision model');
         const visionProvider = getVisionProviderFromDB();
         if (visionProvider) {
@@ -142,6 +152,10 @@ export function setupLLMHandlers() {
           logger.warn(
             '[LLM IPC] Images present but vision model not configured, using regular model'
           );
+          // Vision 모델이 설정되지 않았으면 에러 발생 (이미지는 일반 모델로 처리 불가)
+          throw new Error(
+            'Vision model is not configured. Please enable and configure a vision model in Settings > LLM > Vision Model to analyze images.'
+          );
         }
       }
 
@@ -149,7 +163,8 @@ export function setupLLMHandlers() {
 
       // 스트리밍으로 받아서 렌더러로 전송
       try {
-        for await (const chunk of provider.stream(messages)) {
+        logger.info('[LLM IPC] Stream options:', options);
+        for await (const chunk of provider.stream(messages, options)) {
           if (!chunk.done && chunk.content) {
             // 각 청크를 렌더러로 전송
             event.sender.send('llm-stream-chunk', chunk.content);
@@ -238,9 +253,12 @@ export function setupLLMHandlers() {
       }
 
       // Check if messages contain images and use vision model if available
+      // NOTE: Don't use vision model when tools are provided (tool calling requires regular LLM)
       let provider = client.getProvider();
+      const containsImages = hasImages(messages);
+      const hasTools = options?.tools && options.tools.length > 0;
 
-      if (hasImages(messages)) {
+      if (containsImages && !hasTools) {
         logger.info('[LLM IPC] Images detected in chat, attempting to use vision model');
         const visionProvider = getVisionProviderFromDB();
         if (visionProvider) {
@@ -250,7 +268,15 @@ export function setupLLMHandlers() {
           logger.warn(
             '[LLM IPC] Images present but vision model not configured, using regular model'
           );
+          // Vision 모델이 설정되지 않았으면 에러 발생 (이미지는 일반 모델로 처리 불가)
+          throw new Error(
+            'Vision model is not configured. Please enable and configure a vision model in Settings > LLM > Vision Model to analyze images.'
+          );
         }
+      } else if (containsImages && hasTools) {
+        logger.info(
+          '[LLM IPC] Images detected but tools are provided - using regular LLM for tool calling (Vision models typically do not support tool calling)'
+        );
       }
 
       console.log('[LLM IPC] ===== Calling provider.chat =====');

@@ -1,6 +1,6 @@
 'use client';
 
-import { PresentationChat } from '@/components/presentation/PresentationChat';
+import { PresentationChat } from '@/extensions/presentation/components';
 
 export function SidebarPresentation() {
   return <PresentationChat />;

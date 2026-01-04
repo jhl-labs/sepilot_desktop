@@ -1,3 +1,9 @@
+/**
+ * Presentation Extension Types
+ *
+ * 프레젠테이션 관련 모든 타입 정의
+ */
+
 export type PresentationExportFormat = 'pptx' | 'pdf' | 'html';
 
 export interface PresentationSlide {
@@ -195,4 +201,54 @@ export interface PresentationAgentState {
   // 메타데이터
   createdAt: number;
   updatedAt: number;
+}
+
+/**
+ * Extension Store State (for presentation)
+ */
+export interface PresentationStoreState {
+  // Chat Messages
+  presentationChatMessages: Array<{
+    id: string;
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    conversation_id: string;
+    created_at: number;
+  }>;
+  presentationChatStreaming: boolean;
+
+  // Slides
+  presentationSlides: PresentationSlide[];
+  activePresentationSlideId: string | null;
+
+  // View
+  presentationViewMode: 'chat' | 'outline' | 'assets' | 'settings';
+
+  // Export
+  presentationExportState: PresentationExportState | null;
+
+  // Agent State
+  presentationAgentState: PresentationAgentState | null;
+}
+
+/**
+ * Extension Store Actions (for presentation)
+ */
+export interface PresentationStoreActions {
+  addPresentationChatMessage: (message: {
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+  }) => void;
+  updatePresentationChatMessage: (id: string, updates: Partial<{ content: string }>) => void;
+  clearPresentationChat: () => void;
+  setPresentationChatStreaming: (isStreaming: boolean) => void;
+  setPresentationViewMode: (mode: 'chat' | 'outline' | 'assets' | 'settings') => void;
+  setPresentationSlides: (slides: PresentationSlide[]) => void;
+  addPresentationSlide: (slide: PresentationSlide) => void;
+  updatePresentationSlide: (id: string, updates: Partial<PresentationSlide>) => void;
+  removePresentationSlide: (id: string) => void;
+  setActivePresentationSlide: (id: string | null) => void;
+  setPresentationExportState: (state: PresentationExportState | null) => void;
+  setPresentationAgentState: (state: PresentationAgentState | null) => void;
+  clearPresentationSession: () => void;
 }
