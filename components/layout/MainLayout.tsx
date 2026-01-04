@@ -5,7 +5,7 @@ import { ReactNode, useState, useRef, useCallback, useEffect } from 'react';
 import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { useChatStore } from '@/lib/store/chat-store';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
-import { DocumentsPage } from '@/components/pages/DocumentsPage';
+import { DocumentsPage } from '@/components/rag/DocumentsPage';
 import { GalleryView } from '@/components/gallery/GalleryView';
 import { initializeVectorDB } from '@/lib/vectordb/client';
 import { initializeEmbedding } from '@/lib/vectordb/embeddings/client';
@@ -23,21 +23,13 @@ const DEFAULT_SIDEBAR_WIDTH = 260;
 
 type ViewMode = 'chat' | 'documents' | 'gallery';
 
-// localStorage keys for sidebar widths
-const SIDEBAR_WIDTH_KEYS = {
-  chat: 'sepilot_sidebar_width_chat',
-  editor: 'sepilot_sidebar_width_editor',
-  browser: 'sepilot_sidebar_width_browser',
-  presentation: 'sepilot_sidebar_width_presentation',
-};
-
-// Load sidebar width from localStorage
-function loadSidebarWidth(mode: 'chat' | 'editor' | 'browser' | 'presentation'): number {
+// Load sidebar width from localStorage (dynamic for any mode)
+function loadSidebarWidth(mode: string): number {
   if (typeof window === 'undefined') {
     return DEFAULT_SIDEBAR_WIDTH;
   }
 
-  const key = SIDEBAR_WIDTH_KEYS[mode];
+  const key = `sepilot_sidebar_width_${mode}`;
   const saved = localStorage.getItem(key);
 
   if (saved) {
@@ -50,13 +42,13 @@ function loadSidebarWidth(mode: 'chat' | 'editor' | 'browser' | 'presentation'):
   return DEFAULT_SIDEBAR_WIDTH;
 }
 
-// Save sidebar width to localStorage
-function saveSidebarWidth(mode: 'chat' | 'editor' | 'browser' | 'presentation', width: number) {
+// Save sidebar width to localStorage (dynamic for any mode)
+function saveSidebarWidth(mode: string, width: number) {
   if (typeof window === 'undefined') {
     return;
   }
 
-  const key = SIDEBAR_WIDTH_KEYS[mode];
+  const key = `sepilot_sidebar_width_${mode}`;
   localStorage.setItem(key, width.toString());
 }
 
@@ -76,45 +68,30 @@ export function MainLayout({ children }: MainLayoutProps) {
     browserViewMode,
   } = useChatStore();
 
-  // Mode-specific sidebar widths - always start with default to avoid hydration mismatch
-  const [chatSidebarWidth, setChatSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
-  const [editorSidebarWidth, setEditorSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
-  const [browserSidebarWidth, setBrowserSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
-  const [presentationSidebarWidth, setPresentationSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  // Dynamic sidebar width per mode (Map for any mode including extensions)
+  const [sidebarWidths, setSidebarWidths] = useState<Map<string, number>>(new Map());
 
   // Load saved widths on client side only
   useEffect(() => {
-    setChatSidebarWidth(loadSidebarWidth('chat'));
-    setEditorSidebarWidth(loadSidebarWidth('editor'));
-    setBrowserSidebarWidth(loadSidebarWidth('browser'));
-    setPresentationSidebarWidth(loadSidebarWidth('presentation'));
+    const widths = new Map<string, number>();
+    widths.set('chat', loadSidebarWidth('chat'));
+    widths.set('editor', loadSidebarWidth('editor'));
+    widths.set('browser', loadSidebarWidth('browser'));
+    widths.set('presentation', loadSidebarWidth('presentation'));
+    setSidebarWidths(widths);
   }, []);
 
   // Get current sidebar width based on app mode
-  const sidebarWidth =
-    appMode === 'chat'
-      ? chatSidebarWidth
-      : appMode === 'editor'
-        ? editorSidebarWidth
-        : appMode === 'presentation'
-          ? presentationSidebarWidth
-          : browserSidebarWidth;
+  const sidebarWidth = sidebarWidths.get(appMode) || DEFAULT_SIDEBAR_WIDTH;
 
-  // Set sidebar width based on app mode
+  // Set sidebar width for current app mode
   const setSidebarWidth = (width: number) => {
-    if (appMode === 'chat') {
-      setChatSidebarWidth(width);
-      saveSidebarWidth('chat', width);
-    } else if (appMode === 'editor') {
-      setEditorSidebarWidth(width);
-      saveSidebarWidth('editor', width);
-    } else if (appMode === 'presentation') {
-      setPresentationSidebarWidth(width);
-      saveSidebarWidth('presentation', width);
-    } else {
-      setBrowserSidebarWidth(width);
-      saveSidebarWidth('browser', width);
-    }
+    setSidebarWidths((prev) => {
+      const newWidths = new Map(prev);
+      newWidths.set(appMode, width);
+      return newWidths;
+    });
+    saveSidebarWidth(appMode, width);
   };
 
   // Determine if current conversation is streaming
