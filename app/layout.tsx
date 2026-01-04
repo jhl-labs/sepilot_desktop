@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { ThemePersistenceProvider } from '@/components/providers/theme-persistence-provider';
 import { I18nProvider } from '@/components/providers/i18n-provider';
+import { ExtensionProvider } from '@/components/providers/extension-provider';
 
 export const metadata: Metadata = {
   title: 'SEPilot Desktop',
@@ -32,7 +33,9 @@ export default function RootLayout({
           storageKey="sepilot-theme"
         >
           <ThemePersistenceProvider>
-            <I18nProvider>{children}</I18nProvider>
+            <I18nProvider>
+              <ExtensionProvider>{children}</ExtensionProvider>
+            </I18nProvider>
           </ThemePersistenceProvider>
         </ThemeProvider>
       </body>
