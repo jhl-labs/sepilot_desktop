@@ -52,8 +52,8 @@ import {
 import { migrateLLMConfig, convertV2ToV1, isLLMConfigV2 } from '@/lib/config/llm-config-migration';
 import { SettingsJsonEditor } from './SettingsJsonEditor';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EditorSettingsTab } from './EditorSettingsTab';
-import { BrowserSettingsTab } from './BrowserSettingsTab';
+import { EditorSettingsTab } from '@/extensions/editor/components/EditorSettingsTab';
+import { BrowserSettingsTab } from '@/extensions/browser/components/BrowserSettingsTab';
 
 import { logger } from '@/lib/utils/logger';
 interface SettingsDialogProps {

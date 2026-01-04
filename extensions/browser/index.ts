@@ -18,6 +18,9 @@ export { BrowserPanel } from './components/BrowserPanel';
 // Sidebar Component
 export { SidebarBrowser } from './components/SidebarBrowser';
 
+// Settings Component
+export { BrowserSettingsTab } from './components/BrowserSettingsTab';
+
 // NOTE: Agents are NOT exported here to avoid bundling server-only code in client.
 // They should be imported directly in server-side code:
 // - import { createBrowserAgentGraph, BrowserAgentGraph } from '@/extensions/browser/agents/browser-agent';

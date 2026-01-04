@@ -5,6 +5,8 @@
  * Renderer Process용 loader와는 별도로 동작합니다.
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports */
+
 import { logger } from '../utils/logger';
 
 /**
@@ -19,7 +21,6 @@ export function registerExtensionIpcHandlers(): void {
     // Presentation Extension IPC Handlers
     try {
       // Main Process에서만 require 사용 가능 (동적 import는 Main Process에서 문제 발생)
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const {
         setupPresentationIpcHandlers,
       } = require('../../extensions/presentation/ipc/handlers');
@@ -53,7 +54,6 @@ export function registerExtensionIpcHandlers(): void {
  */
 export async function registerExtensionIpc(extensionPath: string): Promise<void> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const module = require(extensionPath);
 
     if (!module.manifest) {

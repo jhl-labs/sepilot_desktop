@@ -21,6 +21,9 @@ export { SidebarEditor } from './components/SidebarEditor';
 // Header Actions Component
 export { EditorHeaderActions } from './components/EditorHeaderActions';
 
+// Settings Component
+export { EditorSettingsTab } from './components/EditorSettingsTab';
+
 // NOTE: Agents and Tools are NOT exported here to avoid bundling server-only code in client.
 // They should be imported directly in server-side code:
 // - import { createAdvancedEditorAgentGraph } from '@/extensions/editor/agents/editor-agent-advanced';
