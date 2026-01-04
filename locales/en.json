@@ -2209,5 +2209,20 @@
       "send": "Send (Enter)",
       "sendAria": "Send message"
     }
+  },
+  "browser": {
+    "sidebar": {
+      "agentLogs": "Agent Execution Logs",
+      "viewTools": "View Available Tools",
+      "clearChatConfirm": "Delete all chat history?",
+      "newChat": "New Chat",
+      "pageCapture": "Capture Page",
+      "pageCaptureSuccess": "Page has been saved as snapshot.",
+      "pageCaptureFailed": "Page capture failed: {{error}}",
+      "pageCaptureError": "An error occurred while capturing the page.",
+      "snapshots": "Manage Snapshots",
+      "bookmarks": "Bookmarks",
+      "settings": "Browser Settings"
+    }
   }
 }

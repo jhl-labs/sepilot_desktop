@@ -13,7 +13,7 @@ export const manifest: ExtensionManifest = {
   author: 'SEPilot Team',
   icon: 'Globe',
   mode: 'browser',
-  showInSidebar: true,
+  showInSidebar: false,
   order: 4, // Chat(1), Editor(2), Presentation(3), Browser(4)
   dependencies: [],
   enabled: true, // 기본 활성화 (베타 아님)

@@ -2173,5 +2173,20 @@
       "send": "发送 (Enter)",
       "sendAria": "发送消息"
     }
+  },
+  "browser": {
+    "sidebar": {
+      "agentLogs": "Agent 执行日志",
+      "viewTools": "查看可用工具",
+      "clearChatConfirm": "删除所有聊天记录？",
+      "newChat": "新聊天",
+      "pageCapture": "捕获页面",
+      "pageCaptureSuccess": "页面已保存为快照。",
+      "pageCaptureFailed": "页面捕获失败：{{error}}",
+      "pageCaptureError": "捕获页面时发生错误。",
+      "snapshots": "管理快照",
+      "bookmarks": "书签",
+      "settings": "浏览器设置"
+    }
   }
 }

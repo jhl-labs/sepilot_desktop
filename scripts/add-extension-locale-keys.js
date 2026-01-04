@@ -96,6 +96,22 @@ ko.settings.editor.settings = {
   },
 };
 
+// Add Browser sidebar keys
+ko.browser = ko.browser || {};
+ko.browser.sidebar = {
+  agentLogs: 'Agent 실행 로그',
+  viewTools: '사용 가능한 도구 보기',
+  clearChatConfirm: '현재 대화 내역을 모두 삭제하시겠습니까?',
+  newChat: '새 대화',
+  pageCapture: '페이지 캡처',
+  pageCaptureSuccess: '페이지가 스냅샷으로 저장되었습니다.',
+  pageCaptureFailed: '페이지 캡처 실패: {{error}}',
+  pageCaptureError: '페이지 캡처 중 오류가 발생했습니다.',
+  snapshots: '스냅샷 관리',
+  bookmarks: '북마크',
+  settings: 'Browser 설정',
+};
+
 // Add Browser settings keys
 ko.settings.browser.settings = {
   title: '브라우저 설정',
@@ -143,6 +159,21 @@ ko.settings.browser.settings = {
 };
 
 // English
+en.browser = en.browser || {};
+en.browser.sidebar = {
+  agentLogs: 'Agent Execution Logs',
+  viewTools: 'View Available Tools',
+  clearChatConfirm: 'Delete all chat history?',
+  newChat: 'New Chat',
+  pageCapture: 'Capture Page',
+  pageCaptureSuccess: 'Page has been saved as snapshot.',
+  pageCaptureFailed: 'Page capture failed: {{error}}',
+  pageCaptureError: 'An error occurred while capturing the page.',
+  snapshots: 'Manage Snapshots',
+  bookmarks: 'Bookmarks',
+  settings: 'Browser Settings',
+};
+
 en.settings.editor.settings = {
   title: 'Editor Settings',
   appearance: {
@@ -275,6 +306,21 @@ en.settings.browser.settings = {
 };
 
 // Chinese
+zh.browser = zh.browser || {};
+zh.browser.sidebar = {
+  agentLogs: 'Agent 执行日志',
+  viewTools: '查看可用工具',
+  clearChatConfirm: '删除所有聊天记录？',
+  newChat: '新聊天',
+  pageCapture: '捕获页面',
+  pageCaptureSuccess: '页面已保存为快照。',
+  pageCaptureFailed: '页面捕获失败：{{error}}',
+  pageCaptureError: '捕获页面时发生错误。',
+  snapshots: '管理快照',
+  bookmarks: '书签',
+  settings: '浏览器设置',
+};
+
 zh.settings.editor.settings = {
   title: '编辑器设置',
   appearance: {
@@ -406,5 +452,6 @@ fs.writeFileSync(enPath, JSON.stringify(en, null, 2), 'utf-8');
 fs.writeFileSync(zhPath, JSON.stringify(zh, null, 2), 'utf-8');
 
 console.log('✅ Extension locale keys added successfully!');
+console.log('- browser.sidebar (tooltips)');
 console.log('- settings.editor.settings (appearance, prompts)');
 console.log('- settings.browser.settings (llm, font, paths)');
