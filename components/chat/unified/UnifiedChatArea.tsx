@@ -169,11 +169,11 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
         {mode === 'browser' && (
           <div className={`text-center space-y-1 ${style?.compact ? 'text-[10px]' : 'text-xs'}`}>
             <p className={`font-semibold mb-2 ${style?.compact ? 'text-[11px]' : 'text-sm'}`}>
-              Browser Agent 도구
+              {t('browser.emptyState.title')}
             </p>
-            <p>• 페이지 이동 • 내용 읽기 • 요소 클릭</p>
-            <p>• 텍스트 입력 • 스크롤 • 탭 관리</p>
-            <p>• 스크린샷 • 텍스트 요약</p>
+            <p>{t('browser.emptyState.row1')}</p>
+            <p>{t('browser.emptyState.row2')}</p>
+            <p>{t('browser.emptyState.row3')}</p>
           </div>
         )}
         {mode === 'editor' && (
