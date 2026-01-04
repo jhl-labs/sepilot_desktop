@@ -26,7 +26,7 @@ export function SidebarBrowser() {
     setAppMode,
   } = useChatStore();
   const [betaConfig, setBetaConfig] = useState<BetaConfig>({});
-  const allExtensions = useExtensions();
+  const { activeExtensions: allExtensions } = useExtensions();
 
   // Load beta config
   useEffect(() => {

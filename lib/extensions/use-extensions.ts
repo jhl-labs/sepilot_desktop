@@ -70,7 +70,10 @@ export function useExtension(mode: string): ExtensionDefinition | null {
 /**
  * 모든 Extension 조회 훅
  */
-export function useExtensions(): ExtensionDefinition[] {
+export function useExtensions(): {
+  activeExtensions: ExtensionDefinition[];
+  isExtensionActive: (extensionId: string) => boolean;
+} {
   const [extensions, setExtensions] = useState<ExtensionDefinition[]>([]);
 
   useEffect(() => {
@@ -78,5 +81,11 @@ export function useExtensions(): ExtensionDefinition[] {
     setExtensions(exts);
   }, []);
 
-  return extensions;
+  const isExtensionActive = (extensionId: string) =>
+    extensions.some((ext) => ext.manifest.id === extensionId);
+
+  return {
+    activeExtensions: extensions,
+    isExtensionActive,
+  };
 }

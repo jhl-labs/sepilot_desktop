@@ -26,7 +26,7 @@ export function BetaSettingsTab({
 }: BetaSettingsTabProps) {
   const { t } = useTranslation();
   const [localConfig, setLocalConfig] = useState<BetaConfig>(config);
-  const extensions = useExtensions();
+  const { activeExtensions: extensions } = useExtensions();
 
   useEffect(() => {
     setLocalConfig(config);

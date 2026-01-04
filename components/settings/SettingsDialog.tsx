@@ -54,6 +54,7 @@ import { SettingsJsonEditor } from './SettingsJsonEditor';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditorSettingsTab } from '@/extensions/editor/components/EditorSettingsTab';
 import { BrowserSettingsTab } from '@/extensions/browser/components/BrowserSettingsTab';
+import { useExtensions } from '@/lib/extensions/use-extensions';
 
 import { logger } from '@/lib/utils/logger';
 interface SettingsDialogProps {
@@ -72,8 +73,13 @@ const createDefaultBetaConfig = (): BetaConfig => ({
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { t } = useTranslation();
+  const { isExtensionActive } = useExtensions();
   const [activeTab, setActiveTab] = useState<SettingSection>('general');
   const [viewMode, setViewMode] = useState<'ui' | 'json'>('ui');
+
+  // Check if Extensions are active
+  const isEditorActive = isExtensionActive('editor');
+  const isBrowserActive = isExtensionActive('browser');
 
   const [config, setConfig] = useState<LLMConfig>(createDefaultLLMConfig());
   const [configV2, setConfigV2] = useState<LLMConfigV2 | null>(null); // New V2 config
@@ -1113,7 +1119,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   />
                 )}
 
-                {activeTab === 'editor' && (
+                {activeTab === 'editor' && isEditorActive && (
                   <EditorSettingsTab
                     onSave={() => setMessage({ type: 'success', text: t('settings.editor.saved') })}
                     isSaving={isSaving}
@@ -1121,7 +1127,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   />
                 )}
 
-                {activeTab === 'browser' && (
+                {activeTab === 'browser' && isBrowserActive && (
                   <BrowserSettingsTab
                     onSave={() =>
                       setMessage({ type: 'success', text: t('settings.browser.saved') })

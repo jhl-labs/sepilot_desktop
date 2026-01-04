@@ -30,7 +30,7 @@ export function SidebarChat({
   const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
   const [betaConfig, setBetaConfig] = useState<BetaConfig>({});
   const { setAppMode } = useChatStore();
-  const allExtensions = useExtensions();
+  const { activeExtensions: allExtensions } = useExtensions();
 
   // Load beta config
   useEffect(() => {

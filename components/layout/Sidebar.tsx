@@ -38,7 +38,7 @@ export function Sidebar({
 
   // Get current extension for dynamic sidebar rendering
   const currentExtension = useExtension(appMode);
-  const allExtensions = useExtensions();
+  const { activeExtensions: allExtensions } = useExtensions();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [betaConfig, setBetaConfig] = useState<BetaConfig>({});
 

@@ -48,7 +48,7 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
   } = useChatStore();
 
   const [betaConfig, setBetaConfig] = useState<BetaConfig>({});
-  const allExtensions = useExtensions();
+  const { activeExtensions: allExtensions } = useExtensions();
 
   // Load working directory on mount
   useEffect(() => {
