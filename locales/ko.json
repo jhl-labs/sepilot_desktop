@@ -48,6 +48,12 @@
     "testConnection": "연결 테스트",
     "technicalDetails": "기술적 세부사항"
   },
+  "sidebarChat": {
+    "personaManagement": "페르소나 관리",
+    "documentManagement": "문서 관리",
+    "imageGallery": "이미지 갤러리",
+    "settings": "설정"
+  },
   "languages": {
     "ko": "한국어",
     "en": "English",
@@ -934,6 +940,12 @@
     }
   },
   "chat": {
+    "workingDirectory": {
+      "label": "작업 디렉토리:",
+      "select": "디렉토리 선택",
+      "selecting": "선택 중...",
+      "remove": "작업 디렉토리 제거"
+    },
     "welcome": {
       "title": "SEPilot에 오신 것을 환영합니다",
       "subtitle": "새 대화를 시작하거나 기존 대화를 선택하세요"
@@ -2223,6 +2235,140 @@
       "row1": "🌐 웹 페이지 탐색, 정보 수집, 자동화 작업을 AI가 대신 수행합니다",
       "row2": "💬 원하는 작업을 채팅으로 요청하면 AI Agent가 브라우저를 제어합니다",
       "row3": "📸 스냅샷 저장, 북마크 관리 등 편리한 기능을 제공합니다"
+    }
+  },
+  "documentsSync": {
+    "title": "Documents Sync",
+    "description": "Personal Docs와 Team Docs를 GitHub 레포지토리와 동기화합니다.",
+    "loadError": "설정 로드 실패",
+    "validation": {
+      "requiredFields": "모든 필수 필드를 입력하세요.",
+      "ghesUrlRequired": "GHES URL을 입력하세요."
+    },
+    "saveSuccess": {
+      "personal": "Personal Docs 설정이 저장되었습니다!",
+      "team": "Team Docs 설정이 저장되었습니다!"
+    },
+    "saveError": "설정 저장 실패",
+    "deleteError": "삭제 실패",
+    "deleteConfirm": "이 Team Docs 설정을 삭제하시겠습니까?",
+    "deleteSuccess": "Team Docs 설정이 삭제되었습니다.",
+    "tabs": {
+      "personal": "Personal Docs",
+      "team": "Team Docs"
+    },
+    "labels": {
+      "serverType": "Server Type",
+      "ghesUrl": "GHES URL",
+      "token": "GitHub Token *",
+      "owner": "Owner *",
+      "repo": "Repository *",
+      "branch": "Branch",
+      "docsPath": "Docs Path",
+      "teamName": "팀 이름 *",
+      "description": "설명",
+      "descriptionPlaceholder": "이 Team Docs에 대한 설명",
+      "enabled": "활성화"
+    },
+    "buttons": {
+      "save": "설정 저장",
+      "saving": "저장 중...",
+      "cancel": "취소",
+      "add": "추가",
+      "edit": "편집",
+      "delete": "삭제"
+    },
+    "hints": {
+      "saveFirst": "설정을 저장한 후 Document List에서 Pull/Push 작업을 수행할 수 있습니다."
+    },
+    "teamDocs": {
+      "newTitle": "새 Team Docs",
+      "editTitle": "Team Docs 편집",
+      "listTitle": "Team Docs 목록",
+      "empty": "등록된 Team Docs가 없습니다. 추가 버튼을 클릭하여 생성하세요.",
+      "disabled": "비활성화"
+    }
+  },
+  "presentation": {
+    "title": "AI Presentation Designer",
+    "onboarding": {
+      "title": "프레젠테이션 디자이너",
+      "subtitle": "AI와 대화하며 전문적인 PPT를 만들어보세요",
+      "templates": "템플릿으로 시작하기",
+      "or": "또는",
+      "startCustom": "아래에서 원하는 주제를 직접 입력하세요"
+    },
+    "templates": {
+      "profile": {
+        "name": "자기소개",
+        "desc": "면접, 네트워킹"
+      },
+      "techSeminar": {
+        "name": "기술 세미나",
+        "desc": "개발자"
+      },
+      "paperSummary": {
+        "name": "논문 요약",
+        "desc": "학생, 연구원"
+      },
+      "projectIntro": {
+        "name": "과제 소개",
+        "desc": "팀원"
+      }
+    },
+    "steps": {
+      "briefing": {
+        "title": "브리핑",
+        "desc": "주제, 목적, 청중을 파악합니다"
+      },
+      "designMaster": {
+        "title": "디자인",
+        "desc": "색상, 폰트, 분위기를 설정합니다"
+      },
+      "structure": {
+        "title": "구조",
+        "desc": "슬라이드 목차를 계획합니다"
+      },
+      "slideCreation": {
+        "title": "작성",
+        "desc": "슬라이드를 하나씩 만듭니다"
+      },
+      "review": {
+        "title": "검토",
+        "desc": "수정 및 최종 확인합니다"
+      },
+      "complete": {
+        "title": "완료",
+        "desc": "프레젠테이션이 완성되었습니다"
+      }
+    },
+    "chat": {
+      "placeholder": "메시지를 입력하세요...",
+      "placeholderOnboarding": "프레젠테이션 주제를 입력하세요... (예: AI 기술 동향 발표)",
+      "send": "Enter로 전송 · Shift+Enter로 줄바꿈",
+      "generating": "생성 중...",
+      "designer": "Designer"
+    },
+    "preview": {
+      "title": "슬라이드 미리보기",
+      "emptyBriefing": "좌측에서 주제를 입력하면 AI가 프레젠테이션을 디자인합니다",
+      "emptyDesign": "디자인 옵션을 선택해주세요",
+      "emptyStructure": "구조를 승인하면 슬라이드가 생성됩니다",
+      "emptyCreation": "\"자동으로 생성\" 버튼을 클릭하세요",
+      "emptyDefault": "좌측에서 대화를 시작하세요",
+      "manualAdd": "수동으로 슬라이드 추가",
+      "designOptionTitle": "디자인 옵션 선택",
+      "designOptionDesc": "우측 상단에서 옵션을 선택하여 비교해보세요",
+      "templateTitle": "디자인 템플릿",
+      "templateDesc": "이 스타일로 슬라이드가 생성됩니다",
+      "structure": "구조",
+      "completed": "완료"
+    },
+    "quickPrompts": {
+      "next": "다음 단계로",
+      "approveStructure": "구조 승인",
+      "autoCreate": "자동으로 생성",
+      "done": "완료"
     }
   }
 }

@@ -27,6 +27,7 @@ import {
   Edit2,
 } from 'lucide-react';
 import { GitHubSyncConfig, TeamDocsConfig } from '@/types';
+import { useTranslation } from 'react-i18next';
 
 interface DocsSyncDialogProps {
   open: boolean;
@@ -43,6 +44,8 @@ export function DocsSyncDialog({
   initialTab,
   initialEditTeamId,
 }: DocsSyncDialogProps) {
+  const { t } = useTranslation();
+
   // Personal Docs Repo state
   const [_personalRepo, setPersonalRepo] = useState<GitHubSyncConfig | null>(null);
   const [personalForm, setPersonalForm] = useState({
@@ -132,12 +135,12 @@ export function DocsSyncDialog({
   // Personal Docs handlers
   const handleSavePersonalRepo = async () => {
     if (!personalForm.token || !personalForm.owner || !personalForm.repo) {
-      setMessage({ type: 'error', text: '모든 필수 필드를 입력하세요.' });
+      setMessage({ type: 'error', text: t('documentsSync.validation.requiredFields') });
       return;
     }
 
     if (personalForm.serverType === 'ghes' && !personalForm.ghesUrl) {
-      setMessage({ type: 'error', text: 'GHES URL을 입력하세요.' });
+      setMessage({ type: 'error', text: t('documentsSync.validation.ghesUrlRequired') });
       return;
     }
 
@@ -170,13 +173,13 @@ export function DocsSyncDialog({
         const saveResult = await window.electronAPI.config.save(updatedConfig);
         if (saveResult.success) {
           setPersonalRepo(config);
-          setMessage({ type: 'success', text: 'Personal Docs 설정이 저장되었습니다!' });
+          setMessage({ type: 'success', text: t('documentsSync.saveSuccess.personal') });
           // Refresh document list
           if (onRefresh) {
             await onRefresh();
           }
         } else {
-          throw new Error(saveResult.error || '설정 저장 실패');
+          throw new Error(saveResult.error || t('documentsSync.saveError'));
         }
       }
     } catch (error: any) {
@@ -211,12 +214,12 @@ export function DocsSyncDialog({
 
   const handleSaveTeamDoc = async () => {
     if (!teamForm.name || !teamForm.token || !teamForm.owner || !teamForm.repo) {
-      setMessage({ type: 'error', text: '모든 필수 필드를 입력하세요.' });
+      setMessage({ type: 'error', text: t('documentsSync.validation.requiredFields') });
       return;
     }
 
     if (teamForm.serverType === 'ghes' && !teamForm.ghesUrl) {
-      setMessage({ type: 'error', text: 'GHES URL을 입력하세요.' });
+      setMessage({ type: 'error', text: t('documentsSync.validation.ghesUrlRequired') });
       return;
     }
 
@@ -259,13 +262,13 @@ export function DocsSyncDialog({
         if (saveResult.success) {
           setTeamDocs(updatedTeamDocs);
           setEditingTeamId(null);
-          setMessage({ type: 'success', text: 'Team Docs 설정이 저장되었습니다!' });
+          setMessage({ type: 'success', text: t('documentsSync.saveSuccess.team') });
           // Refresh document list
           if (onRefresh) {
             await onRefresh();
           }
         } else {
-          throw new Error(saveResult.error || '설정 저장 실패');
+          throw new Error(saveResult.error || t('documentsSync.saveError'));
         }
       }
     } catch (error: any) {
@@ -277,7 +280,7 @@ export function DocsSyncDialog({
   };
 
   const handleDeleteTeamDoc = async (id: string) => {
-    if (!window.confirm('이 Team Docs 설정을 삭제하시겠습니까?')) {
+    if (!window.confirm(t('documentsSync.deleteConfirm'))) {
       return;
     }
 
@@ -294,13 +297,13 @@ export function DocsSyncDialog({
         const saveResult = await window.electronAPI.config.save(updatedConfig);
         if (saveResult.success) {
           setTeamDocs(updatedTeamDocs);
-          setMessage({ type: 'success', text: 'Team Docs 설정이 삭제되었습니다.' });
+          setMessage({ type: 'success', text: t('documentsSync.deleteSuccess') });
           // Refresh document list
           if (onRefresh) {
             await onRefresh();
           }
         } else {
-          throw new Error(saveResult.error || '설정 저장 실패');
+          throw new Error(saveResult.error || t('documentsSync.saveError'));
         }
       }
     } catch (error: any) {
@@ -319,11 +322,11 @@ export function DocsSyncDialog({
           <DialogTitle>
             <div className="flex items-center gap-2">
               <Github className="h-5 w-5" />
-              Documents Sync
+              {t('documentsSync.title')}
             </div>
           </DialogTitle>
           <DialogDescription>
-            Personal Docs와 Team Docs를 GitHub 레포지토리와 동기화합니다.
+            {t('documentsSync.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -342,20 +345,20 @@ export function DocsSyncDialog({
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="personal" className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Personal Docs
+              {t('documentsSync.tabs.personal')}
             </TabsTrigger>
             <TabsTrigger value="team" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Team Docs
+              {t('documentsSync.tabs.team')}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="personal" className="space-y-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Server Type</Label>
+                <Label>{t('documentsSync.labels.serverType')}</Label>
                 <select
-                  title="GitHub 서버 타입"
+                  title={t('documentsSync.labels.serverType')}
                   value={personalForm.serverType}
                   onChange={(e) =>
                     setPersonalForm({
@@ -372,7 +375,7 @@ export function DocsSyncDialog({
 
               {personalForm.serverType === 'ghes' && (
                 <div className="space-y-2">
-                  <Label>GHES URL</Label>
+                  <Label>{t('documentsSync.labels.ghesUrl')}</Label>
                   <Input
                     value={personalForm.ghesUrl}
                     onChange={(e) => setPersonalForm({ ...personalForm, ghesUrl: e.target.value })}
@@ -382,7 +385,7 @@ export function DocsSyncDialog({
               )}
 
               <div className="space-y-2">
-                <Label>GitHub Token *</Label>
+                <Label>{t('documentsSync.labels.token')}</Label>
                 <Input
                   type="password"
                   value={personalForm.token}
@@ -393,7 +396,7 @@ export function DocsSyncDialog({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Owner *</Label>
+                  <Label>{t('documentsSync.labels.owner')}</Label>
                   <Input
                     value={personalForm.owner}
                     onChange={(e) => setPersonalForm({ ...personalForm, owner: e.target.value })}
@@ -401,7 +404,7 @@ export function DocsSyncDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Repository *</Label>
+                  <Label>{t('documentsSync.labels.repo')}</Label>
                   <Input
                     value={personalForm.repo}
                     onChange={(e) => setPersonalForm({ ...personalForm, repo: e.target.value })}
@@ -412,7 +415,7 @@ export function DocsSyncDialog({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Branch</Label>
+                  <Label>{t('documentsSync.labels.branch')}</Label>
                   <Input
                     value={personalForm.branch}
                     onChange={(e) => setPersonalForm({ ...personalForm, branch: e.target.value })}
@@ -420,7 +423,7 @@ export function DocsSyncDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Docs Path</Label>
+                  <Label>{t('documentsSync.labels.docsPath')}</Label>
                   <Input
                     value={personalForm.docsPath}
                     onChange={(e) => setPersonalForm({ ...personalForm, docsPath: e.target.value })}
@@ -434,15 +437,15 @@ export function DocsSyncDialog({
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      저장 중...
+                      {t('documentsSync.buttons.saving')}
                     </>
                   ) : (
-                    '설정 저장'
+                    t('documentsSync.buttons.save')
                   )}
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
-                설정을 저장한 후 Document List에서 Pull/Push 작업을 수행할 수 있습니다.
+                {t('documentsSync.hints.saveFirst')}
               </p>
             </div>
           </TabsContent>
@@ -452,15 +455,15 @@ export function DocsSyncDialog({
               <div className="space-y-4 border rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">
-                    {editingTeamId === 'new' ? 'New Team Docs' : 'Edit Team Docs'}
+                    {editingTeamId === 'new' ? t('documentsSync.teamDocs.newTitle') : t('documentsSync.teamDocs.editTitle')}
                   </h3>
                   <Button variant="ghost" size="sm" onClick={() => setEditingTeamId(null)}>
-                    취소
+                    {t('documentsSync.buttons.cancel')}
                   </Button>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>팀 이름 *</Label>
+                  <Label>{t('documentsSync.labels.teamName')}</Label>
                   <Input
                     value={teamForm.name}
                     onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
@@ -469,19 +472,19 @@ export function DocsSyncDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>설명</Label>
+                  <Label>{t('documentsSync.labels.description')}</Label>
                   <Textarea
                     value={teamForm.description}
                     onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })}
-                    placeholder="이 Team Docs에 대한 설명"
+                    placeholder={t('documentsSync.labels.descriptionPlaceholder')}
                     rows={2}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Server Type</Label>
+                  <Label>{t('documentsSync.labels.serverType')}</Label>
                   <select
-                    title="GitHub 서버 타입"
+                    title={t('documentsSync.labels.serverType')}
                     value={teamForm.serverType}
                     onChange={(e) =>
                       setTeamForm({
@@ -498,7 +501,7 @@ export function DocsSyncDialog({
 
                 {teamForm.serverType === 'ghes' && (
                   <div className="space-y-2">
-                    <Label>GHES URL</Label>
+                    <Label>{t('documentsSync.labels.ghesUrl')}</Label>
                     <Input
                       value={teamForm.ghesUrl}
                       onChange={(e) => setTeamForm({ ...teamForm, ghesUrl: e.target.value })}
@@ -508,7 +511,7 @@ export function DocsSyncDialog({
                 )}
 
                 <div className="space-y-2">
-                  <Label>GitHub Token *</Label>
+                  <Label>{t('documentsSync.labels.token')}</Label>
                   <Input
                     type="password"
                     value={teamForm.token}
@@ -519,7 +522,7 @@ export function DocsSyncDialog({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Owner *</Label>
+                    <Label>{t('documentsSync.labels.owner')}</Label>
                     <Input
                       value={teamForm.owner}
                       onChange={(e) => setTeamForm({ ...teamForm, owner: e.target.value })}
@@ -527,7 +530,7 @@ export function DocsSyncDialog({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Repository *</Label>
+                    <Label>{t('documentsSync.labels.repo')}</Label>
                     <Input
                       value={teamForm.repo}
                       onChange={(e) => setTeamForm({ ...teamForm, repo: e.target.value })}
@@ -538,7 +541,7 @@ export function DocsSyncDialog({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Branch</Label>
+                    <Label>{t('documentsSync.labels.branch')}</Label>
                     <Input
                       value={teamForm.branch}
                       onChange={(e) => setTeamForm({ ...teamForm, branch: e.target.value })}
@@ -546,7 +549,7 @@ export function DocsSyncDialog({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Docs Path</Label>
+                    <Label>{t('documentsSync.labels.docsPath')}</Label>
                     <Input
                       value={teamForm.docsPath}
                       onChange={(e) => setTeamForm({ ...teamForm, docsPath: e.target.value })}
@@ -557,7 +560,7 @@ export function DocsSyncDialog({
 
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
                   <Label htmlFor="enabled" className="cursor-pointer">
-                    활성화
+                    {t('documentsSync.labels.enabled')}
                   </Label>
                   <Switch
                     id="enabled"
@@ -570,26 +573,26 @@ export function DocsSyncDialog({
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      저장 중...
+                      {t('documentsSync.buttons.saving')}
                     </>
                   ) : (
-                    '저장'
+                    t('documentsSync.buttons.save')
                   )}
                 </Button>
               </div>
             ) : (
               <>
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">Team Docs 목록</h3>
+                  <h3 className="font-semibold">{t('documentsSync.teamDocs.listTitle')}</h3>
                   <Button onClick={handleAddTeamDoc} size="sm">
                     <Plus className="mr-2 h-4 w-4" />
-                    추가
+                    {t('documentsSync.buttons.add')}
                   </Button>
                 </div>
 
                 {teamDocs.length === 0 ? (
                   <div className="border border-dashed rounded-lg p-8 text-center text-muted-foreground">
-                    등록된 Team Docs가 없습니다. 추가 버튼을 클릭하여 생성하세요.
+                    {t('documentsSync.teamDocs.empty')}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -601,7 +604,7 @@ export function DocsSyncDialog({
                               <h4 className="font-medium">{config.name}</h4>
                               {!config.enabled && (
                                 <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                                  비활성화
+                                  {t('documentsSync.teamDocs.disabled')}
                                 </span>
                               )}
                             </div>
@@ -619,7 +622,7 @@ export function DocsSyncDialog({
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEditTeamDoc(config)}
-                              title="편집"
+                              title={t('documentsSync.buttons.edit')}
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
@@ -627,7 +630,7 @@ export function DocsSyncDialog({
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteTeamDoc(config.id)}
-                              title="삭제"
+                              title={t('documentsSync.buttons.delete')}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>

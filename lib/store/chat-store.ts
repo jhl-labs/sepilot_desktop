@@ -32,6 +32,7 @@ import {
 
 // App mode types
 import { logger } from '@/lib/utils/logger';
+import { getI18nInstance } from '@/lib/i18n';
 
 // Re-export AppMode for backward compatibility
 export type { AppMode };
@@ -648,9 +649,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       selectedImageGenProvider: state.selectedImageGenProvider,
     };
 
+    // Determine default title based on current language
+    let defaultTitle = '새 대화';
+    const i18n = getI18nInstance();
+    if (i18n && i18n.isInitialized) {
+      defaultTitle = i18n.t('chat.newConversation');
+    } else if (typeof window !== 'undefined') {
+      try {
+        const savedLang = localStorage.getItem('sepilot_language');
+        if (savedLang === 'en') defaultTitle = 'New Conversation';
+      } catch { }
+    }
+
     const newConversation: Conversation = {
       id: generateId(),
-      title: '새 대화',
+      title: defaultTitle,
       created_at: Date.now(),
       updated_at: Date.now(),
       chatSettings: defaultChatSettings,
@@ -1073,10 +1086,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const updatedConversations = state.conversations.map((c) =>
         c.id === id
           ? {
-              ...c,
-              chatSettings: settings,
-              updated_at: Date.now(),
-            }
+            ...c,
+            chatSettings: settings,
+            updated_at: Date.now(),
+          }
           : c
       );
 

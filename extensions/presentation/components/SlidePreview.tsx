@@ -24,7 +24,10 @@ import type { PresentationSlide } from '../types';
 
 const ACCENT_COLORS = ['#7c3aed', '#0ea5e9', '#22c55e', '#f97316', '#06b6d4', '#ef4444'];
 
+import { useTranslation } from 'react-i18next';
+
 export function SlidePreview() {
+  const { t } = useTranslation();
   const {
     presentationSlides,
     activePresentationSlideId,
@@ -177,9 +180,9 @@ export function SlidePreview() {
         <div className="flex items-center gap-3 px-4 py-3 border-b bg-background">
           <Palette className="h-4 w-4 text-primary" />
           <div>
-            <p className="text-sm font-medium">디자인 옵션 선택</p>
+            <p className="text-sm font-medium">{t('presentation.preview.designOptionTitle')}</p>
             <p className="text-xs text-muted-foreground">
-              우측 상단에서 옵션을 선택하여 비교해보세요
+              {t('presentation.preview.designOptionDesc')}
             </p>
           </div>
         </div>
@@ -201,8 +204,8 @@ export function SlidePreview() {
         <div className="flex items-center gap-3 px-4 py-3 border-b bg-background">
           <LayoutList className="h-4 w-4 text-primary" />
           <div>
-            <p className="text-sm font-medium">디자인 템플릿</p>
-            <p className="text-xs text-muted-foreground">이 스타일로 슬라이드가 생성됩니다</p>
+            <p className="text-sm font-medium">{t('presentation.preview.templateTitle')}</p>
+            <p className="text-xs text-muted-foreground">{t('presentation.preview.templateDesc')}</p>
           </div>
         </div>
         <div className="flex-1 overflow-auto">
@@ -221,22 +224,22 @@ export function SlidePreview() {
             <Sparkles className="h-8 w-8 text-primary" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">슬라이드 미리보기</h3>
+            <h3 className="text-lg font-semibold">{t('presentation.preview.title')}</h3>
             <p className="text-sm text-muted-foreground">
               {presentationAgentState?.currentStep === 'briefing'
-                ? '좌측에서 주제를 입력하면 AI가 프레젠테이션을 디자인합니다'
+                ? t('presentation.preview.emptyBriefing')
                 : presentationAgentState?.currentStep === 'design-master'
-                  ? '디자인 옵션을 선택해주세요'
+                  ? t('presentation.preview.emptyDesign')
                   : presentationAgentState?.currentStep === 'structure'
-                    ? '구조를 승인하면 슬라이드가 생성됩니다'
+                    ? t('presentation.preview.emptyStructure')
                     : presentationAgentState?.currentStep === 'slide-creation'
-                      ? '"자동으로 생성" 버튼을 클릭하세요'
-                      : '좌측에서 대화를 시작하세요'}
+                      ? t('presentation.preview.emptyCreation')
+                      : t('presentation.preview.emptyDefault')}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={handleAddSlide} className="gap-2">
             <Plus className="h-4 w-4" />
-            수동으로 슬라이드 추가
+            {t('presentation.preview.manualAdd')}
           </Button>
         </div>
       </div>
@@ -257,9 +260,9 @@ export function SlidePreview() {
             <SlideRenderer
               slide={currentSlide}
               isEditable={false}
-              onSlideChange={() => {}}
-              onAddBullet={() => {}}
-              onRemoveBullet={() => {}}
+              onSlideChange={() => { }}
+              onAddBullet={() => { }}
+              onRemoveBullet={() => { }}
             />
           </div>
         </div>
@@ -300,7 +303,7 @@ export function SlidePreview() {
             onClick={() => setIsFullscreen(false)}
           >
             <Minimize2 className="h-4 w-4 mr-2" />
-            ESC로 종료
+            {t('presentation.actions.stop')}
           </Button>
         </div>
       </div>
@@ -345,7 +348,7 @@ export function SlidePreview() {
                 onClick={handleEditSlide}
               >
                 <Edit3 className="h-3 w-3 mr-1" />
-                편집
+                {t('documentsSync.buttons.edit')}
               </Button>
               <Button
                 variant="ghost"
@@ -354,7 +357,7 @@ export function SlidePreview() {
                 onClick={handleAddSlide}
               >
                 <Plus className="h-3 w-3 mr-1" />
-                추가
+                {t('documentsSync.buttons.add')}
               </Button>
               <Button
                 variant="ghost"
@@ -375,7 +378,7 @@ export function SlidePreview() {
                 onClick={handleCancelEdit}
               >
                 <X className="h-3 w-3 mr-1" />
-                취소
+                {t('documentsSync.buttons.cancel')}
               </Button>
               <Button
                 variant="default"
@@ -384,7 +387,7 @@ export function SlidePreview() {
                 onClick={handleSaveEdit}
               >
                 <Check className="h-3 w-3 mr-1" />
-                저장
+                {t('documentsSync.buttons.save').replace('설정 ', '').replace(' Settings', '')}
               </Button>
             </>
           )}
@@ -414,16 +417,14 @@ export function SlidePreview() {
                 <button
                   key={slide.id}
                   onClick={() => goToSlide(idx)}
-                  className={`group relative flex-shrink-0 rounded border transition-all ${
-                    idx === currentIndex
+                  className={`group relative flex-shrink-0 rounded border transition-all ${idx === currentIndex
                       ? 'border-primary ring-1 ring-primary/30'
                       : 'border-transparent hover:border-muted-foreground/30'
-                  }`}
+                    }`}
                 >
                   <div
-                    className={`relative h-12 w-20 overflow-hidden rounded-sm ${
-                      idx === currentIndex ? '' : 'opacity-60 group-hover:opacity-100'
-                    }`}
+                    className={`relative h-12 w-20 overflow-hidden rounded-sm ${idx === currentIndex ? '' : 'opacity-60 group-hover:opacity-100'
+                      }`}
                     style={{
                       background: slide.backgroundColor || '#f3f4f6',
                     }}

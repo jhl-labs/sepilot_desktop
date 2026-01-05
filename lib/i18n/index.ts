@@ -131,9 +131,9 @@ export async function initI18n(): Promise<I18nInstance> {
     return initPromise;
   }
 
-  // Create and initialize new instance
+  // Use the global i18next instance instead of creating a new one
   initPromise = (async () => {
-    const instance = i18next.createInstance();
+    const instance = i18next;
 
     const lng = getSavedLanguage();
     logger.info('[i18n] Initializing with language:', lng);

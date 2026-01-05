@@ -297,7 +297,14 @@ export function setupLangGraphHandlers() {
                   // Update previous content
                   previousMessageContent.set(streamId, content);
                 } else if (content.length < previousContent.length) {
-                  // Content decreased - reset tracking
+                  // Content decreased - this is a new message (e.g., reporter summary)
+                  // Send a separator and the new content to preserve intermediate content
+                  event.sender.send('langgraph-stream-event', {
+                    type: 'streaming',
+                    chunk: '\n\n' + content,
+                    conversationId: streamId,
+                  });
+                  // Reset tracking with the new content
                   previousMessageContent.set(streamId, content);
                 }
               }

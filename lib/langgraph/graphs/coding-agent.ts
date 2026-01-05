@@ -1883,8 +1883,30 @@ export class CodingAgentGraph {
 
         // Check if tools need to be called
         if (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) {
-          // No tools - normal completion
-          logger.info('[CodingAgentGraph] No tool calls, ending loop');
+          // No tools - still run verifier to update plan step and check completion
+          logger.info('[CodingAgentGraph] No tool calls, running verifier before completion');
+          
+          yield { type: 'node', node: 'verifier', data: { status: 'starting' } };
+          const verificationResult = await verificationNode(state);
+          state = {
+            ...state,
+            ...verificationResult,
+            messages: [...state.messages, ...(verificationResult.messages || [])],
+            iterationCount: iterations + 1,
+          };
+          yield {
+            type: 'node',
+            node: 'verifier',
+            data: { ...verificationResult, messages: state.messages },
+          };
+
+          // Check if we need to continue based on verification
+          if (verificationResult.needsAdditionalIteration) {
+            iterations++;
+            continue; // Continue to next iteration
+          }
+          
+          // Verification complete, exit loop
           break;
         }
 

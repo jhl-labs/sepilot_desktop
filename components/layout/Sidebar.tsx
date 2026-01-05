@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useTranslation } from 'react-i18next';
 
 interface SidebarProps {
   onDocumentsClick?: () => void;
@@ -28,6 +29,7 @@ export function Sidebar({
   onGalleryClick,
   onConversationClick,
 }: SidebarProps = {}) {
+  const { t } = useTranslation();
   const {
     appMode,
     setAppMode,
@@ -174,7 +176,7 @@ export function Sidebar({
                 await createConversation();
                 setChatViewMode('history');
               }}
-              title="새 대화"
+              title={t('chat.newConversation')}
             >
               <Plus className="h-5 w-5" />
             </Button>

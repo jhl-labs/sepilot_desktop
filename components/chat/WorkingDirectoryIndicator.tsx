@@ -6,7 +6,10 @@ import { isElectron } from '@/lib/platform';
 import { Folder, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+import { useTranslation } from 'react-i18next';
+
 export function WorkingDirectoryIndicator() {
+  const { t } = useTranslation();
   const { workingDirectory, setWorkingDirectory, thinkingMode } = useChatStore();
   const [isSelecting, setIsSelecting] = useState(false);
 
@@ -50,7 +53,7 @@ export function WorkingDirectoryIndicator() {
     <div className="mx-auto max-w-3xl px-4 py-1 border-t border-border/50">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Folder className="h-3 w-3" />
-        <span className="text-[10px] font-medium">작업 디렉토리:</span>
+        <span className="text-[10px] font-medium">{t('chat.workingDirectory.label')}</span>
         {workingDirectory ? (
           <>
             <span
@@ -65,7 +68,7 @@ export function WorkingDirectoryIndicator() {
               size="icon"
               className="h-4 w-4 p-0 hover:bg-destructive/10"
               onClick={handleClearDirectory}
-              title="작업 디렉토리 제거"
+              title={t('chat.workingDirectory.remove')}
             >
               <X className="h-3 w-3 text-destructive" />
             </Button>
@@ -78,7 +81,7 @@ export function WorkingDirectoryIndicator() {
             onClick={handleSelectDirectory}
             disabled={isSelecting}
           >
-            {isSelecting ? '선택 중...' : '디렉토리 선택'}
+            {isSelecting ? t('chat.workingDirectory.selecting') : t('chat.workingDirectory.select')}
           </Button>
         )}
       </div>

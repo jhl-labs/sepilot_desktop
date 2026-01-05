@@ -207,7 +207,7 @@ export function UnifiedChatInput({
     loadImageGenConfig();
   }, [mode, selectedImageGenProvider, setSelectedImageGenProvider]);
 
-  // Load tools from IPC (all modes, but filtered by mode)
+  // Load tools from IPC (all modes, but filtered by mode and thinkingMode)
   useEffect(() => {
     if (!isElectron() || !window.electronAPI?.mcp) {
       return;
@@ -239,15 +239,27 @@ export function UnifiedChatInput({
                 tool.name === 'grepSearch'
             );
           } else if (mode === 'main') {
-            // Main mode: exclude browser* and file* tools (only MCP server tools)
-            filteredTools = response.data.filter(
-              (tool) =>
-                !tool.name.startsWith('browser') &&
-                !tool.name.startsWith('google') &&
-                !tool.name.startsWith('file') &&
-                !tool.name.startsWith('command') &&
-                !tool.name.startsWith('grep')
-            );
+            // Main mode: MCP server tools only (+ Coding Agent tools if thinkingMode === 'coding')
+            const codingAgentTools = new Set([
+              'file_read',
+              'file_write',
+              'file_edit',
+              'file_list',
+              'command_execute',
+              'grep_search',
+            ]);
+            filteredTools = response.data.filter((tool) => {
+              // Include all MCP server tools (non-builtin)
+              if (tool.serverName !== 'builtin') {
+                return true;
+              }
+              // Include Coding Agent builtin tools only when thinkingMode is 'coding'
+              if (thinkingMode === 'coding') {
+                return codingAgentTools.has(tool.name);
+              }
+              // Otherwise, exclude all builtin tools
+              return false;
+            });
           }
 
           _setTools(filteredTools);
@@ -258,7 +270,7 @@ export function UnifiedChatInput({
     };
 
     loadTools();
-  }, [mode]);
+  }, [mode, thinkingMode]);
 
   // Get current conversation's image generation progress
   const currentImageGenProgress = activeConversationId

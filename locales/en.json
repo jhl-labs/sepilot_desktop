@@ -48,6 +48,12 @@
     "testConnection": "Test Connection",
     "technicalDetails": "Technical Details"
   },
+  "sidebarChat": {
+    "personaManagement": "Persona Management",
+    "documentManagement": "Document Management",
+    "imageGallery": "Image Gallery",
+    "settings": "Settings"
+  },
   "languages": {
     "ko": "한국어",
     "en": "English",
@@ -202,7 +208,9 @@
       "ssl": {
         "title": "SSL Settings",
         "verify": "Verify SSL Certificate",
-        "verifyDescription": "Validate SSL certificates. Disable if using self-signed certificates."
+        "verifyDescription": "Validate SSL certificates. Disable if using self-signed certificates.",
+        "verifyDescriptionShort": "Disable if using self-signed certificates",
+        "securityWarning": "Security Warning: Disabling SSL verification may make you vulnerable to MITM attacks."
       },
       "customHeaders": {
         "title": "Custom Headers",
@@ -932,6 +940,12 @@
     }
   },
   "chat": {
+    "workingDirectory": {
+      "label": "Work Directory:",
+      "select": "Select Directory",
+      "selecting": "Selecting...",
+      "remove": "Remove Work Directory"
+    },
     "welcome": {
       "title": "Welcome to SEPilot",
       "subtitle": "Start a new conversation or select an existing one"
@@ -2235,6 +2249,140 @@
       "row1": "🌐 AI performs web page navigation, information gathering, and automation tasks",
       "row2": "💬 Request tasks via chat and AI Agent will control the browser",
       "row3": "📸 Provides convenient features like snapshot saving and bookmark management"
+    }
+  },
+  "documentsSync": {
+    "title": "Documents Sync",
+    "description": "Sync Personal Docs and Team Docs with GitHub repositories.",
+    "loadError": "Failed to load settings",
+    "validation": {
+      "requiredFields": "Please enter all required fields.",
+      "ghesUrlRequired": "Please enter GHES URL."
+    },
+    "saveSuccess": {
+      "personal": "Personal Docs settings saved!",
+      "team": "Team Docs settings saved!"
+    },
+    "saveError": "Failed to save settings",
+    "deleteError": "Failed to delete",
+    "deleteConfirm": "Are you sure you want to delete this Team Docs configuration?",
+    "deleteSuccess": "Team Docs configuration deleted.",
+    "tabs": {
+      "personal": "Personal Docs",
+      "team": "Team Docs"
+    },
+    "labels": {
+      "serverType": "Server Type",
+      "ghesUrl": "GHES URL",
+      "token": "GitHub Token *",
+      "owner": "Owner *",
+      "repo": "Repository *",
+      "branch": "Branch",
+      "docsPath": "Docs Path",
+      "teamName": "Team Name *",
+      "description": "Description",
+      "descriptionPlaceholder": "Description for this Team Docs",
+      "enabled": "Enabled"
+    },
+    "buttons": {
+      "save": "Save Settings",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "add": "Add",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "hints": {
+      "saveFirst": "After saving settings, you can perform Pull/Push operations in the Document List."
+    },
+    "teamDocs": {
+      "newTitle": "New Team Docs",
+      "editTitle": "Edit Team Docs",
+      "listTitle": "Team Docs List",
+      "empty": "No Team Docs registered. Click Add button to create.",
+      "disabled": "Disabled"
+    }
+  },
+  "presentation": {
+    "title": "AI Presentation Designer",
+    "onboarding": {
+      "title": "Presentation Designer",
+      "subtitle": "Create professional PPTs with AI chat",
+      "templates": "Start with Template",
+      "or": "OR",
+      "startCustom": "Enter your topic below"
+    },
+    "templates": {
+      "profile": {
+        "name": "Self Intro",
+        "desc": "Interview, Networking"
+      },
+      "techSeminar": {
+        "name": "Tech Seminar",
+        "desc": "Developers"
+      },
+      "paperSummary": {
+        "name": "Paper Summary",
+        "desc": "Students, Researchers"
+      },
+      "projectIntro": {
+        "name": "Project Intro",
+        "desc": "Team Members"
+      }
+    },
+    "steps": {
+      "briefing": {
+        "title": "Briefing",
+        "desc": "Topic, Purpose, Audience"
+      },
+      "designMaster": {
+        "title": "Design",
+        "desc": "Colors, Fonts, Mood"
+      },
+      "structure": {
+        "title": "Structure",
+        "desc": "Slide Outline"
+      },
+      "slideCreation": {
+        "title": "Creation",
+        "desc": "Generate Slides"
+      },
+      "review": {
+        "title": "Review",
+        "desc": "Edit and Finalize"
+      },
+      "complete": {
+        "title": "Complete",
+        "desc": "Presentation Ready"
+      }
+    },
+    "chat": {
+      "placeholder": "Type a message...",
+      "placeholderOnboarding": "Enter presentation topic... (e.g., AI Trends)",
+      "send": "Enter to Send · Shift+Enter for newline",
+      "generating": "Generating...",
+      "designer": "Designer"
+    },
+    "preview": {
+      "title": "Slide Preview",
+      "emptyBriefing": "Enter a topic on the left to start designing",
+      "emptyDesign": "Please select a design option",
+      "emptyStructure": "Approve structure to generate slides",
+      "emptyCreation": "Click \"Auto Create\" button",
+      "emptyDefault": "Start chat on the left",
+      "manualAdd": "Add Slide Manually",
+      "designOptionTitle": "Select Design Option",
+      "designOptionDesc": "Select options on top right to compare",
+      "templateTitle": "Design Template",
+      "templateDesc": "Slides will be generated in this style",
+      "structure": "Structure",
+      "completed": "Completed"
+    },
+    "quickPrompts": {
+      "next": "Next Step",
+      "approveStructure": "Approve Structure",
+      "autoCreate": "Auto Create",
+      "done": "Done"
     }
   }
 }
