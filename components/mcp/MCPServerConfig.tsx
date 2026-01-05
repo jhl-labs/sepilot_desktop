@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   Plus,
   Loader2,
-  FileText,
   Globe,
   Database,
   Search,
@@ -45,15 +44,6 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
   const PRESETS = useMemo(
     () => ({
       stdio: [
-        {
-          name: 'Filesystem',
-          icon: FileText,
-          description: t('settings.mcp.config.presets.filesystem'),
-          command: 'npx',
-          args: '-y\n@modelcontextprotocol/server-filesystem\n/path/to/allowed/directory',
-          color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-          iconColor: 'text-blue-500',
-        },
         {
           name: 'GitHub',
           icon: Globe,
