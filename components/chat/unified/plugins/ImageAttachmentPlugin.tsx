@@ -8,6 +8,7 @@
  */
 
 import { ImagePlus, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import type { ImageAttachment } from '@/types';
@@ -28,6 +29,8 @@ export function ImageAttachmentPlugin({
   isStreaming,
   mounted = true,
 }: ImageAttachmentPluginProps) {
+  const { t } = useTranslation();
+
   return (
     <>
       {/* Selected Images Preview */}
@@ -40,13 +43,15 @@ export function ImageAttachmentPlugin({
                   <TooltipTrigger asChild>
                     <div className="relative inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm group hover:bg-accent/80 transition-colors">
                       <ImagePlus className="h-3.5 w-3.5" />
-                      <span className="font-medium">이미지 #{index + 1}</span>
+                      <span className="font-medium">
+                        {t('unifiedInput.images.label', { number: index + 1 })}
+                      </span>
                       <button
                         onClick={() => onImageRemove(image.id)}
                         className="ml-1 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
                         disabled={isStreaming}
-                        title="이미지 제거"
-                        aria-label="이미지 제거"
+                        title={t('unifiedInput.images.remove')}
+                        aria-label={t('unifiedInput.images.remove')}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -75,13 +80,15 @@ export function ImageAttachmentPlugin({
                 className="relative inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm group hover:bg-accent/80 transition-colors"
               >
                 <ImagePlus className="h-3.5 w-3.5" />
-                <span className="font-medium">이미지 #{index + 1}</span>
+                <span className="font-medium">
+                  {t('unifiedInput.images.label', { number: index + 1 })}
+                </span>
                 <button
                   onClick={() => onImageRemove(image.id)}
                   className="ml-1 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
                   disabled={isStreaming}
-                  title="이미지 제거"
-                  aria-label="이미지 제거"
+                  title={t('unifiedInput.images.remove')}
+                  aria-label={t('unifiedInput.images.remove')}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -97,8 +104,8 @@ export function ImageAttachmentPlugin({
         variant="ghost"
         size="icon"
         className="h-9 w-9 rounded-xl shrink-0"
-        title="이미지 추가"
-        aria-label="이미지 파일 선택"
+        title={t('unifiedInput.imageUpload.tooltip')}
+        aria-label={t('unifiedInput.imageUpload.ariaLabel')}
         disabled={isStreaming}
       >
         <ImagePlus className="h-4 w-4" />
