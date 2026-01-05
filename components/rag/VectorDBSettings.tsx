@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { VectorDBConfig, EmbeddingConfig } from '@/lib/vectordb';
 
 import { logger } from '@/lib/utils/logger';
-import { httpFetch, safeJsonParse } from '@/lib/http';
+import { safeJsonParse } from '@/lib/http';
+import { isElectron } from '@/lib/platform';
 import type { NetworkConfig } from '@/types';
 interface VectorDBSettingsProps {
   onSave: (vectorDBConfig: VectorDBConfig, embeddingConfig: EmbeddingConfig) => Promise<void>;
@@ -103,22 +104,42 @@ export function VectorDBSettings({
         : undefined;
 
       const baseURL = embeddingConfig.baseURL.replace(/\/$/, ''); // 끝의 / 제거
-      const response = await httpFetch(`${baseURL}/models`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${embeddingConfig.apiKey}`,
-        },
-        networkConfig,
-      });
 
-      if (!response.ok) {
-        throw new Error(
-          t('settings.vectordb.validation.fetchModelsFailed', { error: response.statusText })
-        );
+      let data: any;
+
+      // Electron 환경: IPC를 통해 Main Process에서 호출 (CORS 없음, Network Config 사용)
+      if (isElectron() && window.electronAPI?.llm) {
+        const result = await window.electronAPI.llm.fetchModels({
+          provider: 'openai', // OpenAI Compatible API
+          baseURL: embeddingConfig.baseURL,
+          apiKey: embeddingConfig.apiKey,
+          networkConfig,
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to fetch models');
+        }
+
+        // IPC 결과는 이미 모델 ID 배열이므로, 처리 로직을 위해 OpenAI 형식으로 변환
+        data = { data: (result.data || []).map((id: string) => ({ id })) };
+      } else {
+        // 브라우저 환경: 직접 fetch 사용
+        const response = await fetch(`${baseURL}/models`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${embeddingConfig.apiKey}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            t('settings.vectordb.validation.fetchModelsFailed', { error: response.statusText })
+          );
+        }
+
+        data = await safeJsonParse<any>(response, `${baseURL}/models`);
       }
-
-      const data = await safeJsonParse<any>(response, `${baseURL}/models`);
 
       // 임베딩 모델 키워드 목록
       const embeddingKeywords = [
