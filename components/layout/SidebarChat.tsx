@@ -1,17 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Image, Settings, User, FileText, Bot } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { useState } from 'react';
+import { Image, Settings, User, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ChatHistory } from './ChatHistory';
 import { PersonaDialog } from '@/components/persona/PersonaDialog';
 import { isElectron } from '@/lib/platform';
-import { BetaConfig } from '@/types';
-import { useChatStore } from '@/lib/store/chat-store';
 import { useTranslation } from 'react-i18next';
-import { useExtensions } from '@/lib/extensions/use-extensions';
 
 interface SidebarChatProps {
   onGalleryClick?: () => void;
@@ -28,40 +24,6 @@ export function SidebarChat({
 }: SidebarChatProps) {
   const { t } = useTranslation();
   const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
-  const [betaConfig, setBetaConfig] = useState<BetaConfig>({});
-  const { setAppMode } = useChatStore();
-  const { activeExtensions: allExtensions } = useExtensions();
-
-  // Load beta config
-  useEffect(() => {
-    const loadBetaConfig = () => {
-      if (typeof window === 'undefined') {
-        return;
-      }
-      try {
-        const savedBetaConfig = localStorage.getItem('sepilot_beta_config');
-        if (savedBetaConfig) {
-          setBetaConfig(JSON.parse(savedBetaConfig));
-        }
-      } catch (error) {
-        console.error('Failed to load beta config:', error);
-      }
-    };
-
-    loadBetaConfig();
-
-    // Listen for config updates
-    const handleConfigUpdate = (event: CustomEvent) => {
-      if (event.detail?.beta) {
-        setBetaConfig(event.detail.beta);
-      }
-    };
-
-    window.addEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
-    return () => {
-      window.removeEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
-    };
-  }, []);
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -112,35 +74,6 @@ export function SidebarChat({
           >
             <Image className="h-5 w-5" />
           </Button>
-
-          {/* Extension 버튼 동적 생성 */}
-          {allExtensions
-            .filter((ext) => {
-              // Beta flag 체크
-              if (ext.manifest.betaFlag) {
-                return betaConfig[ext.manifest.betaFlag] === true;
-              }
-              return true;
-            })
-            .filter((ext) => ext.manifest.showInSidebar && ext.manifest.mode !== 'chat')
-            .sort((a, b) => (a.manifest.order || 999) - (b.manifest.order || 999))
-            .map((ext) => {
-              const IconComponent: React.ComponentType<{ className?: string }> =
-                (LucideIcons[ext.manifest.icon as keyof typeof LucideIcons] as any) || Bot;
-              return (
-                <Button
-                  key={ext.manifest.id}
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setAppMode(ext.manifest.mode as any)}
-                  title={ext.manifest.name}
-                  className="flex-1"
-                >
-                  <IconComponent className="h-5 w-5" />
-                </Button>
-              );
-            })}
-
           <Button
             variant="ghost"
             size="icon"

@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Settings, Terminal, FileText, Database, Wrench, Bot } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { Settings, Terminal, FileText, Database, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -18,9 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { OverflowToolbar } from '@/components/ui/overflow-toolbar';
 import { Switch } from '@/components/ui/switch';
 import { isElectron } from '@/lib/platform';
-import { BetaConfig } from '@/types';
 import { cn } from '@/lib/utils';
-import { useExtensions } from '@/lib/extensions/use-extensions';
 
 interface SidebarEditorProps {
   onDocumentsClick?: () => void;
@@ -44,47 +41,12 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
     pendingToolApproval,
     clearPendingToolApproval,
     setAlwaysApproveToolsForSession,
-    setAppMode,
   } = useChatStore();
-
-  const [betaConfig, setBetaConfig] = useState<BetaConfig>({});
-  const { activeExtensions: allExtensions } = useExtensions();
 
   // Load working directory on mount
   useEffect(() => {
     loadWorkingDirectory();
   }, [loadWorkingDirectory]);
-
-  // Load beta config
-  useEffect(() => {
-    const loadBetaConfig = () => {
-      if (typeof window === 'undefined') {
-        return;
-      }
-      try {
-        const savedBetaConfig = localStorage.getItem('sepilot_beta_config');
-        if (savedBetaConfig) {
-          setBetaConfig(JSON.parse(savedBetaConfig));
-        }
-      } catch (error) {
-        console.error('Failed to load beta config:', error);
-      }
-    };
-
-    loadBetaConfig();
-
-    // Listen for config updates
-    const handleConfigUpdate = (event: CustomEvent) => {
-      if (event.detail?.beta) {
-        setBetaConfig(event.detail.beta);
-      }
-    };
-
-    window.addEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
-    return () => {
-      window.removeEventListener('sepilot:config-updated', handleConfigUpdate as EventListener);
-    };
-  }, []);
 
   // Tool approval handlers
   const handleApprove = async () => {
@@ -299,39 +261,6 @@ export function SidebarEditor({ onDocumentsClick }: SidebarEditorProps = {}) {
                   <p>{t('sidebar.editor.tooltips.editorSettings')}</p>
                 </TooltipContent>
               </Tooltip>
-
-              {/* Extension 버튼 동적 생성 */}
-              {allExtensions
-                .filter((ext) => {
-                  // Beta flag 체크
-                  if (ext.manifest.betaFlag) {
-                    return betaConfig[ext.manifest.betaFlag] === true;
-                  }
-                  return true;
-                })
-                .filter((ext) => ext.manifest.showInSidebar && ext.manifest.mode !== 'editor')
-                .sort((a, b) => (a.manifest.order || 999) - (b.manifest.order || 999))
-                .map((ext) => {
-                  const IconComponent: React.ComponentType<{ className?: string }> =
-                    (LucideIcons[ext.manifest.icon as keyof typeof LucideIcons] as any) || Bot;
-                  return (
-                    <Tooltip key={ext.manifest.id}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setAppMode(ext.manifest.mode as any)}
-                          title={ext.manifest.name}
-                        >
-                          <IconComponent className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <p>{ext.manifest.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
             </OverflowToolbar>
           </TooltipProvider>
         </div>

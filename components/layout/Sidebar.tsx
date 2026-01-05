@@ -8,6 +8,7 @@ import { BetaConfig } from '@/types';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { SidebarChat } from './SidebarChat';
 import { useExtension, useExtensions } from '@/lib/extensions/use-extensions';
+import { isElectron } from '@/lib/platform';
 import * as LucideIcons from 'lucide-react';
 import {
   DropdownMenu,
@@ -44,14 +45,25 @@ export function Sidebar({
 
   // Load beta config
   useEffect(() => {
-    const loadBetaConfig = () => {
+    const loadBetaConfig = async () => {
       if (typeof window === 'undefined') {
         return;
       }
       try {
+        // First try to load from localStorage
         const savedBetaConfig = localStorage.getItem('sepilot_beta_config');
         if (savedBetaConfig) {
           setBetaConfig(JSON.parse(savedBetaConfig));
+        }
+
+        // In Electron, also load from DB and sync to localStorage
+        if (isElectron() && window.electronAPI) {
+          const result = await window.electronAPI.config.load();
+          if (result.success && result.data?.beta) {
+            setBetaConfig(result.data.beta);
+            // Sync to localStorage for consistent state
+            localStorage.setItem('sepilot_beta_config', JSON.stringify(result.data.beta));
+          }
         }
       } catch (error) {
         console.error('Failed to load beta config:', error);
