@@ -46,7 +46,7 @@ export function ConnectionManager({
   const handleAdd = () => {
     const { name, baseURL, apiKey, provider } = formData;
 
-    if (!name?.trim() || !baseURL?.trim() || !apiKey?.trim()) {
+    if (!name?.trim() || !baseURL?.trim()) {
       return;
     }
 
@@ -56,18 +56,12 @@ export function ConnectionManager({
       return;
     }
 
-    // Validate API key length
-    if (apiKey.trim().length < 20) {
-      window.alert(t('settings.llm.connections.validation.apiKey'));
-      return;
-    }
-
     const newConnection: LLMConnection = {
       id: `conn-${nanoid()}`,
       name: name.trim(),
       provider: provider || 'openai',
       baseURL: baseURL.trim(),
-      apiKey: apiKey.trim(),
+      apiKey: apiKey?.trim() || '',
       customHeaders: formData.customHeaders || {},
       enabled: formData.enabled ?? true,
     };
@@ -95,19 +89,13 @@ export function ConnectionManager({
     }
 
     const { name, provider, baseURL, apiKey } = formData;
-    if (!name?.trim() || !baseURL?.trim() || !apiKey?.trim()) {
+    if (!name?.trim() || !baseURL?.trim()) {
       return;
     }
 
     // Validate baseURL format
     if (!baseURL.match(/^https?:\/\/.+/)) {
       window.alert(t('settings.llm.connections.validation.url'));
-      return;
-    }
-
-    // Validate API key length
-    if (apiKey.trim().length < 20) {
-      window.alert(t('settings.llm.connections.validation.apiKey'));
       return;
     }
 
@@ -119,7 +107,7 @@ export function ConnectionManager({
               name: name.trim(),
               provider: provider || 'openai',
               baseURL: baseURL.trim(),
-              apiKey: apiKey.trim(),
+              apiKey: apiKey?.trim() || '',
               customHeaders: formData.customHeaders || {},
               enabled: formData.enabled ?? true,
             }
