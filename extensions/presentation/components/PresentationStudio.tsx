@@ -7,7 +7,7 @@ import { useChatStore } from '@/lib/store/chat-store';
 import type { PresentationExportFormat } from '../types';
 import { exportPresentation } from '../lib/exporters';
 import { generateImagesForSlides } from '../lib/image-generation';
-import { Download, FileDown, FileType2 } from 'lucide-react';
+import { Download, FileDown, FileType2, FolderOpen, RefreshCw, X } from 'lucide-react';
 
 export function PresentationStudio() {
   const {
@@ -20,9 +20,8 @@ export function PresentationStudio() {
   const [lastFormat, setLastFormat] = useState<PresentationExportFormat | null>(null);
 
   const handleExport = async (format: PresentationExportFormat) => {
-    if (!presentationSlides.length || exporting) {
-      return;
-    }
+    if (!presentationSlides.length || exporting) return;
+
     setExporting(true);
     setLastFormat(format);
     setPresentationExportState({
@@ -30,8 +29,8 @@ export function PresentationStudio() {
       status: 'preparing',
       progressMessage: '이미지 확인 중...',
     });
+
     try {
-      // Preflight: check missing images/prompts
       const missingImageSlides = presentationSlides.filter(
         (s) => !s.imageData && !s.imageUrl && !s.imagePrompt
       );
@@ -51,14 +50,8 @@ export function PresentationStudio() {
 
       if (errors.length) {
         console.warn('[PresentationStudio] image generation warnings', errors);
-        setPresentationExportState({
-          format,
-          status: 'working',
-          progressMessage: `이미지 경고: ${errors.slice(0, 2).join(' | ')}`,
-        });
       }
 
-      // Preflight: chart/table placeholders notice
       const hasStructured = updatedSlides.some(
         (s) => s.slots?.chart || s.slots?.table || s.slots?.timeline
       );
@@ -66,15 +59,14 @@ export function PresentationStudio() {
         setPresentationExportState({
           format,
           status: 'working',
-          progressMessage:
-            '차트/타임라인/테이블은 샘플 데이터로 렌더링됩니다. 실제 데이터 연결은 후처리 필요.',
+          progressMessage: '차트/테이블 렌더링 중...',
         });
       }
 
       setPresentationExportState({
         format,
         status: 'working',
-        progressMessage: '내보내기 파일 생성 중...',
+        progressMessage: '파일 생성 중...',
       });
 
       const filePath = await exportPresentation(updatedSlides, format);
@@ -96,135 +88,128 @@ export function PresentationStudio() {
     }
   };
 
+  const clearExportState = () => {
+    setPresentationExportState(null);
+  };
+
   return (
-    <div className="flex h-full flex-col gap-3">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div>
-          <p className="text-lg font-semibold text-foreground">Presentation Mode</p>
-          <p className="text-sm text-muted-foreground">
-            좌측 대화로 ppt-agent에게 설계를 요청하고, 우측에서 슬라이드를 검토한 뒤 내보내세요.
-          </p>
+    <div className="flex h-full flex-col bg-muted/20">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between border-b bg-background px-4 py-2">
+        <div className="flex items-center gap-3">
+          <p className="text-sm font-medium text-foreground">슬라이드 미리보기</p>
+          {presentationSlides.length > 0 && (
+            <span className="text-xs text-muted-foreground">{presentationSlides.length}장</span>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            className="gap-2"
-            onClick={() => handleExport('pptx')}
-            disabled={!presentationSlides.length || exporting}
-          >
-            <FileDown className="h-4 w-4" />
-            PPTX
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="gap-2"
-            onClick={() => handleExport('pdf')}
-            disabled={!presentationSlides.length || exporting}
-          >
-            <FileType2 className="h-4 w-4" />
-            PDF
-          </Button>
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={() => handleExport('html')}
-            disabled={!presentationSlides.length || exporting}
-          >
-            <Download className="h-4 w-4" />
-            HTML
-          </Button>
-        </div>
-      </div>
 
-      {presentationExportState?.status === 'preparing' && (
-        <div className="mx-4 rounded-lg border border-muted-foreground/40 bg-muted/10 px-4 py-3 text-sm text-foreground">
-          {presentationExportState.progressMessage || '내보내기 준비 중입니다...'}
-        </div>
-      )}
-      {presentationExportState?.status === 'working' && (
-        <div className="mx-4 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3 text-sm text-primary-foreground">
-          {presentationExportState.progressMessage || '이미지 생성 및 파일 빌드 중...'}
-        </div>
-      )}
-
-      {presentationExportState?.status === 'error' && (
-        <div className="mx-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Export 실패: {presentationExportState.error}
-          {lastFormat && (
+        {/* Export Buttons */}
+        {presentationSlides.length > 0 && (
+          <div className="flex items-center gap-1">
             <Button
               size="sm"
               variant="ghost"
-              className="ml-2"
+              className="h-7 px-2 text-xs gap-1"
+              onClick={() => handleExport('pptx')}
               disabled={exporting}
-              onClick={() => handleExport(lastFormat)}
+              title="PPTX로 내보내기"
             >
-              다시 시도
+              <FileDown className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">PPTX</span>
             </Button>
-          )}
-        </div>
-      )}
-      {presentationExportState?.status === 'ready' && presentationExportState.filePath && (
-        <div className="mx-4 flex items-center justify-between rounded-lg border border-primary/40 bg-primary/5 px-4 py-3 text-sm text-primary-foreground">
-          <span>내보내기 완료: {presentationExportState.filePath}</span>
-          {typeof window !== 'undefined' && window.electronAPI?.fs && (
             <Button
               size="sm"
-              variant="secondary"
-              onClick={() => {
-                const filePath = presentationExportState.filePath;
-                if (filePath) {
-                  window.electronAPI.fs.showInFolder(filePath);
-                }
-              }}
+              variant="ghost"
+              className="h-7 px-2 text-xs gap-1"
+              onClick={() => handleExport('pdf')}
+              disabled={exporting}
+              title="PDF로 내보내기"
             >
-              폴더 열기
+              <FileType2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">PDF</span>
             </Button>
-          )}
-        </div>
-      )}
+            <Button
+              size="sm"
+              variant="default"
+              className="h-7 px-2 text-xs gap-1"
+              onClick={() => handleExport('html')}
+              disabled={exporting}
+              title="HTML로 내보내기"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">HTML</span>
+            </Button>
+          </div>
+        )}
+      </div>
 
-      {/* Current Status */}
-      {presentationAgentState && presentationSlides.length === 0 && (
-        <div className="mx-4 rounded-lg border border-blue-500/40 bg-blue-500/5 p-4">
-          <p className="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">
-            현재 진행 상황
-          </p>
-          <div className="space-y-1 text-xs text-muted-foreground">
-            {presentationAgentState.brief && (
-              <p>✅ 브리핑 완료: {presentationAgentState.brief.topic}</p>
-            )}
-            {presentationAgentState.designMaster && (
-              <p>
-                ✅ 디자인 완료:{' '}
-                {presentationAgentState.designMaster.name ||
-                  presentationAgentState.designMaster.vibe}
-              </p>
-            )}
-            {presentationAgentState.structure && (
-              <p>✅ 구조 완료: {presentationAgentState.structure.totalSlides}장</p>
-            )}
-            {presentationAgentState.currentStep === 'slide-creation' && (
-              <p className="text-yellow-600 dark:text-yellow-400">
-                ⏳ 슬라이드 작성 중... ({presentationAgentState.completedSlideIndices.length} /{' '}
-                {presentationAgentState.structure?.totalSlides || 0})
-              </p>
-            )}
-            {presentationSlides.length === 0 &&
-              presentationAgentState.currentStep === 'slide-creation' && (
-                <p className="mt-2 text-blue-600 dark:text-blue-400">
-                  💡 좌측에서 &quot;자동으로 생성&quot; 버튼을 클릭하면 슬라이드가 생성됩니다
-                </p>
+      {/* Export Status Toast */}
+      {presentationExportState && (
+        <div className="mx-4 mt-3">
+          <div
+            className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${
+              presentationExportState.status === 'error'
+                ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                : presentationExportState.status === 'ready'
+                  ? 'border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400'
+                  : 'border-primary/40 bg-primary/5 text-foreground'
+            }`}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              {(presentationExportState.status === 'preparing' ||
+                presentationExportState.status === 'working') && (
+                <RefreshCw className="h-3.5 w-3.5 animate-spin flex-shrink-0" />
               )}
+              <span className="truncate">
+                {presentationExportState.status === 'error'
+                  ? `오류: ${presentationExportState.error}`
+                  : presentationExportState.status === 'ready' && presentationExportState.filePath
+                    ? '내보내기 완료'
+                    : presentationExportState.progressMessage}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {presentationExportState.status === 'ready' &&
+                presentationExportState.filePath &&
+                typeof window !== 'undefined' &&
+                window.electronAPI?.fs && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => {
+                      if (presentationExportState.filePath) {
+                        window.electronAPI.fs.showInFolder(presentationExportState.filePath);
+                      }
+                    }}
+                  >
+                    <FolderOpen className="h-3 w-3 mr-1" />
+                    열기
+                  </Button>
+                )}
+              {presentationExportState.status === 'error' && lastFormat && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => handleExport(lastFormat)}
+                  disabled={exporting}
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  재시도
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={clearExportState}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="flex flex-1 flex-col px-2 pb-2">
-        <div className="flex-1 overflow-hidden rounded-lg border bg-card shadow-sm">
-          <SlidePreview />
-        </div>
+      {/* Main Preview Area */}
+      <div className="flex-1 overflow-hidden">
+        <SlidePreview />
       </div>
     </div>
   );

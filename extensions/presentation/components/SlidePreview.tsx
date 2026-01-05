@@ -10,12 +10,15 @@ import { DesignOptionsPreview } from './DesignOptionsPreview';
 import {
   ChevronLeft,
   ChevronRight,
-  LayoutTemplate,
+  Plus,
   Maximize2,
   Minimize2,
   Edit3,
   Check,
   X,
+  Sparkles,
+  Palette,
+  LayoutList,
 } from 'lucide-react';
 import type { PresentationSlide } from '../types';
 
@@ -68,19 +71,17 @@ export function SlidePreview() {
     setIsFullscreen(!isFullscreen);
   }, [isFullscreen]);
 
-  // Sync currentIndex with activePresentationSlideId (외부에서 변경된 경우만)
+  // Sync currentIndex with activePresentationSlideId
   useEffect(() => {
     if (!isInternalUpdate.current && activePresentationSlideId) {
-      // undefined 요소를 필터링하여 안전하게 처리
       const idx = presentationSlides.findIndex((s) => s && s.id === activePresentationSlideId);
       if (idx !== -1 && idx !== currentIndex) {
         setCurrentIndex(idx);
       }
     }
-    // currentIndex를 의존성에서 제거하여 무한 루프 방지
   }, [activePresentationSlideId, presentationSlides]);
 
-  // Update active slide when currentIndex changes (내부에서 변경된 경우만)
+  // Update active slide when currentIndex changes
   useEffect(() => {
     if (
       isInternalUpdate.current &&
@@ -95,6 +96,7 @@ export function SlidePreview() {
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isEditMode) return;
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
         goToPrevious();
@@ -104,20 +106,22 @@ export function SlidePreview() {
       } else if (e.key === 'f' || e.key === 'F') {
         e.preventDefault();
         toggleFullscreen();
+      } else if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToNext, goToPrevious, toggleFullscreen]);
+  }, [goToNext, goToPrevious, toggleFullscreen, isFullscreen, isEditMode]);
 
   const handleAddSlide = () => {
     const accentColor = ACCENT_COLORS[presentationSlides.length % ACCENT_COLORS.length];
     addPresentationSlide({
       id: generateId(),
       title: '새 슬라이드',
-      description: 'ppt-agent가 채울 내용을 입력하거나 직접 수정하세요.',
-      bullets: ['핵심 메시지', '지원 근거', '시각 요소 제안'],
+      description: '내용을 입력하세요.',
+      bullets: ['핵심 메시지', '지원 근거'],
       accentColor,
       layout: 'title-body',
       titleFont: 'Sora Bold',
@@ -170,15 +174,15 @@ export function SlidePreview() {
   ) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex items-center gap-3 px-4 py-3 border-b bg-background">
+          <Palette className="h-4 w-4 text-primary" />
           <div>
-            <p className="text-sm font-semibold text-foreground">디자인 옵션 미리보기</p>
+            <p className="text-sm font-medium">디자인 옵션 선택</p>
             <p className="text-xs text-muted-foreground">
-              우측 상단에서 옵션을 선택하여 비교해보세요.
+              우측 상단에서 옵션을 선택하여 비교해보세요
             </p>
           </div>
         </div>
-
         <div className="flex-1 overflow-auto">
           <DesignOptionsPreview designOptions={presentationAgentState.designOptions} />
         </div>
@@ -194,15 +198,13 @@ export function SlidePreview() {
   ) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex items-center gap-3 px-4 py-3 border-b bg-background">
+          <LayoutList className="h-4 w-4 text-primary" />
           <div>
-            <p className="text-sm font-semibold text-foreground">디자인 템플릿 미리보기</p>
-            <p className="text-xs text-muted-foreground">
-              선택한 디자인으로 슬라이드가 생성됩니다.
-            </p>
+            <p className="text-sm font-medium">디자인 템플릿</p>
+            <p className="text-xs text-muted-foreground">이 스타일로 슬라이드가 생성됩니다</p>
           </div>
         </div>
-
         <div className="flex-1 overflow-auto">
           <SlideMasterPreview designMaster={presentationAgentState.designMaster} />
         </div>
@@ -210,109 +212,188 @@ export function SlidePreview() {
     );
   }
 
+  // 빈 상태 화면
   if (presentationSlides.length === 0) {
     return (
-      <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold text-foreground">슬라이드 미리보기</p>
-            <p className="text-xs text-muted-foreground">AI가 제안한 프레젠테이션을 확인하세요.</p>
+      <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+        <div className="max-w-sm space-y-4">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5">
+            <Sparkles className="h-8 w-8 text-primary" />
           </div>
-          <Button size="sm" variant="secondary" onClick={handleAddSlide}>
-            <LayoutTemplate className="mr-2 h-4 w-4" />
-            수동 추가
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">슬라이드 미리보기</h3>
+            <p className="text-sm text-muted-foreground">
+              {presentationAgentState?.currentStep === 'briefing'
+                ? '좌측에서 주제를 입력하면 AI가 프레젠테이션을 디자인합니다'
+                : presentationAgentState?.currentStep === 'design-master'
+                  ? '디자인 옵션을 선택해주세요'
+                  : presentationAgentState?.currentStep === 'structure'
+                    ? '구조를 승인하면 슬라이드가 생성됩니다'
+                    : presentationAgentState?.currentStep === 'slide-creation'
+                      ? '"자동으로 생성" 버튼을 클릭하세요'
+                      : '좌측에서 대화를 시작하세요'}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleAddSlide} className="gap-2">
+            <Plus className="h-4 w-4" />
+            수동으로 슬라이드 추가
           </Button>
-        </div>
-
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-          <div className="text-sm text-muted-foreground">아직 생성된 슬라이드가 없습니다.</div>
-          <div className="text-xs text-muted-foreground">
-            좌측 Sidebar에서 브리핑을 보내거나 수동으로 추가하세요.
-          </div>
         </div>
       </div>
     );
   }
 
-  // Ensure currentIndex is within bounds (safety check)
+  // Ensure currentIndex is within bounds
   const safeIndex = Math.min(currentIndex, presentationSlides.length - 1);
   const currentSlide = presentationSlides[safeIndex];
 
-  return (
-    <div className="flex h-full flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
-      {/* Header */}
-      {!isFullscreen && (
-        <div className="flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur-sm">
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              슬라이드 {safeIndex + 1} / {presentationSlides.length}
-            </p>
-            <p className="text-xs text-muted-foreground">화살표 키로 이동 · F키로 전체화면</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {!isEditMode ? (
-              <>
-                <Button size="sm" variant="ghost" onClick={toggleFullscreen}>
-                  {isFullscreen ? (
-                    <Minimize2 className="h-4 w-4" />
-                  ) : (
-                    <Maximize2 className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleEditSlide}>
-                  <Edit3 className="mr-2 h-4 w-4" />
-                  편집
-                </Button>
-                <Button size="sm" variant="secondary" onClick={handleAddSlide}>
-                  <LayoutTemplate className="mr-2 h-4 w-4" />
-                  추가
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
-                  <X className="mr-2 h-4 w-4" />
-                  취소
-                </Button>
-                <Button size="sm" variant="default" onClick={handleSaveEdit}>
-                  <Check className="mr-2 h-4 w-4" />
-                  저장
-                </Button>
-              </>
-            )}
+  // Fullscreen mode
+  if (isFullscreen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black flex flex-col">
+        {/* Fullscreen slide */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="w-full max-w-7xl">
+            <SlideRenderer
+              slide={currentSlide}
+              isEditable={false}
+              onSlideChange={() => {}}
+              onAddBullet={() => {}}
+              onRemoveBullet={() => {}}
+            />
           </div>
         </div>
-      )}
 
-      {/* Main Slide Display */}
-      <div className="relative flex flex-1 items-center justify-center p-8">
-        {/* Navigation Buttons */}
-        {!isEditMode && (
-          <>
+        {/* Fullscreen controls */}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+          <div className="flex items-center justify-center gap-4">
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
+              className="h-10 w-10 text-white hover:bg-white/20"
               onClick={goToPrevious}
               disabled={currentIndex === 0}
             >
               <ChevronLeft className="h-6 w-6" />
             </Button>
-
+            <span className="text-sm text-white/80">
+              {safeIndex + 1} / {presentationSlides.length}
+            </span>
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-background/80 shadow-lg backdrop-blur-sm hover:bg-background/95"
+              className="h-10 w-10 text-white hover:bg-white/20"
               onClick={goToNext}
               disabled={currentIndex === presentationSlides.length - 1}
             >
               <ChevronRight className="h-6 w-6" />
             </Button>
-          </>
-        )}
+          </div>
+        </div>
 
-        {/* Current Slide */}
-        <div className="max-w-7xl flex-1">
+        {/* Exit hint */}
+        <div className="absolute right-4 top-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white/80 hover:text-white hover:bg-white/20"
+            onClick={() => setIsFullscreen(false)}
+          >
+            <Minimize2 className="h-4 w-4 mr-2" />
+            ESC로 종료
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Slide Navigation Header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={goToPrevious}
+            disabled={currentIndex === 0}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground min-w-[60px] text-center">
+            {safeIndex + 1} / {presentationSlides.length}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={goToNext}
+            disabled={currentIndex === presentationSlides.length - 1}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {!isEditMode ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={handleEditSlide}
+              >
+                <Edit3 className="h-3 w-3 mr-1" />
+                편집
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={handleAddSlide}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                추가
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={toggleFullscreen}
+                title="전체화면 (F)"
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={handleCancelEdit}
+              >
+                <X className="h-3 w-3 mr-1" />
+                취소
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={handleSaveEdit}
+              >
+                <Check className="h-3 w-3 mr-1" />
+                저장
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Main Slide Display */}
+      <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
+        <div className="w-full max-w-5xl">
           <SlideRenderer
             slide={isEditMode && editingSlide ? editingSlide : currentSlide}
             isEditable={isEditMode}
@@ -323,49 +404,49 @@ export function SlidePreview() {
         </div>
       </div>
 
-      {/* Thumbnail Navigation */}
-      {!isFullscreen && presentationSlides.length > 1 && (
-        <div className="border-t bg-background/95 px-4 py-3 backdrop-blur-sm">
-          <div className="flex gap-2 overflow-x-auto">
+      {/* Thumbnail Strip */}
+      {presentationSlides.length > 1 && (
+        <div className="border-t bg-background px-2 py-2">
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
             {presentationSlides
               .filter((s) => s)
               .map((slide, idx) => (
                 <button
                   key={slide.id}
                   onClick={() => goToSlide(idx)}
-                  className={`group relative flex-shrink-0 rounded-md border-2 transition-all ${
+                  className={`group relative flex-shrink-0 rounded border transition-all ${
                     idx === currentIndex
-                      ? 'border-primary shadow-md'
-                      : 'border-transparent opacity-60 hover:opacity-100'
+                      ? 'border-primary ring-1 ring-primary/30'
+                      : 'border-transparent hover:border-muted-foreground/30'
                   }`}
-                  style={{
-                    borderColor: idx === currentIndex ? slide.accentColor : undefined,
-                  }}
                 >
-                  <div className="relative h-16 w-28 overflow-hidden rounded-sm bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
-                    {/* Thumbnail mini preview */}
-                    <div className="absolute inset-0 flex flex-col justify-center px-2">
-                      <div className="truncate text-[10px] font-semibold">{slide.title}</div>
+                  <div
+                    className={`relative h-12 w-20 overflow-hidden rounded-sm ${
+                      idx === currentIndex ? '' : 'opacity-60 group-hover:opacity-100'
+                    }`}
+                    style={{
+                      background: slide.backgroundColor || '#f3f4f6',
+                    }}
+                  >
+                    <div className="absolute inset-0 flex flex-col justify-center px-1.5">
                       <div
-                        className="mt-1 h-0.5 w-6 rounded-full"
+                        className="truncate text-[8px] font-semibold"
+                        style={{ color: slide.textColor || '#1f2937' }}
+                      >
+                        {slide.title}
+                      </div>
+                      <div
+                        className="mt-0.5 h-0.5 w-4 rounded-full"
                         style={{ backgroundColor: slide.accentColor }}
                       />
                     </div>
-                    {/* Slide number badge */}
-                    <div className="absolute bottom-0.5 right-0.5 rounded-sm bg-black/40 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                    <div className="absolute bottom-0.5 right-0.5 rounded-sm bg-black/50 px-1 py-0.5 text-[8px] font-medium text-white">
                       {idx + 1}
                     </div>
                   </div>
                 </button>
               ))}
           </div>
-        </div>
-      )}
-
-      {/* Fullscreen Exit Hint */}
-      {isFullscreen && (
-        <div className="absolute right-4 top-4 rounded-md bg-black/60 px-3 py-2 text-xs text-white backdrop-blur-sm">
-          ESC 또는 F키로 전체화면 종료
         </div>
       )}
     </div>

@@ -987,11 +987,20 @@ export async function runPresentationAgent(
     // Action에 따라 상태 업데이트
     switch (action.action) {
       case 'complete_briefing':
+        // 새 브리핑 완료 시 기존 슬라이드/구조 초기화 (새 주제로 시작)
+        logger.info('[ppt-agent] Briefing completed, resetting slides and structure for new topic');
         newState = {
           ...newState,
           brief: action.brief as PresentationBrief,
           currentStep: 'design-master',
+          designMaster: undefined, // 새 디자인 선택 필요
+          designOptions: undefined,
+          structure: undefined, // 새 구조 계획 필요
+          slides: [], // 기존 슬라이드 초기화
+          completedSlideIndices: [],
+          currentSlideIndex: undefined,
         };
+        callbacks.onSlides?.([]); // UI에 빈 슬라이드 알림
         callbacks.onStateUpdate?.(newState);
         break;
 
@@ -1013,15 +1022,24 @@ export async function runPresentationAgent(
         callbacks.onStateUpdate?.(newState);
         break;
 
-      case 'complete_structure':
+      case 'complete_structure': {
+        // 구조가 확정되면 기존 슬라이드 초기화 (템플릿에서 온 슬라이드도 제거)
+        // 새 구조에 맞춰 슬라이드를 새로 생성할 것이므로
+        logger.info(
+          '[ppt-agent] Structure completed, clearing existing slides for fresh generation'
+        );
         newState = {
           ...newState,
           structure: action.structure as PresentationStructure,
           currentStep: 'slide-creation',
           currentSlideIndex: 0,
+          slides: [], // 기존 슬라이드 초기화
+          completedSlideIndices: [], // 완료된 인덱스도 초기화
         };
+        callbacks.onSlides?.([]); // UI에 빈 슬라이드 알림
         callbacks.onStateUpdate?.(newState);
         break;
+      }
 
       case 'create_slide': {
         const slideData = action.slide as Record<string, unknown>;
