@@ -32,9 +32,17 @@ interface DocsSyncDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRefresh?: () => Promise<void>;
+  initialTab?: 'personal' | 'team';
+  initialEditTeamId?: string | null;
 }
 
-export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialogProps) {
+export function DocsSyncDialog({
+  open,
+  onOpenChange,
+  onRefresh,
+  initialTab,
+  initialEditTeamId,
+}: DocsSyncDialogProps) {
   // Personal Docs Repo state
   const [_personalRepo, setPersonalRepo] = useState<GitHubSyncConfig | null>(null);
   const [personalForm, setPersonalForm] = useState({
@@ -68,12 +76,27 @@ export function DocsSyncDialog({ open, onOpenChange, onRefresh }: DocsSyncDialog
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'personal' | 'team'>('personal');
 
-  // Load configs on mount
+  // Load configs on mount and apply initial settings
   useEffect(() => {
     if (open) {
       loadConfigs();
+
+      // Set initial tab if provided
+      if (initialTab) {
+        setActiveTab(initialTab);
+      }
     }
-  }, [open]);
+  }, [open, initialTab]);
+
+  // Apply initial edit team ID after team docs are loaded
+  useEffect(() => {
+    if (open && initialEditTeamId && teamDocs.length > 0) {
+      const teamConfig = teamDocs.find((td) => td.id === initialEditTeamId);
+      if (teamConfig) {
+        handleEditTeamDoc(teamConfig);
+      }
+    }
+  }, [open, initialEditTeamId, teamDocs]);
 
   const loadConfigs = async () => {
     try {

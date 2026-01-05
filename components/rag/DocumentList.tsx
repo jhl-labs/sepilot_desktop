@@ -61,6 +61,8 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
   const [viewMode, setViewMode] = useState<ViewMode>('tree');
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [syncDialogInitialTab, setSyncDialogInitialTab] = useState<'personal' | 'team'>('personal');
+  const [syncDialogEditTeamId, setSyncDialogEditTeamId] = useState<string | null>(null);
   const [draggedDoc, setDraggedDoc] = useState<VectorDocument | null>(null);
   const [emptyFolders, setEmptyFolders] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1170,7 +1172,11 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSyncDialogOpen(true)}
+                onClick={() => {
+                  setSyncDialogInitialTab('team');
+                  setSyncDialogEditTeamId(selectedTeamDocsId || null);
+                  setSyncDialogOpen(true);
+                }}
                 disabled={isLoading || disabled}
                 title={t('documents.sync.settings')}
               >
@@ -1259,7 +1265,11 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSyncDialogOpen(true)}
+                onClick={() => {
+                  setSyncDialogInitialTab('personal');
+                  setSyncDialogEditTeamId(null);
+                  setSyncDialogOpen(true);
+                }}
                 disabled={isLoading || disabled}
                 title={t('documents.sync.settings')}
               >
@@ -1480,8 +1490,16 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       {/* GitHub Sync 다이얼로그 */}
       <DocsSyncDialog
         open={syncDialogOpen}
-        onOpenChange={setSyncDialogOpen}
+        onOpenChange={(open) => {
+          setSyncDialogOpen(open);
+          if (!open) {
+            // 대화상자가 닫힐 때 초기값 리셋
+            setSyncDialogEditTeamId(null);
+          }
+        }}
         onRefresh={handleFullRefresh}
+        initialTab={syncDialogInitialTab}
+        initialEditTeamId={syncDialogEditTeamId}
       />
     </div>
   );
