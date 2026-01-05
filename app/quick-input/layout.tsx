@@ -1,6 +1,7 @@
 import Script from 'next/script';
 import '@/app/globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { I18nProvider } from '@/components/providers/i18n-provider';
 
 export default function QuickInputLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -14,7 +15,7 @@ export default function QuickInputLayout({ children }: { children: React.ReactNo
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <I18nProvider>{children}</I18nProvider>
         </ThemeProvider>
       </body>
     </html>

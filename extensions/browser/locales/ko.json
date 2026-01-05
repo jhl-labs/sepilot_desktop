@@ -1,8 +1,9 @@
 {
   "settings": {
-    "title": "Browser",
-    "description": "브라우저 에이전트 설정",
-    "saved": "Browser 설정이 저장되었습니다!",
+    "browser": {
+      "title": "Web Browser",
+      "description": "브라우저 에이전트 설정"
+    },
     "sidebar": {
       "agentLogs": "Agent 실행 로그",
       "viewTools": "사용 가능한 도구 보기",

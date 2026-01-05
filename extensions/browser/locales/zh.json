@@ -1,8 +1,9 @@
 {
   "settings": {
-    "title": "浏览器",
-    "description": "浏览器代理设置",
-    "saved": "浏览器设置已保存！",
+    "browser": {
+      "title": "Web Browser",
+      "description": "浏览器代理设置"
+    },
     "sidebar": {
       "agentLogs": "代理执行日志",
       "viewTools": "查看可用工具",

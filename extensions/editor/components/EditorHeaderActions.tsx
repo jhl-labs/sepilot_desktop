@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, MessageSquare, Bot, FolderOpen, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 
@@ -14,6 +15,7 @@ import { useChatStore } from '@/lib/store/chat-store';
  * - Search
  */
 export function EditorHeaderActions() {
+  const { t } = useTranslation();
   const {
     editorViewMode,
     setEditorViewMode,
@@ -29,7 +31,7 @@ export function EditorHeaderActions() {
         size="icon"
         onClick={() => {
           if (editorViewMode === 'chat') {
-            if (window.confirm('현재 대화 내역을 모두 삭제하시겠습니까?')) {
+            if (window.confirm(t('ext.editor.header.clearChatConfirm'))) {
               clearEditorChat();
               setEditorViewMode('chat');
             }
@@ -37,7 +39,11 @@ export function EditorHeaderActions() {
             setEditorViewMode('chat');
           }
         }}
-        title={editorViewMode === 'chat' ? '새 대화' : 'AI 코딩 어시스턴트'}
+        title={
+          editorViewMode === 'chat'
+            ? t('ext.editor.header.newChat')
+            : t('ext.editor.header.aiAssistant')
+        }
         className={editorViewMode === 'chat' ? 'bg-accent' : ''}
       >
         {editorViewMode === 'chat' ? (
@@ -53,8 +59,8 @@ export function EditorHeaderActions() {
           onClick={() => setEditorAgentMode(editorAgentMode === 'editor' ? 'coding' : 'editor')}
           title={
             editorAgentMode === 'editor'
-              ? 'Chat 모드 (클릭하여 Agent 모드로 전환)'
-              : 'Agent 모드 (클릭하여 Chat 모드로 전환)'
+              ? t('ext.editor.header.chatMode')
+              : t('ext.editor.header.agentMode')
           }
           className={
             editorAgentMode === 'coding'
@@ -73,7 +79,7 @@ export function EditorHeaderActions() {
         variant="ghost"
         size="icon"
         onClick={() => setEditorViewMode('files')}
-        title="파일 탐색기"
+        title={t('ext.editor.header.fileExplorer')}
         className={editorViewMode === 'files' ? 'bg-accent' : ''}
       >
         <FolderOpen className="h-5 w-5" />
@@ -84,7 +90,7 @@ export function EditorHeaderActions() {
           variant="ghost"
           size="icon"
           onClick={() => setEditorViewMode('search')}
-          title="전체 검색"
+          title={t('ext.editor.header.search')}
           className={editorViewMode === 'search' ? 'bg-accent' : ''}
         >
           <Search className="h-5 w-5" />

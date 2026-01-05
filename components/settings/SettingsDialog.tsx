@@ -28,7 +28,7 @@ import { initializeVectorDB } from '@/lib/vectordb/client';
 import { initializeEmbedding } from '@/lib/vectordb/embeddings/client';
 import { isElectron } from '@/lib/platform';
 import { configureWebLLMClient } from '@/lib/llm/web-client';
-import { changeLanguage, SupportedLanguage } from '@/lib/i18n';
+import { changeLanguage, SupportedLanguage, getI18nInstance } from '@/lib/i18n';
 import { GitHubSyncSettings } from '@/components/settings/GitHubSyncSettings';
 import { TeamDocsSettings } from '@/components/settings/TeamDocsSettings';
 import { BackupRestoreSettings } from '@/components/settings/BackupRestoreSettings';
@@ -308,12 +308,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       return null;
     }
 
-    // Load current config from DB to preserve existing models and connections
+    // Load current config from DB to preserve existing settings
     const currentConfigResult = await window.electronAPI.config.load();
-    const currentLLMConfig =
-      currentConfigResult.success && currentConfigResult.data?.llm
-        ? currentConfigResult.data.llm
-        : (appConfigSnapshot?.llm ?? mergeLLMConfig());
+    const currentConfig =
+      currentConfigResult.success && currentConfigResult.data
+        ? currentConfigResult.data
+        : (appConfigSnapshot ?? ({} as AppConfig));
+
+    const currentLLMConfig = currentConfig.llm ?? appConfigSnapshot?.llm ?? mergeLLMConfig();
 
     // Merge LLM config properly - preserve models and connections if LLMConfigV2
     let mergedLLM: LLMConfig | LLMConfigV2;
@@ -354,19 +356,25 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       mergedLLM = currentLLMConfig;
     }
 
+    // Merge all config sections: partial (new) > currentConfig (DB) > appConfigSnapshot (fallback)
     const merged: AppConfig = {
       llm: mergedLLM as any, // LLMConfigV2 is stored as llm in AppConfig
-      network: partial.network ?? appConfigSnapshot?.network ?? mergeNetworkConfig(),
-      vectorDB: partial.vectorDB ?? appConfigSnapshot?.vectorDB,
-      embedding: partial.embedding ?? appConfigSnapshot?.embedding,
-      mcp: partial.mcp ?? appConfigSnapshot?.mcp ?? [],
-      imageGen: partial.imageGen ?? appConfigSnapshot?.imageGen,
-      comfyUI: partial.comfyUI ?? appConfigSnapshot?.comfyUI,
-      github: partial.github ?? appConfigSnapshot?.github,
-      githubSync: partial.githubSync ?? appConfigSnapshot?.githubSync,
-      quickInput: partial.quickInput ?? appConfigSnapshot?.quickInput,
-      beta: partial.beta ?? appConfigSnapshot?.beta,
-      general: partial.general ?? appConfigSnapshot?.general,
+      network:
+        partial.network ??
+        currentConfig.network ??
+        appConfigSnapshot?.network ??
+        mergeNetworkConfig(),
+      vectorDB: partial.vectorDB ?? currentConfig.vectorDB ?? appConfigSnapshot?.vectorDB,
+      embedding: partial.embedding ?? currentConfig.embedding ?? appConfigSnapshot?.embedding,
+      mcp: partial.mcp ?? currentConfig.mcp ?? appConfigSnapshot?.mcp ?? [],
+      imageGen: partial.imageGen ?? currentConfig.imageGen ?? appConfigSnapshot?.imageGen,
+      comfyUI: partial.comfyUI ?? currentConfig.comfyUI ?? appConfigSnapshot?.comfyUI,
+      github: partial.github ?? currentConfig.github ?? appConfigSnapshot?.github,
+      githubSync: partial.githubSync ?? currentConfig.githubSync ?? appConfigSnapshot?.githubSync,
+      quickInput: partial.quickInput ?? currentConfig.quickInput ?? appConfigSnapshot?.quickInput,
+      beta: partial.beta ?? currentConfig.beta ?? appConfigSnapshot?.beta,
+      general: partial.general ?? currentConfig.general ?? appConfigSnapshot?.general,
+      teamDocs: partial.teamDocs ?? currentConfig.teamDocs ?? appConfigSnapshot?.teamDocs ?? [],
     };
 
     const result = await window.electronAPI.config.save(merged);
@@ -697,18 +705,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setMessage(null);
 
     try {
-      let savedConfig: AppConfig | null = null;
       if (isElectron() && window.electronAPI) {
         try {
-          savedConfig = await persistAppConfig({ beta: betaConfig });
+          await persistAppConfig({ beta: betaConfig });
         } catch (error) {
           console.error('Error saving Beta config to DB:', error);
         }
       }
 
-      if (!savedConfig) {
-        localStorage.setItem('sepilot_beta_config', JSON.stringify(betaConfig));
-      }
+      // Always save to localStorage for Sidebar sync (Sidebar reads from localStorage)
+      localStorage.setItem('sepilot_beta_config', JSON.stringify(betaConfig));
 
       // Notify other components about Beta config update
       window.dispatchEvent(
@@ -976,7 +982,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         }
                       }
                       // 언어 변경 완료 후 메시지 설정 (올바른 언어로 번역됨)
-                      setMessage({ type: 'success', text: t('settings.general.saved') });
+                      // i18n 인스턴스에서 직접 번역하여 변경된 언어로 메시지 표시
+                      const i18n = getI18nInstance();
+                      const messageText =
+                        i18n?.t('settings.general.saved') || t('settings.general.saved');
+                      setMessage({ type: 'success', text: messageText });
                     }}
                     isSaving={isSaving}
                     message={message}

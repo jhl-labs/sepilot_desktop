@@ -1,8 +1,9 @@
 {
   "settings": {
-    "title": "Browser",
-    "description": "Browser agent settings",
-    "saved": "Browser settings saved!",
+    "browser": {
+      "title": "Web Browser",
+      "description": "Browser agent settings"
+    },
     "sidebar": {
       "agentLogs": "Agent Execution Logs",
       "viewTools": "View Available Tools",

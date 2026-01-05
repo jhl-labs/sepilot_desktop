@@ -1,8 +1,18 @@
 {
+  "header": {
+    "newChat": "New Chat",
+    "aiAssistant": "AI Coding Assistant",
+    "chatMode": "Chat Mode (Click to switch to Agent mode)",
+    "agentMode": "Agent Mode (Click to switch to Chat mode)",
+    "fileExplorer": "File Explorer",
+    "search": "Search All",
+    "clearChatConfirm": "Are you sure you want to clear all chat history?"
+  },
   "settings": {
-    "title": "Editor",
-    "description": "Code editor settings",
-    "saved": "Editor settings saved!",
+    "editor": {
+      "title": "Code Editor",
+      "description": "Code editor settings"
+    },
     "settings": {
       "title": "Editor Settings",
       "appearance": {

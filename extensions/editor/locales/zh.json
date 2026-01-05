@@ -1,8 +1,18 @@
 {
+  "header": {
+    "newChat": "新对话",
+    "aiAssistant": "AI 编程助手",
+    "chatMode": "Chat 模式（点击切换到 Agent 模式）",
+    "agentMode": "Agent 模式（点击切换到 Chat 模式）",
+    "fileExplorer": "文件资源管理器",
+    "search": "全部搜索",
+    "clearChatConfirm": "确定要删除所有对话历史吗？"
+  },
   "settings": {
-    "title": "编辑器",
-    "description": "代码编辑器设置",
-    "saved": "编辑器设置已保存！",
+    "editor": {
+      "title": "Code Editor",
+      "description": "代码编辑器设置"
+    },
     "settings": {
       "title": "编辑器设置",
       "appearance": {
