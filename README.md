@@ -257,50 +257,7 @@ _당신의 문서를 AI의 지식으로._
 
 [Releases](https://github.com/jhl-labs/sepilot_desktop/releases) 페이지에서 최신 설치 파일을 다운로드하세요.
 
-#### 선택 사항: 터미널 기능 (Windows)
-
-터미널 기능은 네이티브 모듈이 필요합니다. `pnpm install` 시 빌드 에러가 발생하는 경우:
-
-**방법 1: Visual Studio Build Tools 설치**
-
-1. [Build Tools for Visual Studio 2022](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) 다운로드
-2. "C++를 사용한 데스크톱 개발" 워크로드와 함께 설치
-3. `pnpm run rebuild:node-pty` 실행
-
-**방법 2: 터미널 기능 없이 계속 진행**
-
-- 터미널 기능 없이도 앱은 완벽하게 작동합니다
-- 필요할 때 나중에 활성화할 수 있습니다
-
 ### 🧪 개발 & 테스트
-
-#### 테스트 실행
-
-**단위 테스트**:
-
-```bash
-pnpm run test              # 전체 단위 테스트 실행
-pnpm run test:frontend     # 프론트엔드 테스트만
-pnpm run test:backend      # 백엔드 테스트만
-pnpm run test:coverage     # 커버리지 리포트 포함
-```
-
-**E2E 테스트**:
-
-E2E 테스트는 디스플레이 서버가 필요합니다. headless 환경 (예: CI/CD)에서는:
-
-```bash
-# Xvfb 설치 (Ubuntu/Debian)
-sudo apt-get install xvfb
-
-# Xvfb 설치 (Fedora/RHEL)
-sudo dnf install xorg-x11-server-Xvfb
-
-# E2E 테스트 실행
-pnpm run test:e2e
-```
-
-GUI 환경(macOS, Windows, Linux Desktop)에서는 Xvfb 없이 바로 실행됩니다.
 
 ### 📄 License
 
