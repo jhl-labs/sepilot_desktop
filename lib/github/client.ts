@@ -508,14 +508,32 @@ export class GitHubSyncClient {
       });
 
       // .md 파일만 필터링 (docsPath 사용)
-      const normalizedDocsPath = docsPath.endsWith('/') ? docsPath.slice(0, -1) : docsPath;
-      const markdownFiles = tree.tree.filter(
-        (item) =>
-          item.type === 'blob' &&
-          item.path?.startsWith(`${normalizedDocsPath}/`) &&
-          item.path.endsWith('.md') &&
-          item.path !== `${normalizedDocsPath}/README.md` // 인덱스 파일 제외
-      );
+      // docsPath가 "/" 또는 빈 문자열이면 루트 디렉토리로 처리
+      let normalizedDocsPath = docsPath.endsWith('/') ? docsPath.slice(0, -1) : docsPath;
+      if (normalizedDocsPath === '' || normalizedDocsPath === '/') {
+        normalizedDocsPath = '';
+      }
+
+      const isRootPath = normalizedDocsPath === '';
+      const markdownFiles = tree.tree.filter((item) => {
+        if (item.type !== 'blob' || !item.path?.endsWith('.md')) {
+          return false;
+        }
+
+        // README.md 제외 (루트 및 docsPath 내)
+        const filename = item.path.split('/').pop();
+        if (filename === 'README.md') {
+          return false;
+        }
+
+        if (isRootPath) {
+          // 루트 경로인 경우: 모든 .md 파일 포함
+          return true;
+        } else {
+          // 특정 경로인 경우: 해당 경로로 시작하는 파일만
+          return item.path.startsWith(`${normalizedDocsPath}/`);
+        }
+      });
 
       const documents: Array<{ title: string; content: string; metadata: Record<string, any> }> =
         [];
@@ -686,17 +704,29 @@ export class GitHubSyncClient {
     const metadata: Record<string, any> = {};
 
     // 폴더 경로 추출 (docsPath 이후 경로)
-    const normalizedDocsPath = docsPath.endsWith('/') ? docsPath.slice(0, -1) : docsPath;
-    // Escape special regex characters in path
-    const escapedDocsPath = normalizedDocsPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const pathRegex = new RegExp(`${escapedDocsPath}/(.+)\\.md$`);
-    const pathMatch = filepath.match(pathRegex);
-    if (pathMatch) {
-      const fullPath = pathMatch[1];
-      const parts = fullPath.split('/');
-      if (parts.length > 1) {
-        metadata.folderPath = parts.slice(0, -1).join('/');
-      }
+    let normalizedDocsPath = docsPath.endsWith('/') ? docsPath.slice(0, -1) : docsPath;
+    if (normalizedDocsPath === '' || normalizedDocsPath === '/') {
+      normalizedDocsPath = '';
+    }
+
+    // filepath에서 폴더 경로 추출
+    let relativePath: string;
+    if (normalizedDocsPath === '') {
+      // 루트 경로인 경우: filepath 자체가 상대 경로
+      relativePath = filepath;
+    } else {
+      // Escape special regex characters in path
+      const escapedDocsPath = normalizedDocsPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pathRegex = new RegExp(`${escapedDocsPath}/(.+)$`);
+      const pathMatch = filepath.match(pathRegex);
+      relativePath = pathMatch ? pathMatch[1] : filepath;
+    }
+
+    // .md 확장자 제거 후 폴더 경로 추출
+    const withoutExt = relativePath.replace(/\.md$/, '');
+    const parts = withoutExt.split('/');
+    if (parts.length > 1) {
+      metadata.folderPath = parts.slice(0, -1).join('/');
     }
 
     // 첫 번째 # 헤딩을 제목으로 추출
