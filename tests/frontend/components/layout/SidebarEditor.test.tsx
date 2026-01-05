@@ -260,23 +260,6 @@ describe('SidebarEditor', () => {
     });
   });
 
-  describe('Console Logging', () => {
-    it.skip('should log when settings button is clicked', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-      render(<SidebarEditor onSettingsClick={mockOnSettingsClick} />);
-
-      const settingsButton = screen.getByTitle('설정');
-      fireEvent.click(settingsButton);
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[SidebarEditor] Settings button clicked - hiding BrowserView'
-      );
-
-      consoleSpy.mockRestore();
-    });
-  });
-
   describe('AI Assistant Button', () => {
     it('should switch to chat mode when not in chat mode', () => {
       const mockSetEditorViewMode = jest.fn();

@@ -58,9 +58,12 @@ let isMenuVisible = false; // Track menu visibility state
 const isDev = !app.isPackaged;
 
 // Setup electron-serve for production
-if (!isDev) {
-  serve({ directory: 'out' });
-}
+const loadURL = isDev
+  ? null
+  : serve({
+      directory: path.join(app.getAppPath(), 'out'),
+      scheme: 'app',
+    });
 
 // Toggle menu visibility
 function toggleMenuVisibility() {
@@ -135,7 +138,7 @@ function toggleMenuVisibility() {
   }
 }
 
-function createWindow() {
+async function createWindow() {
   // Set window icon based on platform and environment
   let iconPath: string;
   const isWindows = process.platform === 'win32';
@@ -191,6 +194,7 @@ function createWindow() {
     logger.info('Loaded development server');
   } else {
     // 프로덕션: electron-serve를 통해 app:// 프로토콜로 로드
+    // electron-serve가 app:// 프로토콜을 등록하므로 직접 사용
     mainWindow.loadURL('app://./index.html');
     logger.info('Loaded production build via app:// protocol');
   }
@@ -211,7 +215,7 @@ function createWindow() {
 }
 
 // Quick Input 창 생성
-function createQuickInputWindow() {
+async function createQuickInputWindow() {
   quickInputWindow = new BrowserWindow({
     width: 600,
     height: 80,
@@ -233,7 +237,8 @@ function createQuickInputWindow() {
   if (isDev) {
     quickInputWindow.loadURL('http://localhost:3000/quick-input');
   } else {
-    quickInputWindow.loadURL('app://./quick-input.html');
+    // electron-serve를 사용하면 app:// 프로토콜이 자동 등록됨
+    quickInputWindow.loadURL('app://./quick-input/index.html');
   }
 
   // 포커스를 잃으면 창 숨기기 (개발 모드에서는 비활성화)
@@ -253,9 +258,9 @@ function createQuickInputWindow() {
 }
 
 // Quick Input 창 표시
-function showQuickInputWindow() {
+async function showQuickInputWindow() {
   if (!quickInputWindow) {
-    createQuickInputWindow();
+    await createQuickInputWindow();
   }
 
   // 화면 중앙에 위치

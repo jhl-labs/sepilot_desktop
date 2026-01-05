@@ -1525,21 +1525,6 @@
       "tip3": "文件夹会自动创建",
       "cancel": "取消"
     },
-    "refinementPromptDialog": {
-      "title": "LLM 文档精炼提示词",
-      "description": "查看并修改用于文档精炼的提示词。",
-      "systemPrompt": "系统提示词",
-      "restoreDefault": "恢复默认值",
-      "promptPlaceholder": "输入精炼提示词...",
-      "promptDescription": "此提示词指示 LLM 如何精炼文档。",
-      "preview": "文档内容预览",
-      "charCount": "总计 {{count}} 个字符（约 {{tokens}} 个令牌）",
-      "tip": "提示：",
-      "tipDescription": "您可以通过修改提示词来自定义精炼方法。示例：\"翻译成韩语并精炼\"、\"在保持专业术语的同时精炼\"、\"仅提取核心关键词\"等",
-      "cancel": "取消",
-      "refining": "精炼中...",
-      "start": "开始精炼"
-    },
     "vectorDBSettings": {
       "title": "向量数据库设置",
       "sqliteVec": "SQLite-vec（仅 Electron）",

@@ -64,43 +64,28 @@ export const DEFAULT_EDITOR_APPEARANCE: EditorAppearanceConfig = {
 
 /**
  * 기본 Editor LLM 프롬프트
+ *
+ * 주의: 이 값은 타입 안정성을 위한 placeholder입니다.
+ * 실제 기본값은 다국어 시스템을 통해 EditorSettings 컴포넌트에서 설정됩니다.
+ * 하드코딩된 값은 사용하지 않으며, 마이그레이션 로직에 의해 자동으로 번역된 값으로 대체됩니다.
  */
 export const DEFAULT_EDITOR_LLM_PROMPTS: EditorLLMPromptsConfig = {
   // === 코드용 AI 프롬프트 ===
-  explainCodePrompt:
-    '다음 코드가 무엇을 하는지 한국어로 설명해주세요. 간결하고 명확하게 작성해주세요.',
-
-  fixCodePrompt:
-    '다음 코드의 잠재적인 버그를 분석하고 수정해주세요. 수정된 코드만 반환하고, 문제점과 해결책을 주석으로 간략히 설명해주세요.',
-
-  improveCodePrompt:
-    '다음 코드의 가독성, 성능, 유지보수성을 개선해주세요. 개선된 코드만 반환하고, 주요 변경사항을 주석으로 간략히 설명해주세요.',
-
-  completeCodePrompt:
-    '컨텍스트를 기반으로 다음 코드를 완성해주세요. 완성할 코드만 반환하고, 설명은 포함하지 마세요.',
-
-  addCommentsPrompt:
-    '다음 코드에 명확하고 간결한 주석을 추가해주세요. 한국어로 주석을 작성하고, 코드의 의도와 로직을 설명해주세요.',
-
-  generateTestPrompt:
-    '다음 코드에 대한 단위 테스트를 생성해주세요. 해당 언어에 적합한 테스트 프레임워크를 사용하세요.',
+  explainCodePrompt: '',
+  fixCodePrompt: '',
+  improveCodePrompt: '',
+  completeCodePrompt: '',
+  addCommentsPrompt: '',
+  generateTestPrompt: '',
 
   // === 문서용 AI 프롬프트 ===
-  continueWritingPrompt:
-    '다음 텍스트를 자연스럽게 이어서 작성해주세요. 문맥과 스타일을 유지하세요.',
-
-  makeShorterPrompt: '다음 텍스트를 핵심 내용을 유지하면서 더 짧게 요약해주세요.',
-
-  makeLongerPrompt:
-    '다음 텍스트를 더 자세하고 풍부하게 확장해주세요. 추가적인 설명이나 예시를 포함하세요.',
-
-  simplifyPrompt: '다음 텍스트를 더 간단하고 이해하기 쉬운 언어로 다시 작성해주세요.',
-
-  fixGrammarPrompt: '다음 텍스트의 맞춤법과 문법 오류를 수정해주세요. 수정된 텍스트만 반환하세요.',
-
-  summarizePrompt: '다음 내용의 핵심을 요약해주세요. 주요 포인트를 간결하게 정리해주세요.',
-
-  translatePrompt: '다음 텍스트를 {targetLanguage}로 번역해주세요. 자연스러운 표현을 사용하세요.',
+  continueWritingPrompt: '',
+  makeShorterPrompt: '',
+  makeLongerPrompt: '',
+  simplifyPrompt: '',
+  fixGrammarPrompt: '',
+  summarizePrompt: '',
+  translatePrompt: '',
 };
 
 /**

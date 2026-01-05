@@ -1530,21 +1530,6 @@
       "tip3": "Folders are created automatically",
       "cancel": "Cancel"
     },
-    "refinementPromptDialog": {
-      "title": "LLM Document Refinement Prompt",
-      "description": "Review and modify the prompt used for document refinement.",
-      "systemPrompt": "System Prompt",
-      "restoreDefault": "Restore Default",
-      "promptPlaceholder": "Enter refinement prompt...",
-      "promptDescription": "This prompt instructs the LLM on how to refine the document.",
-      "preview": "Document Content Preview",
-      "charCount": "Total {{count}} characters (approx. {{tokens}} tokens)",
-      "tip": "Tip:",
-      "tipDescription": "You can customize the refinement method by modifying the prompt. Examples: \"Translate to Korean and refine\", \"Refine while maintaining technical terms\", \"Extract core keywords only\", etc.",
-      "cancel": "Cancel",
-      "refining": "Refining...",
-      "start": "Start Refinement"
-    },
     "vectorDBSettings": {
       "title": "Vector Database Settings",
       "sqliteVec": "SQLite-vec (Electron Only)",

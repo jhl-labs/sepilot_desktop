@@ -185,21 +185,6 @@ describe('SidebarChat', () => {
       expect(mockElectronAPI.browserView.hideAll).not.toHaveBeenCalled();
       expect(mockOnGalleryClick).toHaveBeenCalled();
     });
-
-    it.skip('should log when Gallery button is clicked', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-      render(<SidebarChat onGalleryClick={mockOnGalleryClick} />);
-
-      const galleryButton = screen.getByTitle('이미지 갤러리');
-      fireEvent.click(galleryButton);
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[SidebarChat] Gallery button clicked - hiding BrowserView'
-      );
-
-      consoleSpy.mockRestore();
-    });
   });
 
   describe('BrowserView Hiding - Settings Button', () => {
@@ -255,21 +240,6 @@ describe('SidebarChat', () => {
 
       expect(mockElectronAPI.browserView.hideAll).not.toHaveBeenCalled();
       expect(mockOnSettingsClick).toHaveBeenCalled();
-    });
-
-    it.skip('should log when Settings button is clicked', () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-      render(<SidebarChat onSettingsClick={mockOnSettingsClick} />);
-
-      const settingsButton = screen.getByTitle('설정');
-      fireEvent.click(settingsButton);
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[SidebarChat] Settings button clicked - hiding BrowserView'
-      );
-
-      consoleSpy.mockRestore();
     });
 
     it('should open persona dialog when persona button is clicked', async () => {

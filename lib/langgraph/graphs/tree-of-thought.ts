@@ -8,6 +8,7 @@ import { generateWithToolsNode } from '../nodes/generate';
 import { toolsNode } from '../nodes/tools';
 
 import { logger } from '@/lib/utils/logger';
+import type { SupportedLanguage } from '@/lib/i18n';
 /**
  * Tree of Thought Graph
  *
@@ -17,6 +18,57 @@ import { logger } from '@/lib/utils/logger';
  * 3. 각 경로 평가 (Evaluate)
  * 4. 최선의 경로 선택 및 답변 생성 (Select & Synthesize)
  */
+
+/**
+ * 사용자 언어 설정 가져오기
+ */
+async function getUserLanguage(): Promise<SupportedLanguage> {
+  try {
+    // Main Process에서만 동작
+    if (typeof window !== 'undefined') {
+      // Renderer 프로세스에서는 localStorage에서 가져오기
+      try {
+        const saved = localStorage.getItem('sepilot_language');
+        if (saved && ['ko', 'en', 'zh'].includes(saved)) {
+          return saved as SupportedLanguage;
+        }
+      } catch {
+        // localStorage 접근 실패 시 기본값
+      }
+      return 'ko';
+    }
+
+    const { databaseService } = await import('../../../electron/services/database');
+    const configStr = databaseService.getSetting('app_config');
+    if (!configStr) {
+      return 'ko';
+    }
+
+    const appConfig = JSON.parse(configStr);
+    if (appConfig?.general?.language && ['ko', 'en', 'zh'].includes(appConfig.general.language)) {
+      return appConfig.general.language as SupportedLanguage;
+    }
+  } catch (error) {
+    logger.error('[ToT] Failed to get user language:', error);
+  }
+  return 'ko';
+}
+
+/**
+ * 언어에 따른 답변 언어 지시 메시지 생성
+ */
+function getLanguageInstruction(language: SupportedLanguage): string {
+  switch (language) {
+    case 'ko':
+      return '반드시 한국어로 답변하세요.';
+    case 'en':
+      return 'Please respond in English.';
+    case 'zh':
+      return '请用中文回答。';
+    default:
+      return '반드시 한국어로 답변하세요.';
+  }
+}
 
 /**
  * RAG 검색 헬퍼 함수
@@ -213,6 +265,10 @@ async function decomposeNode(state: TreeOfThoughtState) {
     );
   }
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   const systemMessage: Message = {
     id: 'system',
 
@@ -232,7 +288,7 @@ async function decomposeNode(state: TreeOfThoughtState) {
 
   
 
-  포괄적이면서도 간결하게 작성하세요. 반드시 한국어로 답변하세요.`,
+  포괄적이면서도 간결하게 작성하세요. ${languageInstruction}`,
 
     created_at: Date.now(),
   };
@@ -279,6 +335,10 @@ async function generateBranchesNode(state: TreeOfThoughtState) {
 
   const branches: Array<{ id: string; content: string; score: number }> = [];
 
+  // 사용자 언어 설정 가져오기 (루프 밖에서 한 번만 가져오기)
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   // 3가지 다른 접근 방식으로 답변 생성
   const approaches = [
     { name: '실용적 접근', desc: '실용적이고 실행 가능한 조언에 집중' },
@@ -297,7 +357,7 @@ async function generateBranchesNode(state: TreeOfThoughtState) {
 
 ${approaches[i].desc}
 
-아래 분해를 바탕으로 이 특정 접근 방식에 집중하여 답변을 제공하세요. 반드시 한국어로 답변하세요.`,
+아래 분해를 바탕으로 이 특정 접근 방식에 집중하여 답변을 제공하세요. ${languageInstruction}`,
       created_at: Date.now(),
     };
 
@@ -345,6 +405,10 @@ async function evaluateBranchesNode(state: TreeOfThoughtState) {
     state.conversationId
   );
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   const systemMessage: Message = {
     id: 'system-eval',
     role: 'system',
@@ -356,7 +420,7 @@ async function evaluateBranchesNode(state: TreeOfThoughtState) {
 3. 명확성과 일관성 (0-10)
 4. 통찰의 깊이 (0-10)
 
-각 답변에 대해 총점(0-40)만 제공하세요. 형식: "점수: X". 반드시 한국어로 답변하세요.`,
+각 답변에 대해 총점(0-40)만 제공하세요. 형식: "점수: X". ${languageInstruction}`,
     created_at: Date.now(),
   };
 
@@ -440,6 +504,10 @@ async function synthesizeNode(state: TreeOfThoughtState) {
     .map((b, idx) => `### Approach ${idx + 1} (Score: ${b.score}):\n${b.content}`)
     .join('\n\n');
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   const synthesizePrompt: Message = {
     id: 'synthesize-prompt',
     role: 'user',
@@ -451,7 +519,7 @@ async function synthesizeNode(state: TreeOfThoughtState) {
 탐색된 상위 접근 방식들:
 ${topBranches}
 
-이러한 접근 방식들의 최고의 측면을 포함하는 최종적이고 포괄적인 답변을 제공하세요. 반드시 한국어로 답변하세요.`,
+이러한 접근 방식들의 최고의 측면을 포함하는 최종적이고 포괄적인 답변을 제공하세요. ${languageInstruction}`,
     created_at: Date.now(),
   };
 

@@ -136,7 +136,7 @@ jest.mock('@/lib/vectordb/embeddings/client', () => ({
   initializeEmbedding: jest.fn(),
 }));
 
-describe.skip('SettingsDialog', () => {
+describe('SettingsDialog', () => {
   const mockOnOpenChange = jest.fn();
 
   beforeEach(() => {

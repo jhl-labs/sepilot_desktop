@@ -657,8 +657,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     } else if (typeof window !== 'undefined') {
       try {
         const savedLang = localStorage.getItem('sepilot_language');
-        if (savedLang === 'en') defaultTitle = 'New Conversation';
-      } catch { }
+        if (savedLang === 'en') {
+          defaultTitle = 'New Conversation';
+        }
+      } catch {
+        // localStorage 접근 실패 시 기본값 유지
+      }
     }
 
     const newConversation: Conversation = {
@@ -1086,10 +1090,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const updatedConversations = state.conversations.map((c) =>
         c.id === id
           ? {
-            ...c,
-            chatSettings: settings,
-            updated_at: Date.now(),
-          }
+              ...c,
+              chatSettings: settings,
+              updated_at: Date.now(),
+            }
           : c
       );
 

@@ -41,7 +41,7 @@ jest.mock('@/components/browser/BrowserToolsList', () => ({
   BrowserToolsList: () => <div data-testid="browser-tools-list">Tools List</div>,
 }));
 
-describe.skip('SidebarBrowser', () => {
+describe('SidebarBrowser', () => {
   const mockClearBrowserChat = jest.fn();
   const mockSetBrowserViewMode = jest.fn();
 

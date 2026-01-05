@@ -159,10 +159,10 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
         {mode === 'main' && (
           <div className="text-center">
             <p className={`font-medium ${style?.compact ? 'text-sm' : 'text-base'}`}>
-              메시지를 입력하여 대화를 시작하세요
+              {t('chat.emptyState.startConversation')}
             </p>
             <p className={`mt-1 opacity-60 ${style?.compact ? 'text-xs' : 'text-sm'}`}>
-              AI 어시스턴트가 도와드리겠습니다
+              {t('chat.emptyState.aiAssistantHelp')}
             </p>
           </div>
         )}

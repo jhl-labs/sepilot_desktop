@@ -1528,21 +1528,6 @@
       "tip3": "폴더는 자동으로 생성됩니다",
       "cancel": "취소"
     },
-    "refinementPromptDialog": {
-      "title": "LLM 문서 정제 프롬프트",
-      "description": "문서 정제에 사용할 프롬프트를 확인하고 수정할 수 있습니다.",
-      "systemPrompt": "시스템 프롬프트",
-      "restoreDefault": "기본값으로 복원",
-      "promptPlaceholder": "정제 프롬프트를 입력하세요...",
-      "promptDescription": "이 프롬프트는 LLM에게 문서를 어떻게 정제할지 지시합니다.",
-      "preview": "문서 내용 미리보기",
-      "charCount": "총 {{count}}자 (약 {{tokens}} 토큰)",
-      "tip": "팁:",
-      "tipDescription": "프롬프트를 수정하여 정제 방식을 커스터마이즈할 수 있습니다. 예: \"한국어로 번역하고 정제\", \"전문 용어는 유지하면서 정제\", \"핵심 키워드만 추출\" 등",
-      "cancel": "취소",
-      "refining": "정제 중...",
-      "start": "정제 시작"
-    },
     "vectorDBSettings": {
       "title": "Vector Database 설정",
       "sqliteVec": "SQLite-vec (Electron 전용)",

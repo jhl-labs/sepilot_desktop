@@ -6,7 +6,75 @@ import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-c
 import { LLMService } from '@/lib/llm/service';
 
 import { logger } from '@/lib/utils/logger';
+import type { SupportedLanguage } from '@/lib/i18n';
 const MAX_ITERATIONS = 3;
+
+/**
+ * 사용자 언어 설정 가져오기
+ */
+async function getUserLanguage(): Promise<SupportedLanguage> {
+  try {
+    // Main Process에서만 동작
+    if (typeof window !== 'undefined') {
+      // Renderer 프로세스에서는 localStorage에서 가져오기
+      try {
+        const saved = localStorage.getItem('sepilot_language');
+        if (saved && ['ko', 'en', 'zh'].includes(saved)) {
+          return saved as SupportedLanguage;
+        }
+      } catch {
+        // localStorage 접근 실패 시 기본값
+      }
+      return 'ko';
+    }
+
+    const { databaseService } = await import('../../../electron/services/database');
+    const configStr = databaseService.getSetting('app_config');
+    if (!configStr) {
+      return 'ko';
+    }
+
+    const appConfig = JSON.parse(configStr);
+    if (appConfig?.general?.language && ['ko', 'en', 'zh'].includes(appConfig.general.language)) {
+      return appConfig.general.language as SupportedLanguage;
+    }
+  } catch (error) {
+    logger.error('[DeepWebResearch] Failed to get user language:', error);
+  }
+  return 'ko';
+}
+
+/**
+ * 언어에 따른 답변 언어 지시 메시지 생성
+ */
+function getLanguageInstruction(language: SupportedLanguage): string {
+  switch (language) {
+    case 'ko':
+      return '반드시 한국어로 답변하세요.';
+    case 'en':
+      return 'Please respond in English.';
+    case 'zh':
+      return '请用中文回答。';
+    default:
+      return '반드시 한국어로 답변하세요.';
+  }
+}
+
+/**
+ * 언어에 따른 후속 질문 언어 지시 메시지 생성
+ */
+function getFollowUpLanguageInstruction(language: SupportedLanguage): string {
+  switch (language) {
+    case 'ko':
+      return '한국어로';
+    case 'en':
+      return 'in English';
+    case 'zh':
+      return '用中文';
+    default:
+      return '한국어로';
+  }
+}
 
 // RAG 헬퍼 함수
 async function retrieveContextIfEnabled(query: string): Promise<string> {
@@ -413,6 +481,10 @@ async function synthesizeNode(state: AgentState): Promise<Partial<AgentState>> {
     state.conversationId
   );
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   const allSearchOutputs =
     state.toolResults
       ?.map((r) => {
@@ -427,7 +499,7 @@ async function synthesizeNode(state: AgentState): Promise<Partial<AgentState>> {
     content: `당신은 웹 검색 결과를 바탕으로 사용자의 질문에 대해 포괄적이고 정확한 답변을 생성하는 AI입니다.
 수집된 정보를 정확하게 요약하고, 질문에 직접적으로 답변하세요.
 
-만약 검색 결과가 없거나 불충분하다면(검색 실패, 제한 등), 당신의 내부 지식을 최대한 활용하여 답변하고 검색에 어려움이 있었음을 사용자에게 알리세요.`,
+만약 검색 결과가 없거나 불충분하다면(검색 실패, 제한 등), 당신의 내부 지식을 최대한 활용하여 답변하고 검색에 어려움이 있었음을 사용자에게 알리세요. ${languageInstruction}`,
     created_at: Date.now(),
   };
 
@@ -465,10 +537,14 @@ ${allSearchOutputs}
       created_at: Date.now(),
     };
 
+    // 사용자 언어 설정 가져오기
+    const userLanguage = await getUserLanguage();
+    const followUpLanguage = getFollowUpLanguageInstruction(userLanguage);
+
     const followUpPrompt: Message = {
       id: 'follow-up-prompt',
       role: 'user',
-      content: `위 답변을 바탕으로 사용자가 이어서 궁금해할 만한 "추천 후속 질문" 3가지를 한국어로 제안해주세요.\n질문 내용만 간결하게 번호를 매겨 작성하세요. (설명 불필요)`,
+      content: `위 답변을 바탕으로 사용자가 이어서 궁금해할 만한 "추천 후속 질문" 3가지를 ${followUpLanguage} 제안해주세요.\n질문 내용만 간결하게 번호를 매겨 작성하세요. (설명 불필요)`,
       created_at: Date.now(),
     };
 

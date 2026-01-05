@@ -8,6 +8,7 @@ import { generateWithToolsNode } from '../nodes/generate';
 import { toolsNode } from '../nodes/tools';
 
 import { logger } from '@/lib/utils/logger';
+import type { SupportedLanguage } from '@/lib/i18n';
 /**
  * Sequential Thinking Graph
  *
@@ -17,6 +18,57 @@ import { logger } from '@/lib/utils/logger';
  * 3. 각 단계 실행 (Execute)
  * 4. 최종 답변 생성 (Synthesize)
  */
+
+/**
+ * 사용자 언어 설정 가져오기
+ */
+async function getUserLanguage(): Promise<SupportedLanguage> {
+  try {
+    // Main Process에서만 동작
+    if (typeof window !== 'undefined') {
+      // Renderer 프로세스에서는 localStorage에서 가져오기
+      try {
+        const saved = localStorage.getItem('sepilot_language');
+        if (saved && ['ko', 'en', 'zh'].includes(saved)) {
+          return saved as SupportedLanguage;
+        }
+      } catch {
+        // localStorage 접근 실패 시 기본값
+      }
+      return 'ko';
+    }
+
+    const { databaseService } = await import('../../../electron/services/database');
+    const configStr = databaseService.getSetting('app_config');
+    if (!configStr) {
+      return 'ko';
+    }
+
+    const appConfig = JSON.parse(configStr);
+    if (appConfig?.general?.language && ['ko', 'en', 'zh'].includes(appConfig.general.language)) {
+      return appConfig.general.language as SupportedLanguage;
+    }
+  } catch (error) {
+    logger.error('[Sequential] Failed to get user language:', error);
+  }
+  return 'ko';
+}
+
+/**
+ * 언어에 따른 답변 언어 지시 메시지 생성
+ */
+function getLanguageInstruction(language: SupportedLanguage): string {
+  switch (language) {
+    case 'ko':
+      return '반드시 한국어로 답변하세요.';
+    case 'en':
+      return 'Please respond in English.';
+    case 'zh':
+      return '请用中文回答。';
+    default:
+      return '반드시 한국어로 답변하세요.';
+  }
+}
 
 /**
  * RAG 검색 헬퍼 함수
@@ -172,6 +224,10 @@ async function analyzeNode(state: ChatState) {
     emitStreamingChunk(`\n📚 **사전 수집된 정보를 참조합니다.**\n\n`, state.conversationId);
   }
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   const systemMessage: Message = {
     id: 'system',
     role: 'system',
@@ -182,7 +238,7 @@ async function analyzeNode(state: ChatState) {
 2. 관련된 핵심 개념들
 3. 답변에 필요한 정보
 
-명확하고 구조화된 형식으로 분석을 제공하세요. 반드시 한국어로 답변하세요.`,
+명확하고 구조화된 형식으로 분석을 제공하세요. ${languageInstruction}`,
     created_at: Date.now(),
   };
 
@@ -220,13 +276,17 @@ async function planNode(state: ChatState) {
   emitStreamingChunk('\n\n---\n\n## 📋 2단계: 계획 수립\n\n', state.conversationId);
   emitStreamingChunk('**단계 진행 중:** 실행 계획을 수립 중입니다...\n\n', state.conversationId);
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   const systemMessage: Message = {
     id: 'system',
     role: 'system',
     content: `당신은 전략적 계획 AI입니다. 분석을 바탕으로 질문에 답하기 위한 단계별 계획을 수립하세요.
 
 포괄적인 답변으로 이어질 단계 목록(3-5단계)을 번호를 붙여 작성하세요.
-각 단계는 명확하고 실행 가능해야 합니다. 반드시 한국어로 답변하세요.`,
+각 단계는 명확하고 실행 가능해야 합니다. ${languageInstruction}`,
     created_at: Date.now(),
   };
 
@@ -264,13 +324,17 @@ async function executeNode(state: ChatState) {
   emitStreamingChunk('\n\n---\n\n## ⚙️ 3단계: 계획 실행\n\n', state.conversationId);
   emitStreamingChunk('**단계 진행 중:** 수립된 계획을 실행 중입니다...\n\n', state.conversationId);
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   const systemMessage: Message = {
     id: 'system',
     role: 'system',
     content: `당신은 계획의 각 단계를 신중하게 실행하는 세부 지향적인 AI입니다.
 
 각 단계를 거치면서 상세한 추론과 정보를 제공하세요.
-철저하게 여러 각도를 고려하세요. 반드시 한국어로 답변하세요.`,
+철저하게 여러 각도를 고려하세요. ${languageInstruction}`,
     created_at: Date.now(),
   };
 
@@ -315,6 +379,10 @@ async function synthesizeNode(state: ChatState) {
     created_at: Date.now(),
   };
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   const synthesizePrompt: Message = {
     id: 'synthesize-prompt',
     role: 'user',
@@ -324,7 +392,7 @@ ${state.context}
 
 원본 질문: ${state.messages[state.messages.length - 1].content}
 
-위 사고 과정의 모든 통찰을 포함하는 명확하고 잘 구조화된 답변을 제공하세요. 반드시 한국어로 답변하세요.`,
+위 사고 과정의 모든 통찰을 포함하는 명확하고 잘 구조화된 답변을 제공하세요. ${languageInstruction}`,
     created_at: Date.now(),
   };
 

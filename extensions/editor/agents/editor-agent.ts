@@ -6,6 +6,7 @@ import { emitStreamingChunk, isAborted } from '@/lib/llm/streaming-callback';
 import { editorToolsRegistry, registerAllEditorTools } from '../tools/index';
 
 import { logger } from '@/lib/utils/logger';
+import type { SupportedLanguage } from '@/lib/i18n';
 /**
  * Editor Agent Graph
  *
@@ -23,6 +24,57 @@ import { logger } from '@/lib/utils/logger';
  * - Autocomplete와 Code Action 시 벡터 DB에서 관련 문서 자동 검색
  * - 검색된 문서를 컨텍스트로 포함하여 더 정확한 코드 제안 제공
  */
+
+/**
+ * 사용자 언어 설정 가져오기
+ */
+async function getUserLanguage(): Promise<SupportedLanguage> {
+  try {
+    // Main Process에서만 동작
+    if (typeof window !== 'undefined') {
+      // Renderer 프로세스에서는 localStorage에서 가져오기
+      try {
+        const saved = localStorage.getItem('sepilot_language');
+        if (saved && ['ko', 'en', 'zh'].includes(saved)) {
+          return saved as SupportedLanguage;
+        }
+      } catch {
+        // localStorage 접근 실패 시 기본값
+      }
+      return 'ko';
+    }
+
+    const { databaseService } = await import('../../../electron/services/database');
+    const configStr = databaseService.getSetting('app_config');
+    if (!configStr) {
+      return 'ko';
+    }
+
+    const appConfig = JSON.parse(configStr);
+    if (appConfig?.general?.language && ['ko', 'en', 'zh'].includes(appConfig.general.language)) {
+      return appConfig.general.language as SupportedLanguage;
+    }
+  } catch (error) {
+    logger.error('[EditorAgent] Failed to get user language:', error);
+  }
+  return 'ko';
+}
+
+/**
+ * 언어에 따른 답변 언어 지시 메시지 생성
+ */
+function getLanguageInstruction(language: SupportedLanguage): string {
+  switch (language) {
+    case 'ko':
+      return 'Respond in Korean';
+    case 'en':
+      return 'Respond in English';
+    case 'zh':
+      return '请用中文回答';
+    default:
+      return 'Respond in Korean';
+  }
+}
 
 export interface EditorAgentState extends AgentState {
   // Working directory for file operations
@@ -405,6 +457,10 @@ export class EditorAgentGraph {
       tools.map((t) => t.function.name)
     );
 
+    // 사용자 언어 설정 가져오기
+    const userLanguage = await getUserLanguage();
+    const languageInstruction = getLanguageInstruction(userLanguage);
+
     // 시스템 메시지 구성
     let messages = [...state.messages];
     const systemMessages: Message[] = [];
@@ -457,7 +513,7 @@ You ONLY have access to LOCAL file system tools. You CANNOT access external APIs
 - Always confirm actions with clear, concise feedback
 - Execute multi-step tasks systematically
 
-Respond in Korean and use LOCAL tools efficiently.`,
+${languageInstruction} and use LOCAL tools efficiently.`,
       created_at: Date.now(),
     };
     systemMessages.push(baseSystemMessage);

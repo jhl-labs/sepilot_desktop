@@ -8,6 +8,7 @@ import { generateWithToolsNode } from '../nodes/generate';
 import { toolsNode } from '../nodes/tools';
 
 import { logger } from '@/lib/utils/logger';
+import type { SupportedLanguage } from '@/lib/i18n';
 /**
  * Deep Thinking Graph
  *
@@ -20,6 +21,57 @@ import { logger } from '@/lib/utils/logger';
  * 4. 통합 및 검증 (Integration & Verification)
  * 5. 최종 답변 생성 (Final Synthesis)
  */
+
+/**
+ * 사용자 언어 설정 가져오기
+ */
+async function getUserLanguage(): Promise<SupportedLanguage> {
+  try {
+    // Main Process에서만 동작
+    if (typeof window !== 'undefined') {
+      // Renderer 프로세스에서는 localStorage에서 가져오기
+      try {
+        const saved = localStorage.getItem('sepilot_language');
+        if (saved && ['ko', 'en', 'zh'].includes(saved)) {
+          return saved as SupportedLanguage;
+        }
+      } catch {
+        // localStorage 접근 실패 시 기본값
+      }
+      return 'ko';
+    }
+
+    const { databaseService } = await import('../../../electron/services/database');
+    const configStr = databaseService.getSetting('app_config');
+    if (!configStr) {
+      return 'ko';
+    }
+
+    const appConfig = JSON.parse(configStr);
+    if (appConfig?.general?.language && ['ko', 'en', 'zh'].includes(appConfig.general.language)) {
+      return appConfig.general.language as SupportedLanguage;
+    }
+  } catch (error) {
+    logger.error('[Deep] Failed to get user language:', error);
+  }
+  return 'ko';
+}
+
+/**
+ * 언어에 따른 답변 언어 지시 메시지 생성
+ */
+function getLanguageInstruction(language: SupportedLanguage): string {
+  switch (language) {
+    case 'ko':
+      return '반드시 한국어로 답변하세요.';
+    case 'en':
+      return 'Please respond in English.';
+    case 'zh':
+      return '请用中文回答。';
+    default:
+      return '반드시 한국어로 답변하세요.';
+  }
+}
 
 /**
  * RAG 검색 헬퍼 함수
@@ -199,6 +251,10 @@ export type DeepThinkingState = typeof DeepThinkingStateAnnotation.State;
 async function initialAnalysisNode(state: DeepThinkingState) {
   logger.info('[Deep] Step 1/5: Initial comprehensive analysis...');
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   // 단계 시작 알림
   emitStreamingChunk('\n\n## 🧠 1단계: 초기 심층 분석 (1/5)\n\n', state.conversationId);
   emitStreamingChunk(
@@ -225,7 +281,7 @@ async function initialAnalysisNode(state: DeepThinkingState) {
 3. 이 질문이 복잡하거나 미묘한 이유 고려하기
 4. 탐색할 가치가 있는 관점 결정하기
 
-철저하고 상세하게 분석하세요. 반드시 한국어로 답변하세요.`,
+철저하고 상세하게 분석하세요. ${languageInstruction}`,
     created_at: Date.now(),
   };
 
@@ -276,6 +332,10 @@ async function explorePerspectivesNode(state: DeepThinkingState) {
   const perspectives: Array<{ id: string; name: string; content: string; deepAnalysis: string }> =
     [];
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   for (const type of perspectiveTypes) {
     // 각 관점 시작 알림
     emitStreamingChunk(`\n### 👁️ ${type.name}\n\n`, state.conversationId);
@@ -287,7 +347,7 @@ async function explorePerspectivesNode(state: DeepThinkingState) {
 
 집중 영역: ${type.focus}
 
-초기 분석을 바탕으로 이 특정 관점에서 통찰을 제공하세요. 반드시 한국어로 답변하세요.`,
+초기 분석을 바탕으로 이 특정 관점에서 통찰을 제공하세요. ${languageInstruction}`,
       created_at: Date.now(),
     };
 
@@ -343,6 +403,10 @@ async function deepAnalysisNode(state: DeepThinkingState) {
     deepAnalysis: string;
   }> = [];
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   for (const perspective of state.perspectives) {
     // 각 심화 분석 시작 알림
     emitStreamingChunk(`\n### 🔍 ${perspective.name} 심화 분석\n\n`, state.conversationId);
@@ -358,7 +422,7 @@ async function deepAnalysisNode(state: DeepThinkingState) {
 3. 아이디어 연결 및 패턴 파악하기
 4. 논증을 추론으로 강화하기
 
-상세하고 심층적인 분석을 제공하세요. 반드시 한국어로 답변하세요.`,
+상세하고 심층적인 분석을 제공하세요. ${languageInstruction}`,
       created_at: Date.now(),
     };
 
@@ -406,6 +470,10 @@ async function integrateAndVerifyNode(state: DeepThinkingState) {
   );
   emitStreamingChunk('### 📦 관점 통합\n\n', state.conversationId);
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   const systemMessage1: Message = {
     id: 'system-integrate',
     role: 'system',
@@ -417,7 +485,7 @@ async function integrateAndVerifyNode(state: DeepThinkingState) {
 3. 상호보완적 통찰 종합하기
 4. 포괄적 이해 구축하기
 
-철저하고 섬세하게 분석하세요. 반드시 한국어로 답변하세요.`,
+철저하고 섬세하게 분석하세요. ${languageInstruction}`,
     created_at: Date.now(),
   };
 
@@ -458,7 +526,7 @@ async function integrateAndVerifyNode(state: DeepThinkingState) {
 3. 논리적 일관성 확보하기
 4. 주요 결론 검증하기
 
-검증 평가를 제공하세요. 반드시 한국어로 답변하세요.`,
+검증 평가를 제공하세요. ${languageInstruction}`,
     created_at: Date.now(),
   };
 
@@ -500,13 +568,17 @@ async function finalSynthesisNode(state: DeepThinkingState) {
     state.conversationId
   );
 
+  // 사용자 언어 설정 가져오기
+  const userLanguage = await getUserLanguage();
+  const languageInstruction = getLanguageInstruction(userLanguage);
+
   const systemMessage: Message = {
     id: 'system-final',
     role: 'system',
     content: `${createBaseSystemMessage()}\n\n당신은 광범위한 사고 과정을 거쳤습니다.
 이제 이 모든 심층 사고의 정점을 나타내는 최종적이고 포괄적이며 잘 구조화된 답변을 제공하세요.
 
-명확하고 통찰력 있으며 질문을 철저히 다루는 답변을 작성하세요. 반드시 한국어로 답변하세요.`,
+명확하고 통찰력 있으며 질문을 철저히 다루는 답변을 작성하세요. ${languageInstruction}`,
     created_at: Date.now(),
   };
 
