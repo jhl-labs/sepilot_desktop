@@ -166,7 +166,7 @@ export class TerminalAgentGraph {
       id: `assistant-${Date.now()}`,
       role: 'assistant',
       content: response.content,
-      tool_calls: response.toolCalls,
+      tool_calls: response.toolCalls as any,
       created_at: Date.now(),
     };
 
