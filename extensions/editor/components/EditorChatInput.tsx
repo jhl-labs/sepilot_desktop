@@ -81,12 +81,14 @@ export function EditorChatInput() {
       let accumulatedContent = '';
 
       if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.langgraph) {
-        // Electron: Use Editor Agent with Advanced Tools (Cursor/Cline 수준)
+        // Electron: Use Editor Agent with Advanced Tools (Cursor/Cline 완전체)
         const graphConfig = {
           thinkingMode: 'editor-agent' as const,
           enableRAG: true, // RAG 활성화
           enableTools: true, // Built-in Editor Tools 활성화
           enableMCPTools: true, // MCP Tools 활성화 (GitHub, Filesystem, Brave Search 등)
+          enablePlanning: true, // Planning Pipeline 활성화 ⭐ NEW
+          enableVerification: true, // Verification System 활성화 ⭐ NEW
           enableImageGeneration: false,
         };
 

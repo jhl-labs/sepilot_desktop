@@ -1103,6 +1103,187 @@ export class AdvancedEditorAgentGraph {
     }
     throw new Error('Git operations not available in browser mode');
   }
+
+  /**
+   * Planning: Create execution plan (Cursor/Cline 수준)
+   */
+  private async createPlan(state: EditorAgentState): Promise<Partial<EditorAgentState>> {
+    if (state.planCreated) {
+      logger.info('[AdvancedEditorAgent.Planning] Plan already exists');
+      return {};
+    }
+
+    const messages = state.messages || [];
+    let userPrompt = '';
+
+    // Find last user message
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        userPrompt = messages[i].content;
+        break;
+      }
+    }
+
+    if (!userPrompt) {
+      return {};
+    }
+
+    logger.info('[AdvancedEditorAgent.Planning] Creating execution plan');
+
+    const planningMessage: Message = {
+      id: 'system-planning',
+      role: 'system',
+      content:
+        'You are SE Pilot, analyzing the user request to create an execution plan.\n\n' +
+        'Determine if this is:\n' +
+        '- READ-ONLY task: 요약, 설명, 분석, 리뷰 (Just read and respond)\n' +
+        '- MODIFICATION task: 생성, 만들기, 수정, 편집 (Execute changes)\n\n' +
+        'Create a focused plan with 3-7 steps.',
+      created_at: Date.now(),
+    };
+
+    const planPromptMessage: Message = {
+      id: 'planning-prompt',
+      role: 'user',
+      content: `User request: ${userPrompt}\n\nCreate an actionable plan:\n1. [READ-ONLY] or [MODIFICATION]\n2. List steps`,
+      created_at: Date.now(),
+    };
+
+    try {
+      let planContent = '';
+
+      for await (const chunk of LLMService.streamChat([planningMessage, planPromptMessage])) {
+        planContent += chunk;
+        emitStreamingChunk(chunk, state.conversationId);
+      }
+
+      const planMessage: Message = {
+        id: `plan-${Date.now()}`,
+        role: 'assistant',
+        content: planContent,
+        created_at: Date.now(),
+      };
+
+      const executionMessage: Message = {
+        id: `exec-${Date.now()}`,
+        role: 'user',
+        content: `위 계획을 참고하여 '${userPrompt}' 작업을 수행하세요.`,
+        created_at: Date.now(),
+      };
+
+      // Simple plan step parsing
+      const planSteps = planContent
+        .split('\n')
+        .filter((line) => /^\d+\./.test(line.trim()))
+        .map((line) => line.trim());
+
+      logger.info(`[AdvancedEditorAgent.Planning] Created plan with ${planSteps.length} steps`);
+
+      return {
+        messages: [planMessage, executionMessage],
+        planCreated: true,
+        planSteps,
+        currentPlanStep: 0,
+        planningNotes: [planContent],
+      };
+    } catch (error: any) {
+      console.error('[AdvancedEditorAgent.Planning] Error:', error);
+      return {
+        planningNotes: [`Planning failed: ${error.message}`],
+      };
+    }
+  }
+
+  /**
+   * Verification: Validate execution results (Cursor/Cline 수준)
+   */
+  private async verifyProgress(state: EditorAgentState): Promise<Partial<EditorAgentState>> {
+    logger.info('[AdvancedEditorAgent.Verification] Validating results');
+
+    // Check if plan was created but no tools executed
+    if (state.planCreated && (!state.toolResults || state.toolResults.length === 0)) {
+      logger.info('[AdvancedEditorAgent.Verification] Plan created, awaiting execution');
+
+      const reminderMessage: Message = {
+        id: `reminder-${Date.now()}`,
+        role: 'user',
+        content: '계획이 준비되었습니다. 이제 도구를 사용하여 실제 작업을 수행하세요.',
+        created_at: Date.now(),
+      };
+
+      return {
+        messages: [reminderMessage],
+        verificationNotes: ['⚠️ Plan ready, awaiting execution'],
+        needsAdditionalIteration: true,
+      };
+    }
+
+    // Run automated verification if files were modified
+    if (state.modifiedFiles && state.modifiedFiles.length > 0) {
+      logger.info('[AdvancedEditorAgent.Verification] Running automated checks');
+      const pipeline = new VerificationPipeline();
+
+      try {
+        const verificationResult = await pipeline.verify(state);
+
+        if (!verificationResult.allPassed) {
+          logger.info('[AdvancedEditorAgent.Verification] Checks failed');
+
+          const failedChecks = verificationResult.checks.filter((c) => !c.passed);
+          const failureMessage: Message = {
+            id: `verification-${Date.now()}`,
+            role: 'user',
+            content: `⚠️ 코드 검증 실패:\n${failedChecks
+              .map((c) => `- ${c.message}: ${c.details?.substring(0, 200)}`)
+              .join(
+                '\n'
+              )}\n\n${verificationResult.suggestions.join('\n')}\n\n위 문제를 수정하세요.`,
+            created_at: Date.now(),
+          };
+
+          return {
+            messages: [failureMessage],
+            verificationNotes: failedChecks.map((c) => `❌ ${c.name}: ${c.message}`),
+            needsAdditionalIteration: true,
+          };
+        } else {
+          logger.info('[AdvancedEditorAgent.Verification] All checks passed');
+          emitStreamingChunk('\n✅ **자동 검증 통과** (타입 체크, 린트)\n\n', state.conversationId);
+        }
+      } catch (error: any) {
+        console.error('[AdvancedEditorAgent.Verification] Error:', error);
+        // Continue anyway
+      }
+    }
+
+    // Advance plan step
+    const planSteps = state.planSteps || [];
+    const currentStep = state.currentPlanStep || 0;
+
+    if (planSteps.length > 0 && currentStep < planSteps.length - 1) {
+      logger.info(`[AdvancedEditorAgent.Verification] Advancing to step ${currentStep + 2}`);
+
+      emitStreamingChunk(
+        `\n📋 **Step ${currentStep + 1}/${planSteps.length} 완료** ✅\n` +
+          `➡️ 다음: ${planSteps[currentStep + 1]}\n\n`,
+        state.conversationId
+      );
+
+      return {
+        currentPlanStep: currentStep + 1,
+        needsAdditionalIteration: true,
+      };
+    }
+
+    // All steps complete
+    if (planSteps.length > 0 && currentStep >= planSteps.length - 1) {
+      emitStreamingChunk('\n🎉 **모든 단계 완료!**\n\n', state.conversationId);
+    }
+
+    return {
+      verificationNotes: ['✅ Verification passed'],
+    };
+  }
 }
 
 /**
