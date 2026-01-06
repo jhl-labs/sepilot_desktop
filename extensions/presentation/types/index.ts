@@ -6,6 +6,16 @@
 
 export type PresentationExportFormat = 'pptx' | 'pdf' | 'html';
 
+export interface PresentationSource {
+  id: string;
+  name: string;
+  type: 'file' | 'text';
+  content?: string; // Cache content
+  path?: string; // File path if applicable
+  isActive: boolean;
+  createdAt: number;
+}
+
 export interface PresentationSlide {
   id: string;
   title: string;
@@ -211,6 +221,9 @@ export interface PresentationStoreState {
   presentationChatMessages: any[]; // Will be Message[] at runtime
   presentationChatStreaming: boolean;
 
+  // Sources
+  presentationSources: PresentationSource[];
+
   // Slides
   presentationSlides: PresentationSlide[];
   activePresentationSlideId: string | null;
@@ -245,4 +258,9 @@ export interface PresentationStoreActions {
   setPresentationExportState: (state: PresentationExportState | null) => void;
   setPresentationAgentState: (state: PresentationAgentState | null) => void;
   clearPresentationSession: () => void;
+
+  // Source Actions
+  addPresentationSource: (source: PresentationSource) => void;
+  removePresentationSource: (id: string) => void;
+  togglePresentationSource: (id: string) => void;
 }

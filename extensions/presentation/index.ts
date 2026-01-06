@@ -29,6 +29,8 @@ export * from './lib';
 // Main Components (client-safe)
 export {
   PresentationChat,
+  PresentationMainChat,
+  PresentationSourceSidebar,
   PresentationStudio,
   PresentationHeaderActions,
   PresentationSettings,

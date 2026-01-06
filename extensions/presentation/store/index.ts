@@ -12,6 +12,7 @@ import type {
   PresentationAgentState,
   PresentationStoreState,
   PresentationStoreActions,
+  PresentationSource,
 } from '../types';
 
 /**
@@ -25,6 +26,7 @@ export const initialPresentationState: PresentationStoreState = {
   presentationViewMode: 'chat',
   presentationExportState: null,
   presentationAgentState: null,
+  presentationSources: [],
 };
 
 /**
@@ -141,10 +143,30 @@ export function createPresentationSlice(
         presentationSlides: [],
         activePresentationSlideId: null,
         presentationChatStreaming: false,
+
         presentationExportState: null,
         presentationAgentState: null,
         presentationViewMode: 'chat',
+        presentationSources: [],
       });
+    },
+
+    addPresentationSource: (source) => {
+      set((state) => ({
+        presentationSources: [...state.presentationSources, source],
+      }));
+    },
+    removePresentationSource: (id) => {
+      set((state) => ({
+        presentationSources: state.presentationSources.filter((s) => s.id !== id),
+      }));
+    },
+    togglePresentationSource: (id) => {
+      set((state) => ({
+        presentationSources: state.presentationSources.map((s) =>
+          s.id === id ? { ...s, isActive: !s.isActive } : s
+        ),
+      }));
     },
   };
 }

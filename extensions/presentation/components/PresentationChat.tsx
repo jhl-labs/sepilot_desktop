@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useChatStore } from '@/lib/store/chat-store';
 import { runPresentationAgent, createInitialState } from '../lib/ppt-agent';
 import type { PresentationWorkflowStep, PresentationDesignMaster } from '../types';
-import { generateId } from '@/lib/utils';
+import { generateId } from '@/lib/utils/id-generator';
 import { PRESENTATION_TEMPLATES, type TemplateType } from '../lib/templates';
 import {
   Loader2,
@@ -52,7 +52,7 @@ type QuickPromptItem =
   | { label: string; prompt: string; designOption: PresentationDesignMaster };
 
 // 단계별 Quick Prompts (간소화)
-// Note: Actual prompts for the AI should remain in Korean/English as per system design, 
+// Note: Actual prompts for the AI should remain in Korean/English as per system design,
 // or be localized if the Agent supports it. For now, we localize the labels.
 // This part might need refactoring to move inside the component or use a hook to access 't'.
 // However, since we can't easily use hooks outside component, I'll move this logic inside.
@@ -112,23 +112,70 @@ export function PresentationChat() {
 
   const getStepDescription = (step: PresentationWorkflowStep) => {
     switch (step) {
-      case 'briefing': return { title: t('presentation.steps.briefing.title'), description: t('presentation.steps.briefing.desc') };
-      case 'design-master': return { title: t('presentation.steps.designMaster.title'), description: t('presentation.steps.designMaster.desc') };
-      case 'structure': return { title: t('presentation.steps.structure.title'), description: t('presentation.steps.structure.desc') };
-      case 'slide-creation': return { title: t('presentation.steps.slideCreation.title'), description: t('presentation.steps.slideCreation.desc') };
-      case 'review': return { title: t('presentation.steps.review.title'), description: t('presentation.steps.review.desc') };
-      case 'complete': return { title: t('presentation.steps.complete.title'), description: t('presentation.steps.complete.desc') };
-      default: return { title: '', description: '' };
+      case 'briefing':
+        return {
+          title: t('presentation.steps.briefing.title'),
+          description: t('presentation.steps.briefing.desc'),
+        };
+      case 'design-master':
+        return {
+          title: t('presentation.steps.designMaster.title'),
+          description: t('presentation.steps.designMaster.desc'),
+        };
+      case 'structure':
+        return {
+          title: t('presentation.steps.structure.title'),
+          description: t('presentation.steps.structure.desc'),
+        };
+      case 'slide-creation':
+        return {
+          title: t('presentation.steps.slideCreation.title'),
+          description: t('presentation.steps.slideCreation.desc'),
+        };
+      case 'review':
+        return {
+          title: t('presentation.steps.review.title'),
+          description: t('presentation.steps.review.desc'),
+        };
+      case 'complete':
+        return {
+          title: t('presentation.steps.complete.title'),
+          description: t('presentation.steps.complete.desc'),
+        };
+      default:
+        return { title: '', description: '' };
     }
   };
 
   const getQuickPrompts = (step: PresentationWorkflowStep): { label: string; prompt: string }[] => {
     switch (step) {
-      case 'briefing': return [{ label: t('presentation.quickPrompts.next'), prompt: '이대로 좋습니다. 다음 단계로 진행해주세요.' }];
-      case 'structure': return [{ label: t('presentation.quickPrompts.approveStructure'), prompt: '좋아요! 이 구조로 진행해주세요.' }];
-      case 'slide-creation': return [{ label: t('presentation.quickPrompts.autoCreate'), prompt: '구조에 맞춰 슬라이드를 자동으로 생성해주세요.' }];
-      case 'review': return [{ label: t('presentation.quickPrompts.done'), prompt: '완료! 이제 내보내기 할게요.' }];
-      default: return [];
+      case 'briefing':
+        return [
+          {
+            label: t('presentation.quickPrompts.next'),
+            prompt: '이대로 좋습니다. 다음 단계로 진행해주세요.',
+          },
+        ];
+      case 'structure':
+        return [
+          {
+            label: t('presentation.quickPrompts.approveStructure'),
+            prompt: '좋아요! 이 구조로 진행해주세요.',
+          },
+        ];
+      case 'slide-creation':
+        return [
+          {
+            label: t('presentation.quickPrompts.autoCreate'),
+            prompt: '구조에 맞춰 슬라이드를 자동으로 생성해주세요.',
+          },
+        ];
+      case 'review':
+        return [
+          { label: t('presentation.quickPrompts.done'), prompt: '완료! 이제 내보내기 할게요.' },
+        ];
+      default:
+        return [];
     }
   };
 
@@ -136,12 +183,12 @@ export function PresentationChat() {
   const quickPrompts: QuickPromptItem[] =
     currentStep === 'design-master' && presentationAgentState?.designOptions
       ? presentationAgentState.designOptions.map(
-        (option, idx): QuickPromptItem => ({
-          label: option.name || `옵션 ${idx + 1}`,
-          prompt: `${option.name || `옵션 ${idx + 1}`}으로 선택하겠습니다.`,
-          designOption: option,
-        })
-      )
+          (option, idx): QuickPromptItem => ({
+            label: option.name || `옵션 ${idx + 1}`,
+            prompt: `${option.name || `옵션 ${idx + 1}`}으로 선택하겠습니다.`,
+            designOption: option,
+          })
+        )
       : getQuickPrompts(currentStep);
 
   const handleTemplateSelect = (templateId: TemplateType) => {
@@ -346,22 +393,25 @@ export function PresentationChat() {
                 }
               }}
               disabled={!isAccessible || presentationChatStreaming}
-              className={`group relative flex items-center transition-all ${idx < STEP_ORDER.length - 1 ? 'pr-4' : ''
-                }`}
+              className={`group relative flex items-center transition-all ${
+                idx < STEP_ORDER.length - 1 ? 'pr-4' : ''
+              }`}
               title={getStepDescription(step).title}
             >
               <div
-                className={`h-2 w-2 rounded-full transition-all ${isActive
-                  ? 'bg-primary ring-2 ring-primary/30 ring-offset-1 ring-offset-background'
-                  : isCompleted || hasTemplateData
-                    ? 'bg-green-500'
-                    : 'bg-muted-foreground/30'
-                  } ${isAccessible && !presentationChatStreaming ? 'cursor-pointer hover:scale-125' : 'cursor-not-allowed'}`}
+                className={`h-2 w-2 rounded-full transition-all ${
+                  isActive
+                    ? 'bg-primary ring-2 ring-primary/30 ring-offset-1 ring-offset-background'
+                    : isCompleted || hasTemplateData
+                      ? 'bg-green-500'
+                      : 'bg-muted-foreground/30'
+                } ${isAccessible && !presentationChatStreaming ? 'cursor-pointer hover:scale-125' : 'cursor-not-allowed'}`}
               />
               {idx < STEP_ORDER.length - 1 && (
                 <div
-                  className={`absolute left-3 h-px w-3 ${isCompleted || hasTemplateData ? 'bg-green-500' : 'bg-muted-foreground/30'
-                    }`}
+                  className={`absolute left-3 h-px w-3 ${
+                    isCompleted || hasTemplateData ? 'bg-green-500' : 'bg-muted-foreground/30'
+                  }`}
                 />
               )}
             </button>
@@ -377,7 +427,7 @@ export function PresentationChat() {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden flex flex-col">
-        {showOnboarding &&
+        {showOnboarding && (
           <div className="flex-1 overflow-y-auto px-4 py-6">
             <div className="max-w-md mx-auto space-y-6">
               {/* Welcome */}
@@ -399,10 +449,30 @@ export function PresentationChat() {
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: 'profile', name: t('presentation.templates.profile.name'), icon: '👤', desc: t('presentation.templates.profile.desc') },
-                  { id: 'tech-seminar', name: t('presentation.templates.techSeminar.name'), icon: '💻', desc: t('presentation.templates.techSeminar.desc') },
-                  { id: 'paper-summary', name: t('presentation.templates.paperSummary.name'), icon: '📄', desc: t('presentation.templates.paperSummary.desc') },
-                  { id: 'project-intro', name: t('presentation.templates.projectIntro.name'), icon: '📁', desc: t('presentation.templates.projectIntro.desc') },
+                  {
+                    id: 'profile',
+                    name: t('presentation.templates.profile.name'),
+                    icon: '👤',
+                    desc: t('presentation.templates.profile.desc'),
+                  },
+                  {
+                    id: 'tech-seminar',
+                    name: t('presentation.templates.techSeminar.name'),
+                    icon: '💻',
+                    desc: t('presentation.templates.techSeminar.desc'),
+                  },
+                  {
+                    id: 'paper-summary',
+                    name: t('presentation.templates.paperSummary.name'),
+                    icon: '📄',
+                    desc: t('presentation.templates.paperSummary.desc'),
+                  },
+                  {
+                    id: 'project-intro',
+                    name: t('presentation.templates.projectIntro.name'),
+                    icon: '📁',
+                    desc: t('presentation.templates.projectIntro.desc'),
+                  },
                 ].map((template) => (
                   <button
                     key={template.id}
@@ -427,7 +497,9 @@ export function PresentationChat() {
               <div className="h-px flex-1 bg-border" />
               <div className="flex items-center gap-3">
                 <div className="h-px flex-1 bg-border" />
-                <span className="text-xs text-muted-foreground">{t('presentation.onboarding.or')}</span>
+                <span className="text-xs text-muted-foreground">
+                  {t('presentation.onboarding.or')}
+                </span>
                 <div className="h-px flex-1 bg-border" />
               </div>
               <div className="h-px flex-1 bg-border" />
@@ -438,164 +510,167 @@ export function PresentationChat() {
               {t('presentation.onboarding.startCustom')}
             </div>
           </div>
-        }
-
-      {!showOnboarding &&
-
-        <div className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
-          {presentationChatMessages.map((msg, idx) => {
-            const isLastMessage = idx === presentationChatMessages.length - 1;
-            const isStreaming =
-              isLastMessage && presentationChatStreaming && msg.role === 'assistant';
-
-            return (
-              <div
-                key={msg.id}
-                className={`rounded-lg p-3 ${msg.role === 'user'
-                  ? 'ml-8 bg-primary text-primary-foreground'
-                  : 'mr-8 bg-muted/60'
-                  }`}
-              >
-                {msg.role === 'assistant' && (
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <Sparkles className="h-3 w-3 text-primary" />
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase">
-                      {t('presentation.chat.designer')}
-                    </span>
-                    {isStreaming && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                  </div>
-                )}
-                <div className="text-sm leading-relaxed">
-                  {msg.content ? (
-                    <MessageContent content={msg.content} isStreaming={isStreaming} />
-                  ) : isStreaming ? (
-                    <span className="text-muted-foreground">{t('presentation.chat.generating')}</span>
-                  ) : (
-                    ''
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          <div ref={messagesEndRef} />
-        </div>
-      }
-
-      {/* Structure Preview (Collapsible, shown only when structure exists) */}
-      {presentationAgentState?.structure && !showOnboarding && (
-        <details className="mx-4 mb-2 group">
-          <summary className="flex cursor-pointer items-center gap-2 rounded-lg border bg-card px-3 py-2 text-xs hover:bg-muted/50 transition-colors">
-            <ChevronRight className="h-3 w-3 text-muted-foreground transition-transform group-open:rotate-90" />
-            <LayoutList className="h-3 w-3 text-muted-foreground" />
-            <span className="font-medium">
-              {t('presentation.preview.structure')} ({presentationAgentState.structure.totalSlides}장)
-            </span>
-            {currentStep === 'slide-creation' && (
-              <span className="ml-auto text-muted-foreground">
-                {presentationAgentState.completedSlideIndices.length} /{' '}
-                {presentationAgentState.structure.totalSlides} {t('presentation.preview.completed')}
-              </span>
-            )}
-          </summary>
-          <div className="mt-1 rounded-lg border bg-card px-3 py-2 space-y-1 max-h-32 overflow-y-auto">
-            {presentationAgentState.structure.outline.map((slide, idx) => (
-              <div
-                key={idx}
-                className={`flex items-center gap-2 text-xs py-0.5 ${presentationAgentState.completedSlideIndices.includes(idx)
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-muted-foreground'
-                  }`}
-              >
-                {presentationAgentState.completedSlideIndices.includes(idx) ? (
-                  <CheckCircle2 className="h-3 w-3" />
-                ) : (
-                  <span className="w-3 text-center font-mono">{idx + 1}</span>
-                )}
-                <span className="flex-1 truncate">{slide.title}</span>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
-    </div>
-
-      {/* Quick Actions (shown above input when applicable) */ }
-  {
-    quickPrompts.length > 0 && (
-      <div className="px-4 pb-2">
-        <div className="flex flex-wrap gap-1.5">
-          {quickPrompts.map((quick) => {
-            const hasDesignOption = 'designOption' in quick && quick.designOption;
-            return (
-              <Button
-                key={quick.label}
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs gap-1.5"
-                onClick={() => {
-                  const isBulkCreation =
-                    quick.label === t('presentation.quickPrompts.autoCreate');
-                  handleSend(quick.prompt, isBulkCreation);
-                }}
-                disabled={presentationChatStreaming}
-              >
-                {hasDesignOption && (
-                  <div className="flex gap-0.5">
-                    <div
-                      className="h-2.5 w-2.5 rounded-sm"
-                      style={{ backgroundColor: quick.designOption.palette.primary }}
-                    />
-                    <div
-                      className="h-2.5 w-2.5 rounded-sm"
-                      style={{ backgroundColor: quick.designOption.palette.accent }}
-                    />
-                  </div>
-                )}
-                {quick.label}
-              </Button>
-            );
-          })}
-        </div>
-      </div>
-    )
-  }
-
-  {/* Input Area */ }
-  <div className="border-t bg-background px-4 py-3">
-    <div className="flex gap-2">
-      <Textarea
-        placeholder={
-          showOnboarding
-            ? t('presentation.chat.placeholderOnboarding')
-            : t('presentation.chat.placeholder')
-        }
-        value={input}
-        disabled={presentationChatStreaming}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-          }
-        }}
-        className="flex-1 min-h-[60px] max-h-[120px] resize-none text-sm"
-      />
-      <Button
-        onClick={() => handleSend()}
-        disabled={presentationChatStreaming || !input.trim()}
-        className="h-[60px] w-[60px] shrink-0"
-      >
-        {presentationChatStreaming ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
-        ) : (
-          <Send className="h-5 w-5" />
         )}
-      </Button>
+
+        {!showOnboarding && (
+          <div className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
+            {presentationChatMessages.map((msg, idx) => {
+              const isLastMessage = idx === presentationChatMessages.length - 1;
+              const isStreaming =
+                isLastMessage && presentationChatStreaming && msg.role === 'assistant';
+
+              return (
+                <div
+                  key={msg.id}
+                  className={`rounded-lg p-3 ${
+                    msg.role === 'user'
+                      ? 'ml-8 bg-primary text-primary-foreground'
+                      : 'mr-8 bg-muted/60'
+                  }`}
+                >
+                  {msg.role === 'assistant' && (
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase">
+                        {t('presentation.chat.designer')}
+                      </span>
+                      {isStreaming && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                    </div>
+                  )}
+                  <div className="text-sm leading-relaxed">
+                    {msg.content ? (
+                      <MessageContent content={msg.content} isStreaming={isStreaming} />
+                    ) : isStreaming ? (
+                      <span className="text-muted-foreground">
+                        {t('presentation.chat.generating')}
+                      </span>
+                    ) : (
+                      ''
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+
+        {/* Structure Preview (Collapsible, shown only when structure exists) */}
+        {presentationAgentState?.structure && !showOnboarding && (
+          <details className="mx-4 mb-2 group">
+            <summary className="flex cursor-pointer items-center gap-2 rounded-lg border bg-card px-3 py-2 text-xs hover:bg-muted/50 transition-colors">
+              <ChevronRight className="h-3 w-3 text-muted-foreground transition-transform group-open:rotate-90" />
+              <LayoutList className="h-3 w-3 text-muted-foreground" />
+              <span className="font-medium">
+                {t('presentation.preview.structure')} (
+                {presentationAgentState.structure.totalSlides}장)
+              </span>
+              {currentStep === 'slide-creation' && (
+                <span className="ml-auto text-muted-foreground">
+                  {presentationAgentState.completedSlideIndices.length} /{' '}
+                  {presentationAgentState.structure.totalSlides}{' '}
+                  {t('presentation.preview.completed')}
+                </span>
+              )}
+            </summary>
+            <div className="mt-1 rounded-lg border bg-card px-3 py-2 space-y-1 max-h-32 overflow-y-auto">
+              {presentationAgentState.structure.outline.map((slide, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center gap-2 text-xs py-0.5 ${
+                    presentationAgentState.completedSlideIndices.includes(idx)
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  {presentationAgentState.completedSlideIndices.includes(idx) ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : (
+                    <span className="w-3 text-center font-mono">{idx + 1}</span>
+                  )}
+                  <span className="flex-1 truncate">{slide.title}</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+      </div>
+
+      {/* Quick Actions (shown above input when applicable) */}
+      {quickPrompts.length > 0 && (
+        <div className="px-4 pb-2">
+          <div className="flex flex-wrap gap-1.5">
+            {quickPrompts.map((quick) => {
+              const hasDesignOption = 'designOption' in quick && quick.designOption;
+              return (
+                <Button
+                  key={quick.label}
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => {
+                    const isBulkCreation =
+                      quick.label === t('presentation.quickPrompts.autoCreate');
+                    handleSend(quick.prompt, isBulkCreation);
+                  }}
+                  disabled={presentationChatStreaming}
+                >
+                  {hasDesignOption && (
+                    <div className="flex gap-0.5">
+                      <div
+                        className="h-2.5 w-2.5 rounded-sm"
+                        style={{ backgroundColor: quick.designOption.palette.primary }}
+                      />
+                      <div
+                        className="h-2.5 w-2.5 rounded-sm"
+                        style={{ backgroundColor: quick.designOption.palette.accent }}
+                      />
+                    </div>
+                  )}
+                  {quick.label}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <div className="border-t bg-background px-4 py-3">
+        <div className="flex gap-2">
+          <Textarea
+            placeholder={
+              showOnboarding
+                ? t('presentation.chat.placeholderOnboarding')
+                : t('presentation.chat.placeholder')
+            }
+            value={input}
+            disabled={presentationChatStreaming}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            className="flex-1 min-h-[60px] max-h-[120px] resize-none text-sm"
+          />
+          <Button
+            onClick={() => handleSend()}
+            disabled={presentationChatStreaming || !input.trim()}
+            className="h-[60px] w-[60px] shrink-0"
+          >
+            {presentationChatStreaming ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
+        <p className="mt-1.5 text-[10px] text-muted-foreground text-center">
+          {t('presentation.chat.send')}
+        </p>
+      </div>
     </div>
-    <p className="mt-1.5 text-[10px] text-muted-foreground text-center">
-      {t('presentation.chat.send')}
-    </p>
-  </div>
-    </div >
   );
 }

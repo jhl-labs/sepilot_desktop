@@ -1,4 +1,4 @@
-import { generateId } from '@/lib/utils';
+import { generateId } from '@/lib/utils/id-generator';
 import { LLMService } from '@/lib/llm/service';
 import type {
   PresentationSlide,
@@ -698,48 +698,93 @@ ${
 
 ## 현재 목표
 사용자와 함께 프레젠테이션을 검토하고 수정하세요.
+**현재 보고 있는 슬라이드**: ${state.currentSlideIndex !== undefined ? `슬라이드 ${(state.currentSlideIndex || 0) + 1}번 (Index: ${state.currentSlideIndex}) - "${state.slides[state.currentSlideIndex || 0]?.title}"` : '없음'}
 
-## 가능한 작업
-1. **일반 수정**
-   - "슬라이드 3 수정해줘" → 특정 슬라이드 수정
-   - "전체적으로 색상을 더 밝게" → 디자인 마스터 수정
-   - "슬라이드 2와 3 사이에 새 슬라이드 추가" → 슬라이드 추가
-   - "슬라이드 5 삭제" → 슬라이드 삭제
+⚠️ **중요**: 사용자가 "이 슬라이드", "여기", "현재 페이지", "이거"라고 지칭하면 **반드시** 위 **Index: ${state.currentSlideIndex}**를 \`slideIndex\`로 사용하세요.
 
-2. **내용 검증/보정** ${state.webSearchEnabled ? '(웹검색 사용 가능)' : '(일반 지식 기반)'}
-   - "모든 슬라이드의 데이터 정확성 확인해줘" → 전체 검증
-   - "슬라이드 4의 통계가 맞는지 확인해줘" → 특정 슬라이드 검증
-   - "틀린 내용 찾아서 수정해줘" → 오류 찾기 및 자동 수정
-   ${
-     state.webSearchEnabled
-       ? '- 웹검색을 통해 최신 정보로 업데이트하고 출처를 명시합니다'
-       : '- 일반 지식을 바탕으로 명백한 오류를 수정합니다'
-   }
+## 가능한 작업 (NotebookLM 수준의 제어)
 
-3. **완료**
-   - "완료" → 최종 완료
+### 1. 콘텐츠 및 레이아웃 수정 (modify_slide)
+- **내용 수정**: "내용 채워줘", "제목 바꿔줘" -> **현재 슬라이드 내용 확인 후 수정**
+- **레이아웃 변경**: "2단 말고 1단으로(title-body)", "강조해줘(hero)", "통계 보여줘(stats)"
+  - 지원: \`hero\`, \`title-body\`, \`two-column\`, \`stats\`, \`grid\`, \`timeline\`, \`quote\`
+- **스타일 개별 변경**: 특정 슬라이드의 배경색, 글자색 변경
+
+### 2. 구조 변경 (insert_slide, delete_slide, reorder_slides)
+- "3페이지 뒤에 새 슬라이드 추가해줘" (insert)
+- "5페이지 삭제해" (delete)
+- "3페이지를 1페이지 앞으로 옮겨" (reorder)
+
+### 3. 전체 디자인 변경 (update_design)
+- "전체적으로 파란색 톤으로 바꿔" (색상 변경)
+- "폰트가 너무 딱딱해. 부드러운 걸로 바꿔" (폰트 변경)
+
+### 4. 내용 검증 (verify_and_correct)
+- "수치 정확한지 확인해줘"
 
 ## 응답 형식
-수정 작업:
+
+### 슬라이드 수정 (modify_slide)
+목록(\`bullets\`) 수정 시, 기존 내용을 유지하려면 기존 내용을 포함해서 보내야 합니다.
+\`bullets\` 배열을 보내면 **기존 불렛은 덮어씌워집니다**.
+
 \`\`\`json
 {
   "action": "modify_slide",
-  "slideIndex": 2,
-  "modifications": { "title": "...", "bullets": [...], ... }
+  "slideIndex": ${state.currentSlideIndex ?? 0}, // 현재 보고 있는 슬라이드 수정 시
+  "modifications": {
+    "title": "새로운 제목",
+    "bullets": ["내용 1", "내용 2"], // 내용을 채워줄 때
+    "layout": "two-column"
+  }
 }
 \`\`\`
 
-검증 작업 (웹검색 결과나 일반 지식 기반):
+### 슬라이드 추가
+\`\`\`json
+{
+  "action": "insert_slide",
+  "atIndex": 3, // 이 인덱스 위치에 삽입 (기존 3번은 4번으로 밀림)
+  "slide": {
+    "title": "새 슬라이드",
+    "layout": "title-body",
+    "bullets": ["내용 1", "내용 2"]
+  }
+}
+\`\`\`
+
+### 슬라이드 삭제
+\`\`\`json
+{ "action": "delete_slide", "slideIndices": [4] } // 삭제할 인덱스 배열
+\`\`\`
+
+### 슬라이드 순서 변경
+\`\`\`json
+{ "action": "reorder_slides", "fromIndex": 2, "toIndex": 0 }
+\`\`\`
+
+### 전체 디자인 업데이트
+\`\`\`json
+{
+  "action": "update_design",
+  "designUpdates": {
+    "palette": { "primary": "#ff0000", "background": "#ffffff" }, // 변경할 속성만
+    "vibe": "passionate red"
+  }
+}
+\`\`\`
+
+### 검증
 \`\`\`json
 {
   "action": "verify_and_correct",
   "slideIndex": 2,
-  "findings": "슬라이드 2의 통계 수치가 2020년 데이터입니다. 최신 2025년 데이터로 업데이트했습니다.",
-  "modifications": { "bullets": ["업데이트된 내용..."] }
+  "findings": "검증 결과 설명...",
+  "modifications": { ... }
 }
 \`\`\`
 
-완료:
+### 완료
 \`\`\`json
 { "action": "finalize_presentation" }
 \`\`\``,
@@ -749,27 +794,67 @@ Generated slides: ${state.slides.length}
 
 ## Current Goal
 Review and revise the presentation with the user.
+**Current Slide**: ${
+        state.currentSlideIndex !== undefined
+          ? `Slide ${(state.currentSlideIndex || 0) + 1} - "${state.slides[state.currentSlideIndex || 0]?.title}"`
+          : 'None'
+      }
 
-## Possible Actions
-- "Revise slide 3" → Modify specific slide
-- "Make colors brighter overall" → Update design master
-- "Add new slide between 2 and 3" → Insert slide
-- "Delete slide 5" → Remove slide
-- "Done" → Finalize
+## Capabilities
 
-## Response Format
-Modify:
+### 1. Modify Content & Layout(modify_slide)
+  - Edit text, bullets, title
+    - Change layout: \`hero\`, \`title-body\`, \`two-column\`, \`stats\`, \`grid\`, \`timeline\`, \`quote\`
+- Change individual styles (bg color, text color)
+
+### 2. Modify Structure
+- **Insert**: "Add slide after page 3"
+- **Delete**: "Remove page 5"
+- **Reorder**: "Move page 3 to front"
+
+### 3. Global Design (update_design)
+- "Change theme to blue"
+- "Use serif fonts"
+- "Make it look professional"
+
+## Response Formats
+
+### Modify
 \`\`\`json
 {
   "action": "modify_slide",
   "slideIndex": 2,
-  "modifications": { "title": "...", ... }
+  "modifications": { "layout": "hero", "title": "New Title" }
 }
 \`\`\`
 
-Finalize:
+### Insert
 \`\`\`json
-{ "action": "finalize_presentation" }
+{
+  "action": "insert_slide",
+  "atIndex": 3,
+  "slide": { "title": "New Slide", "layout": "title-body", "bullets": [] }
+}
+\`\`\`
+
+### Delete
+\`\`\`json
+{ "action": "delete_slide", "slideIndices": [4] }
+\`\`\`
+
+### Reorder
+\`\`\`json
+{ "action": "reorder_slides", "fromIndex": 2, "toIndex": 0 }
+\`\`\`
+
+### Update Global Design
+\`\`\`json
+{
+  "action": "update_design",
+  "designUpdates": {
+    "palette": { "primary": "blue" }
+  }
+}
 \`\`\``,
     },
 
@@ -1099,7 +1184,15 @@ export async function runPresentationAgent(
         break;
 
       case 'modify_slide': {
-        const slideIndex = action.slideIndex as number;
+        let slideIndex = action.slideIndex as number;
+        // If slideIndex is missing or null, default to currentSlideIndex
+        if (slideIndex === undefined || slideIndex === null) {
+          slideIndex = newState.currentSlideIndex || 0;
+          logger.info(
+            `[ppt-agent] modify_slide: slideIndex missing, defaulting to current (${slideIndex})`
+          );
+        }
+
         const modifications = action.modifications as Partial<PresentationSlide>;
         const newSlides = [...newState.slides];
 
@@ -1150,6 +1243,134 @@ export async function runPresentationAgent(
 
         // findings는 응답 메시지에 포함되어 사용자에게 전달됨
         logger.info('[ppt-agent] Verification findings:', findings);
+        break;
+      }
+
+      // ----------------------------------------------------------------
+      // NEW ACTIONS FOR ENHANCED CAPABILITIES
+      // ----------------------------------------------------------------
+
+      case 'insert_slide': {
+        const atIndex = (action.atIndex as number) || newState.slides.length;
+        const slideData = action.slide as Record<string, unknown>;
+        const newSlide: PresentationSlide = {
+          id: generateId(),
+          ...slideData,
+        } as PresentationSlide;
+
+        const newSlides = [...newState.slides];
+        newSlides.splice(atIndex, 0, newSlide);
+
+        // Update current index to point to the new slide
+        newState = {
+          ...newState,
+          slides: newSlides,
+          currentSlideIndex: atIndex,
+        };
+        callbacks.onSlides?.(newSlides);
+        callbacks.onStateUpdate?.(newState);
+        break;
+      }
+
+      case 'delete_slide': {
+        const indicesToDelete = (action.slideIndices as number[]) || [];
+        // Sort descending to remove without affecting earlier indices
+        indicesToDelete.sort((a, b) => b - a);
+
+        const newSlides = [...newState.slides];
+        indicesToDelete.forEach((idx) => {
+          if (idx >= 0 && idx < newSlides.length) {
+            newSlides.splice(idx, 1);
+          }
+        });
+
+        newState = {
+          ...newState,
+          slides: newSlides,
+          // Adjust current index if needed
+          currentSlideIndex: Math.min(
+            newState.currentSlideIndex || 0,
+            Math.max(0, newSlides.length - 1)
+          ),
+        };
+        callbacks.onSlides?.(newSlides);
+        callbacks.onStateUpdate?.(newState);
+        break;
+      }
+
+      case 'reorder_slides': {
+        const fromIndex = action.fromIndex as number;
+        const toIndex = action.toIndex as number;
+        const newSlides = [...newState.slides];
+
+        if (
+          fromIndex >= 0 &&
+          fromIndex < newSlides.length &&
+          toIndex >= 0 &&
+          toIndex < newSlides.length
+        ) {
+          const [movedSlide] = newSlides.splice(fromIndex, 1);
+          newSlides.splice(toIndex, 0, movedSlide);
+
+          newState = {
+            ...newState,
+            slides: newSlides,
+            currentSlideIndex: toIndex, // Follow the moved slide
+          };
+          callbacks.onSlides?.(newSlides);
+          callbacks.onStateUpdate?.(newState);
+        }
+        break;
+      }
+
+      case 'update_design': {
+        const designUpdates = action.designUpdates as Partial<PresentationDesignMaster>;
+        if (!newState.designMaster) break;
+
+        // 1. Update Design Master
+        const newDesignMaster = {
+          ...newState.designMaster,
+          ...designUpdates,
+          palette: {
+            ...newState.designMaster.palette,
+            ...(designUpdates.palette || {}),
+          },
+          fonts: {
+            ...newState.designMaster.fonts,
+            ...(designUpdates.fonts || {}),
+          },
+        };
+
+        // 2. Apply to ALL slides (Sync)
+        const newSlides = newState.slides.map((slide) => {
+          const updatedSlide = { ...slide };
+          // Apply palette updates if they exist
+          if (designUpdates.palette) {
+            updatedSlide.backgroundColor = newDesignMaster.palette.background;
+            updatedSlide.textColor = newDesignMaster.palette.text;
+            // Note: Accent color might be slide-specific, so strictly overriding might be aggressive,
+            // but for a global theme change, it's usually desired.
+            updatedSlide.accentColor = newDesignMaster.palette.accent;
+          }
+          // Apply font updates if they exist
+          if (designUpdates.fonts) {
+            updatedSlide.titleFont = newDesignMaster.fonts.title;
+            updatedSlide.bodyFont = newDesignMaster.fonts.body;
+          }
+          // Apply vibe
+          if (designUpdates.vibe) {
+            updatedSlide.vibe = newDesignMaster.vibe;
+          }
+          return updatedSlide;
+        });
+
+        newState = {
+          ...newState,
+          designMaster: newDesignMaster,
+          slides: newSlides,
+        };
+        callbacks.onSlides?.(newSlides);
+        callbacks.onStateUpdate?.(newState);
         break;
       }
 

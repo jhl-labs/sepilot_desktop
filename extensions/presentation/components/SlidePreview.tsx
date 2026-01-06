@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
-import { generateId } from '@/lib/utils';
+import { generateId } from '@/lib/utils/id-generator';
 import { SlideRenderer } from './SlideRenderer';
 import { SlideMasterPreview } from './SlideMasterPreview';
 import { DesignOptionsPreview } from './DesignOptionsPreview';
@@ -99,6 +99,17 @@ export function SlidePreview() {
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore shortcuts if user is typing in an input or textarea
+      const activeElement = document.activeElement;
+      if (
+        activeElement &&
+        (activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.getAttribute('contenteditable') === 'true')
+      ) {
+        return;
+      }
+
       if (isEditMode) return;
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
@@ -205,7 +216,9 @@ export function SlidePreview() {
           <LayoutList className="h-4 w-4 text-primary" />
           <div>
             <p className="text-sm font-medium">{t('presentation.preview.templateTitle')}</p>
-            <p className="text-xs text-muted-foreground">{t('presentation.preview.templateDesc')}</p>
+            <p className="text-xs text-muted-foreground">
+              {t('presentation.preview.templateDesc')}
+            </p>
           </div>
         </div>
         <div className="flex-1 overflow-auto">
@@ -260,9 +273,9 @@ export function SlidePreview() {
             <SlideRenderer
               slide={currentSlide}
               isEditable={false}
-              onSlideChange={() => { }}
-              onAddBullet={() => { }}
-              onRemoveBullet={() => { }}
+              onSlideChange={() => {}}
+              onAddBullet={() => {}}
+              onRemoveBullet={() => {}}
             />
           </div>
         </div>
@@ -417,14 +430,16 @@ export function SlidePreview() {
                 <button
                   key={slide.id}
                   onClick={() => goToSlide(idx)}
-                  className={`group relative flex-shrink-0 rounded border transition-all ${idx === currentIndex
+                  className={`group relative flex-shrink-0 rounded border transition-all ${
+                    idx === currentIndex
                       ? 'border-primary ring-1 ring-primary/30'
                       : 'border-transparent hover:border-muted-foreground/30'
-                    }`}
+                  }`}
                 >
                   <div
-                    className={`relative h-12 w-20 overflow-hidden rounded-sm ${idx === currentIndex ? '' : 'opacity-60 group-hover:opacity-100'
-                      }`}
+                    className={`relative h-12 w-20 overflow-hidden rounded-sm ${
+                      idx === currentIndex ? '' : 'opacity-60 group-hover:opacity-100'
+                    }`}
                     style={{
                       background: slide.backgroundColor || '#f3f4f6',
                     }}
