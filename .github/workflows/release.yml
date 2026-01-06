@@ -11,8 +11,48 @@ permissions:
 
 jobs:
   build:
-    name: Build Windows
-    runs-on: windows-latest
+    name: Build ${{ matrix.os_name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            os_name: Windows
+            build_command: pnpm build:win
+            artifact_path: |
+              release/*.exe
+              release/*.exe.blockmap
+              release/latest.yml
+            artifact_name: windows-build
+            cache_paths: |
+              ~/AppData/Local/electron/Cache
+              ~/AppData/Local/electron-builder/Cache
+          - os: macos-latest
+            os_name: macOS
+            build_command: pnpm build:mac
+            artifact_path: |
+              release/*.dmg
+              release/*.dmg.blockmap
+              release/*.zip
+              release/latest-mac.yml
+            artifact_name: macos-build
+            cache_paths: |
+              ~/Library/Caches/electron
+              ~/Library/Caches/electron-builder
+          - os: ubuntu-latest
+            os_name: Linux
+            build_command: pnpm build:linux
+            artifact_path: |
+              release/*.AppImage
+              release/*.snap
+              release/*.deb
+              release/*.rpm
+              release/latest-linux.yml
+            artifact_name: linux-build
+            cache_paths: |
+              ~/.cache/electron
+              ~/.cache/electron-builder
 
     steps:
       - name: Checkout code
@@ -40,8 +80,7 @@ jobs:
         with:
           path: |
             ${{ env.STORE_PATH }}
-            ~/AppData/Local/electron/Cache
-            ~/AppData/Local/electron-builder/Cache
+            ${{ matrix.cache_paths }}
             ${{ github.workspace }}/.cache/electron-builder
           key: ${{ runner.os }}-deps-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
@@ -76,16 +115,22 @@ jobs:
             ${{ runner.os }}-typescript-${{ hashFiles('**/pnpm-lock.yaml') }}-
             ${{ runner.os }}-typescript-
 
+      - name: Install system dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm libarchive-tools snapd
+
       - name: Generate application icons
         run: pnpm build:icon
 
-      - name: Build for Windows
+      - name: Build for ${{ matrix.os_name }}
         uses: nick-invision/retry@v3
         with:
           timeout_minutes: 30
           max_attempts: 3
           retry_wait_seconds: 30
-          command: pnpm build:win
+          command: ${{ matrix.build_command }}
         env:
           ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
@@ -93,14 +138,11 @@ jobs:
           ELECTRON_GET_USE_PROXY: true
           GLOBAL_AGENT_HTTPS_PROXY: ''
 
-      - name: Upload Windows artifacts
+      - name: Upload ${{ matrix.os_name }} artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: windows-build
-          path: |
-            release/*.exe
-            release/*.exe.blockmap
-            release/latest.yml
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
 
   release:
     name: Create Release
@@ -122,18 +164,33 @@ jobs:
 
       - name: Generate checksums
         run: |
-          # Handle directory structure (nested or flat)
-          if [ -d "artifacts/windows-build" ]; then
-            cd artifacts/windows-build
-          else
-            cd artifacts
+          cd artifacts
+
+          echo "📋 Generating checksums for all platforms..."
+
+          # Windows checksums
+          if [ -d "windows-build" ]; then
+            cd windows-build
+            sha256sum *.exe > SHA256SUMS-windows.txt 2>/dev/null || true
+            cd ..
           fi
-          
-          echo "Current directory: $(pwd)"
-          ls -la
-          
-          sha256sum *.exe > SHA256SUMS.txt
-          cat SHA256SUMS.txt
+
+          # macOS checksums
+          if [ -d "macos-build" ]; then
+            cd macos-build
+            sha256sum *.dmg *.zip > SHA256SUMS-macos.txt 2>/dev/null || true
+            cd ..
+          fi
+
+          # Linux checksums
+          if [ -d "linux-build" ]; then
+            cd linux-build
+            sha256sum *.AppImage *.deb *.rpm > SHA256SUMS-linux.txt 2>/dev/null || true
+            cd ..
+          fi
+
+          echo "✅ Checksums generated"
+          cat */SHA256SUMS-*.txt 2>/dev/null || echo "No checksums found"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -141,8 +198,15 @@ jobs:
           files: |
             artifacts/**/*.exe
             artifacts/**/*.exe.blockmap
+            artifacts/**/*.dmg
+            artifacts/**/*.dmg.blockmap
+            artifacts/**/*.zip
+            artifacts/**/*.AppImage
+            artifacts/**/*.snap
+            artifacts/**/*.deb
+            artifacts/**/*.rpm
             artifacts/**/*.yml
-            artifacts/**/SHA256SUMS.txt
+            artifacts/**/SHA256SUMS-*.txt
           draft: false
           prerelease: false
           generate_release_notes: true
@@ -156,11 +220,29 @@ jobs:
             2. 실행 시 Windows SmartScreen 경고가 표시될 수 있습니다
             3. "추가 정보" → "실행" 클릭하여 설치 진행
 
+            **macOS 사용자:**
+            1. `SEPilot-*.dmg` 파일 다운로드
+            2. DMG 파일을 열고 Applications 폴더로 드래그
+            3. 처음 실행 시 "확인되지 않은 개발자" 경고가 표시되면 시스템 환경설정 → 보안 및 개인 정보 보호에서 "확인 없이 열기" 클릭
+
+            **Linux 사용자:**
+            - **AppImage**: `SEPilot-*.AppImage` 파일을 다운로드하고 실행 권한 부여 후 실행
+            - **Debian/Ubuntu**: `SEPilot-*.deb` 파일 다운로드 후 `sudo dpkg -i SEPilot-*.deb` 실행
+            - **Fedora/RHEL**: `SEPilot-*.rpm` 파일 다운로드 후 `sudo rpm -i SEPilot-*.rpm` 실행
+            - **Snap**: `SEPilot-*.snap` 파일 다운로드 후 `sudo snap install SEPilot-*.snap --dangerous` 실행
+
             ### 🔒 보안 검증
 
             **SHA256 체크섬 확인:**
             ```bash
-            sha256sum -c SHA256SUMS.txt
+            # Windows
+            sha256sum -c SHA256SUMS-windows.txt
+
+            # macOS
+            shasum -a 256 -c SHA256SUMS-macos.txt
+
+            # Linux
+            sha256sum -c SHA256SUMS-linux.txt
             ```
 
             ### ⚙️ 자동 업데이트

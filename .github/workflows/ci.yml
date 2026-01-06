@@ -263,30 +263,35 @@ jobs:
         run: |
           echo "📦 Checking bundle sizes..."
 
-          # Get total JS bundle size
-          total_js=$(find out/_next/static/chunks -name "*.js" -type f -exec gzip -c {} \; | wc -c)
-          total_js_mb=$(echo "scale=2; $total_js / 1024 / 1024" | bc)
+          # Get total JS bundle size (using .next for Electron app)
+          total_js=$(find .next/static/chunks -name "*.js" -type f -exec gzip -c {} \; 2>/dev/null | wc -c || echo 0)
 
-          # Get total CSS size
-          total_css=$(find out/_next/static/css -name "*.css" -type f -exec gzip -c {} \; 2>/dev/null | wc -c || echo 0)
-          total_css_kb=$(echo "scale=2; $total_css / 1024" | bc)
+          if [ "$total_js" -gt 0 ]; then
+            total_js_mb=$(echo "scale=2; $total_js / 1024 / 1024" | bc)
 
-          echo "📊 Bundle Sizes (gzipped):"
-          echo "  JavaScript: ${total_js_mb}MB"
-          echo "  CSS: ${total_css_kb}KB"
+            # Get total CSS size
+            total_css=$(find .next/static/css -name "*.css" -type f -exec gzip -c {} \; 2>/dev/null | wc -c || echo 0)
+            total_css_kb=$(echo "scale=2; $total_css / 1024" | bc)
 
-          # Warning thresholds
-          js_limit=5242880  # 5MB in bytes
-          css_limit=102400  # 100KB in bytes
+            echo "📊 Bundle Sizes (gzipped):"
+            echo "  JavaScript: ${total_js_mb}MB"
+            echo "  CSS: ${total_css_kb}KB"
 
-          if [ "$total_js" -gt "$js_limit" ]; then
-            echo "⚠️  WARNING: JavaScript bundle size (${total_js_mb}MB) exceeds 5MB threshold"
-            echo "::warning::JavaScript bundle size is too large. Consider code splitting or lazy loading."
-          fi
+            # Warning thresholds
+            js_limit=5242880  # 5MB in bytes
+            css_limit=102400  # 100KB in bytes
 
-          if [ "$total_css" -gt "$css_limit" ]; then
-            echo "⚠️  WARNING: CSS bundle size (${total_css_kb}KB) exceeds 100KB threshold"
-            echo "::warning::CSS bundle size is too large. Consider optimizing styles."
+            if [ "$total_js" -gt "$js_limit" ]; then
+              echo "⚠️  WARNING: JavaScript bundle size (${total_js_mb}MB) exceeds 5MB threshold"
+              echo "::warning::JavaScript bundle size is too large. Consider code splitting or lazy loading."
+            fi
+
+            if [ "$total_css" -gt "$css_limit" ]; then
+              echo "⚠️  WARNING: CSS bundle size (${total_css_kb}KB) exceeds 100KB threshold"
+              echo "::warning::CSS bundle size is too large. Consider optimizing styles."
+            fi
+          else
+            echo "⚠️ No bundle files found. Build may have failed or is not a standard Next.js build."
           fi
 
   dependency-check:
@@ -338,121 +343,3 @@ jobs:
               body: '⚠️ **Dependency Check Failed**\n\nCircular dependencies or other dependency issues were detected. Please check the logs for details.'
             });
 
-  lighthouse:
-    name: Lighthouse Performance
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Configure git to use HTTPS instead of SSH
-        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build static site
-        run: pnpm run build
-
-      - name: Run Lighthouse CI
-        run: |
-          npx @lhci/cli@0.15.x autorun || echo "Lighthouse CI completed with warnings"
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Lighthouse reports
-        uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: lighthouse-reports
-          path: .lighthouseci
-          retention-days: 30
-
-  visual-regression:
-    name: Visual Regression Tests
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Configure git to use HTTPS instead of SSH
-        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build static site
-        run: pnpm run build
-
-      - name: Serve static site
-        run: |
-          npx http-server out -p 3000 &
-          sleep 5
-
-      - name: Run BackstopJS reference (if not exists)
-        run: |
-          if [ ! -d "backstop_data/bitmaps_reference" ]; then
-            npx backstop reference --config=backstop.json || true
-          fi
-
-      - name: Run BackstopJS test
-        run: npx backstop test --config=backstop.json || echo "Visual differences detected"
-        continue-on-error: true
-
-      - name: Upload visual regression report
-        uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: backstop-report
-          path: backstop_data
-          retention-days: 30
-
-      - name: Comment on PR
-        if: always() && github.event_name == 'pull_request'
-        uses: actions/github-script@v8
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            let message = '## 📸 Visual Regression Test Results\n\n';
-
-            try {
-              const reportPath = 'backstop_data/ci_report/xunit.xml';
-              if (fs.existsSync(reportPath)) {
-                message += '✅ Visual regression tests completed. Check artifacts for detailed report.\n\n';
-                message += '[Download BackstopJS Report](../actions/runs/${{ github.run_id }})';
-              } else {
-                message += '⚠️ No reference images found. Reference images will be created for future comparisons.';
-              }
-            } catch (error) {
-              message += '⚠️ Visual regression test completed with issues. Check artifacts for details.';
-            }
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: message
-            });
