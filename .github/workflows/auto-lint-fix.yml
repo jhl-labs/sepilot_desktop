@@ -197,8 +197,8 @@ jobs:
 
             const body = `# 🔧 자동 Lint 수정
 
-            **실행 일시:** ${new Date().toISOString()}
-            **워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})
+**실행 일시:** ${new Date().toISOString()}
+**워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})
 
 ---
 
@@ -208,10 +208,7 @@ ${reportContent}
 
 ## 📝 검토 사항
 
-${allFixed
-  ? '✅ 모든 Lint 문제가 자동으로 수정되었습니다. 변경사항을 검토 후 머지해주세요.'
-  : `⚠️ 일부 문제는 자동으로 수정할 수 없습니다. 남은 ${remainingErrors}개의 에러를 수동으로 수정해주세요.`
-}
+${allFixed ? '✅ 모든 Lint 문제가 자동으로 수정되었습니다. 변경사항을 검토 후 머지해주세요.' : `⚠️ 일부 문제는 자동으로 수정할 수 없습니다. 남은 ${remainingErrors}개의 에러를 수동으로 수정해주세요.`}
 
 ## 🤖 자동 생성된 PR
 
