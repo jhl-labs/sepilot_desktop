@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { LLMConnection, ModelConfig, ModelRoleTag, NetworkConfig } from '@/types';
 import { RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 import { fetchAvailableModels } from './settingsUtils';
+import { CustomHeadersManager } from './CustomHeadersManager';
 
 interface ModelListViewProps {
   connections: LLMConnection[];
@@ -427,29 +428,17 @@ function ModelSettings({
   connection,
 }: ModelSettingsProps) {
   const { t } = useTranslation();
-  const [newHeaderKey, setNewHeaderKey] = useState('');
-  const [newHeaderValue, setNewHeaderValue] = useState('');
 
   const connectionHeaders = connection?.customHeaders || {};
   const modelHeaders = model.customHeaders || {};
 
-  const handleAddHeader = () => {
-    const key = newHeaderKey.trim();
-    const value = newHeaderValue.trim();
-
-    if (!key || !value) {
-      return;
-    }
-
+  const handleAddHeader = (key: string, value: string) => {
     onUpdate({
       customHeaders: {
         ...modelHeaders,
         [key]: value,
       },
     });
-
-    setNewHeaderKey('');
-    setNewHeaderValue('');
   };
 
   const handleDeleteHeader = (key: string) => {
@@ -531,40 +520,16 @@ function ModelSettings({
           </div>
         )}
 
-        {Object.entries(modelHeaders).some(([, value]) => value !== null) && (
-          <div className="space-y-1 rounded-md border bg-background p-2 text-xs">
-            <p className="font-medium">{t('settings.llm.models.customHeaders.modelSpecific')}</p>
-            {Object.entries(modelHeaders)
-              .filter(([, value]) => value !== null)
-              .map(([key, value]) => (
-                <div key={key} className="flex items-center gap-2 rounded bg-muted/40 p-2 text-sm">
-                  <span className="font-mono flex-1">{key}</span>
-                  <span className="font-mono text-muted-foreground flex-1">{value}</span>
-                  <Button variant="ghost" size="sm" onClick={() => handleDeleteHeader(key)}>
-                    {t('common.delete')}
-                  </Button>
-                </div>
-              ))}
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <Input
-            value={newHeaderKey}
-            onChange={(e) => setNewHeaderKey(e.target.value)}
-            placeholder={t('settings.llm.connections.headerKey')}
-            className="flex-1"
-          />
-          <Input
-            value={newHeaderValue}
-            onChange={(e) => setNewHeaderValue(e.target.value)}
-            placeholder={t('settings.llm.connections.headerValue')}
-            className="flex-1"
-          />
-          <Button size="sm" onClick={handleAddHeader}>
-            {t('settings.llm.connections.addHeader')}
-          </Button>
-        </div>
+        <CustomHeadersManager
+          headers={
+            Object.fromEntries(
+              Object.entries(modelHeaders).filter(([, value]) => value !== null)
+            ) as Record<string, string>
+          }
+          onAddHeader={handleAddHeader}
+          onDeleteHeader={handleDeleteHeader}
+          title={t('settings.llm.models.customHeaders.modelSpecific')}
+        />
       </div>
 
       {/* Active Model Selection */}
