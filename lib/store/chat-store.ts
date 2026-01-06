@@ -30,6 +30,7 @@ import {
   type ExtensionStoreState,
   type AppMode,
 } from './extension-slices';
+import type { ExtensionDefinition } from '@/lib/extensions/types';
 
 // App mode types
 import { logger } from '@/lib/utils/logger';
@@ -212,6 +213,10 @@ interface ChatStore extends ExtensionStoreState {
   personas: Persona[]; // 사용 가능한 페르소나 목록 (기본 + 사용자 생성)
   activePersonaId: string | null; // 현재 활성화된 페르소나 ID
 
+  // Extension Registry State
+  activeExtensions: ExtensionDefinition[]; // 활성화된 Extension 목록 (Registry와 동기화)
+  extensionsVersion: number; // Extension 상태 변경 시 증가 (리렌더링 트리거)
+
   // Deprecated: kept for backward compatibility
   graphType: GraphType;
   isStreaming: boolean;
@@ -379,6 +384,10 @@ interface ChatStore extends ExtensionStoreState {
       } | null;
     } | null
   ) => void;
+
+  // Actions - Extensions
+  updateActiveExtensions: (extensions: ExtensionDefinition[]) => void;
+  refreshExtensions: () => void;
 
   // Deprecated: kept for backward compatibility
   setGraphType: (type: GraphType) => void;
@@ -619,6 +628,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // Persona
   personas: [...BUILTIN_PERSONAS],
   activePersonaId: 'default',
+
+  // Extension Registry State
+  activeExtensions: [],
+  extensionsVersion: 0,
 
   // Deprecated
   graphType: 'chat',
@@ -2120,6 +2133,23 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setActiveFileSelection: (selection) => {
     set({ activeFileSelection: selection });
+  },
+
+  // Extension Actions
+  updateActiveExtensions: (extensions) => {
+    set((state) => ({
+      activeExtensions: extensions,
+      extensionsVersion: state.extensionsVersion + 1,
+    }));
+  },
+
+  refreshExtensions: () => {
+    // ExtensionRegistry에서 활성화된 Extension 목록을 가져와서 업데이트
+    // 이 함수는 ExtensionRegistry.activate/deactivate 후에 자동으로 호출됨
+    // 여기서는 버전만 증가시켜서 리렌더링 트리거
+    set((state) => ({
+      extensionsVersion: state.extensionsVersion + 1,
+    }));
   },
 
   // Persona Actions

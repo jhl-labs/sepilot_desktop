@@ -44,17 +44,25 @@ export function getErrorStack(error: unknown): string | undefined {
 }
 
 /**
+ * 에러를 로그에 기록 (스택 트레이스 포함)
+ * @internal
+ */
+function logError(message: string, stack: string | undefined, context?: string): void {
+  if (context) {
+    logger.error(`[${context}]`, message, stack ? { stack } : {});
+  } else {
+    logger.error(message, stack ? { stack } : {});
+  }
+}
+
+/**
  * IPC 핸들러에서 사용할 표준 에러 응답 생성
  */
 export function createErrorResponse(error: unknown, context?: string): IPCResponse {
   const message = getErrorMessage(error);
   const stack = getErrorStack(error);
 
-  if (context) {
-    logger.error(`[${context}]`, message, stack ? { stack } : {});
-  } else {
-    logger.error(message, stack ? { stack } : {});
-  }
+  logError(message, stack, context);
 
   return {
     success: false,
@@ -117,11 +125,7 @@ export async function safeAsync<T>(
     const message = getErrorMessage(error);
     const stack = getErrorStack(error);
 
-    if (context) {
-      logger.error(`[${context}]`, message, stack ? { stack } : {});
-    } else {
-      logger.error(message, stack ? { stack } : {});
-    }
+    logError(message, stack, context);
 
     return { success: false, error: message };
   }
