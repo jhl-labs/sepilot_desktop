@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { VectorDBConfig, EmbeddingConfig } from '@/lib/vectordb';
+import { VectorDBConfig, EmbeddingConfig, VectorDBType } from '@/lib/vectordb';
 
 import { logger } from '@/lib/utils/logger';
 import { safeJsonParse } from '@/lib/http';
@@ -105,7 +105,7 @@ export function VectorDBSettings({
 
       const baseURL = embeddingConfig.baseURL.replace(/\/$/, ''); // 끝의 / 제거
 
-      let data: any;
+      let data: unknown;
 
       // Electron 환경: IPC를 통해 Main Process에서 호출 (CORS 없음, Network Config 사용)
       if (isElectron() && window.electronAPI?.llm) {
@@ -138,7 +138,7 @@ export function VectorDBSettings({
           );
         }
 
-        data = await safeJsonParse<any>(response, `${baseURL}/models`);
+        data = await safeJsonParse<unknown>(response, `${baseURL}/models`);
       }
 
       // 임베딩 모델 키워드 목록
@@ -163,37 +163,29 @@ export function VectorDBSettings({
 
       // OpenAI API 형식: { data: [{ id: "model-name", ... }] }
       let models: string[] = [];
-      if (data.data && Array.isArray(data.data)) {
-        const allModels = data.data.map((model: any) => model.id || model.name);
+      const dataObj = data as Record<string, unknown>;
+      if (dataObj.data && Array.isArray(dataObj.data)) {
+        const allModels = dataObj.data
+          .map((model: { id?: string; name?: string }) => model.id || model.name)
+          .filter((id): id is string => typeof id === 'string');
         // 임베딩 모델 필터링
-        const embeddingModels = allModels.filter(
-          (id: string) => typeof id === 'string' && isEmbeddingModel(id)
-        );
+        const embeddingModels = allModels.filter((id) => isEmbeddingModel(id));
         // 임베딩 모델이 없으면 모든 모델 표시
-        models =
-          embeddingModels.length > 0
-            ? embeddingModels
-            : allModels.filter((id: string) => typeof id === 'string');
-      } else if (data.models && Array.isArray(data.models)) {
+        models = embeddingModels.length > 0 ? embeddingModels : allModels;
+      } else if (dataObj.models && Array.isArray(dataObj.models)) {
         // Ollama API 형식: { models: [{ name: "model-name", ... }] }
-        const allModels = data.models.map((model: any) => model.name || model.id);
-        const embeddingModels = allModels.filter(
-          (id: string) => typeof id === 'string' && isEmbeddingModel(id)
-        );
-        models =
-          embeddingModels.length > 0
-            ? embeddingModels
-            : allModels.filter((id: string) => typeof id === 'string');
-      } else if (Array.isArray(data)) {
+        const allModels = dataObj.models
+          .map((model: { id?: string; name?: string }) => model.name || model.id)
+          .filter((id): id is string => typeof id === 'string');
+        const embeddingModels = allModels.filter((id) => isEmbeddingModel(id));
+        models = embeddingModels.length > 0 ? embeddingModels : allModels;
+      } else if (Array.isArray(dataObj)) {
         // 다른 형식의 응답 처리
-        const allModels = data.map((model: any) => model.id || model.name || model);
-        const embeddingModels = allModels.filter(
-          (id: string) => typeof id === 'string' && isEmbeddingModel(id)
-        );
-        models =
-          embeddingModels.length > 0
-            ? embeddingModels
-            : allModels.filter((id: string) => typeof id === 'string');
+        const allModels = dataObj
+          .map((model: { id?: string; name?: string }) => model.id || model.name || model)
+          .filter((id): id is string => typeof id === 'string');
+        const embeddingModels = allModels.filter((id) => isEmbeddingModel(id));
+        models = embeddingModels.length > 0 ? embeddingModels : allModels;
       }
 
       if (models.length === 0) {
@@ -226,10 +218,10 @@ export function VectorDBSettings({
           setVectorDBConfig({ ...vectorDBConfig, dimension });
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch models:', error);
       setModelError(
-        error.message ||
+        (error instanceof Error ? error.message : String(error)) ||
           t('settings.vectordb.validation.fetchModelsFailed', { error: 'Unknown error' })
       );
     } finally {
@@ -264,11 +256,13 @@ export function VectorDBSettings({
 
       // 성공 메시지 표시 후 자동으로 사라지게
       setTimeout(() => setMessage(null), 3000);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save VectorDB config:', error);
       setMessage({
         type: 'error',
-        text: error.message || t('settings.vectordb.validation.saveFailed'),
+        text:
+          (error instanceof Error ? error.message : String(error)) ||
+          t('settings.vectordb.validation.saveFailed'),
       });
     } finally {
       setIsSaving(false);
@@ -289,7 +283,7 @@ export function VectorDBSettings({
               id="vectordb-type"
               value={vectorDBConfig.type}
               onChange={(e) =>
-                setVectorDBConfig({ ...vectorDBConfig, type: e.target.value as any })
+                setVectorDBConfig({ ...vectorDBConfig, type: e.target.value as VectorDBType })
               }
               className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
             >
@@ -336,7 +330,10 @@ export function VectorDBSettings({
               id="embedding-provider"
               value={embeddingConfig.provider}
               onChange={(e) =>
-                setEmbeddingConfig({ ...embeddingConfig, provider: e.target.value as any })
+                setEmbeddingConfig({
+                  ...embeddingConfig,
+                  provider: e.target.value as EmbeddingConfig['provider'],
+                })
               }
               className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
             >

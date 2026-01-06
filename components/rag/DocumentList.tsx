@@ -44,6 +44,11 @@ import { DocsSyncDialog } from './DocsSyncDialog';
 import { logger } from '@/lib/utils/logger';
 type ViewMode = 'grid' | 'list' | 'tree';
 
+interface DocumentChunk {
+  index: number;
+  content: string;
+}
+
 interface DocumentListProps {
   onDelete?: (ids: string[]) => Promise<void>;
   onEdit?: (doc: VectorDocument) => void;
@@ -82,7 +87,10 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       const folders = await getAllEmptyFolders();
       setEmptyFolders(folders);
     } catch (error) {
-      console.error('Failed to load empty folders:', error);
+      console.error(
+        'Failed to load empty folders:',
+        error instanceof Error ? error.message : String(error)
+      );
     }
   };
 
@@ -92,7 +100,10 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       await createEmptyFolder(folderPath);
       await loadEmptyFolders(); // 다시 로드
     } catch (error) {
-      console.error('Failed to add empty folder:', error);
+      console.error(
+        'Failed to add empty folder:',
+        error instanceof Error ? error.message : String(error)
+      );
       throw error;
     }
   };
@@ -103,7 +114,10 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       await deleteEmptyFolder(folderPath);
       await loadEmptyFolders(); // 다시 로드
     } catch (error) {
-      console.error('Failed to remove empty folder:', error);
+      console.error(
+        'Failed to remove empty folder:',
+        error instanceof Error ? error.message : String(error)
+      );
       throw error;
     }
   };
@@ -190,7 +204,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           const existingDoc = groupedDocs.get(originalId)!;
           const chunks = existingDoc.metadata._chunks || [];
           chunks.push({ index: chunkIndex, content: doc.content });
-          chunks.sort((a: any, b: any) => a.index - b.index);
+          chunks.sort((a: DocumentChunk, b: DocumentChunk) => a.index - b.index);
           existingDoc.metadata._chunks = chunks;
         } else {
           // 새 그룹 생성
@@ -209,7 +223,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       // 청크들을 합쳐서 최종 문서 리스트 생성
       const mergedDocs = Array.from(groupedDocs.values()).map((doc) => {
         const chunks = doc.metadata._chunks || [];
-        const mergedContent = chunks.map((c: any) => c.content).join('\n');
+        const mergedContent = chunks.map((c: DocumentChunk) => c.content).join('\n');
         return {
           ...doc,
           content: mergedContent,
@@ -228,9 +242,18 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           folderPath: d.metadata?.folderPath,
         }))
       );
-    } catch (error: any) {
-      console.error('Failed to load documents:', error);
-      setMessage({ type: 'error', text: error.message || t('documents.errors.loadFailed') });
+    } catch (error) {
+      console.error(
+        'Failed to load documents:',
+        error instanceof Error ? error.message : String(error)
+      );
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('documents.errors.loadFailed'),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -259,7 +282,10 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         }
       }
     } catch (error) {
-      console.error('Failed to load team docs configs:', error);
+      console.error(
+        'Failed to load team docs configs:',
+        error instanceof Error ? error.message : String(error)
+      );
     }
   };
 
@@ -307,9 +333,18 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       await onDelete(chunkIdsToDelete.length > 0 ? chunkIdsToDelete : [id]);
       setMessage({ type: 'success', text: t('documents.delete.success') });
       await loadDocuments(); // Reload list
-    } catch (error: any) {
-      console.error('Failed to delete document:', error);
-      setMessage({ type: 'error', text: error.message || t('documents.errors.deleteFailed') });
+    } catch (error) {
+      console.error(
+        'Failed to delete document:',
+        error instanceof Error ? error.message : String(error)
+      );
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('documents.errors.deleteFailed'),
+      });
     }
   };
 
@@ -347,9 +382,18 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         type: 'success',
         text: t('documents.export.success', { count: exportData.totalCount }),
       });
-    } catch (error: any) {
-      console.error('Failed to export documents:', error);
-      setMessage({ type: 'error', text: error.message || t('documents.errors.exportFailed') });
+    } catch (error) {
+      console.error(
+        'Failed to export documents:',
+        error instanceof Error ? error.message : String(error)
+      );
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('documents.errors.exportFailed'),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -386,9 +430,18 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       // 문서 목록 새로고침
       await loadDocuments();
-    } catch (error: any) {
-      console.error('Failed to import documents:', error);
-      setMessage({ type: 'error', text: error.message || t('documents.errors.importFailed') });
+    } catch (error) {
+      console.error(
+        'Failed to import documents:',
+        error instanceof Error ? error.message : String(error)
+      );
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('documents.errors.importFailed'),
+      });
     } finally {
       setIsLoading(false);
       // 파일 입력 초기화
@@ -547,11 +600,17 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         type: 'success',
         text: t('documents.folder.deleteSuccess', { folderPath }),
       });
-    } catch (error: any) {
-      console.error('Failed to delete folder:', error);
+    } catch (error) {
+      console.error(
+        'Failed to delete folder:',
+        error instanceof Error ? error.message : String(error)
+      );
       setMessage({
         type: 'error',
-        text: error.message || t('documents.errors.folderDeleteFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('documents.errors.folderDeleteFailed'),
       });
     }
   };
@@ -590,11 +649,17 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
         type: 'success',
         text: t('documents.folder.createSuccess', { folderPath: trimmedPath }),
       });
-    } catch (error: any) {
-      console.error('Failed to create folder:', error);
+    } catch (error) {
+      console.error(
+        'Failed to create folder:',
+        error instanceof Error ? error.message : String(error)
+      );
       setMessage({
         type: 'error',
-        text: error.message || t('documents.errors.folderCreateFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('documents.errors.folderCreateFailed'),
       });
     }
   };
@@ -644,9 +709,18 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       // 문서 목록 새로고침
       await loadDocuments();
-    } catch (error: any) {
-      console.error('Failed to move document:', error);
-      setMessage({ type: 'error', text: error.message || t('documents.errors.moveFailed') });
+    } catch (error) {
+      console.error(
+        'Failed to move document:',
+        error instanceof Error ? error.message : String(error)
+      );
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('documents.errors.moveFailed'),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -894,7 +968,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
         for (const newDoc of result.documents) {
           const matchingDocs = allDocs.filter(
-            (existing: any) =>
+            (existing: VectorDocument) =>
               existing.metadata?.title === newDoc.title &&
               existing.metadata?.folderPath === newDoc.metadata?.folderPath &&
               existing.metadata?.docGroup !== 'team'
@@ -912,15 +986,17 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
           return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         };
 
-        const documentsWithIds = result.documents.map((doc: any) => ({
-          id: generateId(),
-          content: doc.content,
-          metadata: {
-            ...doc.metadata,
-            docGroup: 'personal',
-            source: `${personalRepo.owner}/${personalRepo.repo}`,
-          },
-        }));
+        const documentsWithIds = result.documents.map(
+          (doc: { title: string; content: string; metadata?: Record<string, unknown> }) => ({
+            id: generateId(),
+            content: doc.content,
+            metadata: {
+              ...doc.metadata,
+              docGroup: 'personal',
+              source: `${personalRepo.owner}/${personalRepo.repo}`,
+            },
+          })
+        );
 
         const indexResult = await window.electronAPI.vectorDB.indexDocuments(documentsWithIds, {
           chunkSize: 2500,
@@ -942,11 +1018,17 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       } else {
         throw new Error(result.error || t('documents.errors.fetchFailed'));
       }
-    } catch (error: any) {
-      console.error('Failed to pull personal docs:', error);
+    } catch (error) {
+      console.error(
+        'Failed to pull personal docs:',
+        error instanceof Error ? error.message : String(error)
+      );
       setMessage({
         type: 'error',
-        text: error.message || t('documents.errors.personalSyncFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('documents.errors.personalSyncFailed'),
       });
     } finally {
       setSyncingPersonal(null);
@@ -974,11 +1056,17 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       } else {
         throw new Error(result.error || t('documents.errors.pushFailed'));
       }
-    } catch (error: any) {
-      console.error('Failed to push personal docs:', error);
+    } catch (error) {
+      console.error(
+        'Failed to push personal docs:',
+        error instanceof Error ? error.message : String(error)
+      );
       setMessage({
         type: 'error',
-        text: error.message || t('documents.errors.personalPushFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('documents.errors.personalPushFailed'),
       });
     } finally {
       setSyncingPersonal(null);
@@ -1007,9 +1095,18 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       } else {
         throw new Error(result.error || t('documents.errors.syncFailed'));
       }
-    } catch (error: any) {
-      console.error('Failed to sync team doc:', error);
-      setMessage({ type: 'error', text: error.message || t('documents.errors.syncFailed') });
+    } catch (error) {
+      console.error(
+        'Failed to sync team doc:',
+        error instanceof Error ? error.message : String(error)
+      );
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('documents.errors.syncFailed'),
+      });
     } finally {
       setSyncingTeamId(null);
     }
@@ -1041,9 +1138,18 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       } else {
         throw new Error(result.error || t('documents.errors.pushFailed'));
       }
-    } catch (error: any) {
-      console.error('Failed to push team doc:', error);
-      setMessage({ type: 'error', text: error.message || t('documents.errors.pushFailed') });
+    } catch (error) {
+      console.error(
+        'Failed to push team doc:',
+        error instanceof Error ? error.message : String(error)
+      );
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('documents.errors.pushFailed'),
+      });
     } finally {
       setSyncingTeamId(null);
     }

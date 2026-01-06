@@ -38,13 +38,12 @@ import { cn } from '@/lib/utils';
 function FallbackEditor({
   content,
   onChange,
-  options,
 }: {
   content: string;
   language?: string;
   theme?: string;
   onChange?: (value: string | undefined) => void;
-  options?: Record<string, any>;
+  options?: unknown;
 }) {
   return (
     <textarea
@@ -52,10 +51,7 @@ function FallbackEditor({
       onChange={(e) => onChange?.(e.target.value)}
       className="w-full h-full bg-[#1e1e1e] text-gray-200 font-mono text-sm p-4 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
       placeholder="Enter content here..."
-      style={{
-        fontSize: options?.fontSize || 14,
-        lineHeight: 1.6,
-      }}
+      style={{ lineHeight: 1.6 }}
     />
   );
 }
@@ -88,10 +84,14 @@ interface DocumentDialogProps {
   onOpenChange: (open: boolean) => void;
   // Edit mode props
   document?: VectorDocument | null;
-  onSave?: (doc: { id: string; content: string; metadata: Record<string, any> }) => Promise<void>;
+  onSave?: (doc: {
+    id: string;
+    content: string;
+    metadata: Record<string, unknown>;
+  }) => Promise<void>;
   // Create mode props
   onUpload?: (
-    documents: { content: string; metadata: Record<string, any> }[],
+    documents: { content: string; metadata: Record<string, unknown> }[],
     chunkStrategy?: ChunkStrategy
   ) => Promise<void>;
 }
@@ -215,7 +215,7 @@ export function DocumentDialog({
       setMessage(null);
 
       try {
-        const updatedMetadata: Record<string, any> = {
+        const updatedMetadata: Record<string, unknown> = {
           ...document.metadata,
           title: title.trim() || t('documents.untitled'),
           source: source.trim() || 'manual',
@@ -267,9 +267,14 @@ export function DocumentDialog({
               throw new Error(result.error || t('documents.errors.pushFailed'));
             }
             setMessage({ type: 'success', text: t('documentDialog.success.githubUpload') });
-          } catch (e: any) {
-            console.error(e);
-            setMessage({ type: 'error', text: e.message || t('documents.errors.pushFailed') });
+          } catch (error) {
+            console.error(error);
+            setMessage({
+              type: 'error',
+              text:
+                (error instanceof Error ? error.message : String(error)) ||
+                t('documents.errors.pushFailed'),
+            });
             return; // Stop here if push failed
           } finally {
             setIsPushing(false);
@@ -279,8 +284,13 @@ export function DocumentDialog({
         }
 
         setTimeout(() => onOpenChange(false), 800);
-      } catch (error: any) {
-        setMessage({ type: 'error', text: error.message || t('documentDialog.errors.saveFailed') });
+      } catch (error) {
+        setMessage({
+          type: 'error',
+          text:
+            (error instanceof Error ? error.message : String(error)) ||
+            t('documentDialog.errors.saveFailed'),
+        });
       } finally {
         setIsSaving(false);
       }
@@ -296,9 +306,9 @@ export function DocumentDialog({
           throw new Error(t('documentDialog.errors.selectTeamDocs'));
         }
 
-        let documentsToUpload: { content: string; metadata: Record<string, any> }[] = [];
+        let documentsToUpload: { content: string; metadata: Record<string, unknown> }[] = [];
         const getBaseMetadata = () => {
-          const base: Record<string, any> = {
+          const base: Record<string, unknown> = {
             docGroup: docGroup,
             uploadedAt: Date.now(),
             folderPath: folderPath.trim() || undefined,
@@ -373,8 +383,14 @@ export function DocumentDialog({
           text: t('documentDialog.success.uploaded', { count: documentsToUpload.length }),
         });
         setTimeout(() => onOpenChange(false), 1000);
-      } catch (e: any) {
-        setMessage({ type: 'error', text: e.message || t('documentDialog.errors.uploadFailed') });
+      } catch (error) {
+        setMessage({
+          type: 'error',
+          text:
+            error instanceof Error
+              ? error.message
+              : String(error) || t('documentDialog.errors.uploadFailed'),
+        });
       } finally {
         setIsSaving(false);
         setUploadProgress(null);
