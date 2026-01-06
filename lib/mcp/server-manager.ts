@@ -7,6 +7,30 @@ import { MCPServerConfig, MCPTool, ToolCallResult } from './types';
 
 import { logger } from '@/lib/utils/logger';
 /**
+ * Simple Mutex implementation for async operations
+ */
+class Mutex {
+  private locked = false;
+  private waitQueue: Array<() => void> = [];
+
+  async acquire(): Promise<() => void> {
+    while (this.locked) {
+      await new Promise<void>((resolve) => this.waitQueue.push(resolve));
+    }
+    this.locked = true;
+    return () => this.release();
+  }
+
+  private release(): void {
+    this.locked = false;
+    const next = this.waitQueue.shift();
+    if (next) {
+      next();
+    }
+  }
+}
+
+/**
  * MCP Server Manager
  *
  * 여러 MCP 서버를 관리하는 싱글톤 클래스
@@ -14,6 +38,7 @@ import { logger } from '@/lib/utils/logger';
 class MCPServerManagerClass {
   private servers: Map<string, MCPClient> = new Map();
   private allTools: MCPTool[] = [];
+  private mutex = new Mutex();
 
   /**
    * 서버 추가 (Renderer에서 호출)
@@ -91,26 +116,36 @@ class MCPServerManagerClass {
    * Main Process용 - 서버 추가 (이미 연결된 클라이언트)
    */
   async addServerInMainProcess(client: MCPClient): Promise<void> {
-    // 클라이언트는 이미 연결되고 초기화된 상태여야 함
-    this.servers.set(client.getName(), client);
-    this.updateAllTools();
+    const release = await this.mutex.acquire();
+    try {
+      // 클라이언트는 이미 연결되고 초기화된 상태여야 함
+      this.servers.set(client.getName(), client);
+      this.updateAllTools();
 
-    logger.info('MCP Server added', {
-      name: client.getName(),
-      toolCount: client.getTools().length,
-    });
+      logger.info('MCP Server added', {
+        name: client.getName(),
+        toolCount: client.getTools().length,
+      });
+    } finally {
+      release();
+    }
   }
 
   /**
    * Main Process용 - 서버 제거
    */
   async removeServerInMainProcess(name: string): Promise<void> {
-    const client = this.servers.get(name);
-    if (client) {
-      await client.disconnect();
-      this.servers.delete(name);
-      this.updateAllTools();
-      logger.info('MCP Server removed', { name });
+    const release = await this.mutex.acquire();
+    try {
+      const client = this.servers.get(name);
+      if (client) {
+        await client.disconnect();
+        this.servers.delete(name);
+        this.updateAllTools();
+        logger.info('MCP Server removed', { name });
+      }
+    } finally {
+      release();
     }
   }
 

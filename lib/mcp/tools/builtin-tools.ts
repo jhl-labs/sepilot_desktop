@@ -109,13 +109,66 @@ function resolvePath(filePath: string): string {
     ? path.resolve(filePath)
     : path.resolve(workingDir, filePath);
 
-  // Security Check: Ensure targetPath is within workingDir
+  // Security Check 1: Ensure targetPath is within workingDir
   const relative = path.relative(workingDir, targetPath);
   const isOutside = relative.startsWith('..') || path.isAbsolute(relative);
 
   if (isOutside) {
     logger.warn(`[Security] Blocked access to path outside working directory: ${targetPath}`);
     throw new Error(`Access denied: Path is outside the working directory: ${filePath}`);
+  }
+
+  // Security Check 2: Block sensitive files and directories
+  const sensitivePatterns = [
+    // Environment and secrets
+    /\.env$/i,
+    /\.env\..+$/i, // .env.local, .env.production, etc.
+    /\.secret/i,
+    /\.secrets?\//i,
+    /credentials/i,
+    /\.password/i,
+
+    // SSH and crypto keys
+    /\.ssh\//i,
+    /id_rsa/i,
+    /id_ed25519/i,
+    /\.pem$/i,
+    /\.key$/i,
+    /private.*key/i,
+
+    // Cloud provider credentials
+    /\.aws\//i,
+    /\.azure\//i,
+    /\.gcloud\//i,
+
+    // Package manager configs (may contain tokens)
+    /\.npmrc$/i,
+    /\.pypirc$/i,
+
+    // Git configs (may contain credentials)
+    /\.git\/config$/i,
+    /\.gitconfig$/i,
+
+    // Database files
+    /\.db$/i,
+    /\.sqlite$/i,
+    /\.sqlite3$/i,
+  ];
+
+  // Normalize path for pattern matching (use forward slashes)
+  const normalizedPath = targetPath.replace(/\\/g, '/');
+  const pathLower = normalizedPath.toLowerCase();
+
+  for (const pattern of sensitivePatterns) {
+    if (pattern.test(normalizedPath) || pattern.test(pathLower)) {
+      logger.warn(`[Security] Blocked access to sensitive file: ${targetPath}`, {
+        pattern: pattern.toString(),
+      });
+      throw new Error(
+        `Access denied: Cannot access sensitive files. ` +
+          `If you need to read this file, please do it manually.`
+      );
+    }
   }
 
   return targetPath;
@@ -659,10 +712,71 @@ async function listFiles(dir: string, recursive: boolean): Promise<string[]> {
 }
 
 /**
+ * Validate command for dangerous patterns
+ * Prevents command injection and destructive operations
+ */
+function validateCommand(command: string): void {
+  // Dangerous command patterns (blacklist approach)
+  const dangerousPatterns = [
+    // Destructive operations
+    /rm\s+(-rf?|--recursive|--force)/i,
+    /dd\s+if=/i,
+    /mkfs/i,
+    /:\(\)\{.*:\|:.*\};:/i, // Fork bomb
+
+    // System manipulation
+    /shutdown|reboot|init\s+0/i,
+    /kill\s+-9\s+1/i, // Kill init process
+    /chmod\s+777/i, // Overly permissive
+    /chown\s+root/i,
+
+    // Network exfiltration
+    /nc\s+.*-e/i, // Netcat reverse shell
+    /bash\s+-i\s+>&\s+\/dev\/tcp/i, // Reverse shell
+    /curl.*\|\s*(bash|sh)/i, // Download and execute
+    /wget.*\|\s*(bash|sh)/i,
+
+    // Sensitive file access (outside working dir)
+    /\/etc\/shadow/i,
+    /\/etc\/passwd/i,
+    /\.ssh\/id_rsa/i,
+
+    // Command chaining abuse
+    /;\s*rm\s+/i,
+    /&&\s*rm\s+/i,
+    /\|\|\s*rm\s+/i,
+  ];
+
+  const commandLower = command.toLowerCase();
+
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(command) || pattern.test(commandLower)) {
+      logger.error('[Security] Blocked dangerous command', {
+        command,
+        pattern: pattern.toString(),
+      });
+      throw new Error(
+        `Blocked: This command contains potentially dangerous operations. ` +
+          `If this is legitimate, please run it manually outside the agent.`
+      );
+    }
+  }
+
+  // Additional check: commands trying to escape working directory
+  if (command.includes('../../../') || command.includes('..\\..\\..\\')) {
+    logger.warn('[Security] Blocked command with excessive path traversal', { command });
+    throw new Error(`Blocked: Excessive path traversal detected in command`);
+  }
+}
+
+/**
  * Handle command_execute
  */
 async function handleCommandExecute(args: { command: string; cwd?: string }): Promise<string> {
   try {
+    // Security: Validate command before execution
+    validateCommand(args.command);
+
     // Treat empty string as null/undefined
     const cwdArg = args.cwd && args.cwd.trim() !== '' ? args.cwd : null;
     const workingDir = cwdArg || getCurrentWorkingDirectory() || process.cwd();

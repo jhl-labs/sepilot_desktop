@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
 import { spawn } from 'child_process';
+import { z } from 'zod';
 import { MCPServerManager } from '../../../lib/mcp/server-manager';
 import { StdioMCPClient } from '../../../lib/mcp/transport/stdio';
 import { SSEMCPClient } from '../../../lib/mcp/transport/sse';
@@ -46,6 +47,36 @@ function saveMCPConfigs(configs: MCPServerConfig[]): void {
 
 // Server configs 저장 (Main Process에서만 유지, DB와 동기화)
 const serverConfigs = new Map<string, MCPServerConfig>();
+
+/**
+ * Zod schemas for runtime validation
+ */
+const ToolArgsSchema = z.record(z.string(), z.unknown());
+
+/**
+ * Sanitize tool arguments to prevent prototype pollution
+ */
+function sanitizeToolArgs(args: unknown): Record<string, unknown> {
+  if (typeof args !== 'object' || args === null) {
+    throw new Error('Tool arguments must be a non-null object');
+  }
+
+  // Validate with Zod
+  const validated = ToolArgsSchema.parse(args);
+
+  // Remove dangerous properties
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(validated)) {
+    // Block prototype pollution attempts
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      console.warn('[Security] Blocked dangerous property in tool args:', key);
+      continue;
+    }
+    sanitized[key] = value;
+  }
+
+  return sanitized;
+}
 
 /**
  * Initialize MCP servers from database on app startup
@@ -283,7 +314,7 @@ export function setupMCPHandlers() {
    */
   ipcMain.handle(
     'mcp-call-tool',
-    async (_event, serverName: string, toolName: string, args: any) => {
+    async (_event, serverName: string, toolName: string, args: unknown) => {
       try {
         const server = MCPServerManager.getServerInMainProcess(serverName);
 
@@ -291,7 +322,10 @@ export function setupMCPHandlers() {
           throw new Error(`MCP Server '${serverName}' not found`);
         }
 
-        const result = await server.callTool(toolName, args);
+        // Security: Validate and sanitize tool arguments
+        const sanitizedArgs = sanitizeToolArgs(args);
+
+        const result = await server.callTool(toolName, sanitizedArgs);
 
         return {
           success: true,
