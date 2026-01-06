@@ -20,24 +20,33 @@ on:
         required: false
         default: 'all'
         type: string
+      auto_fix:
+        description: '자동 수정 시도 (true/false)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 permissions:
-  contents: read
+  contents: write
   issues: write
-  pull-requests: read
+  pull-requests: write
   id-token: write
 
 jobs:
   bug-hunt:
-    name: Claude Bug Hunt
+    name: Claude Bug Hunt & Auto-fix
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -50,8 +59,11 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Configure git to use HTTPS instead of SSH
-        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -125,10 +137,11 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            # 자동 버그 탐색 미션
+            # 자동 버그 탐색 및 수정 미션
 
             ## 목표
             코드베이스에서 잠재적인 버그, 코드 품질 문제, 보안 취약점을 탐색하고 분석합니다.
+            **중요:** 발견한 버그를 보고서에 기록하되, 자동 수정은 하지 마세요. 보고서만 생성합니다.
 
             ## 스캔 깊이: ${{ inputs.scan_depth || 'standard' }}
             ## 대상 영역: ${{ inputs.target_areas || 'all' }}
@@ -198,6 +211,7 @@ jobs:
             - **설명:** [상세 설명]
             - **영향:** [예상되는 영향]
             - **해결 방법:** [권장 수정 방법]
+            - **자동 수정 가능:** [Yes/No]
 
             ### 2. [버그 제목]
             ...
@@ -216,9 +230,10 @@ jobs:
             2. 문제가 많이 보고된 파일들을 우선적으로 검토하세요
             3. 실제 코드를 읽고 문맥을 이해하세요
             4. 발견한 문제들을 심각도별로 분류하세요
-            5. 보고서를 bug-hunt-report.md로 작성하세요
+            5. 각 버그에 대해 자동 수정 가능 여부 표시
+            6. 보고서를 bug-hunt-report.md로 작성하세요
 
-            주의: 단순히 도구의 경고를 나열하는 것이 아니라, 실제 버그 가능성이 있는 것만 보고하세요.
+            **중요:** 코드 수정은 하지 마세요. 보고서만 작성합니다.
 
           claude_args: '--allowed-tools "Read:*,Grep:*,Glob:*,Write:bug-hunt-report.md"'
 
@@ -235,28 +250,244 @@ jobs:
             # 심각도 높은 버그 개수
             high_severity=$(grep -c "심각도.*High\|Severity.*High" bug-hunt-report.md || echo "0")
             echo "high_severity=$high_severity" >> $GITHUB_OUTPUT
+
+            # 자동 수정 가능한 버그 개수
+            auto_fixable=$(grep -c "자동 수정 가능.*Yes\|자동 수정 가능: Yes" bug-hunt-report.md || echo "0")
+            echo "auto_fixable=$auto_fixable" >> $GITHUB_OUTPUT
           else
             echo "report_exists=false" >> $GITHUB_OUTPUT
             echo "bug_count=0" >> $GITHUB_OUTPUT
             echo "high_severity=0" >> $GITHUB_OUTPUT
+            echo "auto_fixable=0" >> $GITHUB_OUTPUT
           fi
 
-      - name: Upload analysis reports
-        uses: actions/upload-artifact@v6
-        if: always()
+      - name: Attempt Auto-fix with Claude
+        if: steps.check_report.outputs.auto_fixable > 0 && (inputs.auto_fix == 'true' || github.event_name == 'schedule')
+        id: claude_fix
+        uses: anthropics/claude-code-action@v1
         with:
-          name: bug-hunt-reports
-          path: |
-            bug-hunt-report.md
-            static-analysis-report.md
-            problem-areas.md
-            eslint-report.json
-            typescript-errors.txt
-            jscpd-report.json
-          retention-days: 90
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            # 버그 자동 수정 미션
 
-      - name: Create issue for critical findings
-        if: steps.check_report.outputs.high_severity > 0
+            ## 목표
+            bug-hunt-report.md에 기록된 버그 중 "자동 수정 가능: Yes"로 표시된 것들을 수정합니다.
+
+            ## 중요 지침
+
+            1. **bug-hunt-report.md를 읽고** 자동 수정 가능한 버그만 수정
+            2. **안전한 수정만 진행**: 로직 변경이 필요한 경우 수정하지 않음
+            3. **한 번에 하나씩**: 각 버그를 신중하게 수정
+            4. **테스트 실행**: 수정 후 해당 영역의 테스트가 통과하는지 확인
+            5. **보수적으로**: 확신이 없으면 수정하지 않음
+
+            ## 수정 가능한 항목 예시
+
+            ✅ **안전한 수정:**
+            - Null 체크 추가
+            - 타입 단언 수정
+            - 사용하지 않는 변수/import 제거
+            - 명백한 오타 수정
+            - 포맷팅 문제
+            - 누락된 에러 핸들링 추가 (단순한 경우)
+
+            ❌ **수정하지 않을 항목:**
+            - 복잡한 로직 변경
+            - 알고리즘 개선
+            - 아키텍처 변경
+            - 불확실한 버그
+            - 테스트가 실패하는 경우
+
+            ## 작업 순서
+
+            1. bug-hunt-report.md 읽기
+            2. "자동 수정 가능: Yes" 항목 찾기
+            3. 해당 파일 읽기
+            4. 신중하게 수정
+            5. 수정 내용을 bug-fixes-applied.md에 기록
+            6. 다음 버그로 이동
+
+            ## 수정 기록 형식
+
+            bug-fixes-applied.md 파일에 다음 형식으로 기록:
+
+            ```markdown
+            # 🔧 자동 수정 적용 내역
+
+            ## 수정된 버그
+
+            ### 1. [버그 제목]
+            - **파일:** [파일경로]
+            - **수정 내용:** [무엇을 수정했는지]
+            - **이유:** [왜 안전한 수정인지]
+
+            ### 2. [버그 제목]
+            ...
+
+            ## 수정하지 않은 버그
+
+            ### 1. [버그 제목]
+            - **파일:** [파일경로]
+            - **이유:** [왜 수정하지 않았는지]
+            ```
+
+            **보수적으로 작업하세요.** 불확실하면 수정하지 마세요.
+
+          claude_args: '--allowed-tools "Read:*,Edit:*,Grep:*,Glob:*,Write:bug-fixes-applied.md,Bash:pnpm run test*,Bash:pnpm run lint"'
+
+      - name: Check if fixes were applied
+        if: steps.claude_fix.conclusion != 'skipped'
+        id: check_fixes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "has_fixes=true" >> $GITHUB_OUTPUT
+            echo "✅ 자동 수정이 적용되었습니다" > fix-summary.md
+            echo "" >> fix-summary.md
+            echo "## 수정된 파일:" >> fix-summary.md
+            git status --short >> fix-summary.md
+          else
+            echo "has_fixes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ 자동 수정 가능한 항목이 없거나 수정이 안전하지 않아 적용되지 않았습니다." > fix-summary.md
+          fi
+
+      - name: Create fix branch and commit
+        if: steps.check_fixes.outputs.has_fixes == 'true'
+        id: create_branch
+        run: |
+          # 브랜치 이름 생성
+          BRANCH_NAME="auto-bug-fix/$(date +%Y%m%d-%H%M%S)"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+          # 새 브랜치 생성 및 체크아웃
+          git checkout -b "$BRANCH_NAME"
+
+          # 변경사항 커밋
+          git add -A
+          git commit -m "fix: 자동 버그 수정 적용
+
+자동 버그 탐색 워크플로우에서 발견한 버그를 수정했습니다.
+
+- 버그 탐색 보고서: bug-hunt-report.md 참조
+- 수정 내역: bug-fixes-applied.md 참조
+
+⚠️ 이 PR은 AI가 자동으로 생성했습니다.
+코드 리뷰를 통해 수정 내용을 검증한 후 머지해주세요.
+
+[skip ci]" || echo "No changes to commit"
+
+          # 푸시
+          git push origin "$BRANCH_NAME"
+
+      - name: Create Pull Request
+        if: steps.check_fixes.outputs.has_fixes == 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const branchName = '${{ steps.create_branch.outputs.branch_name }}';
+
+            let reportContent = '';
+            if (fs.existsSync('bug-hunt-report.md')) {
+              reportContent = fs.readFileSync('bug-hunt-report.md', 'utf8');
+              if (reportContent.length > 30000) {
+                reportContent = reportContent.substring(0, 30000) + '\n\n... (내용이 잘렸습니다)';
+              }
+            }
+
+            let fixesContent = '';
+            if (fs.existsSync('bug-fixes-applied.md')) {
+              fixesContent = fs.readFileSync('bug-fixes-applied.md', 'utf8');
+            }
+
+            const bugCount = '${{ steps.check_report.outputs.bug_count }}';
+            const highSeverity = '${{ steps.check_report.outputs.high_severity }}';
+            const autoFixable = '${{ steps.check_report.outputs.auto_fixable }}';
+
+            const title = `🤖 자동 버그 수정 (${autoFixable}개 수정 시도)`;
+
+            const body = `# 🤖 자동 버그 수정 PR
+
+**실행 일시:** ${new Date().toISOString()}
+**워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})
+
+## 📊 요약
+
+- 발견된 전체 버그: ${bugCount}개
+- 심각도 높음: ${highSeverity}개
+- 자동 수정 시도: ${autoFixable}개
+
+---
+
+## 🔧 적용된 수정사항
+
+${fixesContent || '수정 내역을 확인할 수 없습니다.'}
+
+---
+
+## 📋 전체 버그 탐색 보고서
+
+<details>
+<summary>펼쳐보기</summary>
+
+${reportContent}
+
+</details>
+
+---
+
+## ⚠️ 중요 안내
+
+이 PR은 **AI가 자동으로 생성**한 버그 수정입니다.
+
+### 리뷰 시 확인사항:
+
+1. ✅ **로직 검증**: 수정이 의도대로 동작하는지 확인
+2. ✅ **테스트 실행**: 관련 테스트가 모두 통과하는지 확인
+3. ✅ **부작용 확인**: 다른 부분에 영향이 없는지 확인
+4. ✅ **보안 검토**: 보안 관련 수정이 안전한지 확인
+
+### 권장 조치:
+
+- 🧪 로컬에서 테스트 실행: \`pnpm run test\`
+- 🔍 변경 사항 상세 검토
+- 💬 불확실한 부분은 코멘트로 질문
+- ❌ 문제가 있으면 거부하고 수동 수정
+
+**AI 수정이므로 반드시 리뷰 후 머지하세요!**
+`;
+
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              head: branchName,
+              base: 'main',
+              body: body
+            });
+
+            console.log(`Created PR #${pr.data.number}: ${pr.data.html_url}`);
+
+            // 라벨 추가
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.data.number,
+              labels: ['automated', 'bug-fix', 'ai-generated', 'needs-review']
+            });
+
+            // 심각도 높은 버그 수정이 포함되어 있으면 priority-high 라벨 추가
+            if (parseInt('${{ steps.check_report.outputs.high_severity }}') > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.data.number,
+                labels: ['priority-high']
+              });
+            }
+
+      - name: Create issue for critical findings (no auto-fix)
+        if: steps.check_report.outputs.high_severity > 0 && steps.check_fixes.outputs.has_fixes != 'true'
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -284,7 +515,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `🐛 자동 버그 탐색 결과: ${highSeverity}개의 심각한 문제 발견`,
-              labels: ['bug', 'automated-scan', 'priority-high'],
+              labels: ['bug', 'automated-scan', 'priority-high', 'needs-manual-fix'],
               body: `# 🔍 자동 버그 탐색 보고서
 
 **실행 일시:** ${new Date().toISOString()}
@@ -295,6 +526,7 @@ jobs:
 - 총 발견 항목: ${bugCount}개
 - 🚨 심각도 높음: ${highSeverity}개
 - ⚠️ 중간/낮음: ${bugCount - highSeverity}개
+- 🤖 자동 수정 불가: 수동 수정 필요
 
 ---
 
@@ -302,63 +534,50 @@ ${reportContent}
 
 ---
 
-**자동 생성된 이슈입니다.** 상세 내용은 워크플로우 실행 결과의 아티팩트를 확인하세요.
+**자동 생성된 이슈입니다.** 이 버그들은 자동으로 수정할 수 없으므로 수동 조치가 필요합니다.
+상세 내용은 워크플로우 실행 결과의 아티팩트를 확인하세요.
 `
             });
 
             console.log(`Created issue #${issue.data.number}`);
 
-      - name: Comment on existing issues
-        if: steps.check_report.outputs.bug_count > 0 && steps.check_report.outputs.high_severity == 0
-        uses: actions/github-script@v8
+      - name: Upload analysis reports
+        uses: actions/upload-artifact@v6
+        if: always()
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const bugCount = '${{ steps.check_report.outputs.bug_count }}';
-
-            // 기존의 자동 스캔 이슈가 있는지 확인
-            const issues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: 'automated-scan',
-              state: 'open',
-              per_page: 1
-            });
-
-            const message = `## 🔍 정기 버그 스캔 완료
-
-**실행 일시:** ${new Date().toISOString()}
-**발견 항목:** ${bugCount}개 (심각도 낮음)
-
-상세 내용은 [워크플로우 실행 결과](../actions/runs/${{ github.run_id }})의 아티팩트를 확인하세요.
-
-심각한 문제는 발견되지 않았습니다. ✅
-`;
-
-            if (issues.data.length > 0) {
-              // 기존 이슈에 댓글 추가
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issues.data[0].number,
-                body: message
-              });
-            }
+          name: bug-hunt-reports
+          path: |
+            bug-hunt-report.md
+            bug-fixes-applied.md
+            fix-summary.md
+            static-analysis-report.md
+            problem-areas.md
+            eslint-report.json
+            typescript-errors.txt
+            jscpd-report.json
+          retention-days: 90
 
       - name: Generate summary
         if: always()
         run: |
-          echo "## 🐛 자동 버그 탐색 완료" >> $GITHUB_STEP_SUMMARY
+          echo "## 🐛 자동 버그 탐색 및 수정 완료" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ steps.check_report.outputs.report_exists }}" == "true" ]; then
-            echo "### 📊 결과" >> $GITHUB_STEP_SUMMARY
+            echo "### 📊 탐색 결과" >> $GITHUB_STEP_SUMMARY
             echo "- 발견된 항목: ${{ steps.check_report.outputs.bug_count }}개" >> $GITHUB_STEP_SUMMARY
             echo "- 심각도 높음: ${{ steps.check_report.outputs.high_severity }}개" >> $GITHUB_STEP_SUMMARY
+            echo "- 자동 수정 가능: ${{ steps.check_report.outputs.auto_fixable }}개" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
 
-            if [ "${{ steps.check_report.outputs.high_severity }}" -gt 0 ]; then
-              echo "🚨 **심각한 문제가 발견되었습니다!** 자동으로 이슈가 생성되었습니다." >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.check_fixes.outputs.has_fixes }}" == "true" ]; then
+              echo "### 🔧 자동 수정" >> $GITHUB_STEP_SUMMARY
+              echo "✅ 버그 수정이 적용되었습니다!" >> $GITHUB_STEP_SUMMARY
+              echo "📋 PR이 생성되었습니다. 리뷰 후 머지해주세요." >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ steps.check_report.outputs.high_severity }}" -gt 0 ]; then
+              echo "### ⚠️ 수동 수정 필요" >> $GITHUB_STEP_SUMMARY
+              echo "심각한 버그가 발견되었지만 자동 수정할 수 없습니다." >> $GITHUB_STEP_SUMMARY
+              echo "이슈가 생성되었습니다." >> $GITHUB_STEP_SUMMARY
             else
               echo "✅ 심각한 문제는 발견되지 않았습니다." >> $GITHUB_STEP_SUMMARY
             fi
