@@ -143,13 +143,16 @@ import AllComponents from '@/components/ui';
 
 ```bash
 # macOS
-pnpm run package:mac
+pnpm run build:mac
 
 # Windows
-pnpm run package:win
+pnpm run build:win
 
 # Linux
-pnpm run package:linux
+pnpm run build:linux
+
+# Directory only (빠른 테스트용)
+pnpm run package
 ```
 
 ## Troubleshooting

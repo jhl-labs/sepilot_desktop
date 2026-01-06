@@ -29,20 +29,32 @@ argument-hint: '[test-file-pattern]'
 
 ## Test Types
 
-### Unit Tests
+### Frontend Tests
 
-개별 함수/컴포넌트 테스트:
+React 컴포넌트 및 hooks 테스트:
 
 ```bash
-pnpm run test:unit
+pnpm run test:frontend
 ```
 
-### Integration Tests
-
-IPC 통신, 서비스 통합 테스트:
+Watch 모드:
 
 ```bash
-pnpm run test:integration
+pnpm run test:watch:frontend
+```
+
+### Backend Tests
+
+Electron main process 및 서비스 테스트:
+
+```bash
+pnpm run test:backend
+```
+
+Watch 모드:
+
+```bash
+pnpm run test:watch:backend
 ```
 
 ### E2E Tests
@@ -51,6 +63,12 @@ pnpm run test:integration
 
 ```bash
 pnpm run test:e2e
+```
+
+UI 모드:
+
+```bash
+pnpm run test:e2e:ui
 ```
 
 ## Common Test Issues

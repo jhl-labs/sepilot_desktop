@@ -9,8 +9,10 @@
       "Write:components/**",
       "Write:lib/**",
       "Write:electron/**",
+      "Write:extensions/**",
       "Write:scripts/**",
       "Write:tests/**",
+      "Write:e2e_tests/**",
       "Write:release_notes/**",
       "Write:.claude/**",
       "Bash:pnpm run *",
@@ -21,12 +23,16 @@
       "Bash:git commit",
       "Bash:git push",
       "Bash:git pull",
+      "Bash:tree *",
       "LSP:*"
     ],
     "deny": [
       "Write:.env*",
       "Write:**/*.secrets",
       "Write:**/.secrets/**",
+      "Write:node_modules/**",
+      "Write:dist/**",
+      "Write:.next/**",
       "Bash:npm install",
       "Bash:rm -rf",
       "Bash:git push --force",
@@ -36,11 +42,15 @@
       "Write:CLAUDE.md",
       "Write:package.json",
       "Write:tsconfig.json",
+      "Write:electron/tsconfig.json",
       "Write:pnpm-lock.yaml",
+      "Write:.gitignore",
+      "Write:README.md",
       "Bash:git rebase",
       "Bash:git reset",
       "Bash:pnpm install",
-      "Bash:pnpm add"
+      "Bash:pnpm add",
+      "Bash:pnpm remove"
     ]
   },
   "disableAllHooks": true
