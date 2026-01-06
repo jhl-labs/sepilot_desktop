@@ -33,6 +33,7 @@ export function CodeEditor() {
     clearInitialPosition,
     editorAppearanceConfig,
     workingDirectory,
+    setActiveFileSelection,
   } = useChatStore();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -249,6 +250,54 @@ export function CodeEditor() {
       clearInitialPosition(activeFilePath);
     }
   }, [editor, activeFile?.path, activeFile?.initialPosition, activeFilePath, clearInitialPosition]);
+
+  // Monaco editor selection change listener
+  useEffect(() => {
+    if (!editor || !monacoInstance) {
+      return;
+    }
+
+    // Listen to cursor selection changes
+    const disposable = editor.onDidChangeCursorSelection((e) => {
+      const selection = e.selection;
+      const model = editor.getModel();
+
+      if (!model) {
+        setActiveFileSelection(null);
+        return;
+      }
+
+      // Check if there's a non-empty selection
+      const hasSelection =
+        !selection.isEmpty() &&
+        (selection.startLineNumber !== selection.endLineNumber ||
+          selection.startColumn !== selection.endColumn);
+
+      if (hasSelection) {
+        // Get selected text
+        const selectedText = model.getValueInRange(selection);
+
+        // Update store with selection info
+        setActiveFileSelection({
+          text: selectedText,
+          range: {
+            startLineNumber: selection.startLineNumber,
+            startColumn: selection.startColumn,
+            endLineNumber: selection.endLineNumber,
+            endColumn: selection.endColumn,
+          },
+        });
+      } else {
+        // No selection - clear it
+        setActiveFileSelection(null);
+      }
+    });
+
+    // Cleanup listener on unmount
+    return () => {
+      disposable.dispose();
+    };
+  }, [editor, monacoInstance, setActiveFileSelection]);
 
   // File drop from file explorer - must be defined before early return
   const { openFile } = useChatStore();
