@@ -2,6 +2,7 @@ import { AgentState } from '../state';
 import { ToolResult } from '../types';
 import { MCPServerManager } from '@/lib/mcp/server-manager';
 import { executeBuiltinTool } from '@/lib/mcp/tools/builtin-tools';
+import { generateId } from '@/lib/utils/id-generator';
 import {
   emitImageProgress,
   getCurrentNetworkConfig,
@@ -28,7 +29,7 @@ async function generateImageInMainProcess(
   },
   conversationId?: string
 ): Promise<{ success: boolean; imageBase64?: string; error?: string }> {
-  const clientId = `sepilot-main-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+  const clientId = generateId('sepilot-main');
 
   try {
     // Build workflow

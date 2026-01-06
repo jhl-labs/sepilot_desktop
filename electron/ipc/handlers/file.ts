@@ -7,6 +7,8 @@ import sharp from 'sharp';
 import TurndownService from 'turndown';
 import mammoth from 'mammoth';
 import { httpFetch, getNetworkConfig } from '@/lib/http';
+import { generateImageId } from '@/lib/utils/id-generator';
+import { getMimeTypeByExtension } from '@/lib/utils/mime-types';
 
 const execAsync = promisify(exec);
 
@@ -122,7 +124,7 @@ export function registerFileHandlers() {
         result.filePaths.map(async (filePath) => {
           const filename = path.basename(filePath);
           const ext = path.extname(filePath).toLowerCase();
-          const mimeType = getMimeType(ext);
+          const mimeType = getMimeTypeByExtension(ext);
 
           // 이미지 리사이징 및 최적화
           const processedBuffer = await processImage(filePath);
@@ -133,7 +135,7 @@ export function registerFileHandlers() {
           );
 
           return {
-            id: `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: generateImageId('file'),
             path: filePath,
             filename,
             mimeType: 'image/jpeg', // 처리 후 항상 JPEG
@@ -250,7 +252,7 @@ export function registerFileHandlers() {
             extensions: ['txt', 'md', 'pdf', 'docx'],
           },
         ],
-        properties: ['openFile'],
+        properties: ['openFile', 'multiSelections'],
       });
 
       if (result.canceled || result.filePaths.length === 0) {
@@ -260,45 +262,59 @@ export function registerFileHandlers() {
         };
       }
 
-      const filePath = result.filePaths[0];
-      const filename = path.basename(filePath);
-      const ext = path.extname(filePath).toLowerCase();
+      console.log('[File] Reading documents:', result.filePaths);
 
-      console.log('[File] Reading document:', filename);
+      const documents = await Promise.all(
+        result.filePaths.map(async (filePath) => {
+          try {
+            const filename = path.basename(filePath);
+            const ext = path.extname(filePath).toLowerCase();
+            let content = '';
 
-      let content = '';
+            // 파일 형식에 따라 읽기
+            if (ext === '.txt' || ext === '.md') {
+              // 텍스트 파일
+              content = await fs.readFile(filePath, 'utf-8');
+            } else if (ext === '.pdf') {
+              // PDF 파일
+              const dataBuffer = await fs.readFile(filePath);
+              const pdfParse = require('pdf-parse');
+              const pdfData = await pdfParse(dataBuffer);
+              content = pdfData.text;
+            } else if (ext === '.docx') {
+              // DOCX 파일
+              const dataBuffer = await fs.readFile(filePath);
+              const docxResult = await mammoth.extractRawText({ buffer: dataBuffer });
+              content = docxResult.value;
+            } else {
+              // 지원하지 않는 형식은 스킵하거나 에러 처리 (여기선 스킵하되 로그 남김)
+              console.warn(`[File] Skipping unsupported file format: ${ext} (${filename})`);
+              return null;
+            }
 
-      // 파일 형식에 따라 읽기
-      if (ext === '.txt' || ext === '.md') {
-        // 텍스트 파일
-        content = await fs.readFile(filePath, 'utf-8');
-      } else if (ext === '.pdf') {
-        // PDF 파일
-        const dataBuffer = await fs.readFile(filePath);
-        const pdfParse = require('pdf-parse');
-        const pdfData = await pdfParse(dataBuffer);
-        content = pdfData.text;
-      } else if (ext === '.docx') {
-        // DOCX 파일
-        const dataBuffer = await fs.readFile(filePath);
-        const docxResult = await mammoth.extractRawText({ buffer: dataBuffer });
-        content = docxResult.value;
-      } else {
-        throw new Error(`Unsupported file format: ${ext}`);
-      }
+            return {
+              path: filePath,
+              filename,
+              title: path.basename(filePath, ext),
+              content,
+            };
+          } catch (itemError) {
+            console.error(`[File] Error reading file ${filePath}:`, itemError);
+            return null;
+          }
+        })
+      );
 
-      console.log('[File] Document read successfully, length:', content.length);
+      // null(에러/미지원) 제외
+      const validDocuments = documents.filter(
+        (doc): doc is NonNullable<typeof doc> => doc !== null
+      );
+
+      console.log(`[File] Successfully read ${validDocuments.length} documents`);
 
       return {
         success: true,
-        data: [
-          {
-            path: filePath,
-            filename,
-            title: path.basename(filePath, ext),
-            content,
-          },
-        ],
+        data: validDocuments,
       };
     } catch (error: any) {
       console.error('[File] Error selecting document:', error);
@@ -1296,17 +1312,4 @@ export function registerFileHandlers() {
   );
 
   console.log('[File] IPC handlers registered');
-}
-
-function getMimeType(ext: string): string {
-  const mimeTypes: Record<string, string> = {
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.gif': 'image/gif',
-    '.webp': 'image/webp',
-    '.bmp': 'image/bmp',
-  };
-
-  return mimeTypes[ext] || 'application/octet-stream';
 }

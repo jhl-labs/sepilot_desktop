@@ -196,6 +196,11 @@ export function setupLangGraphHandlers() {
             chunk,
             conversationId: streamId,
           });
+
+          // Update previousMessageContent to prevent duplication when node event arrives
+          // The node event logic calculates diff based on previousMessageContent
+          const current = previousMessageContent.get(streamId) || '';
+          previousMessageContent.set(streamId, current + chunk);
         }, streamId);
 
         // Set up image progress callback
@@ -280,6 +285,14 @@ export function setupLangGraphHandlers() {
                 const content = lastMessage.content;
                 // Get previous content for this conversation
                 const previousContent = previousMessageContent.get(streamId) || '';
+
+                // Check for duplication caused by setStreamingCallback appending new message to old message
+                // If previousContent contains the entire current content at the end, it means we already streamed it
+                if (previousContent.length > content.length && previousContent.endsWith(content)) {
+                  // Just reset the tracking to the current content (dropping the old prefix)
+                  previousMessageContent.set(streamId, content);
+                  continue;
+                }
 
                 // Only send if content has changed and grown (new chunks arrived)
                 if (content !== previousContent && content.length > previousContent.length) {

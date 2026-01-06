@@ -509,13 +509,42 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
     const toolGuidelines = `
 
 # Tool Usage Guidelines
-1. Use tools when necessary to answer user questions accurately
-2. Avoid redundant or repeated tool calls - one tool call per task is usually sufficient
-3. After receiving a tool result, analyze it thoroughly and provide a complete answer
-4. Don't call the same tool multiple times with similar parameters unless explicitly needed
-5. For search queries, one comprehensive search is typically enough
-6. If a tool result is truncated, work with the available information rather than searching again
-7. Always prioritize providing a final answer over making additional tool calls`;
+
+**CRITICAL: You have access to powerful tools - USE THEM!**
+
+When a user asks for information that requires external data or actions, you MUST use the available tools instead of explaining that you cannot access it.
+
+## When to Use Tools
+
+1. **GitHub Operations**: If the user asks about repositories, files, issues, or any GitHub-related information:
+   - Use \`search_repositories\` to find repositories
+   - Use \`get_file_contents\` to read files from repositories
+   - Use \`create_issue\` to create issues
+   - Use \`create_or_update_file\` to modify files
+   - Use \`push_files\` to push multiple files
+
+2. **Web Search**: If the user asks for current information, news, or web content:
+   - Use search tools to find up-to-date information
+   - Don't rely on your training data for current events
+
+3. **File Operations**: If the user asks to read, write, or modify files:
+   - Use file operation tools immediately
+   - Don't just provide code snippets - actually execute the operations
+
+## Tool Usage Best Practices
+
+1. **Be Proactive**: When a tool can answer the user's question, use it immediately
+2. **One Tool Call Per Task**: Usually one comprehensive tool call is sufficient
+3. **Analyze Results**: After receiving a tool result, analyze it thoroughly and provide a complete answer
+4. **Don't Repeat**: Avoid calling the same tool multiple times with similar parameters unless explicitly needed
+5. **Work with Available Data**: If a tool result is truncated, work with the available information rather than searching again
+6. **Provide Final Answers**: Always prioritize providing a final answer over making additional tool calls
+
+## Important Notes
+
+- **You CAN access external APIs and services** through the available tools
+- **Don't say you cannot access something** - check if there's a tool for it first
+- **Tools are your primary way** to interact with external systems and get real-time data`;
 
     let systemContent = createBaseSystemMessage(toolGuidelines);
 
@@ -566,6 +595,20 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
     const llmOptions: any = {
       tools: toolsForLLM.length > 0 ? toolsForLLM : undefined,
     };
+
+    // CRITICAL: Log tools being sent to LLM
+    logger.info('[Agent] ===== TOOLS BEING SENT TO LLM =====');
+    logger.info('[Agent] Number of tools:', toolsForLLM.length);
+    logger.info('[Agent] Tools enabled:', toolsEnabled);
+    logger.info('[Agent] GraphConfig:', graphConfig);
+    if (toolsForLLM.length > 0) {
+      logger.info(
+        '[Agent] Tool names:',
+        toolsForLLM.map((t: any) => t.function.name)
+      );
+    } else {
+      logger.warn('[Agent] NO TOOLS BEING SENT TO LLM!');
+    }
 
     if (llmConfig) {
       // maxTokens가 명시적으로 설정되어 있으면 전달 (0도 유효한 값)

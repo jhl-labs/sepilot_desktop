@@ -1,5 +1,6 @@
 import { ComfyUIConfig } from '@/types';
 import { httpFetch, httpPost } from '@/lib/http';
+import { generateId } from '@/lib/utils/id-generator';
 
 export interface ComfyUIGenerateOptions {
   prompt: string;
@@ -37,7 +38,7 @@ export class ComfyUIClient {
   }
 
   private generateClientId(): string {
-    return `sepilot-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    return generateId('sepilot');
   }
 
   /**

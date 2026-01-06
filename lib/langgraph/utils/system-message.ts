@@ -2,7 +2,7 @@
  * 시스템 메시지 생성 유틸리티
  */
 
-const VISUALIZATION_INSTRUCTIONS = `# 시각화 기능
+export const VISUALIZATION_INSTRUCTIONS = `# 시각화 기능
 
 응답에 다이어그램이나 차트를 포함할 때 다음 형식을 사용할 수 있습니다:
 
@@ -82,6 +82,13 @@ graph TD
 - **억지로 사용하지 않기**: 모든 답변에 시각화를 포함할 필요는 없습니다. 텍스트로 충분히 설명 가능한 경우 시각화를 생략하세요.
 - **Mermaid**: 복잡한 워크플로우, 시스템 아키텍처, 클래스 관계 등 구조적인 설명이 필요할 때 선택적으로 사용하세요.
 - **Plotly**: 5개 이상의 데이터 포인트가 있거나, 추세/분포/상관관계를 보여주는 것이 중요한 경우에만 사용하세요.`;
+
+/**
+ * 시각화 지침 반환 (클라이언트에서 사용)
+ */
+export function getVisualizationInstructions(): string {
+  return VISUALIZATION_INSTRUCTIONS;
+}
 
 /**
  * 기본 시스템 메시지 생성

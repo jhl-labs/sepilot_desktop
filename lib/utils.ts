@@ -29,10 +29,6 @@ export function formatDate(timestamp: number): string {
   }
 }
 
-export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
 export function truncate(str: string, length: number): string {
   if (str.length <= length) {
     return str;

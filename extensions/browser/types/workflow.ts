@@ -3,6 +3,7 @@
  */
 
 import { BrowserError } from './errors';
+import { generateId } from '@/lib/utils/id-generator';
 
 // =============================================================================
 // Workflow Step Types
@@ -433,7 +434,7 @@ export function createWorkflowStep(
   maxRetries = 2
 ): BrowserWorkflowStep {
   return {
-    id: `step-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+    id: generateId('step'),
     type,
     description,
     tool,

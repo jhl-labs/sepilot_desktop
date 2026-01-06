@@ -1,9 +1,10 @@
+import { StringDecoder } from 'string_decoder';
 import type { ChildProcessWithoutNullStreams, SpawnOptionsWithStdioTuple } from 'child_process';
 
 import { getErrorMessage } from '@/lib/utils/error-handler';
 
 import { MCPClient } from '../client';
-import { JSONRPCRequest, JSONRPCResponse } from '../types';
+import { JSONRPCRequest, JSONRPCResponse, MCPServerConfig } from '../types';
 
 import { logger } from '@/lib/utils/logger';
 type SpawnFunction = (
@@ -29,6 +30,13 @@ export class StdioMCPClient extends MCPClient {
     }
   > = new Map();
   private buffer = '';
+  // Use StringDecoder to correctly handle multi-byte characters split across chunks
+  private decoder: StringDecoder;
+
+  constructor(config: MCPServerConfig) {
+    super(config);
+    this.decoder = new StringDecoder('utf8');
+  }
 
   async connect(): Promise<void> {
     // Main Process 전용 메서드로 리다이렉트
@@ -79,7 +87,7 @@ export class StdioMCPClient extends MCPClient {
         // Windows에서는 shell: true를 사용하여 .cmd 파일을 올바르게 실행
         const isWindows = process.platform === 'win32';
 
-        // 프로세스 시작 확인 타임아웃 (5초)
+        // 프로세스 시작 확인 타임아웃 (10초로 증가)
         // MCP 서버는 시작 후 stdin 요청을 대기하므로 stdout 출력이 없을 수 있음
         const connectionTimeout = setTimeout(() => {
           if (this.process) {
@@ -88,11 +96,11 @@ export class StdioMCPClient extends MCPClient {
           }
           reject(
             new Error(
-              `Process start timeout: MCP server '${this.config.name}' failed to start within 5 seconds. ` +
+              `Process start timeout: MCP server '${this.config.name}' failed to start within 10 seconds. ` +
                 `Please check if the command is correct and the server is properly configured.`
             )
           );
-        }, 5000);
+        }, 10000);
 
         let processStarted = false;
 
@@ -135,6 +143,8 @@ export class StdioMCPClient extends MCPClient {
 
         // stderr 처리
         this.process.stderr.on('data', (data: Buffer) => {
+          // Use decoder for stderr as well to handle multi-byte characters properly
+          // Note: We create a temporary decoder or use toString() since this is logging
           const output = data.toString();
           logger.error('MCP server stderr', {
             server: this.config.name,
@@ -213,17 +223,33 @@ export class StdioMCPClient extends MCPClient {
 
       // 응답 대기
       const timeout = setTimeout(() => {
+        // Timeout cleanup
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id);
-          reject(new Error('Request timeout (30s)'));
+          reject(new Error(`Request timeout (30s) for method: ${request.method}, id: ${id}`));
+        } else if (this.pendingRequests.has(String(id))) {
+          this.pendingRequests.delete(String(id));
+          reject(new Error(`Request timeout (300s) for method: ${request.method}, id: ${id}`));
         }
-      }, 30000); // 30초 = 30000ms
+      }, 300000); // 300초 = 300000ms = 5분
 
-      this.pendingRequests.set(id, { resolve, reject, timeout });
+      // Use String(id) as key to avoid type mismatches
+      this.pendingRequests.set(String(id), { resolve, reject, timeout });
 
       // 요청 전송
-      const message = `${JSON.stringify(requestWithId)}\n`;
-      this.process.stdin.write(message);
+      try {
+        const message = JSON.stringify(requestWithId);
+        logger.debug('[MCP Transmit] Sending CLI Request:', {
+          server: this.config.name,
+          method: request.method,
+          id,
+        });
+        this.process.stdin.write(`${message}\n`);
+      } catch (err) {
+        clearTimeout(timeout);
+        this.pendingRequests.delete(String(id));
+        reject(err as Error);
+      }
     });
   }
 
@@ -231,22 +257,35 @@ export class StdioMCPClient extends MCPClient {
    * stdout 데이터 처리
    */
   private handleStdout(data: Buffer): void {
-    this.buffer += data.toString();
+    // Decode new data and add to buffer
+    this.buffer += this.decoder.write(data);
 
-    // 줄바꿈으로 메시지 분리
-    const lines = this.buffer.split('\n');
-    this.buffer = lines.pop() || '';
+    // Check for newlines
+    let newlineIndex: number;
+    while ((newlineIndex = this.buffer.indexOf('\n')) !== -1) {
+      const line = this.buffer.slice(0, newlineIndex).trim();
+      this.buffer = this.buffer.slice(newlineIndex + 1);
 
-    for (const line of lines) {
-      if (line.trim()) {
+      if (line) {
         try {
+          // Log raw lines for debugging (optional, can be noisy)
+          logger.debug('[MCP Raw]', { line });
+
           const response: JSONRPCResponse = JSON.parse(line);
           this.handleResponse(response);
         } catch (error) {
-          logger.error('Failed to parse MCP response', {
-            line,
-            error: getErrorMessage(error),
-          });
+          // Only log if it looks like it might have been intended as JSON but failed
+          // or if it's significant output
+          if (line.startsWith('{') || line.includes('error') || line.includes('Error')) {
+            logger.error('Failed to parse MCP response', {
+              server: this.config.name,
+              line,
+              error: getErrorMessage(error),
+            });
+          } else {
+            // Treat as debug logging from the tool
+            logger.debug(`[MCP Server Log] ${this.config.name}:`, line);
+          }
         }
       }
     }
@@ -257,15 +296,25 @@ export class StdioMCPClient extends MCPClient {
    */
   private handleResponse(response: JSONRPCResponse): void {
     if (response.id !== undefined) {
-      const pending = this.pendingRequests.get(response.id);
+      // Try both exact match and string coercion
+      const idString = String(response.id);
+      const pending = this.pendingRequests.get(idString);
+
       if (pending) {
         clearTimeout(pending.timeout);
-        this.pendingRequests.delete(response.id);
+        this.pendingRequests.delete(idString);
         pending.resolve(response);
+      } else {
+        // ID는 있지만 pending 목록에 없는 경우 (timeout 이후 도착 등)
+        logger.warn('Received response for unknown or timed-out request', {
+          server: this.config.name,
+          receivedId: response.id,
+          pendingIds: Array.from(this.pendingRequests.keys()),
+        });
       }
     } else {
       // 알림 메시지 (id 없음)
-      logger.debug('MCP notification', response);
+      logger.debug('MCP notification', { server: this.config.name, notification: response });
     }
   }
 }

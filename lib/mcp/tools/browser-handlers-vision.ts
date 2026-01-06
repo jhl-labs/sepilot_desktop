@@ -21,7 +21,7 @@ import {
   generateScreenshotContext,
 } from '../../langgraph/utils/screenshot-analyzer';
 import { analyzePage } from './browser-handlers-enhanced';
-import { generateId } from '@/lib/utils';
+import { generateId } from '@/lib/utils/id-generator';
 import { LLMService } from '@/lib/llm/service';
 import { Message } from '@/types';
 

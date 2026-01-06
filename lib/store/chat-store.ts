@@ -6,7 +6,7 @@ import {
   ImageGenerationProgress,
   ConversationChatSettings,
 } from '@/types';
-import { generateId } from '@/lib/utils';
+import { generateId } from '@/lib/utils/id-generator';
 import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
 import { isElectron } from '@/lib/platform';
 import type {
@@ -1424,7 +1424,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       } else {
         newEnabledTools.add(toolName);
       }
-      return { enabledTools: newEnabledTools };
+      // Auto-enable tools if at least one tool is enabled
+      const shouldEnableTools = newEnabledTools.size > 0;
+      return { enabledTools: newEnabledTools, enableTools: shouldEnableTools || state.enableTools };
     });
 
     // Update active conversation's settings
@@ -1435,13 +1437,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         get().updateConversationSettings(state.activeConversationId, {
           ...conversation.chatSettings,
           enabledTools: Array.from(state.enabledTools),
+          enableTools: state.enableTools,
         });
       }
     }
   },
 
   enableAllTools: (toolNames: string[]) => {
-    set({ enabledTools: new Set(toolNames) });
+    // When enabling all tools, also enable the main tools toggle
+    set({ enabledTools: new Set(toolNames), enableTools: toolNames.length > 0 });
 
     // Update active conversation's settings
     const state = get();
@@ -1451,6 +1455,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         get().updateConversationSettings(state.activeConversationId, {
           ...conversation.chatSettings,
           enabledTools: toolNames,
+          enableTools: toolNames.length > 0,
         });
       }
     }

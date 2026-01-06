@@ -100,7 +100,7 @@ async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
     const {
       manifest,
       PresentationStudio,
-      PresentationChat,
+      PresentationSourceSidebar,
       PresentationHeaderActions,
       PresentationSettings,
       createPresentationSlice,
@@ -109,7 +109,7 @@ async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
     extensions.push({
       manifest,
       MainComponent: PresentationStudio,
-      SidebarComponent: PresentationChat,
+      SidebarComponent: PresentationSourceSidebar,
       HeaderActionsComponent: PresentationHeaderActions,
       SettingsComponent: PresentationSettings,
       createStoreSlice: createPresentationSlice,
