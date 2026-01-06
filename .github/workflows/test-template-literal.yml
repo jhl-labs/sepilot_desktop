@@ -13,4 +13,7 @@ jobs:
         with:
           script: |
             const title = "Test";
-            console.log("Title:", title);
+            const body = `Header
+**Bold:** ${title}
+`;
+            console.log(body);
