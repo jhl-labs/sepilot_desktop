@@ -16,7 +16,7 @@ import {
   deleteDocuments,
   getAllDocuments,
 } from '@/lib/vectordb';
-import { generateId } from '@/lib/utils';
+import { generateId } from '@/lib/utils/id-generator';
 import { indexDocuments } from '@/lib/vectordb/indexing';
 import { isElectron } from '@/lib/platform';
 import { Button } from '@/components/ui/button';

@@ -2,17 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SingleFileEditor } from '@/extensions/editor/components/SingleFileEditor';
-
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
-
-import { VectorDocument } from '@/lib/vectordb/types';
+import dynamic from 'next/dynamic';
 import {
   Loader2,
   CheckCircle2,
@@ -27,12 +17,70 @@ import {
   Users,
   User,
 } from 'lucide-react';
+
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
+
+import { VectorDocument } from '@/lib/vectordb/types';
 import { DocumentSourceType } from '@/lib/documents/types';
 import { ChunkStrategy } from '@/lib/vectordb/types';
 import { fetchDocument } from '@/lib/documents/fetchers';
 import { cleanDocumentsWithLLM } from '@/lib/documents/cleaner';
 import { TeamDocsConfig } from '@/types';
 import { cn } from '@/lib/utils';
+
+// Fallback editor component when editor extension is not available
+function FallbackEditor({
+  content,
+  onChange,
+  options,
+}: {
+  content: string;
+  language?: string;
+  theme?: string;
+  onChange?: (value: string | undefined) => void;
+  options?: Record<string, any>;
+}) {
+  return (
+    <textarea
+      value={content}
+      onChange={(e) => onChange?.(e.target.value)}
+      className="w-full h-full bg-[#1e1e1e] text-gray-200 font-mono text-sm p-4 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+      placeholder="Enter content here..."
+      style={{
+        fontSize: options?.fontSize || 14,
+        lineHeight: 1.6,
+      }}
+    />
+  );
+}
+
+// Dynamic import with fallback for editor extension
+const SingleFileEditor = dynamic(
+  () =>
+    import('@/extensions/editor/components/SingleFileEditor')
+      .then((mod) => mod.SingleFileEditor)
+      .catch((err) => {
+        console.warn(
+          '[DocumentDialog] Editor extension not available, using fallback:',
+          err.message
+        );
+        return FallbackEditor;
+      }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full bg-[#1e1e1e] text-gray-400">
+        Loading editor...
+      </div>
+    ),
+  }
+);
 
 interface DocumentDialogProps {
   mode: 'create' | 'edit';

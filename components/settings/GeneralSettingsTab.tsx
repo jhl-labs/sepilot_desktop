@@ -21,11 +21,18 @@ import {
   ExternalLink,
   PackageCheck,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { SupportedLanguage } from '@/lib/i18n';
 import { logger } from '@/lib/utils/logger';
 import { httpFetch, safeJsonParse } from '@/lib/http';
 import type { NetworkConfig } from '@/types';
+import { MessageSquare } from 'lucide-react';
+
+// Chat width setting
+const CHAT_WIDTH_KEY = 'sepilot_chat_message_width';
+const DEFAULT_CHAT_WIDTH = 896; // max-w-4xl = 56rem = 896px
+const MIN_CHAT_WIDTH = 640; // 40rem
+const MAX_CHAT_WIDTH = 1536; // 96rem
 
 interface GeneralSettingsTabProps {
   onSave?: (language?: string) => void;
@@ -62,25 +69,56 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateCheckError, setUpdateCheckError] = useState<string | null>(null);
 
+  // Chat width state
+  const [chatWidth, setChatWidth] = useState<number>(DEFAULT_CHAT_WIDTH);
+  const [initialChatWidth, setInitialChatWidth] = useState<number>(DEFAULT_CHAT_WIDTH);
+
+  // Load chat width from localStorage on mount
+  useEffect(() => {
+    const savedWidth = localStorage.getItem(CHAT_WIDTH_KEY);
+    if (savedWidth) {
+      const width = parseInt(savedWidth, 10);
+      if (!isNaN(width) && width >= MIN_CHAT_WIDTH && width <= MAX_CHAT_WIDTH) {
+        setChatWidth(width);
+        setInitialChatWidth(width);
+      }
+    }
+  }, []);
+
+  const handleChatWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setChatWidth(parseInt(e.target.value, 10));
+  };
+
+  const handleChatWidthSave = () => {
+    localStorage.setItem(CHAT_WIDTH_KEY, chatWidth.toString());
+    setInitialChatWidth(chatWidth);
+    // Dispatch custom event to notify ChatArea
+    window.dispatchEvent(new CustomEvent('sepilot:chat-width-change', { detail: chatWidth }));
+  };
+
   const handleLanguageChange = async (value: string) => {
     setSelectedLanguage(value as SupportedLanguage);
   };
 
   const handleSave = async () => {
-    if (selectedLanguage === language) {
-      onSave?.(selectedLanguage);
-      return;
+    // Save chat width if changed
+    if (hasChatWidthChanges) {
+      handleChatWidthSave();
     }
 
-    setIsChanging(true);
-    try {
-      await setLanguage(selectedLanguage);
-      onSave?.(selectedLanguage);
-    } catch (error) {
-      logger.error('Failed to change language:', error);
-    } finally {
-      setIsChanging(false);
+    // Save language if changed
+    if (hasLanguageChanges) {
+      setIsChanging(true);
+      try {
+        await setLanguage(selectedLanguage);
+      } catch (error) {
+        logger.error('Failed to change language:', error);
+      } finally {
+        setIsChanging(false);
+      }
     }
+
+    onSave?.(selectedLanguage);
   };
 
   const checkForUpdates = async () => {
@@ -154,7 +192,8 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
   const updateStatus = latestRelease
     ? compareVersions(currentVersion, latestRelease.tag_name)
     : null;
-  const hasChanges = selectedLanguage !== language;
+  const hasLanguageChanges = selectedLanguage !== language;
+  const hasChatWidthChanges = chatWidth !== initialChatWidth;
 
   return (
     <div className="space-y-6">
@@ -294,12 +333,65 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
           </p>
         </div>
 
-        {hasChanges && (
+        {hasLanguageChanges && (
           <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground">
             <AlertCircle className="h-4 w-4" />
             <span>{t('settings.general.language.restartRequired')}</span>
           </div>
         )}
+      </div>
+
+      {/* Chat Message Width Setting */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <MessageSquare className="h-5 w-5 text-muted-foreground" />
+          <h3 className="text-lg font-medium">{t('settings.general.chatWidth.title')}</h3>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="chat-width-slider">{t('settings.general.chatWidth.label')}</Label>
+              <span className="text-sm text-muted-foreground font-mono">{chatWidth}px</span>
+            </div>
+            <input
+              id="chat-width-slider"
+              type="range"
+              min={MIN_CHAT_WIDTH}
+              max={MAX_CHAT_WIDTH}
+              step={32}
+              value={chatWidth}
+              onChange={handleChatWidthChange}
+              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{MIN_CHAT_WIDTH}px</span>
+              <span>{MAX_CHAT_WIDTH}px</span>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {t('settings.general.chatWidth.description')}
+          </p>
+
+          {/* Preview */}
+          <div className="p-4 border rounded-lg bg-muted/20">
+            <Label className="text-xs text-muted-foreground mb-2 block">
+              {t('settings.general.chatWidth.preview')}
+            </Label>
+            <div
+              className="bg-background border rounded-lg p-3 mx-auto transition-all duration-200"
+              style={{ maxWidth: `${chatWidth}px` }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 rounded-full bg-primary/20" />
+                <span className="text-xs text-muted-foreground">Assistant</span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {t('settings.general.chatWidth.previewText')}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Save Button and Message */}

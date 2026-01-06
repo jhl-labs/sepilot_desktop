@@ -310,7 +310,12 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
     });
     setArgsText('args' in preset ? preset.args : '');
     setHeadersText('headers' in preset ? preset.headers : '');
-    setEnvText('env' in preset && preset.env ? preset.env : '');
+    const envValue = 'env' in preset && preset.env ? preset.env : '';
+    setEnvText(envValue);
+    // 환경 변수가 필요한 프리셋인 경우 Advanced Options 자동으로 열기
+    if (envValue) {
+      setShowAdvanced(true);
+    }
     setMessage(null);
   };
 
