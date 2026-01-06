@@ -94,6 +94,10 @@ Claude Code가 자동으로 참조하는 프로젝트별 전문 지식:
 - **state-management**: Zustand 전역 상태 관리, Slice 패턴, Persistence
 - **file-operations**: 파일 읽기/쓰기, PDF/Word/Excel 처리, 이미지 처리
 
+**Extension 개발:**
+
+- **extension-development**: Extension 구조, Manifest, Agent 통합, Store slice, Components, IPC 핸들러
+
 **AI/ML 통합:**
 
 - **langgraph-agent**: LangGraph 에이전트 구현 및 그래프 기반 워크플로우
