@@ -69,6 +69,9 @@ export function BrowserChatContainer() {
     message: string;
   } | null>(null);
 
+  // AbortController ref for stream cancellation
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Use LangGraph stream hook
   const { startStream, stopStream } = useLangGraphStream({
     mode: 'browser',
