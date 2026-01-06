@@ -610,11 +610,24 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
           // ⚠️ CRITICAL: Check isError flag first to prevent hallucinations
           if (mcpResult?.isError) {
             // MCP 도구가 에러를 반환한 경우 - 명확하게 에러로 표시
+            // Extract error message from content array (support text, image, resource types)
+            const errorParts: string[] = [];
+            if (mcpResult.content && Array.isArray(mcpResult.content)) {
+              for (const item of mcpResult.content) {
+                if (item.type === 'text' && item.text) {
+                  errorParts.push(item.text);
+                } else if (item.type === 'image' || item.type === 'resource') {
+                  // Include non-text content description in error
+                  errorParts.push(
+                    `[${item.type} data: ${item.mimeType || 'unknown'}${item.data ? `, ${item.data.length} bytes` : ''}]`
+                  );
+                }
+              }
+            }
+
             const errorText =
-              mcpResult.content
-                ?.map((item: any) => item.text || '')
-                .filter((text: string) => text)
-                .join('\n') || 'Tool execution failed with unknown error';
+              errorParts.filter((text) => text).join('\n') ||
+              'Tool execution failed with unknown error';
 
             console.error(`[Tools] MCP tool returned error for ${call.name}:`, errorText);
 
@@ -638,11 +651,24 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
               error: `Tool '${call.name}' returned no response. The MCP server may be unavailable or the tool may not exist.`,
             };
           } else if (mcpResult.content && Array.isArray(mcpResult.content)) {
-            // content 배열에서 텍스트 추출
-            resultText = mcpResult.content
-              .map((item: any) => item.text || '')
-              .filter((text: string) => text)
-              .join('\n');
+            // content 배열에서 모든 타입 처리 (text, image, resource)
+            const contentParts: string[] = [];
+
+            for (const item of mcpResult.content) {
+              if (item.type === 'text' && item.text) {
+                contentParts.push(item.text);
+              } else if (item.type === 'image') {
+                // Image data: include description for LLM
+                const imageDesc = `[Image data: ${item.mimeType || 'unknown type'}${item.data ? `, ${item.data.length} bytes` : ''}]`;
+                contentParts.push(imageDesc);
+              } else if (item.type === 'resource') {
+                // Resource data: include description for LLM
+                const resourceDesc = `[Resource data: ${item.mimeType || 'unknown type'}${item.data ? `, ${item.data.length} bytes` : ''}]`;
+                contentParts.push(resourceDesc);
+              }
+            }
+
+            resultText = contentParts.filter((text) => text).join('\n');
 
             if (!resultText) {
               console.error(`[Tools] MCP tool content array is empty for ${call.name}`);
