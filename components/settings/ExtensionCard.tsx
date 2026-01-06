@@ -93,7 +93,7 @@ export function ExtensionCard({
         <p className="text-sm text-muted-foreground">{manifest.description}</p>
 
         {/* 의존성 */}
-        {manifest.dependencies && manifest.dependencies.length > 0 && (
+        {manifest.dependencies && manifest.dependencies.length > 0 ? (
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">{t('settings.extensions.dependencies')}:</span>
             <div className="flex flex-wrap gap-1">
@@ -104,9 +104,7 @@ export function ExtensionCard({
               ))}
             </div>
           </div>
-        )}
-
-        {!manifest.dependencies && (
+        ) : (
           <div className="text-sm text-muted-foreground">
             {t('settings.extensions.noDependencies')}
           </div>
