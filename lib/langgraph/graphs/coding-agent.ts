@@ -1863,14 +1863,31 @@ export class CodingAgentGraph {
       logger.info('[CodingAgentGraph] Phase 3: Execution (max iterations:', maxIterations, ')');
       while (iterations < maxIterations) {
         // Agent (LLM with tools)
-        yield { type: 'node', node: 'agent', data: { status: 'starting' } };
+        yield {
+          type: 'node',
+          node: 'agent',
+          data: {
+            status: 'starting',
+            iterationCount: iterations + 1,
+            maxIterations,
+          },
+        };
         const agentResult = await agentNode(state);
         state = {
           ...state,
           messages: [...state.messages, ...(agentResult.messages || [])],
           agentError: agentResult.agentError || state.agentError,
         };
-        yield { type: 'node', node: 'agent', data: { ...agentResult, messages: state.messages } };
+        yield {
+          type: 'node',
+          node: 'agent',
+          data: {
+            ...agentResult,
+            messages: state.messages,
+            iterationCount: iterations + 1,
+            maxIterations,
+          },
+        };
 
         // Check if agent encountered an error
         if (agentResult.agentError) {
@@ -1885,8 +1902,16 @@ export class CodingAgentGraph {
         if (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) {
           // No tools - still run verifier to update plan step and check completion
           logger.info('[CodingAgentGraph] No tool calls, running verifier before completion');
-          
-          yield { type: 'node', node: 'verifier', data: { status: 'starting' } };
+
+          yield {
+            type: 'node',
+            node: 'verifier',
+            data: {
+              status: 'starting',
+              iterationCount: iterations + 1,
+              maxIterations,
+            },
+          };
           const verificationResult = await verificationNode(state);
           state = {
             ...state,
@@ -1897,7 +1922,12 @@ export class CodingAgentGraph {
           yield {
             type: 'node',
             node: 'verifier',
-            data: { ...verificationResult, messages: state.messages },
+            data: {
+              ...verificationResult,
+              messages: state.messages,
+              iterationCount: iterations + 1,
+              maxIterations,
+            },
           };
 
           // Check if we need to continue based on verification
@@ -1905,7 +1935,7 @@ export class CodingAgentGraph {
             iterations++;
             continue; // Continue to next iteration
           }
-          
+
           // Verification complete, exit loop
           break;
         }
@@ -2016,7 +2046,15 @@ export class CodingAgentGraph {
         }
 
         // Execute tools
-        yield { type: 'node', node: 'tools', data: { status: 'starting' } };
+        yield {
+          type: 'node',
+          node: 'tools',
+          data: {
+            status: 'starting',
+            iterationCount: iterations + 1,
+            maxIterations,
+          },
+        };
         const toolsResult = await enhancedToolsNode(state);
 
         // Check for errors
@@ -2032,10 +2070,27 @@ export class CodingAgentGraph {
           deletedFiles: toolsResult.deletedFiles || state.deletedFiles,
           fileChangesCount: (state.fileChangesCount || 0) + (toolsResult.fileChangesCount || 0),
         };
-        yield { type: 'node', node: 'tools', data: { ...toolsResult, messages: state.messages } };
+        yield {
+          type: 'node',
+          node: 'tools',
+          data: {
+            ...toolsResult,
+            messages: state.messages,
+            iterationCount: iterations + 1,
+            maxIterations,
+          },
+        };
 
         // Run verification after tools
-        yield { type: 'node', node: 'verifier', data: { status: 'starting' } };
+        yield {
+          type: 'node',
+          node: 'verifier',
+          data: {
+            status: 'starting',
+            iterationCount: iterations + 1,
+            maxIterations,
+          },
+        };
         const verificationResult = await verificationNode(state);
         state = {
           ...state,
@@ -2046,7 +2101,12 @@ export class CodingAgentGraph {
         yield {
           type: 'node',
           node: 'verifier',
-          data: { ...verificationResult, messages: state.messages },
+          data: {
+            ...verificationResult,
+            messages: state.messages,
+            iterationCount: iterations + 1,
+            maxIterations,
+          },
         };
 
         // Check if we need to continue (based on verification)
