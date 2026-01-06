@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SEPilot Desktop - 개발자 아키텍처 문서</title>
-    <script src="https://unpkg.com/mermaid@10.9.1/dist/mermaid.min.js"></script>
     <style>
       :root {
         --primary: #2563eb;
@@ -277,7 +276,7 @@
           </p>
 
           <div class="mermaid-wrapper">
-            <pre class="mermaid">
+            <div class="mermaid">
 graph TB
     subgraph "🖥️ Desktop Application (Electron)"
         subgraph "Frontend (Next.js + React)"
@@ -332,7 +331,7 @@ graph TB
     style Main fill:#8b5cf6,stroke:#6d28d9,color:#fff
     style LLM fill:#10b981,stroke:#059669,color:#fff
     style SQLite fill:#f59e0b,stroke:#d97706,color:#fff
-            </pre>
+            </div>
           </div>
 
           <div class="info-box">
@@ -353,7 +352,7 @@ graph TB
           <p>프로젝트는 크게 Frontend (Next.js), Backend (Electron), 공유 라이브러리 (lib), Extensions로 구성됩니다.</p>
 
           <div class="mermaid-wrapper">
-            <pre class="mermaid">
+            <div class="mermaid">
 graph LR
     Root[sepilot_desktop/]
 
@@ -424,7 +423,7 @@ graph LR
     style Electron fill:#8b5cf6,stroke:#6d28d9,color:#fff
     style Lib fill:#10b981,stroke:#059669,color:#fff
     style ExtRoot fill:#f59e0b,stroke:#d97706,color:#fff
-            </pre>
+            </div>
           </div>
 
           <div class="info-box">
@@ -449,7 +448,7 @@ graph LR
           </p>
 
           <div class="mermaid-wrapper">
-            <pre class="mermaid">
+            <div class="mermaid">
 sequenceDiagram
     participant UI as Frontend<br/>(React Component)
     participant Preload as Preload Script<br/>(Context Bridge)
@@ -481,7 +480,7 @@ sequenceDiagram
     Preload->>UI: window.electron.on('stream-channel', callback)
     Note over UI: Real-time UI Update
     end
-            </pre>
+            </div>
           </div>
 
           <h3>주요 IPC 채널</h3>
@@ -507,7 +506,7 @@ sequenceDiagram
           <p>사용자가 채팅 메시지를 전송하면 Frontend → IPC → LLM API → Database 순으로 데이터가 흐릅니다.</p>
 
           <div class="mermaid-wrapper">
-            <pre class="mermaid">
+            <div class="mermaid">
 graph TB
     subgraph "🎨 Frontend Layer"
         A[User Input<br/>ChatArea.tsx]
@@ -563,7 +562,7 @@ graph TB
     style F fill:#8b5cf6,stroke:#6d28d9,color:#fff
     style J fill:#f59e0b,stroke:#d97706,color:#fff
     style M fill:#10b981,stroke:#059669,color:#fff
-            </pre>
+            </div>
           </div>
         </section>
 
@@ -576,7 +575,7 @@ graph TB
           </p>
 
           <div class="mermaid-wrapper">
-            <pre class="mermaid">
+            <div class="mermaid">
 graph TB
     subgraph "🔌 Extension System"
         Core[Extension Core<br/>lib/extensions/]
@@ -635,7 +634,7 @@ graph TB
     style BrowserAgent fill:#3b82f6,stroke:#1e40af,color:#fff
     style EditorAgent fill:#10b981,stroke:#059669,color:#fff
     style TerminalUI fill:#f59e0b,stroke:#d97706,color:#fff
-            </pre>
+            </div>
           </div>
 
           <div class="info-box">
@@ -659,7 +658,7 @@ graph TB
           </p>
 
           <div class="mermaid-wrapper">
-            <pre class="mermaid">
+            <div class="mermaid">
 graph TB
     Start([Start]) --> SelectMode{Thinking Mode?}
 
@@ -705,12 +704,12 @@ graph TB
     style SelectMode fill:#f59e0b,stroke:#d97706,color:#fff
     style Output fill:#3b82f6,stroke:#1e40af,color:#fff
     style End fill:#10b981,stroke:#059669,color:#fff
-            </pre>
+            </div>
           </div>
 
           <h3>Coding Agent (Beta)</h3>
           <div class="mermaid-wrapper">
-            <pre class="mermaid">
+            <div class="mermaid">
 stateDiagram-v2
     [*] --> Think: Start Task
     Think --> Action: Generate Plan
@@ -740,7 +739,7 @@ stateDiagram-v2
         - Validate result
         - Detect errors
     end note
-            </pre>
+            </div>
           </div>
 
           <div class="info-box">
@@ -764,7 +763,7 @@ stateDiagram-v2
           </p>
 
           <div class="mermaid-wrapper">
-            <pre class="mermaid">
+            <div class="mermaid">
 graph TB
     subgraph "💬 Chat Layer"
         User[User Message]
@@ -827,7 +826,7 @@ graph TB
     style Registry fill:#8b5cf6,stroke:#6d28d9,color:#fff
     style FileTools fill:#10b981,stroke:#059669,color:#fff
     style MCPServer1 fill:#f59e0b,stroke:#d97706,color:#fff
-            </pre>
+            </div>
           </div>
 
           <div class="info-box">
@@ -847,7 +846,7 @@ graph TB
           <p>Frontend는 재사용 가능한 컴포넌트로 구성되며, shadcn/ui를 기반으로 일관된 디자인 시스템을 유지합니다.</p>
 
           <div class="mermaid-wrapper">
-            <pre class="mermaid">
+            <div class="mermaid">
 graph TB
     subgraph "🎨 Layout Components"
         AppLayout[app/layout.tsx<br/>Root Layout]
@@ -915,7 +914,7 @@ graph TB
     style AppLayout fill:#8b5cf6,stroke:#6d28d9,color:#fff
     style ChatContainer fill:#3b82f6,stroke:#1e40af,color:#fff
     style Button fill:#10b981,stroke:#059669,color:#fff
-            </pre>
+            </div>
           </div>
         </section>
 
@@ -925,7 +924,7 @@ graph TB
           <p>개발부터 배포까지의 전체 프로세스를 시각화합니다.</p>
 
           <div class="mermaid-wrapper">
-            <pre class="mermaid">
+            <div class="mermaid">
 graph LR
     subgraph "💻 Development"
         Dev1[npm run dev<br/>Next.js Dev Server]
@@ -975,12 +974,12 @@ graph LR
     style Test1 fill:#f59e0b,stroke:#d97706,color:#fff
     style Build1 fill:#8b5cf6,stroke:#6d28d9,color:#fff
     style Release1 fill:#10b981,stroke:#059669,color:#fff
-            </pre>
+            </div>
           </div>
 
           <h3>CI/CD Pipeline</h3>
           <div class="mermaid-wrapper">
-            <pre class="mermaid">
+            <div class="mermaid">
 sequenceDiagram
     participant Dev as Developer
     participant Git as GitHub
@@ -1005,7 +1004,7 @@ sequenceDiagram
     else Tests Fail
         CI-->>Dev: Build Failed (Notification)
     end
-            </pre>
+            </div>
           </div>
 
           <div class="info-box">
@@ -1027,30 +1026,18 @@ sequenceDiagram
       </footer>
     </div>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        console.log('Initializing Mermaid...');
-        if (typeof mermaid !== 'undefined') {
-          console.log('Mermaid version:', mermaid.version);
-          mermaid.initialize({
-            startOnLoad: true,
-            theme: 'default',
-            securityLevel: 'loose',
-            flowchart: {
-              useMaxWidth: true,
-              htmlLabels: true,
-              curve: 'basis',
-            },
-          });
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
 
-          // 명시적으로 렌더링 시도
-          setTimeout(function() {
-            console.log('Running mermaid.init...');
-            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
-          }, 100);
-        } else {
-          console.error('Mermaid library not loaded!');
-        }
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        securityLevel: 'loose',
+        flowchart: {
+          useMaxWidth: true,
+          htmlLabels: true,
+          curve: 'basis',
+        },
       });
     </script>
   </body>
