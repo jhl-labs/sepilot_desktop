@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Simple Mermaid Test</title>
+</head>
+<body>
+  <h1>Test 1: With pre tag</h1>
+  <pre class="mermaid">
+graph TD
+    A[Start] --> B[Process]
+    B --> C[End]
+  </pre>
+
+  <h1>Test 2: With div tag</h1>
+  <div class="mermaid">
+graph TD
+    X[Begin] --> Y[Work]
+    Y --> Z[Done]
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+  </script>
+</body>
+</html>
