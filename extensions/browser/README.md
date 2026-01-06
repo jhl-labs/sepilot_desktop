@@ -1,5 +1,58 @@
 # Browser Extension - Agent 개선 사항
 
+## 🚀 주요 기능
+
+### **Perplexity 모드 - 자동 웹 검색 & 정보 종합**
+
+Browser Agent가 이제 **Perplexity처럼 작동**합니다!
+
+**자동 검색 트리거**:
+사용자가 명시적으로 "검색해줘"라고 요청하지 않아도, 다음 경우 자동으로 웹 검색을 수행합니다:
+
+- ✅ **최신/실시간 정보**: "2024년 노벨상", "최신 AI 뉴스", "latest news"
+- ✅ **사실 확인**: 통계, 가격, 날짜, 특정 사실
+- ✅ **모르는 주제**: Agent가 확신 없는 정보
+- ✅ **특정 엔티티**: 기업, 제품, 인물, 장소 등 최신 업데이트 가능성 있는 정보
+
+**Perplexity 스타일 응답 프로세스**:
+
+1. **자동 감지**: 질문 분석 후 웹 검색 필요 여부 판단
+2. **다중 소스 조사**: 상위 2-3개 검색 결과 방문 및 정보 수집
+3. **정보 종합**: 여러 소스의 정보를 일관된 답변으로 통합
+4. **출처 인용**: 모든 답변에 `**출처:**` 섹션 포함 (링크 + 설명)
+5. **관련 검색어**: 추가 탐색을 위한 관련 검색어 제안
+
+**예시**:
+
+```
+사용자: "2024년 노벨 물리학상 수상자는?"
+
+Agent 자동 실행:
+1. google_search({ query: "2024 노벨 물리학상 수상자", dateFilter: "year" })
+2. google_extract_results({ maxResults: 5 })
+3. google_visit_result({ rank: 1, extractType: "summary" })
+4. google_visit_result({ rank: 2, extractType: "summary" })
+5. 정보 종합 및 출처 인용
+
+응답:
+"2024년 노벨 물리학상은 John Hopfield와 Geoffrey Hinton이 수상했습니다...
+
+**출처:**
+- [The Nobel Prize - 2024년 물리학상 발표](https://nobelprize.org/...)
+- [한국일보 - 인공지능 선구자 힌튼 교수 노벨상 수상](https://www.hankookilbo.com/...)
+"
+```
+
+**검색하지 않는 경우**:
+
+- 단순 브라우저 자동화: "네이버 접속해줘"
+- 특정 URL 방문: "github.com으로 가줘"
+- UI 상호작용: 클릭, 타이핑, 스크롤 작업
+
+**변경 위치**: `browser-agent.ts:508-539`
+
+---
+
 ## 수정된 주요 버그
 
 ### 1. **무한 루프 방지 개선**
