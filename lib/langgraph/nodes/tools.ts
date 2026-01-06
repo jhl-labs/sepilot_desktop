@@ -621,6 +621,20 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
                   errorParts.push(
                     `[${item.type} data: ${item.mimeType || 'unknown'}${item.data ? `, ${item.data.length} bytes` : ''}]`
                   );
+                } else {
+                  // Unknown content type - log warning for debugging
+                  logger.warn(
+                    `[Tools] Unknown content type '${item.type}' in error from tool ${call.name}`,
+                    {
+                      item,
+                    }
+                  );
+                  // Fallback: try to extract any available text, or add placeholder
+                  if (item.text) {
+                    errorParts.push(item.text);
+                  } else {
+                    errorParts.push(`[Unknown content type: ${item.type}]`);
+                  }
                 }
               }
             }
@@ -665,6 +679,18 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
                 // Resource data: include description for LLM
                 const resourceDesc = `[Resource data: ${item.mimeType || 'unknown type'}${item.data ? `, ${item.data.length} bytes` : ''}]`;
                 contentParts.push(resourceDesc);
+              } else {
+                // Unknown content type - log warning for debugging
+                logger.warn(
+                  `[Tools] Unknown content type '${item.type}' in result from tool ${call.name}`,
+                  { item }
+                );
+                // Fallback: try to extract any available text, or add placeholder
+                if (item.text) {
+                  contentParts.push(item.text);
+                } else {
+                  contentParts.push(`[Unknown content type: ${item.type}]`);
+                }
               }
             }
 
