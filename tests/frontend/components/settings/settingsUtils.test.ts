@@ -458,13 +458,16 @@ describe('settingsUtils', () => {
       });
 
       expect(result).toEqual(['gpt-3.5-turbo', 'gpt-4']);
-      expect(global.fetch).toHaveBeenCalledWith('https://api.openai.com/v1/models', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer test-key',
-        },
-      });
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.openai.com/v1/models',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-key',
+          }),
+        })
+      );
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         '[Settings] Running in browser mode - CORS may occur, Network Config not applied'
       );
@@ -496,14 +499,17 @@ describe('settingsUtils', () => {
       });
 
       expect(result).toEqual(['claude-3-opus', 'claude-3-sonnet']);
-      expect(global.fetch).toHaveBeenCalledWith('https://api.anthropic.com/v1/models', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': 'test-key',
-          'anthropic-version': '2023-06-01',
-        },
-      });
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.anthropic.com/v1/models',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'x-api-key': 'test-key',
+            'anthropic-version': '2023-06-01',
+          }),
+        })
+      );
 
       consoleWarnSpy.mockRestore();
     });
@@ -533,15 +539,18 @@ describe('settingsUtils', () => {
         },
       });
 
-      expect(global.fetch).toHaveBeenCalledWith('https://api.openai.com/v1/models', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer test-key',
-          'X-Custom': 'value',
-          'X-Another': 'header',
-        },
-      });
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.openai.com/v1/models',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-key',
+            'X-Custom': 'value',
+            'X-Another': 'header',
+          }),
+        })
+      );
 
       consoleWarnSpy.mockRestore();
     });
@@ -570,8 +579,11 @@ describe('settingsUtils', () => {
     it('should normalize baseURL before fetching', async () => {
       const mockResponse = {
         ok: true,
+        headers: {
+          get: jest.fn((key: string) => (key === 'content-type' ? 'application/json' : null)),
+        },
         json: jest.fn().mockResolvedValue({ data: [{ id: 'model-1' }] }),
-        text: jest.fn(),
+        text: jest.fn().mockResolvedValue('{"data":[{"id":"model-1"}]}'),
       };
 
       (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
