@@ -208,6 +208,17 @@ async function createWindow() {
     }
   });
 
+  // Window focus/blur 이벤트 리스너 (백그라운드 알림용)
+  mainWindow.on('focus', () => {
+    mainWindow?.webContents.send('window:focus-changed', { focused: true });
+    logger.info('Main window focused');
+  });
+
+  mainWindow.on('blur', () => {
+    mainWindow?.webContents.send('window:focus-changed', { focused: false });
+    logger.info('Main window blurred');
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
     logger.info('Main window closed');

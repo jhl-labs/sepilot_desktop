@@ -25,6 +25,7 @@ import { setupBrowserControlHandlers } from './handlers/browser-control';
 import { setupTerminalHandlers } from './handlers/terminal';
 import { setupPersonaHandlers } from './handlers/persona';
 import { setupErrorReportingHandlers } from './handlers/error-reporting';
+import { setupNotificationHandlers } from './handlers/notification';
 import { logger } from '../services/logger';
 import { registerExtensionIpcHandlers } from '../../lib/extensions/loader-main';
 
@@ -58,6 +59,7 @@ export function setupIpcHandlers(
   setupTerminalHandlers(undefined);
   setupPersonaHandlers();
   setupErrorReportingHandlers();
+  setupNotificationHandlers(getMainWindow);
 
   // Extension IPC handlers
   registerExtensionIpcHandlers();

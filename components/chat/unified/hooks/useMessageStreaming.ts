@@ -508,6 +508,33 @@ export function useMessageStreaming() {
               }
               if (!abortControllerRef.current?.signal.aborted) {
                 scheduleUpdate({}, true);
+
+                // 백그라운드 스트리밍 감지 및 알림 (신규 추가)
+                const state = useChatStore.getState();
+                const isDifferentConversation = state.activeConversationId !== conversationId;
+                const isAppUnfocused = !state.isAppFocused;
+
+                if (isDifferentConversation || isAppUnfocused) {
+                  logger.info(
+                    `[useMessageStreaming] Background streaming completed for ${conversationId}, showing notification`
+                  );
+
+                  // 시스템 알림 표시
+                  const conversation = conversations.find((c) => c.id === conversationId);
+                  const title = conversation?.title || '새 대화';
+
+                  if (window.electronAPI?.notification) {
+                    window.electronAPI.notification
+                      .show({
+                        conversationId,
+                        title: 'SEPilot',
+                        body: `"${title}" 대화의 응답이 완료되었습니다.`,
+                      })
+                      .catch((error) => {
+                        console.error('[useMessageStreaming] Failed to show notification:', error);
+                      });
+                  }
+                }
               }
             }
           );

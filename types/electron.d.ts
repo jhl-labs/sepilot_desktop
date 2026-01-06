@@ -931,6 +931,12 @@ interface PresentationAPI {
   ) => Promise<string>;
 }
 
+interface NotificationAPI {
+  show: (options: { conversationId: string; title: string; body: string }) => Promise<IPCResponse>;
+
+  onClick: (callback: (conversationId: string) => void) => () => void;
+}
+
 interface ElectronAPI {
   platform: string;
   chat: ChatAPI;
@@ -957,6 +963,7 @@ interface ElectronAPI {
   browserControl: BrowserControlAPI;
   terminal: TerminalAPI;
   presentation: PresentationAPI;
+  notification: NotificationAPI;
   on: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => void;
 }
@@ -1020,5 +1027,6 @@ export type {
   Snapshot,
   Bookmark,
   BookmarkFolder,
+  NotificationAPI,
   ElectronAPI,
 };

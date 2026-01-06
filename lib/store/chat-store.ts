@@ -127,6 +127,7 @@ interface ChatStore extends ExtensionStoreState {
   messagesCache: Map<string, Message[]>; // conversationId -> messages cache (for background streaming)
   streamingConversations: Map<string, string>; // conversationId -> messageId mapping
   isLoading: boolean;
+  isAppFocused: boolean; // Window focus state (for background streaming notifications)
 
   // App Mode (Chat vs Editor)
   appMode: AppMode;
@@ -249,6 +250,7 @@ interface ChatStore extends ExtensionStoreState {
   startStreaming: (conversationId: string, messageId: string) => void;
   stopStreaming: (conversationId: string) => void;
   isConversationStreaming: (conversationId: string) => boolean;
+  setAppFocused: (focused: boolean) => void;
 
   // Actions - Graph Config
   setThinkingMode: (mode: ThinkingMode) => void;
@@ -404,6 +406,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   messagesCache: new Map<string, Message[]>(),
   streamingConversations: new Map<string, string>(),
   isLoading: false,
+  isAppFocused: true, // Initially focused
 
   // App Mode
   appMode: 'chat',
@@ -1382,6 +1385,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   isConversationStreaming: (conversationId: string) => {
     return get().streamingConversations.has(conversationId);
+  },
+
+  setAppFocused: (focused: boolean) => {
+    set({ isAppFocused: focused });
   },
 
   // Graph Configuration

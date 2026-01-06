@@ -476,7 +476,12 @@ const electronAPI = {
 
   // 이벤트 리스너
   on: (channel: string, callback: (...args: unknown[]) => void) => {
-    const validChannels = ['update-available', 'download-progress', 'create-new-chat-with-message'];
+    const validChannels = [
+      'update-available',
+      'download-progress',
+      'create-new-chat-with-message',
+      'window:focus-changed',
+    ];
 
     if (validChannels.includes(channel)) {
       // wrapper 함수 없이 직접 등록 (removeListener와 호환)
@@ -642,6 +647,18 @@ const electronAPI = {
   presentation: {
     exportSlides: (slides: any, format: 'pptx' | 'pdf' | 'html') =>
       ipcRenderer.invoke('presentation:export', { slides, format }),
+  },
+
+  // Notification operations
+  notification: {
+    show: (options: { conversationId: string; title: string; body: string }) =>
+      ipcRenderer.invoke('notification:show', options),
+
+    onClick: (callback: (conversationId: string) => void) => {
+      const handler = (_: any, conversationId: string) => callback(conversationId);
+      ipcRenderer.on('notification:click', handler);
+      return () => ipcRenderer.removeListener('notification:click', handler);
+    },
   },
 };
 

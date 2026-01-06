@@ -80,6 +80,37 @@ export default function Home() {
     };
   }, [createConversation, setActiveConversation]);
 
+  // Window focus 및 알림 클릭 리스너
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.electronAPI) {
+      return;
+    }
+
+    // Window focus 상태 동기화
+    const focusHandler = (data: unknown) => {
+      if (typeof data === 'object' && data !== null && 'focused' in data) {
+        const focused = (data as { focused: boolean }).focused;
+        logger.info(`[Home] Window focus changed: ${focused}`);
+        useChatStore.getState().setAppFocused(focused);
+      }
+    };
+
+    window.electronAPI.on('window:focus-changed', focusHandler);
+
+    // 알림 클릭 리스너
+    const notificationCleanup = window.electronAPI.notification?.onClick(
+      (conversationId: string) => {
+        logger.info(`[Home] Notification clicked, switching to conversation: ${conversationId}`);
+        useChatStore.getState().setActiveConversation(conversationId);
+      }
+    );
+
+    return () => {
+      window.electronAPI.removeListener('window:focus-changed', focusHandler);
+      notificationCleanup?.();
+    };
+  }, []);
+
   // Ctrl+Shift+F to open search in Editor mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
