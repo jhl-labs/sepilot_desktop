@@ -6,7 +6,34 @@
 
 import { extensionRegistry } from './registry';
 import type { ExtensionDefinition } from './types';
+import type { ExtensionStateConfig } from '@/types';
 import { logger } from '@/lib/utils/logger';
+
+function isElectron(): boolean {
+  return typeof window !== 'undefined' && !!(window as any).electronAPI;
+}
+
+/**
+ * 저장된 Extension 설정 로드
+ */
+async function loadExtensionsConfig(): Promise<ExtensionStateConfig> {
+  try {
+    if (isElectron() && (window as any).electronAPI) {
+      const result = await (window as any).electronAPI.config.load();
+      return result.data?.extensions || {};
+    } else {
+      const saved = localStorage.getItem('sepilot_app_config');
+      if (saved) {
+        const config = JSON.parse(saved);
+        return config.extensions || {};
+      }
+      return {};
+    }
+  } catch (error) {
+    logger.error('[ExtensionLoader] Failed to load extensions config', { error });
+    return {};
+  }
+}
 
 /**
  * 모든 extension을 로드하고 등록
@@ -30,16 +57,29 @@ export async function loadExtensions(): Promise<void> {
       }
     }
 
-    // 활성화
+    // 저장된 Extension 상태 로드
+    const extensionsConfig = await loadExtensionsConfig();
+
+    // 활성화 (저장된 상태 우선, 없으면 manifest.enabled 사용)
     for (const extension of extensions) {
-      if (extension.manifest.enabled !== false) {
+      const extensionId = extension.manifest.id;
+      const savedConfig = extensionsConfig[extensionId];
+
+      // 저장된 상태가 있으면 우선 사용, 없으면 manifest.enabled 사용
+      const shouldActivate =
+        savedConfig !== undefined ? savedConfig.enabled : extension.manifest.enabled !== false;
+
+      if (shouldActivate) {
         try {
-          await extensionRegistry.activate(extension.manifest.id);
+          await extensionRegistry.activate(extensionId);
+          logger.info(`[ExtensionLoader] Activated extension: ${extensionId}`);
         } catch (error) {
-          logger.error(`[ExtensionLoader] Failed to activate extension ${extension.manifest.id}`, {
+          logger.error(`[ExtensionLoader] Failed to activate extension ${extensionId}`, {
             error,
           });
         }
+      } else {
+        logger.info(`[ExtensionLoader] Extension ${extensionId} is disabled`);
       }
     }
 

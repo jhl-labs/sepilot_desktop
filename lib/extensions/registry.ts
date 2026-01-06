@@ -188,6 +188,24 @@ class ExtensionRegistry {
   }
 
   /**
+   * 특정 extension에 의존하는 활성화된 extension 목록 조회
+   */
+  getDependents(id: string): ExtensionDefinition[] {
+    return Array.from(this.extensions.values())
+      .filter((entry) => entry.isActive && entry.definition.manifest.dependencies?.includes(id))
+      .map((entry) => entry.definition);
+  }
+
+  /**
+   * Extension 비활성화 가능 여부 확인
+   * 다른 활성화된 extension이 이 extension에 의존하고 있으면 false 반환
+   */
+  canDeactivate(id: string): boolean {
+    const dependents = this.getDependents(id);
+    return dependents.length === 0;
+  }
+
+  /**
    * Registry 초기화 (테스트용)
    */
   clear(): void {

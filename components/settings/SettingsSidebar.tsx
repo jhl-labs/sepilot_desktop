@@ -30,6 +30,7 @@ export type SettingSection =
   | 'team-docs'
   | 'backup'
   | 'quickinput'
+  | 'extensions'
   | 'beta'
   | string; // Allow Extension-provided Settings tabs dynamically
 
@@ -111,6 +112,12 @@ export function SettingsSidebar({
       id: 'features',
       label: t('settings.categories.features'),
       items: [
+        {
+          id: 'extensions',
+          label: t('settings.extensions.title'),
+          icon: Plug,
+          description: t('settings.extensions.description'),
+        },
         {
           id: 'quickinput',
           label: t('settings.quickinput.title'),

@@ -690,6 +690,21 @@
       "warning2": "Duplicate IDs will be updated with latest data",
       "warning3": "Page will automatically refresh after import"
     },
+    "extensions": {
+      "title": "Extension Manager",
+      "description": "Manage extensions that extend app functionality",
+      "activeExtensions": "Active Extensions",
+      "availableExtensions": "Available Extensions",
+      "noDependencies": "No dependencies",
+      "dependencies": "Dependencies",
+      "betaBadge": "Beta",
+      "cannotDeactivate": "Cannot deactivate: other extensions depend on this",
+      "goToSettings": "Settings",
+      "version": "Version",
+      "author": "Author",
+      "saved": "Extension settings saved",
+      "saveFailed": "Failed to save extension settings"
+    },
     "beta": {
       "title": "Beta",
       "description": "Experimental features (in development)",

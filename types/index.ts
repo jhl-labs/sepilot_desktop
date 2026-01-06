@@ -414,6 +414,17 @@ export interface QuickInputMessageData {
  */
 export type BetaConfig = Record<string, boolean>;
 
+/**
+ * Extension State Configuration
+ * Extension별 활성화 상태 및 설정을 관리
+ */
+export interface ExtensionStateConfig {
+  [extensionId: string]: {
+    enabled: boolean;
+    settings?: Record<string, unknown>; // Extension별 설정
+  };
+}
+
 export interface GeneralConfig {
   language: 'ko' | 'en' | 'zh';
 }
@@ -432,6 +443,7 @@ export interface AppConfig {
   teamDocs?: TeamDocsConfig[]; // Team Docs 설정 (여러 GitHub Repo)
   quickInput?: QuickInputConfig;
   beta?: BetaConfig; // Beta 기능 설정
+  extensions?: ExtensionStateConfig; // Extension 활성화 상태 및 설정
   theme?: 'light' | 'dark' | 'system';
 }
 

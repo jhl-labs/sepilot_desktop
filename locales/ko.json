@@ -780,6 +780,21 @@
       "warning2": "중복된 ID가 있을 경우 최신 데이터로 업데이트됩니다",
       "warning3": "가져오기 후 자동으로 페이지가 새로고침됩니다"
     },
+    "extensions": {
+      "title": "Extension 관리",
+      "description": "앱 기능을 확장하는 Extension을 관리합니다",
+      "activeExtensions": "활성화된 Extension",
+      "availableExtensions": "사용 가능한 Extension",
+      "noDependencies": "의존성 없음",
+      "dependencies": "의존성",
+      "betaBadge": "베타",
+      "cannotDeactivate": "다른 Extension이 이 Extension에 의존하고 있어 비활성화할 수 없습니다",
+      "goToSettings": "설정",
+      "version": "버전",
+      "author": "작성자",
+      "saved": "Extension 설정이 저장되었습니다",
+      "saveFailed": "Extension 설정 저장에 실패했습니다"
+    },
     "beta": {
       "title": "Beta",
       "description": "실험적 기능 (개발 중)",

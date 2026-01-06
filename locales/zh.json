@@ -923,6 +923,21 @@
       "warning2": "重复的 ID 将使用最新数据更新",
       "warning3": "导入后页面将自动刷新"
     },
+    "extensions": {
+      "title": "扩展管理",
+      "description": "管理扩展应用程序功能的扩展",
+      "activeExtensions": "活动扩展",
+      "availableExtensions": "可用扩展",
+      "noDependencies": "无依赖",
+      "dependencies": "依赖",
+      "betaBadge": "Beta",
+      "cannotDeactivate": "无法停用：其他扩展依赖于此",
+      "goToSettings": "设置",
+      "version": "版本",
+      "author": "作者",
+      "saved": "扩展设置已保存",
+      "saveFailed": "扩展设置保存失败"
+    },
     "beta": {
       "title": "Beta",
       "description": "实验性功能（开发中）",

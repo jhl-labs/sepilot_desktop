@@ -38,6 +38,7 @@ import { NetworkSettingsTab } from './NetworkSettingsTab';
 import { ImageGenSettingsTab } from './ImageGenSettingsTab';
 import { MCPSettingsTab } from './MCPSettingsTab';
 import { QuickInputSettingsTab } from './QuickInputSettingsTab';
+import { ExtensionManagerTab } from './ExtensionManagerTab';
 import { SettingsSidebar, SettingSection } from './SettingsSidebar';
 import { BetaSettingsTab } from './BetaSettingsTab';
 import {
@@ -1119,6 +1120,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     setConfig={setQuickInputConfig}
                     onSave={handleQuickInputSave}
                     isSaving={isSaving}
+                    message={message}
+                  />
+                )}
+
+                {activeTab === 'extensions' && (
+                  <ExtensionManagerTab
+                    onSectionChange={(section) => setActiveTab(section)}
                     message={message}
                   />
                 )}
