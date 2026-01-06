@@ -1655,52 +1655,8 @@ export class BrowserAgentGraph {
           };
         }
 
-        // 동일 페이지 상태가 두 번 이상 유지될 때 추가 탐색/비전 플랜 삽입 (한 번만)
-        if (fallbackState.unchangedCount >= 2 && !fallbackState.visionFallbackUsed) {
-          const unchangedMessage: Message = {
-            id: `unchanged-${Date.now()}`,
-            role: 'assistant',
-            content: '페이지가 변하지 않아 비전 캡처와 요소 검색을 다시 시도합니다.',
-            created_at: Date.now(),
-            tool_calls: [
-              {
-                id: `tool-${Date.now()}-unchanged-capture`,
-                name: 'browser_capture_annotated_screenshot',
-                arguments: {
-                  maxMarkers: 25,
-                  includeOverlay: true,
-                },
-              },
-              {
-                id: `tool-${Date.now()}-unchanged-search`,
-                name: 'browser_search_elements',
-                arguments: {
-                  query: 'button link form input',
-                },
-              },
-            ],
-          };
-
-          addBrowserAgentLog({
-            level: 'warning',
-            phase: 'tool_call',
-            message: '페이지 변화 없음 → 비전 캡처 + 검색 재시도',
-            details: {
-              iteration: iterations + 1,
-              maxIterations: actualMaxIterations,
-            },
-          });
-
-          state = {
-            ...state,
-            messages: [...state.messages, unchangedMessage],
-          };
-
-          fallbackState.visionFallbackUsed = true;
-          fallbackState.unchangedCount = 0;
-        }
-
         // 페이지 변화 없음 → 스크롤 재시도 (한 번만, 아직 실행하지 않았을 때)
+        // 우선순위 1: 가장 가볍고 빠른 복구 전략
         if (!fallbackState.scrollRecoveryUsed && fallbackState.unchangedCount >= 1) {
           const scrollMessage: Message = {
             id: `scroll-recovery-${Date.now()}`,
@@ -1737,29 +1693,55 @@ export class BrowserAgentGraph {
           fallbackState.scrollRecoveryUsed = true;
         }
 
-        // 자동 비전 fallback: 실패 누적 시 Annotated screenshot 호출 (한 번만)
-        if (hasRepeatedFailure && !fallbackState.visionFallbackUsed) {
-          const visionToolMessage: Message = {
+        // 통합된 Vision Fallback (한 번만 실행)
+        // 우선순위 2: 페이지 변화 없음(2회 이상) 또는 반복 실패 시
+        const shouldUseVisionFallback =
+          !fallbackState.visionFallbackUsed &&
+          (fallbackState.unchangedCount >= 2 || hasRepeatedFailure);
+
+        if (shouldUseVisionFallback) {
+          // unchangedCount >= 2: 적극적 탐색 (screenshot + search)
+          // hasRepeatedFailure: 상황 파악 (screenshot만)
+          const isAggressiveMode = fallbackState.unchangedCount >= 2;
+
+          const toolCalls: Array<{ id: string; name: string; arguments: any }> = [
+            {
+              id: `tool-${Date.now()}-vision-capture`,
+              name: 'browser_capture_annotated_screenshot',
+              arguments: {
+                maxMarkers: isAggressiveMode ? 25 : 30,
+                includeOverlay: true,
+              },
+            },
+          ];
+
+          // 적극 모드: 검색도 함께 실행
+          if (isAggressiveMode) {
+            toolCalls.push({
+              id: `tool-${Date.now()}-vision-search`,
+              name: 'browser_search_elements',
+              arguments: {
+                query: 'button link form input',
+              },
+            });
+          }
+
+          const visionMessage: Message = {
             id: `vision-fallback-${Date.now()}`,
             role: 'assistant',
-            content: '반복 실패로 비전 기반 캡처를 실행합니다.',
+            content: isAggressiveMode
+              ? '페이지가 변하지 않아 비전 캡처와 요소 검색을 다시 시도합니다.'
+              : '반복 실패로 비전 기반 캡처를 실행합니다.',
             created_at: Date.now(),
-            tool_calls: [
-              {
-                id: `tool-${Date.now()}`,
-                name: 'browser_capture_annotated_screenshot',
-                arguments: {
-                  maxMarkers: 30,
-                  includeOverlay: true,
-                },
-              },
-            ],
+            tool_calls: toolCalls,
           };
 
           addBrowserAgentLog({
             level: 'warning',
             phase: 'tool_call',
-            message: '비전 캡처 fallback 실행',
+            message: isAggressiveMode
+              ? '페이지 변화 없음 → 비전 캡처 + 검색 재시도'
+              : '반복 실패 → 비전 캡처 실행',
             details: {
               iteration: iterations + 1,
               maxIterations: actualMaxIterations,
@@ -1768,10 +1750,13 @@ export class BrowserAgentGraph {
 
           state = {
             ...state,
-            messages: [...state.messages, visionToolMessage],
+            messages: [...state.messages, visionMessage],
           };
 
           fallbackState.visionFallbackUsed = true;
+          if (isAggressiveMode) {
+            fallbackState.unchangedCount = 0;
+          }
         }
 
         // 자동 검증: 최근 변화가 있을 때 간단한 페이지 요약 요청 (한 번만)
