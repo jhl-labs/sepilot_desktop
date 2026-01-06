@@ -127,7 +127,7 @@ export class TerminalAgentGraph {
   }
 
   /**
-   * Generate Node - LLM 호출
+   * Generate Node - LLM 호출 (스트리밍)
    */
   private async generateNode(state: TerminalAgentState): Promise<{ messages: Message[] }> {
     // System prompt 생성
@@ -154,21 +154,48 @@ export class TerminalAgentGraph {
       },
     }));
 
-    // LLM 호출 (non-streaming)
-    const response = await LLMService.chat(messages, {
-      tools,
-      temperature: 0.3,
-      maxTokens: 2000,
-      stream: false,
-    });
+    logger.info('[TerminalAgent.Generate] Calling LLM with streaming');
+
+    // LLM 호출 (스트리밍)
+    let accumulatedContent = '';
+    let finalToolCalls: any[] = [];
+
+    try {
+      for await (const chunk of LLMService.streamChatWithChunks(messages, {
+        tools,
+        temperature: 0.3,
+        maxTokens: 2000,
+      })) {
+        // 콘텐츠 누적 및 실시간 emit
+        if (!chunk.done && chunk.content) {
+          accumulatedContent += chunk.content;
+          emitStreamingChunk(chunk.content, state.conversationId);
+        }
+
+        // 마지막 청크에 tool_calls 포함
+        if (chunk.done && chunk.toolCalls) {
+          finalToolCalls = chunk.toolCalls;
+          logger.debug('[TerminalAgent.Generate] Received tool calls:', finalToolCalls);
+        }
+      }
+    } catch (llmError) {
+      logger.error('[TerminalAgent.Generate] LLM call failed:', llmError);
+      throw llmError;
+    }
 
     const assistantMessage: Message = {
       id: `assistant-${Date.now()}`,
       role: 'assistant',
-      content: response.content,
-      tool_calls: response.toolCalls as any,
+      content: accumulatedContent,
+      tool_calls: finalToolCalls.length > 0 ? (finalToolCalls as any) : undefined,
       created_at: Date.now(),
     };
+
+    logger.info('[TerminalAgent.Generate] Generated message:', {
+      contentLength: accumulatedContent.length,
+      hasToolCalls: !!assistantMessage.tool_calls,
+      toolCallCount: finalToolCalls.length,
+    });
 
     return {
       messages: [assistantMessage],

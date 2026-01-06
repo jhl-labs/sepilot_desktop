@@ -646,6 +646,11 @@ const electronAPI = {
       ipcRenderer.on('terminal:exit', handler);
       return handler;
     },
+    onAIStream: (callback: (data: { chunk: string; conversationId: string }) => void) => {
+      const handler = (_: any, data: any) => callback(data);
+      ipcRenderer.on('terminal:ai-stream', handler);
+      return handler;
+    },
     removeListener: (event: string, handler: any) => {
       ipcRenderer.removeListener(event, handler);
     },

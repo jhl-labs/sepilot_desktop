@@ -108,11 +108,24 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       }
     );
 
+    // terminal:ai-stream 이벤트 리스너 (AI 명령어 생성 스트리밍)
+    const aiStreamHandler = window.electronAPI.terminal.onAIStream(
+      ({ chunk, conversationId }: { chunk: string; conversationId: string }) => {
+        logger.info('[TerminalPanel] AI stream chunk:', {
+          conversationId,
+          chunkLength: chunk.length,
+        });
+        // TODO: AI 생성 중인 텍스트를 UI에 표시
+        console.log('[AI Stream]', chunk);
+      }
+    );
+
     // Cleanup
     return () => {
       if (window.electronAPI?.terminal?.removeListener) {
         window.electronAPI.terminal.removeListener('terminal:data', dataHandler);
         window.electronAPI.terminal.removeListener('terminal:exit', exitHandler);
+        window.electronAPI.terminal.removeListener('terminal:ai-stream', aiStreamHandler);
       }
     };
   }, [store, terminalBlocks, updateTerminalBlock]);

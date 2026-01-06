@@ -935,6 +935,9 @@ interface TerminalAPI {
   onExit: (
     callback: (data: { sessionId: string; exitCode: number; signal?: number }) => void
   ) => (...args: unknown[]) => void;
+  onAIStream: (
+    callback: (data: { chunk: string; conversationId: string }) => void
+  ) => (...args: unknown[]) => void;
   removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
 }
 

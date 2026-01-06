@@ -183,21 +183,34 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
   ipcMain.handle(
     'terminal:ai-command',
     async (
-      _event,
+      event,
       args: {
         naturalInput: string;
         currentCwd?: string;
         recentBlocks?: any[];
       }
     ) => {
+      const streamId = `terminal-${Date.now()}`;
+
       try {
         logger.info('[Terminal IPC] AI command request:', args.naturalInput);
 
         // Terminal Agent 동적 import (Main Process용)
         const { createTerminalAgentGraph } =
           await import('../../../extensions/terminal/agents/terminal-agent');
+        const { setStreamingCallback, setCurrentConversationId } =
+          await import('../../../lib/llm/streaming-callback');
 
         const agent = createTerminalAgentGraph(10);
+
+        // 스트리밍 콜백 설정 (LangGraph와 동일한 방식)
+        setCurrentConversationId(streamId);
+        setStreamingCallback((chunk: string) => {
+          event.sender.send('terminal:ai-stream', {
+            chunk,
+            conversationId: streamId,
+          });
+        }, streamId);
 
         // Agent 초기 상태 구성
         const initialState = {
@@ -209,7 +222,7 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
               created_at: Date.now(),
             },
           ],
-          conversationId: `terminal-${Date.now()}`,
+          conversationId: streamId,
           recentBlocks: args.recentBlocks || [],
           currentCwd: args.currentCwd || process.cwd(),
           currentShell: process.env.SHELL || 'bash',
@@ -219,10 +232,10 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
         // Agent 실행 (첫 번째 명령어만 추출)
         let generatedCommand: string | null = null;
 
-        for await (const event of agent.stream(initialState)) {
-          if (event.type === 'message' && event.message?.content) {
+        for await (const agentEvent of agent.stream(initialState)) {
+          if (agentEvent.type === 'message' && agentEvent.message?.content) {
             // 명령어 추출 시도
-            const content = event.message.content;
+            const content = agentEvent.message.content;
             const commandMatch = content.match(/```(?:bash|sh|shell)?\n([\s\S]+?)\n```/);
             if (commandMatch) {
               generatedCommand = commandMatch[1].trim();
@@ -230,9 +243,9 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
             }
           }
 
-          if (event.type === 'tool_results' && event.results?.[0]) {
+          if (agentEvent.type === 'tool_results' && agentEvent.results?.[0]) {
             // run_command 결과가 있으면 사용
-            const toolResult = event.results[0];
+            const toolResult = agentEvent.results[0];
             if (toolResult.toolName === 'run_command') {
               return {
                 success: true,
