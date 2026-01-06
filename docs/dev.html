@@ -765,62 +765,62 @@ stateDiagram-v2
           <div class="mermaid-wrapper">
             <div class="mermaid">
 graph TB
-    subgraph "💬 Chat Layer"
+    subgraph Chat["💬 Chat Layer"]
         User[User Message]
         LLM[LLM API<br/>GPT-4o, Claude]
-        ToolCall[Tool Call Detection<br/>Function Calling]
+        ToolCall[Tool Call Detection]
     end
 
-    subgraph "🔧 MCP Layer"
-        Registry[Tool Registry<br/>lib/mcp/registry.ts]
-        Executor[Tool Executor<br/>lib/mcp/executor.ts]
-
-        subgraph "Built-in Tools"
-            FileTools[File Tools<br/>read, write, list]
-            WebTools[Web Tools<br/>search, fetch]
-            ImageTools[Image Tools<br/>generate, analyze]
-            GitHubTools[GitHub Tools<br/>repo, issues]
-        end
-
-        subgraph "External MCP Servers"
-            MCPServer1[MCP Server 1<br/>Custom Domain]
-            MCPServer2[MCP Server 2<br/>Third-party API]
-            MCPServer3[MCP Server 3<br/>Database Access]
-        end
+    subgraph Core["🔧 MCP Core"]
+        Registry[Tool Registry]
+        Executor[Tool Executor]
     end
 
-    subgraph "🔌 Extension Tools"
-        BrowserTools[Browser Tools<br/>click, scroll, type]
-        EditorTools[Editor Tools<br/>edit, replace, format]
+    subgraph Builtin["🛠️ Built-in Tools"]
+        FileTools[File Tools]
+        WebTools[Web Tools]
+        ImageTools[Image Tools]
+        GitHubTools[GitHub Tools]
     end
 
-    User -->|1. Ask Question| LLM
-    LLM -->|2. Analyze & Decide| ToolCall
-    ToolCall -->|3. Request Tool| Registry
-    Registry -->|4. Find Tool| Executor
+    subgraph External["🌐 External MCP Servers"]
+        MCPServer1[MCP Server 1]
+        MCPServer2[MCP Server 2]
+        MCPServer3[MCP Server 3]
+    end
 
-    Executor -.5a. Execute.-> FileTools
-    Executor -.5b. Execute.-> WebTools
-    Executor -.5c. Execute.-> ImageTools
-    Executor -.5d. Execute.-> GitHubTools
-    Executor -.5e. Call MCP.-> MCPServer1
-    Executor -.5f. Call MCP.-> MCPServer2
-    Executor -.5g. Call MCP.-> MCPServer3
-    Executor -.5h. Extension.-> BrowserTools
-    Executor -.5i. Extension.-> EditorTools
+    subgraph Extensions["🔌 Extension Tools"]
+        BrowserTools[Browser Tools]
+        EditorTools[Editor Tools]
+    end
 
-    FileTools -.6. Result.-> Executor
-    WebTools -.6. Result.-> Executor
-    ImageTools -.6. Result.-> Executor
-    GitHubTools -.6. Result.-> Executor
-    MCPServer1 -.6. Result.-> Executor
-    MCPServer2 -.6. Result.-> Executor
-    MCPServer3 -.6. Result.-> Executor
-    BrowserTools -.6. Result.-> Executor
-    EditorTools -.6. Result.-> Executor
+    User --> LLM
+    LLM --> ToolCall
+    ToolCall --> Registry
+    Registry --> Executor
 
-    Executor -->|7. Return Result| LLM
-    LLM -->|8. Generate Response| User
+    Executor --> FileTools
+    Executor --> WebTools
+    Executor --> ImageTools
+    Executor --> GitHubTools
+    Executor --> MCPServer1
+    Executor --> MCPServer2
+    Executor --> MCPServer3
+    Executor --> BrowserTools
+    Executor --> EditorTools
+
+    FileTools -.Result.-> Executor
+    WebTools -.Result.-> Executor
+    ImageTools -.Result.-> Executor
+    GitHubTools -.Result.-> Executor
+    MCPServer1 -.Result.-> Executor
+    MCPServer2 -.Result.-> Executor
+    MCPServer3 -.Result.-> Executor
+    BrowserTools -.Result.-> Executor
+    EditorTools -.Result.-> Executor
+
+    Executor --> LLM
+    LLM --> User
 
     style User fill:#3b82f6,stroke:#1e40af,color:#fff
     style Registry fill:#8b5cf6,stroke:#6d28d9,color:#fff
