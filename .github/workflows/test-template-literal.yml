@@ -13,7 +13,5 @@ jobs:
         with:
           script: |
             const title = "Test";
-            const body = `Header
-Bold text: ${title}
-`;
+            const body = `Header Bold text: ${title}`;
             console.log(body);

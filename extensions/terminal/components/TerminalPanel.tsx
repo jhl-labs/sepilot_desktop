@@ -173,7 +173,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [terminalBlocks.length, lastOutputLen]);
+  }, [sessionBlocks.length, lastOutputLen]);
 
   // 명령어 실행 (직접 또는 AI 생성)
   const handleExecuteCommand = async (command: string, naturalInput?: string) => {
