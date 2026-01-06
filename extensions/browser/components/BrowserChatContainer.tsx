@@ -256,6 +256,12 @@ export function BrowserChatContainer() {
               undefined, // networkConfig
               undefined // workingDirectory
             );
+
+            // Stream completed successfully - cleanup event handler
+            if (eventHandler) {
+              eventHandler();
+              setBrowserAgentStreamCleanup(null);
+            }
           } catch (streamError) {
             console.error('[BrowserChatContainer] Stream error:', streamError);
             // Cleanup on error
@@ -265,16 +271,6 @@ export function BrowserChatContainer() {
             }
             throw streamError;
           }
-
-          // Stream completed successfully - cleanup
-          if (eventHandler) {
-            eventHandler();
-            setBrowserAgentStreamCleanup(null);
-          }
-          if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
-            abortControllerRef.current.abort();
-          }
-          abortControllerRef.current = null;
         } else {
           // Web: WebLLMClient directly
           const webClient = getWebLLMClient();
