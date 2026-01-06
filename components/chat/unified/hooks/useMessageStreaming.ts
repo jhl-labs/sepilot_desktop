@@ -10,9 +10,10 @@ import { useRef, useCallback } from 'react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { isElectron } from '@/lib/platform';
 import { getWebLLMClient } from '@/lib/llm/web-client';
-import type { Message, ImageAttachment } from '@/types';
+import type { Message, ImageAttachment, ToolCall } from '@/types';
 import { generateId } from '@/lib/utils/id-generator';
 import { getVisualizationInstructions } from '@/lib/langgraph/utils/system-message';
+import type { ToolResult } from '@/lib/langgraph/types';
 
 interface StreamingOptions {
   conversationId: string;
@@ -256,21 +257,21 @@ export function useMessageStreaming() {
 
               if (event.node === 'generate') {
                 const hasToolResults = event.data?.messages?.some(
-                  (msg: any) => msg.role === 'tool'
+                  (msg: Message) => msg.role === 'tool'
                 );
                 if (event.data?.messages?.[0]?.tool_calls) {
                   const toolNames = event.data.messages[0].tool_calls
-                    .map((tc: any) => tc.name)
+                    .map((tc: ToolCall) => tc.name)
                     .join(', ');
                   nodeStatusMessage = `🤖 AI가 도구 사용을 계획하고 있습니다: ${toolNames}`;
                 } else if (!hasToolResults) {
                   nodeStatusMessage = '🤖 AI가 응답을 생성하고 있습니다...';
                 }
               } else if (event.node === 'tools') {
-                const toolResults = event.data?.toolResults || [];
+                const toolResults = (event.data?.toolResults || []) as ToolResult[];
                 if (toolResults.length > 0) {
-                  const toolNames = toolResults.map((tr: any) => tr.toolName).join(', ');
-                  const hasError = toolResults.some((tr: any) => tr.error);
+                  const toolNames = toolResults.map((tr: ToolResult) => tr.toolName).join(', ');
+                  const hasError = toolResults.some((tr: ToolResult) => tr.error);
                   const hasImageGen = toolNames.includes('generate_image');
 
                   if (hasImageGen) {
@@ -316,11 +317,16 @@ export function useMessageStreaming() {
                   reporter: 'executing',
                 };
 
+                // Use statusMessage from event if available, otherwise fallback to node name
+                const detailedMessage = eventData?.statusMessage
+                  ? eventData.statusMessage
+                  : `${event.node || 'Processing'}`;
+
                 setAgentProgress(conversationId, {
                   iteration: eventData.iterationCount,
                   maxIterations: eventData.maxIterations,
                   status: statusMap[nodeStatus] || 'working',
-                  message: `Step ${eventData.iterationCount}/${eventData.maxIterations}: ${event.node || 'Processing'}`,
+                  message: detailedMessage,
                 });
               }
 
@@ -333,11 +339,21 @@ export function useMessageStreaming() {
 
                   if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
                     if (msg.content) {
-                      const thinkingContent =
-                        msg.content.length > 300
-                          ? `${msg.content.substring(0, 300)}...`
-                          : msg.content;
-                      displayContent += `💭 ${thinkingContent}\n\n`;
+                      // Show full thinking content with collapsible UI for long content
+                      if (msg.content.length > 300) {
+                        displayContent += `<details class="thinking-block mb-2">
+<summary class="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+💭 <strong>Thinking...</strong> (click to expand)
+</summary>
+<div class="mt-2 pl-4 border-l-2 border-primary/30">
+
+${msg.content}
+
+</div>
+</details>\n\n`;
+                      } else {
+                        displayContent += `💭 ${msg.content}\n\n`;
+                      }
                     }
                     continue;
                   }
@@ -420,7 +436,7 @@ export function useMessageStreaming() {
             if (event.type === 'node' && event.node === 'tools' && event.data?.toolResults) {
               const toolResults = event.data.toolResults;
               const generatedImages: ImageAttachment[] = [];
-              let usageInfo: any = null;
+              let usageInfo: Record<string, unknown> | null = null;
 
               for (const toolResult of toolResults) {
                 if (toolResult.toolName === 'generate_image' && toolResult.result) {
@@ -655,12 +671,12 @@ export function useMessageStreaming() {
               console.error('Failed to auto-generate title:', err);
             });
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error('[useMessageStreaming] Error:', error);
         updateMessage(
           accumulatedMessage.content ? '' : 'temp',
           {
-            content: `Error: ${error.message || 'Failed to get response'}`,
+            content: `Error: ${error instanceof Error ? error.message : 'Failed to get response'}`,
           },
           conversationId
         );

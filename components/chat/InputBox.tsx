@@ -35,6 +35,7 @@ import {
   QuickInputMessageData,
 } from '@/types';
 import type { Persona } from '@/types/persona';
+import type { ToolResult } from '@/lib/langgraph/types';
 import { ToolApprovalDialog } from './ToolApprovalDialog';
 import { ImageGenerationProgressBar } from './ImageGenerationProgressBar';
 import { LLMStatusBar, type ToolInfo } from './LLMStatusBar';
@@ -208,7 +209,7 @@ export function InputBox() {
         const allToolsResult = await window.electronAPI.mcp.getAllTools();
         const allTools: ToolInfo[] =
           allToolsResult.success && allToolsResult.data
-            ? allToolsResult.data.map((tool: any) => ({
+            ? allToolsResult.data.map((tool) => ({
                 name: tool.name,
                 description: tool.description,
                 serverName: tool.serverName,
@@ -499,9 +500,9 @@ export function InputBox() {
       if (result.success && result.data && result.data.length > 0) {
         setSelectedImages((prev) => [...prev, ...(result.data || [])]);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to select images:', error);
-      setError(error.message || t('inputBox.errors.imageSelectFailed'));
+      setError(error instanceof Error ? error.message : t('inputBox.errors.imageSelectFailed'));
     }
   };
 
@@ -556,9 +557,9 @@ export function InputBox() {
           setError(t('inputBox.errors.clipboardRead'));
         };
         reader.readAsDataURL(file);
-      } catch (error: any) {
+      } catch (error) {
         console.error('Failed to read clipboard image:', error);
-        setError(error.message || t('inputBox.errors.clipboardProcess'));
+        setError(error instanceof Error ? error.message : t('inputBox.errors.clipboardProcess'));
       }
     }
   };
@@ -914,7 +915,7 @@ export function InputBox() {
                   // If there are tool calls, show them
                   if (event.data?.messages?.[0]?.tool_calls) {
                     const toolNames = event.data.messages[0].tool_calls
-                      .map((tc: any) => tc.name)
+                      .map((tc: ToolCall) => tc.name)
                       .join(', ');
                     nodeStatusMessage = t('inputBox.nodes.generatingTools', { tools: toolNames });
                   }
@@ -922,10 +923,10 @@ export function InputBox() {
 
                 // Tools node: Show tool execution
                 else if (event.node === 'tools') {
-                  const toolResults = event.data?.toolResults || [];
+                  const toolResults = (event.data?.toolResults || []) as ToolResult[];
                   if (toolResults.length > 0) {
-                    const toolNames = toolResults.map((tr: any) => tr.toolName).join(', ');
-                    const hasError = toolResults.some((tr: any) => tr.error);
+                    const toolNames = toolResults.map((tr: ToolResult) => tr.toolName).join(', ');
+                    const hasError = toolResults.some((tr: ToolResult) => tr.error);
                     const hasImageGen = toolNames.includes('generate_image');
 
                     if (hasImageGen) {
@@ -940,9 +941,9 @@ export function InputBox() {
                     }
                   } else {
                     // 도구 실행 시작 - 메시지에서 이미지 생성 여부 확인
-                    const recentMessages = event.data?.messages || [];
-                    const hasImageGenCall = recentMessages.some((msg: any) =>
-                      msg.tool_calls?.some((tc: any) => tc.name === 'generate_image')
+                    const recentMessages = (event.data?.messages || []) as Message[];
+                    const hasImageGenCall = recentMessages.some((msg: Message) =>
+                      msg.tool_calls?.some((tc: ToolCall) => tc.name === 'generate_image')
                     );
 
                     if (hasImageGenCall) {
@@ -1009,12 +1010,12 @@ export function InputBox() {
                       const toolName = msg.name || 'tool';
 
                       // Find the corresponding tool call to get arguments
-                      let toolArgs: any = null;
+                      let toolArgs: Record<string, unknown> | null = null;
                       for (let j = i - 1; j >= 0; j--) {
                         const prevMsg = allMessages[j];
                         if (prevMsg.role === 'assistant' && prevMsg.tool_calls) {
                           const toolCall = prevMsg.tool_calls.find(
-                            (tc: any) => tc.id === msg.tool_call_id
+                            (tc: ToolCall) => tc.id === msg.tool_call_id
                           );
                           if (toolCall) {
                             toolArgs = toolCall.arguments;
@@ -1132,15 +1133,15 @@ export function InputBox() {
 
               // Extract generated images from tool results
               if (event.type === 'node' && event.node === 'tools' && event.data?.toolResults) {
-                const toolResults = event.data.toolResults;
+                const toolResults = event.data.toolResults as ToolResult[];
                 const generatedImages: ImageAttachment[] = [];
 
                 console.log('[InputBox] Processing tool results:', toolResults);
 
                 // Show tool completion status
-                const toolNames = toolResults.map((tr: any) => tr.toolName).join(', ');
+                const toolNames = toolResults.map((tr: ToolResult) => tr.toolName).join(', ');
                 const hasImageGeneration = toolResults.some(
-                  (tr: any) => tr.toolName === 'generate_image'
+                  (tr: ToolResult) => tr.toolName === 'generate_image'
                 );
 
                 // 이미지 생성 진행 상황 초기화
@@ -1345,22 +1346,24 @@ export function InputBox() {
               });
           }
         }
-      } catch (streamError: any) {
+      } catch (streamError) {
         console.error('Streaming error:', streamError);
-        setError(streamError.message || 'Failed to get response from LLM');
+        setError(
+          streamError instanceof Error ? streamError.message : 'Failed to get response from LLM'
+        );
 
         // Update message with error (specify conversation ID)
         updateMessage(
           assistantMessageId,
           {
-            content: `Error: ${streamError.message || 'Failed to get response'}`,
+            content: `Error: ${streamError instanceof Error ? streamError.message : 'Failed to get response'}`,
           },
           conversationId
         );
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Send message error:', error);
-      setError(error.message || 'Failed to send message');
+      setError(error instanceof Error ? error.message : 'Failed to send message');
     } finally {
       // Cleanup: cancel any pending animation frame
       if (rafId !== null) {
