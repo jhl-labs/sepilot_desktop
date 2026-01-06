@@ -1365,3 +1365,111 @@ export function browserGetTabs() {
     return { success: false, error: String(error) };
   }
 }
+
+/**
+ * Internal tab management helpers for google_visit_result
+ * (Main process 내부 사용, IPC 없이 직접 호출)
+ */
+
+export function getCurrentActiveTabId(): string | null {
+  return activeTabId;
+}
+
+export function getMainWindow(): BrowserWindow | null {
+  return mainWindowRef;
+}
+
+export function getTabs(): Map<string, BrowserTab> {
+  return tabs;
+}
+
+/**
+ * 새 탭 생성 (내부용 - 빠른 버전)
+ * IPC 핸들러와 달리 loadURL을 호출하지 않음 (caller가 직접 제어)
+ */
+export function createTabInternal(mainWindow: BrowserWindow, url: string): string {
+  const tabId = randomUUID();
+  const view = createBrowserView(mainWindow, tabId);
+
+  const tab: BrowserTab = {
+    id: tabId,
+    view,
+    url,
+    title: 'Loading...',
+  };
+
+  tabs.set(tabId, tab);
+
+  // Hide current active tab
+  if (activeTabId) {
+    const currentTab = tabs.get(activeTabId);
+    if (currentTab) {
+      mainWindow.removeBrowserView(currentTab.view);
+    }
+  }
+
+  // Make new tab active
+  activeTabId = tabId;
+  mainWindow.addBrowserView(view);
+  setActiveBrowserView(view);
+
+  logger.info(`[TabInternal] Created tab: ${tabId}`);
+  return tabId;
+}
+
+/**
+ * 탭 전환 (내부용)
+ */
+export function switchTabInternal(mainWindow: BrowserWindow, tabId: string): void {
+  const tab = tabs.get(tabId);
+  if (!tab) {
+    throw new Error(`Tab not found: ${tabId}`);
+  }
+
+  // Remove current active view
+  if (activeTabId) {
+    const currentTab = tabs.get(activeTabId);
+    if (currentTab) {
+      mainWindow.removeBrowserView(currentTab.view);
+    }
+  }
+
+  // Add new active view
+  mainWindow.addBrowserView(tab.view);
+  activeTabId = tabId;
+  setActiveBrowserView(tab.view);
+
+  logger.info(`[TabInternal] Switched to tab: ${tabId}`);
+}
+
+/**
+ * 탭 닫기 (내부용)
+ */
+export function closeTabInternal(mainWindow: BrowserWindow, tabId: string): void {
+  const tab = tabs.get(tabId);
+  if (!tab) {
+    logger.warn(`[TabInternal] Tab not found for closing: ${tabId}`);
+    return;
+  }
+
+  // Remove from window if it's active
+  if (activeTabId === tabId) {
+    mainWindow.removeBrowserView(tab.view);
+    activeTabId = null;
+
+    // Switch to another tab if available
+    const remainingTabs = Array.from(tabs.values()).filter((t) => t.id !== tabId);
+    if (remainingTabs.length > 0) {
+      const nextTab = remainingTabs[0];
+      mainWindow.addBrowserView(nextTab.view);
+      activeTabId = nextTab.id;
+      setActiveBrowserView(nextTab.view);
+    } else {
+      setActiveBrowserView(null);
+    }
+  }
+
+  // Clean up
+  tabs.delete(tabId);
+  logger.info(`[TabInternal] Closed tab: ${tabId}`);
+}

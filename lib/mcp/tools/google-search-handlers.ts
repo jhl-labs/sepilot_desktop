@@ -7,6 +7,14 @@ import { logger } from '@/lib/utils/logger';
  */
 
 import { getActiveBrowserView } from '../../../electron/ipc/handlers/browser-control';
+import {
+  getCurrentActiveTabId,
+  getMainWindow,
+  getTabs,
+  createTabInternal,
+  switchTabInternal,
+  closeTabInternal,
+} from '../../../electron/ipc/handlers/browser-view';
 import type {
   GoogleSearchOptions,
   GoogleSearchResultItem,
@@ -16,8 +24,9 @@ import type {
 
 /**
  * 자연스러운 지연 (bot 감지 방지)
+ * Perplexity-level 속도: 100-300ms (기존 500-1500ms에서 5배 빠름)
  */
-async function naturalDelay(minMs = 500, maxMs = 1500) {
+async function naturalDelay(minMs = 100, maxMs = 300) {
   const delay = Math.random() * (maxMs - minMs) + minMs;
   await new Promise((resolve) => setTimeout(resolve, delay));
 }
@@ -503,25 +512,37 @@ export async function handleGoogleGetRelatedSearches(): Promise<string> {
 /**
  * Google 검색 결과 방문
  */
+/**
+ * Google 검색 결과 방문 (NEW - 탭 기반 + Perplexity-level 속도)
+ *
+ * 새 탭에서 열어 검색 페이지 유지 + 5배 빠른 속도
+ */
 export async function handleGoogleVisitResult(options: GoogleVisitResultOptions): Promise<string> {
+  const startTime = Date.now();
+  let newTabId: string | null = null;
+  const originalTabId = getCurrentActiveTabId();
+
   try {
+    const mainWindow = getMainWindow();
+    if (!mainWindow) {
+      throw new Error('Main window not found');
+    }
+
+    const { rank, extractType = 'summary', maxWaitTime = 5, waitForJs = false } = options;
+
+    // 빠른 지연 (Perplexity-level: 100-300ms)
+    await naturalDelay();
+
+    // 현재 검색 페이지에서 URL 추출
     const browserView = getActiveBrowserView();
     if (!browserView) {
       throw new Error('No active browser view');
     }
 
-    const { rank, extractType = 'text', maxWaitTime = 10, waitForJs = true } = options;
-
-    // 자연스러운 지연 (bot 감지 방지)
-    await naturalDelay(500, 1000);
-
-    // 해당 순위의 링크 찾기 및 클릭
-    const clickResult = await browserView.webContents.executeJavaScript(`
+    const linkData = await browserView.webContents.executeJavaScript(`
       (function() {
-        // Google 검색 결과 선택자 (여러 버전 시도)
         let resultElements = document.querySelectorAll('div.MjjYud, div.g, div[data-sokoban-container], div[jscontroller]');
 
-        // Fallback: h3를 포함한 div 찾기
         if (resultElements.length === 0) {
           const allDivs = document.querySelectorAll('div');
           const divsWithH3 = Array.from(allDivs).filter(div => {
@@ -532,7 +553,6 @@ export async function handleGoogleVisitResult(options: GoogleVisitResultOptions)
           resultElements = divsWithH3;
         }
 
-        // 실제 검색 결과만 필터링 (내부 링크 제외)
         const validResults = Array.from(resultElements).filter(el => {
           const linkEl = el.querySelector('a[href]');
           if (!linkEl) return false;
@@ -547,149 +567,128 @@ export async function handleGoogleVisitResult(options: GoogleVisitResultOptions)
         const targetResult = validResults[${rank - 1}];
         const linkEl = targetResult.querySelector('a[href]');
 
-        if (!linkEl) {
-          return { success: false, error: '링크를 찾을 수 없습니다.' };
-        }
-
-        const url = linkEl.getAttribute('href');
-        const title = targetResult.querySelector('h3')?.textContent?.trim() || '';
-
-        return { success: true, url, title };
-      })();
-    `);
-
-    if (!clickResult.success) {
-      throw new Error(clickResult.error);
-    }
-
-    // 페이지 로드
-    await browserView.webContents.loadURL(clickResult.url);
-
-    // 페이지 로딩 완료 대기 (dom-ready: 더 빠르고 안정적)
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Page load timeout - try browser_navigate instead'));
-      }, maxWaitTime * 1000);
-
-      // dom-ready는 DOM이 준비되면 즉시 발생 (리소스 로딩 불필요)
-      browserView.webContents.once('dom-ready', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
-
-      // Fallback: did-fail-load 이벤트 처리
-      browserView.webContents.once('did-fail-load', (_event, errorCode, errorDescription) => {
-        clearTimeout(timeout);
-        reject(new Error(`Page load failed: ${errorDescription} (code: ${errorCode})`));
-      });
-    });
-
-    // JavaScript 실행 대기 (DOM 준비 후 렌더링 대기)
-    if (waitForJs) {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-    }
-
-    // 콘텐츠 추출
-    let content = '';
-    const url = browserView.webContents.getURL();
-
-    switch (extractType) {
-      case 'text':
-        content = await browserView.webContents.executeJavaScript(`
-          document.body.innerText || document.body.textContent || ''
-        `);
-        break;
-
-      case 'markdown':
-        // 간단한 마크다운 변환
-        content = await browserView.webContents.executeJavaScript(`
-          (function() {
-            let md = '';
-
-            // 제목들
-            document.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(h => {
-              const level = h.tagName.substring(1);
-              md += '#'.repeat(parseInt(level)) + ' ' + h.textContent + '\\n\\n';
-            });
-
-            // 본문
-            document.querySelectorAll('p').forEach(p => {
-              md += p.textContent + '\\n\\n';
-            });
-
-            return md;
-          })();
-        `);
-        break;
-
-      case 'summary':
-        // 주요 내용 추출 (첫 몇 단락)
-        content = await browserView.webContents.executeJavaScript(`
-          (function() {
-            const paragraphs = Array.from(document.querySelectorAll('p'))
-              .map(p => p.textContent?.trim())
-              .filter(t => t && t.length > 50)
-              .slice(0, 5);
-
-            return paragraphs.join('\\n\\n');
-          })();
-        `);
-        break;
-
-      default:
-        content = await browserView.webContents.executeJavaScript(`
-          document.body.innerText || document.body.textContent || ''
-        `);
-    }
-
-    // 메타데이터 추출
-    const metadata = await browserView.webContents.executeJavaScript(`
-      (function() {
-        const getMeta = (name) => {
-          const el = document.querySelector(\`meta[name="\${name}"], meta[property="\${name}"]\`);
-          return el?.getAttribute('content') || undefined;
-        };
+        if (!linkEl) return { success: false, error: '링크를 찾을 수 없습니다.' };
 
         return {
-          author: getMeta('author'),
-          publishDate: getMeta('article:published_time') || getMeta('publish_date'),
-          modifiedDate: getMeta('article:modified_time'),
-          language: document.documentElement.lang || undefined,
-          description: getMeta('description'),
-          keywords: getMeta('keywords')?.split(',').map(k => k.trim()),
+          success: true,
+          url: linkEl.getAttribute('href'),
+          title: targetResult.querySelector('h3')?.textContent?.trim() || 'No title'
         };
       })();
     `);
 
-    // 콘텐츠 길이 제한 (너무 길면 요약)
+    if (!linkData.success) {
+      throw new Error(linkData.error);
+    }
+
+    logger.info(`[GoogleVisitResult] Opening rank ${rank} in new tab: ${linkData.url}`);
+
+    // 🚀 새 탭 생성 (빠르게)
+    newTabId = createTabInternal(mainWindow, linkData.url);
+    const newTab = getTabs().get(newTabId);
+    if (!newTab) {
+      throw new Error('Failed to create new tab');
+    }
+
+    // 페이지 로드 (DOM-ready만 대기, 리소스 로딩 X)
+    await newTab.view.webContents.loadURL(linkData.url);
+
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        logger.warn(`[GoogleVisitResult] Timeout after ${maxWaitTime}s - using partial content`);
+        resolve(); // 타임아웃이어도 부분 콘텐츠 사용
+      }, maxWaitTime * 1000);
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        newTab.view.webContents.off('dom-ready', onReady);
+        newTab.view.webContents.off('did-fail-load', onFail);
+      };
+
+      const onReady = () => {
+        cleanup();
+        resolve();
+      };
+
+      const onFail = (_e: unknown, code: number, desc: string) => {
+        cleanup();
+        reject(new Error(`Load failed (${code}): ${desc}`));
+      };
+
+      newTab.view.webContents.once('dom-ready', onReady);
+      newTab.view.webContents.once('did-fail-load', onFail);
+    });
+
+    // 빠른 JS 대기 (500ms, 기존 1500ms에서 3배 빠름)
+    if (waitForJs) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    // 빠른 콘텐츠 추출
+    let content = '';
+    const finalUrl = newTab.view.webContents.getURL();
+
+    if (extractType === 'summary') {
+      content = await newTab.view.webContents.executeJavaScript(`
+        (function() {
+          const paragraphs = Array.from(document.querySelectorAll('p, article p, main p'))
+            .map(p => p.textContent?.trim())
+            .filter(t => t && t.length > 30)
+            .slice(0, 8);
+          return paragraphs.join('\\n\\n');
+        })();
+      `);
+    } else {
+      content = await newTab.view.webContents.executeJavaScript(`
+        document.body.innerText || document.body.textContent || ''
+      `);
+    }
+
+    // 빠른 메타데이터 추출 (병렬 처리)
+    const [title, description] = await Promise.all([
+      newTab.view.webContents.getTitle(),
+      newTab.view.webContents.executeJavaScript(`
+        document.querySelector('meta[name="description"], meta[property="og:description"]')?.getAttribute('content') || ''
+      `),
+    ]);
+
+    // 콘텐츠 길이 제한
     const maxLength = 5000;
     if (content.length > maxLength) {
       content = `${content.substring(0, maxLength)}\n\n... (내용이 잘렸습니다)`;
     }
 
-    let output = `페이지 방문 완료\n\n`;
-    output += `제목: ${clickResult.title}\n`;
-    output += `URL: ${url}\n`;
-    output += `추출 타입: ${extractType}\n\n`;
+    const elapsedMs = Date.now() - startTime;
+    logger.info(`[GoogleVisitResult] ✅ Completed in ${elapsedMs}ms (Perplexity-level!)`);
 
-    if (metadata.author) {
-      output += `작성자: ${metadata.author}\n`;
+    let output = `✅ 페이지 방문 완료 (${(elapsedMs / 1000).toFixed(1)}초)\n\n`;
+    output += `제목: ${title}\n`;
+    output += `URL: ${finalUrl}\n`;
+    if (description) {
+      output += `설명: ${description}\n`;
     }
-    if (metadata.publishDate) {
-      output += `게시일: ${metadata.publishDate}\n`;
-    }
-    if (metadata.description) {
-      output += `설명: ${metadata.description}\n`;
-    }
-
-    output += `\n━━━━━━━━━━━━━━━━━━━━\n`;
-    output += `콘텐츠:\n\n${content}`;
+    output += `\n━━━━━━━━━━━━━━━━━━━━\n콘텐츠:\n\n${content}`;
 
     return output;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error('[GoogleVisitResult] Error:', error);
     throw new Error(`검색 결과 방문 실패: ${message}`);
+  } finally {
+    // 🔄 항상 탭 정리 및 원래 탭으로 복귀
+    if (newTabId) {
+      try {
+        const mainWindow = getMainWindow();
+        if (mainWindow) {
+          closeTabInternal(mainWindow, newTabId);
+          if (originalTabId) {
+            switchTabInternal(mainWindow, originalTabId);
+          }
+        }
+      } catch (cleanupError) {
+        logger.error('[GoogleVisitResult] Cleanup error:', cleanupError);
+      }
+    }
   }
 }
 
