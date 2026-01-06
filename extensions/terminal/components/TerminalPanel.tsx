@@ -164,12 +164,16 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     initializeSession();
   }, []); // Empty dependency array - run once on mount
 
-  // 블록 추가 시 자동 스크롤
+  // 마지막 블록의 출력 길이 변화를 감지하여 스크롤
+  const lastSessionBlock = sessionBlocks[sessionBlocks.length - 1];
+  const lastOutputLen = lastSessionBlock?.output?.length || 0;
+
+  // 블록 추가 또는 출력 업데이트 시 자동 스크롤
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [terminalBlocks.length]);
+  }, [terminalBlocks.length, lastOutputLen]);
 
   // 명령어 실행 (직접 또는 AI 생성)
   const handleExecuteCommand = async (command: string, naturalInput?: string) => {
