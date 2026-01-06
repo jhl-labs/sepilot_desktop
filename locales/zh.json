@@ -372,6 +372,9 @@
       },
       "saved": "图像生成设置已保存！"
     },
+    "presentation": {
+      "title": "演示文稿"
+    },
     "mcp": {
       "title": "MCP",
       "description": "Model Context Protocol 服务器设置",
@@ -966,6 +969,14 @@
     }
   },
   "chat": {
+    "workingDirectory": {
+      "label": "工作目录：",
+      "select": "选择目录",
+      "selecting": "选择中...",
+      "remove": "移除工作目录",
+      "warning": "编程助手需要设置工作目录",
+      "selectNow": "立即选择"
+    },
     "welcome": {
       "title": "欢迎使用 SEPilot",
       "subtitle": "开始新对话或选择现有对话"

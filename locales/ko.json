@@ -821,6 +821,9 @@
       "syntaxError": "JSON 구문 오류: {{error}}",
       "saveFailed": "설정 저장에 실패했습니다."
     },
+    "presentation": {
+      "title": "프레젠테이션"
+    },
     "mcp": {
       "title": "MCP",
       "description": "Model Context Protocol 서버 설정",
@@ -969,7 +972,9 @@
       "label": "작업 디렉토리:",
       "select": "디렉토리 선택",
       "selecting": "선택 중...",
-      "remove": "작업 디렉토리 제거"
+      "remove": "작업 디렉토리 제거",
+      "warning": "코딩 에이전트를 사용하려면 작업 디렉토리가 필요합니다",
+      "selectNow": "지금 선택"
     },
     "welcome": {
       "title": "SEPilot에 오신 것을 환영합니다",

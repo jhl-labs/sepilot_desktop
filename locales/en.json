@@ -731,6 +731,9 @@
       "syntaxError": "JSON syntax error: {{error}}",
       "saveFailed": "Failed to save settings."
     },
+    "presentation": {
+      "title": "Presentation"
+    },
     "mcp": {
       "title": "MCP",
       "description": "Model Context Protocol Server Settings",
@@ -967,7 +970,9 @@
       "label": "Work Directory:",
       "select": "Select Directory",
       "selecting": "Selecting...",
-      "remove": "Remove Work Directory"
+      "remove": "Remove Work Directory",
+      "warning": "Working directory required for Coding Agent",
+      "selectNow": "Select Now"
     },
     "welcome": {
       "title": "Welcome to SEPilot",
