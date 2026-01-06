@@ -24,7 +24,7 @@ export const builtinExtensions: ExtensionDefinition[] = [
   editorExtension,
   browserExtension,
   presentationExtension,
-  // terminalExtension, // Phase 3 완료 시 활성화
+  terminalExtension,
 ];
 
 /**
