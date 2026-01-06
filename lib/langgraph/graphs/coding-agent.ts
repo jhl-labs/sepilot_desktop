@@ -1870,6 +1870,7 @@ export class CodingAgentGraph {
             status: 'starting',
             iterationCount: iterations + 1,
             maxIterations,
+            statusMessage: 'Thinking about next steps...',
           },
         };
         const agentResult = await agentNode(state);
@@ -1878,6 +1879,33 @@ export class CodingAgentGraph {
           messages: [...state.messages, ...(agentResult.messages || [])],
           agentError: agentResult.agentError || state.agentError,
         };
+
+        // Generate detailed status message based on tool calls
+        const lastMessage = agentResult.messages?.[agentResult.messages.length - 1];
+        let agentStatusMessage = 'Completed thinking';
+        if (lastMessage?.tool_calls && lastMessage.tool_calls.length > 0) {
+          const toolCall = lastMessage.tool_calls[0];
+          const toolName = toolCall.name;
+          const args = toolCall.arguments as any;
+
+          if (toolName === 'file_read' && args?.path) {
+            agentStatusMessage = `Planning to read ${args.path}`;
+          } else if (toolName === 'file_write' && args?.path) {
+            agentStatusMessage = `Planning to write to ${args.path}`;
+          } else if (toolName === 'file_edit' && args?.path) {
+            agentStatusMessage = `Planning to edit ${args.path}`;
+          } else if (toolName === 'command_execute' && args?.command) {
+            const cmd = args.command.substring(0, 50);
+            agentStatusMessage = `Planning to run: ${cmd}${args.command.length > 50 ? '...' : ''}`;
+          } else if (toolName === 'grep_search' && args?.pattern) {
+            agentStatusMessage = `Planning to search for: ${args.pattern}`;
+          } else if (lastMessage.tool_calls.length > 1) {
+            agentStatusMessage = `Planning to use ${lastMessage.tool_calls.length} tools`;
+          } else {
+            agentStatusMessage = `Planning to use ${toolName}`;
+          }
+        }
+
         yield {
           type: 'node',
           node: 'agent',
@@ -1886,6 +1914,7 @@ export class CodingAgentGraph {
             messages: state.messages,
             iterationCount: iterations + 1,
             maxIterations,
+            statusMessage: agentStatusMessage,
           },
         };
 
@@ -1896,10 +1925,10 @@ export class CodingAgentGraph {
           break;
         }
 
-        const lastMessage = state.messages[state.messages.length - 1];
+        const lastStateMessage = state.messages[state.messages.length - 1];
 
         // Check if tools need to be called
-        if (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) {
+        if (!lastStateMessage.tool_calls || lastStateMessage.tool_calls.length === 0) {
           // No tools - still run verifier to update plan step and check completion
           logger.info('[CodingAgentGraph] No tool calls, running verifier before completion');
 
@@ -1910,6 +1939,7 @@ export class CodingAgentGraph {
               status: 'starting',
               iterationCount: iterations + 1,
               maxIterations,
+              statusMessage: 'Checking if task is complete',
             },
           };
           const verificationResult = await verificationNode(state);
@@ -1927,6 +1957,9 @@ export class CodingAgentGraph {
               messages: state.messages,
               iterationCount: iterations + 1,
               maxIterations,
+              statusMessage: verificationResult.needsAdditionalIteration
+                ? 'Need more iterations'
+                : 'Task completed',
             },
           };
 
@@ -1940,7 +1973,7 @@ export class CodingAgentGraph {
           break;
         }
 
-        const sensitiveToolCalls = (lastMessage.tool_calls || []).filter((call: any) => {
+        const sensitiveToolCalls = (lastStateMessage.tool_calls || []).filter((call: any) => {
           if (call.name !== 'command_execute' || typeof call.arguments?.command !== 'string') {
             return false;
           }
@@ -1975,7 +2008,7 @@ export class CodingAgentGraph {
             '⚠️ 민감한 명령이 포함되어 실행 전 승인이 필요합니다. "승인" 또는 "항상 승인" 여부를 알려주세요.';
           yield {
             type: 'tool_approval_request',
-            messageId: lastMessage.id,
+            messageId: lastStateMessage.id,
             toolCalls: sensitiveToolCalls,
             note: approvalNote,
           };
@@ -1999,20 +2032,20 @@ export class CodingAgentGraph {
         // Tool approval (human-in-the-loop)
         if (
           this.toolApprovalCallback &&
-          lastMessage.tool_calls &&
-          lastMessage.tool_calls.length > 0
+          lastStateMessage.tool_calls &&
+          lastStateMessage.tool_calls.length > 0
         ) {
           logger.info('[CodingAgentGraph] Requesting tool approval');
 
           // Yield tool approval request
           yield {
             type: 'tool_approval_request',
-            messageId: lastMessage.id,
-            toolCalls: lastMessage.tool_calls,
+            messageId: lastStateMessage.id,
+            toolCalls: lastStateMessage.tool_calls,
           };
 
           try {
-            const approved = await this.toolApprovalCallback(lastMessage.tool_calls);
+            const approved = await this.toolApprovalCallback(lastStateMessage.tool_calls);
 
             yield {
               type: 'tool_approval_result',
@@ -2046,6 +2079,32 @@ export class CodingAgentGraph {
         }
 
         // Execute tools
+        // Generate tool execution status message
+        const executingMessage =
+          lastStateMessage?.tool_calls && lastStateMessage.tool_calls.length > 0
+            ? (() => {
+                const toolCall = lastStateMessage.tool_calls[0];
+                const toolName = toolCall.name;
+                const args = toolCall.arguments as any;
+
+                if (toolName === 'file_read' && args?.path) {
+                  return `Reading ${args.path}`;
+                } else if (toolName === 'file_write' && args?.path) {
+                  return `Writing to ${args.path}`;
+                } else if (toolName === 'file_edit' && args?.path) {
+                  return `Editing ${args.path}`;
+                } else if (toolName === 'command_execute' && args?.command) {
+                  const cmd = args.command.substring(0, 50);
+                  return `Running: ${cmd}${args.command.length > 50 ? '...' : ''}`;
+                } else if (toolName === 'grep_search' && args?.pattern) {
+                  return `Searching for: ${args.pattern}`;
+                } else if (lastStateMessage.tool_calls.length > 1) {
+                  return `Executing ${lastStateMessage.tool_calls.length} tools`;
+                }
+                return `Executing ${toolName}`;
+              })()
+            : 'Executing tools';
+
         yield {
           type: 'node',
           node: 'tools',
@@ -2053,6 +2112,7 @@ export class CodingAgentGraph {
             status: 'starting',
             iterationCount: iterations + 1,
             maxIterations,
+            statusMessage: executingMessage,
           },
         };
         const toolsResult = await enhancedToolsNode(state);
@@ -2070,6 +2130,19 @@ export class CodingAgentGraph {
           deletedFiles: toolsResult.deletedFiles || state.deletedFiles,
           fileChangesCount: (state.fileChangesCount || 0) + (toolsResult.fileChangesCount || 0),
         };
+
+        // Generate completion status message
+        const toolCompletionMessage =
+          toolsResult.toolResults && toolsResult.toolResults.length > 0
+            ? (() => {
+                const hasErrors = toolsResult.toolResults.some((r) => r.error);
+                const toolNames = toolsResult.toolResults.map((r) => r.toolName).join(', ');
+                return hasErrors
+                  ? `Completed ${toolNames} (with errors)`
+                  : `Completed ${toolNames}`;
+              })()
+            : 'Tools completed';
+
         yield {
           type: 'node',
           node: 'tools',
@@ -2078,6 +2151,7 @@ export class CodingAgentGraph {
             messages: state.messages,
             iterationCount: iterations + 1,
             maxIterations,
+            statusMessage: toolCompletionMessage,
           },
         };
 
@@ -2089,6 +2163,7 @@ export class CodingAgentGraph {
             status: 'starting',
             iterationCount: iterations + 1,
             maxIterations,
+            statusMessage: 'Verifying changes and checking completion',
           },
         };
         const verificationResult = await verificationNode(state);
@@ -2106,6 +2181,9 @@ export class CodingAgentGraph {
             messages: state.messages,
             iterationCount: iterations + 1,
             maxIterations,
+            statusMessage: verificationResult.needsAdditionalIteration
+              ? 'Verification complete - continuing'
+              : 'Verification complete - task finished',
           },
         };
 
@@ -2121,7 +2199,14 @@ export class CodingAgentGraph {
       logger.info('[CodingAgentGraph] Stream completed, total iterations:', iterations);
 
       // Reporter: Only for errors or max iterations
-      yield { type: 'node', node: 'reporter', data: { status: 'starting' } };
+      yield {
+        type: 'node',
+        node: 'reporter',
+        data: {
+          status: 'starting',
+          statusMessage: 'Preparing final response',
+        },
+      };
       // Pass hasError and iterations through state
       const stateForReporter = {
         ...state,
@@ -2135,7 +2220,15 @@ export class CodingAgentGraph {
           messages: [...state.messages, ...reportResult.messages],
         };
       }
-      yield { type: 'node', node: 'reporter', data: { ...reportResult, messages: state.messages } };
+      yield {
+        type: 'node',
+        node: 'reporter',
+        data: {
+          ...reportResult,
+          messages: state.messages,
+          statusMessage: 'Final response ready',
+        },
+      };
     } catch (error: any) {
       console.error('[CodingAgentGraph] Stream error:', error);
       yield { type: 'error', error: error.message || 'Graph execution failed' };

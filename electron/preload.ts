@@ -64,6 +64,9 @@ const electronAPI = {
       ipcRenderer.invoke('mcp-call-tool', serverName, toolName, args),
     toggleServer: (name: string) => ipcRenderer.invoke('mcp-toggle-server', name),
     getServerStatus: (name: string) => ipcRenderer.invoke('mcp-get-server-status', name),
+    listPrompts: (serverName: string) => ipcRenderer.invoke('mcp-list-prompts', serverName),
+    getPrompt: (serverName: string, promptName: string, args?: Record<string, string>) =>
+      ipcRenderer.invoke('mcp-get-prompt', serverName, promptName, args),
   },
 
   // Auth operations

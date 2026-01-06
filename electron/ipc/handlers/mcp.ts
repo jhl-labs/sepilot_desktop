@@ -471,5 +471,60 @@ export function setupMCPHandlers() {
     }
   });
 
+  /**
+   * 프롬프트 목록 가져오기
+   */
+  ipcMain.handle('mcp-list-prompts', async (_event, serverName: string) => {
+    try {
+      const server = MCPServerManager.getServerInMainProcess(serverName);
+
+      if (!server) {
+        throw new Error(`MCP Server '${serverName}' not found`);
+      }
+
+      const prompts = await server.listPrompts();
+
+      return {
+        success: true,
+        data: prompts,
+      };
+    } catch (error: any) {
+      console.error('[MCP] Failed to list prompts:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to list prompts',
+      };
+    }
+  });
+
+  /**
+   * 프롬프트 가져오기
+   */
+  ipcMain.handle(
+    'mcp-get-prompt',
+    async (_event, serverName: string, promptName: string, args?: Record<string, string>) => {
+      try {
+        const server = MCPServerManager.getServerInMainProcess(serverName);
+
+        if (!server) {
+          throw new Error(`MCP Server '${serverName}' not found`);
+        }
+
+        const prompt = await server.getPrompt(promptName, args);
+
+        return {
+          success: true,
+          data: prompt,
+        };
+      } catch (error: any) {
+        console.error('[MCP] Failed to get prompt:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to get prompt',
+        };
+      }
+    }
+  );
+
   console.log('[MCP] IPC handlers registered');
 }

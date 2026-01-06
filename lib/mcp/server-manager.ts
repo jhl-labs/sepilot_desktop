@@ -218,6 +218,45 @@ class MCPServerManagerClass {
     }
     return await client.callTool(toolName, args);
   }
+
+  /**
+   * Renderer에서 프롬프트 목록 가져오기
+   */
+  async listPrompts(serverName: string): Promise<import('./types').MCPPrompt[]> {
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      const result = await window.electronAPI.invoke('mcp-list-prompts', serverName);
+      if (result.success) {
+        return result.data || [];
+      } else {
+        throw new Error(result.error || 'Failed to list prompts');
+      }
+    }
+    throw new Error('MCP not available');
+  }
+
+  /**
+   * Renderer에서 프롬프트 가져오기
+   */
+  async getPrompt(
+    serverName: string,
+    promptName: string,
+    args?: Record<string, string>
+  ): Promise<import('./types').MCPPromptResult> {
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      const result = await window.electronAPI.invoke(
+        'mcp-get-prompt',
+        serverName,
+        promptName,
+        args
+      );
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || 'Failed to get prompt');
+      }
+    }
+    throw new Error('MCP not available');
+  }
 }
 
 export const MCPServerManager = new MCPServerManagerClass();
