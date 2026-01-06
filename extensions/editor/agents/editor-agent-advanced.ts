@@ -188,10 +188,67 @@ export class AdvancedEditorAgentGraph {
     let hasError = false;
     let errorMessage = '';
 
+    // ===== PLANNING PHASE ===== (Cursor/Cline 수준)
+    if (state.editorContext?.enablePlanning && !state.planCreated) {
+      logger.info('[AdvancedEditorAgent] === Planning Phase ===');
+      emitStreamingChunk('\n\n📋 **실행 계획 수립 중...**\n\n', state.conversationId);
+
+      try {
+        const planResult = await this.createPlan(state);
+        state = { ...state, ...planResult };
+
+        if (planResult.messages) {
+          state = {
+            ...state,
+            messages: [...state.messages, ...planResult.messages],
+          };
+        }
+
+        yield {
+          type: 'planning',
+          plan: planResult,
+        };
+
+        emitStreamingChunk('\n---\n\n', state.conversationId);
+      } catch (error: any) {
+        console.error('[AdvancedEditorAgent] Planning error:', error);
+        // Continue without plan
+      }
+    }
+
+    // ===== MAIN EXECUTION LOOP =====
     while (iterations < this.maxIterations) {
       logger.info(
         `[AdvancedEditorAgent] ===== Iteration ${iterations + 1}/${this.maxIterations} =====`
       );
+
+      // Show plan progress
+      if (state.planSteps && state.planSteps.length > 0) {
+        const currentStep = state.currentPlanStep || 0;
+        if (currentStep < state.planSteps.length) {
+          emitStreamingChunk(
+            `\n📍 **현재 단계 (${currentStep + 1}/${state.planSteps.length}):** ${state.planSteps[currentStep]}\n\n`,
+            state.conversationId
+          );
+        }
+      }
+
+      // Context Management: Optimize messages if needed (100k tokens limit)
+      try {
+        const optimized = AdvancedEditorAgentGraph.contextManager.optimizeMessages(state.messages);
+        if (optimized.length < state.messages.length) {
+          logger.info(
+            `[AdvancedEditorAgent] Context optimized: ${state.messages.length} → ${optimized.length} messages`
+          );
+          state = {
+            ...state,
+            messages: optimized,
+          };
+        }
+      } catch (error: any) {
+        logger.warn('[AdvancedEditorAgent] Context optimization failed:', error);
+        // Continue with original messages
+      }
 
       // 1. Generate response with tools
       let generateResult;
@@ -313,6 +370,46 @@ export class AdvancedEditorAgentGraph {
           type: 'tool_results',
           toolResults: toolsResult.toolResults,
         };
+      }
+
+      // Update modifiedFiles tracking from toolsResult
+      if (toolsResult.modifiedFiles && toolsResult.modifiedFiles.length > 0) {
+        state = {
+          ...state,
+          modifiedFiles: [...(state.modifiedFiles || []), ...toolsResult.modifiedFiles],
+        };
+      }
+
+      // ===== VERIFICATION PHASE ===== (Cursor/Cline 수준)
+      if (state.editorContext?.enableVerification) {
+        logger.info('[AdvancedEditorAgent] === Verification Phase ===');
+
+        try {
+          const verifyResult = await this.verifyProgress(state);
+          state = { ...state, ...verifyResult };
+
+          if (verifyResult.messages) {
+            state = {
+              ...state,
+              messages: [...state.messages, ...verifyResult.messages],
+            };
+          }
+
+          yield {
+            type: 'verification',
+            verification: verifyResult,
+          };
+
+          // If verification requests additional iteration, continue loop
+          if (verifyResult.needsAdditionalIteration) {
+            logger.info('[AdvancedEditorAgent] Verification requests additional iteration');
+            iterations++;
+            continue;
+          }
+        } catch (error: any) {
+          console.error('[AdvancedEditorAgent] Verification error:', error);
+          // Continue anyway
+        }
       }
 
       iterations++;
@@ -549,10 +646,15 @@ export class AdvancedEditorAgentGraph {
 
     const provider = client.getProvider();
 
-    // Get all editor tools
+    // Get all editor tools (Built-in + MCP)
     // Check if tools are enabled in context (default to true if undefined)
     const useTools = state.editorContext?.useTools !== false;
-    const tools = useTools ? this.getEditorTools(state.editorContext?.enabledTools) : [];
+    const tools = useTools
+      ? await this.getEditorTools(
+          state.editorContext?.enabledTools,
+          state.editorContext?.enableMCPTools
+        )
+      : [];
 
     const response = await provider.chat(state.messages, {
       tools: tools.length > 0 ? tools : undefined,
@@ -583,7 +685,9 @@ export class AdvancedEditorAgentGraph {
   /**
    * Tools node: Execute tool calls
    */
-  private async toolsNode(state: EditorAgentState): Promise<{ toolResults: any[] }> {
+  private async toolsNode(
+    state: EditorAgentState
+  ): Promise<{ toolResults: any[]; modifiedFiles?: string[] }> {
     const lastMessage = state.messages[state.messages.length - 1];
 
     if (!lastMessage.tool_calls || lastMessage.tool_calls.length === 0) {
@@ -591,6 +695,7 @@ export class AdvancedEditorAgentGraph {
     }
 
     const results = [];
+    const modifiedFiles: string[] = [];
 
     for (const toolCall of lastMessage.tool_calls) {
       logger.info('[AdvancedEditorAgent] Executing tool:', toolCall.name);
@@ -602,6 +707,15 @@ export class AdvancedEditorAgentGraph {
           toolName: toolCall.name,
           result,
         });
+
+        // Track file modifications (Cursor/Cline 수준)
+        if (toolCall.name === 'write_file' || toolCall.name === 'edit_file') {
+          const filePath = (toolCall.arguments as any)?.filePath;
+          if (filePath && !modifiedFiles.includes(filePath)) {
+            modifiedFiles.push(filePath);
+            logger.info(`[AdvancedEditorAgent] File modified: ${filePath}`);
+          }
+        }
       } catch (error: any) {
         console.error('[AdvancedEditorAgent] Tool execution error:', error);
         results.push({
@@ -612,7 +726,10 @@ export class AdvancedEditorAgentGraph {
       }
     }
 
-    return { toolResults: results };
+    return {
+      toolResults: results,
+      modifiedFiles: modifiedFiles.length > 0 ? modifiedFiles : undefined,
+    };
   }
 
   /**
@@ -633,9 +750,9 @@ export class AdvancedEditorAgentGraph {
   }
 
   /**
-   * Get all editor tools
+   * Get all editor tools (Built-in + MCP)
    */
-  private getEditorTools(enabledTools?: string[]): any[] {
+  private async getEditorTools(enabledTools?: string[], enableMCPTools?: boolean): Promise<any[]> {
     const allTools = [
       // File Reading (no approval needed)
       {
@@ -841,6 +958,32 @@ export class AdvancedEditorAgentGraph {
         },
       },
     ];
+
+    // Add MCP Tools if enabled (Cursor/Cline 수준)
+    if (enableMCPTools) {
+      try {
+        const mcpTools = await MCPServerManager.getAllTools();
+        logger.info(`[AdvancedEditorAgent] Adding ${mcpTools.length} MCP tools to LLM`);
+
+        // Convert MCP tools to OpenAI tool format
+        for (const mcpTool of mcpTools) {
+          allTools.push({
+            type: 'function',
+            function: {
+              name: mcpTool.name,
+              description: mcpTool.description || `MCP tool: ${mcpTool.name}`,
+              parameters: mcpTool.inputSchema || {
+                type: 'object',
+                properties: {},
+              },
+            },
+          });
+        }
+      } catch (error: any) {
+        logger.error('[AdvancedEditorAgent] Failed to load MCP tools:', error);
+        // Continue with built-in tools only
+      }
+    }
 
     if (!enabledTools || enabledTools.length === 0) {
       return allTools;

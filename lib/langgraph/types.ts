@@ -9,7 +9,8 @@ export type ThinkingMode =
   | 'deep-web-research' // Add Deep Web Research mode
   | 'coding'
   | 'browser-agent'
-  | 'editor-agent';
+  | 'editor-agent'
+  | 'terminal-agent';
 
 /**
  * 기능 토글 옵션

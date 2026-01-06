@@ -1,0 +1,422 @@
+name: Auto Update Documentation
+
+on:
+  schedule:
+    # 1시간마다 실행
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: '강제 업데이트 (true/false)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-docs:
+    name: Update docs/dev.html
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 50  # 최근 50개 커밋 가져오기
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Analyze recent changes
+        id: analyze_changes
+        run: |
+          echo "## 📊 최근 변경사항 분석" > changes-report.md
+          echo "" >> changes-report.md
+
+          # 최근 1시간 동안의 커밋 확인
+          recent_commits=$(git log --since="1 hour ago" --oneline | wc -l)
+          echo "RECENT_COMMITS=$recent_commits" >> $GITHUB_OUTPUT
+
+          if [ "$recent_commits" -eq 0 ] && [ "${{ inputs.force_update }}" != "true" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ 최근 1시간 동안 변경사항이 없습니다." >> changes-report.md
+            exit 0
+          fi
+
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "📝 최근 1시간 동안 ${recent_commits}개의 커밋이 발견되었습니다." >> changes-report.md
+          echo "" >> changes-report.md
+
+          # 최근 커밋 목록
+          echo "### 최근 커밋 목록" >> changes-report.md
+          git log --since="1 hour ago" --pretty=format:"- %h %s (%an)" >> changes-report.md
+          echo "" >> changes-report.md
+          echo "" >> changes-report.md
+
+          # 변경된 파일 분석
+          echo "### 변경된 파일" >> changes-report.md
+          git diff --name-only HEAD~${recent_commits}..HEAD | sort -u > changed-files.txt
+          cat changed-files.txt >> changes-report.md
+          echo "" >> changes-report.md
+
+          # 주요 영역별 변경사항
+          echo "### 주요 영역별 변경사항" >> changes-report.md
+
+          architecture_changes=$(grep -E "^(app/|components/|electron/|lib/)" changed-files.txt | wc -l)
+          extension_changes=$(grep -E "^extensions/" changed-files.txt | wc -l)
+          config_changes=$(grep -E "^(package.json|tsconfig|next.config)" changed-files.txt | wc -l)
+
+          echo "- 아키텍처 변경: ${architecture_changes}개 파일" >> changes-report.md
+          echo "- Extension 변경: ${extension_changes}개 파일" >> changes-report.md
+          echo "- 설정 변경: ${config_changes}개 파일" >> changes-report.md
+
+          echo "ARCH_CHANGES=$architecture_changes" >> $GITHUB_OUTPUT
+          echo "EXT_CHANGES=$extension_changes" >> $GITHUB_OUTPUT
+          echo "CONFIG_CHANGES=$config_changes" >> $GITHUB_OUTPUT
+
+      - name: Generate project structure snapshot
+        if: steps.analyze_changes.outputs.has_changes == 'true'
+        run: |
+          echo "## 📁 현재 프로젝트 구조" > project-snapshot.md
+          echo "" >> project-snapshot.md
+
+          # 디렉토리 구조
+          echo "### 디렉토리 구조 (주요 디렉토리)" >> project-snapshot.md
+          echo "\`\`\`" >> project-snapshot.md
+          tree -L 2 -d -I 'node_modules|.next|dist|out|coverage' . >> project-snapshot.md || find . -type d -maxdepth 2 ! -path "*/node_modules/*" ! -path "*/.next/*" ! -path "*/dist/*" ! -path "*/out/*" -print | head -50 >> project-snapshot.md
+          echo "\`\`\`" >> project-snapshot.md
+          echo "" >> project-snapshot.md
+
+          # package.json에서 주요 정보 추출
+          echo "### 기술 스택" >> project-snapshot.md
+          echo "\`\`\`json" >> project-snapshot.md
+          jq '{
+            name,
+            version,
+            dependencies: .dependencies | with_entries(select(.key | test("^(react|next|electron|@langchain)"; "i"))),
+            devDependencies: .devDependencies | with_entries(select(.key | test("^(typescript|@types|eslint)"; "i")))
+          }' package.json >> project-snapshot.md
+          echo "\`\`\`" >> project-snapshot.md
+          echo "" >> project-snapshot.md
+
+          # Extensions 목록
+          echo "### Extensions" >> project-snapshot.md
+          if [ -d "extensions" ]; then
+            ls -d extensions/*/ | sed 's|extensions/||;s|/$||' | sed 's/^/- /' >> project-snapshot.md
+          fi
+          echo "" >> project-snapshot.md
+
+          # IPC handlers 목록
+          echo "### IPC Handlers" >> project-snapshot.md
+          if [ -d "electron/ipc/handlers" ]; then
+            ls electron/ipc/handlers/*.ts 2>/dev/null | xargs -n1 basename | sed 's/\.ts$//' | sed 's/^/- /' >> project-snapshot.md
+          fi
+
+      - name: Update docs with Claude
+        if: steps.analyze_changes.outputs.has_changes == 'true'
+        id: claude_update
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            # docs/dev.html 자동 업데이트 미션
+
+            ## 목표
+            프로젝트의 최근 변경사항을 분석하여 docs/dev.html 문서를 최신 상태로 업데이트합니다.
+
+            ## 변경사항 요약
+            - 최근 커밋 수: ${{ steps.analyze_changes.outputs.RECENT_COMMITS }}개
+            - 아키텍처 변경: ${{ steps.analyze_changes.outputs.ARCH_CHANGES }}개 파일
+            - Extension 변경: ${{ steps.analyze_changes.outputs.EXT_CHANGES }}개 파일
+            - 설정 변경: ${{ steps.analyze_changes.outputs.CONFIG_CHANGES }}개 파일
+
+            ## 분석할 파일
+            1. changes-report.md - 최근 변경사항 상세 내역
+            2. project-snapshot.md - 현재 프로젝트 구조 스냅샷
+            3. docs/dev.html - 업데이트할 문서 (현재 버전)
+
+            ## 업데이트 지침
+
+            ### 1. 변경사항 분석
+            - changes-report.md를 읽고 어떤 변경이 있었는지 파악
+            - 변경된 파일들을 실제로 읽어보고 내용 확인
+            - 아키텍처에 영향을 주는 변경인지 판단
+
+            ### 2. 업데이트가 필요한 섹션 식별
+            docs/dev.html의 다음 섹션들을 검토:
+            - **1. 전체 아키텍처** - 새로운 서비스나 레이어 추가/변경
+            - **2. 디렉토리 구조** - 새로운 디렉토리나 파일 구조 변경
+            - **3. IPC 통신** - 새로운 IPC 핸들러 추가/변경
+            - **4. 데이터 흐름** - 데이터 플로우 변경
+            - **5. Extension 시스템** - 새 Extension 추가/제거
+            - **6. LangGraph Agent** - Agent 구조 변경
+            - **7. MCP 통합** - MCP 도구 추가/변경
+            - **8. 컴포넌트 계층** - 주요 컴포넌트 변경
+            - **9. 빌드 & 배포** - 빌드 프로세스 변경
+
+            ### 3. Mermaid 다이어그램 업데이트
+            **중요:** 구조가 변경되었다면 해당 Mermaid 다이어그램을 업데이트하세요:
+            - 새로운 노드 추가
+            - 제거된 노드 삭제
+            - 연결 관계 업데이트
+            - 스타일 일관성 유지
+
+            ### 4. 텍스트 설명 업데이트
+            - 새로운 기능이나 컴포넌트 설명 추가
+            - 변경된 동작 방식 업데이트
+            - 예시 코드 업데이트 (필요시)
+            - 버전 정보 업데이트 (header의 badge)
+
+            ### 5. 업데이트 원칙
+            - ✅ **정확성**: 실제 코드와 일치하는 내용만 작성
+            - ✅ **일관성**: 기존 문서 스타일 유지
+            - ✅ **간결성**: 핵심 내용만 포함
+            - ✅ **시각성**: Mermaid 다이어그램 적극 활용
+            - ❌ **추측 금지**: 확인되지 않은 내용은 추가하지 않음
+
+            ### 6. 변경 기록 작성
+            업데이트 완료 후 docs-update-log.md 파일을 생성:
+
+            ```markdown
+            # 📝 문서 업데이트 로그
+
+            **업데이트 일시:** [현재 시각]
+            **커밋 분석 기간:** 최근 1시간
+
+            ## 📊 변경 요약
+
+            - 업데이트된 섹션: [섹션 목록]
+            - 추가된 다이어그램: [개수]
+            - 수정된 다이어그램: [개수]
+            - 추가된 설명: [내용]
+
+            ## 🔍 주요 변경사항
+
+            1. [변경사항 1]
+               - 이유: [왜 업데이트했는지]
+               - 내용: [무엇을 업데이트했는지]
+
+            2. [변경사항 2]
+               ...
+
+            ## ⚠️ 추가 검토 필요
+
+            [자동으로 업데이트할 수 없었던 내용이나 확인이 필요한 부분]
+            ```
+
+            ## 실행 순서
+
+            1. changes-report.md 읽기
+            2. project-snapshot.md 읽기
+            3. 변경된 파일들 직접 읽어보기 (중요한 파일들)
+            4. docs/dev.html 읽기
+            5. 업데이트가 필요한 부분 식별
+            6. docs/dev.html 업데이트 (Edit tool 사용)
+            7. docs-update-log.md 작성 (Write tool 사용)
+
+            **보수적으로 작업하세요.** 확실하지 않은 변경은 docs-update-log.md에 "추가 검토 필요"로 기록하고 업데이트하지 마세요.
+
+          claude_args: '--allowed-tools "Read:*,Edit:docs/dev.html,Write:docs-update-log.md,Grep:*,Glob:*"'
+
+      - name: Check if docs were updated
+        if: steps.claude_update.conclusion != 'skipped'
+        id: check_updates
+        run: |
+          if [[ -n $(git diff docs/dev.html) ]]; then
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            echo "✅ docs/dev.html이 업데이트되었습니다" > update-summary.md
+            echo "" >> update-summary.md
+            echo "## 변경 사항:" >> update-summary.md
+            git diff --stat docs/dev.html >> update-summary.md
+          else
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ 업데이트할 내용이 없습니다." > update-summary.md
+          fi
+
+      - name: Create update branch and commit
+        if: steps.check_updates.outputs.has_updates == 'true'
+        id: create_branch
+        run: |
+          # 브랜치 이름 생성
+          BRANCH_NAME="auto-docs-update/$(date +%Y%m%d-%H%M)"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+          # 새 브랜치 생성 및 체크아웃
+          git checkout -b "$BRANCH_NAME"
+
+          # 변경사항 커밋
+          git add docs/dev.html docs-update-log.md
+          git commit -m "docs: 개발자 문서 자동 업데이트
+
+최근 코드 변경사항을 반영하여 docs/dev.html을 업데이트했습니다.
+
+- 분석 기간: 최근 1시간
+- 변경 커밋: ${{ steps.analyze_changes.outputs.RECENT_COMMITS }}개
+- 업데이트 로그: docs-update-log.md 참조
+
+🤖 자동 생성된 커밋입니다.
+
+[skip ci]" || echo "No changes to commit"
+
+          # 푸시
+          git push origin "$BRANCH_NAME"
+
+      - name: Create Pull Request
+        if: steps.check_updates.outputs.has_updates == 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const branchName = '${{ steps.create_branch.outputs.branch_name }}';
+
+            let changesReport = '';
+            if (fs.existsSync('changes-report.md')) {
+              changesReport = fs.readFileSync('changes-report.md', 'utf8');
+            }
+
+            let updateLog = '';
+            if (fs.existsSync('docs-update-log.md')) {
+              updateLog = fs.readFileSync('docs-update-log.md', 'utf8');
+            }
+
+            const recentCommits = '${{ steps.analyze_changes.outputs.RECENT_COMMITS }}';
+
+            const title = `📚 문서 자동 업데이트 (${recentCommits}개 커밋 반영)`;
+
+            const body = `# 📚 개발자 문서 자동 업데이트
+
+**실행 일시:** ${new Date().toISOString()}
+**워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})
+
+## 📊 업데이트 요약
+
+- 분석 기간: 최근 1시간
+- 변경 커밋: ${recentCommits}개
+- 업데이트 파일: docs/dev.html
+
+---
+
+## 📝 업데이트 로그
+
+${updateLog || '업데이트 로그를 확인할 수 없습니다.'}
+
+---
+
+## 🔍 분석된 변경사항
+
+<details>
+<summary>펼쳐보기</summary>
+
+${changesReport}
+
+</details>
+
+---
+
+## ⚠️ 리뷰 안내
+
+이 PR은 **AI가 자동으로 생성**한 문서 업데이트입니다.
+
+### 리뷰 시 확인사항:
+
+1. ✅ **정확성**: 문서 내용이 실제 코드와 일치하는가?
+2. ✅ **Mermaid 다이어그램**: 다이어그램이 올바르게 렌더링되는가?
+3. ✅ **일관성**: 기존 문서 스타일과 일관되는가?
+4. ✅ **완전성**: 중요한 변경사항이 누락되지 않았는가?
+
+### 권장 조치:
+
+- 🌐 docs/dev.html을 브라우저에서 열어 확인
+- 📊 Mermaid 다이어그램 렌더링 확인
+- 📝 설명이 명확하고 정확한지 검토
+- ❌ 문제가 있으면 거부하고 수동 수정
+
+**AI 생성 문서이므로 반드시 리뷰 후 머지하세요!**
+`;
+
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              head: branchName,
+              base: 'main',
+              body: body
+            });
+
+            console.log(`Created PR #${pr.data.number}: ${pr.data.html_url}`);
+
+            // 라벨 추가
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.data.number,
+              labels: ['documentation', 'automated', 'ai-generated']
+            });
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: docs-update-reports
+          path: |
+            changes-report.md
+            project-snapshot.md
+            docs-update-log.md
+            update-summary.md
+          retention-days: 30
+
+      - name: Generate workflow summary
+        if: always()
+        run: |
+          echo "## 📚 문서 자동 업데이트 완료" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.analyze_changes.outputs.has_changes }}" == "true" ]; then
+            echo "### 📊 분석 결과" >> $GITHUB_STEP_SUMMARY
+            echo "- 최근 커밋: ${{ steps.analyze_changes.outputs.RECENT_COMMITS }}개" >> $GITHUB_STEP_SUMMARY
+            echo "- 아키텍처 변경: ${{ steps.analyze_changes.outputs.ARCH_CHANGES }}개 파일" >> $GITHUB_STEP_SUMMARY
+            echo "- Extension 변경: ${{ steps.analyze_changes.outputs.EXT_CHANGES }}개 파일" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            if [ "${{ steps.check_updates.outputs.has_updates }}" == "true" ]; then
+              echo "### 📝 업데이트 완료" >> $GITHUB_STEP_SUMMARY
+              echo "✅ docs/dev.html이 업데이트되었습니다!" >> $GITHUB_STEP_SUMMARY
+              echo "📋 PR이 생성되었습니다. 리뷰 후 머지해주세요." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "### ℹ️ 업데이트 불필요" >> $GITHUB_STEP_SUMMARY
+              echo "변경사항이 문서에 영향을 주지 않습니다." >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "### ℹ️ 변경사항 없음" >> $GITHUB_STEP_SUMMARY
+            echo "최근 1시간 동안 커밋이 없습니다." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 아티팩트" >> $GITHUB_STEP_SUMMARY
+          echo "상세 리포트는 [Artifacts](../actions/runs/${{ github.run_id }})에서 확인하세요." >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,33 @@
+{
+  "recommendations": [
+    // Essential
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+
+    // TypeScript
+    "yoavbls.pretty-ts-errors",
+
+    // React/Next.js
+    "burkeholland.simple-react-snippets",
+
+    // Testing
+    "orta.vscode-jest",
+
+    // Git
+    "eamodio.gitlens",
+
+    // Utilities
+    "christian-kohler.path-intellisense",
+    "formulahendry.auto-rename-tag",
+    "wayou.vscode-todo-highlight",
+
+    // Markdown
+    "yzhang.markdown-all-in-one",
+
+    // AI (Cursor has built-in AI, but these can help)
+    "github.copilot",
+    "github.copilot-chat"
+  ],
+  "unwantedRecommendations": []
+}

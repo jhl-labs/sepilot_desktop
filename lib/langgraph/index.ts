@@ -38,6 +38,7 @@ export class GraphFactory {
   private static _browserAgentGraph: any = null;
   private static _editorAgentGraph: any = null;
   private static _deepWebResearchGraph: any = null; // New static member
+  private static _terminalAgentGraph: any = null;
 
   // Lazy getters with dynamic imports
   private static async getChatGraph() {
@@ -119,6 +120,15 @@ export class GraphFactory {
       this._deepWebResearchGraph = createDeepWebResearchGraph();
     }
     return this._deepWebResearchGraph;
+  }
+
+  private static async getTerminalAgentGraph() {
+    if (!this._terminalAgentGraph) {
+      const { createTerminalAgentGraph } =
+        await import('@/extensions/terminal/agents/terminal-agent');
+      this._terminalAgentGraph = createTerminalAgentGraph(10); // Max 10 iterations for terminal commands
+    }
+    return this._terminalAgentGraph;
   }
 
   /**
@@ -289,6 +299,12 @@ export class GraphFactory {
     // Browser Agent의 경우 BrowserAgentGraph 인스턴스를 직접 사용 (Human-in-the-loop 지원)
     if (config.thinkingMode === 'browser-agent') {
       yield* this.streamBrowserAgentGraph(config, messages, options);
+      return;
+    }
+
+    // Terminal Agent의 경우 TerminalAgentGraph 인스턴스를 직접 사용
+    if (config.thinkingMode === 'terminal-agent') {
+      yield* this.streamTerminalAgentGraph(config, messages, options);
       return;
     }
 
@@ -776,6 +792,58 @@ export class GraphFactory {
       yield {
         type: 'error',
         error: error.message || 'Editor Agent execution failed',
+      };
+    }
+  }
+
+  /**
+   * Terminal Agent 그래프 스트리밍
+   */
+  private static async *streamTerminalAgentGraph(
+    config: GraphConfig,
+    messages: Message[],
+    options?: GraphOptions
+  ): AsyncGenerator<StreamEvent> {
+    const conversationId = options?.conversationId || '';
+
+    try {
+      logger.info('[GraphFactory] Starting terminal agent stream');
+
+      const terminalAgentGraph = await this.getTerminalAgentGraph();
+      const { useChatStore } = await import('@/lib/store/chat-store');
+
+      // Get Terminal state from store
+      const store = useChatStore.getState();
+      const recentBlocks = store.getRecentTerminalBlocks?.(5) || [];
+      const currentCwd = store.currentCwd || store.workingDirectory || '';
+      const currentShell = store.currentShell || 'bash';
+
+      // Create initial state for Terminal Agent
+      const initialState = {
+        messages,
+        conversationId,
+        toolCalls: [],
+        toolResults: [],
+        recentBlocks,
+        currentCwd,
+        currentShell,
+        platform: process.platform,
+      };
+
+      // Stream events from Terminal Agent
+      for await (const event of terminalAgentGraph.stream(initialState)) {
+        yield event;
+      }
+
+      yield {
+        type: 'end',
+      };
+    } catch (error: any) {
+      console.error('[GraphFactory] Terminal Agent stream error:', error);
+
+      yield {
+        type: 'error',
+        error: error.message || 'Terminal Agent execution failed',
       };
     }
   }
