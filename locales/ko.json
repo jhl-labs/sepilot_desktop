@@ -793,7 +793,8 @@
       "version": "버전",
       "author": "작성자",
       "saved": "Extension 설정이 저장되었습니다",
-      "saveFailed": "Extension 설정 저장에 실패했습니다"
+      "saveFailed": "Extension 설정 저장에 실패했습니다",
+      "notFound": "Extension을 찾을 수 없습니다"
     },
     "beta": {
       "title": "Beta",
