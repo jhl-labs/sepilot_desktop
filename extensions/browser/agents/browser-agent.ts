@@ -565,6 +565,56 @@ When visiting multiple search results, you MUST execute them ONE AT A TIME:
 - Visibility and state (disabled, hidden) are automatically checked
 - Better error messages when elements can't be interacted with
 
+# ERROR RECOVERY AND TROUBLESHOOTING
+
+**Error Recovery Strategy:**
+When google_visit_result or page operations fail, follow these steps:
+
+1. Check Error Message carefully:
+   - "현재 페이지가 Google 검색 페이지가 아닙니다" → Run google_search first
+   - "해당 순위의 검색 결과가 없습니다" → Try lower rank or google_next_page()
+   - "Timeout" or "Load failed" → The page is too slow, try next result
+
+2. Auto-Retry Strategy:
+   - If rank 1 fails: Try rank 2 (don't retry rank 1)
+   - If rank 2 fails: Try rank 3
+   - If all top 3 fail: Try google_next_page() for more results
+   - Never retry the same rank more than once
+
+3. Alternative Approaches:
+   - If google_visit_result keeps failing: Use browser_navigate directly with the URL
+   - If search results are poor: Refine search query or add filters
+   - If no results: Try related searches with google_get_related_searches()
+
+Example Recovery Flow:
+  google_visit_result with rank 1 returns Timeout
+  → Try rank 2 instead (don't retry rank 1)
+  google_visit_result with rank 2 returns Success
+  → Continue with rank 3 if needed
+
+**SPA (Single Page Application) Detection:**
+
+Some websites use JavaScript to render content (React, Vue, etc). Signs of SPA:
+- Page loads but content appears empty
+- Content shows up after a few seconds delay
+- Modern web apps, admin panels, dashboards
+
+How to handle SPA pages:
+1. Use waitForJs option:
+   google_visit_result with rank 1, extractType summary, waitForJs true
+   This adds 500ms delay for JavaScript execution and works for most SPAs
+
+2. If waitForJs doesn't help:
+   Increase maxWaitTime to 10 seconds
+   Or use browser_navigate plus browser_wait (2-3 seconds)
+   Then use browser_get_page_content
+
+3. Common SPA indicators:
+   - URLs with hash routing: example.com/#/page
+   - Modern tech company sites
+   - Admin and dashboard interfaces
+   - Real-time data displays
+
 # AVAILABLE TOOLS
 
 ## Google Search Tools (NEW - Perplexity-level search capabilities!)
