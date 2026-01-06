@@ -69,23 +69,65 @@ export function useExtension(mode: string): ExtensionDefinition | null {
 
 /**
  * 모든 Extension 조회 훅
+ *
+ * Zustand store와 통합되어 Extension 상태 변경 시 자동으로 리렌더링됩니다.
  */
 export function useExtensions(): {
   activeExtensions: ExtensionDefinition[];
   isExtensionActive: (extensionId: string) => boolean;
 } {
   const [extensions, setExtensions] = useState<ExtensionDefinition[]>([]);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const exts = extensionRegistry.getActive();
-    setExtensions(exts);
+    setMounted(true);
+
+    // 초기 로드
+    const initialExts = extensionRegistry.getActive();
+    setExtensions(initialExts);
+
+    // Store 구독 (Client-side only)
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    let unsubscribe: (() => void) | null = null;
+
+    import('@/lib/store/chat-store')
+      .then((module) => {
+        let previousVersion = module.useChatStore.getState().extensionsVersion;
+
+        // Store 구독: extensionsVersion이 변경되면 업데이트
+        unsubscribe = module.useChatStore.subscribe((state) => {
+          if (state.extensionsVersion !== previousVersion) {
+            previousVersion = state.extensionsVersion;
+            const updatedExts = extensionRegistry.getActive();
+            setExtensions(updatedExts);
+            logger.info('[useExtensions] Extensions updated from store', {
+              count: updatedExts.length,
+            });
+          }
+        });
+
+        // Store에 초기 Extension 목록 설정
+        module.useChatStore.getState().updateActiveExtensions(initialExts);
+      })
+      .catch((error) => {
+        logger.error('[useExtensions] Failed to subscribe to store', { error });
+      });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const isExtensionActive = (extensionId: string) =>
     extensions.some((ext) => ext.manifest.id === extensionId);
 
   return {
-    activeExtensions: extensions,
+    activeExtensions: mounted ? extensions : [],
     isExtensionActive,
   };
 }

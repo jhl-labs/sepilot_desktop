@@ -7,6 +7,21 @@
 import type { ExtensionDefinition, ExtensionManifest, ExtensionRegistryEntry } from './types';
 import { logger } from '@/lib/utils/logger';
 
+// Store 업데이트를 위한 함수 (lazy loading to avoid circular dependency)
+let updateStoreExtensions: ((extensions: ExtensionDefinition[]) => void) | null = null;
+
+function getStoreUpdater() {
+  if (!updateStoreExtensions && typeof window !== 'undefined') {
+    // Client-side에서만 store import
+    import('@/lib/store/chat-store').then((module) => {
+      updateStoreExtensions = (extensions: ExtensionDefinition[]) => {
+        module.useChatStore.getState().updateActiveExtensions(extensions);
+      };
+    });
+  }
+  return updateStoreExtensions;
+}
+
 class ExtensionRegistry {
   private extensions = new Map<string, ExtensionRegistryEntry>();
 
@@ -94,6 +109,12 @@ class ExtensionRegistry {
 
     entry.isActive = true;
     logger.info(`[ExtensionRegistry] Activated extension: ${id}`);
+
+    // Store 업데이트
+    const updater = getStoreUpdater();
+    if (updater) {
+      updater(this.getActive());
+    }
   }
 
   /**
@@ -126,6 +147,12 @@ class ExtensionRegistry {
 
     entry.isActive = false;
     logger.info(`[ExtensionRegistry] Deactivated extension: ${id}`);
+
+    // Store 업데이트
+    const updater = getStoreUpdater();
+    if (updater) {
+      updater(this.getActive());
+    }
   }
 
   /**
