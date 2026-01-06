@@ -36,7 +36,13 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     setCurrentCwd,
     setTerminalAgentIsRunning,
     toggleHistory,
+    loadTerminalHistoryFromStorage,
   } = useChatStore();
+
+  // 히스토리 로드 (컴포넌트 마운트 시 한 번만)
+  useEffect(() => {
+    loadTerminalHistoryFromStorage();
+  }, [loadTerminalHistoryFromStorage]);
 
   // Working directory 초기화
   useEffect(() => {

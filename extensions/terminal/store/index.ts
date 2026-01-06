@@ -8,6 +8,15 @@ import type {
   TerminalStoreState,
   TerminalStoreActions,
 } from '../types';
+import {
+  loadTerminalHistory,
+  saveTerminalHistory,
+  clearTerminalHistory,
+  createAutoSaveDebouncer,
+} from './storage';
+
+// 자동 저장 디바운서 (1초 후 저장)
+const autoSave = createAutoSaveDebouncer(1000);
 
 /**
  * Terminal Extension 초기 상태
@@ -72,6 +81,9 @@ export function createTerminalSlice(
             ? blocks.slice(blocks.length - state.maxHistoryBlocks)
             : blocks;
 
+        // 자동 저장
+        autoSave(limitedBlocks);
+
         return {
           terminalBlocks: limitedBlocks,
           activeBlockId: id,
@@ -82,17 +94,28 @@ export function createTerminalSlice(
     },
 
     updateTerminalBlock: (id, updates) => {
-      set((state) => ({
-        terminalBlocks: state.terminalBlocks.map((block) =>
+      set((state) => {
+        const updatedBlocks = state.terminalBlocks.map((block) =>
           block.id === id ? { ...block, ...updates } : block
-        ),
-      }));
+        );
+
+        // 자동 저장
+        autoSave(updatedBlocks);
+
+        return {
+          terminalBlocks: updatedBlocks,
+        };
+      });
     },
 
     removeTerminalBlock: (id) => {
       set((state) => {
         const blocks = state.terminalBlocks.filter((block) => block.id !== id);
         const activeId = state.activeBlockId === id ? null : state.activeBlockId;
+
+        // 자동 저장
+        autoSave(blocks);
+
         return {
           terminalBlocks: blocks,
           activeBlockId: activeId,
@@ -101,6 +124,9 @@ export function createTerminalSlice(
     },
 
     clearTerminalBlocks: () => {
+      // 스토리지 완전 삭제
+      clearTerminalHistory();
+
       set({
         terminalBlocks: [],
         activeBlockId: null,
@@ -111,6 +137,21 @@ export function createTerminalSlice(
       const state = get();
       const blocks = state.terminalBlocks;
       return blocks.slice(-limit);
+    },
+
+    loadTerminalHistoryFromStorage: () => {
+      const blocks = loadTerminalHistory();
+      const state = get();
+
+      // maxHistoryBlocks 제한 적용
+      const limitedBlocks =
+        blocks.length > state.maxHistoryBlocks
+          ? blocks.slice(blocks.length - state.maxHistoryBlocks)
+          : blocks;
+
+      set({
+        terminalBlocks: limitedBlocks,
+      });
     },
 
     // 세션 관리 액션
@@ -166,6 +207,25 @@ export function createTerminalSlice(
 
     setEnableAutoAnalysis: (enable) => {
       set({ enableAutoAnalysis: enable });
+    },
+
+    setMaxHistoryBlocks: (max) => {
+      set((state) => {
+        const newMax = Math.max(10, Math.min(1000, max)); // 10-1000 범위로 제한
+        const blocks = state.terminalBlocks;
+
+        // 새 제한보다 많은 블록이 있으면 잘라냄
+        const trimmedBlocks =
+          blocks.length > newMax ? blocks.slice(blocks.length - newMax) : blocks;
+
+        // 자동 저장
+        autoSave(trimmedBlocks);
+
+        return {
+          maxHistoryBlocks: newMax,
+          terminalBlocks: trimmedBlocks,
+        };
+      });
     },
   };
 }

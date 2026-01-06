@@ -29,6 +29,7 @@ export function TerminalSettings() {
     toggleAISuggestions,
     setEnableAutoAnalysis,
     setTerminalViewMode,
+    setMaxHistoryBlocks,
   } = useChatStore();
 
   return (
@@ -107,10 +108,9 @@ export function TerminalSettings() {
             type="number"
             value={maxHistoryBlocks}
             onChange={(e) => {
-              // TODO: Store에 setMaxHistoryBlocks 액션 추가 필요
               const value = parseInt(e.target.value);
               if (!isNaN(value) && value > 0) {
-                // 임시로 로컬 상태로만 처리
+                setMaxHistoryBlocks(value);
               }
             }}
             min={10}

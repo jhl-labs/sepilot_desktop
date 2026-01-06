@@ -107,6 +107,7 @@ export interface TerminalStoreActions {
   removeTerminalBlock: (id: string) => void;
   clearTerminalBlocks: () => void;
   getRecentTerminalBlocks: (limit: number) => TerminalBlock[];
+  loadTerminalHistoryFromStorage: () => void;
 
   // 세션 관리
   setTerminalSessionId: (sessionId: string) => void;
@@ -123,6 +124,7 @@ export interface TerminalStoreActions {
   toggleAISuggestions: () => void;
   toggleHistory: () => void;
   setEnableAutoAnalysis: (enable: boolean) => void;
+  setMaxHistoryBlocks: (max: number) => void;
 }
 
 /**
