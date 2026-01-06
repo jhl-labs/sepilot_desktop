@@ -1,0 +1,25 @@
+name: Test Template Literal
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = "Test Title";
+            const body = `# Test Header
+
+**Bold text:** value
+**Another bold:** ${title}
+
+## Section
+
+Content here
+`;
+            console.log(body);
