@@ -88,11 +88,16 @@ Claude Code가 자동으로 참조하는 프로젝트별 전문 지식:
 - **testing-patterns**: Jest, React Testing Library, Playwright 테스트 패턴
 - **error-handling**: 에러 처리, 로깅, Error Boundary, 사용자 피드백
 - **performance-optimization**: React 최적화, IPC 최적화, 번들 크기 최적화
+- **logging-monitoring**: 로깅, 디버깅, 모니터링 패턴 (개발/프로덕션 환경)
 
 **상태 및 데이터 관리:**
 
 - **state-management**: Zustand 전역 상태 관리, Slice 패턴, Persistence
 - **file-operations**: 파일 읽기/쓰기, PDF/Word/Excel 처리, 이미지 처리
+
+**UI 및 디자인:**
+
+- **ui-design-system**: shadcn/ui 디자인 시스템, Tailwind CSS 패턴, cva, 아이콘
 
 **Extension 개발:**
 
@@ -103,6 +108,11 @@ Claude Code가 자동으로 참조하는 프로젝트별 전문 지식:
 - **langgraph-agent**: LangGraph 에이전트 구현 및 그래프 기반 워크플로우
 - **mcp-integration**: MCP (Model Context Protocol) 도구 통합 패턴
 - **rag-vector-search**: RAG 및 벡터 검색 구현 가이드
+
+**국제화 및 빌드:**
+
+- **i18n-localization**: 다국어 지원 (i18next), 한/영/중, Extension 번역
+- **build-deployment**: Electron 빌드 및 배포 (electron-builder, 멀티 플랫폼)
 
 Skills는 자동으로 적용되며, 별도로 호출할 필요 없음.
 
