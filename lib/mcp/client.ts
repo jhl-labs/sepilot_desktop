@@ -2,6 +2,8 @@ import {
   MCPServerConfig,
   MCPTool,
   MCPResource,
+  MCPPrompt,
+  MCPPromptResult,
   JSONRPCRequest,
   JSONRPCResponse,
   MCPInitializeResult,
@@ -21,9 +23,29 @@ interface ResourceReadResponse {
   contents: Array<{ text: string }>;
 }
 
+interface PromptsListResponse {
+  prompts: MCPPrompt[];
+}
+
 function isToolsListResponse(value: unknown): value is ToolsListResponse {
   return (
     typeof value === 'object' && value !== null && Array.isArray((value as ToolsListResponse).tools)
+  );
+}
+
+function _isPromptsListResponse(value: unknown): value is PromptsListResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Array.isArray((value as PromptsListResponse).prompts)
+  );
+}
+
+function _isPromptGetResponse(value: unknown): value is MCPPromptResult {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Array.isArray((value as MCPPromptResult).messages)
   );
 }
 
@@ -58,6 +80,7 @@ export abstract class MCPClient {
   protected isConnected = false;
   protected tools: MCPTool[] = [];
   protected resources: MCPResource[] = [];
+  protected prompts: MCPPrompt[] = [];
 
   constructor(config: MCPServerConfig) {
     this.config = config;

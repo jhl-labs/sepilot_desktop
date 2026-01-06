@@ -86,3 +86,42 @@ export interface ToolCallResult {
   }>;
   isError?: boolean;
 }
+
+/**
+ * MCP Prompt Argument
+ */
+export interface MCPPromptArgument {
+  name: string;
+  description?: string;
+  required?: boolean;
+}
+
+/**
+ * MCP Prompt (Template)
+ */
+export interface MCPPrompt {
+  name: string;
+  description?: string;
+  arguments?: MCPPromptArgument[];
+}
+
+/**
+ * MCP Prompt Message
+ */
+export interface MCPPromptMessage {
+  role: 'user' | 'assistant';
+  content: {
+    type: 'text' | 'image' | 'resource';
+    text?: string;
+    data?: string;
+    mimeType?: string;
+  };
+}
+
+/**
+ * MCP Prompt Get Result
+ */
+export interface MCPPromptResult {
+  description?: string;
+  messages: MCPPromptMessage[];
+}

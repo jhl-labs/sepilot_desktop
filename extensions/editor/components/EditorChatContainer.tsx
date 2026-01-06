@@ -129,6 +129,9 @@ export function EditorChatContainer() {
               editorAgentMode === 'coding' ? ('coding' as const) : ('editor-agent' as const),
             enableRAG: false,
             enableTools: editorAgentMode === 'coding',
+            enableMCPTools: true, // MCP Tools 활성화 (GitHub, Filesystem, Brave Search 등) ⭐ v0.7.6
+            enablePlanning: true, // Planning Pipeline 활성화 ⭐ v0.7.6
+            enableVerification: true, // Verification System 활성화 ⭐ v0.7.6
             enableImageGeneration: false,
           };
 
