@@ -100,12 +100,12 @@ jest.mock('@/components/rag/VectorDBSettings', () => ({
   ),
 }));
 
-jest.mock('@/components/settings/GitHubOAuthSettings', () => ({
-  GitHubOAuthSettings: ({ onSave }: any) => (
+jest.mock('@/components/settings/GitHubSyncSettings', () => ({
+  GitHubSyncSettings: ({ onSave }: any) => (
     <div data-testid="github-settings">
       <div>GitHub Settings</div>
       <button
-        onClick={() => onSave({ clientId: 'test-client', clientSecret: 'test-secret' })}
+        onClick={() => onSave({ enabled: true, repoUrl: 'https://github.com/test/test' })}
         data-testid="github-save"
       >
         Save GitHub
