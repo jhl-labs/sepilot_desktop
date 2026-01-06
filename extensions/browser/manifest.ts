@@ -17,19 +17,6 @@ export const manifest: ExtensionManifest = {
   order: 4, // Chat(1), Editor(2), Presentation(3), Browser(4)
   dependencies: [],
   enabled: true, // 기본 활성화 (베타 아님)
-  settingsSchema: {
-    defaultSearchEngine: {
-      type: 'string',
-      enum: ['google', 'bing', 'duckduckgo'],
-      default: 'google',
-      description: 'Default search engine',
-    },
-    autoCapture: {
-      type: 'boolean',
-      default: false,
-      description: 'Auto capture page snapshots',
-    },
-  },
   settingsTab: {
     id: 'browser',
     label: 'settings.browser.title',

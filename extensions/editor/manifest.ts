@@ -17,23 +17,6 @@ export const manifest: ExtensionManifest = {
   order: 2, // Chat(1), Editor(2), Presentation(3), Browser(4)
   dependencies: [],
   enabled: true, // 기본 활성화 (베타 아님)
-  settingsSchema: {
-    fontSize: {
-      type: 'number',
-      default: 14,
-      description: 'Editor font size',
-    },
-    tabSize: {
-      type: 'number',
-      default: 2,
-      description: 'Tab size',
-    },
-    wordWrap: {
-      type: 'boolean',
-      default: false,
-      description: 'Word wrap',
-    },
-  },
   settingsTab: {
     id: 'editor',
     label: 'settings.editor.title',

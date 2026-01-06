@@ -95,10 +95,10 @@ export interface ExtensionDefinition {
   clearSession?: () => void;
 
   /** Extension 활성화 시 호출되는 함수 */
-  activate?: () => void | Promise<void>;
+  activate?: (context?: ExtensionContext) => void | Promise<void>;
 
   /** Extension 비활성화 시 호출되는 함수 */
-  deactivate?: () => void | Promise<void>;
+  deactivate?: (context?: ExtensionContext) => void | Promise<void>;
 }
 
 /**
@@ -111,4 +111,97 @@ export interface ExtensionRegistryEntry {
   loadedAt: number;
   /** 활성화 여부 */
   isActive: boolean;
+}
+
+/**
+ * Extension Context API
+ *
+ * Extension이 앱 상태와 상호작용할 수 있는 안전한 API를 제공합니다.
+ * chat-store를 직접 import하지 않고도 필요한 기능에 접근할 수 있습니다.
+ *
+ * @example
+ * ```typescript
+ * // Extension activate 함수에서 context 사용
+ * export async function activate(context: ExtensionContext) {
+ *   const mode = context.getAppMode();
+ *   context.on('app:mode-changed', (newMode) => {
+ *     console.log('Mode changed to:', newMode);
+ *   });
+ * }
+ * ```
+ */
+export interface ExtensionContext {
+  /** Extension ID */
+  readonly extensionId: string;
+
+  // ==================== 앱 상태 조회 (읽기 전용) ====================
+
+  /** 현재 앱 모드 조회 */
+  getAppMode: () => string;
+
+  /** 현재 활성 세션 ID 조회 */
+  getActiveSessionId: () => string | null;
+
+  /** 특정 세션 조회 */
+  getSession: (sessionId: string) => any | null;
+
+  // ==================== Extension 상태 관리 ====================
+
+  /** Extension 전용 스토리지에 데이터 저장 */
+  setState: <T = any>(key: string, value: T) => void;
+
+  /** Extension 전용 스토리지에서 데이터 조회 */
+  getState: <T = any>(key: string) => T | undefined;
+
+  /** Extension 전용 스토리지에서 데이터 삭제 */
+  removeState: (key: string) => void;
+
+  // ==================== 이벤트 시스템 ====================
+
+  /** 이벤트 구독 */
+  on: <T = any>(event: ExtensionEventType, handler: (data: T) => void) => () => void;
+
+  /** 이벤트 발행 (다른 Extension에게 전달) */
+  emit: <T = any>(event: ExtensionEventType, data: T) => void;
+
+  // ==================== 로깅 ====================
+
+  /** Extension 전용 로거 */
+  logger: {
+    info: (message: string, meta?: Record<string, unknown>) => void;
+    warn: (message: string, meta?: Record<string, unknown>) => void;
+    error: (message: string, meta?: Record<string, unknown>) => void;
+    debug: (message: string, meta?: Record<string, unknown>) => void;
+  };
+}
+
+/**
+ * Extension Event Type
+ *
+ * Extension 간 통신을 위한 이벤트 타입 정의
+ */
+export type ExtensionEventType =
+  // 앱 상태 변경 이벤트
+  | 'app:mode-changed'
+  | 'app:session-created'
+  | 'app:session-deleted'
+  | 'app:session-switched'
+  // Extension 생명주기 이벤트
+  | 'extension:activated'
+  | 'extension:deactivated'
+  // 사용자 정의 이벤트 (extension-id:event-name 형식)
+  | `${string}:${string}`;
+
+/**
+ * Extension Event Payload
+ */
+export interface ExtensionEvent<T = any> {
+  /** 이벤트 타입 */
+  type: ExtensionEventType;
+  /** 이벤트를 발행한 Extension ID */
+  source: string;
+  /** 이벤트 데이터 */
+  data: T;
+  /** 이벤트 발생 시간 */
+  timestamp: number;
 }

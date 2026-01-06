@@ -94,94 +94,42 @@ export async function loadExtensions(): Promise<void> {
 
 /**
  * 빌트인 extension 로드
+ *
+ * extensions/index.ts에서 등록된 모든 Extension을 자동으로 로드합니다.
+ * 새 Extension 추가 시 extensions/index.ts만 수정하면 됩니다.
  */
 async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
-  const extensions: ExtensionDefinition[] = [];
-
-  // Editor Extension
   try {
-    const editorModule = await import('@/extensions/editor');
-    const { manifest, EditorWithTerminal, SidebarEditor, EditorHeaderActions, EditorSettingsTab } =
-      editorModule;
+    const { builtinExtensions } = await import('@/extensions');
 
-    extensions.push({
-      manifest,
-      MainComponent: EditorWithTerminal,
-      SidebarComponent: SidebarEditor,
-      HeaderActionsComponent: EditorHeaderActions,
-      SettingsTabComponent: EditorSettingsTab,
+    logger.info('[ExtensionLoader] Loading builtin extensions...', {
+      count: builtinExtensions.length,
+      extensions: builtinExtensions.map((ext) => ext.manifest.id),
     });
 
-    logger.info('[ExtensionLoader] Loaded editor extension');
+    // 각 Extension 검증 및 로깅
+    for (const extension of builtinExtensions) {
+      const { manifest } = extension;
+
+      if (!manifest.id || !manifest.name) {
+        logger.error('[ExtensionLoader] Invalid extension manifest', { manifest });
+        continue;
+      }
+
+      logger.info(`[ExtensionLoader] Loaded extension: ${manifest.id} v${manifest.version}`, {
+        enabled: manifest.enabled !== false,
+        hasMainComponent: !!extension.MainComponent,
+        hasSidebarComponent: !!extension.SidebarComponent,
+        hasSettingsTab: !!extension.SettingsTabComponent,
+        hasStoreSlice: !!extension.createStoreSlice,
+      });
+    }
+
+    return builtinExtensions;
   } catch (error) {
-    logger.error('[ExtensionLoader] Failed to load editor extension', { error });
+    logger.error('[ExtensionLoader] Failed to load builtin extensions', { error });
+    return [];
   }
-
-  // Browser Extension
-  try {
-    const browserModule = await import('@/extensions/browser');
-    const { manifest, BrowserPanel, SidebarBrowser, BrowserSettingsTab } = browserModule;
-
-    extensions.push({
-      manifest,
-      MainComponent: BrowserPanel,
-      SidebarComponent: SidebarBrowser,
-      SettingsTabComponent: BrowserSettingsTab,
-    });
-
-    logger.info('[ExtensionLoader] Loaded browser extension');
-  } catch (error) {
-    logger.error('[ExtensionLoader] Failed to load browser extension', { error });
-  }
-
-  // Presentation Extension
-  try {
-    const presentationModule = await import('@/extensions/presentation');
-    const {
-      manifest,
-      PresentationStudio,
-      PresentationSourceSidebar,
-      PresentationHeaderActions,
-      PresentationSettings,
-      PresentationSettingsTab,
-      createPresentationSlice,
-    } = presentationModule;
-
-    extensions.push({
-      manifest,
-      MainComponent: PresentationStudio,
-      SidebarComponent: PresentationSourceSidebar,
-      HeaderActionsComponent: PresentationHeaderActions,
-      SettingsComponent: PresentationSettings, // Beta Settings용 (deprecated)
-      SettingsTabComponent: PresentationSettingsTab, // 독립 Settings 탭
-      createStoreSlice: createPresentationSlice,
-    });
-
-    logger.info('[ExtensionLoader] Loaded presentation extension');
-  } catch (error) {
-    logger.error('[ExtensionLoader] Failed to load presentation extension', { error });
-  }
-
-  // Terminal Extension
-  try {
-    const terminalModule = await import('@/extensions/terminal');
-    const { manifest, createTerminalSlice, TerminalPanel, SidebarTerminal, TerminalSettings } =
-      terminalModule;
-
-    extensions.push({
-      manifest,
-      MainComponent: TerminalPanel,
-      SidebarComponent: SidebarTerminal,
-      SettingsTabComponent: TerminalSettings,
-      createStoreSlice: createTerminalSlice,
-    });
-
-    logger.info('[ExtensionLoader] Loaded terminal extension');
-  } catch (error) {
-    logger.error('[ExtensionLoader] Failed to load terminal extension', { error });
-  }
-
-  return extensions;
 }
 
 /**

@@ -32,29 +32,6 @@ export const manifest: ExtensionManifest = {
     description: 'settings.presentation.description',
     icon: 'Presentation',
   },
-  settingsSchema: {
-    webSearchEnabled: {
-      type: 'boolean',
-      default: false,
-      description: '웹검색을 통한 최신 정보 활용',
-    },
-    ragEnabled: {
-      type: 'boolean',
-      default: false,
-      description: 'RAG(Personal/Team Docs) 활용',
-    },
-    defaultSlideCount: {
-      type: 'number',
-      default: 8,
-      description: '기본 슬라이드 수',
-    },
-    defaultLanguage: {
-      type: 'string',
-      enum: ['ko', 'en', 'ja', 'zh'],
-      default: 'ko',
-      description: '기본 언어',
-    },
-  },
 };
 
 export default manifest;

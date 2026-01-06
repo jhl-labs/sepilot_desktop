@@ -17,34 +17,6 @@ export const manifest: ExtensionManifest = {
   order: 5, // Chat(1), Editor(2), Presentation(3), Browser(4), Terminal(5)
   dependencies: [],
   enabled: true,
-  settingsSchema: {
-    enableAISuggestions: {
-      type: 'boolean',
-      default: true,
-      description: 'AI 명령어 제안 활성화',
-    },
-    enableAutoAnalysis: {
-      type: 'boolean',
-      default: true,
-      description: '에러 자동 분석 활성화',
-    },
-    defaultViewMode: {
-      type: 'string',
-      enum: ['blocks', 'traditional'],
-      default: 'blocks',
-      description: '기본 뷰 모드',
-    },
-    maxHistoryBlocks: {
-      type: 'number',
-      default: 100,
-      description: '최대 히스토리 블록 수',
-    },
-    enableRAG: {
-      type: 'boolean',
-      default: false,
-      description: 'RAG 기반 명령어 검색 활성화',
-    },
-  },
   settingsTab: {
     id: 'terminal',
     label: 'settings.terminal.title',
