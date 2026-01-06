@@ -1,5 +1,4 @@
 /**
-// TODO: i18n mock 필요
  * VectorDBSettings 컴포넌트 테스트
  */
 
@@ -13,7 +12,7 @@ import { VectorDBConfig, EmbeddingConfig } from '@/lib/vectordb';
 // Mock fetch
 global.fetch = jest.fn();
 
-describe.skip('VectorDBSettings', () => {
+describe('VectorDBSettings', () => {
   const mockOnSave = jest.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {

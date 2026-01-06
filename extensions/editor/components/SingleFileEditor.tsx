@@ -753,6 +753,53 @@ export function SingleFileEditor({
     return () => disposable.dispose();
   }, [editor]);
 
+  // Handle replace_selection tool from Coding Agent
+  useEffect(() => {
+    if (!editor || !isElectron() || !window.electronAPI) {
+      return;
+    }
+
+    const handleReplaceSelection = (...args: unknown[]) => {
+      const newText = args[0] as string;
+
+      if (typeof newText !== 'string') {
+        logger.warn('[SingleFileEditor] Invalid replace-selection argument type');
+        return;
+      }
+
+      const selection = editor.getSelection();
+      if (!selection) {
+        logger.warn('[SingleFileEditor] No selection to replace');
+        return;
+      }
+
+      logger.info('[SingleFileEditor] Replacing selection with text length:', newText.length);
+
+      // Replace the selected text
+      editor.executeEdits('replace-selection', [
+        {
+          range: selection,
+          text: newText,
+        },
+      ]);
+
+      // Trigger onChange to mark file as dirty and update store
+      const newContent = editor.getValue();
+      if (onChange) {
+        onChange(newContent);
+      }
+
+      // Focus editor after replacement
+      editor.focus();
+    };
+
+    window.electronAPI.on('editor:replace-selection', handleReplaceSelection);
+
+    return () => {
+      window.electronAPI.removeListener('editor:replace-selection', handleReplaceSelection);
+    };
+  }, [editor, onChange]);
+
   return (
     <>
       <EditorContextMenu

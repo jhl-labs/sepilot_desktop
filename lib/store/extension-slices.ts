@@ -9,9 +9,11 @@
  */
 
 import { createPresentationSlice } from '@/extensions/presentation/store';
+import { createTerminalSlice } from '@/extensions/terminal/store';
 import { manifest as editorManifest } from '@/extensions/editor/manifest';
 import { manifest as browserManifest } from '@/extensions/browser/manifest';
 import { manifest as presentationManifest } from '@/extensions/presentation/manifest';
+import { manifest as terminalManifest } from '@/extensions/terminal/manifest';
 
 /**
  * 모든 Extension의 createStoreSlice 함수를 모아둔 객체
@@ -22,12 +24,14 @@ import { manifest as presentationManifest } from '@/extensions/presentation/mani
  *
  * export const extensionStoreSlices = {
  *   createPresentationSlice,
+ *   createTerminalSlice,
  *   createMyExtensionSlice,  // 추가
  * };
  * ```
  */
 export const extensionStoreSlices = {
   createPresentationSlice,
+  createTerminalSlice,
 };
 
 /**
@@ -35,7 +39,8 @@ export const extensionStoreSlices = {
  *
  * 모든 Extension store slice의 반환 타입을 합친 것입니다.
  */
-export type ExtensionStoreState = ReturnType<typeof createPresentationSlice>;
+export type ExtensionStoreState = ReturnType<typeof createPresentationSlice> &
+  ReturnType<typeof createTerminalSlice>;
 
 /**
  * Extension store slices를 Zustand store에 병합
@@ -65,4 +70,5 @@ export type AppMode =
   | 'chat' // Built-in mode
   | typeof editorManifest.mode
   | typeof browserManifest.mode
-  | typeof presentationManifest.mode;
+  | typeof presentationManifest.mode
+  | typeof terminalManifest.mode;

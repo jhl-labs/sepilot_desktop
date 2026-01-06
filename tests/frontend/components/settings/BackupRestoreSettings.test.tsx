@@ -1,5 +1,4 @@
 /**
-// TODO: i18n mock 필요
  * BackupRestoreSettings 컴포넌트 테스트
  */
 
@@ -15,7 +14,7 @@ jest.mock('@/lib/platform', () => ({
   isElectron: jest.fn(() => true),
 }));
 
-describe.skip('BackupRestoreSettings', () => {
+describe('BackupRestoreSettings', () => {
   beforeEach(() => {
     // Reset isElectron mock to default
     (isElectron as jest.Mock).mockReturnValue(true);

@@ -1,5 +1,4 @@
 /**
-// TODO: i18n mock 필요
  * FileExplorer 컴포넌트 테스트
  *
  * 파일 탐색기 UI 및 파일/폴더 관리 기능을 테스트합니다.
@@ -47,7 +46,7 @@ jest.mock('@/lib/platform', () => ({
   isElectron: jest.fn(() => true),
 }));
 
-describe.skip('FileExplorer', () => {
+describe('FileExplorer', () => {
   const mockSetWorkingDirectory = jest.fn();
   const mockOpenFile = jest.fn();
   const mockLoadWorkingDirectory = jest.fn();

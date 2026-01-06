@@ -160,6 +160,22 @@ async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
     logger.error('[ExtensionLoader] Failed to load presentation extension', { error });
   }
 
+  // Terminal Extension
+  try {
+    const terminalModule = await import('@/extensions/terminal');
+    const { manifest, createTerminalSlice } = terminalModule;
+
+    extensions.push({
+      manifest,
+      // MainComponent, SidebarComponent, SettingsTabComponent는 Phase 3에서 추가 예정
+      createStoreSlice: createTerminalSlice,
+    });
+
+    logger.info('[ExtensionLoader] Loaded terminal extension');
+  } catch (error) {
+    logger.error('[ExtensionLoader] Failed to load terminal extension', { error });
+  }
+
   return extensions;
 }
 

@@ -1,5 +1,4 @@
 /**
-// TODO: i18n mock 필요
  * MCPServerConfig 컴포넌트 테스트
  */
 
@@ -16,7 +15,7 @@ const mockElectronAPI = {
   },
 };
 
-describe.skip('MCPServerConfig', () => {
+describe('MCPServerConfig', () => {
   const mockOnAdd = jest.fn();
 
   beforeEach(() => {

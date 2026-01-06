@@ -1,5 +1,4 @@
 /**
-// TODO: i18n mock 필요
  * MCPServerList 컴포넌트 테스트
  */
 
@@ -43,7 +42,7 @@ const mockElectronAPI = {
   },
 };
 
-describe.skip('MCPServerList', () => {
+describe('MCPServerList', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (window as any).electronAPI = mockElectronAPI;

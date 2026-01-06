@@ -5,36 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Send, Square } from 'lucide-react';
 import { useChatStore } from '@/lib/store/chat-store';
-import { isElectron } from '@/lib/platform';
-import { getWebLLMClient } from '@/lib/llm/web-client';
-
-// Stream event types
-interface StreamEventProgress {
-  type: 'progress';
-  data: {
-    iteration: number;
-    maxIterations: number;
-    status: string;
-    message: string;
-  };
-}
-
-interface StreamEventStreaming {
-  type: 'streaming';
-  chunk: string;
-}
-
-interface StreamEventNode {
-  type: 'node';
-  data: {
-    messages: Array<{
-      role: 'system' | 'user' | 'assistant';
-      content: string;
-    }>;
-  };
-}
-
-type StreamEvent = StreamEventProgress | StreamEventStreaming | StreamEventNode;
+import { useLangGraphStream } from '@/lib/hooks/useLangGraphStream';
 
 export function SimpleChatInput() {
   const [input, setInput] = useState('');
