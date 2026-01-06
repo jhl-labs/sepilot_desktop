@@ -24,9 +24,9 @@ export function SessionTabBar() {
 
   const handleCreateSession = async () => {
     // PTY 세션 생성은 IPC 통해 Main Process에서 처리
-    if (typeof window !== 'undefined' && window.electronAPI) {
+    if (typeof window !== 'undefined' && window.electronAPI?.terminal) {
       try {
-        const result = await window.electronAPI.invoke('terminal:create-session');
+        const result = await window.electronAPI.terminal.createSession();
 
         if (result.success && result.data) {
           createTerminalSession({
@@ -47,9 +47,9 @@ export function SessionTabBar() {
     if (!session) return;
 
     // PTY 세션 종료
-    if (typeof window !== 'undefined' && window.electronAPI) {
+    if (typeof window !== 'undefined' && window.electronAPI?.terminal) {
       try {
-        await window.electronAPI.invoke('terminal:kill-session', session.ptySessionId);
+        await window.electronAPI.terminal.killSession(session.ptySessionId);
       } catch (error) {
         console.error('[SessionTabBar] Failed to kill PTY session:', error);
       }
