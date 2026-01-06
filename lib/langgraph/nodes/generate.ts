@@ -609,8 +609,9 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
     logger.info('[Agent] Starting streaming with tools...');
 
     // Main Process에서 현재 LLM 설정 가져오기 (maxTokens, temperature)
-    const llmConfig = await getLLMConfigFromDB();
+    const baseOptions = await buildLLMOptions('Agent');
     const llmOptions: any = {
+      ...baseOptions,
       tools: toolsForLLM.length > 0 ? toolsForLLM : undefined,
     };
 
@@ -626,22 +627,6 @@ Example: "이미지를 생성하기 전에 몇 가지 옵션을 선택해주세�
       );
     } else {
       logger.warn('[Agent] NO TOOLS BEING SENT TO LLM!');
-    }
-
-    if (llmConfig) {
-      // maxTokens가 명시적으로 설정되어 있으면 전달 (0도 유효한 값)
-      if (llmConfig.maxTokens !== undefined && llmConfig.maxTokens !== null) {
-        llmOptions.maxTokens = llmConfig.maxTokens;
-      }
-      if (llmConfig.temperature !== undefined && llmConfig.temperature !== null) {
-        llmOptions.temperature = llmConfig.temperature;
-      }
-      logger.info('[Agent] Using LLM config from DB:', {
-        maxTokens: llmOptions.maxTokens,
-        temperature: llmOptions.temperature,
-      });
-    } else {
-      logger.warn('[Agent] Could not get LLM config from DB, using defaults');
     }
 
     for await (const chunk of LLMService.streamChatWithChunks(messages, llmOptions)) {
