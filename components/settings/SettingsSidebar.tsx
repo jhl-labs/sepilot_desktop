@@ -7,6 +7,7 @@ import {
   Database,
   Image,
   Plug,
+  Puzzle,
   Github,
   Users,
   HardDrive,
@@ -115,7 +116,7 @@ export function SettingsSidebar({
         {
           id: 'extensions',
           label: t('settings.extensions.title'),
-          icon: Plug,
+          icon: Puzzle,
           description: t('settings.extensions.description'),
         },
         {

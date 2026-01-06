@@ -8,7 +8,7 @@ import { ExtensionCard } from './ExtensionCard';
 import { SettingsSectionHeader } from './SettingsSectionHeader';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Puzzle, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { ExtensionStateConfig, BetaConfig } from '@/types';
+import { ExtensionStateConfig, BetaConfig, AppConfig } from '@/types';
 
 interface ExtensionInfo {
   manifest: ExtensionManifest;
@@ -174,7 +174,7 @@ export function ExtensionManagerTab({ onSectionChange, message }: ExtensionManag
     }
   };
 
-  const loadAppConfig = async (): Promise<any> => {
+  const loadAppConfig = async (): Promise<Partial<AppConfig>> => {
     if (isElectron() && (window as any).electronAPI) {
       const result = await (window as any).electronAPI.config.load();
       return result.data || {};
@@ -184,7 +184,7 @@ export function ExtensionManagerTab({ onSectionChange, message }: ExtensionManag
     }
   };
 
-  const saveAppConfig = async (partial: Record<string, any>) => {
+  const saveAppConfig = async (partial: Partial<AppConfig>) => {
     const currentConfig = await loadAppConfig();
     const newConfig = {
       ...currentConfig,
