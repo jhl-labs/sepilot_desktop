@@ -146,9 +146,8 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
         logger.info('[Terminal IPC] Executing command:', args.command);
 
         // run_command tool 동적 import (Main Process용)
-        const { executeRunCommand } = await import(
-          '../../../extensions/terminal/tools/run_command'
-        );
+        const { executeRunCommand } =
+          await import('../../../extensions/terminal/tools/run_command');
 
         const result = await executeRunCommand({
           command: args.command,
@@ -195,9 +194,8 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
         logger.info('[Terminal IPC] AI command request:', args.naturalInput);
 
         // Terminal Agent 동적 import (Main Process용)
-        const { createTerminalAgentGraph } = await import(
-          '../../../extensions/terminal/agents/terminal-agent'
-        );
+        const { createTerminalAgentGraph } =
+          await import('../../../extensions/terminal/agents/terminal-agent');
 
         const agent = createTerminalAgentGraph(10);
 
@@ -205,8 +203,10 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
         const initialState = {
           messages: [
             {
+              id: `msg-${Date.now()}`,
               role: 'user' as const,
               content: args.naturalInput,
+              created_at: Date.now(),
             },
           ],
           conversationId: `terminal-${Date.now()}`,
