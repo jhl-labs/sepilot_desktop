@@ -343,6 +343,11 @@ export class GraphFactory {
         enabledTools: config.enabledTools,
         workingDirectory: config.workingDirectory,
         activeFileSelection: config.activeFileSelection,
+        // Advanced features (Cursor/Cline 수준) ⭐ v0.7.6
+        useRag: config.enableRAG || false,
+        enableMCPTools: (config as any).enableMCPTools || false,
+        enablePlanning: (config as any).enablePlanning || false,
+        enableVerification: (config as any).enableVerification || false,
       };
     }
 

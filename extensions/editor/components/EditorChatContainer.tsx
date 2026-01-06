@@ -129,9 +129,12 @@ export function EditorChatContainer() {
               editorAgentMode === 'coding' ? ('coding' as const) : ('editor-agent' as const),
             enableRAG: false,
             enableTools: editorAgentMode === 'coding',
-            enableMCPTools: true, // MCP Tools 활성화 (GitHub, Filesystem, Brave Search 등) ⭐ v0.7.6
-            enablePlanning: true, // Planning Pipeline 활성화 ⭐ v0.7.6
-            enableVerification: true, // Verification System 활성화 ⭐ v0.7.6
+            // Advanced features (v0.7.6) - Coding 모드에서만 활성화 ⭐
+            // Editor 모드: 조언만 제공 (Copilot Chat 스타일)
+            // Coding 모드: 실제 파일 수정 (Cursor/Cline 스타일)
+            enableMCPTools: editorAgentMode === 'coding',
+            enablePlanning: editorAgentMode === 'coding',
+            enableVerification: editorAgentMode === 'coding',
             enableImageGeneration: false,
           };
 

@@ -23,6 +23,8 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
   ipcMain.removeHandler('terminal:resize');
   ipcMain.removeHandler('terminal:kill-session');
   ipcMain.removeHandler('terminal:get-sessions');
+  ipcMain.removeHandler('terminal:execute-command');
+  ipcMain.removeHandler('terminal:ai-command');
 
   /**
    * 터미널 세션 생성
@@ -133,6 +135,142 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
       };
     }
   });
+
+  /**
+   * 명령어 직접 실행 (Terminal Extension용)
+   */
+  ipcMain.handle(
+    'terminal:execute-command',
+    async (_event, args: { command: string; cwd?: string; timeout?: number }) => {
+      try {
+        logger.info('[Terminal IPC] Executing command:', args.command);
+
+        // run_command tool 동적 import (Main Process용)
+        const { executeRunCommand } = await import(
+          '../../../extensions/terminal/tools/run_command'
+        );
+
+        const result = await executeRunCommand({
+          command: args.command,
+          cwd: args.cwd,
+          timeout: args.timeout || 30000,
+        });
+
+        return {
+          success: result.success,
+          data: result.success
+            ? {
+                stdout: result.stdout || '',
+                stderr: result.stderr || '',
+                exitCode: result.exitCode ?? 0,
+                duration: result.duration || 0,
+              }
+            : undefined,
+          error: result.error,
+        };
+      } catch (error: any) {
+        logger.error('[Terminal IPC] Error executing command:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to execute command',
+        };
+      }
+    }
+  );
+
+  /**
+   * AI 명령어 생성 및 실행 (Terminal Extension용)
+   */
+  ipcMain.handle(
+    'terminal:ai-command',
+    async (
+      _event,
+      args: {
+        naturalInput: string;
+        currentCwd?: string;
+        recentBlocks?: any[];
+      }
+    ) => {
+      try {
+        logger.info('[Terminal IPC] AI command request:', args.naturalInput);
+
+        // Terminal Agent 동적 import (Main Process용)
+        const { createTerminalAgentGraph } = await import(
+          '../../../extensions/terminal/agents/terminal-agent'
+        );
+
+        const agent = createTerminalAgentGraph(10);
+
+        // Agent 초기 상태 구성
+        const initialState = {
+          messages: [
+            {
+              role: 'user' as const,
+              content: args.naturalInput,
+            },
+          ],
+          conversationId: `terminal-${Date.now()}`,
+          recentBlocks: args.recentBlocks || [],
+          currentCwd: args.currentCwd || process.cwd(),
+          currentShell: process.env.SHELL || 'bash',
+          platform: process.platform,
+        };
+
+        // Agent 실행 (첫 번째 명령어만 추출)
+        let generatedCommand: string | null = null;
+
+        for await (const event of agent.stream(initialState)) {
+          if (event.type === 'message' && event.message?.content) {
+            // 명령어 추출 시도
+            const content = event.message.content;
+            const commandMatch = content.match(/```(?:bash|sh|shell)?\n([\s\S]+?)\n```/);
+            if (commandMatch) {
+              generatedCommand = commandMatch[1].trim();
+              break;
+            }
+          }
+
+          if (event.type === 'tool_results' && event.results?.[0]) {
+            // run_command 결과가 있으면 사용
+            const toolResult = event.results[0];
+            if (toolResult.toolName === 'run_command') {
+              return {
+                success: true,
+                data: {
+                  command: generatedCommand || args.naturalInput,
+                  output: toolResult.result?.stdout || '',
+                  stderr: toolResult.result?.stderr || '',
+                  exitCode: toolResult.result?.exitCode ?? 0,
+                },
+              };
+            }
+          }
+        }
+
+        // 명령어만 생성된 경우
+        if (generatedCommand) {
+          return {
+            success: true,
+            data: {
+              command: generatedCommand,
+            },
+          };
+        }
+
+        // Agent가 명령어를 생성하지 못한 경우
+        return {
+          success: false,
+          error: 'Failed to generate command from natural language input',
+        };
+      } catch (error: any) {
+        logger.error('[Terminal IPC] Error in AI command:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to process AI command',
+        };
+      }
+    }
+  );
 
   logger.info('[Terminal IPC] Terminal handlers registered');
 }
