@@ -6,6 +6,7 @@ import { logger } from '@/lib/utils/logger';
  */
 
 import type { EditorTool } from './editor-tools-registry';
+import { parseRipgrepOutput } from './ripgrep-parser';
 
 /**
  * Working directory 결정 헬퍼
@@ -414,24 +415,7 @@ const searchFilesTool: EditorTool = {
       logger.info('[search_files] Running:', rgCommand);
 
       const { stdout } = await execAsync(rgCommand);
-      const lines = stdout.trim().split('\n');
-      const results: any[] = [];
-
-      for (const line of lines) {
-        try {
-          const data = JSON.parse(line);
-          if (data.type === 'match') {
-            results.push({
-              path: data.data.path.text,
-              line: data.data.line_number,
-              column: data.data.submatches[0]?.start || 0,
-              text: data.data.lines.text.trim(),
-            });
-          }
-        } catch {
-          // JSON 파싱 실패한 라인 무시
-        }
-      }
+      const results = parseRipgrepOutput(stdout);
 
       return {
         success: true,
