@@ -521,14 +521,14 @@ export function useMessageStreaming() {
 
                   // 시스템 알림 표시
                   const conversation = conversations.find((c) => c.id === conversationId);
-                  const title = conversation?.title || '새 대화';
+                  const conversationTitle = conversation?.title || '새 대화';
 
                   if (window.electronAPI?.notification) {
                     window.electronAPI.notification
                       .show({
                         conversationId,
-                        title: 'SEPilot',
-                        body: `"${title}" 대화의 응답이 완료되었습니다.`,
+                        title: conversationTitle,
+                        body: '응답이 완료되었습니다.',
                       })
                       .catch((error) => {
                         console.error('[useMessageStreaming] Failed to show notification:', error);
