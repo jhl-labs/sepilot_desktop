@@ -101,10 +101,17 @@ function resolveShellForExec(): string {
 
 /**
  * Resolve path relative to working directory
- * If no working directory is set, uses current process directory
+ * Working directory MUST be set for file operations
  */
 function resolvePath(filePath: string): string {
-  const workingDir = getCurrentWorkingDirectory() || process.cwd();
+  const workingDir = getCurrentWorkingDirectory();
+
+  if (!workingDir) {
+    throw new Error(
+      'Working directory is not set. Please select a working directory in Coding mode before using file operations.'
+    );
+  }
+
   const targetPath = path.isAbsolute(filePath)
     ? path.resolve(filePath)
     : path.resolve(workingDir, filePath);
@@ -779,7 +786,15 @@ async function handleCommandExecute(args: { command: string; cwd?: string }): Pr
 
     // Treat empty string as null/undefined
     const cwdArg = args.cwd && args.cwd.trim() !== '' ? args.cwd : null;
-    const workingDir = cwdArg || getCurrentWorkingDirectory() || process.cwd();
+    const currentWorkingDir = getCurrentWorkingDirectory();
+
+    if (!cwdArg && !currentWorkingDir) {
+      throw new Error(
+        'Working directory is not set. Please select a working directory in Coding mode before executing commands.'
+      );
+    }
+
+    const workingDir = cwdArg || currentWorkingDir!;
     const shell = resolveShellForExec();
     logger.info('[Builtin Tools] Executing command', { command: args.command, workingDir, shell });
 
@@ -855,7 +870,13 @@ async function handleGrepSearch(args: {
     rgCommand += ` "${args.pattern.replace(/"/g, '\\"')}" "${absolutePath}"`;
 
     // Use working directory for execution
-    const workingDir = getCurrentWorkingDirectory() || process.cwd();
+    const workingDir = getCurrentWorkingDirectory();
+
+    if (!workingDir) {
+      throw new Error(
+        'Working directory is not set. Please select a working directory in Coding mode before using search operations.'
+      );
+    }
 
     const { stdout, stderr } = await execPromise(rgCommand, {
       cwd: workingDir,

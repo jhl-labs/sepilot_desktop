@@ -18,9 +18,17 @@ export function SimpleChatInput() {
     message: string;
   } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
 
   const { addBrowserChatMessage, updateBrowserChatMessage, browserChatMessages } = useChatStore();
+
+  // Use LangGraph stream hook
+  const { startStream, stopStream } = useLangGraphStream({
+    mode: 'browser',
+    conversationId: 'browser-chat-temp',
+    getMessages: () => useChatStore.getState().browserChatMessages,
+    updateMessage: updateBrowserChatMessage,
+    onAgentProgress: setAgentProgress,
+  });
 
   // Auto-resize textarea
   useEffect(() => {
@@ -31,21 +39,7 @@ export function SimpleChatInput() {
   }, [input]);
 
   const handleStop = async () => {
-    // Stop Browser Agent (if running)
-    if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.langgraph) {
-      try {
-        await window.electronAPI.langgraph.stopBrowserAgent('browser-chat-temp');
-      } catch (error) {
-        console.error('[SimpleChatInput] Failed to stop Browser Agent:', error);
-      }
-    }
-
-    // Abort stream
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-
+    await stopStream();
     setIsStreaming(false);
     setAgentProgress(null);
   };
@@ -58,9 +52,6 @@ export function SimpleChatInput() {
     const userMessage = input.trim();
     setInput('');
     setIsStreaming(true);
-
-    // Create abort controller for cancellation
-    abortControllerRef.current = new AbortController();
 
     try {
       // Add user message
@@ -75,135 +66,8 @@ export function SimpleChatInput() {
         content: '',
       });
 
-      // Stream accumulator
-      let accumulatedContent = '';
-
-      if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.langgraph) {
-        // Electron: Use Browser Agent with Browser Control Tools
-        const graphConfig = {
-          thinkingMode: 'browser-agent' as const,
-          enableRAG: false,
-          enableTools: true, // Enable Browser Control Tools
-          enableImageGeneration: false,
-        };
-
-        // Prepare messages for LLM
-        const allMessages = [
-          ...browserChatMessages,
-          {
-            id: 'temp',
-            role: 'user' as const,
-            content: userMessage,
-            created_at: Date.now(),
-          },
-        ];
-
-        // Setup stream event listener
-        const eventHandler = window.electronAPI.langgraph.onStreamEvent((event: unknown) => {
-          try {
-            if (!event) {
-              return;
-            }
-
-            if (abortControllerRef.current?.signal.aborted) {
-              return;
-            }
-
-            const evt = event as StreamEvent;
-
-            // Handle progress events
-            if (evt.type === 'progress') {
-              setAgentProgress({
-                iteration: evt.data.iteration,
-                maxIterations: evt.data.maxIterations,
-                status: evt.data.status,
-                message: evt.data.message,
-              });
-              return;
-            }
-
-            // Handle real-time streaming chunks from LLM
-            if (evt.type === 'streaming') {
-              accumulatedContent += evt.chunk;
-              // Update the last assistant message
-              const messages = useChatStore.getState().browserChatMessages;
-              const lastMessage = messages[messages.length - 1];
-              if (lastMessage && lastMessage.role === 'assistant') {
-                updateBrowserChatMessage(lastMessage.id, { content: accumulatedContent });
-              }
-              return;
-            }
-
-            // Handle node execution results
-            if (evt.type === 'node') {
-              const allMessages = evt.data?.messages;
-              if (allMessages && allMessages.length > 0) {
-                const lastMsg = allMessages[allMessages.length - 1];
-                if (lastMsg.role === 'assistant' && lastMsg.content) {
-                  const messages = useChatStore.getState().browserChatMessages;
-                  const lastMessage = messages[messages.length - 1];
-                  if (lastMessage && lastMessage.role === 'assistant') {
-                    updateBrowserChatMessage(lastMessage.id, { content: lastMsg.content });
-                  }
-                }
-              }
-            }
-          } catch (error) {
-            console.error('[SimpleChatInput] Stream event error:', error);
-          }
-        });
-
-        try {
-          // Start streaming via IPC (without conversationId for simple mode)
-          await window.electronAPI.langgraph.stream(
-            graphConfig,
-            allMessages,
-            'browser-chat-temp', // Temporary conversation ID for browser chat
-            undefined, // comfyUIConfig
-            undefined, // networkConfig
-            undefined // workingDirectory
-          );
-        } catch (streamError) {
-          console.error('[SimpleChatInput] Stream error:', streamError);
-          throw streamError;
-        } finally {
-          // Cleanup event listener
-          eventHandler?.();
-          // Ensure abort controller is cleaned up
-          if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
-            abortControllerRef.current.abort();
-          }
-          abortControllerRef.current = null;
-        }
-      } else {
-        // Web: WebLLMClient directly
-        const webClient = getWebLLMClient();
-        const historyMessages = [
-          ...browserChatMessages.map((m) => ({
-            role: m.role as 'system' | 'user' | 'assistant',
-            content: m.content,
-          })),
-          {
-            role: 'user' as const,
-            content: userMessage,
-          },
-        ];
-
-        for await (const chunk of webClient.stream(historyMessages)) {
-          if (abortControllerRef.current?.signal.aborted) {
-            break;
-          }
-
-          if (!chunk.done && chunk.content) {
-            accumulatedContent += chunk.content;
-            const messages = useChatStore.getState().browserChatMessages;
-            const lastMessage = messages[messages.length - 1];
-            if (lastMessage && lastMessage.role === 'assistant') {
-              updateBrowserChatMessage(lastMessage.id, { content: accumulatedContent });
-            }
-          }
-        }
-      }
+      // Start streaming (Hook handles all stream logic)
+      await startStream(userMessage, 'browser-agent');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to get response';
       console.error('Browser chat error:', error);
@@ -218,7 +82,6 @@ export function SimpleChatInput() {
     } finally {
       setIsStreaming(false);
       setAgentProgress(null);
-      abortControllerRef.current = null;
       textareaRef.current?.focus();
     }
   };

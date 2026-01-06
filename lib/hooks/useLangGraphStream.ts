@@ -86,6 +86,25 @@ interface UseLangGraphStreamOptions {
    * Get stream cleanup function (for checking if cleanup exists)
    */
   getCleanup?: () => (() => void) | null;
+
+  /**
+   * Tool approval request callback (for Editor Agent)
+   */
+  onToolApprovalRequest?: (data: {
+    conversationId: string;
+    messageId: string;
+    toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+  }) => void;
+
+  /**
+   * Tool approval result callback (for Editor Agent)
+   */
+  onToolApprovalResult?: (approved: boolean) => void;
+
+  /**
+   * Always approve tools for session (for Editor Agent)
+   */
+  alwaysApproveToolsForSession?: boolean;
 }
 
 export function useLangGraphStream(options: UseLangGraphStreamOptions) {
@@ -98,6 +117,9 @@ export function useLangGraphStream(options: UseLangGraphStreamOptions) {
     onAgentProgress,
     onSetCleanup,
     getCleanup,
+    onToolApprovalRequest,
+    onToolApprovalResult,
+    alwaysApproveToolsForSession,
   } = options;
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -192,6 +214,88 @@ export function useLangGraphStream(options: UseLangGraphStreamOptions) {
                   }
                 }
               }
+              return;
+            }
+
+            // Handle tool approval request (Editor Agent only)
+            if ((evt as any).type === 'tool_approval_request') {
+              const toolEvent = evt as any;
+
+              // Auto-approve if session-wide approval is enabled
+              if (alwaysApproveToolsForSession) {
+                console.log(
+                  '[useLangGraphStream] Auto-approving tools (session-wide approval enabled)'
+                );
+                if (isElectron() && window.electronAPI?.langgraph) {
+                  (async () => {
+                    try {
+                      await window.electronAPI.langgraph.respondToolApproval(conversationId, true);
+                    } catch (error) {
+                      console.error('[useLangGraphStream] Failed to auto-approve tools:', error);
+                    }
+                  })();
+                }
+                return;
+              }
+
+              // Show approval dialog via callback
+              if (
+                onToolApprovalRequest &&
+                toolEvent.conversationId &&
+                toolEvent.messageId &&
+                toolEvent.toolCalls
+              ) {
+                onToolApprovalRequest({
+                  conversationId: toolEvent.conversationId,
+                  messageId: toolEvent.messageId,
+                  toolCalls: toolEvent.toolCalls,
+                });
+
+                // Append approval waiting message
+                const approvalMessage = '🔔 도구 실행 승인을 기다리는 중...';
+                if (!accumulatedContent.includes(approvalMessage)) {
+                  accumulatedContent += `\n\n${approvalMessage}`;
+                  const messages = getMessages();
+                  const lastMessage = messages[messages.length - 1];
+                  if (lastMessage && lastMessage.role === 'assistant') {
+                    updateMessage(lastMessage.id, { content: accumulatedContent });
+                  }
+                }
+              }
+              return;
+            }
+
+            // Handle tool approval result (Editor Agent only)
+            if ((evt as any).type === 'tool_approval_result') {
+              const toolEvent = evt as any;
+              console.log('[useLangGraphStream] Tool approval result:', toolEvent.approved);
+
+              if (onToolApprovalResult) {
+                onToolApprovalResult(toolEvent.approved);
+              }
+
+              if (!toolEvent.approved) {
+                accumulatedContent += '\n\n❌ 도구 실행이 거부되었습니다.';
+                const messages = getMessages();
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage && lastMessage.role === 'assistant') {
+                  updateMessage(lastMessage.id, { content: accumulatedContent });
+                }
+              }
+              return;
+            }
+
+            // Handle full message response (Editor Agent)
+            if ((evt as any).type === 'message' && (evt as any).message) {
+              const msg = (evt as any).message;
+              if (msg.role === 'assistant' && msg.content) {
+                const messages = getMessages();
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage && lastMessage.role === 'assistant') {
+                  updateMessage(lastMessage.id, { content: msg.content });
+                }
+              }
+              return;
             }
           } catch (error) {
             console.error(`[useLangGraphStream:${mode}] Stream event error:`, error);
