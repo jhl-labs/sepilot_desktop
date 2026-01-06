@@ -50,24 +50,55 @@ const log = {
 };
 
 export class OpenAIProvider extends BaseLLMProvider {
+  /**
+   * Build request body for OpenAI API
+   * @param messages - Chat messages
+   * @param options - LLM options
+   * @param stream - Whether to stream response
+   * @returns Request body, merged options, and formatted messages
+   */
+  private buildRequestBody(
+    messages: Message[],
+    options: LLMOptions | undefined,
+    stream: boolean
+  ): { requestBody: any; mergedOptions: any; formattedMessages: any[] } {
+    const mergedOptions = this.mergeOptions(options);
+    const formattedMessages = this.formatMessages(messages);
+
+    const requestBody: any = {
+      model: this.model,
+      messages: formattedMessages,
+      stream,
+    };
+
+    // Optional parameters with Ollama compatibility
+    if (mergedOptions.temperature !== undefined) {
+      requestBody.temperature = mergedOptions.temperature;
+    }
+    if (mergedOptions.maxTokens !== undefined && mergedOptions.maxTokens !== null) {
+      requestBody.max_tokens = mergedOptions.maxTokens;
+    }
+    if (mergedOptions.topP !== undefined) {
+      requestBody.top_p = mergedOptions.topP;
+    }
+
+    // Add tools if provided
+    if (mergedOptions.tools && mergedOptions.tools.length > 0) {
+      requestBody.tools = mergedOptions.tools;
+      requestBody.tool_choice = 'auto';
+    }
+
+    return { requestBody, mergedOptions, formattedMessages };
+  }
+
   async chat(messages: Message[], options?: LLMOptions): Promise<LLMResponse> {
     const isElectron = typeof process !== 'undefined' && process.versions?.electron;
     log.info('[OpenAIProvider] chat() called, isElectron:', isElectron, 'baseURL:', this.baseURL);
 
-    const mergedOptions = this.mergeOptions(options);
-    const formattedMessages = this.formatMessages(messages);
+    const { requestBody } = this.buildRequestBody(messages, options, false);
 
     try {
       const authHeaders = createAuthHeader(this.config.provider, this.apiKey);
-
-      const requestBody: any = {
-        model: this.model,
-        messages: formattedMessages,
-        temperature: mergedOptions.temperature,
-        max_tokens: mergedOptions.maxTokens,
-        top_p: mergedOptions.topP,
-        stream: false,
-      };
 
       // Debug: Log request details for autocomplete
       log.info('[OpenAI] Request body:', {
@@ -78,12 +109,6 @@ export class OpenAIProvider extends BaseLLMProvider {
         systemMessageLength: requestBody.messages[0]?.content?.length || 0,
         userMessageLength: requestBody.messages[1]?.content?.length || 0,
       });
-
-      // Add tools if provided
-      if (mergedOptions.tools && mergedOptions.tools.length > 0) {
-        requestBody.tools = mergedOptions.tools;
-        requestBody.tool_choice = 'auto';
-      }
 
       const response = await fetchWithConfig(`${this.baseURL}/chat/completions`, this.config, {
         method: 'POST',
@@ -195,37 +220,24 @@ export class OpenAIProvider extends BaseLLMProvider {
     const isElectron = typeof process !== 'undefined' && process.versions?.electron;
     log.info('[OpenAIProvider] stream() called, isElectron:', isElectron, 'baseURL:', this.baseURL);
 
-    const mergedOptions = this.mergeOptions(options);
-    const formattedMessages = this.formatMessages(messages);
+    const { requestBody, mergedOptions, formattedMessages } = this.buildRequestBody(
+      messages,
+      options,
+      true
+    );
 
     try {
       const authHeaders = createAuthHeader(this.config.provider, this.apiKey);
 
-      const requestBody: any = {
-        model: this.model,
-        messages: formattedMessages,
-        stream: true,
-      };
-
-      // Only add optional parameters if they're defined (for Ollama compatibility)
-      if (mergedOptions.temperature !== undefined) {
-        requestBody.temperature = mergedOptions.temperature;
-      }
-      // maxTokens는 0이어도 유효한 값이므로 !== undefined로 체크
+      // Log maxTokens setting
       if (mergedOptions.maxTokens !== undefined && mergedOptions.maxTokens !== null) {
-        requestBody.max_tokens = mergedOptions.maxTokens;
         log.info('[OpenAI] max_tokens set to:', mergedOptions.maxTokens);
       } else {
         log.warn('[OpenAI] maxTokens is undefined or null, not setting max_tokens');
       }
-      if (mergedOptions.topP !== undefined) {
-        requestBody.top_p = mergedOptions.topP;
-      }
 
-      // Add tools if provided (for tool calling support)
+      // Log tools if provided
       if (mergedOptions.tools && mergedOptions.tools.length > 0) {
-        requestBody.tools = mergedOptions.tools;
-        requestBody.tool_choice = 'auto';
         log.info('[OpenAI] Stream request with tools:', mergedOptions.tools.length);
       }
 
