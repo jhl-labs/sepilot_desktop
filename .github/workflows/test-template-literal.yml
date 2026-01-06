@@ -8,6 +8,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Test script
-        run: |
-          echo "Simple test"
+      - name: Test github-script
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const title = "Test";
+            console.log("Title:", title);
