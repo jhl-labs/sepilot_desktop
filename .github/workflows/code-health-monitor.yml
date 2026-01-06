@@ -327,7 +327,7 @@ ${reportContent}
             }
 
       - name: Alert on low health score
-        if: steps.health_score.outputs.HEALTH_SCORE < 70
+        if: ${{ steps.health_score.outputs.HEALTH_SCORE < 70 }}
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

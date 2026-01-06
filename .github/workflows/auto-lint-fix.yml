@@ -246,7 +246,7 @@ ${allFixed
             }
 
       - name: Create issue for unfixable errors
-        if: steps.lint_recheck.outputs.all_fixed == 'false' && steps.lint_recheck.outputs.remaining_errors > 0
+        if: steps.lint_recheck.outputs.all_fixed == 'false' && steps.lint_recheck.outputs.remaining_errors != '0'
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
