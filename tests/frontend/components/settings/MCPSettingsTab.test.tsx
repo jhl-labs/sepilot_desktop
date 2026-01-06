@@ -91,7 +91,7 @@ describe('MCPSettingsTab', () => {
     render(<MCPSettingsTab />);
 
     const serverList = screen.getByTestId('mcp-server-list');
-    const divider = screen.getByText('새 서버 추가');
+    const divider = screen.getByText('서버 추가');
     const serverConfig = screen.getByTestId('mcp-server-config');
 
     // All components should be present

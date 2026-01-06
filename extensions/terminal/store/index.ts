@@ -19,6 +19,7 @@ import {
   deleteTerminalBlockFromVectorDB,
   clearAllTerminalBlocksFromVectorDB,
 } from './vectordb';
+import { initialSessionState, createSessionActions } from './sessions';
 
 // 자동 저장 디바운서 (1초 후 저장)
 const autoSave = createAutoSaveDebouncer(1000);
@@ -26,12 +27,18 @@ const autoSave = createAutoSaveDebouncer(1000);
 /**
  * Terminal Extension 초기 상태
  */
-export const initialTerminalState: TerminalStoreState = {
+export const initialTerminalState: TerminalStoreState & {
+  sessions?: any[];
+  activeSessionId?: string | null;
+} = {
   // 블록 관리
   terminalBlocks: [],
   activeBlockId: null,
 
-  // 세션 관리
+  // 다중 세션 (새로 추가)
+  ...initialSessionState,
+
+  // 세션 관리 (레거시 - 하위 호환성)
   terminalSessionId: null,
   currentCwd: '',
   currentShell: '',
@@ -255,6 +262,9 @@ export function createTerminalSlice(
         };
       });
     },
+
+    // 다중 세션 관리 액션
+    ...createSessionActions(set, get, autoSave),
   };
 }
 
@@ -265,3 +275,4 @@ export type {
   TerminalStoreState,
   TerminalStoreActions,
 } from '../types';
+export type { TerminalSession } from '../types/sessions';

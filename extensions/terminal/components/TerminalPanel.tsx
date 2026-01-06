@@ -6,13 +6,14 @@
 
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Trash2, History, Settings } from 'lucide-react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { TerminalBlock } from './TerminalBlock';
 import { AICommandInput } from './AICommandInput';
+import { SessionTabBar } from './SessionTabBar';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/utils/logger';
 
@@ -24,11 +25,13 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Store에서 상태 가져오기
+  const store = useChatStore();
   const {
     terminalBlocks,
     activeBlockId,
     terminalAgentIsRunning,
     currentCwd,
+    activeSessionId,
     addTerminalBlock,
     updateTerminalBlock,
     removeTerminalBlock,
@@ -37,12 +40,82 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     setTerminalAgentIsRunning,
     toggleHistory,
     loadTerminalHistoryFromStorage,
-  } = useChatStore();
+    getSessionBlocks,
+  } = store as any; // Type assertion for extension store
+
+  // 현재 활성 세션의 블록들만 필터링
+  const sessionBlocks = useMemo(() => {
+    if (!activeSessionId) return terminalBlocks;
+    return getSessionBlocks ? getSessionBlocks(activeSessionId) : terminalBlocks;
+  }, [terminalBlocks, activeSessionId, getSessionBlocks]);
 
   // 히스토리 로드 (컴포넌트 마운트 시 한 번만)
   useEffect(() => {
     loadTerminalHistoryFromStorage();
   }, [loadTerminalHistoryFromStorage]);
+
+  // Terminal 데이터 스트리밍 이벤트 수신
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.electronAPI?.terminal) {
+      return;
+    }
+
+    // terminal:data 이벤트 리스너
+    const dataHandler = window.electronAPI.terminal.onData(
+      ({ sessionId, data }: { sessionId: string; data: string }) => {
+        logger.info('[TerminalPanel] Received data:', { sessionId, dataLength: data.length });
+
+        // 해당 PTY 세션과 연결된 Terminal Session 찾기
+        const session = (store as any).sessions?.find((s: any) => s.ptySessionId === sessionId);
+        if (!session) {
+          logger.warn('[TerminalPanel] Session not found for PTY:', sessionId);
+          return;
+        }
+
+        // 해당 세션의 가장 최근 블록 찾기 (실행 중인 블록)
+        const sessionBlocks = terminalBlocks.filter((b: any) => b.sessionId === session.id);
+        const lastBlock = sessionBlocks[sessionBlocks.length - 1];
+
+        if (lastBlock && lastBlock.exitCode === undefined) {
+          // 실행 중인 블록에 데이터 추가
+          updateTerminalBlock(lastBlock.id, {
+            output: (lastBlock.output || '') + data,
+          });
+        }
+      }
+    );
+
+    // terminal:exit 이벤트 리스너
+    const exitHandler = window.electronAPI.terminal.onExit(
+      ({ sessionId, exitCode }: { sessionId: string; exitCode: number; signal?: number }) => {
+        logger.info('[TerminalPanel] Session exited:', { sessionId, exitCode });
+
+        // 해당 PTY 세션과 연결된 Terminal Session 찾기
+        const session = (store as any).sessions?.find((s: any) => s.ptySessionId === sessionId);
+        if (!session) {
+          return;
+        }
+
+        // 해당 세션의 가장 최근 블록에 exitCode 설정
+        const sessionBlocks = terminalBlocks.filter((b: any) => b.sessionId === session.id);
+        const lastBlock = sessionBlocks[sessionBlocks.length - 1];
+
+        if (lastBlock && lastBlock.exitCode === undefined) {
+          updateTerminalBlock(lastBlock.id, {
+            exitCode,
+          });
+        }
+      }
+    );
+
+    // Cleanup
+    return () => {
+      if (window.electronAPI?.terminal?.removeListener) {
+        window.electronAPI.terminal.removeListener('terminal:data', dataHandler);
+        window.electronAPI.terminal.removeListener('terminal:exit', exitHandler);
+      }
+    };
+  }, [store, terminalBlocks, updateTerminalBlock]);
 
   // Working directory 초기화
   useEffect(() => {
@@ -50,6 +123,46 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       setCurrentCwd(workingDirectory);
     }
   }, [workingDirectory, currentCwd, setCurrentCwd]);
+
+  // 초기 세션 자동 생성
+  useEffect(() => {
+    const initializeSession = async () => {
+      const sessions = (store as any).sessions;
+
+      // 이미 세션이 있으면 생성하지 않음
+      if (sessions && sessions.length > 0) {
+        return;
+      }
+
+      // PTY 세션 생성
+      if (typeof window !== 'undefined' && window.electronAPI?.terminal) {
+        try {
+          const result = await window.electronAPI.terminal.createSession(
+            workingDirectory || undefined,
+            80,
+            24
+          );
+
+          if (result.success && result.data) {
+            const createTerminalSession = (store as any).createTerminalSession;
+            if (createTerminalSession) {
+              createTerminalSession({
+                name: 'Terminal 1',
+                ptySessionId: result.data.sessionId,
+                cwd: result.data.cwd,
+                shell: result.data.shell,
+              });
+              logger.info('[TerminalPanel] Initial session created');
+            }
+          }
+        } catch (error) {
+          console.error('[TerminalPanel] Failed to create initial session:', error);
+        }
+      }
+    };
+
+    initializeSession();
+  }, []); // Empty dependency array - run once on mount
 
   // 블록 추가 시 자동 스크롤
   useEffect(() => {
@@ -62,6 +175,16 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   const handleExecuteCommand = async (command: string, naturalInput?: string) => {
     logger.info('[TerminalPanel] Executing command:', command);
 
+    // 활성 세션 확인
+    const activeSession = (store as any).getActiveTerminalSession
+      ? (store as any).getActiveTerminalSession()
+      : null;
+
+    if (!activeSession) {
+      logger.error('[TerminalPanel] No active session');
+      return;
+    }
+
     // 새 블록 생성
     const blockId = addTerminalBlock({
       type: naturalInput ? 'ai-suggestion' : 'command',
@@ -70,30 +193,24 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       output: '',
       aiGenerated: !!naturalInput,
       cwd: currentCwd || workingDirectory || '',
-      sessionId: 'default', // TODO: PTY 세션 ID 연동
+      sessionId: activeSession.id,
       exitCode: undefined,
     });
 
     try {
-      // Main Process에서 명령어 실행 (IPC 필요)
-      // TODO: Phase 4에서 실제 PTY Manager 연동 구현
-      if (window.electronAPI) {
-        // Electron 환경
-        const result = await window.electronAPI.invoke('terminal:execute-command', {
-          command,
-          cwd: currentCwd || workingDirectory,
-        });
+      if (window.electronAPI?.terminal) {
+        // PTY 세션에 명령어 전송 (실시간 스트리밍)
+        const result = await window.electronAPI.terminal.write(
+          activeSession.ptySessionId,
+          command + '\r' // \r은 Enter키
+        );
 
-        updateTerminalBlock(blockId, {
-          output: result.stdout + result.stderr,
-          exitCode: result.exitCode,
-          duration: result.duration,
-        });
-
-        // 에러 시 AI 분석 (옵션)
-        if (result.exitCode !== 0) {
-          // TODO: explain_error tool 호출
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to write command');
         }
+
+        // 출력은 terminal:data 이벤트로 실시간 수신됨
+        logger.info('[TerminalPanel] Command sent to PTY session');
       } else {
         // 웹 환경 - 시뮬레이션
         updateTerminalBlock(blockId, {
@@ -155,7 +272,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 블록 재실행
   const handleRerunBlock = (blockId: string) => {
-    const block = terminalBlocks.find((b) => b.id === blockId);
+    const block = terminalBlocks.find((b: any) => b.id === blockId);
     if (block) {
       handleExecuteCommand(block.command, block.naturalInput);
     }
@@ -199,9 +316,12 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
         </div>
       </div>
 
+      {/* 세션 탭 */}
+      <SessionTabBar />
+
       {/* 블록 리스트 */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        {terminalBlocks.length === 0 ? (
+        {sessionBlocks.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center">
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
@@ -214,7 +334,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
           </div>
         ) : (
           <div className="space-y-0">
-            {terminalBlocks.map((block) => (
+            {sessionBlocks.map((block: any) => (
               <TerminalBlock
                 key={block.id}
                 block={block}

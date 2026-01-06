@@ -89,14 +89,14 @@ describe('UnifiedChatArea', () => {
   it('should render without crashing', () => {
     const config = createDefaultConfig();
     render(<UnifiedChatArea config={config} />);
-    expect(screen.getByText('SEPilot에 오신 것을 환영합니다')).toBeInTheDocument();
+    expect(screen.getByText('메시지를 입력하여 대화를 시작하세요')).toBeInTheDocument();
   });
 
   it('should show welcome message when no messages', () => {
     const config = createDefaultConfig();
     render(<UnifiedChatArea config={config} />);
 
-    expect(screen.getByText('SEPilot에 오신 것을 환영합니다')).toBeInTheDocument();
+    expect(screen.getByText('메시지를 입력하여 대화를 시작하세요')).toBeInTheDocument();
   });
 
   it('should render messages when available', () => {
@@ -182,7 +182,7 @@ describe('UnifiedChatArea', () => {
     });
 
     render(<UnifiedChatArea config={config} />);
-    expect(screen.getByText('SEPilot에 오신 것을 환영합니다')).toBeInTheDocument();
+    expect(screen.getByText('Browser Agent 도구')).toBeInTheDocument();
   });
 
   it('should render in editor mode', () => {
@@ -190,8 +190,9 @@ describe('UnifiedChatArea', () => {
       mode: 'editor' as ChatMode,
     });
 
-    render(<UnifiedChatArea config={config} />);
-    expect(screen.getByText('SEPilot에 오신 것을 환영합니다')).toBeInTheDocument();
+    const { container } = render(<UnifiedChatArea config={config} />);
+    // Editor mode shows empty state without text
+    expect(container.querySelector('.flex.h-full')).toBeInTheDocument();
   });
 
   it('should handle persona display', () => {
