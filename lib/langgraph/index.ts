@@ -750,14 +750,22 @@ export class GraphFactory {
       const graph = await this.getEditorAgentGraph();
       const initialState = await this.createInitialState('editor-agent', messages, conversationId);
 
-      // Inject Editor Context
+      // Inject Editor Context with advanced features (Cursor/Cline 수준)
       (initialState as any).editorContext = {
         ...(initialState as any).editorContext,
         useTools: config.enableTools,
         enabledTools: config.enabledTools,
         workingDirectory: config.workingDirectory,
         activeFileSelection: config.activeFileSelection,
+        // Advanced features
+        useRag: config.enableRAG || false,
+        enableMCPTools: (config as any).enableMCPTools || false,
+        enablePlanning: (config as any).enablePlanning || false,
+        enableVerification: (config as any).enableVerification || false,
       };
+
+      // Set working directory for file operations
+      (initialState as any).workingDirectory = config.workingDirectory;
 
       for await (const event of graph.stream(initialState, options?.toolApprovalCallback)) {
         yield event;

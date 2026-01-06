@@ -1,8 +1,17 @@
-import { AgentState } from '@/lib/langgraph/state';
+import { CodingAgentState } from '@/lib/langgraph/state';
 import type { Message, ToolCall } from '@/types';
 import type { ToolApprovalCallback } from '@/lib/langgraph/types';
 import { getLLMClient } from '@/lib/llm/client';
+import { LLMService } from '@/lib/llm/service';
 import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import { ToolSelector } from '@/lib/langgraph/utils/tool-selector';
+import { FileTracker } from '@/lib/langgraph/utils/file-tracker';
+import { ContextManager } from '@/lib/langgraph/utils/context-manager';
+import { VerificationPipeline } from '@/lib/langgraph/utils/verification-pipeline';
+import { ErrorRecovery } from '@/lib/langgraph/utils/error-recovery';
+import { CodebaseAnalyzer } from '@/lib/langgraph/utils/codebase-analyzer';
+import { MCPServerManager } from '@/lib/mcp/server-manager';
+import { executeBuiltinTool } from '@/lib/mcp/tools/builtin-tools';
 
 import { logger } from '@/lib/utils/logger';
 import type { SupportedLanguage } from '@/lib/i18n';
@@ -69,8 +78,8 @@ function getLanguageInstruction(language: SupportedLanguage): string {
   }
 }
 
-export interface EditorAgentState extends AgentState {
-  // Editor 전용 상태
+export interface EditorAgentState extends CodingAgentState {
+  // Editor 전용 상태 (CodingAgentState를 확장)
   editorContext?: {
     openFiles?: Array<{
       path: string;
@@ -87,6 +96,9 @@ export interface EditorAgentState extends AgentState {
     }>;
     useRag?: boolean;
     useTools?: boolean;
+    enableMCPTools?: boolean;
+    enablePlanning?: boolean;
+    enableVerification?: boolean;
     action?: 'autocomplete' | 'code-action' | 'writing-tool';
     actionType?: string;
     selectedText?: string;
@@ -103,6 +115,12 @@ export interface EditorAgentState extends AgentState {
 
 export class AdvancedEditorAgentGraph {
   private maxIterations: number;
+
+  // Static utility instances (shared across all instances like CodingAgent)
+  private static toolSelector = new ToolSelector();
+  private static fileTracker = new FileTracker();
+  private static contextManager = new ContextManager(100000); // 100k tokens
+  private static codebaseAnalyzer = new CodebaseAnalyzer();
 
   constructor(maxIterations = 100) {
     this.maxIterations = maxIterations;
@@ -832,35 +850,122 @@ export class AdvancedEditorAgentGraph {
   }
 
   /**
-   * Execute editor tool
+   * Execute editor tool with MCP support, file tracking, and error recovery
    */
   private async executeTool(toolCall: ToolCall, state: EditorAgentState): Promise<any> {
     const { name, arguments: args } = toolCall;
 
-    // Tools will be implemented via IPC calls to Electron
-    // For now, return placeholders
-    switch (name) {
-      case 'read_file':
-        return this.readFile(args as any, state);
-      case 'list_files':
-        return this.listFiles(args as any, state);
-      case 'search_files':
-        return this.searchFiles(args as any, state);
-      case 'write_file':
-        return this.writeFile(args as any, state);
-      case 'edit_file':
-        return this.editFile(args as any, state);
-      case 'execute_command':
-        return this.executeCommand(args as any, state);
-      case 'get_terminal_output':
-        return this.getTerminalOutput(args as any, state);
-      case 'get_git_status':
-        return this.getGitStatus(args as any, state);
-      case 'git_diff':
-        return this.gitDiff(args as any, state);
-      default:
-        throw new Error(`Unknown tool: ${name}`);
+    // Track tool usage (simplified - full tracking requires success/duration/error)
+    // AdvancedEditorAgentGraph.toolSelector.recordUsage(name, true, 0);
+
+    // Built-in Editor Tools (IPC-based)
+    const builtinTools = [
+      'read_file',
+      'list_files',
+      'search_files',
+      'write_file',
+      'edit_file',
+      'execute_command',
+      'get_terminal_output',
+      'get_git_status',
+      'git_diff',
+    ];
+
+    if (builtinTools.includes(name)) {
+      // File tracking for write/edit operations
+      let filePath: string | undefined;
+      if (name === 'write_file' || name === 'edit_file') {
+        filePath = (args as any).filePath;
+        if (filePath) {
+          // Track before modification
+          await AdvancedEditorAgentGraph.fileTracker.trackBeforeModify(filePath);
+        }
+      }
+
+      // Execute with error recovery
+      const result = await ErrorRecovery.withTimeoutAndRetry(
+        async () => {
+          switch (name) {
+            case 'read_file':
+              return this.readFile(args as any, state);
+            case 'list_files':
+              return this.listFiles(args as any, state);
+            case 'search_files':
+              return this.searchFiles(args as any, state);
+            case 'write_file':
+              return this.writeFile(args as any, state);
+            case 'edit_file':
+              return this.editFile(args as any, state);
+            case 'execute_command':
+              return this.executeCommand(args as any, state);
+            case 'get_terminal_output':
+              return this.getTerminalOutput(args as any, state);
+            case 'get_git_status':
+              return this.getGitStatus(args as any, state);
+            case 'git_diff':
+              return this.gitDiff(args as any, state);
+            default:
+              throw new Error(`Unknown built-in tool: ${name}`);
+          }
+        },
+        30000, // 30 second timeout
+        { maxRetries: 2, initialDelayMs: 1000 },
+        `editor tool '${name}'`
+      );
+
+      // Track after modification
+      if (filePath && (name === 'write_file' || name === 'edit_file')) {
+        await AdvancedEditorAgentGraph.fileTracker.trackAfterModify(filePath, null);
+      }
+
+      return result;
     }
+
+    // MCP Tools (if enabled)
+    if (state.editorContext?.enableMCPTools) {
+      try {
+        logger.info(`[AdvancedEditorAgent] Executing MCP tool: ${name}`);
+
+        // MCP tools need serverName, but we don't know which server provides this tool
+        // For now, we'll try to find it through getAllTools()
+        const allTools = await MCPServerManager.getAllTools();
+        const toolInfo = allTools.find((t) => t.name === name);
+        if (!toolInfo) {
+          throw new Error(`MCP tool '${name}' not found in any server`);
+        }
+
+        // Execute MCP tool
+        const mcpResult = await MCPServerManager.callTool(
+          toolInfo.serverName || 'default',
+          name,
+          args
+        );
+
+        // Check for errors
+        if ((mcpResult as any)?.isError) {
+          const errorText =
+            (mcpResult as any).content
+              ?.map((item: any) => item.text || '')
+              .filter((text: string) => text)
+              .join('\n') || 'Tool execution failed';
+          throw new Error(errorText);
+        }
+
+        // Extract text content
+        const content =
+          (mcpResult as any)?.content
+            ?.map((item: any) => item.text || '')
+            .filter((text: string) => text)
+            .join('\n') || '';
+
+        return content || `Tool '${name}' completed successfully`;
+      } catch (error: any) {
+        logger.error(`[AdvancedEditorAgent] MCP tool '${name}' failed:`, error);
+        throw error;
+      }
+    }
+
+    throw new Error(`Unknown tool: ${name}`);
   }
 
   // Tool implementations
