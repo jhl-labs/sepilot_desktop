@@ -65,23 +65,47 @@ async function hasActiveBrowserView(): Promise<boolean> {
 
 /**
  * Tool 결과를 누적하면서 프롬프트 크기를 제한
+ * - 실패한 결과와 성공한 결과를 구분하여 저장
+ * - 실패한 결과는 더 오래 보관 (복구 전략에 유용)
  */
 function mergeToolResults(previous: ToolResult[], next?: ToolResult[]): ToolResult[] {
   const combined = [...previous, ...(next || [])];
+
   if (combined.length <= TOOL_RESULT_HISTORY_LIMIT) {
     return combined;
   }
 
-  return combined.slice(-TOOL_RESULT_HISTORY_LIMIT);
+  // 실패한 결과와 성공한 결과를 분리
+  const failures = combined.filter((r) => r.error);
+  const successes = combined.filter((r) => !r.error);
+
+  // 실패 결과는 최근 8개 유지, 성공 결과는 최근 4개 유지
+  const recentFailures = failures.slice(-8);
+  const recentSuccesses = successes.slice(-4);
+
+  // 시간 순으로 재정렬 (toolCallId에 timestamp 포함되어 있음)
+  const merged = [...recentFailures, ...recentSuccesses].sort((a, b) => {
+    // toolCallId 형식: "tool-{timestamp}-{name}" 또는 "tool-{timestamp}"
+    const extractTimestamp = (id: string): number => {
+      const match = id.match(/tool-(\d+)/);
+      return match ? parseInt(match[1]) : 0;
+    };
+    return extractTimestamp(a.toolCallId) - extractTimestamp(b.toolCallId);
+  });
+
+  return merged.slice(-TOOL_RESULT_HISTORY_LIMIT);
 }
 
 /**
  * Exponential Backoff 재시도 유틸리티
+ * - 재시도 횟수와 간격을 줄여 더 빠른 실패
+ * - 선택적 재시도 조건 지원
  */
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelay: number = 1000
+  maxRetries: number = 2, // 감소: 3 -> 2 (더 빠른 실패)
+  baseDelay: number = 500, // 감소: 1000 -> 500 (더 빠른 재시도)
+  shouldRetry?: (error: Error) => boolean // 재시도 조건 추가
 ): Promise<T> {
   let lastError: Error | null = null;
 
@@ -91,10 +115,17 @@ async function retryWithBackoff<T>(
     } catch (error) {
       lastError = error as Error;
 
+      // 재시도 조건 체크
+      if (shouldRetry && !shouldRetry(lastError)) {
+        logger.debug(`[BrowserAgent.Retry] Error is not retryable: ${lastError.message}`);
+        throw lastError;
+      }
+
       if (attempt < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, attempt);
         logger.debug(
-          `[BrowserAgent.Retry] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`
+          `[BrowserAgent.Retry] Attempt ${attempt + 1}/${maxRetries} failed, retrying in ${delay}ms...`,
+          lastError.message
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
@@ -1051,6 +1082,12 @@ export class BrowserAgentGraph {
 
         generateResult = await generateWithBrowserToolsNode(state);
         logger.debug('[BrowserAgent] generateWithBrowserToolsNode completed');
+
+        // Stop 체크: LLM 생성 후
+        if (this.shouldStop) {
+          logger.debug('[BrowserAgent] Stop requested after LLM generation');
+          break;
+        }
       } catch (error: any) {
         console.error('[BrowserAgent] Generate node error:', error);
 
@@ -1174,6 +1211,61 @@ export class BrowserAgentGraph {
         emitStreamingChunk(logMessage, state.conversationId);
       }
 
+      // **무한 루프 감지: Tool 실행 전에 먼저 체크**
+      for (const toolCall of toolCalls) {
+        const now = Date.now();
+        const callSignature = `${toolCall.name}:${JSON.stringify(toolCall.arguments)}`;
+
+        toolCallHistory.push({
+          name: toolCall.name,
+          args: callSignature,
+          timestamp: now,
+        });
+
+        // 히스토리 크기 제한
+        if (toolCallHistory.length > MAX_HISTORY) {
+          toolCallHistory.shift();
+        }
+
+        // 연속 반복 감지: 최근 LOOP_THRESHOLD개가 모두 같은지 확인
+        if (toolCallHistory.length >= LOOP_THRESHOLD) {
+          const recent = toolCallHistory.slice(-LOOP_THRESHOLD);
+          const firstCall = recent[0];
+
+          // 시간 윈도우 내에서 같은 호출이 반복되는지 확인 (10초 내)
+          const timeWindow = 10000;
+          const isWithinTimeWindow = recent.every((call) => now - call.timestamp < timeWindow);
+
+          const allSame = recent.every(
+            (call) => call.name === firstCall.name && call.args === firstCall.args
+          );
+
+          if (allSame && isWithinTimeWindow) {
+            console.warn(
+              `[BrowserAgent] Loop detected BEFORE execution: ${toolCall.name} called ${LOOP_THRESHOLD} times with same arguments`
+            );
+            addBrowserAgentLog({
+              level: 'error',
+              phase: 'error',
+              message: `무한 루프 감지: ${toolCall.name}가 동일한 인자로 ${LOOP_THRESHOLD}회 연속 호출 예정입니다. 실행을 중단합니다.`,
+              details: {
+                toolName: toolCall.name,
+                iteration: iterations + 1,
+                maxIterations: actualMaxIterations,
+              },
+            });
+            hasError = true;
+            errorMessage = `무한 루프 감지: ${toolCall.name}가 반복 호출되고 있습니다. 다른 접근 방법을 시도해야 합니다.`;
+            break;
+          }
+        }
+      }
+
+      // 루프 감지로 중단된 경우
+      if (hasError) {
+        break;
+      }
+
       // Emit tool execution progress
       if (toolCalls.length > 0) {
         const toolNames = toolCalls.map((tc) => tc.name).join(', ');
@@ -1193,7 +1285,13 @@ export class BrowserAgentGraph {
 
       try {
         toolsResult = await retryWithBackoff(
-          async () => await toolsNode(state),
+          async () => {
+            // Stop 체크: Tool 실행 전
+            if (this.shouldStop) {
+              throw new Error('Stop requested before tool execution');
+            }
+            return await toolsNode(state);
+          },
           2, // 도구 실행은 2번만 재시도
           500 // 500ms base delay
         );
@@ -1711,55 +1809,8 @@ export class BrowserAgentGraph {
         }
       }
 
-      // 반복 감지: 도구 호출 히스토리에 추가 (timestamp 포함)
-      for (const toolCall of toolCalls) {
-        const now = Date.now();
-        toolCallHistory.push({
-          name: toolCall.name,
-          args: JSON.stringify(toolCall.arguments),
-          timestamp: now,
-        });
-
-        // 히스토리 크기 제한
-        if (toolCallHistory.length > MAX_HISTORY) {
-          toolCallHistory.shift();
-        }
-
-        // 반복 감지: 최근 LOOP_THRESHOLD개가 모두 같은지 확인 (시간 윈도우 내에서)
-        if (toolCallHistory.length >= LOOP_THRESHOLD) {
-          const recentCalls = toolCallHistory.slice(-LOOP_THRESHOLD);
-          const firstCall = recentCalls[0];
-
-          // 시간 윈도우 체크: 10초 내 같은 호출 반복
-          const timeWindow = 10000; // 10초
-          const isWithinTimeWindow = recentCalls.every((call) => now - call.timestamp < timeWindow);
-
-          const allSame = recentCalls.every(
-            (call) => call.name === firstCall.name && call.args === firstCall.args
-          );
-
-          if (allSame && isWithinTimeWindow) {
-            console.warn(
-              `[BrowserAgent] Loop detected: ${toolCall.name} called ${LOOP_THRESHOLD} times consecutively with same arguments`
-            );
-            addBrowserAgentLog({
-              level: 'error',
-              phase: 'error',
-              message: `무한 루프 감지: ${toolCall.name}가 동일한 인자로 ${LOOP_THRESHOLD}회 연속 호출되었습니다.`,
-              details: {
-                iteration: iterations + 1,
-                maxIterations: actualMaxIterations,
-                toolName: toolCall.name,
-              },
-            });
-            hasError = true;
-            errorMessage = `무한 루프 감지: ${toolCall.name}가 반복 호출되고 있습니다. 다른 접근 방법을 시도해야 합니다.`;
-            break;
-          }
-        }
-      }
-
-      // Remove tool_calls from the source message (방금 실행한 메시지만)
+      // Remove tool_calls from the source message to prevent re-execution
+      // (무한 루프 감지는 이미 tool 실행 전에 완료됨 - 라인 1210-1260)
       const updatedMessages = [...state.messages];
       if (toolSourceIndex >= 0 && updatedMessages[toolSourceIndex]?.tool_calls) {
         updatedMessages[toolSourceIndex] = {
