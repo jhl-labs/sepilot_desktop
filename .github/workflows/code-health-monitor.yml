@@ -289,20 +289,7 @@ jobs:
               per_page: 1
             });
 
-            const body = `# 📊 코드 건강도 리포트
-
-**최근 업데이트:** ${date}
-**건강도 점수:** ${score}/100
-
----
-
-${reportContent}
-
----
-
-*이 리포트는 매일 자동으로 업데이트됩니다.*
-*상세 내역: [워크플로우 실행](../actions/runs/${{ github.run_id }})*
-`;
+            const body = `# 📊 코드 건강도 리포트\n\n**최근 업데이트:** ${date}\n**건강도 점수:** ${score}/100\n\n---\n\n${reportContent}\n\n---\n\n*이 리포트는 매일 자동으로 업데이트됩니다.*\n*상세 내역: [워크플로우 실행](../actions/runs/${{ github.run_id }})*`;
 
             if (issues.data.length > 0) {
               // 기존 이슈 업데이트

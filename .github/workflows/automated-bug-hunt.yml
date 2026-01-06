@@ -409,57 +409,7 @@ jobs:
             const autoFixable = '${{ steps.check_report.outputs.auto_fixable }}';
 
             const title = `🤖 자동 버그 수정 (${autoFixable}개 수정 시도)`;
-
-            const body = `# 🤖 자동 버그 수정 PR
-
-**실행 일시:** ${new Date().toISOString()}
-**워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})
-
-## 📊 요약
-
-- 발견된 전체 버그: ${bugCount}개
-- 심각도 높음: ${highSeverity}개
-- 자동 수정 시도: ${autoFixable}개
-
----
-
-## 🔧 적용된 수정사항
-
-${fixesContent || '수정 내역을 확인할 수 없습니다.'}
-
----
-
-## 📋 전체 버그 탐색 보고서
-
-<details>
-<summary>펼쳐보기</summary>
-
-${reportContent}
-
-</details>
-
----
-
-## ⚠️ 중요 안내
-
-이 PR은 **AI가 자동으로 생성**한 버그 수정입니다.
-
-### 리뷰 시 확인사항:
-
-1. ✅ **로직 검증**: 수정이 의도대로 동작하는지 확인
-2. ✅ **테스트 실행**: 관련 테스트가 모두 통과하는지 확인
-3. ✅ **부작용 확인**: 다른 부분에 영향이 없는지 확인
-4. ✅ **보안 검토**: 보안 관련 수정이 안전한지 확인
-
-### 권장 조치:
-
-- 🧪 로컬에서 테스트 실행: \`pnpm run test\`
-- 🔍 변경 사항 상세 검토
-- 💬 불확실한 부분은 코멘트로 질문
-- ❌ 문제가 있으면 거부하고 수동 수정
-
-**AI 수정이므로 반드시 리뷰 후 머지하세요!**
-`;
+            const body = `# 🤖 자동 버그 수정 PR\n\n**실행 일시:** ${new Date().toISOString()}\n**워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})\n\n## 📊 요약\n\n- 발견된 전체 버그: ${bugCount}개\n- 심각도 높음: ${highSeverity}개\n- 자동 수정 시도: ${autoFixable}개\n\n---\n\n## 🔧 적용된 수정사항\n\n${fixesContent || '수정 내역을 확인할 수 없습니다.'}\n\n---\n\n## 📋 전체 버그 탐색 보고서\n\n<details>\n<summary>펼쳐보기</summary>\n\n${reportContent}\n\n</details>\n\n---\n\n## ⚠️ 중요 안내\n\n이 PR은 **AI가 자동으로 생성**한 버그 수정입니다.\n\n### 리뷰 시 확인사항:\n\n1. ✅ **로직 검증**: 수정이 의도대로 동작하는지 확인\n2. ✅ **테스트 실행**: 관련 테스트가 모두 통과하는지 확인\n3. ✅ **부작용 확인**: 다른 부분에 영향이 없는지 확인\n4. ✅ **보안 검토**: 보안 관련 수정이 안전한지 확인\n\n### 권장 조치:\n\n- 🧪 로컬에서 테스트 실행: \`pnpm run test\`\n- 🔍 변경 사항 상세 검토\n- 💬 불확실한 부분은 코멘트로 질문\n- ❌ 문제가 있으면 거부하고 수동 수정\n\n**AI 수정이므로 반드시 리뷰 후 머지하세요!**`;
 
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,

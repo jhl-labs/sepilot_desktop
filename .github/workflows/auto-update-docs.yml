@@ -314,57 +314,7 @@ jobs:
             const recentCommits = '${{ steps.analyze_changes.outputs.RECENT_COMMITS }}';
 
             const title = `📚 문서 자동 업데이트 (${recentCommits}개 커밋 반영)`;
-
-            const body = `# 📚 개발자 문서 자동 업데이트
-
-**실행 일시:** ${new Date().toISOString()}
-**워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})
-
-## 📊 업데이트 요약
-
-- 분석 기간: 최근 1시간
-- 변경 커밋: ${recentCommits}개
-- 업데이트 파일: docs/dev.html
-
----
-
-## 📝 업데이트 로그
-
-${updateLog || '업데이트 로그를 확인할 수 없습니다.'}
-
----
-
-## 🔍 분석된 변경사항
-
-<details>
-<summary>펼쳐보기</summary>
-
-${changesReport}
-
-</details>
-
----
-
-## ⚠️ 리뷰 안내
-
-이 PR은 **AI가 자동으로 생성**한 문서 업데이트입니다.
-
-### 리뷰 시 확인사항:
-
-1. ✅ **정확성**: 문서 내용이 실제 코드와 일치하는가?
-2. ✅ **Mermaid 다이어그램**: 다이어그램이 올바르게 렌더링되는가?
-3. ✅ **일관성**: 기존 문서 스타일과 일관되는가?
-4. ✅ **완전성**: 중요한 변경사항이 누락되지 않았는가?
-
-### 권장 조치:
-
-- 🌐 docs/dev.html을 브라우저에서 열어 확인
-- 📊 Mermaid 다이어그램 렌더링 확인
-- 📝 설명이 명확하고 정확한지 검토
-- ❌ 문제가 있으면 거부하고 수동 수정
-
-**AI 생성 문서이므로 반드시 리뷰 후 머지하세요!**
-`;
+            const body = `# 📚 개발자 문서 자동 업데이트\n\n**실행 일시:** ${new Date().toISOString()}\n**워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})\n\n## 📊 업데이트 요약\n\n- 분석 기간: 최근 1시간\n- 변경 커밋: ${recentCommits}개\n- 업데이트 파일: docs/dev.html\n\n---\n\n## 📝 업데이트 로그\n\n${updateLog || '업데이트 로그를 확인할 수 없습니다.'}\n\n---\n\n## 🔍 분석된 변경사항\n\n<details>\n<summary>펼쳐보기</summary>\n\n${changesReport}\n\n</details>\n\n---\n\n## ⚠️ 리뷰 안내\n\n이 PR은 **AI가 자동으로 생성**한 문서 업데이트입니다.\n\n### 리뷰 시 확인사항:\n\n1. ✅ **정확성**: 문서 내용이 실제 코드와 일치하는가?\n2. ✅ **Mermaid 다이어그램**: 다이어그램이 올바르게 렌더링되는가?\n3. ✅ **일관성**: 기존 문서 스타일과 일관되는가?\n4. ✅ **완전성**: 중요한 변경사항이 누락되지 않았는가?\n\n### 권장 조치:\n\n- 🌐 docs/dev.html을 브라우저에서 열어 확인\n- 📊 Mermaid 다이어그램 렌더링 확인\n- 📝 설명이 명확하고 정확한지 검토\n- ❌ 문제가 있으면 거부하고 수동 수정\n\n**AI 생성 문서이므로 반드시 리뷰 후 머지하세요!**`;
 
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,

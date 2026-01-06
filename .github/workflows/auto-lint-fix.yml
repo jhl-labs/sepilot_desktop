@@ -1,8 +1,6 @@
 name: Auto Lint & Fix
 
 on:
-  push:
-    branches: [main]
   schedule:
     # 매일 오전 3시 (KST 12시)에 실행
     - cron: '0 3 * * *'
