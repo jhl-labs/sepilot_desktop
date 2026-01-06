@@ -6,7 +6,7 @@
 
 _Thinking, Coding, Editor, Browser, Vision을 하나로 통합한 궁극의 데스크톱 AI 워크스페이스_
 
-![Version](https://img.shields.io/badge/version-0.6.5-blue.svg)
+![Version](https://img.shields.io/badge/version-0.7.4-blue.svg)
 [![License](https://img.shields.io/badge/license-Custom-green)](./LICENSE)
 
 <p>
@@ -170,6 +170,51 @@ pnpm run test:e2e
 
 For GUI environments (macOS, Windows, Linux Desktop), tests will run directly without Xvfb.
 
+#### Test Coverage
+
+**View Coverage Reports**:
+
+We use [Codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop) for comprehensive test coverage tracking. Visit the dashboard to see:
+
+- Overall project coverage with interactive sunburst and tree visualizations
+- Component-specific coverage (Chat, LangGraph, MCP, RAG, Electron IPC)
+- Coverage trends over time
+- Pull request impact analysis
+
+**Local Coverage Reports**:
+
+```bash
+# Generate coverage reports
+pnpm run test:coverage             # All tests with coverage
+pnpm run test:coverage:frontend    # Frontend only
+pnpm run test:coverage:backend     # Backend only
+
+# View HTML report (after running tests)
+open coverage/lcov-report/index.html   # macOS
+start coverage/lcov-report/index.html  # Windows
+xdg-open coverage/lcov-report/index.html  # Linux
+```
+
+**Coverage Targets**:
+
+| Component       | Target | Current                                                                                                                                                   |
+| --------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overall Project | 55%    | [![codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graph/badge.svg?token=RTDC27F34B)](https://codecov.io/gh/jhl-labs/sepilot_desktop) |
+| Frontend (UI)   | 50%    | -                                                                                                                                                         |
+| Backend (Core)  | 55%    | -                                                                                                                                                         |
+| Chat System     | 60%    | -                                                                                                                                                         |
+| LangGraph Agent | 65%    | -                                                                                                                                                         |
+| MCP Integration | 60%    | -                                                                                                                                                         |
+| Electron IPC    | 70%    | -                                                                                                                                                         |
+
+**Automated Coverage Checks**:
+
+- ✅ **PR Comments**: Every pull request receives detailed coverage analysis
+- ✅ **Status Checks**: PRs must maintain coverage within threshold (±2-5%)
+- ✅ **Component Tracking**: Individual components tracked separately
+- ✅ **Bundle Analysis**: JavaScript bundle size monitoring
+- ✅ **Test Results**: Test pass/fail tracking integrated with coverage
+
 ---
 
 <a name="korean"></a>
@@ -258,6 +303,81 @@ _당신의 문서를 AI의 지식으로._
 [Releases](https://github.com/jhl-labs/sepilot_desktop/releases) 페이지에서 최신 설치 파일을 다운로드하세요.
 
 ### 🧪 개발 & 테스트
+
+#### 테스트 실행
+
+**단위 테스트**:
+
+```bash
+pnpm run test              # 모든 단위 테스트 실행
+pnpm run test:frontend     # 프론트엔드 테스트만
+pnpm run test:backend      # 백엔드 테스트만
+pnpm run test:coverage     # 커버리지 리포트 포함
+```
+
+**E2E 테스트**:
+
+E2E 테스트는 디스플레이 서버가 필요합니다. 헤드리스 환경(CI/CD)에서는:
+
+```bash
+# Xvfb 설치 (Ubuntu/Debian)
+sudo apt-get install xvfb
+
+# Xvfb 설치 (Fedora/RHEL)
+sudo dnf install xorg-x11-server-Xvfb
+
+# E2E 테스트 실행
+pnpm run test:e2e
+```
+
+GUI 환경(macOS, Windows, Linux 데스크톱)에서는 Xvfb 없이 바로 실행됩니다.
+
+#### 테스트 커버리지
+
+**커버리지 리포트 확인**:
+
+[Codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop)를 사용하여 포괄적인 테스트 커버리지를 추적합니다. 대시보드에서 다음을 확인할 수 있습니다:
+
+- 대화형 선버스트 및 트리 시각화를 통한 전체 프로젝트 커버리지
+- 컴포넌트별 커버리지 (Chat, LangGraph, MCP, RAG, Electron IPC)
+- 시간별 커버리지 추이
+- Pull Request 영향 분석
+
+**로컬 커버리지 리포트**:
+
+```bash
+# 커버리지 리포트 생성
+pnpm run test:coverage             # 모든 테스트 + 커버리지
+pnpm run test:coverage:frontend    # 프론트엔드만
+pnpm run test:coverage:backend     # 백엔드만
+
+# HTML 리포트 보기 (테스트 실행 후)
+open coverage/lcov-report/index.html   # macOS
+start coverage/lcov-report/index.html  # Windows
+xdg-open coverage/lcov-report/index.html  # Linux
+```
+
+**커버리지 목표**:
+
+| 컴포넌트        | 목표 | 현재                                                                                                                                                      |
+| --------------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 전체 프로젝트   | 55%  | [![codecov](https://codecov.io/gh/jhl-labs/sepilot_desktop/branch/main/graph/badge.svg?token=RTDC27F34B)](https://codecov.io/gh/jhl-labs/sepilot_desktop) |
+| 프론트엔드 (UI) | 50%  | -                                                                                                                                                         |
+| 백엔드 (Core)   | 55%  | -                                                                                                                                                         |
+| Chat 시스템     | 60%  | -                                                                                                                                                         |
+| LangGraph Agent | 65%  | -                                                                                                                                                         |
+| MCP 통합        | 60%  | -                                                                                                                                                         |
+| Electron IPC    | 70%  | -                                                                                                                                                         |
+
+**자동 커버리지 체크**:
+
+- ✅ **PR 코멘트**: 모든 Pull Request에 상세한 커버리지 분석 제공
+- ✅ **Status Checks**: PR은 임계값(±2-5%) 내에서 커버리지 유지 필수
+- ✅ **컴포넌트 추적**: 개별 컴포넌트를 별도로 추적
+- ✅ **번들 분석**: JavaScript 번들 크기 모니터링
+- ✅ **테스트 결과**: 테스트 통과/실패 추적이 커버리지와 통합
+
+---
 
 ### 📄 License
 
