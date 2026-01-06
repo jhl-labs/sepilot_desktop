@@ -540,11 +540,30 @@ When a user asks for information that requires external data or actions, you MUS
 5. **Work with Available Data**: If a tool result is truncated, work with the available information rather than searching again
 6. **Provide Final Answers**: Always prioritize providing a final answer over making additional tool calls
 
+## Critical: Handling Tool Errors
+
+**⚠️ NEVER HALLUCINATE OR FABRICATE DATA WHEN A TOOL FAILS**
+
+When you receive a tool error (marked with "Error:" in the result):
+
+1. **Acknowledge the Error**: Tell the user that the tool operation failed
+2. **Explain What Happened**: Clearly state which tool failed and why (based on the error message)
+3. **DO NOT Make Up Data**: Never invent, guess, or fabricate information to compensate for the tool failure
+4. **Suggest Alternatives**: If possible, suggest alternative approaches or tools the user can try
+5. **Be Honest**: If you cannot complete the task without the tool, clearly state that
+
+**Example of CORRECT error handling:**
+❌ BAD: "I searched GitHub and found these repositories..." (when the search actually failed)
+✅ GOOD: "The GitHub search tool failed with error: [error message]. I cannot provide search results without access to the GitHub API. Please check your network connection or API credentials."
+
+**Remember**: It's better to admit a tool failed than to provide false information that misleads the user.
+
 ## Important Notes
 
 - **You CAN access external APIs and services** through the available tools
 - **Don't say you cannot access something** - check if there's a tool for it first
-- **Tools are your primary way** to interact with external systems and get real-time data`;
+- **Tools are your primary way** to interact with external systems and get real-time data
+- **When tools fail, NEVER fabricate results** - always be honest about the failure`;
 
     let systemContent = createBaseSystemMessage(toolGuidelines);
 

@@ -607,12 +607,36 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
 
           logger.info(`[Tools] MCP Tool result:`, mcpResult);
 
+          // ⚠️ CRITICAL: Check isError flag first to prevent hallucinations
+          if (mcpResult?.isError) {
+            // MCP 도구가 에러를 반환한 경우 - 명확하게 에러로 표시
+            const errorText =
+              mcpResult.content
+                ?.map((item: any) => item.text || '')
+                .filter((text: string) => text)
+                .join('\n') || 'Tool execution failed with unknown error';
+
+            console.error(`[Tools] MCP tool returned error for ${call.name}:`, errorText);
+
+            return {
+              toolCallId: call.id,
+              toolName: call.name,
+              result: null,
+              error: `Tool '${call.name}' failed: ${errorText}`,
+            };
+          }
+
           // MCP ToolCallResult 형식에서 텍스트 추출
           let resultText = '';
 
           if (!mcpResult) {
-            console.warn(`[Tools] MCP tool returned null/undefined result for ${call.name}`);
-            resultText = 'Tool returned no result';
+            console.error(`[Tools] MCP tool returned null/undefined result for ${call.name}`);
+            return {
+              toolCallId: call.id,
+              toolName: call.name,
+              result: null,
+              error: `Tool '${call.name}' returned no response. The MCP server may be unavailable or the tool may not exist.`,
+            };
           } else if (mcpResult.content && Array.isArray(mcpResult.content)) {
             // content 배열에서 텍스트 추출
             resultText = mcpResult.content
@@ -621,8 +645,13 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
               .join('\n');
 
             if (!resultText) {
-              console.warn(`[Tools] MCP tool content array is empty for ${call.name}`);
-              resultText = 'Tool returned empty content';
+              console.error(`[Tools] MCP tool content array is empty for ${call.name}`);
+              return {
+                toolCallId: call.id,
+                toolName: call.name,
+                result: null,
+                error: `Tool '${call.name}' returned empty content. The tool may not support the given parameters or the requested data may not exist.`,
+              };
             }
           } else if (typeof mcpResult === 'string') {
             resultText = mcpResult;
@@ -630,6 +659,17 @@ export async function toolsNode(state: AgentState): Promise<Partial<AgentState>>
             resultText = JSON.stringify(mcpResult);
           } else {
             resultText = String(mcpResult);
+          }
+
+          // 추가 검증: 결과 텍스트가 비어있지 않은지 확인
+          if (!resultText || resultText.trim().length === 0) {
+            console.error(`[Tools] MCP tool returned empty text for ${call.name}`);
+            return {
+              toolCallId: call.id,
+              toolName: call.name,
+              result: null,
+              error: `Tool '${call.name}' returned empty result. The requested operation may have failed or returned no data.`,
+            };
           }
 
           logger.info(
