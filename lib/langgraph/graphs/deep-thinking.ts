@@ -3,12 +3,10 @@ import { Annotation } from '@langchain/langgraph';
 import { Message } from '@/types';
 import { LLMService } from '@/lib/llm/service';
 import { createBaseSystemMessage } from '../utils/system-message';
-import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-callback';
-import { generateWithToolsNode } from '../nodes/generate';
-import { toolsNode } from '../nodes/tools';
-
+import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
+import { getUserLanguage, getLanguageInstruction } from '../utils/language-utils';
+import { createResearchNode } from '../utils/research-node';
 import { logger } from '@/lib/utils/logger';
-import type { SupportedLanguage } from '@/lib/i18n';
 /**
  * Deep Thinking Graph
  *
@@ -23,189 +21,14 @@ import type { SupportedLanguage } from '@/lib/i18n';
  */
 
 /**
- * 사용자 언어 설정 가져오기
- */
-async function getUserLanguage(): Promise<SupportedLanguage> {
-  try {
-    // Main Process에서만 동작
-    if (typeof window !== 'undefined') {
-      // Renderer 프로세스에서는 localStorage에서 가져오기
-      try {
-        const saved = localStorage.getItem('sepilot_language');
-        if (saved && ['ko', 'en', 'zh'].includes(saved)) {
-          return saved as SupportedLanguage;
-        }
-      } catch {
-        // localStorage 접근 실패 시 기본값
-      }
-      return 'ko';
-    }
-
-    const { databaseService } = await import('../../../electron/services/database');
-    const configStr = databaseService.getSetting('app_config');
-    if (!configStr) {
-      return 'ko';
-    }
-
-    const appConfig = JSON.parse(configStr);
-    if (appConfig?.general?.language && ['ko', 'en', 'zh'].includes(appConfig.general.language)) {
-      return appConfig.general.language as SupportedLanguage;
-    }
-  } catch (error) {
-    logger.error('[Deep] Failed to get user language:', error);
-  }
-  return 'ko';
-}
-
-/**
- * 언어에 따른 답변 언어 지시 메시지 생성
- */
-function getLanguageInstruction(language: SupportedLanguage): string {
-  switch (language) {
-    case 'ko':
-      return '반드시 한국어로 답변하세요.';
-    case 'en':
-      return 'Please respond in English.';
-    case 'zh':
-      return '请用中文回答。';
-    default:
-      return '반드시 한국어로 답변하세요.';
-  }
-}
-
-/**
- * RAG 검색 헬퍼 함수
- */
-async function retrieveContextIfEnabled(query: string): Promise<string> {
-  const config = getCurrentGraphConfig();
-  if (!config?.enableRAG) {
-    return '';
-  }
-
-  try {
-    // Main Process 전용 로직
-    if (typeof window !== 'undefined') {
-      return '';
-    }
-
-    logger.info('[Deep] RAG enabled, retrieving documents...');
-    const { vectorDBService } = await import('../../../electron/services/vectordb');
-    const { databaseService } = await import('../../../electron/services/database');
-    const { initializeEmbedding, getEmbeddingProvider } =
-      await import('@/lib/vectordb/embeddings/client');
-
-    const configStr = databaseService.getSetting('app_config');
-    if (!configStr) {
-      return '';
-    }
-    const appConfig = JSON.parse(configStr);
-    if (!appConfig.embedding) {
-      return '';
-    }
-
-    initializeEmbedding(appConfig.embedding);
-    const embedder = getEmbeddingProvider();
-    const queryEmbedding = await embedder.embed(query);
-    const results = await vectorDBService.searchByVector(queryEmbedding, 5);
-
-    if (results.length > 0) {
-      logger.info(`[Deep] Found ${results.length} documents`);
-      return results.map((doc, i) => `[참고 문서 ${i + 1}]\n${doc.content}`).join('\n\n');
-    }
-  } catch (error) {
-    console.error('[Deep] RAG retrieval failed:', error);
-  }
-  return '';
-}
-
-/**
  * 0단계: 정보 수집 (Research)
  */
+const researchNodeBase = createResearchNode<DeepThinkingState>('Deep');
 async function researchNode(state: DeepThinkingState) {
-  logger.info('[Deep] Step 0: Researching...');
-  emitStreamingChunk('\n\n## 🔎 0단계: 정보 수집 (Research)\n\n', state.conversationId);
-
-  // RAG 검색
-  const query = state.messages[state.messages.length - 1].content;
-  const ragContext = await retrieveContextIfEnabled(query);
-
-  let gatheredInfo = ragContext ? `[RAG 검색 결과]\n${ragContext}\n\n` : '';
-
-  // 도구 사용 루프 (최대 5회)
-  let currentMessages = [...state.messages];
-
-  // 시스템 메시지: 정보 수집가 페르소나
-  const researchSystemMsg: Message = {
-    id: 'system-research',
-    role: 'system',
-    content: `당신은 사용자의 질문에 대해 심층 분석을 하기 전, 필요한 배경 지식과 최신 정보를 수집하는 연구원입니다.
-주어진 도구(검색 등)를 활용하여 필요한 정보를 수집하세요.
-이미 충분한 정보가 있거나 도구가 없다면 즉시 종료하세요.
-최대 3회의 기회가 있습니다.`,
-    created_at: Date.now(),
-  };
-
-  currentMessages = [researchSystemMsg, ...currentMessages];
-
-  for (let i = 0; i < 3; i++) {
-    // Generate (도구 사용 결정)
-    const genResult = await generateWithToolsNode({
-      ...state,
-      messages: currentMessages,
-      context: '',
-      toolCalls: [],
-      toolResults: [],
-      generatedImages: [],
-      planningNotes: {},
-    });
-    const responseMsg = genResult.messages?.[0];
-
-    if (!responseMsg) {
-      break;
-    }
-
-    currentMessages.push(responseMsg);
-
-    if (!responseMsg.tool_calls || responseMsg.tool_calls.length === 0) {
-      break;
-    }
-
-    // Tools Execute
-    const toolNames = responseMsg.tool_calls.map((tc) => tc.name).join(', ');
-    emitStreamingChunk(`\n🛠️ **정보 수집 중:** ${toolNames}...\n`, state.conversationId);
-
-    const toolResult = await toolsNode({
-      ...state,
-      messages: currentMessages,
-      planningNotes: {},
-      context: '',
-      toolCalls: [],
-      generatedImages: [],
-      toolResults: [],
-    });
-
-    // 결과 메시지 생성
-    const toolMessages = (toolResult.toolResults || []).map((res) => ({
-      role: 'tool' as const,
-      tool_call_id: res.toolCallId,
-      name: res.toolName,
-      content: res.result || res.error || '',
-      id: `tool-${res.toolCallId}`,
-      created_at: Date.now(),
-    }));
-
-    currentMessages.push(...toolMessages);
-
-    // 수집된 정보 누적
-    gatheredInfo += `[도구 실행 결과: ${toolNames}]\n${toolMessages.map((m) => m.content).join('\n')}\n\n`;
-
-    emitStreamingChunk(`✅ **수집 완료**\n`, state.conversationId);
-  }
-
-  logger.info('[Deep] Research complete');
-
+  const result = await researchNodeBase(state);
+  // DeepThinkingState는 researchContext를 사용
   return {
-    researchContext: gatheredInfo,
+    researchContext: result.context || '',
   };
 }
 

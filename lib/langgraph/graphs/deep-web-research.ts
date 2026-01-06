@@ -2,126 +2,16 @@ import { StateGraph, END } from '@langchain/langgraph';
 import { AgentStateAnnotation, AgentState } from '../state';
 import { toolsNode } from '../nodes/tools';
 import type { Message } from '@/types';
-import { emitStreamingChunk, getCurrentGraphConfig } from '@/lib/llm/streaming-callback';
+import { emitStreamingChunk } from '@/lib/llm/streaming-callback';
 import { LLMService } from '@/lib/llm/service';
-
+import {
+  getUserLanguage,
+  getLanguageInstruction,
+  getFollowUpLanguageInstruction,
+} from '../utils/language-utils';
+import { retrieveContextIfEnabled } from '../utils/rag-utils';
 import { logger } from '@/lib/utils/logger';
-import type { SupportedLanguage } from '@/lib/i18n';
 const MAX_ITERATIONS = 3;
-
-/**
- * 사용자 언어 설정 가져오기
- */
-async function getUserLanguage(): Promise<SupportedLanguage> {
-  try {
-    // Main Process에서만 동작
-    if (typeof window !== 'undefined') {
-      // Renderer 프로세스에서는 localStorage에서 가져오기
-      try {
-        const saved = localStorage.getItem('sepilot_language');
-        if (saved && ['ko', 'en', 'zh'].includes(saved)) {
-          return saved as SupportedLanguage;
-        }
-      } catch {
-        // localStorage 접근 실패 시 기본값
-      }
-      return 'ko';
-    }
-
-    const { databaseService } = await import('../../../electron/services/database');
-    const configStr = databaseService.getSetting('app_config');
-    if (!configStr) {
-      return 'ko';
-    }
-
-    const appConfig = JSON.parse(configStr);
-    if (appConfig?.general?.language && ['ko', 'en', 'zh'].includes(appConfig.general.language)) {
-      return appConfig.general.language as SupportedLanguage;
-    }
-  } catch (error) {
-    logger.error('[DeepWebResearch] Failed to get user language:', error);
-  }
-  return 'ko';
-}
-
-/**
- * 언어에 따른 답변 언어 지시 메시지 생성
- */
-function getLanguageInstruction(language: SupportedLanguage): string {
-  switch (language) {
-    case 'ko':
-      return '반드시 한국어로 답변하세요.';
-    case 'en':
-      return 'Please respond in English.';
-    case 'zh':
-      return '请用中文回答。';
-    default:
-      return '반드시 한국어로 답변하세요.';
-  }
-}
-
-/**
- * 언어에 따른 후속 질문 언어 지시 메시지 생성
- */
-function getFollowUpLanguageInstruction(language: SupportedLanguage): string {
-  switch (language) {
-    case 'ko':
-      return '한국어로';
-    case 'en':
-      return 'in English';
-    case 'zh':
-      return '用中文';
-    default:
-      return '한국어로';
-  }
-}
-
-// RAG 헬퍼 함수
-async function retrieveContextIfEnabled(query: string): Promise<string> {
-  const config = getCurrentGraphConfig();
-  if (!config?.enableRAG) {
-    return '';
-  }
-
-  try {
-    if (typeof window !== 'undefined') {
-      return '';
-    }
-
-    logger.info('[DeepWebResearch] RAG enabled, retrieving documents...');
-    const { vectorDBService } = await import('../../../electron/services/vectordb');
-    const { databaseService } = await import('../../../electron/services/database');
-    const { initializeEmbedding, getEmbeddingProvider } =
-      await import('@/lib/vectordb/embeddings/client');
-
-    const configStr = databaseService.getSetting('app_config');
-    if (!configStr) {
-      return '';
-    }
-    const appConfig = JSON.parse(configStr);
-    if (!appConfig.embedding) {
-      return '';
-    }
-
-    initializeEmbedding(appConfig.embedding);
-    const embedder = getEmbeddingProvider();
-    const queryEmbedding = await embedder.embed(query);
-    const results = await vectorDBService.searchByVector(queryEmbedding, 5);
-
-    if (results.length > 0) {
-      logger.info(`[DeepWebResearch] Found ${results.length} documents`);
-      return results
-        .map(
-          (doc, i) => `[참고 문서 ${i + 1}]
-${doc.content}`
-        )
-        .join('\n\n');
-    }
-  } catch (error) {
-    console.error('[DeepWebResearch] RAG retrieval failed:', error);
-  }
-  return '';
-}
 
 /**
  * 1단계: 검색 계획 수립 (Plan Node)
@@ -154,7 +44,7 @@ async function planNode(state: AgentState): Promise<Partial<AgentState>> {
   // RAG Context (첫 턴에만 수행)
   let ragContext = '';
   if (isFirstStep) {
-    ragContext = await retrieveContextIfEnabled(query);
+    ragContext = await retrieveContextIfEnabled(query, 'DeepWebResearch');
   }
 
   logger.info(`[DeepWebResearch] Planning Step (Iter ${iteration + 1}, Actual: ${iteration})`);
