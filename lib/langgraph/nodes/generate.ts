@@ -58,6 +58,34 @@ async function getLLMConfigFromDB(): Promise<{ maxTokens: number; temperature: n
     return null;
   }
 }
+
+/**
+ * LLM 옵션 객체 생성 헬퍼 함수
+ * DB에서 설정을 가져와 LLMService에 전달할 옵션 객체를 생성합니다.
+ */
+async function buildLLMOptions(context: string): Promise<any> {
+  const llmConfig = await getLLMConfigFromDB();
+  const llmOptions: any = {};
+
+  if (llmConfig) {
+    // maxTokens가 명시적으로 설정되어 있으면 전달 (0도 유효한 값)
+    if (llmConfig.maxTokens !== undefined && llmConfig.maxTokens !== null) {
+      llmOptions.maxTokens = llmConfig.maxTokens;
+    }
+    if (llmConfig.temperature !== undefined && llmConfig.temperature !== null) {
+      llmOptions.temperature = llmConfig.temperature;
+    }
+    logger.info(`[${context}] Using LLM config from DB:`, {
+      maxTokens: llmOptions.maxTokens,
+      temperature: llmOptions.temperature,
+      rawMaxTokens: llmConfig.maxTokens,
+    });
+  } else {
+    logger.warn(`[${context}] Could not get LLM config from DB, maxTokens may not be set`);
+  }
+
+  return llmOptions;
+}
 let cachedTools: any[] | null = null;
 let lastCacheTime = 0;
 const TOOLS_CACHE_TTL = 10000; // 10 seconds
@@ -84,24 +112,7 @@ export async function* generateNode(state: ChatState): AsyncGenerator<Partial<Ch
     let accumulatedContent = '';
 
     // Main Process에서 현재 LLM 설정 가져오기 (maxTokens, temperature)
-    const llmConfig = await getLLMConfigFromDB();
-    const llmOptions: any = {};
-    if (llmConfig) {
-      // maxTokens가 명시적으로 설정되어 있으면 전달 (0도 유효한 값)
-      if (llmConfig.maxTokens !== undefined && llmConfig.maxTokens !== null) {
-        llmOptions.maxTokens = llmConfig.maxTokens;
-      }
-      if (llmConfig.temperature !== undefined && llmConfig.temperature !== null) {
-        llmOptions.temperature = llmConfig.temperature;
-      }
-      logger.info('[generateNode] Using LLM config from DB:', {
-        maxTokens: llmOptions.maxTokens,
-        temperature: llmOptions.temperature,
-        rawMaxTokens: llmConfig.maxTokens,
-      });
-    } else {
-      logger.warn('[generateNode] Could not get LLM config from DB, maxTokens may not be set');
-    }
+    const llmOptions = await buildLLMOptions('generateNode');
 
     // Get conversationId for streaming
     const conversationId = getCurrentConversationId();
@@ -204,25 +215,7 @@ export async function* generateWithContextNode(state: RAGState): AsyncGenerator<
     let accumulatedContent = '';
 
     // Main Process에서 현재 LLM 설정 가져오기 (maxTokens, temperature)
-    const llmConfig = await getLLMConfigFromDB();
-    const llmOptions: any = {};
-    if (llmConfig) {
-      // maxTokens가 명시적으로 설정되어 있으면 전달 (0도 유효한 값)
-      if (llmConfig.maxTokens !== undefined && llmConfig.maxTokens !== null) {
-        llmOptions.maxTokens = llmConfig.maxTokens;
-      }
-      if (llmConfig.temperature !== undefined && llmConfig.temperature !== null) {
-        llmOptions.temperature = llmConfig.temperature;
-      }
-      logger.info('[generateWithContextNode] Using LLM config from DB:', {
-        maxTokens: llmOptions.maxTokens,
-        temperature: llmOptions.temperature,
-      });
-    } else {
-      logger.warn(
-        '[generateWithContextNode] Could not get LLM config from DB, maxTokens may not be set'
-      );
-    }
+    const llmOptions = await buildLLMOptions('generateWithContextNode');
 
     // Get conversationId for streaming
     const conversationId = getCurrentConversationId();
