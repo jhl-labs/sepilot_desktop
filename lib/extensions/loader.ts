@@ -143,6 +143,7 @@ async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
       PresentationSourceSidebar,
       PresentationHeaderActions,
       PresentationSettings,
+      PresentationSettingsTab,
       createPresentationSlice,
     } = presentationModule;
 
@@ -151,7 +152,8 @@ async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
       MainComponent: PresentationStudio,
       SidebarComponent: PresentationSourceSidebar,
       HeaderActionsComponent: PresentationHeaderActions,
-      SettingsComponent: PresentationSettings,
+      SettingsComponent: PresentationSettings, // Beta Settings용 (deprecated)
+      SettingsTabComponent: PresentationSettingsTab, // 독립 Settings 탭
       createStoreSlice: createPresentationSlice,
     });
 

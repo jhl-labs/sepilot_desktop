@@ -26,6 +26,12 @@ export const manifest: ExtensionManifest = {
   ipcChannels: {
     handlers: ['presentation:export'],
   },
+  settingsTab: {
+    id: 'presentation',
+    label: 'settings.presentation.title',
+    description: 'settings.presentation.description',
+    icon: 'Presentation',
+  },
   settingsSchema: {
     webSearchEnabled: {
       type: 'boolean',

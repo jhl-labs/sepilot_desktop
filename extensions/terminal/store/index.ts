@@ -14,6 +14,11 @@ import {
   clearTerminalHistory,
   createAutoSaveDebouncer,
 } from './storage';
+import {
+  indexTerminalBlock,
+  deleteTerminalBlockFromVectorDB,
+  clearAllTerminalBlocksFromVectorDB,
+} from './vectordb';
 
 // 자동 저장 디바운서 (1초 후 저장)
 const autoSave = createAutoSaveDebouncer(1000);
@@ -84,6 +89,11 @@ export function createTerminalSlice(
         // 자동 저장
         autoSave(limitedBlocks);
 
+        // VectorDB 인덱싱 (백그라운드)
+        indexTerminalBlock(newBlock).catch(() => {
+          // VectorDB 인덱싱 실패는 무시 (블록 생성은 계속)
+        });
+
         return {
           terminalBlocks: limitedBlocks,
           activeBlockId: id,
@@ -102,6 +112,14 @@ export function createTerminalSlice(
         // 자동 저장
         autoSave(updatedBlocks);
 
+        // VectorDB 재인덱싱 (백그라운드)
+        const updatedBlock = updatedBlocks.find((block) => block.id === id);
+        if (updatedBlock) {
+          indexTerminalBlock(updatedBlock).catch(() => {
+            // VectorDB 재인덱싱 실패는 무시
+          });
+        }
+
         return {
           terminalBlocks: updatedBlocks,
         };
@@ -116,6 +134,11 @@ export function createTerminalSlice(
         // 자동 저장
         autoSave(blocks);
 
+        // VectorDB에서 삭제 (백그라운드)
+        deleteTerminalBlockFromVectorDB(id).catch(() => {
+          // VectorDB 삭제 실패는 무시
+        });
+
         return {
           terminalBlocks: blocks,
           activeBlockId: activeId,
@@ -126,6 +149,11 @@ export function createTerminalSlice(
     clearTerminalBlocks: () => {
       // 스토리지 완전 삭제
       clearTerminalHistory();
+
+      // VectorDB에서 모든 터미널 블록 삭제 (백그라운드)
+      clearAllTerminalBlocksFromVectorDB().catch(() => {
+        // VectorDB 삭제 실패는 무시
+      });
 
       set({
         terminalBlocks: [],

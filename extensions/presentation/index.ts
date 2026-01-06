@@ -34,6 +34,7 @@ export {
   PresentationStudio,
   PresentationHeaderActions,
   PresentationSettings,
+  PresentationSettingsTab,
   SlidePreview,
   SlideRenderer,
   SlideMasterPreview,
