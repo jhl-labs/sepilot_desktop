@@ -1700,8 +1700,8 @@ export class BrowserAgentGraph {
           fallbackState.unchangedCount = 0;
         }
 
-        // 페이지 변화 없음 → 스크롤 재시도 (한 번만)
-        if (fallbackState.scrollRecoveryUsed && fallbackState.unchangedCount >= 1) {
+        // 페이지 변화 없음 → 스크롤 재시도 (한 번만, 아직 실행하지 않았을 때)
+        if (!fallbackState.scrollRecoveryUsed && fallbackState.unchangedCount >= 1) {
           const scrollMessage: Message = {
             id: `scroll-recovery-${Date.now()}`,
             role: 'assistant',
