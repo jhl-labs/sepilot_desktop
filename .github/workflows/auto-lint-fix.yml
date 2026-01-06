@@ -140,6 +140,9 @@ jobs:
       - name: Create fix branch and commit
         if: steps.eslint_fix.outputs.fixed_files == 'true'
         id: create_branch
+        env:
+          ERROR_COUNT: ${{ steps.lint_check.outputs.error_count }}
+          WARNING_COUNT: ${{ steps.lint_check.outputs.warning_count }}
         run: |
           # 브랜치 이름 생성
           BRANCH_NAME="auto-lint-fix/$(date +%Y%m%d-%H%M%S)"
@@ -149,17 +152,21 @@ jobs:
           git checkout -b "$BRANCH_NAME"
 
           # 변경사항 커밋
+          cat > /tmp/commit_msg.txt << 'COMMIT_MSG'
+          fix: ESLint 자동 수정 적용
+
+          자동으로 수정 가능한 Lint 문제를 해결했습니다.
+
+          COMMIT_MSG
+          echo "- 수정 전 에러: ${ERROR_COUNT}개" >> /tmp/commit_msg.txt
+          echo "- 수정 전 경고: ${WARNING_COUNT}개" >> /tmp/commit_msg.txt
+          echo "" >> /tmp/commit_msg.txt
+          echo "🤖 자동 생성된 커밋입니다." >> /tmp/commit_msg.txt
+          echo "" >> /tmp/commit_msg.txt
+          echo "[skip ci]" >> /tmp/commit_msg.txt
+
           git add -A
-          git commit -m "fix: ESLint 자동 수정 적용
-
-자동으로 수정 가능한 Lint 문제를 해결했습니다.
-
-- 수정 전 에러: ${{ steps.lint_check.outputs.error_count }}개
-- 수정 전 경고: ${{ steps.lint_check.outputs.warning_count }}개
-
-🤖 자동 생성된 커밋입니다.
-
-[skip ci]" || echo "No changes to commit"
+          git commit -F /tmp/commit_msg.txt || echo "No changes to commit"
 
           # 푸시
           git push origin "$BRANCH_NAME"
@@ -190,8 +197,8 @@ jobs:
 
             const body = `# 🔧 자동 Lint 수정
 
-**실행 일시:** ${new Date().toISOString()}
-**워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})
+            **실행 일시:** ${new Date().toISOString()}
+            **워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})
 
 ---
 

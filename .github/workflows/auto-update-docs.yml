@@ -261,6 +261,8 @@ jobs:
       - name: Create update branch and commit
         if: steps.check_updates.outputs.has_updates == 'true'
         id: create_branch
+        env:
+          RECENT_COMMITS: ${{ steps.analyze_changes.outputs.RECENT_COMMITS }}
         run: |
           # 브랜치 이름 생성
           BRANCH_NAME="auto-docs-update/$(date +%Y%m%d-%H%M)"
@@ -270,18 +272,22 @@ jobs:
           git checkout -b "$BRANCH_NAME"
 
           # 변경사항 커밋
+          cat > /tmp/commit_msg.txt << 'COMMIT_MSG'
+          docs: 개발자 문서 자동 업데이트
+
+          최근 코드 변경사항을 반영하여 docs/dev.html을 업데이트했습니다.
+
+          - 분석 기간: 최근 1시간
+          COMMIT_MSG
+          echo "- 변경 커밋: ${RECENT_COMMITS}개" >> /tmp/commit_msg.txt
+          echo "- 업데이트 로그: docs-update-log.md 참조" >> /tmp/commit_msg.txt
+          echo "" >> /tmp/commit_msg.txt
+          echo "🤖 자동 생성된 커밋입니다." >> /tmp/commit_msg.txt
+          echo "" >> /tmp/commit_msg.txt
+          echo "[skip ci]" >> /tmp/commit_msg.txt
+
           git add docs/dev.html docs-update-log.md
-          git commit -m "docs: 개발자 문서 자동 업데이트
-
-최근 코드 변경사항을 반영하여 docs/dev.html을 업데이트했습니다.
-
-- 분석 기간: 최근 1시간
-- 변경 커밋: ${{ steps.analyze_changes.outputs.RECENT_COMMITS }}개
-- 업데이트 로그: docs-update-log.md 참조
-
-🤖 자동 생성된 커밋입니다.
-
-[skip ci]" || echo "No changes to commit"
+          git commit -F /tmp/commit_msg.txt || echo "No changes to commit"
 
           # 푸시
           git push origin "$BRANCH_NAME"

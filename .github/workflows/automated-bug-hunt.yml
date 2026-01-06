@@ -362,18 +362,22 @@ jobs:
           git checkout -b "$BRANCH_NAME"
 
           # 변경사항 커밋
+          cat > /tmp/commit_msg.txt << 'COMMIT_MSG'
+          fix: 자동 버그 수정 적용
+
+          자동 버그 탐색 워크플로우에서 발견한 버그를 수정했습니다.
+
+          - 버그 탐색 보고서: bug-hunt-report.md 참조
+          - 수정 내역: bug-fixes-applied.md 참조
+
+          ⚠️ 이 PR은 AI가 자동으로 생성했습니다.
+          코드 리뷰를 통해 수정 내용을 검증한 후 머지해주세요.
+
+          [skip ci]
+          COMMIT_MSG
+
           git add -A
-          git commit -m "fix: 자동 버그 수정 적용
-
-자동 버그 탐색 워크플로우에서 발견한 버그를 수정했습니다.
-
-- 버그 탐색 보고서: bug-hunt-report.md 참조
-- 수정 내역: bug-fixes-applied.md 참조
-
-⚠️ 이 PR은 AI가 자동으로 생성했습니다.
-코드 리뷰를 통해 수정 내용을 검증한 후 머지해주세요.
-
-[skip ci]" || echo "No changes to commit"
+          git commit -F /tmp/commit_msg.txt || echo "No changes to commit"
 
           # 푸시
           git push origin "$BRANCH_NAME"
