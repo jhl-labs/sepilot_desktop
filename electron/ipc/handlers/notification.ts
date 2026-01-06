@@ -3,8 +3,12 @@
  * 시스템 알림 표시 및 클릭 처리
  */
 
-import { ipcMain, Notification, BrowserWindow } from 'electron';
+import { ipcMain, Notification, BrowserWindow, app } from 'electron';
+import path from 'path';
 import { logger } from '../../services/logger';
+
+const isDev = process.env.NODE_ENV === 'development';
+const isWindows = process.platform === 'win32';
 
 let getMainWindowFunc: () => BrowserWindow | null;
 
@@ -29,10 +33,25 @@ export function setupNotificationHandlers(getMainWindow: () => BrowserWindow | n
       try {
         logger.info(`[Notification] Showing notification for conversation: ${conversationId}`);
 
+        // Get icon path (same as main window icon)
+        let iconPath: string;
+        if (isDev) {
+          // Development: use icon from assets directory
+          iconPath = isWindows
+            ? path.join(app.getAppPath(), 'assets', 'icon.ico')
+            : path.join(app.getAppPath(), 'assets', 'icon.png');
+        } else {
+          // Production: use packaged icon
+          iconPath = isWindows
+            ? path.join(process.resourcesPath, 'assets', 'icon.ico')
+            : path.join(process.resourcesPath, 'assets', 'icon.png');
+        }
+
         // Create notification
         const notification = new Notification({
           title,
           body,
+          icon: iconPath,
           silent: false, // Play sound
           urgency: 'normal' as const,
         });
