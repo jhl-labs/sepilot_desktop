@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { isElectron } from '@/lib/platform';
-import { Folder, X } from 'lucide-react';
+import { Folder, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 import { useTranslation } from 'react-i18next';
@@ -48,6 +48,32 @@ export function WorkingDirectoryIndicator() {
     }
     return `.../${segments.slice(-2).join('/')}`;
   };
+
+  // Show warning if no working directory in coding mode
+  if (thinkingMode === 'coding' && !workingDirectory) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-2 border-t border-orange-500/50 bg-orange-500/10">
+        <div className="flex items-center gap-2 text-xs">
+          <AlertCircle className="h-4 w-4 text-orange-600 flex-shrink-0" />
+          <span className="font-medium text-orange-700 dark:text-orange-400">
+            {t('chat.workingDirectory.warning') ||
+              'Warning: Working directory not set. File operations will fail.'}
+          </span>
+          <Button
+            variant="default"
+            size="sm"
+            className="h-6 px-3 text-xs ml-auto bg-orange-600 hover:bg-orange-700 text-white"
+            onClick={handleSelectDirectory}
+            disabled={isSelecting}
+          >
+            {isSelecting
+              ? t('chat.workingDirectory.selecting')
+              : t('chat.workingDirectory.selectNow') || 'Set Working Directory'}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-1 border-t border-border/50">

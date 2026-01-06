@@ -261,6 +261,25 @@ export function getCodingAgentSystemPrompt(workingDirectory?: string): string {
 - **Working Directory**: ${workingDirectory}
   - All file operations must be relative to this path or use this absolute path.
   - You are RESTRICTED to this directory. Do not try to access files outside (e.g. ../).`);
+  } else {
+    parts.push('');
+    parts.push(`## ⚠️ CRITICAL: No Working Directory Set
+
+**IMPORTANT**: The user has NOT set a working directory.
+
+**What This Means**:
+- File operations (file_read, file_write, file_edit, file_list) will FAIL
+- Command execution (command_execute) will FAIL
+- Search operations (grep_search) will FAIL
+
+**What You Should Do**:
+1. Immediately inform the user that working directory is not set
+2. Ask them to select a working directory before proceeding
+3. DO NOT attempt any file or command operations
+4. Explain that they need to click "Set Working Directory" in Coding mode
+
+**Example Response**:
+"I need a working directory to be set before I can help with file operations. Please click 'Set Working Directory' at the bottom of the chat to select your project folder, then I'll be able to read and modify files."`);
   }
 
   return parts.join('\n');
