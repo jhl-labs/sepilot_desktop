@@ -11,6 +11,8 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { isElectron } from '@/lib/platform';
 import { getWebLLMClient } from '@/lib/llm/web-client';
 import type { Message, ImageAttachment } from '@/types';
+import { generateId } from '@/lib/utils/id-generator';
+import { getVisualizationInstructions } from '@/lib/langgraph/utils/system-message';
 
 interface StreamingOptions {
   conversationId: string;
@@ -79,14 +81,20 @@ export function useMessageStreaming() {
         );
 
         // Prepare messages for LLM (include history)
+        // 시각화 지침을 페르소나 시스템 프롬프트에 추가
+        const visualizationInstructions = getVisualizationInstructions();
+        const enhancedPersonaPrompt = personaSystemPrompt
+          ? `${personaSystemPrompt}\n\n${visualizationInstructions}`
+          : null;
+
         const allMessages = [
-          // Add persona system prompt (if no Quick Question system message)
-          ...(!systemMessage && personaSystemPrompt
+          // Add persona system prompt with visualization instructions (if no Quick Question system message)
+          ...(!systemMessage && enhancedPersonaPrompt
             ? [
                 {
                   id: 'system-persona',
                   role: 'system' as const,
-                  content: personaSystemPrompt,
+                  content: enhancedPersonaPrompt,
                   created_at: Date.now(),
                 },
               ]
@@ -276,8 +284,18 @@ export function useMessageStreaming() {
               }
 
               if (nodeStatusMessage) {
-                accumulatedContent = `${accumulatedContent || ''}\n\n${nodeStatusMessage}`;
-                scheduleUpdate({ content: accumulatedContent });
+                // For 'generate' status without tool use, only show if we don't have content yet
+                // This prevents "AI is generating..." from appearing after the text has started streaming
+                if (
+                  event.node === 'generate' &&
+                  !nodeStatusMessage.includes('tool') &&
+                  accumulatedContent.trim()
+                ) {
+                  // Skip
+                } else {
+                  accumulatedContent = `${accumulatedContent || ''}\n\n${nodeStatusMessage}`;
+                  scheduleUpdate({ content: accumulatedContent });
+                }
               }
             }
 
@@ -398,7 +416,7 @@ export function useMessageStreaming() {
 
                       if (resultData.imageBase64) {
                         generatedImages.push({
-                          id: `generated-${Date.now()}-${Math.random()}`,
+                          id: generateId('generated'),
                           path: '',
                           filename: `Generated: ${resultData.prompt?.substring(0, 30) || 'image'}...`,
                           mimeType: 'image/png',
@@ -408,7 +426,7 @@ export function useMessageStreaming() {
                         for (const imgData of resultData.images) {
                           if (imgData.imageBase64) {
                             generatedImages.push({
-                              id: `generated-${Date.now()}-${Math.random()}`,
+                              id: generateId('generated'),
                               path: '',
                               filename: `Generated #${imgData.index + 1}: ${resultData.prompt?.substring(0, 30) || 'image'}...`,
                               mimeType: 'image/png',

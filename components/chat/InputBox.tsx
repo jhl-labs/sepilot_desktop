@@ -48,6 +48,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 import { useLanguage } from '@/components/providers/i18n-provider';
 import { useTranslation } from 'react-i18next';
+import { getVisualizationInstructions } from '@/lib/langgraph/utils/system-message';
 
 export function InputBox() {
   const { language } = useLanguage();
@@ -109,10 +110,12 @@ export function InputBox() {
   const conversationPersonaId = currentConversation?.personaId;
   const effectivePersonaId = conversationPersonaId || activePersonaId;
   const activePersona = personas.find((p) => p.id === effectivePersonaId);
-  const personaSystemPrompt = activePersona?.systemPrompt || null;
 
-  // Builtin persona의 번역된 이름, 설명을 가져오는 헬퍼 함수
-  const getPersonaDisplayText = (persona: Persona, field: 'name' | 'description') => {
+  // Builtin persona의 번역된 텍스트를 가져오는 헬퍼 함수
+  const getPersonaDisplayText = (
+    persona: Persona,
+    field: 'name' | 'description' | 'systemPrompt'
+  ) => {
     if (persona.isBuiltin) {
       const translationKey = `persona.builtin.${persona.id}.${field}`;
       const translated = t(translationKey);
@@ -121,6 +124,11 @@ export function InputBox() {
     }
     return persona[field];
   };
+
+  // Get translated systemPrompt for builtin personas
+  const personaSystemPrompt = activePersona
+    ? getPersonaDisplayText(activePersona, 'systemPrompt')
+    : null;
 
   // Detect slash command for persona switching
   const personaCommand = input.match(/^\/persona\s+(.*)$/);
@@ -684,14 +692,20 @@ export function InputBox() {
       );
 
       // Prepare messages for LLM (include history)
+      // 시각화 지침을 페르소나 시스템 프롬프트에 추가
+      const visualizationInstructions = getVisualizationInstructions();
+      const enhancedPersonaPrompt = personaSystemPrompt
+        ? `${personaSystemPrompt}\n\n${visualizationInstructions}`
+        : null;
+
       const allMessages = [
-        // Add persona system prompt (if no Quick Question system message)
-        ...(!systemMessage && personaSystemPrompt
+        // Add persona system prompt with visualization instructions (if no Quick Question system message)
+        ...(!systemMessage && enhancedPersonaPrompt
           ? [
               {
                 id: 'system-persona',
                 role: 'system' as const,
-                content: personaSystemPrompt,
+                content: enhancedPersonaPrompt,
                 created_at: Date.now(),
               },
             ]

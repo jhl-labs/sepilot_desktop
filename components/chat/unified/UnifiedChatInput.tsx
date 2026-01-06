@@ -46,6 +46,7 @@ import { ImageGenerationProgressBar } from '../ImageGenerationProgressBar';
 import { useChatStore } from '@/lib/store/chat-store';
 import { isElectron } from '@/lib/platform';
 import type { ImageAttachment } from '@/types';
+import type { Persona } from '@/types/persona';
 import type { ChatConfig } from './types';
 
 interface ToolInfo {
@@ -146,9 +147,24 @@ export function UnifiedChatInput({
   // Local state
   const [personaAutocompleteIndex, setPersonaAutocompleteIndex] = useState(0);
   const [tools, _setTools] = useState<ToolInfo[]>([]);
+  const [toolsLoading, setToolsLoading] = useState(true);
+  const [toolsError, setToolsError] = useState<string | null>(null);
   const [imageGenConfig, setImageGenConfig] = useState<any>(null);
   const { selectedImageGenProvider, setSelectedImageGenProvider } = useChatStore();
   const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  // Helper function for getting translated persona text (for builtin personas)
+  const getPersonaDisplayText = useCallback(
+    (persona: Persona, field: 'name' | 'description'): string => {
+      if (persona.isBuiltin) {
+        const translationKey = `persona.builtin.${persona.id}.${field}`;
+        const translated = t(translationKey);
+        return translated !== translationKey ? translated : persona[field];
+      }
+      return persona[field];
+    },
+    [t]
+  );
 
   // Width-based responsive layout
   useEffect(() => {
@@ -210,10 +226,13 @@ export function UnifiedChatInput({
   // Load tools from IPC (all modes, but filtered by mode and thinkingMode)
   useEffect(() => {
     if (!isElectron() || !window.electronAPI?.mcp) {
+      setToolsLoading(false);
       return;
     }
 
     const loadTools = async () => {
+      setToolsLoading(true);
+      setToolsError(null);
       try {
         const response = await window.electronAPI.mcp.getAllTools();
         if (response.success && response.data) {
@@ -263,9 +282,15 @@ export function UnifiedChatInput({
           }
 
           _setTools(filteredTools);
+          setToolsError(null);
+        } else {
+          setToolsError(response.error || 'Failed to load tools');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('[UnifiedChatInput] Failed to load tools:', error);
+        setToolsError(error.message || 'Failed to load tools');
+      } finally {
+        setToolsLoading(false);
       }
     };
 
@@ -430,11 +455,14 @@ export function UnifiedChatInput({
         return;
       }
 
-      const filteredPersonas = personas.filter(
-        (p) =>
-          p.name.toLowerCase().includes(personaCommand[1].toLowerCase()) ||
-          p.description.toLowerCase().includes(personaCommand[1].toLowerCase())
-      );
+      const filteredPersonas = personas.filter((p) => {
+        const name = getPersonaDisplayText(p, 'name');
+        const description = getPersonaDisplayText(p, 'description');
+        const searchTerm = personaCommand[1].toLowerCase();
+        return (
+          name.toLowerCase().includes(searchTerm) || description.toLowerCase().includes(searchTerm)
+        );
+      });
 
       if (filteredPersonas.length === 0) {
         return;
@@ -836,44 +864,66 @@ export function UnifiedChatInput({
                 </div>
 
                 {/* Individual tool toggles */}
-                {tools.map((tool) => {
-                  const isEnabled = enabledTools.has(tool.name);
-                  return (
-                    <button
-                      key={tool.name}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleTool(tool.name);
-                        if (!enableTools && !isEnabled) {
-                          setEnableTools(true);
-                        }
-                      }}
-                      className="w-full px-2 py-2 flex items-start gap-2 hover:bg-accent cursor-pointer text-left"
-                    >
-                      <div className="mt-0.5 shrink-0">
-                        {isEnabled ? (
-                          <div className="h-4 w-4 rounded-sm border-2 border-primary bg-primary flex items-center justify-center">
-                            <Check className="h-3 w-3 text-primary-foreground" />
-                          </div>
-                        ) : (
-                          <div className="h-4 w-4 rounded-sm border-2 border-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{tool.name}</div>
-                        <div className="text-xs text-muted-foreground line-clamp-2">
-                          {tool.description}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-
-                {tools.length === 0 && (
+                {toolsLoading ? (
                   <div className="px-2 py-4 text-center text-xs text-muted-foreground">
                     {t('unifiedInput.tools.loading')}
                   </div>
+                ) : toolsError ? (
+                  <div className="px-2 py-4 space-y-2">
+                    <div className="text-center text-xs text-destructive font-medium">
+                      {t('unifiedInput.tools.error', { error: toolsError })}
+                    </div>
+                    {mode === 'main' && (
+                      <div className="text-center text-[10px] text-muted-foreground">
+                        {t('unifiedInput.tools.errorHint')}
+                      </div>
+                    )}
+                  </div>
+                ) : tools.length === 0 ? (
+                  <div className="px-2 py-4 space-y-2">
+                    <div className="text-center text-xs text-muted-foreground">
+                      {t('unifiedInput.tools.noTools')}
+                    </div>
+                    {mode === 'main' && (
+                      <div className="text-center text-[10px] text-muted-foreground">
+                        {t('unifiedInput.tools.noToolsHint')}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  tools.map((tool) => {
+                    const isEnabled = enabledTools.has(tool.name);
+                    return (
+                      <button
+                        key={tool.name}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleTool(tool.name);
+                          if (!enableTools && !isEnabled) {
+                            setEnableTools(true);
+                          }
+                        }}
+                        className="w-full px-2 py-2 flex items-start gap-2 hover:bg-accent cursor-pointer text-left"
+                      >
+                        <div className="mt-0.5 shrink-0">
+                          {isEnabled ? (
+                            <div className="h-4 w-4 rounded-sm border-2 border-primary bg-primary flex items-center justify-center">
+                              <Check className="h-3 w-3 text-primary-foreground" />
+                            </div>
+                          ) : (
+                            <div className="h-4 w-4 rounded-sm border-2 border-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{tool.name}</div>
+                          <div className="text-xs text-muted-foreground line-clamp-2">
+                            {tool.description}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
                 )}
               </DropdownMenuContent>
             </DropdownMenu>

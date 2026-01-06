@@ -7,6 +7,8 @@
 import { useState, useCallback } from 'react';
 import { isTextFile } from '@/lib/utils';
 import type { ImageAttachment } from '@/types';
+import { generateImageId } from '@/lib/utils/id-generator';
+import { fileToDataUrl } from '@/lib/utils/file-utils';
 
 export function useFileUpload() {
   const [isDragging, setIsDragging] = useState(false);
@@ -34,18 +36,14 @@ export function useFileUpload() {
         // Handle image files
         else if (file.type.startsWith('image/')) {
           try {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              const base64 = event.target?.result as string;
-              imageFiles.push({
-                id: `drop-${Date.now()}-${Math.random()}`,
-                path: '',
-                filename: file.name,
-                mimeType: file.type,
-                base64,
-              });
-            };
-            reader.readAsDataURL(file);
+            const base64 = await fileToDataUrl(file);
+            imageFiles.push({
+              id: generateImageId('file'),
+              path: '',
+              filename: file.name,
+              mimeType: file.type,
+              base64,
+            });
           } catch (error) {
             console.error(`Failed to read image ${file.name}:`, error);
           }

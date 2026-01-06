@@ -7,6 +7,8 @@
 import { useState, useCallback } from 'react';
 import { isElectron } from '@/lib/platform';
 import type { ImageAttachment } from '@/types';
+import { generateImageId } from '@/lib/utils/id-generator';
+import { fileToDataUrl } from '@/lib/utils/file-utils';
 
 export function useImageUpload() {
   const [selectedImages, setSelectedImages] = useState<ImageAttachment[]>([]);
@@ -65,22 +67,15 @@ export function useImageUpload() {
     // Convert images to base64
     for (const file of imageFiles) {
       try {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const base64 = event.target?.result as string;
-          const newImage: ImageAttachment = {
-            id: `clipboard-${Date.now()}-${Math.random()}`,
-            path: '',
-            filename: file.name || `clipboard-image-${Date.now()}.${file.type.split('/')[1]}`,
-            mimeType: file.type,
-            base64,
-          };
-          setSelectedImages((prev) => [...prev, newImage]);
+        const base64 = await fileToDataUrl(file);
+        const newImage: ImageAttachment = {
+          id: generateImageId('clipboard'),
+          path: '',
+          filename: file.name || `clipboard-image-${Date.now()}.${file.type.split('/')[1]}`,
+          mimeType: file.type,
+          base64,
         };
-        reader.onerror = () => {
-          setError('클립보드 이미지를 읽는 중 오류가 발생했습니다');
-        };
-        reader.readAsDataURL(file);
+        setSelectedImages((prev) => [...prev, newImage]);
       } catch (error: any) {
         console.error('Failed to read clipboard image:', error);
         setError(error.message || '클립보드 이미지를 처리하는 중 오류가 발생했습니다');
@@ -89,22 +84,18 @@ export function useImageUpload() {
   }, []);
 
   // Handle file drop (images)
-  const handleImageDrop = useCallback((imageFiles: File[]) => {
+  const handleImageDrop = useCallback(async (imageFiles: File[]) => {
     for (const file of imageFiles) {
       try {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const base64 = event.target?.result as string;
-          const newImage: ImageAttachment = {
-            id: `drop-${Date.now()}-${Math.random()}`,
-            path: '',
-            filename: file.name,
-            mimeType: file.type,
-            base64,
-          };
-          setSelectedImages((prev) => [...prev, newImage]);
+        const base64 = await fileToDataUrl(file);
+        const newImage: ImageAttachment = {
+          id: generateImageId('file'),
+          path: '',
+          filename: file.name,
+          mimeType: file.type,
+          base64,
         };
-        reader.readAsDataURL(file);
+        setSelectedImages((prev) => [...prev, newImage]);
       } catch (error) {
         console.error(`Failed to read image ${file.name}:`, error);
       }

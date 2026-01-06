@@ -90,6 +90,27 @@ export function ChatContainer() {
     activePersona,
   };
 
+  // Get translated systemPrompt for builtin personas
+  const getPersonaSystemPrompt = useCallback(
+    (persona: typeof activePersona): string | null => {
+      if (!persona) {
+        return null;
+      }
+
+      // For builtin personas, use translation if available
+      if (persona.isBuiltin) {
+        const translationKey = `persona.builtin.${persona.id}.systemPrompt`;
+        const translated = t(translationKey);
+        // If translation exists (key !== value), use it; otherwise fallback to original
+        return translated !== translationKey ? translated : persona.systemPrompt;
+      }
+
+      // For custom personas, use the stored systemPrompt directly
+      return persona.systemPrompt;
+    },
+    [t]
+  );
+
   // Handle send message
   const handleSendMessage = useCallback(
     async (userMessage: string, images?: ImageAttachment[]) => {
@@ -97,8 +118,8 @@ export function ChatContainer() {
         return;
       }
 
-      // Get persona system prompt
-      const personaSystemPrompt = activePersona?.systemPrompt || null;
+      // Get persona system prompt (translated for builtin personas)
+      const personaSystemPrompt = getPersonaSystemPrompt(activePersona);
 
       // Execute streaming
       await executeStreaming({
@@ -109,7 +130,7 @@ export function ChatContainer() {
         personaSystemPrompt,
       });
     },
-    [activeConversationId, activePersona, executeStreaming]
+    [activeConversationId, activePersona, executeStreaming, getPersonaSystemPrompt]
   );
 
   // Handle stop streaming

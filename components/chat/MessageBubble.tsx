@@ -4,6 +4,7 @@ import { Message, FileChange } from '@/types';
 import { Persona } from '@/types/persona';
 import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/utils/clipboard';
+import { useTranslation } from 'react-i18next';
 import {
   User,
   Bot,
@@ -47,8 +48,24 @@ export function MessageBubble({
   isStreaming = false,
   activePersona = null,
 }: MessageBubbleProps) {
+  const { t } = useTranslation();
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
+
+  // Get translated persona name for builtin personas
+  const getPersonaDisplayName = (persona: Persona | null): string => {
+    if (!persona) {
+      return t('chat.assistant', 'Assistant');
+    }
+
+    if (persona.isBuiltin) {
+      const translationKey = `persona.builtin.${persona.id}.name`;
+      const translated = t(translationKey);
+      return translated !== translationKey ? translated : persona.name;
+    }
+
+    return persona.name;
+  };
 
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
@@ -221,7 +238,7 @@ export function MessageBubble({
               isUser ? 'text-blue-700 dark:text-blue-400' : 'text-left'
             )}
           >
-            {isUser ? 'You' : activePersona?.name || 'Assistant'}
+            {isUser ? t('chat.you', 'You') : getPersonaDisplayName(activePersona)}
           </span>
         </div>
         <div className="prose prose-sm dark:prose-invert max-w-none">

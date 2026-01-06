@@ -7,8 +7,12 @@
  * Main Chat, Browser Chat, Editor Chat 모두에서 사용
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+
+// Chat width setting
+const CHAT_WIDTH_KEY = 'sepilot_chat_message_width';
+const DEFAULT_CHAT_WIDTH = 896; // max-w-4xl = 56rem = 896px
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageSquare, Bug, Copy, Check, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -48,6 +52,42 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
   // 메시지별 복사 상태 및 hover 상태
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+
+  // Chat width state with localStorage persistence (only for main mode)
+  const [chatWidth, setChatWidth] = useState<number>(DEFAULT_CHAT_WIDTH);
+
+  // Load chat width from localStorage on mount and listen for changes
+  useEffect(() => {
+    if (mode !== 'main' || style?.compact) {
+      return;
+    }
+
+    const loadChatWidth = () => {
+      const savedWidth = localStorage.getItem(CHAT_WIDTH_KEY);
+      if (savedWidth) {
+        const width = parseInt(savedWidth, 10);
+        if (!isNaN(width) && width >= 640 && width <= 1536) {
+          setChatWidth(width);
+        }
+      }
+    };
+
+    loadChatWidth();
+
+    // Listen for chat width changes from settings
+    const handleChatWidthChange = (event: CustomEvent<number>) => {
+      setChatWidth(event.detail);
+    };
+
+    window.addEventListener('sepilot:chat-width-change', handleChatWidthChange as EventListener);
+
+    return () => {
+      window.removeEventListener(
+        'sepilot:chat-width-change',
+        handleChatWidthChange as EventListener
+      );
+    };
+  }, [mode, style?.compact]);
 
   // 대화 리포트 전송 핸들러
   const handleSendReport = async (issue: string, additionalInfo?: string) => {
@@ -201,8 +241,11 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
 
       <ScrollArea ref={scrollRef} className="flex-1 overflow-y-auto">
         <div
-          className={`${style?.compact ? 'px-2 py-1.5 space-y-2' : 'mx-auto max-w-4xl'}`}
-          style={{ fontSize: baseFontSize }}
+          className={`${style?.compact ? 'px-2 py-1.5 space-y-2' : 'mx-auto'}`}
+          style={{
+            fontSize: baseFontSize,
+            maxWidth: style?.compact ? undefined : `${chatWidth}px`,
+          }}
         >
           {messages.map((message, index) => {
             const isLastAssistantMessage =

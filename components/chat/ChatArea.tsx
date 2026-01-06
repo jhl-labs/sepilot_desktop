@@ -37,6 +37,10 @@ const FONT_SCALE_OPTIONS = [
   '200',
 ];
 
+// Chat width setting
+const CHAT_WIDTH_KEY = 'sepilot_chat_message_width';
+const DEFAULT_CHAT_WIDTH = 896; // max-w-4xl = 56rem = 896px
+
 export function ChatArea() {
   const { t } = useTranslation();
   const {
@@ -158,12 +162,44 @@ export function ChatArea() {
   // Font scale state with localStorage persistence
   const [fontScale, setFontScale] = useState<string>(DEFAULT_FONT_SCALE);
 
+  // Chat width state with localStorage persistence
+  const [chatWidth, setChatWidth] = useState<number>(DEFAULT_CHAT_WIDTH);
+
   // Load font scale from localStorage on mount
   useEffect(() => {
     const savedScale = localStorage.getItem(FONT_SCALE_KEY);
     if (savedScale && FONT_SCALE_OPTIONS.includes(savedScale)) {
       setFontScale(savedScale);
     }
+  }, []);
+
+  // Load chat width from localStorage on mount and listen for changes
+  useEffect(() => {
+    const loadChatWidth = () => {
+      const savedWidth = localStorage.getItem(CHAT_WIDTH_KEY);
+      if (savedWidth) {
+        const width = parseInt(savedWidth, 10);
+        if (!isNaN(width) && width >= 640 && width <= 1536) {
+          setChatWidth(width);
+        }
+      }
+    };
+
+    loadChatWidth();
+
+    // Listen for chat width changes from settings
+    const handleChatWidthChange = (event: CustomEvent<number>) => {
+      setChatWidth(event.detail);
+    };
+
+    window.addEventListener('sepilot:chat-width-change', handleChatWidthChange as EventListener);
+
+    return () => {
+      window.removeEventListener(
+        'sepilot:chat-width-change',
+        handleChatWidthChange as EventListener
+      );
+    };
   }, []);
 
   // Handle font scale change
@@ -564,8 +600,11 @@ export function ChatArea() {
           </div>
         ) : (
           <div
-            className="mx-auto max-w-4xl"
-            style={{ fontSize: `${parseInt(fontScale) / 100}rem` }}
+            className="mx-auto"
+            style={{
+              fontSize: `${parseInt(fontScale) / 100}rem`,
+              maxWidth: `${chatWidth}px`,
+            }}
           >
             {messages.map((message, index) => {
               // Determine if this is the last assistant message
