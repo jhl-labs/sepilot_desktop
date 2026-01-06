@@ -7,6 +7,9 @@ import { KeyboardShortcutInput } from '@/components/ui/keyboard-shortcut-input';
 import { QuickInputConfig, QuickQuestion } from '@/types';
 import { Plus, Trash2, Zap } from 'lucide-react';
 import { SettingsSectionHeader } from './SettingsSectionHeader';
+import DOMPurify from 'dompurify';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 interface QuickInputSettingsTabProps {
   config: QuickInputConfig;
@@ -15,8 +18,6 @@ interface QuickInputSettingsTabProps {
   isSaving: boolean;
   message: { type: 'success' | 'error'; text: string } | null;
 }
-
-import { useTranslation } from 'react-i18next';
 
 export function QuickInputSettingsTab({
   config,
@@ -50,7 +51,7 @@ export function QuickInputSettingsTab({
 
   const handleAddQuestion = () => {
     if (config.quickQuestions.length >= 5) {
-      window.alert(t('settings.quickinput.validation.maxQuestionsReached'));
+      toast.warning(t('settings.quickinput.validation.maxQuestionsReached'));
       return;
     }
 
@@ -132,20 +133,20 @@ export function QuickInputSettingsTab({
             <br />
             <span
               dangerouslySetInnerHTML={{
-                __html: t('settings.quickinput.questions.descriptionPrompt'),
+                __html: DOMPurify.sanitize(t('settings.quickinput.questions.descriptionPrompt')),
               }}
             />
             <br />
             <span
               dangerouslySetInnerHTML={{
-                __html: t('settings.quickinput.questions.descriptionClipboard'),
+                __html: DOMPurify.sanitize(t('settings.quickinput.questions.descriptionClipboard')),
               }}
             />
             <br />
             <br />
             <span
               dangerouslySetInnerHTML={{
-                __html: t('settings.quickinput.questions.descriptionExample'),
+                __html: DOMPurify.sanitize(t('settings.quickinput.questions.descriptionExample')),
               }}
             />
           </p>

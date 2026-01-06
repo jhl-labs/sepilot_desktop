@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,7 +73,7 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
 
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.systemPrompt.trim()) {
-      window.alert(t('personaDialog.errors.requiredFields'));
+      toast.warning(t('personaDialog.errors.requiredFields'));
       return;
     }
 
@@ -86,7 +87,7 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
       setEditingId(null);
       setFormData({ name: '', description: '', systemPrompt: '', avatar: '🤖' });
     } catch (error: any) {
-      window.alert(error.message || t('personaDialog.errors.saveFailed'));
+      toast.error(error.message || t('personaDialog.errors.saveFailed'));
     }
   };
 
@@ -95,7 +96,7 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
       try {
         await deletePersona(id);
       } catch (error: any) {
-        window.alert(error.message || t('personaDialog.errors.deleteFailed'));
+        toast.error(error.message || t('personaDialog.errors.deleteFailed'));
       }
     }
   };

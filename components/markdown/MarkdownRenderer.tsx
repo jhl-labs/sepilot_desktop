@@ -6,7 +6,7 @@ import { CodeBlock } from './CodeBlock';
 import { MermaidDiagram } from './MermaidDiagram';
 import { PlotlyChart } from './PlotlyChart';
 import { cn } from '@/lib/utils';
-
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { logger } from '@/lib/utils/logger';
 interface MarkdownRendererProps {
   content: string;
@@ -85,7 +85,11 @@ function CustomPreComponent({
           // During streaming, show as code block to avoid incomplete diagram parse errors
           return <CodeBlock language={language} code={codeText} />;
         }
-        return <MermaidDiagram chart={codeText} />;
+        return (
+          <ErrorBoundary fallback={<CodeBlock language="mermaid" code={codeText} />}>
+            <MermaidDiagram chart={codeText} />
+          </ErrorBoundary>
+        );
       }
 
       // Handle plotly charts - but not during streaming to avoid parse errors
@@ -94,7 +98,11 @@ function CustomPreComponent({
           // During streaming, show as code block to avoid incomplete JSON parse errors
           return <CodeBlock language="json" code={codeText} />;
         }
-        return <PlotlyChart data={codeText} />;
+        return (
+          <ErrorBoundary fallback={<CodeBlock language="json" code={codeText} />}>
+            <PlotlyChart data={codeText} />
+          </ErrorBoundary>
+        );
       }
 
       // Handle json blocks - check if they are plotly charts
@@ -104,7 +112,11 @@ function CustomPreComponent({
         }
         // Try to detect if this JSON is a Plotly figure
         if (isLikelyPlotlyJSON(codeText)) {
-          return <PlotlyChart data={codeText} />;
+          return (
+            <ErrorBoundary fallback={<CodeBlock language="json" code={codeText} />}>
+              <PlotlyChart data={codeText} />
+            </ErrorBoundary>
+          );
         }
         return <CodeBlock language="json" code={codeText} />;
       }

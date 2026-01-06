@@ -9,6 +9,8 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { logger } from '@/lib/utils/logger';
 
 // Chat width setting
 const CHAT_WIDTH_KEY = 'sepilot_chat_message_width';
@@ -104,14 +106,14 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
       });
 
       if (result.success) {
-        console.error('[ConversationReport] Report sent successfully:', result.data?.issueUrl);
+        logger.info('[ConversationReport] Report sent successfully:', result.data?.issueUrl);
         setShowReportDialog(false);
       } else {
         throw new Error(result.error || '리포트 전송 실패');
       }
     } catch (error) {
-      console.error('[ConversationReport] Failed to send report:', error);
-      window.alert(
+      logger.error('[ConversationReport] Failed to send report:', error);
+      toast.error(
         `리포트 전송 실패: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`
       );
     }
@@ -138,7 +140,7 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
   const handleReportClick = async () => {
     const enabled = await isErrorReportingEnabled();
     if (!enabled) {
-      window.alert(
+      toast.warning(
         '에러 리포팅 비활성화됨. Settings > System > GitHub Sync에서 에러 리포팅을 활성화해주세요.'
       );
       return;
@@ -159,7 +161,7 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
   // Document로 저장 핸들러
   const handleSaveAsDocument = async (content: string) => {
     if (typeof window === 'undefined' || !window.electronAPI) {
-      window.alert('Document 저장은 Electron 환경에서만 사용 가능합니다.');
+      toast.warning('Document 저장은 Electron 환경에서만 사용 가능합니다.');
       return;
     }
 
@@ -173,13 +175,13 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
       });
 
       if (result?.success) {
-        window.alert('메시지가 Document로 저장되었습니다.');
+        toast.success('메시지가 Document로 저장되었습니다.');
       } else {
-        window.alert(`Document 저장 실패: ${result?.error || '알 수 없는 오류'}`);
+        toast.error(`Document 저장 실패: ${result?.error || '알 수 없는 오류'}`);
       }
     } catch (error) {
-      console.error('[UnifiedChatArea] Failed to save as document:', error);
-      window.alert('Document 저장 중 오류가 발생했습니다.');
+      logger.error('[UnifiedChatArea] Failed to save as document:', error);
+      toast.error('Document 저장 중 오류가 발생했습니다.');
     }
   };
 

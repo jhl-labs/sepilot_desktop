@@ -12,6 +12,7 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { UnifiedChatArea } from '@/components/chat/unified/UnifiedChatArea';
 import { UnifiedChatInput } from '@/components/chat/unified/UnifiedChatInput';
 import { AgentLogsPlugin } from '@/components/chat/unified/plugins/AgentLogsPlugin';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import type { ChatConfig } from '@/components/chat/unified/types';
 import { isElectron } from '@/lib/platform';
 import { getWebLLMClient } from '@/lib/llm/web-client';
@@ -339,7 +340,9 @@ export function BrowserChatContainer() {
     <div className="flex h-full flex-col">
       {/* Chat Area (Compact) with Agent Logs */}
       <div className="flex-1 overflow-y-auto">
-        <UnifiedChatArea config={chatConfig} />
+        <ErrorBoundary>
+          <UnifiedChatArea config={chatConfig} />
+        </ErrorBoundary>
 
         {/* Agent Logs (at the bottom of chat area) */}
         {browserAgentLogs.length > 0 && (

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { nanoid } from 'nanoid';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,7 +53,7 @@ export function ConnectionManager({
 
     // Validate baseURL format
     if (!baseURL.match(/^https?:\/\/.+/)) {
-      window.alert(t('settings.llm.connections.validation.url'));
+      toast.warning(t('settings.llm.connections.validation.url'));
       return;
     }
 
@@ -95,7 +96,7 @@ export function ConnectionManager({
 
     // Validate baseURL format
     if (!baseURL.match(/^https?:\/\/.+/)) {
-      window.alert(t('settings.llm.connections.validation.url'));
+      toast.warning(t('settings.llm.connections.validation.url'));
       return;
     }
 

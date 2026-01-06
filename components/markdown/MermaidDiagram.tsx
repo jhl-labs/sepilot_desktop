@@ -8,6 +8,7 @@ import { Check, Copy, Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { isElectron } from '@/lib/platform';
 import { copyToClipboard } from '@/lib/utils/clipboard';
+import { logger } from '@/lib/utils/logger';
 
 interface MermaidDiagramProps {
   chart: string;
@@ -84,7 +85,7 @@ ${brokenChart}`;
         }
       }
     } catch (err) {
-      console.error('[MermaidDiagram] Failed to convert to text:', err);
+      logger.error('[MermaidDiagram] Failed to convert to text:', err);
       // Fallback to showing code if conversion fails
       setTextDiagram(brokenChart);
     } finally {
@@ -170,7 +171,7 @@ Corrected Mermaid code:`;
           }
         }
       } catch (err) {
-        console.error('[MermaidDiagram] Failed to fix syntax:', err);
+        logger.error('[MermaidDiagram] Failed to fix syntax:', err);
       }
       return null;
     },
@@ -221,7 +222,7 @@ Corrected Mermaid code:`;
           }
         }
       } catch (err) {
-        console.error(`[MermaidDiagram] Attempt ${currentAttempt} error:`, err);
+        logger.error(`[MermaidDiagram] Attempt ${currentAttempt} error:`, err);
         setRetryCount(currentAttempt);
         setFixHistory((prev) => [
           ...prev,
@@ -292,7 +293,7 @@ Corrected Mermaid code:`;
         }
       } catch (err) {
         const error = err as Error;
-        console.error(`[MermaidDiagram] Rendering error (attempt ${retryCount + 1}):`, err);
+        logger.error(`[MermaidDiagram] Rendering error (attempt ${retryCount + 1}):`, err);
         const errorMsg = error.message || 'Failed to render diagram';
         setError(errorMsg);
 

@@ -12,6 +12,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { UnifiedChatArea } from '@/components/chat/unified/UnifiedChatArea';
 import { UnifiedChatInput } from '@/components/chat/unified/UnifiedChatInput';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import type { ChatConfig } from '@/components/chat/unified/types';
 import { isElectron } from '@/lib/platform';
 import { getWebLLMClient } from '@/lib/llm/web-client';
@@ -437,7 +438,9 @@ Answer the user's request based on the provided code context.`;
   return (
     <div className="flex h-full flex-col">
       {/* Chat Area (Compact) */}
-      <UnifiedChatArea config={chatConfig} />
+      <ErrorBoundary>
+        <UnifiedChatArea config={chatConfig} />
+      </ErrorBoundary>
 
       {/* Unified Chat Input */}
       <UnifiedChatInput

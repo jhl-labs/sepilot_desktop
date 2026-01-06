@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './MessageBubble';
 import { useChatStore } from '@/lib/store/chat-store';
@@ -143,7 +144,7 @@ export function ChatArea() {
 
     // Show error notification for failed files
     if (failedFiles.length > 0) {
-      window.alert(`다음 파일을 읽을 수 없습니다:\n${failedFiles.join('\n')}`);
+      toast.error(`다음 파일을 읽을 수 없습니다:\n${failedFiles.join('\n')}`);
     }
 
     // Dispatch custom event to InputBox

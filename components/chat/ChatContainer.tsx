@@ -16,6 +16,8 @@ import { useMessageStreaming } from './unified/hooks/useMessageStreaming';
 import { useToolApproval } from './unified/hooks/useToolApproval';
 import { useConfigLoader } from './unified/hooks/useConfigLoader';
 import { isElectron } from '@/lib/platform';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { logger } from '@/lib/utils/logger';
 import type { ChatConfig } from './unified/types';
 import type { ImageAttachment } from '@/types';
 
@@ -145,7 +147,7 @@ export function ChatContainer() {
       try {
         await window.electronAPI.langgraph.abort(activeConversationId);
       } catch (error) {
-        console.error('[ChatContainer] Failed to abort stream:', error);
+        logger.error('[ChatContainer] Failed to abort stream:', error);
       }
       window.electronAPI.langgraph.removeAllStreamListeners();
     }
@@ -215,7 +217,9 @@ export function ChatContainer() {
   return (
     <div className="flex h-full flex-col">
       {/* Chat Area */}
-      <UnifiedChatArea config={chatConfig} onEdit={handleEdit} onRegenerate={handleRegenerate} />
+      <ErrorBoundary>
+        <UnifiedChatArea config={chatConfig} onEdit={handleEdit} onRegenerate={handleRegenerate} />
+      </ErrorBoundary>
 
       {/* Unified Chat Input */}
       <UnifiedChatInput

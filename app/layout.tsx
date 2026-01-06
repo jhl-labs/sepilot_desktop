@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 import { ThemePersistenceProvider } from '@/components/providers/theme-persistence-provider';
 import { I18nProvider } from '@/components/providers/i18n-provider';
 import { ExtensionProvider } from '@/components/providers/extension-provider';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: 'SEPilot Desktop',
@@ -36,6 +37,7 @@ export default function RootLayout({
             <I18nProvider>
               <ExtensionProvider>{children}</ExtensionProvider>
             </I18nProvider>
+            <Toaster richColors position="top-right" />
           </ThemePersistenceProvider>
         </ThemeProvider>
       </body>
