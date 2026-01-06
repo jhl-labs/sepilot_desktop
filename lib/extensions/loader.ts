@@ -163,11 +163,14 @@ async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
   // Terminal Extension
   try {
     const terminalModule = await import('@/extensions/terminal');
-    const { manifest, createTerminalSlice } = terminalModule;
+    const { manifest, createTerminalSlice, TerminalPanel, SidebarTerminal, TerminalSettings } =
+      terminalModule;
 
     extensions.push({
       manifest,
-      // MainComponent, SidebarComponent, SettingsTabComponent는 Phase 3에서 추가 예정
+      MainComponent: TerminalPanel,
+      SidebarComponent: SidebarTerminal,
+      SettingsTabComponent: TerminalSettings,
       createStoreSlice: createTerminalSlice,
     });
 

@@ -967,6 +967,7 @@ interface ElectronAPI {
   notification: NotificationAPI;
   on: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => void;
+  invoke: <T = any>(channel: string, ...args: any[]) => Promise<T>;
 }
 
 declare global {

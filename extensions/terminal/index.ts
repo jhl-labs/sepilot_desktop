@@ -18,13 +18,12 @@ export * from './types';
 export { createTerminalSlice, initialTerminalState } from './store';
 
 // Components (lazy-loaded for better performance)
-// NOTE: 컴포넌트들은 아직 구현하지 않았으므로 나중에 추가할 예정
-// export { TerminalPanel } from './components/TerminalPanel';
-// export { TerminalBlock } from './components/TerminalBlock';
-// export { AICommandInput } from './components/AICommandInput';
-// export { BlockHistoryPanel } from './components/BlockHistoryPanel';
-// export { SidebarTerminal } from './components/SidebarTerminal';
-// export { TerminalSettings } from './components/TerminalSettings';
+export { TerminalPanel } from './components/TerminalPanel';
+export { TerminalBlock } from './components/TerminalBlock';
+export { AICommandInput } from './components/AICommandInput';
+export { BlockHistoryPanel } from './components/BlockHistoryPanel';
+export { SidebarTerminal } from './components/SidebarTerminal';
+export { TerminalSettings } from './components/TerminalSettings';
 
 // NOTE: Agents and Tools are NOT exported here to avoid bundling server-only code in client.
 // They should be imported directly in server-side code:
