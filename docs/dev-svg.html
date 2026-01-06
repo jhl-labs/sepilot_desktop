@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEPilot Desktop - 개발자 아키텍처 문서</title>
+    <style>
+      :root {
+        --primary: #2563eb;
+        --secondary: #7c3aed;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --dark: #1e293b;
+        --light: #f8fafc;
+        --border: #e2e8f0;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+        line-height: 1.6;
+        color: var(--dark);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem 1rem;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: var(--light);
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        padding: 3rem 2rem;
+        text-align: center;
+      }
+
+      header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+      }
+
+      .content {
+        padding: 2rem;
+      }
+
+      .section {
+        margin-bottom: 4rem;
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      .section h2 {
+        font-size: 2rem;
+        color: var(--dark);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 3px solid var(--primary);
+      }
+
+      .section p {
+        color: #475569;
+        margin-bottom: 1rem;
+        line-height: 1.8;
+      }
+
+      .diagram-wrapper {
+        background: #fafafa;
+        border-radius: 8px;
+        padding: 2rem;
+        margin: 1.5rem 0;
+        border: 1px solid var(--border);
+        overflow-x: auto;
+      }
+
+      .diagram-wrapper img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+      }
+
+      footer {
+        background: var(--dark);
+        color: white;
+        text-align: center;
+        padding: 2rem;
+      }
+    </style>
+</head>
+<body>
+    <div class="container">
+      <header>
+        <h1>🚀 SEPilot Desktop</h1>
+        <p>개발자를 위한 아키텍처 & 설계 문서</p>
+      </header>
+
+      <div class="content">
+        <section class="section">
+          <h2>🏗️ 전체 시스템 아키텍처</h2>
+          <p>
+            SEPilot Desktop은 <strong>Electron</strong>과 <strong>Next.js</strong>를 기반으로 구축된 데스크톱 애플리케이션입니다.
+            Frontend는 React + Next.js로 UI를 렌더링하고, Backend는 Electron Main Process에서 파일 시스템, 데이터베이스, LLM API 등을 처리합니다.
+          </p>
+
+          <div class="diagram-wrapper">
+            <img src="diagrams/architecture.svg" alt="SEPilot Desktop Architecture" />
+          </div>
+
+          <div style="background: #eff6ff; border-left: 4px solid var(--primary); padding: 1rem 1.5rem; margin: 1rem 0; border-radius: 4px;">
+            <h4 style="color: var(--primary); margin-bottom: 0.5rem;">📌 핵심 특징</h4>
+            <ul style="margin-left: 1.5rem; color: #475569;">
+              <li><strong>Frontend:</strong> Next.js 14 (App Router), React 19, Tailwind CSS, shadcn/ui</li>
+              <li><strong>Backend:</strong> Electron 31, Node.js 18+, TypeScript 5.4</li>
+              <li><strong>통신:</strong> IPC (Inter-Process Communication) via Context Bridge</li>
+              <li><strong>데이터베이스:</strong> better-sqlite3 (Chat History), SQLite-vec (RAG)</li>
+              <li><strong>AI/ML:</strong> LangGraph, MCP (Model Context Protocol), OpenAI Compatible API</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>📝 다음 단계</h2>
+          <p>이 문서는 SVG 이미지 기반으로 작성되었습니다. 모든 다이어그램이 정상적으로 표시되는지 확인해주세요.</p>
+        </section>
+      </div>
+
+      <footer>
+        <p>&copy; 2024 SEPilot Desktop. All rights reserved.</p>
+        <p style="margin-top: 0.5rem; font-size: 0.9rem">
+          Built with <strong>Electron</strong>, <strong>Next.js</strong>, <strong>LangGraph</strong>, and <strong>MCP</strong>
+        </p>
+      </footer>
+    </div>
+</body>
+</html>
