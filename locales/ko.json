@@ -101,6 +101,13 @@
         "selectLanguage": "언어 선택",
         "restartRequired": "언어 변경 후 일부 변경사항을 적용하려면 앱을 재시작해야 할 수 있습니다."
       },
+      "chatWidth": {
+        "title": "채팅 메시지 너비",
+        "label": "최대 너비",
+        "description": "채팅 응답 메시지의 최대 너비를 조절합니다. 넓은 화면에서 더 넓은 너비로 설정하면 읽기 편해집니다.",
+        "preview": "미리보기",
+        "previewText": "이것은 채팅 메시지의 미리보기입니다. 슬라이더를 조절하여 원하는 너비를 설정해보세요."
+      },
       "saved": "일반 설정이 저장되었습니다!"
     },
     "llm": {
@@ -2103,7 +2110,11 @@
       "status": "{{active}}/{{total}} 활성화",
       "enableAll": "전체 활성화",
       "disableAll": "전체 비활성화",
-      "loading": "도구를 불러오는 중..."
+      "loading": "도구를 불러오는 중...",
+      "error": "도구 로드 오류: {{error}}",
+      "errorHint": "MCP 서버 설정을 확인하세요. 서버가 활성화되어 있고 올바르게 구성되어 있는지 확인하세요.",
+      "noTools": "사용 가능한 도구가 없습니다",
+      "noToolsHint": "설정에서 MCP 서버를 추가하여 도구를 활성화하세요. 서버가 활성화되어 있는지 확인하세요."
     },
     "imageGen": "이미지 생성",
     "fileDrop": {
@@ -2119,6 +2130,14 @@
     "actions": {
       "stop": "중지 (Esc)",
       "send": "전송 (Enter)"
+    },
+    "images": {
+      "label": "이미지 #{{number}}",
+      "remove": "이미지 제거"
+    },
+    "imageUpload": {
+      "tooltip": "이미지 첨부",
+      "ariaLabel": "이미지 첨부 버튼"
     }
   },
   "quickInput": {

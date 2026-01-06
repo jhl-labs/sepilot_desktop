@@ -101,6 +101,13 @@
         "selectLanguage": "Select Language",
         "restartRequired": "Some changes may require restarting the app to take effect."
       },
+      "chatWidth": {
+        "title": "Chat Message Width",
+        "label": "Maximum Width",
+        "description": "Adjust the maximum width of chat response messages. A wider setting may be more comfortable to read on larger screens.",
+        "preview": "Preview",
+        "previewText": "This is a preview of the chat message. Adjust the slider to set your preferred width."
+      },
       "saved": "General settings saved!"
     },
     "llm": {
@@ -2117,7 +2124,11 @@
       "status": "{{active}}/{{total}} enabled",
       "enableAll": "Enable all",
       "disableAll": "Disable all",
-      "loading": "Loading tools..."
+      "loading": "Loading tools...",
+      "error": "Error loading tools: {{error}}",
+      "errorHint": "Check MCP server settings. Ensure servers are enabled and configured correctly.",
+      "noTools": "No tools available",
+      "noToolsHint": "Add MCP servers in Settings to enable tools. Check if servers are enabled."
     },
     "imageGen": "Image Generation",
     "fileDrop": {
@@ -2133,6 +2144,14 @@
     "actions": {
       "stop": "Stop (Esc)",
       "send": "Send (Enter)"
+    },
+    "images": {
+      "label": "Image #{{number}}",
+      "remove": "Remove image"
+    },
+    "imageUpload": {
+      "tooltip": "Attach image",
+      "ariaLabel": "Attach image button"
     }
   },
   "quickInput": {

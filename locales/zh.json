@@ -95,6 +95,13 @@
         "selectLanguage": "选择语言",
         "restartRequired": "某些更改可能需要重启应用程序才能生效。"
       },
+      "chatWidth": {
+        "title": "聊天消息宽度",
+        "label": "最大宽度",
+        "description": "调整聊天回复消息的最大宽度。在较大的屏幕上，更宽的设置可能更易于阅读。",
+        "preview": "预览",
+        "previewText": "这是聊天消息的预览。调整滑块以设置您喜欢的宽度。"
+      },
       "saved": "通用设置已保存！"
     },
     "llm": {
@@ -2061,7 +2068,11 @@
       "status": "{{active}}/{{total}} 已启用",
       "enableAll": "全部启用",
       "disableAll": "全部禁用",
-      "loading": "加载工具中..."
+      "loading": "加载工具中...",
+      "error": "加载工具时出错：{{error}}",
+      "errorHint": "请检查 MCP 服务器设置。确保服务器已启用并正确配置。",
+      "noTools": "没有可用工具",
+      "noToolsHint": "在设置中添加 MCP 服务器以启用工具。检查服务器是否已启用。"
     },
     "imageGen": "图像生成",
     "fileDrop": {
@@ -2077,6 +2088,14 @@
     "actions": {
       "stop": "停止 (Esc)",
       "send": "发送 (Enter)"
+    },
+    "images": {
+      "label": "图片 #{{number}}",
+      "remove": "删除图片"
+    },
+    "imageUpload": {
+      "tooltip": "附加图片",
+      "ariaLabel": "附加图片按钮"
     }
   },
   "quickInput": {
