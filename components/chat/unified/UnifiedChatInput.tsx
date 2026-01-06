@@ -1071,7 +1071,7 @@ export function UnifiedChatInput({
             </div>
           )}
 
-        {/* Agent Progress Display (Editor/Browser modes) */}
+        {/* Agent Progress Display (Coding Agent, Editor Agent, Browser Agent) */}
         {agentProgress && (
           <div className="mb-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
             <div className="flex items-center justify-between gap-2">
