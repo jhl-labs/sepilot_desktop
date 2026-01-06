@@ -99,9 +99,19 @@ export default function Home() {
 
     // 알림 클릭 리스너
     const notificationCleanup = window.electronAPI.notification?.onClick(
-      (conversationId: string) => {
+      async (conversationId: string) => {
         logger.info(`[Home] Notification clicked, switching to conversation: ${conversationId}`);
-        useChatStore.getState().setActiveConversation(conversationId);
+        const store = useChatStore.getState();
+
+        // 1. Chat 모드로 전환
+        if (store.appMode !== 'chat') {
+          logger.info(`[Home] Switching to chat mode from ${store.appMode}`);
+          store.setAppMode('chat');
+        }
+
+        // 2. 해당 대화로 전환
+        await store.setActiveConversation(conversationId);
+        logger.info(`[Home] Switched to conversation: ${conversationId}`);
       }
     );
 

@@ -235,7 +235,9 @@ export class AdvancedEditorAgentGraph {
 
       // Context Management: Optimize messages if needed (100k tokens limit)
       try {
-        const optimized = AdvancedEditorAgentGraph.contextManager.optimizeMessages(state.messages);
+        const optimized = AdvancedEditorAgentGraph.contextManager.getOptimizedContext(
+          state.messages
+        );
         if (optimized.length < state.messages.length) {
           logger.info(
             `[AdvancedEditorAgent] Context optimized: ${state.messages.length} → ${optimized.length} messages`
@@ -972,10 +974,10 @@ export class AdvancedEditorAgentGraph {
             function: {
               name: mcpTool.name,
               description: mcpTool.description || `MCP tool: ${mcpTool.name}`,
-              parameters: mcpTool.inputSchema || {
+              parameters: (mcpTool.inputSchema || {
                 type: 'object',
                 properties: {},
-              },
+              }) as any,
             },
           });
         }
