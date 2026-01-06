@@ -77,9 +77,17 @@ lib/                    # 공유 라이브러리
 
 Claude Code가 자동으로 참조하는 프로젝트별 전문 지식:
 
+**기본 개발 패턴:**
+
 - **electron-ipc**: Electron IPC 통신 패턴 및 보안 가이드
 - **typescript-strict**: TypeScript strict mode 타입 작성 규칙
 - **react-shadcn**: React + shadcn/ui 컴포넌트 개발 패턴
+
+**AI/ML 통합:**
+
+- **langgraph-agent**: LangGraph 에이전트 구현 및 그래프 기반 워크플로우
+- **mcp-integration**: MCP (Model Context Protocol) 도구 통합 패턴
+- **rag-vector-search**: RAG 및 벡터 검색 구현 가이드
 
 Skills는 자동으로 적용되며, 별도로 호출할 필요 없음.
 
@@ -87,15 +95,26 @@ Skills는 자동으로 적용되며, 별도로 호출할 필요 없음.
 
 자주 사용하는 작업을 위한 커스텀 명령어:
 
+**코드 품질:**
+
 - `/review [파일경로]` - 코드 리뷰 (품질, 보안, 타입 안전성)
 - `/security` - 보안 취약점 검사 (커밋 전 필수)
+
+**개발 작업:**
+
 - `/feature [이름] [설명]` - 새 기능 설계 및 구현
-- `/debug [이슈설명]` - 버그 디버깅 및 수정
 - `/component [이름] [설명]` - React 컴포넌트 생성
+- `/debug [이슈설명]` - 버그 디버깅 및 수정
+
+**빌드 및 테스트:**
+
+- `/test [패턴]` - 테스트 실행 및 실패 수정
+- `/build` - 애플리케이션 빌드 및 에러 수정
+- `/commit` - 변경사항 검토 및 한국어 커밋 생성
 
 ### Subagents (전문 에이전트)
 
-복잡한 작업을 위한 전문화된 AI 에이전트:
+복잡한 작업을 위한 전문화된 AI 에이전트 (한국어 응답 지원):
 
 - **code-reviewer**: 코드 품질, 보안, 타입 안전성 검토
 - **architect**: 시스템 설계, 아키텍처 결정, 기능 설계
@@ -110,4 +129,10 @@ Skills는 자동으로 적용되며, 별도로 호출할 필요 없음.
 
 또는 슬래시 명령어 사용 시 자동 호출됨.
 
-- claude code와 같은 agent 작업 시 pre commit hook이 변경사항을 되돌리지 않게 disable 하던지 무시하게 해줘
+## Hooks 설정
+
+현재 모든 hooks는 비활성화 상태 (`disableAllHooks: true`):
+
+- pre-commit hook이 변경사항을 되돌리지 않도록 설정됨
+- Claude Code 작업 시 자유롭게 파일 수정 가능
+- 커밋 전 수동으로 lint/type-check 실행 권장
