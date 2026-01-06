@@ -236,18 +236,19 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
     try {
       // Terminal Agent 호출 (IPC)
-      // TODO: Phase 4에서 실제 Agent 연동 구현
-      if (window.electronAPI) {
+      if (window.electronAPI?.terminal) {
         // Electron: Terminal Agent 호출
-        const result = await window.electronAPI.invoke('terminal:ai-command', {
+        const result = await window.electronAPI.terminal.aiCommand(
           naturalInput,
-          currentCwd: currentCwd || workingDirectory,
-          recentBlocks: terminalBlocks.slice(-5),
-        });
+          currentCwd || workingDirectory,
+          terminalBlocks.slice(-5)
+        );
 
-        if (result.command) {
+        if (result.success && result.data?.command) {
           // Agent가 제안한 명령어 실행
-          await handleExecuteCommand(result.command, naturalInput);
+          await handleExecuteCommand(result.data.command, naturalInput);
+        } else if (!result.success) {
+          logger.error('[TerminalPanel] AI command failed:', result.error);
         }
       } else {
         // 웹 환경 - 시뮬레이션

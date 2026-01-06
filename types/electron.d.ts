@@ -915,6 +915,19 @@ interface TerminalAPI {
   resize: (sessionId: string, cols: number, rows: number) => Promise<IPCResponse>;
   killSession: (sessionId: string) => Promise<IPCResponse>;
   getSessions: () => Promise<IPCResponse<TerminalSession[]>>;
+  // Command execution
+  executeCommand: (
+    command: string,
+    cwd?: string,
+    timeout?: number
+  ) => Promise<IPCResponse<{ stdout: string; stderr: string; exitCode: number; duration: number }>>;
+  aiCommand: (
+    naturalInput: string,
+    currentCwd?: string,
+    recentBlocks?: any[]
+  ) => Promise<
+    IPCResponse<{ command?: string; output?: string; stderr?: string; exitCode?: number }>
+  >;
   // Event listeners
   onData: (
     callback: (data: { sessionId: string; data: string }) => void
