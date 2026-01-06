@@ -19,6 +19,26 @@ export function useConfigLoader() {
   const [imageGenAvailable, setImageGenAvailable] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // Helper function to apply ImageGen config
+  const applyImageGenConfig = (imgGenCfg: ImageGenConfig | null) => {
+    if (imgGenCfg) {
+      if (imgGenCfg.provider === 'comfyui' && imgGenCfg.comfyui) {
+        initializeComfyUIClient(imgGenCfg.comfyui);
+      }
+      setImageGenConfig(imgGenCfg);
+      let isAvailable = false;
+      if (imgGenCfg.provider === 'comfyui' && imgGenCfg.comfyui) {
+        isAvailable = imgGenCfg.comfyui.enabled && !!imgGenCfg.comfyui.httpUrl;
+      } else if (imgGenCfg.provider === 'nanobanana' && imgGenCfg.nanobanana) {
+        isAvailable = imgGenCfg.nanobanana.enabled && !!imgGenCfg.nanobanana.apiKey;
+      }
+      setImageGenAvailable(isAvailable);
+    } else {
+      setImageGenAvailable(false);
+      setImageGenConfig(null);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -59,25 +79,7 @@ export function useConfigLoader() {
               };
             }
 
-            if (imgGenCfg) {
-              // Initialize ComfyUI client if provider is comfyui
-              if (imgGenCfg.provider === 'comfyui' && imgGenCfg.comfyui) {
-                initializeComfyUIClient(imgGenCfg.comfyui);
-              }
-              // Store ImageGen config
-              setImageGenConfig(imgGenCfg);
-              // Check availability based on provider
-              let isAvailable = false;
-              if (imgGenCfg.provider === 'comfyui' && imgGenCfg.comfyui) {
-                isAvailable = imgGenCfg.comfyui.enabled && !!imgGenCfg.comfyui.httpUrl;
-              } else if (imgGenCfg.provider === 'nanobanana' && imgGenCfg.nanobanana) {
-                isAvailable = imgGenCfg.nanobanana.enabled && !!imgGenCfg.nanobanana.apiKey;
-              }
-              setImageGenAvailable(isAvailable);
-            } else {
-              setImageGenAvailable(false);
-              setImageGenConfig(null);
-            }
+            applyImageGenConfig(imgGenCfg);
           }
         } else {
           // Web: Load from localStorage
@@ -104,24 +106,7 @@ export function useConfigLoader() {
             };
           }
 
-          if (imgGenCfg) {
-            // Initialize ComfyUI client if provider is comfyui
-            if (imgGenCfg.provider === 'comfyui' && imgGenCfg.comfyui) {
-              initializeComfyUIClient(imgGenCfg.comfyui);
-            }
-            setImageGenConfig(imgGenCfg);
-            // Check availability based on provider
-            let isAvailable = false;
-            if (imgGenCfg.provider === 'comfyui' && imgGenCfg.comfyui) {
-              isAvailable = imgGenCfg.comfyui.enabled && !!imgGenCfg.comfyui.httpUrl;
-            } else if (imgGenCfg.provider === 'nanobanana' && imgGenCfg.nanobanana) {
-              isAvailable = imgGenCfg.nanobanana.enabled && !!imgGenCfg.nanobanana.apiKey;
-            }
-            setImageGenAvailable(isAvailable);
-          } else {
-            setImageGenAvailable(false);
-            setImageGenConfig(null);
-          }
+          applyImageGenConfig(imgGenCfg);
         }
       } catch (error) {
         console.error('Failed to load config:', error);
@@ -149,19 +134,7 @@ export function useConfigLoader() {
             };
           }
 
-          if (imgGenCfg) {
-            if (imgGenCfg.provider === 'comfyui' && imgGenCfg.comfyui) {
-              initializeComfyUIClient(imgGenCfg.comfyui);
-            }
-            setImageGenConfig(imgGenCfg);
-            let isAvailable = false;
-            if (imgGenCfg.provider === 'comfyui' && imgGenCfg.comfyui) {
-              isAvailable = imgGenCfg.comfyui.enabled && !!imgGenCfg.comfyui.httpUrl;
-            } else if (imgGenCfg.provider === 'nanobanana' && imgGenCfg.nanobanana) {
-              isAvailable = imgGenCfg.nanobanana.enabled && !!imgGenCfg.nanobanana.apiKey;
-            }
-            setImageGenAvailable(isAvailable);
-          }
+          applyImageGenConfig(imgGenCfg);
         } catch (error) {
           console.error('Failed to parse ImageGen config from storage:', error);
         }
@@ -194,19 +167,7 @@ export function useConfigLoader() {
         };
       }
 
-      if (imgGenCfg) {
-        if (imgGenCfg.provider === 'comfyui' && imgGenCfg.comfyui) {
-          initializeComfyUIClient(imgGenCfg.comfyui);
-        }
-        setImageGenConfig(imgGenCfg);
-        let isAvailable = false;
-        if (imgGenCfg.provider === 'comfyui' && imgGenCfg.comfyui) {
-          isAvailable = imgGenCfg.comfyui.enabled && !!imgGenCfg.comfyui.httpUrl;
-        } else if (imgGenCfg.provider === 'nanobanana' && imgGenCfg.nanobanana) {
-          isAvailable = imgGenCfg.nanobanana.enabled && !!imgGenCfg.nanobanana.apiKey;
-        }
-        setImageGenAvailable(isAvailable);
-      }
+      applyImageGenConfig(imgGenCfg);
     }) as EventListener;
 
     window.addEventListener('storage', handleStorageChange);
