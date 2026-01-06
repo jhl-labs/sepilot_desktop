@@ -1,0 +1,368 @@
+name: Code Health Monitor
+
+on:
+  schedule:
+    # 매일 오전 2시 (KST 11시)에 실행
+    - cron: '0 2 * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  health-check:
+    name: Daily Code Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 30
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Configure git to use HTTPS instead of SSH
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Collect code metrics
+        id: metrics
+        run: |
+          echo "## 📊 코드 건강 지표" > health-report.md
+          echo "" >> health-report.md
+          echo "**날짜:** $(date +%Y-%m-%d)" >> health-report.md
+          echo "" >> health-report.md
+
+          # 코드 라인 수 통계
+          echo "### 📝 코드 통계" >> health-report.md
+          echo "\`\`\`" >> health-report.md
+          cloc app components lib electron --json --out=cloc.json || true
+          if [ -f cloc.json ]; then
+            total_code=$(jq '.SUM.code' cloc.json || echo "0")
+            total_comments=$(jq '.SUM.comment' cloc.json || echo "0")
+            echo "총 코드 라인: $total_code" >> health-report.md
+            echo "총 주석 라인: $total_comments" >> health-report.md
+            echo "CODE_LINES=$total_code" >> $GITHUB_OUTPUT
+          fi
+          echo "\`\`\`" >> health-report.md
+          echo "" >> health-report.md
+
+          # Git 활동 통계
+          echo "### 🔄 최근 활동 (7일)" >> health-report.md
+          commits=$(git log --since="7 days ago" --oneline | wc -l)
+          authors=$(git log --since="7 days ago" --format='%an' | sort -u | wc -l)
+          echo "- 커밋 수: $commits" >> health-report.md
+          echo "- 기여자 수: $authors" >> health-report.md
+          echo "COMMITS_7D=$commits" >> $GITHUB_OUTPUT
+          echo "" >> health-report.md
+
+          # 파일 변경 빈도
+          echo "### 🔥 최근 변경이 잦은 파일 (Top 10)" >> health-report.md
+          echo "\`\`\`" >> health-report.md
+          git log --since="30 days ago" --name-only --pretty=format: | \
+            grep -E "\.(ts|tsx|js|jsx)$" | \
+            sort | uniq -c | sort -rn | head -10 >> health-report.md
+          echo "\`\`\`" >> health-report.md
+          echo "" >> health-report.md
+
+          # 큰 파일 찾기
+          echo "### 📦 큰 파일 (Top 10)" >> health-report.md
+          echo "\`\`\`" >> health-report.md
+          find app components lib electron -name "*.ts" -o -name "*.tsx" | \
+            xargs wc -l | sort -rn | head -10 >> health-report.md
+          echo "\`\`\`" >> health-report.md
+          echo "" >> health-report.md
+
+      - name: Run quick linting
+        id: lint_check
+        run: |
+          echo "### ⚠️ Lint 경고" >> health-report.md
+
+          # ESLint 실행
+          if pnpm run lint 2>&1 | tee lint-output.txt; then
+            echo "✅ Lint 에러 없음" >> health-report.md
+            echo "LINT_STATUS=pass" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Lint 에러 발견" >> health-report.md
+            grep -E "error|warning" lint-output.txt | head -20 >> health-report.md || true
+            echo "LINT_STATUS=fail" >> $GITHUB_OUTPUT
+          fi
+          echo "" >> health-report.md
+
+      - name: Check test coverage trend
+        id: coverage_check
+        run: |
+          echo "### 🧪 테스트 커버리지" >> health-report.md
+
+          # 프론트엔드 테스트 실행
+          if pnpm run test:coverage:frontend --silent 2>&1 | tee test-output.txt; then
+            if [ -f coverage/coverage-summary.json ]; then
+              coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+              echo "- 프론트엔드 커버리지: ${coverage}%" >> health-report.md
+              echo "COVERAGE=$coverage" >> $GITHUB_OUTPUT
+
+              # 커버리지가 70% 미만이면 경고
+              if (( $(echo "$coverage < 70" | bc -l) )); then
+                echo "⚠️ 커버리지가 70% 미만입니다" >> health-report.md
+                echo "COVERAGE_WARNING=true" >> $GITHUB_OUTPUT
+              fi
+            fi
+          fi
+          echo "" >> health-report.md
+
+      - name: Check for common anti-patterns
+        id: antipattern_check
+        run: |
+          echo "### 🚩 안티패턴 체크" >> health-report.md
+
+          # console.log 사용
+          console_count=$(grep -r "console\\.log" app components lib --include="*.ts" --include="*.tsx" | wc -l)
+          echo "- console.log 사용: $console_count개" >> health-report.md
+
+          # any 타입 사용
+          any_count=$(grep -r ": any" app components lib --include="*.ts" --include="*.tsx" | wc -l)
+          echo "- any 타입 사용: $any_count개" >> health-report.md
+
+          # TODO 주석
+          todo_count=$(grep -r "TODO\|FIXME" app components lib electron --include="*.ts" --include="*.tsx" | wc -l)
+          echo "- TODO/FIXME: $todo_count개" >> health-report.md
+
+          # 긴 함수 (100줄 이상)
+          long_functions=0
+          for file in $(find app components lib electron -name "*.ts" -o -name "*.tsx"); do
+            count=$(awk '/function.*{/{p=1} p{n++} /^}$/{if(n>100) print n; n=0; p=0}' "$file" | wc -l)
+            long_functions=$((long_functions + count))
+          done
+          echo "- 100줄 이상 함수: ${long_functions}개" >> health-report.md
+
+          echo "CONSOLE_COUNT=$console_count" >> $GITHUB_OUTPUT
+          echo "ANY_COUNT=$any_count" >> $GITHUB_OUTPUT
+          echo "TODO_COUNT=$todo_count" >> $GITHUB_OUTPUT
+          echo "" >> health-report.md
+
+      - name: Dependency freshness check
+        id: deps_check
+        run: |
+          echo "### 📦 의존성 상태" >> health-report.md
+
+          # 오래된 패키지 확인
+          outdated_output=$(pnpm outdated --format json 2>/dev/null || echo "[]")
+          outdated_count=$(echo "$outdated_output" | jq 'length' || echo "0")
+
+          echo "- 업데이트 가능한 패키지: ${outdated_count}개" >> health-report.md
+
+          if [ "$outdated_count" -gt 0 ]; then
+            echo "" >> health-report.md
+            echo "주요 업데이트:" >> health-report.md
+            echo "\`\`\`" >> health-report.md
+            echo "$outdated_output" | jq -r '.[] | "- \(.name): \(.current) → \(.latest)"' | head -10 >> health-report.md
+            echo "\`\`\`" >> health-report.md
+          fi
+
+          echo "OUTDATED_COUNT=$outdated_count" >> $GITHUB_OUTPUT
+          echo "" >> health-report.md
+
+      - name: Generate health score
+        id: health_score
+        run: |
+          echo "### 🏥 전체 건강도 점수" >> health-report.md
+
+          score=100
+
+          # Lint 실패 시 -10점
+          if [ "${{ steps.lint_check.outputs.LINT_STATUS }}" == "fail" ]; then
+            score=$((score - 10))
+          fi
+
+          # 커버리지 낮으면 -15점
+          if [ "${{ steps.coverage_check.outputs.COVERAGE_WARNING }}" == "true" ]; then
+            score=$((score - 15))
+          fi
+
+          # console.log가 많으면 -5점
+          console_count=${{ steps.antipattern_check.outputs.CONSOLE_COUNT }}
+          if [ "$console_count" -gt 50 ]; then
+            score=$((score - 5))
+          fi
+
+          # any 타입이 많으면 -10점
+          any_count=${{ steps.antipattern_check.outputs.ANY_COUNT }}
+          if [ "$any_count" -gt 30 ]; then
+            score=$((score - 10))
+          fi
+
+          # 오래된 패키지가 많으면 -5점
+          outdated_count=${{ steps.deps_check.outputs.OUTDATED_COUNT }}
+          if [ "$outdated_count" -gt 20 ]; then
+            score=$((score - 5))
+          fi
+
+          echo "HEALTH_SCORE=$score" >> $GITHUB_OUTPUT
+
+          # 점수에 따른 이모지와 평가
+          if [ "$score" -ge 90 ]; then
+            emoji="🟢"
+            status="우수"
+          elif [ "$score" -ge 75 ]; then
+            emoji="🟡"
+            status="양호"
+          elif [ "$score" -ge 60 ]; then
+            emoji="🟠"
+            status="주의"
+          else
+            emoji="🔴"
+            status="개선 필요"
+          fi
+
+          echo "" >> health-report.md
+          echo "$emoji **점수: ${score}/100 - ${status}**" >> health-report.md
+          echo "" >> health-report.md
+
+          # 개선 권장사항
+          if [ "$score" -lt 90 ]; then
+            echo "### 💡 개선 권장사항" >> health-report.md
+            if [ "${{ steps.lint_check.outputs.LINT_STATUS }}" == "fail" ]; then
+              echo "- [ ] Lint 에러 수정" >> health-report.md
+            fi
+            if [ "${{ steps.coverage_check.outputs.COVERAGE_WARNING }}" == "true" ]; then
+              echo "- [ ] 테스트 커버리지 향상" >> health-report.md
+            fi
+            if [ "$console_count" -gt 50 ]; then
+              echo "- [ ] 프로덕션 코드의 console.log 제거" >> health-report.md
+            fi
+            if [ "$any_count" -gt 30 ]; then
+              echo "- [ ] any 타입 사용 줄이기" >> health-report.md
+            fi
+            if [ "$outdated_count" -gt 20 ]; then
+              echo "- [ ] 오래된 패키지 업데이트" >> health-report.md
+            fi
+          fi
+
+      - name: Upload health report
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: code-health-report-${{ github.run_number }}
+          path: |
+            health-report.md
+            cloc.json
+            lint-output.txt
+          retention-days: 30
+
+      - name: Update or create tracking issue
+        if: always()
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const score = '${{ steps.health_score.outputs.HEALTH_SCORE }}';
+            const date = new Date().toISOString().split('T')[0];
+
+            let reportContent = '';
+            if (fs.existsSync('health-report.md')) {
+              reportContent = fs.readFileSync('health-report.md', 'utf8');
+            }
+
+            // 기존 추적 이슈 찾기
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'code-health,automated',
+              state: 'open',
+              per_page: 1
+            });
+
+            const body = `# 📊 코드 건강도 리포트
+
+**최근 업데이트:** ${date}
+**건강도 점수:** ${score}/100
+
+---
+
+${reportContent}
+
+---
+
+*이 리포트는 매일 자동으로 업데이트됩니다.*
+*상세 내역: [워크플로우 실행](../actions/runs/${{ github.run_id }})*
+`;
+
+            if (issues.data.length > 0) {
+              // 기존 이슈 업데이트
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                title: `📊 코드 건강도 추적 (현재: ${score}/100)`,
+                body: body
+              });
+              console.log(`Updated issue #${issues.data[0].number}`);
+            } else {
+              // 새 이슈 생성
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `📊 코드 건강도 추적 (현재: ${score}/100)`,
+                labels: ['code-health', 'automated', 'documentation'],
+                body: body
+              });
+              console.log(`Created issue #${issue.data.number}`);
+            }
+
+      - name: Alert on low health score
+        if: steps.health_score.outputs.HEALTH_SCORE < 70
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const score = '${{ steps.health_score.outputs.HEALTH_SCORE }}';
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `⚠️ 코드 건강도 낮음: ${score}/100`,
+              labels: ['code-health', 'priority-high', 'automated'],
+              body: `# ⚠️ 코드 건강도 경고
+
+**현재 점수:** ${score}/100
+
+코드 건강도가 70점 미만으로 떨어졌습니다. 즉시 개선이 필요합니다.
+
+## 조치 필요
+1. [워크플로우 실행 결과](../actions/runs/${{ github.run_id }}) 확인
+2. health-report.md 아티팩트 다운로드 및 검토
+3. 개선 권장사항 실행
+4. 주간 버그 탐색 워크플로우 수동 실행 고려
+
+이 이슈는 자동으로 생성되었습니다.
+`
+            });
+
+      - name: Generate workflow summary
+        if: always()
+        run: |
+          echo "## 📊 코드 건강도 체크 완료" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**건강도 점수:** ${{ steps.health_score.outputs.HEALTH_SCORE }}/100" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f health-report.md ]; then
+            cat health-report.md >> $GITHUB_STEP_SUMMARY
+          fi

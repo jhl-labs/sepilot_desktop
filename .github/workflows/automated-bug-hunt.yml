@@ -1,0 +1,371 @@
+name: Automated Bug Hunt
+
+on:
+  schedule:
+    # 매주 월요일 오전 9시 (KST 18시)에 실행
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      scan_depth:
+        description: '스캔 깊이 (quick, standard, deep)'
+        required: false
+        default: 'standard'
+        type: choice
+        options:
+          - quick
+          - standard
+          - deep
+      target_areas:
+        description: '검사할 영역 (쉼표로 구분: electron,frontend,langgraph,mcp,rag)'
+        required: false
+        default: 'all'
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  id-token: write
+
+jobs:
+  bug-hunt:
+    name: Claude Bug Hunt
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Configure git to use HTTPS instead of SSH
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run static analysis tools
+        id: static_analysis
+        run: |
+          echo "## 🔍 정적 분석 결과" > static-analysis-report.md
+          echo "" >> static-analysis-report.md
+
+          # ESLint 실행
+          echo "### ESLint 분석" >> static-analysis-report.md
+          pnpm run lint --format json --output-file eslint-report.json || true
+
+          if [ -f eslint-report.json ]; then
+            error_count=$(jq '[.[] | .errorCount] | add' eslint-report.json || echo "0")
+            warning_count=$(jq '[.[] | .warningCount] | add' eslint-report.json || echo "0")
+            echo "- 에러: $error_count" >> static-analysis-report.md
+            echo "- 경고: $warning_count" >> static-analysis-report.md
+            echo "ESLINT_ERRORS=$error_count" >> $GITHUB_OUTPUT
+            echo "ESLINT_WARNINGS=$warning_count" >> $GITHUB_OUTPUT
+          fi
+          echo "" >> static-analysis-report.md
+
+          # TypeScript 타입 체크
+          echo "### TypeScript 타입 체크" >> static-analysis-report.md
+          if pnpm run type-check 2>&1 | tee typescript-errors.txt; then
+            echo "✅ 타입 에러 없음" >> static-analysis-report.md
+            echo "TS_ERRORS=0" >> $GITHUB_OUTPUT
+          else
+            error_count=$(grep -c "error TS" typescript-errors.txt || echo "0")
+            echo "❌ 타입 에러 발견: $error_count" >> static-analysis-report.md
+            echo "TS_ERRORS=$error_count" >> $GITHUB_OUTPUT
+            cat typescript-errors.txt >> static-analysis-report.md
+          fi
+          echo "" >> static-analysis-report.md
+
+          # 코드 중복 검사
+          echo "### 코드 중복 검사" >> static-analysis-report.md
+          npx jscpd app components lib electron --format json --output jscpd-report.json || true
+
+          if [ -f jscpd-report.json ]; then
+            duplication_rate=$(jq '.statistics.total.percentage' jscpd-report.json || echo "0")
+            echo "- 중복률: ${duplication_rate}%" >> static-analysis-report.md
+            echo "DUPLICATION_RATE=$duplication_rate" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Identify problematic areas
+        id: problem_areas
+        run: |
+          echo "## 🎯 분석 대상 영역" > problem-areas.md
+          echo "" >> problem-areas.md
+
+          # 최근 자주 변경된 파일 분석
+          echo "### 최근 변경이 잦은 파일 (잠재적 버그 영역)" >> problem-areas.md
+          git log --since="1 month ago" --name-only --pretty=format: | sort | uniq -c | sort -rn | head -20 >> problem-areas.md
+          echo "" >> problem-areas.md
+
+          # 복잡도가 높은 파일 찾기
+          echo "### 복잡한 파일 (Lines of Code)" >> problem-areas.md
+          find app components lib electron -name "*.ts" -o -name "*.tsx" | xargs wc -l | sort -rn | head -20 >> problem-areas.md
+          echo "" >> problem-areas.md
+
+          # TODO/FIXME 주석 찾기
+          echo "### TODO/FIXME 항목" >> problem-areas.md
+          grep -r "TODO\|FIXME\|HACK\|XXX" app components lib electron --include="*.ts" --include="*.tsx" -n | head -30 >> problem-areas.md || echo "없음" >> problem-areas.md
+
+      - name: Run Claude Bug Hunt Analysis
+        id: claude_analysis
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            # 자동 버그 탐색 미션
+
+            ## 목표
+            코드베이스에서 잠재적인 버그, 코드 품질 문제, 보안 취약점을 탐색하고 분석합니다.
+
+            ## 스캔 깊이: ${{ inputs.scan_depth || 'standard' }}
+            ## 대상 영역: ${{ inputs.target_areas || 'all' }}
+
+            ## 분석 항목
+
+            ### 1. 정적 분석 결과 검토
+            다음 파일들을 읽고 주요 문제점을 파악하세요:
+            - static-analysis-report.md
+            - problem-areas.md
+            - eslint-report.json (있는 경우)
+            - typescript-errors.txt (있는 경우)
+
+            ### 2. 코드 패턴 분석
+            다음 영역에서 잠재적 버그를 탐색하세요:
+
+            **보안 취약점:**
+            - XSS, SQL Injection, Command Injection 가능성
+            - 하드코딩된 비밀번호, API 키
+            - 안전하지 않은 파일 처리
+            - IPC 통신 보안 문제
+
+            **런타임 에러 가능성:**
+            - Null/Undefined 참조
+            - 타입 불일치
+            - 비동기 처리 오류 (Promise, async/await)
+            - 에러 핸들링 누락
+
+            **로직 버그:**
+            - 엣지 케이스 처리 누락
+            - 경쟁 조건 (Race Condition)
+            - 메모리 누수 가능성
+            - 무한 루프 가능성
+
+            **코드 품질:**
+            - 과도하게 복잡한 함수
+            - 중복 코드
+            - 테스트 커버리지 부족
+            - 문서화 부족
+
+            ### 3. 특정 영역 집중 검사
+            ${{ inputs.target_areas == 'all' && '전체 코드베이스' || inputs.target_areas }}를 집중 분석하세요.
+
+            ### 4. 결과 보고서 생성
+            다음 형식으로 bug-hunt-report.md 파일을 생성하세요:
+
+            ```markdown
+            # 🐛 자동 버그 탐색 보고서
+
+            **실행 날짜:** $(date)
+            **스캔 깊이:** ${{ inputs.scan_depth || 'standard' }}
+            **대상 영역:** ${{ inputs.target_areas || 'all' }}
+
+            ## 📊 요약
+
+            - 발견된 잠재적 버그: [개수]
+            - 심각도 높음: [개수]
+            - 심각도 중간: [개수]
+            - 심각도 낮음: [개수]
+
+            ## 🚨 주요 발견사항
+
+            ### 1. [버그 제목]
+            - **파일:** [파일경로:라인번호]
+            - **심각도:** [High/Medium/Low]
+            - **카테고리:** [Security/Runtime/Logic/Quality]
+            - **설명:** [상세 설명]
+            - **영향:** [예상되는 영향]
+            - **해결 방법:** [권장 수정 방법]
+
+            ### 2. [버그 제목]
+            ...
+
+            ## 💡 권장사항
+
+            [전반적인 개선 권장사항]
+
+            ## 🔍 다음 검토 필요 영역
+
+            [추가로 수동 검토가 필요한 영역]
+            ```
+
+            ## 실행 지침
+            1. 정적 분석 결과를 먼저 읽으세요
+            2. 문제가 많이 보고된 파일들을 우선적으로 검토하세요
+            3. 실제 코드를 읽고 문맥을 이해하세요
+            4. 발견한 문제들을 심각도별로 분류하세요
+            5. 보고서를 bug-hunt-report.md로 작성하세요
+
+            주의: 단순히 도구의 경고를 나열하는 것이 아니라, 실제 버그 가능성이 있는 것만 보고하세요.
+
+          claude_args: '--allowed-tools "Read:*,Grep:*,Glob:*,Write:bug-hunt-report.md"'
+
+      - name: Check if report was generated
+        id: check_report
+        run: |
+          if [ -f bug-hunt-report.md ]; then
+            echo "report_exists=true" >> $GITHUB_OUTPUT
+
+            # 발견된 버그 개수 추출
+            bug_count=$(grep -c "### [0-9]" bug-hunt-report.md || echo "0")
+            echo "bug_count=$bug_count" >> $GITHUB_OUTPUT
+
+            # 심각도 높은 버그 개수
+            high_severity=$(grep -c "심각도.*High\|Severity.*High" bug-hunt-report.md || echo "0")
+            echo "high_severity=$high_severity" >> $GITHUB_OUTPUT
+          else
+            echo "report_exists=false" >> $GITHUB_OUTPUT
+            echo "bug_count=0" >> $GITHUB_OUTPUT
+            echo "high_severity=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload analysis reports
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: bug-hunt-reports
+          path: |
+            bug-hunt-report.md
+            static-analysis-report.md
+            problem-areas.md
+            eslint-report.json
+            typescript-errors.txt
+            jscpd-report.json
+          retention-days: 90
+
+      - name: Create issue for critical findings
+        if: steps.check_report.outputs.high_severity > 0
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const bugCount = '${{ steps.check_report.outputs.bug_count }}';
+            const highSeverity = '${{ steps.check_report.outputs.high_severity }}';
+
+            let reportContent = '보고서를 생성할 수 없습니다.';
+            if (fs.existsSync('bug-hunt-report.md')) {
+              reportContent = fs.readFileSync('bug-hunt-report.md', 'utf8');
+
+              // 너무 긴 경우 요약만 포함
+              if (reportContent.length > 60000) {
+                const summaryEnd = reportContent.indexOf('## 🚨 주요 발견사항');
+                const findingsEnd = reportContent.indexOf('## 💡 권장사항');
+                if (summaryEnd > 0 && findingsEnd > summaryEnd) {
+                  reportContent = reportContent.substring(0, findingsEnd) +
+                    '\n\n*전체 보고서는 [Artifacts](../actions/runs/${{ github.run_id }})를 확인하세요.*';
+                }
+              }
+            }
+
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🐛 자동 버그 탐색 결과: ${highSeverity}개의 심각한 문제 발견`,
+              labels: ['bug', 'automated-scan', 'priority-high'],
+              body: `# 🔍 자동 버그 탐색 보고서
+
+**실행 일시:** ${new Date().toISOString()}
+**워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})
+
+## 📊 요약
+
+- 총 발견 항목: ${bugCount}개
+- 🚨 심각도 높음: ${highSeverity}개
+- ⚠️ 중간/낮음: ${bugCount - highSeverity}개
+
+---
+
+${reportContent}
+
+---
+
+**자동 생성된 이슈입니다.** 상세 내용은 워크플로우 실행 결과의 아티팩트를 확인하세요.
+`
+            });
+
+            console.log(`Created issue #${issue.data.number}`);
+
+      - name: Comment on existing issues
+        if: steps.check_report.outputs.bug_count > 0 && steps.check_report.outputs.high_severity == 0
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const bugCount = '${{ steps.check_report.outputs.bug_count }}';
+
+            // 기존의 자동 스캔 이슈가 있는지 확인
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'automated-scan',
+              state: 'open',
+              per_page: 1
+            });
+
+            const message = `## 🔍 정기 버그 스캔 완료
+
+**실행 일시:** ${new Date().toISOString()}
+**발견 항목:** ${bugCount}개 (심각도 낮음)
+
+상세 내용은 [워크플로우 실행 결과](../actions/runs/${{ github.run_id }})의 아티팩트를 확인하세요.
+
+심각한 문제는 발견되지 않았습니다. ✅
+`;
+
+            if (issues.data.length > 0) {
+              // 기존 이슈에 댓글 추가
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                body: message
+              });
+            }
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## 🐛 자동 버그 탐색 완료" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.check_report.outputs.report_exists }}" == "true" ]; then
+            echo "### 📊 결과" >> $GITHUB_STEP_SUMMARY
+            echo "- 발견된 항목: ${{ steps.check_report.outputs.bug_count }}개" >> $GITHUB_STEP_SUMMARY
+            echo "- 심각도 높음: ${{ steps.check_report.outputs.high_severity }}개" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            if [ "${{ steps.check_report.outputs.high_severity }}" -gt 0 ]; then
+              echo "🚨 **심각한 문제가 발견되었습니다!** 자동으로 이슈가 생성되었습니다." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ 심각한 문제는 발견되지 않았습니다." >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ 보고서 생성 실패" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 아티팩트" >> $GITHUB_STEP_SUMMARY
+          echo "상세 보고서는 [Artifacts](../actions/runs/${{ github.run_id }})에서 확인하세요." >> $GITHUB_STEP_SUMMARY
