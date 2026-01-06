@@ -539,6 +539,18 @@ export async function handleGoogleVisitResult(options: GoogleVisitResultOptions)
       throw new Error('No active browser view');
     }
 
+    // 🔍 CRITICAL: 검색 페이지 검증
+    const currentUrl = browserView.webContents.getURL();
+    const isGoogleSearch =
+      currentUrl.includes('google.com/search') || currentUrl.includes('google.co.kr/search');
+
+    if (!isGoogleSearch) {
+      throw new Error(
+        `현재 페이지가 Google 검색 페이지가 아닙니다. (URL: ${currentUrl})\n` +
+          'google_search 도구를 먼저 실행하여 검색 페이지로 이동해주세요.'
+      );
+    }
+
     const linkData = await browserView.webContents.executeJavaScript(`
       (function() {
         let resultElements = document.querySelectorAll('div.MjjYud, div.g, div[data-sokoban-container], div[jscontroller]');
