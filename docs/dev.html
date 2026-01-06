@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SEPilot Desktop - 개발자 아키텍처 문서</title>
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        securityLevel: 'loose',
+        flowchart: {
+          useMaxWidth: true,
+          htmlLabels: true,
+          curve: 'basis',
+        },
+      });
+    </script>
+    <style>
+      :root {
+        --primary: #2563eb;
+        --secondary: #7c3aed;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --dark: #1e293b;
+        --light: #f8fafc;
+        --border: #e2e8f0;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+        line-height: 1.6;
+        color: var(--dark);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem 1rem;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: var(--light);
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        padding: 3rem 2rem;
+        text-align: center;
+      }
+
+      header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+      }
+
+      header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+      }
+
+      .toc {
+        background: white;
+        border-bottom: 2px solid var(--border);
+        padding: 1.5rem 2rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      .toc h2 {
+        font-size: 1rem;
+        color: var(--dark);
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .toc ul {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .toc li a {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: var(--light);
+        color: var(--primary);
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: all 0.3s;
+        border: 1px solid var(--border);
+      }
+
+      .toc li a:hover {
+        background: var(--primary);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      }
+
+      .content {
+        padding: 2rem;
+      }
+
+      .section {
+        margin-bottom: 4rem;
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      .section h2 {
+        font-size: 2rem;
+        color: var(--dark);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 3px solid var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .section h3 {
+        font-size: 1.3rem;
+        color: var(--secondary);
+        margin: 2rem 0 1rem;
+      }
+
+      .section p {
+        color: #475569;
+        margin-bottom: 1rem;
+        line-height: 1.8;
+      }
+
+      .mermaid-wrapper {
+        background: #fafafa;
+        border-radius: 8px;
+        padding: 2rem;
+        margin: 1.5rem 0;
+        border: 1px solid var(--border);
+        overflow-x: auto;
+      }
+
+      .mermaid {
+        display: flex;
+        justify-content: center;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: var(--primary);
+        color: white;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-right: 0.5rem;
+      }
+
+      .badge.secondary {
+        background: var(--secondary);
+      }
+
+      .badge.success {
+        background: var(--success);
+      }
+
+      .badge.warning {
+        background: var(--warning);
+      }
+
+      .info-box {
+        background: #eff6ff;
+        border-left: 4px solid var(--primary);
+        padding: 1rem 1.5rem;
+        margin: 1rem 0;
+        border-radius: 4px;
+      }
+
+      .info-box h4 {
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+      }
+
+      .info-box ul {
+        margin-left: 1.5rem;
+        color: #475569;
+      }
+
+      .info-box ul li {
+        margin: 0.25rem 0;
+      }
+
+      footer {
+        background: var(--dark);
+        color: white;
+        text-align: center;
+        padding: 2rem;
+      }
+
+      @media (max-width: 768px) {
+        body {
+          padding: 1rem 0.5rem;
+        }
+
+        header h1 {
+          font-size: 1.8rem;
+        }
+
+        .section h2 {
+          font-size: 1.5rem;
+        }
+
+        .toc ul {
+          flex-direction: column;
+        }
+
+        .content {
+          padding: 1rem;
+        }
+
+        .section {
+          padding: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🚀 SEPilot Desktop</h1>
+        <p>개발자를 위한 아키텍처 & 설계 문서</p>
+        <p style="margin-top: 0.5rem; font-size: 0.9rem">
+          <span class="badge">Electron 31</span>
+          <span class="badge">Next.js 14</span>
+          <span class="badge">TypeScript 5.4</span>
+          <span class="badge success">LangGraph</span>
+          <span class="badge warning">MCP</span>
+        </p>
+      </header>
+
+      <nav class="toc">
+        <h2>📑 목차 (Table of Contents)</h2>
+        <ul>
+          <li><a href="#architecture">1. 전체 아키텍처</a></li>
+          <li><a href="#directory">2. 디렉토리 구조</a></li>
+          <li><a href="#ipc">3. IPC 통신</a></li>
+          <li><a href="#dataflow">4. 데이터 흐름</a></li>
+          <li><a href="#extensions">5. Extension 시스템</a></li>
+          <li><a href="#langgraph">6. LangGraph Agent</a></li>
+          <li><a href="#mcp">7. MCP 통합</a></li>
+          <li><a href="#components">8. 컴포넌트 계층</a></li>
+          <li><a href="#build">9. 빌드 & 배포</a></li>
+        </ul>
+      </nav>
+
+      <div class="content">
+        <!-- 1. 전체 아키텍처 -->
+        <section id="architecture" class="section">
+          <h2>🏗️ 1. 전체 시스템 아키텍처</h2>
+          <p>
+            SEPilot Desktop은 <strong>Electron</strong>과 <strong>Next.js</strong>를 기반으로 구축된 데스크톱 애플리케이션입니다.
+            Frontend는 React + Next.js로 UI를 렌더링하고, Backend는 Electron Main Process에서 파일 시스템, 데이터베이스, LLM API 등을 처리합니다.
+          </p>
+
+          <div class="mermaid-wrapper">
+            <div class="mermaid">
+graph TB
+    subgraph "🖥️ Desktop Application (Electron)"
+        subgraph "Frontend (Next.js + React)"
+            UI[React Components<br/>shadcn/ui]
+            Hooks[Custom Hooks<br/>Zustand Store]
+            Router[App Router<br/>Next.js 14]
+            UI --> Hooks --> Router
+        end
+
+        subgraph "Electron Main Process"
+            Main[Main Process<br/>main.ts]
+            IPC[IPC Handlers<br/>electron/ipc/handlers/]
+            Services[Services<br/>database, vectordb, logger]
+            FileSystem[File System<br/>fs, path]
+
+            Main --> IPC
+            IPC --> Services
+            IPC --> FileSystem
+        end
+
+        subgraph "Preload Bridge"
+            Preload[Context Bridge<br/>preload.ts]
+        end
+
+        Router -.IPC.-> Preload
+        Preload -.IPC.-> IPC
+    end
+
+    subgraph "🌐 External Services"
+        LLM[LLM APIs<br/>OpenAI, Claude, Ollama]
+        GitHub[GitHub API<br/>Team Docs Sync]
+        ComfyUI[ComfyUI<br/>Image Generation]
+        MCP[MCP Servers<br/>External Tools]
+    end
+
+    Services --> LLM
+    Services --> GitHub
+    Services --> ComfyUI
+    IPC --> MCP
+
+    subgraph "💾 Local Storage"
+        SQLite[(SQLite<br/>Chat History)]
+        VectorDB[(SQLite-vec<br/>RAG Embeddings)]
+        Config[JSON Files<br/>Settings, Configs]
+    end
+
+    Services --> SQLite
+    Services --> VectorDB
+    Services --> Config
+
+    style UI fill:#3b82f6,stroke:#1e40af,color:#fff
+    style Main fill:#8b5cf6,stroke:#6d28d9,color:#fff
+    style LLM fill:#10b981,stroke:#059669,color:#fff
+    style SQLite fill:#f59e0b,stroke:#d97706,color:#fff
+            </div>
+          </div>
+
+          <div class="info-box">
+            <h4>📌 핵심 특징</h4>
+            <ul>
+              <li><strong>Frontend:</strong> Next.js 14 (App Router), React 19, Tailwind CSS, shadcn/ui</li>
+              <li><strong>Backend:</strong> Electron 31, Node.js 18+, TypeScript 5.4</li>
+              <li><strong>통신:</strong> IPC (Inter-Process Communication) via Context Bridge</li>
+              <li><strong>데이터베이스:</strong> better-sqlite3 (Chat History), SQLite-vec (RAG)</li>
+              <li><strong>AI/ML:</strong> LangGraph, MCP (Model Context Protocol), OpenAI Compatible API</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- 2. 디렉토리 구조 -->
+        <section id="directory" class="section">
+          <h2>📁 2. 디렉토리 구조</h2>
+          <p>프로젝트는 크게 Frontend (Next.js), Backend (Electron), 공유 라이브러리 (lib), Extensions로 구성됩니다.</p>
+
+          <div class="mermaid-wrapper">
+            <div class="mermaid">
+graph LR
+    Root[sepilot_desktop/]
+
+    subgraph "🎨 Frontend"
+        App[app/<br/>Next.js App Router]
+        Components[components/<br/>React Components]
+        Hooks[hooks/<br/>Custom Hooks]
+        Public[public/<br/>Static Assets]
+    end
+
+    subgraph "⚙️ Backend (Electron)"
+        Electron[electron/<br/>Main & Preload]
+        IPC[electron/ipc/<br/>IPC Handlers]
+        Services[electron/services/<br/>Database, Logger]
+        Utils[electron/utils/<br/>Helper Functions]
+    end
+
+    subgraph "📚 Shared Libraries"
+        Lib[lib/]
+        LangGraph[lib/langgraph/<br/>Agent System]
+        LLM[lib/llm/<br/>LLM Clients]
+        MCPLib[lib/mcp/<br/>MCP Integration]
+        VectorDB[lib/vectordb/<br/>RAG System]
+        Config[lib/config/<br/>Configuration]
+    end
+
+    subgraph "🔌 Extensions"
+        ExtRoot[extensions/]
+        Browser[extensions/browser/<br/>Browser Agent]
+        Editor[extensions/editor/<br/>Editor Agent]
+        Terminal[extensions/terminal/<br/>Terminal UI]
+        Presentation[extensions/presentation/<br/>Presentation Mode]
+    end
+
+    subgraph "📝 Documentation & Config"
+        Docs[docs/<br/>Documentation]
+        Tests[tests/<br/>Unit & E2E Tests]
+        Claude[.claude/<br/>Claude Code Config]
+        ReleaseNotes[release_notes/<br/>Version History]
+    end
+
+    Root --> App
+    Root --> Components
+    Root --> Hooks
+    Root --> Public
+    Root --> Electron
+    Root --> Lib
+    Root --> ExtRoot
+    Root --> Docs
+    Root --> Tests
+    Root --> Claude
+    Root --> ReleaseNotes
+
+    Electron --> IPC
+    Electron --> Services
+    Electron --> Utils
+    Lib --> LangGraph
+    Lib --> LLM
+    Lib --> MCPLib
+    Lib --> VectorDB
+    Lib --> Config
+    ExtRoot --> Browser
+    ExtRoot --> Editor
+    ExtRoot --> Terminal
+    ExtRoot --> Presentation
+
+    style App fill:#3b82f6,stroke:#1e40af,color:#fff
+    style Electron fill:#8b5cf6,stroke:#6d28d9,color:#fff
+    style Lib fill:#10b981,stroke:#059669,color:#fff
+    style ExtRoot fill:#f59e0b,stroke:#d97706,color:#fff
+            </div>
+          </div>
+
+          <div class="info-box">
+            <h4>📌 주요 디렉토리 설명</h4>
+            <ul>
+              <li><strong>app/</strong> - Next.js App Router 페이지 및 레이아웃</li>
+              <li><strong>components/</strong> - 재사용 가능한 React 컴포넌트 (UI, Chat, Settings 등)</li>
+              <li><strong>electron/</strong> - Electron Main Process, IPC 핸들러, 백엔드 서비스</li>
+              <li><strong>lib/</strong> - Frontend/Backend 공유 라이브러리 (LangGraph, LLM, MCP, RAG)</li>
+              <li><strong>extensions/</strong> - 독립적인 기능 모듈 (Browser, Editor, Terminal, Presentation)</li>
+              <li><strong>.claude/</strong> - Claude Code 설정 (skills, commands, agents)</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- 3. IPC 통신 -->
+        <section id="ipc" class="section">
+          <h2>🔄 3. IPC (Inter-Process Communication)</h2>
+          <p>
+            Frontend (Renderer Process)와 Backend (Main Process) 간의 통신은 Electron의 IPC 메커니즘을 통해 이루어집니다.
+            보안을 위해 Context Bridge를 사용하여 제한된 API만 Frontend에 노출합니다.
+          </p>
+
+          <div class="mermaid-wrapper">
+            <div class="mermaid">
+sequenceDiagram
+    participant UI as Frontend<br/>(React Component)
+    participant Preload as Preload Script<br/>(Context Bridge)
+    participant IPC as IPC Handler<br/>(electron/ipc/handlers/)
+    participant Service as Backend Service<br/>(Database, LLM, etc.)
+    participant External as External API<br/>(OpenAI, GitHub, etc.)
+
+    UI->>Preload: window.electron.invoke('channel-name', data)
+    Note over UI,Preload: Frontend → Backend Request
+
+    Preload->>IPC: ipcMain.handle('channel-name', handler)
+    Note over Preload,IPC: Secure IPC via Context Bridge
+
+    IPC->>Service: Process request
+    Note over IPC,Service: Business Logic Execution
+
+    Service->>External: API Call (if needed)
+    External-->>Service: Response
+
+    Service-->>IPC: Return result
+    IPC-->>Preload: IPC Response
+    Preload-->>UI: Promise resolves
+
+    Note over UI: UI Update with result
+
+    rect rgb(240, 240, 255)
+    Note over IPC,UI: Streaming Data (Chat, LLM)
+    IPC->>Preload: event.sender.send('stream-channel', chunk)
+    Preload->>UI: window.electron.on('stream-channel', callback)
+    Note over UI: Real-time UI Update
+    end
+            </div>
+          </div>
+
+          <h3>주요 IPC 채널</h3>
+          <div class="info-box">
+            <h4>📌 IPC 핸들러 목록 (electron/ipc/handlers/)</h4>
+            <ul>
+              <li><strong>llm.ts:</strong> LLM API 호출 (Chat, Streaming, Model Management)</li>
+              <li><strong>chat.ts:</strong> Chat 세션 관리 (Create, Load, Delete)</li>
+              <li><strong>file.ts:</strong> 파일 시스템 작업 (Read, Write, Delete, Upload)</li>
+              <li><strong>langgraph.ts:</strong> LangGraph Agent 실행 및 상태 관리</li>
+              <li><strong>mcp.ts:</strong> MCP Tool 등록 및 실행</li>
+              <li><strong>vectordb.ts:</strong> RAG 시스템 (Embedding, Search, Indexing)</li>
+              <li><strong>github.ts:</strong> GitHub 연동 (Repo Sync, Team Docs)</li>
+              <li><strong>browser-view.ts:</strong> Browser Agent 제어 (Navigation, Interaction)</li>
+              <li><strong>terminal.ts:</strong> 터미널 세션 관리 (PTY, Shell Commands)</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- 4. 데이터 흐름 -->
+        <section id="dataflow" class="section">
+          <h2>🌊 4. 데이터 흐름 (Data Flow)</h2>
+          <p>사용자가 채팅 메시지를 전송하면 Frontend → IPC → LLM API → Database 순으로 데이터가 흐릅니다.</p>
+
+          <div class="mermaid-wrapper">
+            <div class="mermaid">
+graph TB
+    subgraph "🎨 Frontend Layer"
+        A[User Input<br/>ChatArea.tsx]
+        B[Zustand Store<br/>useChatStore]
+        C[React Component<br/>MessageList]
+    end
+
+    subgraph "🔄 IPC Layer"
+        D[window.electron.invoke]
+        E[IPC Handler<br/>llm.ts, chat.ts]
+    end
+
+    subgraph "⚙️ Business Logic Layer"
+        F[LLM Client<br/>lib/llm/client.ts]
+        G[LangGraph Agent<br/>lib/langgraph/]
+        H[MCP Tools<br/>lib/mcp/]
+        I[RAG System<br/>lib/vectordb/]
+    end
+
+    subgraph "💾 Data Layer"
+        J[(SQLite<br/>Chat History)]
+        K[(SQLite-vec<br/>Embeddings)]
+        L[File System<br/>Config, Logs]
+    end
+
+    subgraph "🌐 External APIs"
+        M[LLM APIs<br/>OpenAI, Claude]
+        N[GitHub API<br/>Team Docs]
+        O[ComfyUI<br/>Image Gen]
+    end
+
+    A -->|1. User Message| B
+    B -->|2. Send Request| D
+    D -->|3. IPC Call| E
+    E -->|4. Route Request| F
+    F -->|5. Call LLM| M
+    M -->|6. Stream Response| F
+    F -->|7. Save to DB| J
+    F -->|8. Return Stream| E
+    E -->|9. IPC Response| D
+    D -->|10. Update Store| B
+    B -->|11. Re-render| C
+
+    E -.Optional.-> G
+    G -.Tools.-> H
+    E -.Context.-> I
+    I --> K
+    E --> L
+    H -.Sync.-> N
+    H -.Generate.-> O
+
+    style A fill:#3b82f6,stroke:#1e40af,color:#fff
+    style F fill:#8b5cf6,stroke:#6d28d9,color:#fff
+    style J fill:#f59e0b,stroke:#d97706,color:#fff
+    style M fill:#10b981,stroke:#059669,color:#fff
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. Extension 시스템 -->
+        <section id="extensions" class="section">
+          <h2>🔌 5. Extension 시스템</h2>
+          <p>
+            SEPilot Desktop은 모듈화된 Extension 시스템을 통해 Browser Agent, Editor Agent, Terminal, Presentation 등의 기능을 제공합니다.
+            각 Extension은 독립적인 디렉토리 구조와 Manifest를 가지며, 동적으로 로드/언로드됩니다.
+          </p>
+
+          <div class="mermaid-wrapper">
+            <div class="mermaid">
+graph TB
+    subgraph "🔌 Extension System"
+        Core[Extension Core<br/>lib/extensions/]
+        Registry[Extension Registry<br/>Store & Manifest]
+        Loader[Extension Loader<br/>Dynamic Import]
+    end
+
+    subgraph "🌐 Browser Extension"
+        BrowserManifest[browser/manifest.ts]
+        BrowserAgent[Browser Agent<br/>Puppeteer + Vision]
+        BrowserUI[Browser UI<br/>BrowserView Control]
+        BrowserTools[Browser Tools<br/>27+ Actions]
+
+        BrowserManifest --> BrowserAgent
+        BrowserAgent --> BrowserUI
+        BrowserAgent --> BrowserTools
+    end
+
+    subgraph "📝 Editor Extension"
+        EditorManifest[editor/manifest.ts]
+        EditorAgent[Editor Agent<br/>File Operations]
+        MonacoEditor[Monaco Editor<br/>Code Editing]
+        EditorTools[Editor Tools<br/>Read, Write, Replace]
+
+        EditorManifest --> EditorAgent
+        EditorAgent --> MonacoEditor
+        EditorAgent --> EditorTools
+    end
+
+    subgraph "💻 Terminal Extension"
+        TerminalManifest[terminal/manifest.ts]
+        TerminalUI[Terminal UI<br/>xterm.js]
+        PTY[PTY Manager<br/>node-pty]
+
+        TerminalManifest --> TerminalUI
+        TerminalUI --> PTY
+    end
+
+    subgraph "🎨 Presentation Extension"
+        PresentationManifest[presentation/manifest.ts]
+        PresentationUI[Presentation UI<br/>Slides Viewer]
+        PPTXGen[PPTX Generator<br/>pptxgenjs]
+
+        PresentationManifest --> PresentationUI
+        PresentationUI --> PPTXGen
+    end
+
+    Core --> Registry
+    Registry --> Loader
+    Loader -.Load.-> BrowserManifest
+    Loader -.Load.-> EditorManifest
+    Loader -.Load.-> TerminalManifest
+    Loader -.Load.-> PresentationManifest
+
+    style Core fill:#8b5cf6,stroke:#6d28d9,color:#fff
+    style BrowserAgent fill:#3b82f6,stroke:#1e40af,color:#fff
+    style EditorAgent fill:#10b981,stroke:#059669,color:#fff
+    style TerminalUI fill:#f59e0b,stroke:#d97706,color:#fff
+            </div>
+          </div>
+
+          <div class="info-box">
+            <h4>📌 Extension 구조</h4>
+            <ul>
+              <li><strong>manifest.ts:</strong> Extension 메타데이터 (이름, 버전, 아이콘, 설명)</li>
+              <li><strong>agent/:</strong> LangGraph Agent 구현 (상태, 노드, 엣지)</li>
+              <li><strong>tools/:</strong> Extension 전용 도구 (MCP Tool 형식)</li>
+              <li><strong>components/:</strong> Extension UI 컴포넌트</li>
+              <li><strong>store/:</strong> Extension 전용 Zustand Store Slice</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- 6. LangGraph Agent -->
+        <section id="langgraph" class="section">
+          <h2>🧠 6. LangGraph Agent System</h2>
+          <p>
+            LangGraph는 그래프 기반 AI Agent 시스템으로, Sequential Thinking, Tree of Thought, Deep Thinking 등 다양한 사고 모델을 구현합니다.
+            각 노드(Node)는 특정 작업을 수행하고, 엣지(Edge)는 상태 전이 조건을 정의합니다.
+          </p>
+
+          <div class="mermaid-wrapper">
+            <div class="mermaid">
+graph TB
+    Start([Start]) --> SelectMode{Thinking Mode?}
+
+    subgraph "🔹 Sequential Thinking"
+        Seq1[Think Step 1<br/>Problem Analysis]
+        Seq2[Think Step 2<br/>Solution Design]
+        Seq3[Think Step 3<br/>Self-Verification]
+        Seq1 --> Seq2 --> Seq3
+    end
+
+    subgraph "🌳 Tree of Thought"
+        Tree1[Generate Branch 1<br/>Approach A]
+        Tree2[Generate Branch 2<br/>Approach B]
+        Tree3[Generate Branch 3<br/>Approach C]
+        TreeEval[Evaluate Branches<br/>Score & Select Best]
+        Tree1 --> TreeEval
+        Tree2 --> TreeEval
+        Tree3 --> TreeEval
+    end
+
+    subgraph "🔮 Deep Thinking (Graph)"
+        Deep1[Analytical Perspective<br/>Data & Logic]
+        Deep2[Practical Perspective<br/>Feasibility]
+        Deep3[Critical Perspective<br/>Risk Assessment]
+        Deep4[Creative Perspective<br/>Innovation]
+        DeepSynth[Synthesize<br/>Integrate All Views]
+        Deep1 --> DeepSynth
+        Deep2 --> DeepSynth
+        Deep3 --> DeepSynth
+        Deep4 --> DeepSynth
+    end
+
+    SelectMode -->|Sequential| Seq1
+    SelectMode -->|Tree| Tree1 & Tree2 & Tree3
+    SelectMode -->|Deep| Deep1 & Deep2 & Deep3 & Deep4
+
+    Seq3 --> Output[Final Answer]
+    TreeEval --> Output
+    DeepSynth --> Output
+    Output --> End([End])
+
+    style Start fill:#10b981,stroke:#059669,color:#fff
+    style SelectMode fill:#f59e0b,stroke:#d97706,color:#fff
+    style Output fill:#3b82f6,stroke:#1e40af,color:#fff
+    style End fill:#10b981,stroke:#059669,color:#fff
+            </div>
+          </div>
+
+          <h3>Coding Agent (Beta)</h3>
+          <div class="mermaid-wrapper">
+            <div class="mermaid">
+stateDiagram-v2
+    [*] --> Think: Start Task
+    Think --> Action: Generate Plan
+    Action --> Observe: Execute Tool
+    Observe --> Think: Analyze Result
+
+    Think --> Error: Tool Failed
+    Error --> Think: Retry with Fix
+
+    Observe --> Done: Task Complete
+    Done --> [*]
+
+    note right of Think
+        - Analyze requirements
+        - Plan next step
+        - Select appropriate tool
+    end note
+
+    note right of Action
+        - File read/write
+        - Terminal commands
+        - Code generation
+    end note
+
+    note right of Observe
+        - Check output
+        - Validate result
+        - Detect errors
+    end note
+            </div>
+          </div>
+
+          <div class="info-box">
+            <h4>📌 LangGraph 핵심 개념</h4>
+            <ul>
+              <li><strong>State:</strong> Agent의 현재 상태 (메시지, 컨텍스트, 변수)</li>
+              <li><strong>Node:</strong> 특정 작업을 수행하는 함수 (Think, Action, Observe)</li>
+              <li><strong>Edge:</strong> 노드 간 전이 조건 (Conditional, Unconditional)</li>
+              <li><strong>Graph:</strong> 노드와 엣지로 구성된 워크플로우</li>
+              <li><strong>Checkpointer:</strong> 상태 저장 및 복원 (SQLite Saver)</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- 7. MCP 통합 -->
+        <section id="mcp" class="section">
+          <h2>🛠️ 7. MCP (Model Context Protocol) 통합</h2>
+          <p>
+            MCP는 LLM이 외부 도구를 호출할 수 있게 하는 프로토콜입니다.
+            SEPilot Desktop은 내장 도구(Builtin Tools)와 외부 MCP 서버(External MCP Servers)를 모두 지원합니다.
+          </p>
+
+          <div class="mermaid-wrapper">
+            <div class="mermaid">
+graph TB
+    subgraph "💬 Chat Layer"
+        User[User Message]
+        LLM[LLM API<br/>GPT-4o, Claude]
+        ToolCall[Tool Call Detection<br/>Function Calling]
+    end
+
+    subgraph "🔧 MCP Layer"
+        Registry[Tool Registry<br/>lib/mcp/registry.ts]
+        Executor[Tool Executor<br/>lib/mcp/executor.ts]
+
+        subgraph "Built-in Tools"
+            FileTools[File Tools<br/>read, write, list]
+            WebTools[Web Tools<br/>search, fetch]
+            ImageTools[Image Tools<br/>generate, analyze]
+            GitHubTools[GitHub Tools<br/>repo, issues]
+        end
+
+        subgraph "External MCP Servers"
+            MCPServer1[MCP Server 1<br/>Custom Domain]
+            MCPServer2[MCP Server 2<br/>Third-party API]
+            MCPServer3[MCP Server 3<br/>Database Access]
+        end
+    end
+
+    subgraph "🔌 Extension Tools"
+        BrowserTools[Browser Tools<br/>click, scroll, type]
+        EditorTools[Editor Tools<br/>edit, replace, format]
+    end
+
+    User -->|1. Ask Question| LLM
+    LLM -->|2. Analyze & Decide| ToolCall
+    ToolCall -->|3. Request Tool| Registry
+    Registry -->|4. Find Tool| Executor
+
+    Executor -.5a. Execute.-> FileTools
+    Executor -.5b. Execute.-> WebTools
+    Executor -.5c. Execute.-> ImageTools
+    Executor -.5d. Execute.-> GitHubTools
+    Executor -.5e. Call MCP.-> MCPServer1
+    Executor -.5f. Call MCP.-> MCPServer2
+    Executor -.5g. Call MCP.-> MCPServer3
+    Executor -.5h. Extension.-> BrowserTools
+    Executor -.5i. Extension.-> EditorTools
+
+    FileTools -.6. Result.-> Executor
+    WebTools -.6. Result.-> Executor
+    ImageTools -.6. Result.-> Executor
+    GitHubTools -.6. Result.-> Executor
+    MCPServer1 -.6. Result.-> Executor
+    MCPServer2 -.6. Result.-> Executor
+    MCPServer3 -.6. Result.-> Executor
+    BrowserTools -.6. Result.-> Executor
+    EditorTools -.6. Result.-> Executor
+
+    Executor -->|7. Return Result| LLM
+    LLM -->|8. Generate Response| User
+
+    style User fill:#3b82f6,stroke:#1e40af,color:#fff
+    style Registry fill:#8b5cf6,stroke:#6d28d9,color:#fff
+    style FileTools fill:#10b981,stroke:#059669,color:#fff
+    style MCPServer1 fill:#f59e0b,stroke:#d97706,color:#fff
+            </div>
+          </div>
+
+          <div class="info-box">
+            <h4>📌 MCP Tool 형식</h4>
+            <ul>
+              <li><strong>name:</strong> 도구 이름 (고유 식별자)</li>
+              <li><strong>description:</strong> 도구 설명 (LLM이 이해할 수 있는 자연어)</li>
+              <li><strong>inputSchema:</strong> 입력 파라미터 스키마 (JSON Schema)</li>
+              <li><strong>handler:</strong> 실제 실행 함수 (async function)</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- 8. 컴포넌트 계층 -->
+        <section id="components" class="section">
+          <h2>🧩 8. 컴포넌트 계층 구조</h2>
+          <p>Frontend는 재사용 가능한 컴포넌트로 구성되며, shadcn/ui를 기반으로 일관된 디자인 시스템을 유지합니다.</p>
+
+          <div class="mermaid-wrapper">
+            <div class="mermaid">
+graph TB
+    subgraph "🎨 Layout Components"
+        AppLayout[app/layout.tsx<br/>Root Layout]
+        MainLayout[components/layout/<br/>MainLayout]
+        Sidebar[components/layout/<br/>Sidebar]
+        Topbar[components/layout/<br/>Topbar]
+    end
+
+    subgraph "💬 Chat Components"
+        ChatContainer[ChatContainer<br/>Session Manager]
+        ChatArea[ChatArea<br/>Message Display]
+        MessageList[MessageList<br/>Message Renderer]
+        MessageInput[MessageInput<br/>User Input]
+        MarkdownRenderer[MarkdownRenderer<br/>Content Rendering]
+    end
+
+    subgraph "⚙️ Settings Components"
+        SettingsDialog[SettingsDialog<br/>Modal Container]
+        ConnectionManager[ConnectionManager<br/>API Keys]
+        ModelSelector[ModelSelector<br/>Model Selection]
+        NetworkSettings[NetworkSettings<br/>Proxy Config]
+    end
+
+    subgraph "🔌 Extension UI"
+        ExtensionManager[ExtensionManager<br/>Extension List]
+        BrowserView[BrowserView<br/>Browser Control]
+        EditorView[EditorView<br/>Monaco Editor]
+        TerminalView[TerminalView<br/>xterm.js]
+    end
+
+    subgraph "🎨 UI Primitives (shadcn/ui)"
+        Button[components/ui/<br/>Button]
+        Input[components/ui/<br/>Input]
+        Dialog[components/ui/<br/>Dialog]
+        Select[components/ui/<br/>Select]
+        Tabs[components/ui/<br/>Tabs]
+    end
+
+    AppLayout --> MainLayout
+    MainLayout --> Sidebar
+    MainLayout --> Topbar
+    MainLayout --> ChatContainer
+
+    ChatContainer --> ChatArea
+    ChatArea --> MessageList
+    ChatArea --> MessageInput
+    MessageList --> MarkdownRenderer
+
+    Topbar --> SettingsDialog
+    SettingsDialog --> ConnectionManager
+    SettingsDialog --> ModelSelector
+    SettingsDialog --> NetworkSettings
+
+    Sidebar --> ExtensionManager
+    ExtensionManager --> BrowserView
+    ExtensionManager --> EditorView
+    ExtensionManager --> TerminalView
+
+    MessageInput --> Button
+    MessageInput --> Input
+    SettingsDialog --> Dialog
+    ModelSelector --> Select
+    ExtensionManager --> Tabs
+
+    style AppLayout fill:#8b5cf6,stroke:#6d28d9,color:#fff
+    style ChatContainer fill:#3b82f6,stroke:#1e40af,color:#fff
+    style Button fill:#10b981,stroke:#059669,color:#fff
+            </div>
+          </div>
+        </section>
+
+        <!-- 9. 빌드 & 배포 -->
+        <section id="build" class="section">
+          <h2>🚀 9. 빌드 & 배포 플로우</h2>
+          <p>개발부터 배포까지의 전체 프로세스를 시각화합니다.</p>
+
+          <div class="mermaid-wrapper">
+            <div class="mermaid">
+graph LR
+    subgraph "💻 Development"
+        Dev1[npm run dev<br/>Next.js Dev Server]
+        Dev2[npm run dev:electron<br/>Electron Dev Mode]
+        Dev3[Hot Reload<br/>Auto Refresh]
+
+        Dev1 --> Dev3
+        Dev2 --> Dev3
+    end
+
+    subgraph "🧪 Testing"
+        Test1[npm run test<br/>Unit Tests]
+        Test2[npm run test:e2e<br/>E2E Tests]
+        Test3[npm run lint<br/>ESLint]
+        Test4[npm run type-check<br/>TypeScript]
+
+        Test1 --> TestOK{All Pass?}
+        Test2 --> TestOK
+        Test3 --> TestOK
+        Test4 --> TestOK
+    end
+
+    subgraph "📦 Build"
+        Build1[npm run build<br/>Next.js Build]
+        Build2[npm run build:electron<br/>TypeScript Compile]
+        Build3[npm run build:app<br/>electron-builder]
+
+        Build1 --> Build3
+        Build2 --> Build3
+    end
+
+    subgraph "🚀 Release"
+        Release1[GitHub Actions<br/>CI/CD Pipeline]
+        Release2[Platform Build<br/>Windows, macOS, Linux]
+        Release3[GitHub Releases<br/>Download Page]
+
+        Release1 --> Release2
+        Release2 --> Release3
+    end
+
+    Dev3 -->|Code Complete| Test1
+    TestOK -->|Yes| Build1
+    TestOK -->|No| Dev1
+    Build3 -->|Success| Release1
+
+    style Dev1 fill:#3b82f6,stroke:#1e40af,color:#fff
+    style Test1 fill:#f59e0b,stroke:#d97706,color:#fff
+    style Build1 fill:#8b5cf6,stroke:#6d28d9,color:#fff
+    style Release1 fill:#10b981,stroke:#059669,color:#fff
+            </div>
+          </div>
+
+          <h3>CI/CD Pipeline</h3>
+          <div class="mermaid-wrapper">
+            <div class="mermaid">
+sequenceDiagram
+    participant Dev as Developer
+    participant Git as GitHub
+    participant CI as GitHub Actions
+    participant Build as Build Server
+    participant Release as GitHub Releases
+
+    Dev->>Git: git push
+    Git->>CI: Trigger Workflow
+
+    CI->>CI: Install Dependencies
+    CI->>CI: Run Lint & Type Check
+    CI->>CI: Run Unit Tests
+    CI->>CI: Run E2E Tests
+
+    alt Tests Pass
+        CI->>Build: Build Next.js
+        Build->>Build: Build Electron
+        Build->>Build: Package (Windows, macOS, Linux)
+        Build->>Release: Upload Artifacts
+        Release-->>Dev: Release Published
+    else Tests Fail
+        CI-->>Dev: Build Failed (Notification)
+    end
+            </div>
+          </div>
+
+          <div class="info-box">
+            <h4>📌 배포 플랫폼</h4>
+            <ul>
+              <li><strong>Windows:</strong> .exe (NSIS Installer), .msi, Portable .zip</li>
+              <li><strong>macOS:</strong> .dmg (Apple Silicon + Intel Universal Binary)</li>
+              <li><strong>Linux:</strong> .AppImage, .deb, .rpm, .snap</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <footer>
+        <p>&copy; 2024 SEPilot Desktop. All rights reserved.</p>
+        <p style="margin-top: 0.5rem; font-size: 0.9rem">
+          Built with <strong>Electron</strong>, <strong>Next.js</strong>, <strong>LangGraph</strong>, and <strong>MCP</strong>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
