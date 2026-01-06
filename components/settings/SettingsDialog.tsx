@@ -994,38 +994,40 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   />
                 )}
                 {activeTab === 'llm' && configV2 && (
-                  <LLMSettingsTab
-                    config={configV2}
-                    setConfig={(update) => {
-                      if (typeof update === 'function') {
-                        setConfigV2((prev) => {
-                          if (!prev) {
-                            return prev;
-                          }
-                          const newV2 = update(prev);
-                          // Also update V1 config for compatibility
+                  <div data-testid="llm-settings">
+                    <LLMSettingsTab
+                      config={configV2}
+                      setConfig={(update) => {
+                        if (typeof update === 'function') {
+                          setConfigV2((prev) => {
+                            if (!prev) {
+                              return prev;
+                            }
+                            const newV2 = update(prev);
+                            // Also update V1 config for compatibility
+                            try {
+                              setConfig(convertV2ToV1(newV2));
+                            } catch (err) {
+                              console.error('Failed to convert V2 to V1:', err);
+                            }
+                            return newV2;
+                          });
+                        } else {
+                          setConfigV2(update);
                           try {
-                            setConfig(convertV2ToV1(newV2));
+                            setConfig(convertV2ToV1(update));
                           } catch (err) {
                             console.error('Failed to convert V2 to V1:', err);
                           }
-                          return newV2;
-                        });
-                      } else {
-                        setConfigV2(update);
-                        try {
-                          setConfig(convertV2ToV1(update));
-                        } catch (err) {
-                          console.error('Failed to convert V2 to V1:', err);
                         }
-                      }
-                    }}
-                    networkConfig={networkConfig}
-                    setNetworkConfig={setNetworkConfig}
-                    onSave={handleSave}
-                    isSaving={isSaving}
-                    message={message}
-                  />
+                      }}
+                      networkConfig={networkConfig}
+                      setNetworkConfig={setNetworkConfig}
+                      onSave={handleSave}
+                      isSaving={isSaving}
+                      message={message}
+                    />
+                  </div>
                 )}
 
                 {activeTab === 'network' && (
