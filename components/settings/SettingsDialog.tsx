@@ -965,33 +965,35 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               {/* Content Area */}
               <div className="flex-1 overflow-y-auto p-6">
                 {activeTab === 'general' && (
-                  <GeneralSettingsTab
-                    onSave={async (lang) => {
-                      if (lang) {
-                        setGeneralConfig({ language: lang as SupportedLanguage });
-                        // 언어 변경이 완료된 후에 메시지를 설정
-                        await changeLanguage(lang as SupportedLanguage);
-                        if (isElectron() && window.electronAPI) {
-                          await persistAppConfig({
-                            general: { language: lang as SupportedLanguage },
-                          });
-                        } else {
-                          localStorage.setItem(
-                            'sepilot_general_config',
-                            JSON.stringify({ language: lang })
-                          );
+                  <div data-testid="general-settings">
+                    <GeneralSettingsTab
+                      onSave={async (lang) => {
+                        if (lang) {
+                          setGeneralConfig({ language: lang as SupportedLanguage });
+                          // 언어 변경이 완료된 후에 메시지를 설정
+                          await changeLanguage(lang as SupportedLanguage);
+                          if (isElectron() && window.electronAPI) {
+                            await persistAppConfig({
+                              general: { language: lang as SupportedLanguage },
+                            });
+                          } else {
+                            localStorage.setItem(
+                              'sepilot_general_config',
+                              JSON.stringify({ language: lang })
+                            );
+                          }
                         }
-                      }
-                      // 언어 변경 완료 후 메시지 설정 (올바른 언어로 번역됨)
-                      // i18n 인스턴스에서 직접 번역하여 변경된 언어로 메시지 표시
-                      const i18n = getI18nInstance();
-                      const messageText =
-                        i18n?.t('settings.general.saved') || t('settings.general.saved');
-                      setMessage({ type: 'success', text: messageText });
-                    }}
-                    isSaving={isSaving}
-                    message={message}
-                  />
+                        // 언어 변경 완료 후 메시지 설정 (올바른 언어로 번역됨)
+                        // i18n 인스턴스에서 직접 번역하여 변경된 언어로 메시지 표시
+                        const i18n = getI18nInstance();
+                        const messageText =
+                          i18n?.t('settings.general.saved') || t('settings.general.saved');
+                        setMessage({ type: 'success', text: messageText });
+                      }}
+                      isSaving={isSaving}
+                      message={message}
+                    />
+                  </div>
                 )}
                 {activeTab === 'llm' && configV2 && (
                   <div data-testid="llm-settings">
@@ -1031,61 +1033,73 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 )}
 
                 {activeTab === 'network' && (
-                  <NetworkSettingsTab
-                    networkConfig={networkConfig}
-                    setNetworkConfig={setNetworkConfig}
-                    onSave={handleNetworkSave}
-                    isSaving={isSaving}
-                    message={message}
-                  />
+                  <div data-testid="network-settings">
+                    <NetworkSettingsTab
+                      networkConfig={networkConfig}
+                      setNetworkConfig={setNetworkConfig}
+                      onSave={handleNetworkSave}
+                      isSaving={isSaving}
+                      message={message}
+                    />
+                  </div>
                 )}
 
                 {activeTab === 'vectordb' && (
-                  <VectorDBSettings
-                    onSave={handleVectorDBSave}
-                    initialVectorDBConfig={vectorDBConfig || undefined}
-                    initialEmbeddingConfig={embeddingConfig || undefined}
-                  />
+                  <div data-testid="vectordb-settings">
+                    <VectorDBSettings
+                      onSave={handleVectorDBSave}
+                      initialVectorDBConfig={vectorDBConfig || undefined}
+                      initialEmbeddingConfig={embeddingConfig || undefined}
+                    />
+                  </div>
                 )}
 
                 {activeTab === 'imagegen' && (
-                  <ImageGenSettingsTab
-                    imageGenConfig={imageGenConfig}
-                    setImageGenConfig={setImageGenConfig}
-                    networkConfig={networkConfig}
-                    onSave={handleImageGenSave}
-                    isSaving={isImageGenSaving}
-                    message={imageGenMessage}
-                    setMessage={setImageGenMessage}
-                  />
+                  <div data-testid="comfyui-settings">
+                    <ImageGenSettingsTab
+                      imageGenConfig={imageGenConfig}
+                      setImageGenConfig={setImageGenConfig}
+                      networkConfig={networkConfig}
+                      onSave={handleImageGenSave}
+                      isSaving={isImageGenSaving}
+                      message={imageGenMessage}
+                      setMessage={setImageGenMessage}
+                    />
+                  </div>
                 )}
 
-                {activeTab === 'mcp' && <MCPSettingsTab />}
+                {activeTab === 'mcp' && (
+                  <div data-testid="mcp-settings">
+                    <MCPSettingsTab />
+                  </div>
+                )}
 
                 {activeTab === 'github' && (
-                  <GitHubSyncSettings
-                    config={githubSyncConfig}
-                    onSave={async (newConfig) => {
-                      setGithubSyncConfig(newConfig);
-                      let savedConfig: AppConfig | null = null;
-                      if (isElectron() && window.electronAPI) {
-                        savedConfig = await persistAppConfig({ githubSync: newConfig });
-                      }
-                      if (!savedConfig) {
-                        const currentAppConfig = localStorage.getItem('sepilot_app_config');
-                        const appConfig = currentAppConfig ? JSON.parse(currentAppConfig) : {};
-                        appConfig.githubSync = newConfig;
-                        localStorage.setItem('sepilot_app_config', JSON.stringify(appConfig));
-                      }
+                  <div data-testid="github-settings">
+                    <GitHubSyncSettings
+                      config={githubSyncConfig}
+                      onSave={async (newConfig) => {
+                        setGithubSyncConfig(newConfig);
+                        let savedConfig: AppConfig | null = null;
+                        if (isElectron() && window.electronAPI) {
+                          savedConfig = await persistAppConfig({ githubSync: newConfig });
+                        }
+                        if (!savedConfig) {
+                          const currentAppConfig = localStorage.getItem('sepilot_app_config');
+                          const appConfig = currentAppConfig ? JSON.parse(currentAppConfig) : {};
+                          appConfig.githubSync = newConfig;
+                          localStorage.setItem('sepilot_app_config', JSON.stringify(appConfig));
+                        }
 
-                      // Notify other components about GitHub Sync config update
-                      window.dispatchEvent(
-                        new CustomEvent('sepilot:config-updated', {
-                          detail: { githubSync: newConfig },
-                        })
-                      );
-                    }}
-                  />
+                        // Notify other components about GitHub Sync config update
+                        window.dispatchEvent(
+                          new CustomEvent('sepilot:config-updated', {
+                            detail: { githubSync: newConfig },
+                          })
+                        );
+                      }}
+                    />
+                  </div>
                 )}
 
                 {activeTab === 'team-docs' && (
@@ -1114,7 +1128,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   />
                 )}
 
-                {activeTab === 'backup' && <BackupRestoreSettings />}
+                {activeTab === 'backup' && (
+                  <div data-testid="backup-settings">
+                    <BackupRestoreSettings />
+                  </div>
+                )}
 
                 {activeTab === 'quickinput' && (
                   <QuickInputSettingsTab

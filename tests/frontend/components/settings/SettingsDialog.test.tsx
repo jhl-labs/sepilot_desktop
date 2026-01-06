@@ -157,10 +157,10 @@ describe('SettingsDialog', () => {
     expect(container.querySelector('[role="dialog"]')).not.toBeInTheDocument();
   });
 
-  it('should render LLM tab by default', () => {
+  it('should render general tab by default', () => {
     render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-    expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+    expect(screen.getByTestId('general-settings')).toBeInTheDocument();
   });
 
   it('should switch to Network tab when clicked', async () => {
@@ -238,6 +238,7 @@ describe('SettingsDialog', () => {
   it('should render all tab buttons', () => {
     render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
+    expect(screen.getByRole('button', { name: /일반/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^LLM$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Network/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /VectorDB/i })).toBeInTheDocument();
@@ -250,11 +251,11 @@ describe('SettingsDialog', () => {
   it('should show active tab indicator', () => {
     render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-    const llmTab = screen.getByRole('button', { name: /^LLM$/i });
+    const generalTab = screen.getByRole('button', { name: /일반/i });
 
-    // Check that LLM tab has active styling
-    expect(llmTab).toHaveClass('bg-accent');
-    expect(llmTab).toHaveClass('text-accent-foreground');
+    // Check that General tab has active styling
+    expect(generalTab).toHaveClass('bg-accent');
+    expect(generalTab).toHaveClass('text-accent-foreground');
   });
 
   it('should handle dialog close', () => {
@@ -272,7 +273,7 @@ describe('SettingsDialog', () => {
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
       expect(screen.getByText('설정')).toBeInTheDocument();
-      expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      expect(screen.getByTestId('general-settings')).toBeInTheDocument();
     });
   });
 
@@ -345,7 +346,7 @@ describe('SettingsDialog', () => {
       });
 
       // Component should render without errors when localStorage has data
-      expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      expect(screen.getByTestId('general-settings')).toBeInTheDocument();
 
       localStorage.clear();
     });
@@ -366,7 +367,7 @@ describe('SettingsDialog', () => {
       });
 
       // Component should render without errors
-      expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      expect(screen.getByTestId('general-settings')).toBeInTheDocument();
 
       localStorage.clear();
     });
@@ -388,7 +389,7 @@ describe('SettingsDialog', () => {
       });
 
       // Component should render without errors
-      expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      expect(screen.getByTestId('general-settings')).toBeInTheDocument();
 
       localStorage.clear();
     });
@@ -403,7 +404,7 @@ describe('SettingsDialog', () => {
       });
 
       // Should render without errors even with empty localStorage
-      expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+      expect(screen.getByTestId('general-settings')).toBeInTheDocument();
     });
   });
 
@@ -519,6 +520,10 @@ describe('SettingsDialog', () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
+      // Switch to LLM tab
+      const llmTab = screen.getByRole('button', { name: /^LLM$/i });
+      await user.click(llmTab);
+
       await waitFor(() => {
         expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
       });
@@ -539,6 +544,10 @@ describe('SettingsDialog', () => {
     it('should show error when model is empty', async () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      // Switch to LLM tab
+      const llmTab = screen.getByRole('button', { name: /^LLM$/i });
+      await user.click(llmTab);
 
       await waitFor(() => {
         expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
@@ -562,6 +571,10 @@ describe('SettingsDialog', () => {
     it('should save LLM config to localStorage in web environment', async () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      // Switch to LLM tab
+      const llmTab = screen.getByRole('button', { name: /^LLM$/i });
+      await user.click(llmTab);
 
       await waitFor(() => {
         expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
@@ -591,6 +604,10 @@ describe('SettingsDialog', () => {
     it('should initialize web LLM client after saving', async () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      // Switch to LLM tab
+      const llmTab = screen.getByRole('button', { name: /^LLM$/i });
+      await user.click(llmTab);
 
       await waitFor(() => {
         expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
@@ -639,6 +656,10 @@ describe('SettingsDialog', () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
+      // Switch to LLM tab
+      const llmTab = screen.getByRole('button', { name: /^LLM$/i });
+      await user.click(llmTab);
+
       await waitFor(() => {
         expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
       });
@@ -669,6 +690,10 @@ describe('SettingsDialog', () => {
 
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
+
+      // Switch to LLM tab
+      const llmTab = screen.getByRole('button', { name: /^LLM$/i });
+      await user.click(llmTab);
 
       await waitFor(() => {
         expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
@@ -705,10 +730,6 @@ describe('SettingsDialog', () => {
     it('should save network config to localStorage', async () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
-      });
 
       // Switch to Network tab
       const networkTab = screen.getByRole('button', { name: /Network/i });
@@ -762,10 +783,6 @@ describe('SettingsDialog', () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
-      });
-
       const networkTab = screen.getByRole('button', { name: /Network/i });
       await user.click(networkTab);
 
@@ -795,10 +812,6 @@ describe('SettingsDialog', () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
-      });
-
       const comfyTab = screen.getByRole('button', { name: /ComfyUI/i });
       await user.click(comfyTab);
 
@@ -825,10 +838,6 @@ describe('SettingsDialog', () => {
     it('should show error when enabled but workflow ID is empty', async () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
-      });
 
       const comfyTab = screen.getByRole('button', { name: /ComfyUI/i });
       await user.click(comfyTab);
@@ -857,10 +866,6 @@ describe('SettingsDialog', () => {
     it('should save ComfyUI config successfully', async () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
-      });
 
       const comfyTab = screen.getByRole('button', { name: /ComfyUI/i });
       await user.click(comfyTab);
@@ -907,10 +912,6 @@ describe('SettingsDialog', () => {
     it('should save VectorDB and Embedding config', async () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
-      });
 
       const vectordbTab = screen.getByRole('button', { name: /VectorDB/i });
       await user.click(vectordbTab);
@@ -983,10 +984,6 @@ describe('SettingsDialog', () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
-      });
-
       const vectordbTab = screen.getByRole('button', { name: /VectorDB/i });
       await user.click(vectordbTab);
 
@@ -1015,10 +1012,6 @@ describe('SettingsDialog', () => {
     it('should save GitHub OAuth config', async () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
-      });
 
       const githubTab = screen.getByRole('button', { name: /GitHub/i });
       await user.click(githubTab);
@@ -1063,10 +1056,6 @@ describe('SettingsDialog', () => {
 
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
-      });
 
       const githubTab = screen.getByRole('button', { name: /GitHub/i });
       await user.click(githubTab);
