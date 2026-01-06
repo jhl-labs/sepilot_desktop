@@ -538,6 +538,21 @@ User: "2024년 노벨 물리학상 수상자는?"
 - User explicitly asks to visit a specific URL
 - Pure UI interaction tasks (clicking, typing, scrolling)
 
+**⚠️ CRITICAL: Sequential Execution Only**
+When visiting multiple search results, you MUST execute them ONE AT A TIME:
+- ✅ **CORRECT**: Visit rank 1 → Wait for completion → Visit rank 2 → Wait → Visit rank 3
+- ❌ **WRONG**: Never use Promise.all() or parallel execution for google_visit_result
+- **Why**: The tab system can only handle one visit at a time
+- Each google_visit_result opens a new tab, collects info, closes the tab, and returns to search page
+- Parallel execution will cause tab conflicts and data loss
+
+**Correct Usage Pattern:**
+  1. Call google_visit_result with rank: 1 and extractType: "summary"
+  2. Wait for it to complete
+  3. Call google_visit_result with rank: 2 and extractType: "summary"
+  4. Wait for it to complete
+  5. Synthesize information from both results
+
 # ENHANCED CAPABILITIES
 
 **NEW: Accessibility Tree Analysis**

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LLMConnection, ModelConfig } from '@/types';
 import { Plus, Trash2, Edit2, Check, X } from 'lucide-react';
+import { CustomHeadersManager } from './CustomHeadersManager';
 
 import { useTranslation } from 'react-i18next';
 
@@ -318,25 +319,14 @@ interface ConnectionFormProps {
 
 function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionFormProps) {
   const { t } = useTranslation();
-  const [newHeaderKey, setNewHeaderKey] = useState('');
-  const [newHeaderValue, setNewHeaderValue] = useState('');
 
-  const handleAddHeader = () => {
-    const key = newHeaderKey.trim();
-    const value = newHeaderValue.trim();
-
-    if (!key || !value) {
-      return;
-    }
-
+  const handleAddHeader = (key: string, value: string) => {
     const updatedHeaders = {
       ...(formData.customHeaders || {}),
       [key]: value,
     };
 
     onChange({ ...formData, customHeaders: updatedHeaders });
-    setNewHeaderKey('');
-    setNewHeaderValue('');
   };
 
   const handleDeleteHeader = (key: string) => {
@@ -400,39 +390,11 @@ function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionForm
         />
       </div>
 
-      <div className="space-y-2">
-        <Label>{t('settings.llm.connections.customHeaders')}</Label>
-        {formData.customHeaders && Object.keys(formData.customHeaders).length > 0 && (
-          <div className="space-y-1">
-            {Object.entries(formData.customHeaders).map(([key, value]) => (
-              <div key={key} className="flex items-center gap-2 p-2 rounded bg-background text-sm">
-                <span className="font-mono flex-1">{key}:</span>
-                <span className="font-mono text-muted-foreground flex-1">{value}</span>
-                <Button variant="ghost" size="sm" onClick={() => handleDeleteHeader(key)}>
-                  {t('common.delete')}
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="flex gap-2">
-          <Input
-            value={newHeaderKey}
-            onChange={(e) => setNewHeaderKey(e.target.value)}
-            placeholder={t('settings.llm.connections.headerKey')}
-            className="flex-1"
-          />
-          <Input
-            value={newHeaderValue}
-            onChange={(e) => setNewHeaderValue(e.target.value)}
-            placeholder={t('settings.llm.connections.headerValue')}
-            className="flex-1"
-          />
-          <Button size="sm" onClick={handleAddHeader}>
-            {t('settings.llm.connections.addHeader')}
-          </Button>
-        </div>
-      </div>
+      <CustomHeadersManager
+        headers={formData.customHeaders || null}
+        onAddHeader={handleAddHeader}
+        onDeleteHeader={handleDeleteHeader}
+      />
 
       <div className="flex items-center justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onCancel}>

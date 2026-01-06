@@ -33,7 +33,7 @@ function isToolsListResponse(value: unknown): value is ToolsListResponse {
   );
 }
 
-function _isPromptsListResponse(value: unknown): value is PromptsListResponse {
+function isPromptsListResponse(value: unknown): value is PromptsListResponse {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -41,7 +41,7 @@ function _isPromptsListResponse(value: unknown): value is PromptsListResponse {
   );
 }
 
-function _isPromptGetResponse(value: unknown): value is MCPPromptResult {
+function isPromptGetResponse(value: unknown): value is MCPPromptResult {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -261,6 +261,58 @@ export abstract class MCPClient {
   }
 
   /**
+   * 사용 가능한 프롬프트 템플릿 목록 가져오기
+   */
+  async listPrompts(): Promise<MCPPrompt[]> {
+    const request: JSONRPCRequest = {
+      jsonrpc: '2.0',
+      id: this.getNextId(),
+      method: 'prompts/list',
+      params: {},
+    };
+
+    const response = await this.sendRequest(request);
+
+    if (response.error) {
+      throw new Error(`List prompts error: ${response.error.message}`);
+    }
+
+    if (!isPromptsListResponse(response.result)) {
+      throw new Error('Invalid prompts list response from MCP server');
+    }
+
+    this.prompts = response.result.prompts;
+    return this.prompts;
+  }
+
+  /**
+   * 프롬프트 템플릿 가져오기
+   */
+  async getPrompt(name: string, args?: Record<string, string>): Promise<MCPPromptResult> {
+    const request: JSONRPCRequest = {
+      jsonrpc: '2.0',
+      id: this.getNextId(),
+      method: 'prompts/get',
+      params: {
+        name,
+        arguments: args || {},
+      },
+    };
+
+    const response = await this.sendRequest(request);
+
+    if (response.error) {
+      throw new Error(`Get prompt error: ${response.error.message}`);
+    }
+
+    if (!isPromptGetResponse(response.result)) {
+      throw new Error('Invalid prompt get response from MCP server');
+    }
+
+    return response.result;
+  }
+
+  /**
    * 다음 요청 ID 생성
    */
   protected getNextId(): number {
@@ -286,6 +338,13 @@ export abstract class MCPClient {
    */
   getResources(): MCPResource[] {
     return this.resources;
+  }
+
+  /**
+   * 프롬프트 목록 가져오기 (캐시된)
+   */
+  getPrompts(): MCPPrompt[] {
+    return this.prompts;
   }
 
   /**
