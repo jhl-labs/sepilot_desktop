@@ -2,7 +2,8 @@
  * lib/utils.ts 유틸리티 함수 테스트
  */
 
-import { cn, formatDate, generateId, truncate } from '@/lib/utils';
+import { cn, formatDate, truncate } from '@/lib/utils';
+import { generateId } from '@/lib/utils/id-generator';
 
 describe('utils', () => {
   describe('cn (classnames)', () => {

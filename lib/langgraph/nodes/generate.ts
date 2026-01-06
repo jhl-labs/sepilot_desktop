@@ -458,7 +458,13 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
             typeof result.result === 'string' ? result.result : JSON.stringify(result.result);
         }
       } else {
-        content = 'No result';
+        // ⚠️ This should not happen if tools.ts is working correctly
+        // Both error and result are missing - treat as error
+        content = 'Error: Tool returned neither result nor error (internal error)';
+        logger.error('[Agent] Tool result missing both error and result:', {
+          toolCallId: result.toolCallId,
+          toolName: result.toolName,
+        });
       }
 
       // 긴 결과 제한 (Truncation) - 50000자로 증가하여 더 많은 컨텍스트 제공

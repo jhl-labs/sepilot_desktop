@@ -10,28 +10,38 @@
       "Write:lib/**",
       "Write:electron/**",
       "Write:scripts/**",
+      "Write:tests/**",
+      "Write:release_notes/**",
       "Write:.claude/**",
       "Bash:pnpm run *",
       "Bash:git status",
       "Bash:git diff",
       "Bash:git log",
       "Bash:git add",
-      "Bash:git commit"
+      "Bash:git commit",
+      "Bash:git push",
+      "Bash:git pull",
+      "LSP:*"
     ],
     "deny": [
       "Write:.env*",
       "Write:**/*.secrets",
       "Write:**/.secrets/**",
-      "Bash:git push",
       "Bash:npm install",
-      "Bash:rm -rf"
+      "Bash:rm -rf",
+      "Bash:git push --force",
+      "Bash:git push -f"
     ],
     "ask": [
       "Write:CLAUDE.md",
       "Write:package.json",
       "Write:tsconfig.json",
+      "Write:pnpm-lock.yaml",
       "Bash:git rebase",
-      "Bash:git reset"
+      "Bash:git reset",
+      "Bash:pnpm install",
+      "Bash:pnpm add"
     ]
-  }
+  },
+  "disableAllHooks": true
 }

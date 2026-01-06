@@ -277,6 +277,16 @@ export interface ImageGenerationProgress {
   totalSteps?: number;
 }
 
+/**
+ * Agent Progress (Coding Agent, Editor Agent 등)
+ */
+export interface AgentProgress {
+  iteration: number;
+  maxIterations: number;
+  status: string; // 'thinking' | 'executing' | 'working' | etc.
+  message: string;
+}
+
 export interface MCPServerConfig {
   name: string;
   transport: 'stdio' | 'sse';

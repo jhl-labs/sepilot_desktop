@@ -989,17 +989,21 @@ export class BrowserAgentGraph {
     let hasError = false;
     let errorMessage = '';
 
-    // 반복 감지를 위한 도구 호출 히스토리 (최근 5개만 추적)
-    const toolCallHistory: Array<{ name: string; args: string }> = [];
-    const MAX_HISTORY = 5;
-    const LOOP_THRESHOLD = 3; // 같은 호출이 3번 반복되면 루프로 간주
+    // 반복 감지를 위한 도구 호출 히스토리 (최근 10개 추적으로 증가)
+    const toolCallHistory: Array<{ name: string; args: string; timestamp: number }> = [];
+    const MAX_HISTORY = 10; // 증가: 5 -> 10 (더 긴 히스토리 추적)
+    const LOOP_THRESHOLD = 2; // 감소: 3 -> 2 (더 빠른 루프 감지)
     const failureCounts = new Map<string, number>();
-    let visionFallbackTriggered = false;
-    let postVerifyPending = false;
-    let lastPageFingerprint: string | null = null;
-    let unchangedCount = 0;
-    let scrollRecoveryPending = false;
-    let waitInjected = false;
+
+    // Fallback 전략 플래그들을 하나의 객체로 통합 관리
+    const fallbackState = {
+      visionFallbackUsed: false,
+      postVerifyPending: false,
+      lastPageFingerprint: null as string | null,
+      unchangedCount: 0,
+      scrollRecoveryUsed: false,
+      waitInjected: false,
+    };
 
     while (iterations < actualMaxIterations && !this.shouldStop) {
       logger.debug(`[BrowserAgent] ===== Iteration ${iterations + 1}/${actualMaxIterations} =====`);
@@ -1295,7 +1299,7 @@ export class BrowserAgentGraph {
               ].includes(result.toolName)
             ) {
               verificationHints.push(result.toolName);
-              postVerifyPending = true;
+              fallbackState.postVerifyPending = true;
             }
 
             // Annotated screenshot → marker guidance
@@ -1337,29 +1341,31 @@ export class BrowserAgentGraph {
                   parsed?.main_content_preview?.length || parsed?.mainText?.length || 0,
                 ].join('|');
 
-                if (lastPageFingerprint && fingerprint === lastPageFingerprint) {
-                  addBrowserAgentLog({
-                    level: 'warning',
-                    phase: 'decision',
-                    message: '페이지 상태가 이전과 동일합니다. 다른 접근을 시도하세요.',
-                    details: {
-                      iteration: iterations + 1,
-                      maxIterations: actualMaxIterations,
-                    },
-                  });
+                if (
+                  fallbackState.lastPageFingerprint &&
+                  fingerprint === fallbackState.lastPageFingerprint
+                ) {
+                  fallbackState.unchangedCount += 1;
 
-                  unchangedCount += 1;
-                  if (unchangedCount >= 1) {
-                    scrollRecoveryPending = true;
+                  // 경고는 한 번만 표시
+                  if (fallbackState.unchangedCount === 1) {
+                    addBrowserAgentLog({
+                      level: 'warning',
+                      phase: 'decision',
+                      message: '페이지 상태가 이전과 동일합니다. 다른 접근을 시도하세요.',
+                      details: {
+                        iteration: iterations + 1,
+                        maxIterations: actualMaxIterations,
+                      },
+                    });
                   }
+                } else {
+                  // 페이지가 변경됨 - 카운터 리셋
+                  fallbackState.unchangedCount = 0;
+                  fallbackState.scrollRecoveryUsed = false;
                 }
 
-                if (!lastPageFingerprint || fingerprint !== lastPageFingerprint) {
-                  unchangedCount = 0;
-                  scrollRecoveryPending = false;
-                }
-
-                lastPageFingerprint = fingerprint;
+                fallbackState.lastPageFingerprint = fingerprint;
               } catch (err) {
                 console.warn('[BrowserAgent] Failed to parse page content for fingerprint', err);
               }
@@ -1480,8 +1486,8 @@ export class BrowserAgentGraph {
           };
         }
 
-        // 반복 실패 시 요소 등장 대기 자동 실행
-        if (hasRepeatedFailure && !waitInjected) {
+        // 반복 실패 시 요소 등장 대기 자동 실행 (한 번만)
+        if (hasRepeatedFailure && !fallbackState.waitInjected) {
           const waitMessage: Message = {
             id: `wait-${Date.now()}`,
             role: 'assistant',
@@ -1514,11 +1520,11 @@ export class BrowserAgentGraph {
             messages: [...state.messages, waitMessage],
           };
 
-          waitInjected = true;
+          fallbackState.waitInjected = true;
         }
 
-        // Annotated marker 기반 검색을 자동 준비 (간단한 OCR-free 하이브리드)
-        if (annotatedGuidance && visionFallbackTriggered) {
+        // Annotated marker 기반 검색을 자동 준비 (vision fallback 사용 시에만)
+        if (annotatedGuidance && fallbackState.visionFallbackUsed) {
           const markerSearchMessage: Message = {
             id: `marker-search-${Date.now()}`,
             role: 'assistant',
@@ -1551,8 +1557,8 @@ export class BrowserAgentGraph {
           };
         }
 
-        // 동일 페이지 상태가 두 번 이상 유지될 때 추가 탐색/비전 플랜 삽입
-        if (unchangedCount >= 2 && !visionFallbackTriggered) {
+        // 동일 페이지 상태가 두 번 이상 유지될 때 추가 탐색/비전 플랜 삽입 (한 번만)
+        if (fallbackState.unchangedCount >= 2 && !fallbackState.visionFallbackUsed) {
           const unchangedMessage: Message = {
             id: `unchanged-${Date.now()}`,
             role: 'assistant',
@@ -1592,12 +1598,12 @@ export class BrowserAgentGraph {
             messages: [...state.messages, unchangedMessage],
           };
 
-          visionFallbackTriggered = true;
-          unchangedCount = 0;
+          fallbackState.visionFallbackUsed = true;
+          fallbackState.unchangedCount = 0;
         }
 
-        // 페이지 변화 없음 → 스크롤 재시도
-        if (scrollRecoveryPending) {
+        // 페이지 변화 없음 → 스크롤 재시도 (한 번만)
+        if (fallbackState.scrollRecoveryUsed && fallbackState.unchangedCount >= 1) {
           const scrollMessage: Message = {
             id: `scroll-recovery-${Date.now()}`,
             role: 'assistant',
@@ -1630,11 +1636,11 @@ export class BrowserAgentGraph {
             messages: [...state.messages, scrollMessage],
           };
 
-          scrollRecoveryPending = false;
+          fallbackState.scrollRecoveryUsed = true;
         }
 
-        // 자동 비전 fallback: 실패 누적 시 Annotated screenshot 호출
-        if (hasRepeatedFailure && !visionFallbackTriggered) {
+        // 자동 비전 fallback: 실패 누적 시 Annotated screenshot 호출 (한 번만)
+        if (hasRepeatedFailure && !fallbackState.visionFallbackUsed) {
           const visionToolMessage: Message = {
             id: `vision-fallback-${Date.now()}`,
             role: 'assistant',
@@ -1667,11 +1673,11 @@ export class BrowserAgentGraph {
             messages: [...state.messages, visionToolMessage],
           };
 
-          visionFallbackTriggered = true;
+          fallbackState.visionFallbackUsed = true;
         }
 
-        // 자동 검증: 최근 변화가 있을 때 간단한 페이지 요약 요청
-        if (postVerifyPending) {
+        // 자동 검증: 최근 변화가 있을 때 간단한 페이지 요약 요청 (한 번만)
+        if (fallbackState.postVerifyPending) {
           const verifyToolMessage: Message = {
             id: `verify-${Date.now()}`,
             role: 'assistant',
@@ -1701,34 +1707,45 @@ export class BrowserAgentGraph {
             messages: [...state.messages, verifyToolMessage],
           };
 
-          postVerifyPending = false;
+          fallbackState.postVerifyPending = false;
         }
       }
 
-      // 반복 감지: 도구 호출 히스토리에 추가
+      // 반복 감지: 도구 호출 히스토리에 추가 (timestamp 포함)
       for (const toolCall of toolCalls) {
-        toolCallHistory.push({ name: toolCall.name, args: JSON.stringify(toolCall.arguments) });
+        const now = Date.now();
+        toolCallHistory.push({
+          name: toolCall.name,
+          args: JSON.stringify(toolCall.arguments),
+          timestamp: now,
+        });
 
         // 히스토리 크기 제한
         if (toolCallHistory.length > MAX_HISTORY) {
           toolCallHistory.shift();
         }
 
-        // 반복 감지: 같은 호출이 여러 번 반복되는지 확인
-        const recentCalls = toolCallHistory.slice(-LOOP_THRESHOLD);
-        if (recentCalls.length === LOOP_THRESHOLD) {
+        // 반복 감지: 최근 LOOP_THRESHOLD개가 모두 같은지 확인 (시간 윈도우 내에서)
+        if (toolCallHistory.length >= LOOP_THRESHOLD) {
+          const recentCalls = toolCallHistory.slice(-LOOP_THRESHOLD);
+          const firstCall = recentCalls[0];
+
+          // 시간 윈도우 체크: 10초 내 같은 호출 반복
+          const timeWindow = 10000; // 10초
+          const isWithinTimeWindow = recentCalls.every((call) => now - call.timestamp < timeWindow);
+
           const allSame = recentCalls.every(
-            (call) => call.name === recentCalls[0].name && call.args === recentCalls[0].args
+            (call) => call.name === firstCall.name && call.args === firstCall.args
           );
 
-          if (allSame) {
+          if (allSame && isWithinTimeWindow) {
             console.warn(
-              '[BrowserAgent] Loop detected: same tool called multiple times with same arguments'
+              `[BrowserAgent] Loop detected: ${toolCall.name} called ${LOOP_THRESHOLD} times consecutively with same arguments`
             );
             addBrowserAgentLog({
-              level: 'warning',
-              phase: 'decision',
-              message: '동일한 도구 호출이 반복되어 실행을 중단합니다.',
+              level: 'error',
+              phase: 'error',
+              message: `무한 루프 감지: ${toolCall.name}가 동일한 인자로 ${LOOP_THRESHOLD}회 연속 호출되었습니다.`,
               details: {
                 iteration: iterations + 1,
                 maxIterations: actualMaxIterations,
@@ -1736,7 +1753,7 @@ export class BrowserAgentGraph {
               },
             });
             hasError = true;
-            errorMessage = `같은 작업(${toolCall.name})이 반복되고 있습니다. 다른 방법을 시도해야 할 것 같습니다.`;
+            errorMessage = `무한 루프 감지: ${toolCall.name}가 반복 호출되고 있습니다. 다른 접근 방법을 시도해야 합니다.`;
             break;
           }
         }

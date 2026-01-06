@@ -45,7 +45,7 @@ import { LLMStatusBar } from '../LLMStatusBar';
 import { ImageGenerationProgressBar } from '../ImageGenerationProgressBar';
 import { useChatStore } from '@/lib/store/chat-store';
 import { isElectron } from '@/lib/platform';
-import type { ImageAttachment } from '@/types';
+import type { ImageAttachment, AgentProgress } from '@/types';
 import type { Persona } from '@/types/persona';
 import type { ChatConfig } from './types';
 
@@ -53,13 +53,6 @@ interface ToolInfo {
   name: string;
   description: string;
   serverName: string;
-}
-
-interface AgentProgress {
-  iteration: number;
-  maxIterations: number;
-  status: string;
-  message: string;
 }
 
 interface UnifiedChatInputProps {

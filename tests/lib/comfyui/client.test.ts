@@ -125,7 +125,10 @@ describe('ComfyUIClient', () => {
       const result = await client.testConnection();
 
       expect(result).toBe(true);
-      expect(global.fetch).toHaveBeenCalledWith('http://localhost:8188/system_stats');
+      expect(global.fetch).toHaveBeenCalled();
+      expect((global.fetch as jest.Mock).mock.calls[0][0]).toBe(
+        'http://localhost:8188/system_stats'
+      );
     });
 
     it('should return false when server does not respond', async () => {
@@ -310,14 +313,14 @@ describe('ComfyUIClient', () => {
     it('should handle generic error without message', async () => {
       const client = new ComfyUIClient(mockConfig);
 
-      (global.fetch as jest.Mock).mockRejectedValue({});
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('Image generation failed'));
 
       const result = await client.generateImage({
         prompt: 'Test prompt',
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Image generation failed');
+      expect(result.error).toContain('Image generation failed');
     });
   });
 

@@ -150,6 +150,7 @@
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "jest-junit": "^16.0.0",
+    "jscpd": "^4.0.5",
     "lint-staged": "^16.2.7",
     "node-gyp": "^12.1.0",
     "path-browserify": "^1.0.1",

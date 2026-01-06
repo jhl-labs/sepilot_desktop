@@ -5,6 +5,7 @@ import {
   PendingToolApproval,
   ImageGenerationProgress,
   ConversationChatSettings,
+  AgentProgress,
 } from '@/types';
 import { generateId } from '@/lib/utils/id-generator';
 import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
@@ -168,6 +169,9 @@ interface ChatStore extends ExtensionStoreState {
   // Image Generation Progress (per conversation)
   imageGenerationProgress: Map<string, ImageGenerationProgress>; // conversationId -> progress
 
+  // Agent Progress (Coding Agent, Editor Agent 등)
+  agentProgress: Map<string, AgentProgress>; // conversationId -> progress
+
   // Browser Mode Chat (simple side chat)
   browserChatMessages: Message[];
   browserViewMode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs';
@@ -266,6 +270,12 @@ interface ChatStore extends ExtensionStoreState {
   ) => void;
   clearImageGenerationProgress: (conversationId: string) => void;
   getImageGenerationProgress: (conversationId: string) => ImageGenerationProgress | undefined;
+
+  // Actions - Agent Progress
+  setAgentProgress: (conversationId: string, progress: AgentProgress) => void;
+  updateAgentProgress: (conversationId: string, updates: Partial<AgentProgress>) => void;
+  clearAgentProgress: (conversationId: string) => void;
+  getAgentProgress: (conversationId: string) => AgentProgress | undefined;
 
   // Actions - Browser Chat
   addBrowserChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => void;
@@ -417,6 +427,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Image Generation Progress
   imageGenerationProgress: new Map<string, ImageGenerationProgress>(),
+
+  // Agent Progress
+  agentProgress: new Map<string, AgentProgress>(),
 
   // Browser Chat
   browserChatMessages: [],
@@ -1553,6 +1566,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       enableRAG: state.enableRAG,
       enableTools: state.enableTools,
       enableImageGeneration: state.enableImageGeneration,
+      workingDirectory: state.workingDirectory || undefined,
+      activeFileSelection: state.activeFileSelection || undefined,
+      enabledTools: state.enabledTools.size > 0 ? Array.from(state.enabledTools) : undefined,
     };
   },
 
@@ -1618,6 +1634,38 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   getImageGenerationProgress: (conversationId: string) => {
     return get().imageGenerationProgress.get(conversationId);
+  },
+
+  // Agent Progress
+  setAgentProgress: (conversationId: string, progress: AgentProgress) => {
+    set((state) => {
+      const newMap = new Map(state.agentProgress);
+      newMap.set(conversationId, progress);
+      return { agentProgress: newMap };
+    });
+  },
+
+  updateAgentProgress: (conversationId: string, updates: Partial<AgentProgress>) => {
+    set((state) => {
+      const newMap = new Map(state.agentProgress);
+      const existing = newMap.get(conversationId);
+      if (existing) {
+        newMap.set(conversationId, { ...existing, ...updates });
+      }
+      return { agentProgress: newMap };
+    });
+  },
+
+  clearAgentProgress: (conversationId: string) => {
+    set((state) => {
+      const newMap = new Map(state.agentProgress);
+      newMap.delete(conversationId);
+      return { agentProgress: newMap };
+    });
+  },
+
+  getAgentProgress: (conversationId: string) => {
+    return get().agentProgress.get(conversationId);
   },
 
   // App Mode Actions
