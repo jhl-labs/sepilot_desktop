@@ -83,6 +83,17 @@ Claude Code가 자동으로 참조하는 프로젝트별 전문 지식:
 - **typescript-strict**: TypeScript strict mode 타입 작성 규칙
 - **react-shadcn**: React + shadcn/ui 컴포넌트 개발 패턴
 
+**품질 및 최적화:**
+
+- **testing-patterns**: Jest, React Testing Library, Playwright 테스트 패턴
+- **error-handling**: 에러 처리, 로깅, Error Boundary, 사용자 피드백
+- **performance-optimization**: React 최적화, IPC 최적화, 번들 크기 최적화
+
+**상태 및 데이터 관리:**
+
+- **state-management**: Zustand 전역 상태 관리, Slice 패턴, Persistence
+- **file-operations**: 파일 읽기/쓰기, PDF/Word/Excel 처리, 이미지 처리
+
 **AI/ML 통합:**
 
 - **langgraph-agent**: LangGraph 에이전트 구현 및 그래프 기반 워크플로우
