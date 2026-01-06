@@ -7,8 +7,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './MessageBubble';
 import { useChatStore } from '@/lib/store/chat-store';
 import { MessageSquare, ZoomIn } from 'lucide-react';
-import { Message } from '@/types';
+import { Message, ToolCall } from '@/types';
 import { isTextFile } from '@/lib/utils';
+import { StreamEvent } from '@/lib/langgraph/types';
 import {
   Select,
   SelectContent,
@@ -299,7 +300,7 @@ export function ChatArea() {
         const graphConfig = getGraphConfig();
 
         // Setup stream event listener
-        const eventHandler = window.electronAPI.langgraph.onStreamEvent((event: any) => {
+        const eventHandler = window.electronAPI.langgraph.onStreamEvent((event: StreamEvent) => {
           try {
             // Guard: Check if event exists
             if (!event) {
@@ -352,12 +353,12 @@ export function ChatArea() {
                     const toolName = msg.name || 'tool';
 
                     // Find the corresponding tool call to get arguments
-                    let toolArgs: any = null;
+                    let toolArgs: Record<string, unknown> | null = null;
                     for (let j = i - 1; j >= 0; j--) {
                       const prevMsg = allMessages[j];
                       if (prevMsg.role === 'assistant' && prevMsg.tool_calls) {
                         const toolCall = prevMsg.tool_calls.find(
-                          (tc: any) => tc.id === msg.tool_call_id
+                          (tc: ToolCall) => tc.id === msg.tool_call_id
                         );
                         if (toolCall) {
                           toolArgs = toolCall.arguments;
@@ -515,7 +516,7 @@ export function ChatArea() {
         };
         await window.electronAPI.chat.saveMessage(finalMessage);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Regeneration error:', error);
     } finally {
       // Cleanup: cancel any pending animation frame
