@@ -439,10 +439,13 @@ describe('settingsUtils', () => {
     it('should use fetch in browser mode for OpenAI', async () => {
       const mockResponse = {
         ok: true,
+        headers: {
+          get: jest.fn((key: string) => (key === 'content-type' ? 'application/json' : null)),
+        },
         json: jest.fn().mockResolvedValue({
           data: [{ id: 'gpt-4' }, { id: 'gpt-3.5-turbo' }],
         }),
-        text: jest.fn(),
+        text: jest.fn().mockResolvedValue('{"data":[{"id":"gpt-4"},{"id":"gpt-3.5-turbo"}]}'),
       };
 
       (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
@@ -472,10 +475,15 @@ describe('settingsUtils', () => {
     it('should use fetch in browser mode for Anthropic', async () => {
       const mockResponse = {
         ok: true,
+        headers: {
+          get: jest.fn((key: string) => (key === 'content-type' ? 'application/json' : null)),
+        },
         json: jest.fn().mockResolvedValue({
           data: [{ id: 'claude-3-opus' }, { id: 'claude-3-sonnet' }],
         }),
-        text: jest.fn(),
+        text: jest
+          .fn()
+          .mockResolvedValue('{"data":[{"id":"claude-3-opus"},{"id":"claude-3-sonnet"}]}'),
       };
 
       (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
@@ -503,10 +511,13 @@ describe('settingsUtils', () => {
     it('should include custom headers in browser mode', async () => {
       const mockResponse = {
         ok: true,
+        headers: {
+          get: jest.fn((key: string) => (key === 'content-type' ? 'application/json' : null)),
+        },
         json: jest.fn().mockResolvedValue({
           data: [{ id: 'model-1' }],
         }),
-        text: jest.fn(),
+        text: jest.fn().mockResolvedValue('{"data":[{"id":"model-1"}]}'),
       };
 
       (global.fetch as jest.Mock).mockResolvedValue(mockResponse);

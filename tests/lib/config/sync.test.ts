@@ -69,7 +69,7 @@ describe('ConfigSync', () => {
 
       await sync.initialize(testToken);
 
-      expect(Octokit).toHaveBeenCalledWith({ auth: testToken });
+      expect(Octokit).toHaveBeenCalledWith(expect.objectContaining({ auth: testToken }));
       expect(mockOctokit.users.getAuthenticated).toHaveBeenCalled();
     });
   });

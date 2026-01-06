@@ -39,6 +39,8 @@ export function useMessageStreaming() {
     clearPendingToolApproval,
     setImageGenerationProgress,
     clearImageGenerationProgress,
+    setAgentProgress,
+    clearAgentProgress,
     setEnableImageGeneration,
     enableTools,
     enableImageGeneration,
@@ -302,6 +304,26 @@ export function useMessageStreaming() {
             // Handle Coding Agent display
             if (thinkingMode === 'coding' && event.type === 'node' && event.data?.messages) {
               const allMsgs = event.data.messages;
+
+              // Update agent progress if available
+              const eventData = event.data as any; // Type assertion for dynamic data
+              if (eventData?.iterationCount !== undefined && eventData?.maxIterations) {
+                const nodeStatus = event.node || 'working';
+                const statusMap: Record<string, string> = {
+                  agent: 'thinking',
+                  tools: 'executing',
+                  verifier: 'thinking',
+                  reporter: 'executing',
+                };
+
+                setAgentProgress(conversationId, {
+                  iteration: eventData.iterationCount,
+                  maxIterations: eventData.maxIterations,
+                  status: statusMap[nodeStatus] || 'working',
+                  message: `Step ${eventData.iterationCount}/${eventData.maxIterations}: ${event.node || 'Processing'}`,
+                });
+              }
+
               if (allMsgs && allMsgs.length > 0) {
                 let displayContent = '';
                 for (const msg of allMsgs) {
@@ -631,6 +653,9 @@ export function useMessageStreaming() {
           cleanupErrorHandler();
         }
 
+        // Clear agent progress when streaming stops
+        clearAgentProgress(conversationId);
+
         stopStreaming(conversationId);
         abortControllerRef.current = null;
       }
@@ -648,6 +673,8 @@ export function useMessageStreaming() {
       clearPendingToolApproval,
       setImageGenerationProgress,
       clearImageGenerationProgress,
+      setAgentProgress,
+      clearAgentProgress,
       setEnableImageGeneration,
       enableTools,
       enableImageGeneration,

@@ -16,6 +16,11 @@ global.TextDecoder = TextDecoder as any;
 // Mock fetch globally
 global.fetch = jest.fn();
 
+// Mock nanoid
+jest.mock('nanoid', () => ({
+  nanoid: jest.fn(() => 'mock-nanoid-id'),
+}));
+
 // Mock crypto for UUID generation (Node.js environment)
 const crypto = require('crypto');
 (global as any).crypto = {

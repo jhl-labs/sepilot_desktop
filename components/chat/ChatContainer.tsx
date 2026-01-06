@@ -31,6 +31,7 @@ export function ChatContainer() {
     updateMessage,
     deleteMessage,
     addMessage,
+    agentProgress,
   } = useChatStore();
 
   // Load LLM and ImageGen config
@@ -224,6 +225,9 @@ export function ChatContainer() {
         isStreaming={isStreaming}
         imageGenAvailable={imageGenAvailable}
         mounted={mounted}
+        agentProgress={
+          activeConversationId ? agentProgress.get(activeConversationId) || null : null
+        }
       />
     </div>
   );

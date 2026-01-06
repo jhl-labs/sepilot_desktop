@@ -2,7 +2,8 @@
  * lib/utils.ts 테스트
  */
 
-import { cn, formatDate, generateId, truncate, isTextFile } from '@/lib/utils';
+import { cn, formatDate, truncate, isTextFile } from '@/lib/utils';
+import { generateId } from '@/lib/utils/id-generator';
 
 describe('utils', () => {
   describe('cn', () => {
