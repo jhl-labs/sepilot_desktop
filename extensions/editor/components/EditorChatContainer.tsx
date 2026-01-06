@@ -123,15 +123,15 @@ export function EditorChatContainer() {
         let accumulatedContent = '';
 
         if (isElectron() && typeof window !== 'undefined' && window.electronAPI?.langgraph) {
-          // Electron: Use selected Agent mode (Editor or Coding)
+          // Electron: Always use AdvancedEditorAgent (has Planning/Verification)
+          // 항상 'editor-agent' 사용 (CodingAgent에는 Planning/Verification 없음)
           const graphConfig = {
-            thinkingMode:
-              editorAgentMode === 'coding' ? ('coding' as const) : ('editor-agent' as const),
+            thinkingMode: 'editor-agent' as const, // ✅ AdvancedEditorAgent 사용
             enableRAG: false,
             enableTools: editorAgentMode === 'coding',
             // Advanced features (v0.7.6) - Coding 모드에서만 활성화 ⭐
-            // Editor 모드: 조언만 제공 (Copilot Chat 스타일)
-            // Coding 모드: 실제 파일 수정 (Cursor/Cline 스타일)
+            // Editor 모드: 조언만 제공 (도구 없음, Planning 없음)
+            // Coding 모드: Planning + Verification + MCP Tools + 파일 수정
             enableMCPTools: editorAgentMode === 'coding',
             enablePlanning: editorAgentMode === 'coding',
             enableVerification: editorAgentMode === 'coding',
