@@ -4,19 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SEPilot Desktop - 개발자 아키텍처 문서</title>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-    <script>
-      mermaid.initialize({
-        startOnLoad: true,
-        theme: 'default',
-        securityLevel: 'loose',
-        flowchart: {
-          useMaxWidth: true,
-          htmlLabels: true,
-          curve: 'basis',
-        },
-      });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
     <style>
       :root {
         --primary: #2563eb;
@@ -1038,5 +1026,32 @@ sequenceDiagram
         </p>
       </footer>
     </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('Initializing Mermaid...');
+        if (typeof mermaid !== 'undefined') {
+          console.log('Mermaid version:', mermaid.version);
+          mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+              useMaxWidth: true,
+              htmlLabels: true,
+              curve: 'basis',
+            },
+          });
+
+          // 명시적으로 렌더링 시도
+          setTimeout(function() {
+            console.log('Running mermaid.init...');
+            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+          }, 100);
+        } else {
+          console.error('Mermaid library not loaded!');
+        }
+      });
+    </script>
   </body>
 </html>
