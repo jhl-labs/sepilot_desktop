@@ -84,7 +84,7 @@ export function ExtensionManagerTab({ onSectionChange, message }: ExtensionManag
     try {
       const manifest = extensionRegistry.getManifest(extensionId);
       if (!manifest) {
-        throw new Error(`Extension ${extensionId} not found`);
+        throw new Error(t('settings.extensions.notFound'));
       }
 
       if (enabled) {

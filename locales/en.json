@@ -703,7 +703,8 @@
       "version": "Version",
       "author": "Author",
       "saved": "Extension settings saved",
-      "saveFailed": "Failed to save extension settings"
+      "saveFailed": "Failed to save extension settings",
+      "notFound": "Extension not found"
     },
     "beta": {
       "title": "Beta",

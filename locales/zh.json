@@ -936,7 +936,8 @@
       "version": "版本",
       "author": "作者",
       "saved": "扩展设置已保存",
-      "saveFailed": "扩展设置保存失败"
+      "saveFailed": "扩展设置保存失败",
+      "notFound": "未找到扩展"
     },
     "beta": {
       "title": "Beta",
