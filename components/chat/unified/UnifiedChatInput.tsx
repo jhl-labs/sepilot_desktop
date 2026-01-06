@@ -484,49 +484,52 @@ export function UnifiedChatInput({
   }, [input, personas, personaAutocompleteIndex, isComposing, clearInput, setActivePersona, mode]);
 
   // Handle drag events
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-  };
+  }, []);
 
-  const handleDragEnter = (e: React.DragEvent) => {
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
-  };
+  }, []);
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) {
       setIsDragging(false);
     }
-  };
+  }, []);
 
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
 
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) {
-      return;
-    }
-
-    await handleFileDrop(
-      files,
-      (textContent) => {
-        setInput((prev) => (prev ? `${prev}\n\n${textContent}` : textContent));
-      },
-      (images) => {
-        // Add images to selectedImages
-        for (const _img of images) {
-          // TODO: Fix this - should directly add to selectedImages
-          handleImageSelect();
-        }
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length === 0) {
+        return;
       }
-    );
-  };
+
+      await handleFileDrop(
+        files,
+        (textContent) => {
+          setInput((prev) => (prev ? `${prev}\n\n${textContent}` : textContent));
+        },
+        (images) => {
+          // Add images to selectedImages
+          for (const _img of images) {
+            // TODO: Fix this - should directly add to selectedImages
+            handleImageSelect();
+          }
+        }
+      );
+    },
+    [handleFileDrop, handleImageSelect]
+  );
 
   const placeholderText = isStreaming
     ? t('unifiedInput.placeholder.generating')

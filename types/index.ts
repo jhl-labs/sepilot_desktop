@@ -65,7 +65,8 @@ export interface ConversationChatSettings {
     | 'deep-web-research'
     | 'coding'
     | 'browser-agent'
-    | 'editor-agent';
+    | 'editor-agent'
+    | 'terminal-agent';
   enableRAG?: boolean;
   enableTools?: boolean;
   enabledTools?: string[]; // Individual tool names
@@ -465,3 +466,4 @@ export interface Activity {
 }
 
 // LangGraph Stream Event Types are defined in electron.d.ts
+export type { LangGraphStreamEvent } from './electron';

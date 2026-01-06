@@ -7,7 +7,7 @@
  * Main Chat, Browser Chat, Editor Chat 모두에서 사용
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { logger } from '@/lib/utils/logger';
@@ -92,52 +92,59 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
   }, [mode, style?.compact]);
 
   // 대화 리포트 전송 핸들러
-  const handleSendReport = async (issue: string, additionalInfo?: string) => {
-    try {
-      if (typeof window === 'undefined' || !window.electronAPI) {
-        throw new Error('Electron API를 사용할 수 없습니다.');
-      }
+  const handleSendReport = useCallback(
+    async (issue: string, additionalInfo?: string) => {
+      try {
+        if (typeof window === 'undefined' || !window.electronAPI) {
+          throw new Error('Electron API를 사용할 수 없습니다.');
+        }
 
-      const result = await window.electronAPI.errorReporting.sendConversation({
-        issue,
-        messages,
-        conversationId,
-        additionalInfo,
-      });
+        const result = await window.electronAPI.errorReporting.sendConversation({
+          issue,
+          messages,
+          conversationId,
+          additionalInfo,
+        });
 
-      if (result.success) {
-        logger.info('[ConversationReport] Report sent successfully:', result.data?.issueUrl);
-        setShowReportDialog(false);
-      } else {
-        throw new Error(result.error || '리포트 전송 실패');
+        if (result.success) {
+          logger.info('[ConversationReport] Report sent successfully:', result.data?.issueUrl);
+          setShowReportDialog(false);
+        } else {
+          throw new Error(result.error || '리포트 전송 실패');
+        }
+      } catch (error) {
+        logger.error('[ConversationReport] Failed to send report:', error);
+        toast.error(
+          `리포트 전송 실패: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`
+        );
       }
-    } catch (error) {
-      logger.error('[ConversationReport] Failed to send report:', error);
-      toast.error(
-        `리포트 전송 실패: ${error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}`
-      );
-    }
-  };
+    },
+    [messages, conversationId]
+  );
 
   // 에러 발생 여부 확인
-  const hasError = messages.some((msg) => {
-    if (msg.role === 'assistant') {
-      const content = msg.content.toLowerCase();
-      return (
-        content.includes('error:') ||
-        content.includes('오류:') ||
-        content.includes('실패:') ||
-        content.includes('failed:') ||
-        content.includes('exception:') ||
-        content.includes('cannot') ||
-        content.includes('할 수 없습니다')
-      );
-    }
-    return false;
-  });
+  const hasError = useMemo(
+    () =>
+      messages.some((msg) => {
+        if (msg.role === 'assistant') {
+          const content = msg.content.toLowerCase();
+          return (
+            content.includes('error:') ||
+            content.includes('오류:') ||
+            content.includes('실패:') ||
+            content.includes('failed:') ||
+            content.includes('exception:') ||
+            content.includes('cannot') ||
+            content.includes('할 수 없습니다')
+          );
+        }
+        return false;
+      }),
+    [messages]
+  );
 
   // 리포트 버튼 클릭 핸들러
-  const handleReportClick = async () => {
+  const handleReportClick = useCallback(async () => {
     const enabled = await isErrorReportingEnabled();
     if (!enabled) {
       toast.warning(
@@ -147,19 +154,19 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
     }
 
     setShowReportDialog(true);
-  };
+  }, []);
 
   // 메시지 복사 핸들러
-  const handleCopyMessage = async (messageId: string, content: string) => {
+  const handleCopyMessage = useCallback(async (messageId: string, content: string) => {
     const success = await copyToClipboard(content);
     if (success) {
       setCopiedMessageId(messageId);
       setTimeout(() => setCopiedMessageId(null), 2000);
     }
-  };
+  }, []);
 
   // Document로 저장 핸들러
-  const handleSaveAsDocument = async (content: string) => {
+  const handleSaveAsDocument = useCallback(async (content: string) => {
     if (typeof window === 'undefined' || !window.electronAPI) {
       toast.warning('Document 저장은 Electron 환경에서만 사용 가능합니다.');
       return;
@@ -183,7 +190,7 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
       logger.error('[UnifiedChatArea] Failed to save as document:', error);
       toast.error('Document 저장 중 오류가 발생했습니다.');
     }
-  };
+  }, []);
 
   // Empty state
   if (messages.length === 0) {

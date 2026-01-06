@@ -226,6 +226,7 @@ interface GraphConfig {
     | 'coding'
     | 'browser-agent'
     | 'editor-agent'
+    | 'terminal-agent'
     | 'deep-web-research';
   enableRAG: boolean;
   enableTools: boolean;

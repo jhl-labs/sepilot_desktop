@@ -8,13 +8,15 @@ import { logger } from '@/lib/utils/logger';
  * Compact 모드, Agent Progress, Tool Approval 포함
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { UnifiedChatArea } from '@/components/chat/unified/UnifiedChatArea';
 import { UnifiedChatInput } from '@/components/chat/unified/UnifiedChatInput';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import type { ChatConfig } from '@/components/chat/unified/types';
 import { useLangGraphStream } from '@/lib/hooks/useLangGraphStream';
+import { isElectron } from '@/lib/platform';
+import { getWebLLMClient } from '@/lib/llm';
 
 export function EditorChatContainer() {
   const {

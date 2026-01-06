@@ -26,7 +26,7 @@ interface MarkdownRendererProps {
 }
 
 // Helper function to extract text content from React children
-function getTextContent(children: any): string {
+function getTextContent(children: ReactNode): string {
   if (typeof children === 'string') {
     return children;
   }
@@ -36,14 +36,18 @@ function getTextContent(children: any): string {
   if (Array.isArray(children)) {
     return children.map(getTextContent).join('');
   }
-  if (children && typeof children === 'object') {
-    if ('props' in children && children.props) {
-      if ('children' in children.props) {
-        return getTextContent(children.props.children);
-      }
+  if (children && typeof children === 'object' && 'props' in children) {
+    const element = children as React.ReactElement;
+    if (element.props && typeof element.props === 'object' && 'children' in element.props) {
+      return getTextContent(element.props.children as ReactNode);
     }
   }
   return '';
+}
+
+interface CustomPreComponentProps {
+  children: ReactNode;
+  isStreaming?: boolean;
 }
 
 // Custom Pre component to handle code blocks
@@ -51,13 +55,12 @@ function CustomPreComponent({
   children,
   isStreaming,
   ...props
-}: {
-  children: any;
-  isStreaming?: boolean;
-}) {
+}: CustomPreComponentProps & React.HTMLAttributes<HTMLPreElement>) {
   // Check if this is a code block with language
-  if (children && typeof children === 'object' && 'props' in (children as any)) {
-    const { className, children: code } = (children as any).props || {};
+  if (children && typeof children === 'object' && 'props' in children) {
+    const childElement = children as React.ReactElement;
+    const props = childElement.props as { className?: string; children?: ReactNode };
+    const { className, children: code } = props;
 
     // Extract language from className
     // className can be: "language-mermaid", "lang-mermaid", or "language-mermaid lang-mermaid"
@@ -210,11 +213,17 @@ export function MarkdownRenderer({
   workingDirectory,
 }: MarkdownRendererProps) {
   // Create a wrapped component that includes isStreaming
-  const CustomPre = (props: any) => <CustomPreComponent {...props} isStreaming={isStreaming} />;
+  const CustomPre = (props: React.HTMLAttributes<HTMLPreElement> & { children: ReactNode }) => (
+    <CustomPreComponent {...props} isStreaming={isStreaming} />
+  );
 
   // Custom image component for local file support
-  const CustomImage = ({ src, alt, ...props }: any) => {
-    const [imageSrc, setImageSrc] = React.useState<string>(src);
+  const CustomImage = ({
+    src,
+    alt,
+    ...props
+  }: React.ImgHTMLAttributes<HTMLImageElement> & { src?: string; alt?: string }) => {
+    const [imageSrc, setImageSrc] = React.useState<string>(src || '');
     const [isLoading, setIsLoading] = React.useState(false);
 
     React.useEffect(() => {
@@ -226,7 +235,7 @@ export function MarkdownRenderer({
         src.startsWith('https://') ||
         src.startsWith('data:')
       ) {
-        setImageSrc(src);
+        setImageSrc(src || '');
         return;
       }
 
@@ -323,7 +332,11 @@ export function MarkdownRenderer({
   };
 
   // Custom link component with URI error handling
-  const CustomLink = ({ href, children, ...props }: any) => {
+  const CustomLink = ({
+    href,
+    children,
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href?: string; children?: ReactNode }) => {
     // Validate and sanitize href to prevent URI malformed errors
     let safeHref = '#';
 
