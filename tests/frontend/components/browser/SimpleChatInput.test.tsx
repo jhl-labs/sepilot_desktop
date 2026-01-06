@@ -6,7 +6,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { SimpleChatInput } from '@/components/browser/SimpleChatInput';
+import { SimpleChatInput } from '@/extensions/browser/components/SimpleChatInput';
 import { useChatStore } from '@/lib/store/chat-store';
 
 // Mock useChatStore

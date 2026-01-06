@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SearchPanel } from '@/components/editor/SearchPanel';
+import { SearchPanel } from '@/extensions/editor/components/SearchPanel';
 import { useChatStore } from '@/lib/store/chat-store';
 import { enableElectronMode, mockElectronAPI } from '../../../setup';
 

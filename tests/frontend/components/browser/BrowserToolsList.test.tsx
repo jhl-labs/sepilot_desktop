@@ -6,7 +6,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { BrowserToolsList } from '@/components/browser/BrowserToolsList';
+import { BrowserToolsList } from '@/extensions/browser/components/BrowserToolsList';
 import { useChatStore } from '@/lib/store/chat-store';
 
 // Mock useChatStore

@@ -305,22 +305,3 @@ jest.mock('react-i18next', () => ({
   I18nextProvider: ({ children }: any) => children,
   Trans: ({ children }: any) => children,
 }));
-
-// Mock i18n provider context
-jest.mock('@/components/providers/i18n-provider', () => ({
-  I18nProvider: ({ children }: any) => children,
-  useI18nContext: () => ({
-    language: 'ko' as const,
-    setLanguage: jest.fn(),
-    isLoading: false,
-    supportedLanguages: ['ko', 'en', 'ja', 'zh-CN'] as const,
-  }),
-  useLanguage: () => ({
-    language: 'ko' as const,
-    setLanguage: jest.fn(),
-    supportedLanguages: ['ko', 'en', 'ja', 'zh-CN'] as const,
-  }),
-}));
-
-// Export localStorage mock for direct access
-export { mockLocalStorage, mockSessionStorage };

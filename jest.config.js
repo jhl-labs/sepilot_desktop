@@ -18,7 +18,7 @@ const config = {
           '<rootDir>/tests/__mocks__/react-syntax-highlighter-styles.js',
         '^mermaid$': '<rootDir>/tests/__mocks__/mermaid.js',
       },
-      setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+      setupFilesAfterEnv: ['<rootDir>/tests/setup.ts', '<rootDir>/tests/setup.frontend.ts'],
       collectCoverageFrom: [
         'app/**/*.{ts,tsx}',
         'components/**/*.{ts,tsx}',

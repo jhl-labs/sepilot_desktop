@@ -6,7 +6,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { BrowserAgentLogsView } from '@/components/browser/BrowserAgentLogsView';
+import { BrowserAgentLogsView } from '@/extensions/browser/components/BrowserAgentLogsView';
 import { useChatStore } from '@/lib/store/chat-store';
 import type { BrowserAgentLogEntry } from '@/extensions/browser/types';
 

@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { SnapshotsList } from '@/components/browser/SnapshotsList';
+import { SnapshotsList } from '@/extensions/browser/components/SnapshotsList';
 import { enableElectronMode, mockElectronAPI } from '../../../setup';
 import * as chatStoreModule from '@/lib/store/chat-store';
 

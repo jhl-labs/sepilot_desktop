@@ -35,26 +35,26 @@ jest.mock('@/components/layout/ChatHistory', () => ({
 }));
 
 // Mock FileExplorer
-jest.mock('@/components/layout/FileExplorer', () => ({
+jest.mock('@/extensions/editor/components/FileExplorer', () => ({
   FileExplorer: () => <div data-testid="file-explorer">File Explorer</div>,
 }));
 
 // Mock SearchPanel
-jest.mock('@/components/editor/SearchPanel', () => ({
+jest.mock('@/extensions/editor/components/SearchPanel', () => ({
   SearchPanel: () => <div data-testid="search-panel">Search Panel</div>,
 }));
 
 // Mock SimpleChatArea and SimpleChatInput
-jest.mock('@/components/browser/SimpleChatArea', () => ({
+jest.mock('@/extensions/browser/components/SimpleChatArea', () => ({
   SimpleChatArea: () => <div data-testid="simple-chat-area">Simple Chat Area</div>,
 }));
 
-jest.mock('@/components/browser/SimpleChatInput', () => ({
+jest.mock('@/extensions/browser/components/SimpleChatInput', () => ({
   SimpleChatInput: () => <div data-testid="simple-chat-input">Simple Chat Input</div>,
 }));
 
 // Mock EditorChatArea
-jest.mock('@/components/editor/EditorChatArea', () => ({
+jest.mock('@/extensions/editor/components/EditorChatArea', () => ({
   EditorChatArea: () => <div data-testid="editor-chat-area">Editor Chat Area</div>,
 }));
 

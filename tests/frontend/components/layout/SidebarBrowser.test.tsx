@@ -5,7 +5,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { SidebarBrowser } from '@/components/layout/SidebarBrowser';
+import { SidebarBrowser } from '@/extensions/browser/components/SidebarBrowser';
 import { useChatStore } from '@/lib/store/chat-store';
 import { enableElectronMode, disableElectronMode, mockElectronAPI } from '../../../setup';
 
