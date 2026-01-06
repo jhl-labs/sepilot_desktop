@@ -8,6 +8,38 @@ import { logger } from '@/lib/utils/logger';
 import type { EditorTool } from './editor-tools-registry';
 
 /**
+ * Working directory 결정 헬퍼
+ * 우선순위: state.workingDirectory > editorContext.filePath의 dirname > process.cwd()
+ */
+function getWorkingDirectory(state: any): string {
+  if (typeof window !== 'undefined') {
+    throw new Error('File operations can only be executed in Main Process');
+  }
+
+  const path = require('path');
+  return (
+    state.workingDirectory ||
+    (state.editorContext?.filePath ? path.dirname(state.editorContext.filePath) : process.cwd())
+  );
+}
+
+/**
+ * 파일 경로를 absolute path로 변환하고 보안 체크
+ */
+function resolveAndValidatePath(workingDir: string, filePath: string): string {
+  const path = require('path');
+  const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
+
+  // Security Check: working directory 외부 접근 차단
+  const relative = path.relative(workingDir, absolutePath);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`Access denied: Path is outside the working directory: ${filePath}`);
+  }
+
+  return absolutePath;
+}
+
+/**
  * Tool: 파일 읽기
  */
 const readFileTool: EditorTool = {
@@ -101,27 +133,13 @@ const writeFileTool: EditorTool = {
   execute: async (args, state) => {
     const { filePath, content } = args as { filePath: string; content: string };
 
-    if (typeof window !== 'undefined') {
-      throw new Error('write_file can only be executed in Main Process');
-    }
+    const workingDir = getWorkingDirectory(state);
 
     try {
       const fs = await import('fs/promises');
       const path = await import('path');
 
-      // Working directory 우선순위: state.workingDirectory > editorContext.filePath의 dirname > process.cwd()
-      const workingDir =
-        state.workingDirectory ||
-        (state.editorContext?.filePath
-          ? path.dirname(state.editorContext.filePath)
-          : process.cwd());
-      const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
-
-      // Security Check
-      const relative = path.relative(workingDir, absolutePath);
-      if (relative.startsWith('..') || path.isAbsolute(relative)) {
-        throw new Error(`Access denied: Path is outside the working directory: ${filePath}`);
-      }
+      const absolutePath = resolveAndValidatePath(workingDir, filePath);
 
       // 디렉토리가 없으면 생성
       const dir = path.dirname(absolutePath);
@@ -183,27 +201,13 @@ const editFileTool: EditorTool = {
       newContent: string;
     };
 
-    if (typeof window !== 'undefined') {
-      throw new Error('edit_file can only be executed in Main Process');
-    }
+    const workingDir = getWorkingDirectory(state);
 
     try {
       const fs = await import('fs/promises');
       const path = await import('path');
 
-      // Working directory 우선순위: state.workingDirectory > editorContext.filePath의 dirname > process.cwd()
-      const workingDir =
-        state.workingDirectory ||
-        (state.editorContext?.filePath
-          ? path.dirname(state.editorContext.filePath)
-          : process.cwd());
-      const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
-
-      // Security Check
-      const relative = path.relative(workingDir, absolutePath);
-      if (relative.startsWith('..') || path.isAbsolute(relative)) {
-        throw new Error(`Access denied: Path is outside the working directory: ${filePath}`);
-      }
+      const absolutePath = resolveAndValidatePath(workingDir, filePath);
 
       // 파일 읽기
       const content = await fs.readFile(absolutePath, 'utf-8');
@@ -265,20 +269,12 @@ const listFilesTool: EditorTool = {
   execute: async (args, state) => {
     const { dirPath, recursive } = args as { dirPath?: string; recursive?: boolean };
 
-    if (typeof window !== 'undefined') {
-      throw new Error('list_files can only be executed in Main Process');
-    }
+    const workingDir = getWorkingDirectory(state);
 
     try {
       const fs = await import('fs/promises');
       const path = await import('path');
 
-      // Working directory 우선순위: state.workingDirectory > editorContext.filePath의 dirname > process.cwd()
-      const workingDir =
-        state.workingDirectory ||
-        (state.editorContext?.filePath
-          ? path.dirname(state.editorContext.filePath)
-          : process.cwd());
       const absolutePath = dirPath
         ? path.isAbsolute(dirPath)
           ? dirPath
@@ -484,27 +480,13 @@ const deleteFileTool: EditorTool = {
   execute: async (args, state) => {
     const { filePath } = args as { filePath: string };
 
-    if (typeof window !== 'undefined') {
-      throw new Error('delete_file can only be executed in Main Process');
-    }
+    const workingDir = getWorkingDirectory(state);
 
     try {
       const fs = await import('fs/promises');
       const path = await import('path');
 
-      // Working directory 우선순위: state.workingDirectory > editorContext.filePath의 dirname > process.cwd()
-      const workingDir =
-        state.workingDirectory ||
-        (state.editorContext?.filePath
-          ? path.dirname(state.editorContext.filePath)
-          : process.cwd());
-      const absolutePath = path.isAbsolute(filePath) ? filePath : path.join(workingDir, filePath);
-
-      // Security Check
-      const relative = path.relative(workingDir, absolutePath);
-      if (relative.startsWith('..') || path.isAbsolute(relative)) {
-        throw new Error(`Access denied: Path is outside the working directory: ${filePath}`);
-      }
+      const absolutePath = resolveAndValidatePath(workingDir, filePath);
 
       // 파일/디렉토리 확인
       const stats = await fs.stat(absolutePath);

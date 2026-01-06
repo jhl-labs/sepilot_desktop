@@ -26,6 +26,25 @@ function applyNetworkConfig(config: GitHubSyncConfig): GitHubSyncConfig {
   return config;
 }
 
+/**
+ * 동기화 성공 후 마지막 동기화 정보 업데이트
+ */
+function updateSyncStatus(config: GitHubSyncConfig): void {
+  const appConfigStr = databaseService.getSetting('app_config');
+  if (appConfigStr) {
+    const appConfig: AppConfig = JSON.parse(appConfigStr);
+    const updatedConfig: AppConfig = {
+      ...appConfig,
+      githubSync: {
+        ...config,
+        lastSyncAt: Date.now(),
+        lastSyncStatus: 'success',
+      },
+    };
+    databaseService.updateSetting('app_config', JSON.stringify(updatedConfig));
+  }
+}
+
 export function setupGitHubSyncHandlers() {
   /**
    * 마스터 암호화 키 생성 또는 가져오기
@@ -147,19 +166,7 @@ export function setupGitHubSyncHandlers() {
 
       // 마지막 동기화 정보 업데이트
       if (result.success) {
-        const appConfigStr = databaseService.getSetting('app_config');
-        if (appConfigStr) {
-          const appConfig: AppConfig = JSON.parse(appConfigStr);
-          const updatedConfig: AppConfig = {
-            ...appConfig,
-            githubSync: {
-              ...config,
-              lastSyncAt: Date.now(),
-              lastSyncStatus: 'success',
-            },
-          };
-          databaseService.updateSetting('app_config', JSON.stringify(updatedConfig));
-        }
+        updateSyncStatus(config);
       }
 
       return result;
@@ -218,19 +225,7 @@ export function setupGitHubSyncHandlers() {
 
       // 마지막 동기화 정보 업데이트
       if (result.success) {
-        const appConfigStr = databaseService.getSetting('app_config');
-        if (appConfigStr) {
-          const appConfig: AppConfig = JSON.parse(appConfigStr);
-          const updatedConfig: AppConfig = {
-            ...appConfig,
-            githubSync: {
-              ...config,
-              lastSyncAt: Date.now(),
-              lastSyncStatus: 'success',
-            },
-          };
-          databaseService.updateSetting('app_config', JSON.stringify(updatedConfig));
-        }
+        updateSyncStatus(config);
       }
 
       return result;
@@ -277,19 +272,7 @@ export function setupGitHubSyncHandlers() {
 
       // 마지막 동기화 정보 업데이트
       if (result.success) {
-        const appConfigStr = databaseService.getSetting('app_config');
-        if (appConfigStr) {
-          const appConfig: AppConfig = JSON.parse(appConfigStr);
-          const updatedConfig: AppConfig = {
-            ...appConfig,
-            githubSync: {
-              ...config,
-              lastSyncAt: Date.now(),
-              lastSyncStatus: 'success',
-            },
-          };
-          databaseService.updateSetting('app_config', JSON.stringify(updatedConfig));
-        }
+        updateSyncStatus(config);
       }
 
       return result;
@@ -321,19 +304,7 @@ export function setupGitHubSyncHandlers() {
 
       // 마지막 동기화 정보 업데이트
       if (result.success) {
-        const appConfigStr = databaseService.getSetting('app_config');
-        if (appConfigStr) {
-          const appConfig: AppConfig = JSON.parse(appConfigStr);
-          const updatedConfig: AppConfig = {
-            ...appConfig,
-            githubSync: {
-              ...config,
-              lastSyncAt: Date.now(),
-              lastSyncStatus: 'success',
-            },
-          };
-          databaseService.updateSetting('app_config', JSON.stringify(updatedConfig));
-        }
+        updateSyncStatus(config);
       }
 
       return result;
