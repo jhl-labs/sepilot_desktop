@@ -193,34 +193,8 @@ jobs:
             const allFixed = '${{ steps.lint_recheck.outputs.all_fixed }}' === 'true';
             const remainingErrors = '${{ steps.lint_recheck.outputs.remaining_errors }}' || '0';
 
-            const title = allFixed
-              ? '🔧 자동 Lint 수정 적용'
-              : `⚠️ 자동 Lint 수정 적용 (${remainingErrors}개 수동 수정 필요)`;
-
-            const body = `# 🔧 자동 Lint 수정
-
-**실행 일시:** ${new Date().toISOString()}
-**워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})
-
----
-
-${reportContent}
-
----
-
-## 📝 검토 사항
-
-${allFixed ? '✅ 모든 Lint 문제가 자동으로 수정되었습니다. 변경사항을 검토 후 머지해주세요.' : `⚠️ 일부 문제는 자동으로 수정할 수 없습니다. 남은 ${remainingErrors}개의 에러를 수동으로 수정해주세요.`}
-
-## 🤖 자동 생성된 PR
-
-이 PR은 자동 Lint 워크플로우에 의해 생성되었습니다.
-- ESLint의 \`--fix\` 옵션으로 자동 수정 가능한 항목만 포함
-- 코드 로직 변경 없음 (포맷팅 및 스타일 수정만)
-- 변경사항을 검토 후 안전하게 머지 가능
-
-**주의:** 수동 수정이 필요한 항목은 별도로 처리해야 합니다.
-`;
+            const title = allFixed ? '🔧 자동 Lint 수정 적용' : `⚠️ 자동 Lint 수정 적용 (${remainingErrors}개 수동 수정 필요)`;
+            const body = `# 🔧 자동 Lint 수정\n\n**실행 일시:** ${new Date().toISOString()}\n**워크플로우:** [Run #${{ github.run_id }}](../actions/runs/${{ github.run_id }})\n\n---\n\n${reportContent}\n\n---\n\n## 📝 검토 사항\n\n${allFixed ? '✅ 모든 Lint 문제가 자동으로 수정되었습니다. 변경사항을 검토 후 머지해주세요.' : `⚠️ 일부 문제는 자동으로 수정할 수 없습니다. 남은 ${remainingErrors}개의 에러를 수동으로 수정해주세요.`}\n\n## 🤖 자동 생성된 PR\n\n이 PR은 자동 Lint 워크플로우에 의해 생성되었습니다.\n- ESLint의 \`--fix\` 옵션으로 자동 수정 가능한 항목만 포함\n- 코드 로직 변경 없음 (포맷팅 및 스타일 수정만)\n- 변경사항을 검토 후 안전하게 머지 가능\n\n**주의:** 수동 수정이 필요한 항목은 별도로 처리해야 합니다.`;
 
             const pr = await github.rest.pulls.create({
               owner: context.repo.owner,

@@ -196,7 +196,7 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
   const hasChatWidthChanges = chatWidth !== initialChatWidth;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="general-settings">
       <SettingsSectionHeader
         title={t('settings.general.title')}
         description={t('settings.general.description')}

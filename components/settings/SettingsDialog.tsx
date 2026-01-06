@@ -965,141 +965,125 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               {/* Content Area */}
               <div className="flex-1 overflow-y-auto p-6">
                 {activeTab === 'general' && (
-                  <div data-testid="general-settings">
-                    <GeneralSettingsTab
-                      onSave={async (lang) => {
-                        if (lang) {
-                          setGeneralConfig({ language: lang as SupportedLanguage });
-                          // 언어 변경이 완료된 후에 메시지를 설정
-                          await changeLanguage(lang as SupportedLanguage);
-                          if (isElectron() && window.electronAPI) {
-                            await persistAppConfig({
-                              general: { language: lang as SupportedLanguage },
-                            });
-                          } else {
-                            localStorage.setItem(
-                              'sepilot_general_config',
-                              JSON.stringify({ language: lang })
-                            );
-                          }
-                        }
-                        // 언어 변경 완료 후 메시지 설정 (올바른 언어로 번역됨)
-                        // i18n 인스턴스에서 직접 번역하여 변경된 언어로 메시지 표시
-                        const i18n = getI18nInstance();
-                        const messageText =
-                          i18n?.t('settings.general.saved') || t('settings.general.saved');
-                        setMessage({ type: 'success', text: messageText });
-                      }}
-                      isSaving={isSaving}
-                      message={message}
-                    />
-                  </div>
-                )}
-                {activeTab === 'llm' && configV2 && (
-                  <div data-testid="llm-settings">
-                    <LLMSettingsTab
-                      config={configV2}
-                      setConfig={(update) => {
-                        if (typeof update === 'function') {
-                          setConfigV2((prev) => {
-                            if (!prev) {
-                              return prev;
-                            }
-                            const newV2 = update(prev);
-                            // Also update V1 config for compatibility
-                            try {
-                              setConfig(convertV2ToV1(newV2));
-                            } catch (err) {
-                              console.error('Failed to convert V2 to V1:', err);
-                            }
-                            return newV2;
+                  <GeneralSettingsTab
+                    onSave={async (lang) => {
+                      if (lang) {
+                        setGeneralConfig({ language: lang as SupportedLanguage });
+                        // 언어 변경이 완료된 후에 메시지를 설정
+                        await changeLanguage(lang as SupportedLanguage);
+                        if (isElectron() && window.electronAPI) {
+                          await persistAppConfig({
+                            general: { language: lang as SupportedLanguage },
                           });
                         } else {
-                          setConfigV2(update);
+                          localStorage.setItem(
+                            'sepilot_general_config',
+                            JSON.stringify({ language: lang })
+                          );
+                        }
+                      }
+                      // 언어 변경 완료 후 메시지 설정 (올바른 언어로 번역됨)
+                      // i18n 인스턴스에서 직접 번역하여 변경된 언어로 메시지 표시
+                      const i18n = getI18nInstance();
+                      const messageText =
+                        i18n?.t('settings.general.saved') || t('settings.general.saved');
+                      setMessage({ type: 'success', text: messageText });
+                    }}
+                    isSaving={isSaving}
+                    message={message}
+                  />
+                )}
+                {activeTab === 'llm' && configV2 && (
+                  <LLMSettingsTab
+                    config={configV2}
+                    setConfig={(update) => {
+                      if (typeof update === 'function') {
+                        setConfigV2((prev) => {
+                          if (!prev) {
+                            return prev;
+                          }
+                          const newV2 = update(prev);
+                          // Also update V1 config for compatibility
                           try {
-                            setConfig(convertV2ToV1(update));
+                            setConfig(convertV2ToV1(newV2));
                           } catch (err) {
                             console.error('Failed to convert V2 to V1:', err);
                           }
+                          return newV2;
+                        });
+                      } else {
+                        setConfigV2(update);
+                        try {
+                          setConfig(convertV2ToV1(update));
+                        } catch (err) {
+                          console.error('Failed to convert V2 to V1:', err);
                         }
-                      }}
-                      networkConfig={networkConfig}
-                      setNetworkConfig={setNetworkConfig}
-                      onSave={handleSave}
-                      isSaving={isSaving}
-                      message={message}
-                    />
-                  </div>
+                      }
+                    }}
+                    networkConfig={networkConfig}
+                    setNetworkConfig={setNetworkConfig}
+                    onSave={handleSave}
+                    isSaving={isSaving}
+                    message={message}
+                  />
                 )}
 
                 {activeTab === 'network' && (
-                  <div data-testid="network-settings">
-                    <NetworkSettingsTab
-                      networkConfig={networkConfig}
-                      setNetworkConfig={setNetworkConfig}
-                      onSave={handleNetworkSave}
-                      isSaving={isSaving}
-                      message={message}
-                    />
-                  </div>
+                  <NetworkSettingsTab
+                    networkConfig={networkConfig}
+                    setNetworkConfig={setNetworkConfig}
+                    onSave={handleNetworkSave}
+                    isSaving={isSaving}
+                    message={message}
+                  />
                 )}
 
                 {activeTab === 'vectordb' && (
-                  <div data-testid="vectordb-settings">
-                    <VectorDBSettings
-                      onSave={handleVectorDBSave}
-                      initialVectorDBConfig={vectorDBConfig || undefined}
-                      initialEmbeddingConfig={embeddingConfig || undefined}
-                    />
-                  </div>
+                  <VectorDBSettings
+                    onSave={handleVectorDBSave}
+                    initialVectorDBConfig={vectorDBConfig || undefined}
+                    initialEmbeddingConfig={embeddingConfig || undefined}
+                  />
                 )}
 
                 {activeTab === 'imagegen' && (
-                  <div data-testid="comfyui-settings">
-                    <ImageGenSettingsTab
-                      imageGenConfig={imageGenConfig}
-                      setImageGenConfig={setImageGenConfig}
-                      networkConfig={networkConfig}
-                      onSave={handleImageGenSave}
-                      isSaving={isImageGenSaving}
-                      message={imageGenMessage}
-                      setMessage={setImageGenMessage}
-                    />
-                  </div>
+                  <ImageGenSettingsTab
+                    imageGenConfig={imageGenConfig}
+                    setImageGenConfig={setImageGenConfig}
+                    networkConfig={networkConfig}
+                    onSave={handleImageGenSave}
+                    isSaving={isImageGenSaving}
+                    message={imageGenMessage}
+                    setMessage={setImageGenMessage}
+                  />
                 )}
 
-                {activeTab === 'mcp' && (
-                  <div data-testid="mcp-settings">
-                    <MCPSettingsTab />
-                  </div>
-                )}
+                {activeTab === 'mcp' && <MCPSettingsTab />}
 
                 {activeTab === 'github' && (
-                  <div data-testid="github-settings">
-                    <GitHubSyncSettings
-                      config={githubSyncConfig}
-                      onSave={async (newConfig) => {
-                        setGithubSyncConfig(newConfig);
-                        let savedConfig: AppConfig | null = null;
-                        if (isElectron() && window.electronAPI) {
-                          savedConfig = await persistAppConfig({ githubSync: newConfig });
-                        }
-                        if (!savedConfig) {
-                          const currentAppConfig = localStorage.getItem('sepilot_app_config');
-                          const appConfig = currentAppConfig ? JSON.parse(currentAppConfig) : {};
-                          appConfig.githubSync = newConfig;
-                          localStorage.setItem('sepilot_app_config', JSON.stringify(appConfig));
-                        }
+                  <GitHubSyncSettings
+                    config={githubSyncConfig}
+                    onSave={async (newConfig) => {
+                      setGithubSyncConfig(newConfig);
+                      let savedConfig: AppConfig | null = null;
+                      if (isElectron() && window.electronAPI) {
+                        savedConfig = await persistAppConfig({ githubSync: newConfig });
+                      }
+                      if (!savedConfig) {
+                        const currentAppConfig = localStorage.getItem('sepilot_app_config');
+                        const appConfig = currentAppConfig ? JSON.parse(currentAppConfig) : {};
+                        appConfig.githubSync = newConfig;
+                        localStorage.setItem('sepilot_app_config', JSON.stringify(appConfig));
+                      }
 
-                        // Notify other components about GitHub Sync config update
-                        window.dispatchEvent(
-                          new CustomEvent('sepilot:config-updated', {
-                            detail: { githubSync: newConfig },
-                          })
-                        );
-                      }}
-                    />
-                  </div>
+                      // Notify other components about GitHub Sync config update
+                      window.dispatchEvent(
+                        new CustomEvent('sepilot:config-updated', {
+                          detail: { githubSync: newConfig },
+                        })
+                      );
+                    }}
+                  />
                 )}
 
                 {activeTab === 'team-docs' && (
@@ -1128,11 +1112,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   />
                 )}
 
-                {activeTab === 'backup' && (
-                  <div data-testid="backup-settings">
-                    <BackupRestoreSettings />
-                  </div>
-                )}
+                {activeTab === 'backup' && <BackupRestoreSettings />}
 
                 {activeTab === 'quickinput' && (
                   <QuickInputSettingsTab
