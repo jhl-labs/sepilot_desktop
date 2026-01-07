@@ -928,6 +928,7 @@ interface TerminalAPI {
   ) => Promise<
     IPCResponse<{ command?: string; output?: string; stderr?: string; exitCode?: number }>
   >;
+  autocomplete: (cwd: string, input: string) => Promise<IPCResponse<string[]>>;
   // Event listeners
   onData: (
     callback: (data: { sessionId: string; data: string }) => void

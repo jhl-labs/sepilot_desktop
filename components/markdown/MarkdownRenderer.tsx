@@ -401,10 +401,11 @@ export function MarkdownRenderer({
   // Sanitize markdown content to prevent URI malformed errors
   const sanitizeMarkdownContent = (rawContent: string): string => {
     try {
-      // CRITICAL FIX: Replace ALL malformed percent encoding globally
-      // This prevents decodeURIComponent errors in markdown-to-jsx's HTML attribute parser
-      // The library has a bug where it calls decodeURIComponent without try-catch
-      let result = rawContent.replace(/%(?![0-9A-Fa-f]{2})/g, '%25');
+      // NOTE: Global percent encoding replacement was removed because:
+      // 1. disableParsingRawHTML: true already prevents markdown-to-jsx's HTML attribute parser bug
+      // 2. The global replacement was breaking normal percent signs in text (e.g., "30%" -> "30%25")
+      // URL-specific encoding is still handled below for markdown links only.
+      let result = rawContent;
 
       // Additional processing for markdown links [text](url) format
       result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {

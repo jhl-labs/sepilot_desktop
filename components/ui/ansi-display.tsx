@@ -54,67 +54,108 @@ export function AnsiDisplay({ text, className }: AnsiDisplayProps) {
     const result: { text: string; style: StyleState }[] = [];
     let currentStyle: StyleState = {};
 
-    // Split by ANSI escape code: \x1b[...m or other codes
-    // Updated Regex to match CSI sequences including parameters like ? (e.g. \x1b[?25l)
+    // Match ANSI Code (\x1b[...m), other CSI (\x1b[...L), or Backspace (\x08, \x7f)
+    // We categorize tokens:
+    // 1. ANSI SGR (Color/Style): \x1b[...m
+    // 2. Control CSI (Ignore/Handle): \x1b[...X
+    // 3. Backspace: \b, \x7f, \x08
+    // 4. Normal Text
+
+    // Regex explanation:
+    // \x1b\[[\d;?]*[a-zA-Z]  -> CSI sequences (colors, cursor)
+    // [\x08\x7f]             -> Backspace / DEL
+    // [^\x1b\x08\x7f]+       -> Normal text run
     // eslint-disable-next-line no-control-regex
-    const regex = /\x1b\[([\d;?]*)([a-zA-Z])/g;
+    const tokenRegex = /(\x1b\[[\d;?]*[a-zA-Z])|([\x08\x7f])|([^\x1b\x08\x7f]+)/g;
 
-    let lastIndex = 0;
     let match;
+    while ((match = tokenRegex.exec(text)) !== null) {
+      const ansiCode = match[1];
+      const backspace = match[2];
+      const textChunk = match[3];
 
-    while ((match = regex.exec(text)) !== null) {
-      const [, params, command] = match;
-      const index = match.index;
+      if (ansiCode) {
+        // Handle CSI
+        // eslint-disable-next-line no-control-regex
+        const csiMatch = ansiCode.match(/^\x1b\[([\d;?]*)?([a-zA-Z])$/);
+        if (csiMatch) {
+          const params = csiMatch[1] || '';
+          const command = csiMatch[2];
 
-      // Push preceding text with current style
-      if (index > lastIndex) {
-        result.push({
-          text: text.slice(lastIndex, index),
-          style: { ...currentStyle },
-        });
-      }
-
-      // Process ANSI code
-      if (command === 'm') {
-        // SGR (Select Graphic Rendition) - Colors and Styles
-        const codes = params.length === 0 ? [0] : params.split(';').map(Number);
-
-        for (const code of codes) {
-          if (code === 0) {
-            // Reset
-            currentStyle = {};
-          } else if (code === 1) {
-            currentStyle.bold = true;
-          } else if (code === 3) {
-            currentStyle.italic = true;
-          } else if (code === 4) {
-            currentStyle.underline = true;
-          } else if (code >= 30 && code <= 37) {
-            currentStyle.foreground = ANSI_COLORS[code];
-          } else if (code >= 90 && code <= 97) {
-            currentStyle.foreground = ANSI_COLORS[code];
-          } else if (code >= 40 && code <= 47) {
-            currentStyle.background = ANSI_BG_COLORS[code];
-          } else if (code === 39) {
-            delete currentStyle.foreground;
-          } else if (code === 49) {
-            delete currentStyle.background;
+          if (command === 'm') {
+            // SGR
+            const codes =
+              params.length === 0 ? [0] : params.split(';').map((n) => parseInt(n) || 0);
+            for (const code of codes) {
+              if (code === 0) {
+                currentStyle = {};
+              } else if (code === 1) {
+                currentStyle.bold = true;
+              } else if (code === 3) {
+                currentStyle.italic = true;
+              } else if (code === 4) {
+                currentStyle.underline = true;
+              } else if (code >= 30 && code <= 37) {
+                currentStyle.foreground = ANSI_COLORS[code];
+              } else if (code >= 90 && code <= 97) {
+                currentStyle.foreground = ANSI_COLORS[code];
+              } else if (code >= 40 && code <= 47) {
+                currentStyle.background = ANSI_BG_COLORS[code];
+              } else if (code === 39) {
+                delete currentStyle.foreground;
+              } else if (code === 49) {
+                delete currentStyle.background;
+              }
+            }
+          } else if (command === 'K') {
+            // Erase Line (0: cursor to end, 1: start to cursor, 2: all)
+            // Since this is a log view, we can't easily ease "start to cursor".
+            // But "cursor to end" (def) typically means "delete pending text on this line"
+            // For simplified handling: if param is 0 or missing, remove text from "current line" buffer?
+            // Our buffer is segmented. This is hard.
+            // For now, ignoring [K is cleaner than mishandling it.
+            // Users report artifacts like Squares, [K usually isn't a square.
           }
         }
+      } else if (backspace) {
+        // Handle Backspace: Remove last character from the last segment
+        let remainingToDelete = 1;
+        while (remainingToDelete > 0 && result.length > 0) {
+          const lastSegment = result[result.length - 1];
+          if (lastSegment.text.length > 0) {
+            // Remove 1 char
+            lastSegment.text = lastSegment.text.slice(0, -1);
+            remainingToDelete--;
+            // If segment becomes empty, remove it (unless it's stylistically important? No, empty text has no visual)
+            if (lastSegment.text.length === 0) {
+              result.pop();
+            }
+          } else {
+            // Empty segment, just pop it
+            result.pop();
+          }
+        }
+      } else if (textChunk) {
+        // Add text
+        // Optimize: if last segment has same style, append
+        const lastSegment = result[result.length - 1];
+        const stylesMatch =
+          lastSegment &&
+          lastSegment.style.foreground === currentStyle.foreground &&
+          lastSegment.style.background === currentStyle.background &&
+          lastSegment.style.bold === currentStyle.bold &&
+          lastSegment.style.italic === currentStyle.italic &&
+          lastSegment.style.underline === currentStyle.underline;
+
+        if (stylesMatch) {
+          lastSegment.text += textChunk;
+        } else {
+          result.push({
+            text: textChunk,
+            style: { ...currentStyle },
+          });
+        }
       }
-      // Other commands (like A, B, C, D, K, etc.) are cursor/screen controls.
-      // We generally want to ignore them for a history block view,
-      // effectively stripping them.
-
-      lastIndex = regex.lastIndex;
-    }
-
-    // Push remaining text
-    if (lastIndex < text.length) {
-      result.push({
-        text: text.slice(lastIndex),
-        style: { ...currentStyle },
-      });
     }
 
     return result;

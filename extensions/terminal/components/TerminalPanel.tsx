@@ -23,9 +23,11 @@ interface TerminalPanelProps {
 
 export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollAnchorRef = useRef<HTMLDivElement>(null);
 
   // Store에서 상태 가져오기
   const store = useChatStore();
+  // ... (lines 29-44) ...
   const {
     terminalBlocks,
     activeBlockId,
@@ -41,7 +43,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     toggleHistory,
     loadTerminalHistoryFromStorage,
     getSessionBlocks,
-  } = store as any; // Type assertion for extension store
+  } = store as any; // Type assertion
 
   // 현재 활성 세션의 블록들만 필터링
   const sessionBlocks = useMemo(() => {
@@ -104,56 +106,6 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
           updateTerminalBlock(lastBlock.id, {
             exitCode,
           });
-
-          // CD 명령어 감지 및 CWD 업데이트 (Optimistic)
-          if (exitCode === 0 && lastBlock.command.trim().startsWith('cd ')) {
-            const args = lastBlock.command.trim().substring(3).trim();
-            if (args) {
-              const currentSessionCwd = session.cwd || '';
-              // 간단한 경로 해결 로직 (Windows/Unix 호환 노력)
-              // 주의: 완벽한 경로 해결을 위해서는 백엔드 도움이 필요하지만, UI 업데이트용으로 근사치 계산
-              let newCwd = args;
-
-              const isAbsolute =
-                args.startsWith('/') || // Unix absolute
-                /^[a-zA-Z]:[\\/]/.test(args); // Windows absolute
-
-              if (!isAbsolute) {
-                // 상대 경로 처리
-                const separator = currentSessionCwd.includes('\\') ? '\\' : '/';
-                const parts = currentSessionCwd.split(separator).filter(Boolean);
-                const relParts = args.split(/[/\\]/);
-
-                for (const part of relParts) {
-                  if (part === '.' || part === '') continue;
-                  if (part === '..') {
-                    parts.pop();
-                  } else if (part === '~') {
-                    // 홈 디렉토리 처리는 복잡하므로 무시하거나 원본 유지 시도
-                    // 여기서는 단순화를 위해 처리하지 않음 (절대 경로로 간주될 수 있음)
-                  } else {
-                    parts.push(part);
-                  }
-                }
-                newCwd = parts.join(separator);
-
-                // Windows 드라이브 문자 복구
-                if (currentSessionCwd.includes(':') && !newCwd.includes(':')) {
-                  newCwd = currentSessionCwd.split('\\')[0] + '\\' + newCwd;
-                }
-                // 루트 슬래시 복구 (Unix)
-                if (currentSessionCwd.startsWith('/') && !newCwd.startsWith('/')) {
-                  newCwd = '/' + newCwd;
-                }
-              }
-
-              // Store 업데이트
-              const updateTerminalSession = (store as any).updateTerminalSession;
-              if (updateTerminalSession) {
-                updateTerminalSession(session.id, { cwd: newCwd });
-              }
-            }
-          }
         }
       }
     );
@@ -244,10 +196,14 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
 
   // 블록 추가 또는 출력 업데이트 시 자동 스크롤
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [sessionBlocks.length, lastOutputLen]);
+    // 약간의 지연을 주어 렌더링 완료 후 스크롤
+    const timer = setTimeout(() => {
+      if (scrollAnchorRef.current) {
+        scrollAnchorRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }
+    }, 10);
+    return () => clearTimeout(timer);
+  }, [sessionBlocks.length, lastOutputLen, activeBlockId]);
 
   // 명령어 실행 (직접 또는 AI 생성)
   const handleExecuteCommand = async (command: string, naturalInput?: string) => {
@@ -287,8 +243,43 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
           throw new Error(result.error || 'Failed to write command');
         }
 
-        // 출력은 terminal:data 이벤트로 실시간 수신됨
         logger.info('[TerminalPanel] Command sent to PTY session');
+
+        // CD 명령어 감지 및 CWD 업데이트 (Optimistic but Validated)
+        if (command.trim().startsWith('cd ')) {
+          const args = command.trim().substring(3).trim();
+          if (args) {
+            const currentSessionCwd = activeSession.cwd || '';
+            let targetPath = args;
+
+            try {
+              // 1. Resolve Path via Backend (handles .., ., and absolute paths correctly)
+              // If args is absolute, resolvePath usually handles it if backend uses path.resolve
+              // But strictly path.resolve(base, abs) -> abs. So it works.
+
+              const resolveResult = await window.electronAPI.fs.resolvePath(
+                currentSessionCwd,
+                args
+              );
+              if (resolveResult.success && resolveResult.data) {
+                targetPath = resolveResult.data;
+
+                // 2. Validate existence
+                const statResult = await window.electronAPI.fs.getFileStat(targetPath);
+                if (statResult.success && statResult.data?.isDirectory) {
+                  // 3. Update Store only if valid directory
+                  const updateTerminalSession = (store as any).updateTerminalSession;
+                  if (updateTerminalSession) {
+                    updateTerminalSession(activeSession.id, { cwd: targetPath });
+                  }
+                }
+              }
+            } catch (err) {
+              // Ignore validation errors - just don't update optimistic CWD
+              console.warn('[TerminalPanel] Failed to validate CWD update:', err);
+            }
+          }
+        }
       } else {
         // 웹 환경 - 시뮬레이션
         updateTerminalBlock(blockId, {
@@ -327,6 +318,18 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
           await handleExecuteCommand(result.data.command, naturalInput);
         } else if (!result.success) {
           logger.error('[TerminalPanel] AI command failed:', result.error);
+
+          // 에러 메시지를 터미널 블록으로 표시
+          if (addTerminalBlock) {
+            addTerminalBlock({
+              id: crypto.randomUUID(),
+              type: 'text', // or 'command'
+              role: 'assistant',
+              output: `\x1b[31m[AI Error]\x1b[0m ${result.error || 'Failed to generate command.'}`,
+              timestamp: Date.now(),
+              cwd: currentCwd || workingDirectory,
+            });
+          }
         }
       } else {
         // 웹 환경 - 시뮬레이션
@@ -362,8 +365,64 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     handleExecuteCommand(command);
   };
 
+  const [isTerminalFocused, setIsTerminalFocused] = React.useState(false);
+  const terminalContainerRef = useRef<HTMLDivElement>(null);
+
+  // ... (previous code)
+
+  // 터미널 직접 입력 처리 (Interactive Mode)
+  const handleTerminalKeyDown = async (e: React.KeyboardEvent) => {
+    if (!activeSessionId) return;
+
+    // AI Input에 포커스가 있거나 조합키(Ctrl/Meta) 사용 시 기본 동작 허용 (단, Ctrl+C 등은 터미널로 보내야 함)
+    // 하지만 여기서 포커스가 터미널 컨테이너에 있을 때만 작동하므로 안전함.
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const key = e.key;
+    let dataToSend = key;
+
+    // 특수 키 매핑
+    if (key === 'Enter') dataToSend = '\r';
+    else if (key === 'Backspace') dataToSend = '\x7f';
+    else if (key === 'Tab') dataToSend = '\t';
+    else if (key === 'Escape') dataToSend = '\x1b';
+    else if (key === 'ArrowUp') dataToSend = '\x1b[A';
+    else if (key === 'ArrowDown') dataToSend = '\x1b[B';
+    else if (key === 'ArrowRight') dataToSend = '\x1b[C';
+    else if (key === 'ArrowLeft') dataToSend = '\x1b[D';
+    else if (key.length > 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      // 다른 특수키는 무시하거나 추가 매핑 필요 (Home, End, PageUp 등)
+      return;
+    }
+
+    // Ctrl 조합키 처리
+    if (e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+      if (key.length === 1) {
+        const charCode = key.toLowerCase().charCodeAt(0);
+        if (charCode >= 97 && charCode <= 122) {
+          dataToSend = String.fromCharCode(charCode - 96);
+        }
+      }
+    }
+
+    if (dataToSend) {
+      // 활성 세션 찾기
+      const activeSession = (store as any).getActiveTerminalSession
+        ? (store as any).getActiveTerminalSession()
+        : null;
+      if (activeSession && window.electronAPI?.terminal) {
+        await window.electronAPI.terminal.write(activeSession.ptySessionId, dataToSend);
+      }
+    }
+  };
+
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div
+      className="flex h-full flex-col bg-background outline-none"
+      tabIndex={-1} // 포커스 관리는 내부 컨테이너에서
+    >
       {/* 헤더 */}
       <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
@@ -371,8 +430,13 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
           <span className="text-xs text-muted-foreground font-mono">
             {currentCwd || workingDirectory || '~'}
           </span>
+          {isTerminalFocused && (
+            <span className="text-[10px] bg-accent text-accent-foreground px-1.5 py-0.5 rounded animate-pulse">
+              Interactive Mode
+            </span>
+          )}
         </div>
-
+        {/* ... buttons ... */}
         <div className="flex gap-1">
           <Button
             size="icon"
@@ -398,40 +462,66 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       {/* 세션 탭 */}
       <SessionTabBar />
 
-      {/* 블록 리스트 */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        {sessionBlocks.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-center">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                터미널 명령어를 실행하거나 AI에게 작업을 요청하세요
-              </p>
-              <p className="text-xs text-muted-foreground">
-                자연어로 &quot;최근 수정된 파일 보여줘&quot; 같은 요청을 할 수 있습니다
-              </p>
+      {/* 블록 리스트 - 포커스 가능 영역 */}
+      <div
+        className={cn(
+          'flex-1 relative outline-none ring-offset-background transition-colors min-h-0',
+          isTerminalFocused ? 'ring-2 ring-primary/20 bg-accent/5' : ''
+        )}
+        tabIndex={0}
+        ref={terminalContainerRef}
+        onFocus={() => setIsTerminalFocused(true)}
+        onBlur={() => setIsTerminalFocused(false)}
+        onKeyDown={handleTerminalKeyDown}
+        onClick={() => terminalContainerRef.current?.focus()}
+      >
+        <ScrollArea className="h-full p-4" ref={scrollRef}>
+          {/* ... contents ... */}
+          {sessionBlocks.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-center">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  터미널 명령어를 실행하거나 AI에게 작업을 요청하세요
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  자연어로 &quot;최근 수정된 파일 보여줘&quot; 같은 요청을 할 수 있습니다
+                </p>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-0">
-            {sessionBlocks.map((block: any) => (
-              <TerminalBlock
-                key={block.id}
-                block={block}
-                isActive={block.id === activeBlockId}
-                onSelect={() => {
-                  // TODO: 블록 선택 시 activeBlockId 업데이트
-                }}
-                onRerun={() => handleRerunBlock(block.id)}
-                onDelete={() => removeTerminalBlock(block.id)}
-                onExecuteSuggestion={handleExecuteSuggestion}
-              />
-            ))}
+          ) : (
+            <div className="space-y-0">
+              {sessionBlocks.map((block: any) => (
+                <TerminalBlock
+                  key={block.id}
+                  block={block}
+                  isActive={block.id === activeBlockId}
+                  onSelect={() => {
+                    // TODO: 블록 선택 시 activeBlockId 업데이트
+                  }}
+                  onRerun={() => handleRerunBlock(block.id)}
+                  onDelete={() => removeTerminalBlock(block.id)}
+                  onExecuteSuggestion={handleExecuteSuggestion}
+                />
+              ))}
+            </div>
+          )}
+          <div ref={scrollAnchorRef} />
+        </ScrollArea>
+
+        {/* 포커스 안내 오버레이 (마우스 오버 시 또는 포커스 없을 때) */}
+        {!isTerminalFocused && sessionBlocks.length > 0 && (
+          <div className="absolute top-2 right-2 pointer-events-none opacity-50">
+            <span className="text-[10px] bg-muted px-1 rounded border">Click to interact</span>
           </div>
         )}
-      </ScrollArea>
+      </div>
 
       {/* 입력 창 */}
-      <AICommandInput onSubmit={handleSubmit} isLoading={terminalAgentIsRunning} />
+      <AICommandInput
+        onSubmit={handleSubmit}
+        isLoading={terminalAgentIsRunning}
+        currentCwd={currentCwd || workingDirectory || ''}
+      />
     </div>
   );
 }

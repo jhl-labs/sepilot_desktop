@@ -5,6 +5,9 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
 import { getPTYManager } from '../../services/pty-manager';
 import { logger } from '../../services/logger';
 
@@ -233,24 +236,81 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
         let generatedCommand: string | null = null;
 
         for await (const agentEvent of agent.stream(initialState)) {
-          if (agentEvent.type === 'message' && agentEvent.message?.content) {
-            // 명령어 추출 시도
-            const content = agentEvent.message.content;
-            const commandMatch = content.match(/```(?:bash|sh|shell)?\n([\s\S]+?)\n```/);
-            if (commandMatch) {
-              generatedCommand = commandMatch[1].trim();
-              break;
+          // DEBUG LOC
+          logger.info('[Terminal IPC] Agent Event:', {
+            type: agentEvent.type,
+            keys: Object.keys(agentEvent),
+          });
+
+          if (agentEvent.type === 'message') {
+            const message = agentEvent.message;
+            logger.info('[Terminal IPC] Agent Message:', {
+              content: message?.content,
+              tool_calls: message?.tool_calls,
+            });
+
+            if (message.content) {
+              // 명령어 추출 시도 (Markdown Block)
+              const commandMatch = message.content.match(/```(?:bash|sh|shell)?\n([\s\S]+?)\n```/);
+              if (commandMatch) {
+                generatedCommand = commandMatch[1].trim();
+              }
+            }
+
+            // Tool Logic: Capture command from arguments before execution
+            if (message.tool_calls && message.tool_calls.length > 0) {
+              for (const toolCall of message.tool_calls) {
+                logger.info('[Terminal IPC] Tool Call:', toolCall);
+                if (toolCall.name === 'run_command') {
+                  // Check args casing
+                  const args = toolCall.args;
+                  logger.info('[Terminal IPC] run_command args:', args);
+
+                  if (typeof args === 'string') {
+                    try {
+                      const parsed = JSON.parse(args);
+                      if (parsed.CommandLine) generatedCommand = parsed.CommandLine;
+                      if (parsed.command) generatedCommand = parsed.command;
+                    } catch (e) {
+                      logger.error('[Terminal IPC] Failed to parse tool args:', e);
+                    }
+                  } else if (typeof args === 'object') {
+                    const cmd = args.CommandLine || args.command || args.code;
+                    if (cmd) {
+                      generatedCommand = cmd;
+                    }
+                  }
+                }
+              }
             }
           }
 
           if (agentEvent.type === 'tool_results' && agentEvent.results?.[0]) {
             // run_command 결과가 있으면 사용
             const toolResult = agentEvent.results[0];
+            logger.info('[Terminal IPC] Tool Result:', {
+              toolName: toolResult.toolName,
+              resultKeys: Object.keys(toolResult),
+            });
+
             if (toolResult.toolName === 'run_command') {
+              // Note: If the agent executed the command via tool, we might not want to re-execute it in frontend.
+              // But currently frontend logic ignores the 'output' here and just re-runs 'command'.
+              // We MUST NOT fallback to `args.naturalInput` as it causes natural language to be executed as shell commands.
+
+              if (!generatedCommand) {
+                // If we didn't capture the command text but the tool ran, we can't safely replay it.
+                // It's better to fail than to execute arbitrary text.
+                return {
+                  success: false,
+                  error: 'Agent executed a command but the command text could not be captured.',
+                };
+              }
+
               return {
                 success: true,
                 data: {
-                  command: generatedCommand || args.naturalInput,
+                  command: generatedCommand, // Never use args.naturalInput here
                   output: toolResult.result?.stdout || '',
                   stderr: toolResult.result?.stderr || '',
                   exitCode: toolResult.result?.exitCode ?? 0,
@@ -284,6 +344,125 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
       }
     }
   );
+
+  /**
+   * 터미널 자동완성
+   */
+  ipcMain.handle('terminal:autocomplete', async (_event, args: { cwd: string; input: string }) => {
+    try {
+      const { cwd, input } = args;
+      if (!input) return { success: true, data: [] };
+
+      const tokens = input.split(' ');
+      const lastToken = tokens[tokens.length - 1]; // We only autocomplete the last token for now
+
+      let suggestions: string[] = [];
+
+      // 1. Common Commands (only for first word)
+      if (tokens.length === 1 && !lastToken.includes('/') && !lastToken.includes('\\')) {
+        const commonCommands = [
+          'cd',
+          'ls',
+          'dir',
+          'git',
+          'npm',
+          'pnpm',
+          'yarn',
+          'node',
+          'docker',
+          'python',
+          'code',
+          'exit',
+          'clear',
+          'mkdir',
+          'rm',
+          'cp',
+          'mv',
+        ];
+        const cmdMatches = commonCommands
+          .filter((cmd) => cmd.startsWith(lastToken.toLowerCase()))
+          .map((cmd) => cmd + ' '); // Add space for commands
+        suggestions.push(...cmdMatches);
+      }
+
+      // 2. File System Path Completion
+      // Resolve directory to search
+      let searchPath = cwd;
+      let partialName = lastToken;
+
+      // Handle Tilde
+      if (partialName.startsWith('~')) {
+        const homedir = os.homedir();
+        if (partialName === '~' || partialName === '~/') {
+          searchPath = homedir;
+          partialName = '';
+        } else {
+          // ~/Dow... -> search homedir, partial = Dow...
+          // We need to resolve the part before the last separator
+          const resolved = path.resolve(homedir, partialName.substring(2)); // basic handling
+          // This is getting complex. Let's simplify: only handle ~ if it's the start
+          // Actually, let's use path.join logic
+        }
+      }
+
+      // Check if lastToken looks like a path
+      let dirToRead = cwd;
+      let prefix = lastToken;
+
+      try {
+        // Handle absolute paths or relative paths with separators
+        if (lastToken.includes('/') || lastToken.includes('\\')) {
+          const dirname = path.dirname(lastToken);
+          const basename = path.basename(lastToken);
+
+          if (path.isAbsolute(lastToken)) {
+            dirToRead = dirname;
+          } else {
+            dirToRead = path.resolve(cwd, dirname);
+          }
+
+          // Special case: "folder/" -> dirname is "folder", basename is ""
+          if (lastToken.endsWith('/') || lastToken.endsWith('\\')) {
+            dirToRead = path.resolve(cwd, lastToken);
+            prefix = '';
+          } else {
+            prefix = basename;
+          }
+        } else {
+          // Just a filename in CWD
+          dirToRead = cwd;
+          prefix = lastToken;
+        }
+
+        // Tilde expansion for read
+        if (dirToRead.startsWith('~')) {
+          dirToRead = dirToRead.replace('~', os.homedir());
+        }
+
+        const entries = await fs.readdir(dirToRead, { withFileTypes: true });
+
+        const fileMatches = entries
+          .filter((entry) => entry.name.toLowerCase().startsWith(prefix.toLowerCase()))
+          .map((entry) => {
+            // Return just the filename, or maybe the full path suffix?
+            // Usually autocomplete expects the replacement for 'prefix'.
+            return entry.name + (entry.isDirectory() ? path.sep : '');
+          });
+
+        suggestions.push(...fileMatches);
+      } catch (e) {
+        // Directory not found or other error - ignore file completion
+      }
+
+      return {
+        success: true,
+        data: [...new Set(suggestions)].slice(0, 50), // Deduplicate and limit
+      };
+    } catch (error: any) {
+      logger.error('[Terminal IPC] Error in autocomplete:', error);
+      return { success: false, error: error.message };
+    }
+  });
 
   logger.info('[Terminal IPC] Terminal handlers registered');
 }

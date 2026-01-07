@@ -633,6 +633,8 @@ const electronAPI = {
       ipcRenderer.invoke('terminal:execute-command', { command, cwd, timeout }),
     aiCommand: (naturalInput: string, currentCwd?: string, recentBlocks?: any[]) =>
       ipcRenderer.invoke('terminal:ai-command', { naturalInput, currentCwd, recentBlocks }),
+    autocomplete: (cwd: string, input: string) =>
+      ipcRenderer.invoke('terminal:autocomplete', { cwd, input }),
     // Event listeners
     onData: (callback: (data: { sessionId: string; data: string }) => void) => {
       const handler = (_: any, data: any) => callback(data);
