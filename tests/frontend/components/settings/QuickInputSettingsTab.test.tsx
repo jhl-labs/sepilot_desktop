@@ -8,6 +8,19 @@ import '@testing-library/jest-dom';
 import { QuickInputSettingsTab } from '@/components/settings/QuickInputSettingsTab';
 import { QuickInputConfig } from '@/types';
 
+// Mock KeyboardShortcutInput to simplify testing
+jest.mock('@/components/ui/keyboard-shortcut-input', () => ({
+  KeyboardShortcutInput: ({
+    value,
+    onChange,
+    id,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    id?: string;
+  }) => <input id={id} data-testid={id} value={value} onChange={(e) => onChange(e.target.value)} />,
+}));
+
 describe('QuickInputSettingsTab', () => {
   const mockConfig: QuickInputConfig = {
     quickInputShortcut: 'CommandOrControl+Shift+Space',
