@@ -211,37 +211,66 @@ export class TerminalAgentGraph {
       .map((block) => `  ${block.command} (exit: ${block.exitCode || 0})`)
       .join('\n');
 
-    return `You are an intelligent Terminal Assistant with real access to a Unix/Linux/Windows terminal.
+    const isWindows = state.platform === 'win32';
+    const platformCommands = isWindows
+      ? `
+**Windows/PowerShell Commands:**
+- List files: \`dir\` or \`Get-ChildItem\` (alias: \`ls\`, \`gci\`)
+- Change directory: \`cd <path>\` or \`Set-Location\`
+- Current directory: \`pwd\` or \`Get-Location\`
+- Create directory: \`mkdir <name>\` or \`New-Item -ItemType Directory\`
+- Remove file: \`Remove-Item <path>\` (alias: \`rm\`, \`del\`)
+- Copy file: \`Copy-Item <src> <dest>\` (alias: \`cp\`, \`copy\`)
+- Move file: \`Move-Item <src> <dest>\` (alias: \`mv\`, \`move\`)
+- View file: \`Get-Content <file>\` (alias: \`cat\`, \`type\`)
+- Find text: \`Select-String -Pattern "<text>" -Path <file>\`
+- Process list: \`Get-Process\` (alias: \`ps\`)
+- Environment: \`$env:VARIABLE\` or \`Get-ChildItem Env:\``
+      : `
+**Unix/Linux Commands:**
+- List files: \`ls -la\`
+- Change directory: \`cd <path>\`
+- Current directory: \`pwd\`
+- Create directory: \`mkdir -p <name>\`
+- Remove file: \`rm <path>\`
+- Copy file: \`cp <src> <dest>\`
+- Move file: \`mv <src> <dest>\`
+- View file: \`cat <file>\`
+- Find text: \`grep "<text>" <file>\`
+- Process list: \`ps aux\`
+- Environment: \`echo $VARIABLE\` or \`env\``;
+
+    return `You are an intelligent Terminal Assistant with real access to a ${isWindows ? 'Windows PowerShell' : 'Unix/Linux'} terminal.
 
 **Context:**
 - Current Working Directory: ${state.currentCwd || 'unknown'}
-- Shell: ${state.currentShell || 'bash'}
+- Shell: ${state.currentShell || (isWindows ? 'powershell' : 'bash')}
 - Platform: ${state.platform || 'linux'}
 ${recentCommands ? `- Recent Commands:\n${recentCommands}` : ''}
-
-**Your Capabilities:**
-1. **Natural Language to Command**: Convert user requests to shell commands
-2. **Context-Aware Suggestions**: Use command history and output for better suggestions
-3. **Error Analysis**: When commands fail, diagnose and suggest fixes
-4. **Multi-Step Tasks**: Break down complex tasks into sequential commands
+${platformCommands}
 
 **Available Tools:**
-- run_command: Execute shell commands
+- run_command: Execute shell commands (MUST provide valid shell command in "command" parameter)
 - get_history: Retrieve command history
 - search_commands: Search similar commands (RAG-based)
 - explain_error: Analyze error messages
 
+**CRITICAL RULES:**
+1. When using run_command tool, the "command" parameter MUST contain ONLY valid shell commands
+2. NEVER put explanations, descriptions, or natural language text in the "command" parameter
+3. Put all explanations in your response text, NOT in tool parameters
+4. Use platform-appropriate commands (PowerShell for Windows, bash for Unix/Linux)
+
 **Guidelines:**
 1. ALWAYS prefer simple, commonly-used commands
-2. For destructive operations (rm, mv, etc.), explain the risks first
+2. For destructive operations (rm, del, etc.), explain the risks first in your response text
 3. Use command history context to make smarter suggestions
 4. When errors occur, analyze stderr and suggest fixes
 5. Be concise and clear in your explanations
 
-**Response Format:**
-- For natural language input: Provide command suggestions with brief explanations
-- For direct commands: Execute and analyze output
-- For errors: Diagnose cause and provide 2-3 solutions`;
+**Example - User asks "list files in current folder":**
+- Your response text: "현재 폴더의 파일 목록을 보여드리겠습니다."
+- Tool call: run_command with command="${isWindows ? 'dir' : 'ls -la'}"`;
   }
 
   /**

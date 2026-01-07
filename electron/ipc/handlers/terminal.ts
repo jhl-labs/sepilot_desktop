@@ -28,6 +28,7 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
   ipcMain.removeHandler('terminal:get-sessions');
   ipcMain.removeHandler('terminal:execute-command');
   ipcMain.removeHandler('terminal:ai-command');
+  ipcMain.removeHandler('terminal:autocomplete');
 
   /**
    * 터미널 세션 생성
@@ -228,7 +229,7 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
           conversationId: streamId,
           recentBlocks: args.recentBlocks || [],
           currentCwd: args.currentCwd || process.cwd(),
-          currentShell: process.env.SHELL || 'bash',
+          currentShell: process.env.SHELL || (process.platform === 'win32' ? 'powershell' : 'bash'),
           platform: process.platform,
         };
 
@@ -261,20 +262,28 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
             if (message.tool_calls && message.tool_calls.length > 0) {
               for (const toolCall of message.tool_calls) {
                 logger.info('[Terminal IPC] Tool Call:', toolCall);
-                if (toolCall.name === 'run_command') {
-                  // Check args casing
-                  const args = toolCall.args;
+
+                // Check both OpenAI format (function.name) and LangChain format (name)
+                const toolName = toolCall.function?.name || toolCall.name;
+
+                if (toolName === 'run_command') {
+                  // Check args casing and location (OpenAI format vs LangChain format)
+                  let args = toolCall.function?.arguments || toolCall.args;
+
                   logger.info('[Terminal IPC] run_command args:', args);
 
                   if (typeof args === 'string') {
                     try {
+                      // Attempt to parse if it's a JSON string (OpenAI format)
                       const parsed = JSON.parse(args);
                       if (parsed.CommandLine) generatedCommand = parsed.CommandLine;
                       if (parsed.command) generatedCommand = parsed.command;
+                      if (parsed.code) generatedCommand = parsed.code;
                     } catch (e) {
                       logger.error('[Terminal IPC] Failed to parse tool args:', e);
+                      // Fallback: if parse fails, maybe the string *is* the command? (unlikely for run_command but possible for others)
                     }
-                  } else if (typeof args === 'object') {
+                  } else if (typeof args === 'object' && args !== null) {
                     const cmd = args.CommandLine || args.command || args.code;
                     if (cmd) {
                       generatedCommand = cmd;
@@ -353,10 +362,14 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
       const { cwd, input } = args;
       if (!input) return { success: true, data: [] };
 
+      // Basic tokenization - split by space
+      // TODO: Handle quotes properly in the future
       const tokens = input.split(' ');
-      const lastToken = tokens[tokens.length - 1]; // We only autocomplete the last token for now
+      const lastToken = tokens[tokens.length - 1];
 
-      let suggestions: string[] = [];
+      // Define the suggestion type
+      type Suggestion = { label: string; value: string; type: 'file' | 'folder' | 'command' };
+      let suggestions: Suggestion[] = [];
 
       // 1. Common Commands (only for first word)
       if (tokens.length === 1 && !lastToken.includes('/') && !lastToken.includes('\\')) {
@@ -381,35 +394,20 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
         ];
         const cmdMatches = commonCommands
           .filter((cmd) => cmd.startsWith(lastToken.toLowerCase()))
-          .map((cmd) => cmd + ' '); // Add space for commands
+          .map((cmd) => ({
+            label: cmd,
+            value: cmd + ' ', // Add space for commands
+            type: 'command' as const,
+          }));
         suggestions.push(...cmdMatches);
       }
 
       // 2. File System Path Completion
-      // Resolve directory to search
-      let searchPath = cwd;
-      let partialName = lastToken;
-
-      // Handle Tilde
-      if (partialName.startsWith('~')) {
-        const homedir = os.homedir();
-        if (partialName === '~' || partialName === '~/') {
-          searchPath = homedir;
-          partialName = '';
-        } else {
-          // ~/Dow... -> search homedir, partial = Dow...
-          // We need to resolve the part before the last separator
-          const resolved = path.resolve(homedir, partialName.substring(2)); // basic handling
-          // This is getting complex. Let's simplify: only handle ~ if it's the start
-          // Actually, let's use path.join logic
-        }
-      }
-
-      // Check if lastToken looks like a path
-      let dirToRead = cwd;
-      let prefix = lastToken;
-
       try {
+        let dirToRead = cwd;
+        let filePrefix = lastToken;
+        let pathPrefix = ''; // The part of the path before the file/folder name (e.g. "src/" in "src/main")
+
         // Handle absolute paths or relative paths with separators
         if (lastToken.includes('/') || lastToken.includes('\\')) {
           const dirname = path.dirname(lastToken);
@@ -417,24 +415,28 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
 
           if (path.isAbsolute(lastToken)) {
             dirToRead = dirname;
+            pathPrefix = dirname;
+            // Ensure pathPrefix ends with separator if it's not root (win32 root can be tricky)
+            if (!pathPrefix.endsWith(path.sep) && !pathPrefix.endsWith('/')) {
+              pathPrefix += path.sep;
+            }
           } else {
             dirToRead = path.resolve(cwd, dirname);
+            pathPrefix = dirname + path.sep; // Keep relative prefix structure
           }
 
           // Special case: "folder/" -> dirname is "folder", basename is ""
           if (lastToken.endsWith('/') || lastToken.endsWith('\\')) {
             dirToRead = path.resolve(cwd, lastToken);
-            prefix = '';
+            pathPrefix = lastToken;
+            filePrefix = '';
           } else {
-            prefix = basename;
+            // "folder/fi" -> dirname "folder", basename "fi"
+            filePrefix = basename;
           }
-        } else {
-          // Just a filename in CWD
-          dirToRead = cwd;
-          prefix = lastToken;
         }
 
-        // Tilde expansion for read
+        // Tilde expansion for reading directory (not for the value returned)
         if (dirToRead.startsWith('~')) {
           dirToRead = dirToRead.replace('~', os.homedir());
         }
@@ -442,11 +444,31 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
         const entries = await fs.readdir(dirToRead, { withFileTypes: true });
 
         const fileMatches = entries
-          .filter((entry) => entry.name.toLowerCase().startsWith(prefix.toLowerCase()))
+          .filter((entry) => entry.name.toLowerCase().startsWith(filePrefix.toLowerCase()))
           .map((entry) => {
-            // Return just the filename, or maybe the full path suffix?
-            // Usually autocomplete expects the replacement for 'prefix'.
-            return entry.name + (entry.isDirectory() ? path.sep : '');
+            const isDir = entry.isDirectory();
+            const name = entry.name;
+            // If we have a path prefix (e.g. "src/"), the value should be "src/filename"
+            // If it's a directory, add a trailing slash
+            const suffix = isDir ? path.sep : '';
+
+            // Construct the full relative path to replace the token with
+            let value = pathPrefix ? path.join(pathPrefix, name) : name;
+
+            // path.join removes trailing separators, add it back for directories
+            if (isDir && !value.endsWith(path.sep)) {
+              value += path.sep;
+            }
+
+            // Fix windows backslashes if frontend expects forward slashes or just ensure consistency
+            // But usually terminal on windows works fine with backslash or forward slash.
+            // Let's stick to system default but maybe normalize if needed.
+
+            return {
+              label: name + (isDir ? '/' : ''),
+              value: value,
+              type: (isDir ? 'folder' : 'file') as 'folder' | 'file',
+            };
           });
 
         suggestions.push(...fileMatches);
@@ -456,7 +478,7 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
 
       return {
         success: true,
-        data: [...new Set(suggestions)].slice(0, 50), // Deduplicate and limit
+        data: suggestions.slice(0, 50), // Limit results
       };
     } catch (error: any) {
       logger.error('[Terminal IPC] Error in autocomplete:', error);

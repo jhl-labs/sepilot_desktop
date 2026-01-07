@@ -68,10 +68,27 @@ export async function executeRunCommand(args: {
     const startTime = Date.now();
 
     // 명령어 실행
-    const { stdout, stderr } = await execAsync(command, {
+    let finalCommand = command;
+    let shellOption: string | undefined = undefined;
+
+    if (process.platform === 'win32') {
+      // Windows: Use PowerShell with full path to avoid ENOENT errors
+      const systemRoot = process.env.SystemRoot || 'C:\\Windows';
+      const powershellPath = `${systemRoot}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`;
+
+      // Escape command for PowerShell
+      const escapedCommand = command.replace(/"/g, '`"').replace(/\$/g, '`$');
+      finalCommand = `"${powershellPath}" -NoProfile -NonInteractive -Command "${escapedCommand}"`;
+
+      // Use cmd.exe as the shell to execute the full command
+      shellOption = `${systemRoot}\\System32\\cmd.exe`;
+    }
+
+    const { stdout, stderr } = await execAsync(finalCommand, {
       cwd: workingDir,
       timeout,
       maxBuffer: 1024 * 1024 * 10, // 10MB
+      shell: shellOption,
       env: {
         ...process.env,
         // Terminal-specific env vars can be added here

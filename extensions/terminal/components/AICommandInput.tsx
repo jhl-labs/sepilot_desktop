@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, Terminal, Send, Loader2, ArrowRightLeft } from 'lucide-react';
+import { Sparkles, Terminal, Send, Loader2, ArrowRightLeft, File, Folder } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -20,6 +20,12 @@ interface AICommandInputProps {
   placeholder?: string;
   currentCwd: string;
 }
+
+type Suggestion = {
+  label: string;
+  value: string;
+  type: 'file' | 'folder' | 'command';
+};
 
 export function AICommandInput({
   onSubmit,
@@ -32,7 +38,7 @@ export function AICommandInput({
   const [manualMode, setManualMode] = useState<'natural' | 'direct'>('natural');
 
   // Autocomplete State
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
 
   // 감지된 모드 계산
@@ -93,7 +99,8 @@ export function AICommandInput({
       // Check if API is available
       if (typeof window !== 'undefined' && window.electronAPI?.terminal?.autocomplete) {
         try {
-          const result = await window.electronAPI.terminal.autocomplete(currentCwd, input);
+          // Type assertion for now since we haven't updated window.electronAPI type defs yet
+          const result = await (window.electronAPI.terminal.autocomplete as any)(currentCwd, input);
           if (result.success) {
             setSuggestions(result.data || []);
             setSelectedSuggestionIndex(0);
@@ -127,13 +134,16 @@ export function AICommandInput({
     setIsManualMode(false); // 전송 후 자동 모드로 복귀
   };
 
-  const acceptSuggestion = (suggestion: string) => {
+  const acceptSuggestion = (suggestion: Suggestion) => {
     // 간단한 토큰 치환 로직: 마지막 공백 이후를 제안된 텍스트로 교체
-    // (더 정교한 로직은 백엔드에서 range 정보를 주어야 함)
     const tokens = input.split(' ');
     tokens.pop(); // Remove partial
-    tokens.push(suggestion); // Add completed
-    setInput(tokens.join(' ')); // Space separated
+
+    // Suggestion Value already contains the full path relative or adjusted by backend logic
+    // for the last token specifically.
+    tokens.push(suggestion.value);
+
+    setInput(tokens.join(' '));
     setSuggestions([]);
     // Focus logic handles itself since input is controlled
   };
@@ -156,9 +166,6 @@ export function AICommandInput({
         setSelectedSuggestionIndex((prev) => Math.min(suggestions.length - 1, prev + 1));
         return;
       }
-      // Optional: Enter to select if list is visible?
-      // Standard terminal behavior: Enter executes command regardless of completion state unless selected explicitly?
-      // For now, let's keep Enter for Submit to avoid friction. Users use Tab for completion.
     }
 
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -190,8 +197,15 @@ export function AICommandInput({
                 onClick={() => acceptSuggestion(item)}
                 onMouseEnter={() => setSelectedSuggestionIndex(index)}
               >
-                <Terminal className="w-3 h-3 opacity-50" />
-                <span>{item}</span>
+                {item.type === 'folder' ? (
+                  <Folder className="w-3.5 h-3.5 opacity-70 text-blue-400" />
+                ) : item.type === 'file' ? (
+                  <File className="w-3.5 h-3.5 opacity-70" />
+                ) : (
+                  <Terminal className="w-3.5 h-3.5 opacity-50" />
+                )}
+                <span className="flex-1 truncate">{item.label}</span>
+                {item.type === 'command' && <span className="text-[10px] opacity-40">Command</span>}
               </div>
             ))}
           </div>
