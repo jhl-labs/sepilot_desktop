@@ -1000,7 +1000,7 @@ describe('SimpleChatInput', () => {
 
       await waitFor(() => {
         expect(consoleErrorSpy).toHaveBeenCalledWith(
-          '[SimpleChatInput] Failed to stop Browser Agent:',
+          '[useLangGraphStream:browser] Failed to stop agent:',
           expect.any(Error)
         );
       });
