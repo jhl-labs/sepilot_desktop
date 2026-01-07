@@ -53,11 +53,11 @@ describe('MCPServerConfig', () => {
     it('should show preset templates', () => {
       render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
 
-      expect(screen.getByText('Filesystem')).toBeInTheDocument();
       expect(screen.getByText('GitHub')).toBeInTheDocument();
       expect(screen.getByText('SQLite')).toBeInTheDocument();
       expect(screen.getByText('Web Search')).toBeInTheDocument();
       expect(screen.getByText('Git')).toBeInTheDocument();
+      expect(screen.getByText('Context7')).toBeInTheDocument();
     });
 
     it('should show add button disabled by default', () => {
@@ -111,16 +111,16 @@ describe('MCPServerConfig', () => {
   });
 
   describe('Preset 템플릿', () => {
-    it('should load Filesystem preset', async () => {
+    it('should load SQLite preset', async () => {
       const user = userEvent.setup();
       render(<MCPServerConfigComponent onAdd={mockOnAdd} />);
 
-      const filesystemPreset = screen.getByText('Filesystem').closest('button');
-      await user.click(filesystemPreset!);
+      const sqlitePreset = screen.getByText('SQLite').closest('button');
+      await user.click(sqlitePreset!);
 
       await waitFor(() => {
         const nameInput = screen.getByLabelText(/서버 이름/) as HTMLInputElement;
-        expect(nameInput.value).toBe('Filesystem');
+        expect(nameInput.value).toBe('SQLite');
       });
     });
 
