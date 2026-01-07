@@ -58,7 +58,7 @@ jest.mock('@/extensions/editor/components/EditorChatArea', () => ({
   EditorChatArea: () => <div data-testid="editor-chat-area">Editor Chat Area</div>,
 }));
 
-// Mock SidebarChat, SidebarEditor, SidebarBrowser
+// Mock SidebarChat
 jest.mock('@/components/layout/SidebarChat', () => ({
   SidebarChat: ({ onGalleryClick, onConversationClick, onSettingsClick }: any) => (
     <div data-testid="sidebar-chat">
@@ -68,18 +68,6 @@ jest.mock('@/components/layout/SidebarChat', () => ({
       <button onClick={onSettingsClick}>Settings</button>
     </div>
   ),
-}));
-
-jest.mock('@/components/layout/SidebarEditor', () => ({
-  SidebarEditor: ({ onSettingsClick }: any) => (
-    <div data-testid="sidebar-editor">
-      <button onClick={onSettingsClick}>Settings</button>
-    </div>
-  ),
-}));
-
-jest.mock('@/components/layout/SidebarBrowser', () => ({
-  SidebarBrowser: () => <div data-testid="sidebar-browser">Sidebar Browser</div>,
 }));
 
 // Mock window.confirm
