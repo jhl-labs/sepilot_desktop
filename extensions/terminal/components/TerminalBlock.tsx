@@ -20,7 +20,9 @@ import {
   Check,
   Terminal as TerminalIcon,
 } from 'lucide-react';
+import { AnsiDisplay } from '@/components/ui/ansi-display';
 import { cn } from '@/lib/utils';
+
 import type { TerminalBlock as TerminalBlockType } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -144,7 +146,7 @@ export function TerminalBlock({
             isError ? 'bg-destructive/5 border border-destructive/20' : 'bg-muted/50'
           )}
         >
-          {block.output}
+          <AnsiDisplay text={block.output} />
         </div>
       )}
 
