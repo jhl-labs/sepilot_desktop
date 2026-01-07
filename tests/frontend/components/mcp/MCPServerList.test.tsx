@@ -87,8 +87,10 @@ describe('MCPServerList', () => {
       render(<MCPServerList />);
 
       await waitFor(() => {
-        expect(screen.getByText('MCP 서버를 추가하세요')).toBeInTheDocument();
-        expect(screen.getByText(/MCP 서버를 등록하면 AI 어시스턴트가/)).toBeInTheDocument();
+        expect(screen.getByText('MCP 서버 추가')).toBeInTheDocument();
+        expect(
+          screen.getByText(/AI 어시스턴트가 파일 시스템, 데이터베이스, 웹 검색/)
+        ).toBeInTheDocument();
       });
     });
   });
@@ -126,7 +128,7 @@ describe('MCPServerList', () => {
       render(<MCPServerList />);
 
       await waitFor(() => {
-        expect(screen.getAllByText(/5개 도구/)).toHaveLength(2); // Both servers show 5 tools
+        expect(screen.getAllByText(/5개의 도구/)).toHaveLength(2); // Both servers show 5 tools
       });
     });
 
@@ -188,7 +190,7 @@ describe('MCPServerList', () => {
 
       await waitFor(() => {
         // Should show empty state
-        expect(screen.getByText('MCP 서버를 추가하세요')).toBeInTheDocument();
+        expect(screen.getByText('MCP 서버 추가')).toBeInTheDocument();
       });
     });
 
