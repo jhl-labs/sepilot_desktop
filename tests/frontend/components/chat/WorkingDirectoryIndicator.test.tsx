@@ -57,14 +57,18 @@ describe('WorkingDirectoryIndicator', () => {
   it('should render in coding mode', () => {
     render(<WorkingDirectoryIndicator />);
 
-    expect(screen.getByText('작업 디렉토리:')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /디렉토리 선택/ })).toBeInTheDocument();
+    // When no directory is set, it shows a warning message
+    expect(
+      screen.getByText(/코딩 에이전트를 사용하려면 작업 디렉토리가 필요합니다/)
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /지금 선택/ })).toBeInTheDocument();
   });
 
   it('should show select directory button when no directory is set', () => {
     render(<WorkingDirectoryIndicator />);
 
-    const selectButton = screen.getByRole('button', { name: /디렉토리 선택/ });
+    // Warning state shows "지금 선택" button
+    const selectButton = screen.getByRole('button', { name: /지금 선택/ });
     expect(selectButton).toBeInTheDocument();
     expect(selectButton).not.toBeDisabled();
   });
@@ -143,7 +147,8 @@ describe('WorkingDirectoryIndicator', () => {
 
     render(<WorkingDirectoryIndicator />);
 
-    const selectButton = screen.getByRole('button', { name: /디렉토리 선택/ });
+    // When no directory is set, button shows "지금 선택"
+    const selectButton = screen.getByRole('button', { name: /지금 선택/ });
     fireEvent.click(selectButton);
 
     await waitFor(() => {
@@ -160,7 +165,8 @@ describe('WorkingDirectoryIndicator', () => {
 
     render(<WorkingDirectoryIndicator />);
 
-    const selectButton = screen.getByRole('button', { name: /디렉토리 선택/ });
+    // When no directory is set, button shows "지금 선택"
+    const selectButton = screen.getByRole('button', { name: /지금 선택/ });
     fireEvent.click(selectButton);
 
     expect(screen.getByText('선택 중...')).toBeInTheDocument();
@@ -179,7 +185,8 @@ describe('WorkingDirectoryIndicator', () => {
 
     render(<WorkingDirectoryIndicator />);
 
-    const selectButton = screen.getByRole('button', { name: /디렉토리 선택/ });
+    // When no directory is set, button shows "지금 선택"
+    const selectButton = screen.getByRole('button', { name: /지금 선택/ });
     fireEvent.click(selectButton);
 
     await waitFor(() => {
@@ -194,7 +201,8 @@ describe('WorkingDirectoryIndicator', () => {
 
     render(<WorkingDirectoryIndicator />);
 
-    const selectButton = screen.getByRole('button', { name: /디렉토리 선택/ });
+    // When no directory is set, button shows "지금 선택"
+    const selectButton = screen.getByRole('button', { name: /지금 선택/ });
     fireEvent.click(selectButton);
 
     await waitFor(() => {
@@ -261,7 +269,8 @@ describe('WorkingDirectoryIndicator', () => {
 
     render(<WorkingDirectoryIndicator />);
 
-    const selectButton = screen.getByRole('button', { name: /디렉토리 선택/ });
+    // When no directory is set, button shows "지금 선택"
+    const selectButton = screen.getByRole('button', { name: /지금 선택/ });
     fireEvent.click(selectButton);
 
     await waitFor(() => {
