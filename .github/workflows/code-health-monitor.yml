@@ -163,7 +163,10 @@ jobs:
 
           # 오래된 패키지 확인
           outdated_output=$(pnpm outdated --format json 2>/dev/null || echo "[]")
-          outdated_count=$(echo "$outdated_output" | jq 'length' || echo "0")
+          outdated_count=$(echo "$outdated_output" | jq 'length' 2>/dev/null || echo "0")
+          # 숫자가 아닌 경우 0으로 설정
+          outdated_count=$(echo "$outdated_count" | grep -o '[0-9]*' | head -1)
+          outdated_count=${outdated_count:-0}
 
           echo "- 업데이트 가능한 패키지: ${outdated_count}개" >> health-report.md
 
@@ -171,7 +174,7 @@ jobs:
             echo "" >> health-report.md
             echo "주요 업데이트:" >> health-report.md
             echo "\`\`\`" >> health-report.md
-            echo "$outdated_output" | jq -r '.[] | "- \(.name): \(.current) → \(.latest)"' | head -10 >> health-report.md
+            echo "$outdated_output" | jq -r '.[] | "- \(.name): \(.current) → \(.latest)"' 2>/dev/null | head -10 >> health-report.md || echo "파싱 실패" >> health-report.md
             echo "\`\`\`" >> health-report.md
           fi
 
