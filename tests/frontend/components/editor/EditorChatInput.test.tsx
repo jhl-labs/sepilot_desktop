@@ -675,9 +675,12 @@ describe('EditorChatInput', () => {
       const streamCall = mockStream.mock.calls[0];
       expect(streamCall[0]).toEqual({
         thinkingMode: 'editor-agent',
-        enableRAG: false,
+        enableRAG: true,
         enableTools: true,
         enableImageGeneration: false,
+        enableMCPTools: true,
+        enablePlanning: true,
+        enableVerification: true,
       });
       expect(streamCall[2]).toBe('editor-chat-temp');
       expect(streamCall[5]).toBe('/test/workspace'); // workingDirectory
