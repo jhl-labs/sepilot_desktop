@@ -255,22 +255,28 @@ ${platformCommands}
 - search_commands: Search similar commands (RAG-based)
 - explain_error: Analyze error messages
 
+**YOUR PRIMARY DIRECTIVE:**
+When the user requests ANY action that can be accomplished with a shell command, you MUST use the run_command tool.
+DO NOT just explain what command to use - EXECUTE IT using the run_command tool.
+
 **CRITICAL RULES:**
-1. When using run_command tool, the "command" parameter MUST contain ONLY valid shell commands
-2. NEVER put explanations, descriptions, or natural language text in the "command" parameter
-3. Put all explanations in your response text, NOT in tool parameters
+1. ALWAYS use run_command tool when user asks to perform any terminal operation
+2. The "command" parameter MUST contain ONLY valid shell commands (no natural language)
+3. NEVER respond with just explanations when a command can be executed
 4. Use platform-appropriate commands (PowerShell for Windows, bash for Unix/Linux)
+5. For simple requests like "list files", "show directory", etc. - IMMEDIATELY execute the appropriate command
 
 **Guidelines:**
 1. ALWAYS prefer simple, commonly-used commands
-2. For destructive operations (rm, del, etc.), explain the risks first in your response text
+2. For destructive operations (rm, del, etc.), you may briefly warn, but STILL execute if user requested
 3. Use command history context to make smarter suggestions
 4. When errors occur, analyze stderr and suggest fixes
-5. Be concise and clear in your explanations
 
-**Example - User asks "list files in current folder":**
-- Your response text: "현재 폴더의 파일 목록을 보여드리겠습니다."
-- Tool call: run_command with command="${isWindows ? 'dir' : 'ls -la'}"`;
+**Examples:**
+- "파일 목록 보여줘" → run_command with command="${isWindows ? 'dir' : 'ls -la'}"
+- "현재 폴더" → run_command with command="pwd"
+- "node 버전" → run_command with command="node --version"
+- "git 상태" → run_command with command="git status"`;
   }
 
   /**

@@ -316,6 +316,20 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
         if (result.success && result.data?.command) {
           // Agent가 제안한 명령어 실행
           await handleExecuteCommand(result.data.command, naturalInput);
+        } else if (result.success && result.data?.textResponse) {
+          // Agent가 명령어 대신 텍스트 응답만 제공한 경우
+          logger.info('[TerminalPanel] AI returned text response (no command)');
+          if (addTerminalBlock) {
+            addTerminalBlock({
+              id: crypto.randomUUID(),
+              type: 'text',
+              role: 'assistant',
+              naturalInput,
+              output: `\x1b[36m[AI]\x1b[0m ${result.data.textResponse}`,
+              timestamp: Date.now(),
+              cwd: currentCwd || workingDirectory,
+            });
+          }
         } else if (!result.success) {
           logger.error('[TerminalPanel] AI command failed:', result.error);
 
@@ -323,7 +337,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
           if (addTerminalBlock) {
             addTerminalBlock({
               id: crypto.randomUUID(),
-              type: 'text', // or 'command'
+              type: 'text',
               role: 'assistant',
               output: `\x1b[31m[AI Error]\x1b[0m ${result.error || 'Failed to generate command.'}`,
               timestamp: Date.now(),

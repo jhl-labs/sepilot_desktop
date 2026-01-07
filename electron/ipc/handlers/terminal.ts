@@ -235,6 +235,7 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
 
         // Agent 실행 (첫 번째 명령어만 추출)
         let generatedCommand: string | null = null;
+        let lastAssistantContent: string | null = null;
 
         for await (const agentEvent of agent.stream(initialState)) {
           // DEBUG LOC
@@ -250,9 +251,14 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
               tool_calls: message?.tool_calls,
             });
 
+            // 마지막 assistant 메시지 내용 저장 (tool 호출 없을 경우 사용)
             if (message.content) {
-              // 명령어 추출 시도 (Markdown Block)
-              const commandMatch = message.content.match(/```(?:bash|sh|shell)?\n([\s\S]+?)\n```/);
+              lastAssistantContent = message.content;
+
+              // 명령어 추출 시도 (Markdown Block - PowerShell도 포함)
+              const commandMatch = message.content.match(
+                /```(?:bash|sh|shell|powershell|ps1|cmd)?\n([\s\S]+?)\n```/
+              );
               if (commandMatch) {
                 generatedCommand = commandMatch[1].trim();
               }
@@ -329,7 +335,7 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
           }
         }
 
-        // 명령어만 생성된 경우
+        // 명령어가 생성된 경우
         if (generatedCommand) {
           return {
             success: true,
@@ -339,10 +345,22 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
           };
         }
 
-        // Agent가 명령어를 생성하지 못한 경우
+        // Agent가 명령어를 생성하지 않고 텍스트 응답만 제공한 경우
+        // 텍스트 응답을 반환하여 프론트엔드에서 표시할 수 있도록 함
+        if (lastAssistantContent) {
+          return {
+            success: true,
+            data: {
+              textResponse: lastAssistantContent,
+              command: null, // 명령어 없음을 명시
+            },
+          };
+        }
+
+        // Agent가 아무 응답도 생성하지 못한 경우
         return {
           success: false,
-          error: 'Failed to generate command from natural language input',
+          error: 'Failed to generate response from natural language input',
         };
       } catch (error: any) {
         logger.error('[Terminal IPC] Error in AI command:', error);
