@@ -326,20 +326,7 @@ jobs:
               repo: context.repo.repo,
               title: `⚠️ 코드 건강도 낮음: ${score}/100`,
               labels: ['code-health', 'priority-high', 'automated'],
-              body: `# ⚠️ 코드 건강도 경고
-
-**현재 점수:** ${score}/100
-
-코드 건강도가 70점 미만으로 떨어졌습니다. 즉시 개선이 필요합니다.
-
-## 조치 필요
-1. [워크플로우 실행 결과](../actions/runs/${{ github.run_id }}) 확인
-2. health-report.md 아티팩트 다운로드 및 검토
-3. 개선 권장사항 실행
-4. 주간 버그 탐색 워크플로우 수동 실행 고려
-
-이 이슈는 자동으로 생성되었습니다.
-`
+              body: `# ⚠️ 코드 건강도 경고\n\n**현재 점수:** ${score}/100\n\n코드 건강도가 70점 미만으로 떨어졌습니다. 즉시 개선이 필요합니다.\n\n## 조치 필요\n1. [워크플로우 실행 결과](../actions/runs/${{ github.run_id }}) 확인\n2. health-report.md 아티팩트 다운로드 및 검토\n3. 개선 권장사항 실행\n4. 주간 버그 탐색 워크플로우 수동 실행 고려\n\n이 이슈는 자동으로 생성되었습니다.`
             });
 
       - name: Generate workflow summary
