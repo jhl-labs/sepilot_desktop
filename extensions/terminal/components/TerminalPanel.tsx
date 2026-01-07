@@ -104,6 +104,56 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
           updateTerminalBlock(lastBlock.id, {
             exitCode,
           });
+
+          // CD 명령어 감지 및 CWD 업데이트 (Optimistic)
+          if (exitCode === 0 && lastBlock.command.trim().startsWith('cd ')) {
+            const args = lastBlock.command.trim().substring(3).trim();
+            if (args) {
+              const currentSessionCwd = session.cwd || '';
+              // 간단한 경로 해결 로직 (Windows/Unix 호환 노력)
+              // 주의: 완벽한 경로 해결을 위해서는 백엔드 도움이 필요하지만, UI 업데이트용으로 근사치 계산
+              let newCwd = args;
+
+              const isAbsolute =
+                args.startsWith('/') || // Unix absolute
+                /^[a-zA-Z]:[\\/]/.test(args); // Windows absolute
+
+              if (!isAbsolute) {
+                // 상대 경로 처리
+                const separator = currentSessionCwd.includes('\\') ? '\\' : '/';
+                const parts = currentSessionCwd.split(separator).filter(Boolean);
+                const relParts = args.split(/[/\\]/);
+
+                for (const part of relParts) {
+                  if (part === '.' || part === '') continue;
+                  if (part === '..') {
+                    parts.pop();
+                  } else if (part === '~') {
+                    // 홈 디렉토리 처리는 복잡하므로 무시하거나 원본 유지 시도
+                    // 여기서는 단순화를 위해 처리하지 않음 (절대 경로로 간주될 수 있음)
+                  } else {
+                    parts.push(part);
+                  }
+                }
+                newCwd = parts.join(separator);
+
+                // Windows 드라이브 문자 복구
+                if (currentSessionCwd.includes(':') && !newCwd.includes(':')) {
+                  newCwd = currentSessionCwd.split('\\')[0] + '\\' + newCwd;
+                }
+                // 루트 슬래시 복구 (Unix)
+                if (currentSessionCwd.startsWith('/') && !newCwd.startsWith('/')) {
+                  newCwd = '/' + newCwd;
+                }
+              }
+
+              // Store 업데이트
+              const updateTerminalSession = (store as any).updateTerminalSession;
+              if (updateTerminalSession) {
+                updateTerminalSession(session.id, { cwd: newCwd });
+              }
+            }
+          }
         }
       }
     );
@@ -137,9 +187,20 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
     }
   }, [workingDirectory, currentCwd, setCurrentCwd]);
 
+  const isInitializing = useRef(false);
+
   // 초기 세션 자동 생성
   useEffect(() => {
     const initializeSession = async () => {
+      // 이미 초기화 진행 중이거나 세션이 있으면 중단
+      if (
+        isInitializing.current ||
+        ((store as any).sessions && (store as any).sessions.length > 0)
+      ) {
+        return;
+      }
+
+      isInitializing.current = true;
       const sessions = (store as any).sessions;
 
       // 이미 세션이 있으면 생성하지 않음
