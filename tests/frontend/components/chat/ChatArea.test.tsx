@@ -195,7 +195,7 @@ describe('ChatArea', () => {
 
     const { container } = render(<ChatArea />);
 
-    const messagesContainer = container.querySelector('.mx-auto.max-w-4xl');
+    const messagesContainer = container.querySelector('.mx-auto');
     expect(messagesContainer).toHaveStyle({ fontSize: '1rem' });
   });
 

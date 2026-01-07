@@ -598,8 +598,8 @@ export function ChatArea() {
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-muted-foreground px-4">
             <MessageSquare className="mb-4 h-16 w-16 opacity-10" />
-            <p className="text-sm font-medium">{t('chat.emptyState.message')}</p>
-            <p className="text-xs mt-1 opacity-60">{t('chat.emptyState.hint')}</p>
+            <p className="text-sm font-medium">{t('chat.emptyState.startConversation')}</p>
+            <p className="text-xs mt-1 opacity-60">{t('chat.emptyState.aiAssistantHelp')}</p>
           </div>
         ) : (
           <div
