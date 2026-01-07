@@ -1,6 +1,6 @@
 {
   "name": "sepilot-desktop",
-  "version": "0.7.4",
+  "version": "0.7.9",
   "description": "SEPilot Desktop - LLM Desktop Application with LangGraph, RAG, and MCP",
   "main": "dist/electron/electron/main.js",
   "scripts": {
