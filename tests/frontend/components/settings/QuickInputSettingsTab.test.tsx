@@ -41,7 +41,9 @@ describe('QuickInputSettingsTab', () => {
       />
     );
 
-    expect(screen.getByLabelText('Quick Input 단축키')).toHaveValue('CommandOrControl+Shift+Space');
+    const shortcutInput = screen.getByLabelText('Quick Input 단축키') as HTMLInputElement;
+    // CommandOrControl is converted to Ctrl on non-Mac platforms
+    expect(shortcutInput.value).toMatch(/^(CommandOrControl|Ctrl)\+Shift\+Space$/);
   });
 
   it('should update quick input shortcut', () => {
@@ -76,7 +78,8 @@ describe('QuickInputSettingsTab', () => {
     );
 
     expect(screen.getByDisplayValue('Test Question')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('CommandOrControl+1')).toBeInTheDocument();
+    // CommandOrControl is converted to Ctrl on non-Mac platforms
+    expect(screen.getByDisplayValue(/^(CommandOrControl|Ctrl)\+1$/)).toBeInTheDocument();
     expect(screen.getByDisplayValue('Test prompt')).toBeInTheDocument();
   });
 
@@ -195,7 +198,7 @@ describe('QuickInputSettingsTab', () => {
       />
     );
 
-    const shortcutInput = screen.getByDisplayValue('CommandOrControl+1');
+    const shortcutInput = screen.getByDisplayValue(/^(CommandOrControl|Ctrl)\+1$/);
     fireEvent.change(shortcutInput, { target: { value: 'CommandOrControl+2' } });
 
     expect(mockSetConfig).toHaveBeenCalledWith({
