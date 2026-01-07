@@ -153,6 +153,15 @@
           "add": "Add",
           "added": "Added"
         },
+        "manual": {
+          "button": "Add Manually",
+          "title": "Add Model Manually",
+          "connection": "Connection",
+          "selectConnection": "Select a connection",
+          "modelId": "Model ID",
+          "modelIdPlaceholder": "e.g., gpt-4, claude-3-5-sonnet-20241022",
+          "addButton": "Add Model"
+        },
         "configured": {
           "title": "Configured Models",
           "description": "Configure tags and detailed settings for added models.",
@@ -184,7 +193,9 @@
           "duplicate": "\"{{modelId}}\" is already added.",
           "fetchError": "Failed to fetch models from some connections:\n{{error}}",
           "fetchErrorAll": "Failed to fetch models from enabled connections.",
-          "unknownError": "Unknown error"
+          "unknownError": "Unknown error",
+          "emptyFields": "Please fill in all fields.",
+          "invalidConnection": "Invalid connection."
         }
       },
       "validation": {

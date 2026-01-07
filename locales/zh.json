@@ -147,6 +147,15 @@
           "add": "添加",
           "added": "已添加"
         },
+        "manual": {
+          "button": "手动添加",
+          "title": "手动添加模型",
+          "connection": "连接",
+          "selectConnection": "请选择连接",
+          "modelId": "模型 ID",
+          "modelIdPlaceholder": "例如：gpt-4, claude-3-5-sonnet-20241022",
+          "addButton": "添加模型"
+        },
         "configured": {
           "title": "已配置的模型",
           "description": "为已添加的模型指定标签并配置详细设置。",
@@ -178,7 +187,9 @@
           "duplicate": "\"{{modelId}}\" 已添加。",
           "fetchError": "从某些连接获取模型失败：\n{{error}}",
           "fetchErrorAll": "从已启用的连接获取模型失败。",
-          "unknownError": "未知错误"
+          "unknownError": "未知错误",
+          "emptyFields": "请填写所有字段。",
+          "invalidConnection": "无效的连接。"
         }
       },
       "validation": {

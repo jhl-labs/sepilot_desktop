@@ -6,8 +6,15 @@ import { nanoid } from 'nanoid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { LLMConnection, ModelConfig, ModelRoleTag, NetworkConfig } from '@/types';
-import { RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { RefreshCw, ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import { fetchAvailableModels } from './settingsUtils';
 import { CustomHeadersManager } from './CustomHeadersManager';
 
@@ -48,6 +55,12 @@ export function ModelListView({
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Manual model add states
+  const [showManualAddForm, setShowManualAddForm] = useState(false);
+  const [manualConnectionId, setManualConnectionId] = useState<string>('');
+  const [manualModelId, setManualModelId] = useState<string>('');
+  const [manualAddError, setManualAddError] = useState<string | null>(null);
 
   // Parse error message and translate error code
   const parseErrorMessage = (
@@ -181,6 +194,53 @@ export function ModelListView({
     onModelsChange([...models, newModel]);
   };
 
+  // Manual model add handler
+  const handleManualAddModel = () => {
+    // 1. Validation - empty fields
+    if (!manualConnectionId.trim() || !manualModelId.trim()) {
+      setManualAddError(t('settings.llm.models.validation.emptyFields'));
+      return;
+    }
+
+    // 2. Validate connection exists
+    const connection = connections.find((c) => c.id === manualConnectionId);
+    if (!connection) {
+      setManualAddError(t('settings.llm.models.validation.invalidConnection'));
+      return;
+    }
+
+    // 3. Duplicate check
+    const existingModel = models.find(
+      (m) => m.connectionId === manualConnectionId && m.modelId === manualModelId.trim()
+    );
+
+    if (existingModel) {
+      setManualAddError(
+        t('settings.llm.models.validation.duplicate', { modelId: manualModelId.trim() })
+      );
+      setTimeout(() => setManualAddError(null), 3000);
+      return;
+    }
+
+    // 4. Add model
+    const newModel: ModelConfig = {
+      id: `model-${nanoid()}`,
+      connectionId: manualConnectionId,
+      modelId: manualModelId.trim(),
+      tags: [],
+      temperature: defaultTemperature,
+      maxTokens: defaultMaxTokens,
+    };
+
+    onModelsChange([...models, newModel]);
+
+    // 5. Reset form and close
+    setManualConnectionId('');
+    setManualModelId('');
+    setManualAddError(null);
+    setShowManualAddForm(false);
+  };
+
   // Remove model from configuration
   const handleRemoveModel = (modelId: string) => {
     onModelsChange(models.filter((m) => m.id !== modelId));
@@ -249,16 +309,28 @@ export function ModelListView({
               {t('settings.llm.models.available.description')}
             </p>
           </div>
-          <Button
-            onClick={handleFetchAllModels}
-            disabled={isLoadingModels || connections.filter((c) => c.enabled).length === 0}
-            size="sm"
-          >
-            <RefreshCw className={`h-4 w-4 mr-1 ${isLoadingModels ? 'animate-spin' : ''}`} />
-            {isLoadingModels
-              ? t('settings.llm.models.available.fetching')
-              : t('settings.llm.models.available.fetch')}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleFetchAllModels}
+              disabled={isLoadingModels || connections.filter((c) => c.enabled).length === 0}
+              size="sm"
+              variant="default"
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${isLoadingModels ? 'animate-spin' : ''}`} />
+              {isLoadingModels
+                ? t('settings.llm.models.available.fetching')
+                : t('settings.llm.models.available.fetch')}
+            </Button>
+            <Button
+              onClick={() => setShowManualAddForm(!showManualAddForm)}
+              size="sm"
+              variant="outline"
+              disabled={connections.filter((c) => c.enabled).length === 0}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              {t('settings.llm.models.manual.button')}
+            </Button>
+          </div>
         </div>
 
         {loadError && (
@@ -268,6 +340,85 @@ export function ModelListView({
               <div className="flex-1">
                 <pre className="whitespace-pre-wrap break-words font-sans text-sm">{loadError}</pre>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Manual Add Form */}
+        {showManualAddForm && (
+          <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-semibold text-sm">{t('settings.llm.models.manual.title')}</h4>
+              <button
+                onClick={() => {
+                  setShowManualAddForm(false);
+                  setManualConnectionId('');
+                  setManualModelId('');
+                  setManualAddError(null);
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {manualAddError && <p className="text-sm text-destructive">{manualAddError}</p>}
+
+            <div className="space-y-2">
+              <Label htmlFor="manual-connection">
+                {t('settings.llm.models.manual.connection')}
+              </Label>
+              <Select value={manualConnectionId} onValueChange={setManualConnectionId}>
+                <SelectTrigger id="manual-connection">
+                  <SelectValue placeholder={t('settings.llm.models.manual.selectConnection')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {connections
+                    .filter((c) => c.enabled)
+                    .map((connection) => (
+                      <SelectItem key={connection.id} value={connection.id}>
+                        {connection.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="manual-model-id">{t('settings.llm.models.manual.modelId')}</Label>
+              <Input
+                id="manual-model-id"
+                value={manualModelId}
+                onChange={(e) => setManualModelId(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && manualConnectionId && manualModelId.trim()) {
+                    handleManualAddModel();
+                  }
+                }}
+                placeholder={t('settings.llm.models.manual.modelIdPlaceholder')}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowManualAddForm(false);
+                  setManualConnectionId('');
+                  setManualModelId('');
+                  setManualAddError(null);
+                }}
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleManualAddModel}
+                disabled={!manualConnectionId || !manualModelId.trim()}
+              >
+                {t('settings.llm.models.manual.addButton')}
+              </Button>
             </div>
           </div>
         )}
