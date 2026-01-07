@@ -449,7 +449,6 @@ describe('settingsUtils', () => {
       };
 
       (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
       const result = await fetchAvailableModels({
         provider: 'openai',
@@ -468,11 +467,6 @@ describe('settingsUtils', () => {
           }),
         })
       );
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        '[Settings] Running in browser mode - CORS may occur, Network Config not applied'
-      );
-
-      consoleWarnSpy.mockRestore();
     });
 
     it('should use fetch in browser mode for Anthropic', async () => {

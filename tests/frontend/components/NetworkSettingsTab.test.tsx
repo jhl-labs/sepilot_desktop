@@ -15,7 +15,7 @@ describe('NetworkSettingsTab', () => {
   const defaultNetworkConfig: NetworkConfig = {
     proxy: {
       enabled: false,
-      mode: 'none',
+      mode: 'manual',
     },
     ssl: {
       verify: true,
@@ -65,7 +65,7 @@ describe('NetworkSettingsTab', () => {
       ...defaultNetworkConfig,
       proxy: {
         enabled: true,
-        mode: 'none',
+        mode: 'manual',
       },
     });
   });
@@ -75,7 +75,7 @@ describe('NetworkSettingsTab', () => {
       ...defaultNetworkConfig,
       proxy: {
         enabled: true,
-        mode: 'none',
+        mode: 'manual',
       },
     };
 
@@ -95,7 +95,7 @@ describe('NetworkSettingsTab', () => {
       ...defaultNetworkConfig,
       proxy: {
         enabled: true,
-        mode: 'none',
+        mode: 'manual',
       },
     };
 
@@ -249,7 +249,7 @@ describe('NetworkSettingsTab', () => {
       ...defaultNetworkConfig,
       proxy: {
         enabled: true,
-        mode: 'none',
+        mode: 'manual',
       },
     };
 

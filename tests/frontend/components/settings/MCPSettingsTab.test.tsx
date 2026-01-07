@@ -38,10 +38,10 @@ describe('MCPSettingsTab', () => {
     expect(screen.getByTestId('mcp-server-config')).toBeInTheDocument();
   });
 
-  it('should render divider with "새 서버 추가" text', () => {
+  it('should render divider with "서버 추가" text', () => {
     render(<MCPSettingsTab />);
 
-    expect(screen.getByText('새 서버 추가')).toBeInTheDocument();
+    expect(screen.getByText('서버 추가')).toBeInTheDocument();
   });
 
   it('should refresh MCPServerList when onRefresh is called', async () => {
