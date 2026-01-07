@@ -161,7 +161,7 @@ const mockLocalStorage = {
 };
 
 // Mock sessionStorage
-const mockSessionStorage = {
+export const mockSessionStorage = {
   getItem: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
@@ -218,6 +218,10 @@ beforeEach(() => {
   mockLocalStorage.setItem.mockReset();
   mockLocalStorage.removeItem.mockReset();
   mockLocalStorage.clear.mockReset();
+  mockSessionStorage.getItem.mockReset();
+  mockSessionStorage.setItem.mockReset();
+  mockSessionStorage.removeItem.mockReset();
+  mockSessionStorage.clear.mockReset();
 });
 
 // Mock fetch globally
