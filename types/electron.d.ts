@@ -926,9 +926,20 @@ interface TerminalAPI {
     currentCwd?: string,
     recentBlocks?: any[]
   ) => Promise<
-    IPCResponse<{ command?: string; output?: string; stderr?: string; exitCode?: number }>
+    IPCResponse<{
+      command?: string;
+      output?: string;
+      stderr?: string;
+      exitCode?: number;
+      textResponse?: string;
+    }>
   >;
-  autocomplete: (cwd: string, input: string) => Promise<IPCResponse<string[]>>;
+  autocomplete: (
+    cwd: string,
+    input: string
+  ) => Promise<
+    IPCResponse<Array<{ label: string; value: string; type: 'file' | 'folder' | 'command' }>>
+  >;
   // Event listeners
   onData: (
     callback: (data: { sessionId: string; data: string }) => void

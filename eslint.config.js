@@ -16,7 +16,8 @@ module.exports = [
       'build/**',
       'electron/**',
       'tests/**',
-
+      'e2e_tests/test-results/**',
+      'playwright-report/**',
       'scripts/**',
       'public/**',
       'types/**/*.js',
