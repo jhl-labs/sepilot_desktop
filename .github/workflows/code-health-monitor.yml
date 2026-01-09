@@ -41,6 +41,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install cloc
+        run: sudo apt-get update && sudo apt-get install -y cloc
+
       - name: Collect code metrics
         id: metrics
         run: |
