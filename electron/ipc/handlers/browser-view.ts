@@ -177,7 +177,15 @@ function createBrowserView(
     },
 
     // Handle new window/popup requests - open in new tab
-    windowOpenHandler: ({ url, frameName, features }: { url: string; frameName: string; features: string }) => {
+    windowOpenHandler: ({
+      url,
+      frameName,
+      features,
+    }: {
+      url: string;
+      frameName: string;
+      features: string;
+    }) => {
       logger.info('[BrowserView] ===== WINDOW OPEN HANDLER CALLED =====');
       logger.info('[BrowserView] URL:', url);
       logger.info('[BrowserView] Frame name:', frameName);
@@ -185,7 +193,10 @@ function createBrowserView(
 
       // Create new tab for popup
       const newTabId = randomUUID();
-      const { view: newView, cleanupListeners: newCleanup } = createBrowserView(mainWindow, newTabId);
+      const { view: newView, cleanupListeners: newCleanup } = createBrowserView(
+        mainWindow,
+        newTabId
+      );
 
       const newTab: BrowserTab = {
         id: newTabId,
@@ -254,7 +265,12 @@ function createBrowserView(
     },
 
     // Handle navigation errors
-    didFailLoad: (event: Event, errorCode: number, errorDescription: string, validatedURL: string) => {
+    didFailLoad: (
+      event: Event,
+      errorCode: number,
+      errorDescription: string,
+      validatedURL: string
+    ) => {
       if (errorCode !== -3) {
         logger.error(
           `[BrowserView] Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`
@@ -476,7 +492,14 @@ export function setupBrowserViewHandlers() {
         return { success: false, error: 'Tab not found' };
       }
 
-      // Remove from window if it's active
+      // 1. Cleanup event listeners
+      try {
+        tab.cleanupListeners();
+      } catch (error) {
+        logger.warn(`Failed to cleanup listeners for ${tabId}:`, error);
+      }
+
+      // 2. Remove from window if it's active
       if (activeTabId === tabId) {
         mainWindow.removeBrowserView(tab.view);
         activeTabId = null;
@@ -493,7 +516,17 @@ export function setupBrowserViewHandlers() {
         }
       }
 
-      // Clean up
+      // 3. Destroy webContents explicitly to prevent memory leaks
+      if (!tab.view.webContents.isDestroyed()) {
+        try {
+          (tab.view.webContents as any).destroy();
+          logger.info(`WebContents destroyed for tab: ${tabId}`);
+        } catch (error) {
+          logger.error(`Failed to destroy webContents for ${tabId}:`, error);
+        }
+      }
+
+      // 4. Remove from tabs map
       tabs.delete(tabId);
 
       logger.info(`Tab closed: ${tabId}`);
@@ -1255,14 +1288,41 @@ export function setupBrowserViewHandlers() {
 
 // Clean up on app quit
 export function cleanupBrowserView() {
-  if (mainWindowRef) {
-    tabs.forEach((tab) => {
-      mainWindowRef!.removeBrowserView(tab.view);
-    });
-  }
+  logger.info(`[BrowserView] Cleaning up ${tabs.size} tabs`);
+
+  tabs.forEach((tab) => {
+    // 1. Cleanup event listeners
+    try {
+      tab.cleanupListeners();
+    } catch (error) {
+      logger.warn(`[BrowserView] Failed to cleanup listeners for ${tab.id}:`, error);
+    }
+
+    // 2. Remove BrowserView from window
+    if (mainWindowRef) {
+      try {
+        mainWindowRef.removeBrowserView(tab.view);
+      } catch (error) {
+        logger.warn(`[BrowserView] Failed to remove view for ${tab.id}:`, error);
+      }
+    }
+
+    // 3. Destroy webContents explicitly
+    if (!tab.view.webContents.isDestroyed()) {
+      try {
+        (tab.view.webContents as any).destroy();
+        logger.debug(`[BrowserView] WebContents destroyed for ${tab.id}`);
+      } catch (error) {
+        logger.error(`[BrowserView] Failed to destroy webContents for ${tab.id}:`, error);
+      }
+    }
+  });
+
+  // 4. Clear all references
   tabs.clear();
   activeTabId = null;
   mainWindowRef = null;
+  logger.info('[BrowserView] Cleanup complete');
 }
 
 /**
@@ -1277,14 +1337,14 @@ export async function browserCreateTab(url?: string) {
     const tabId = randomUUID();
     const defaultUrl = url || 'https://euno.news';
 
-    const view = createBrowserView(mainWindowRef, tabId);
+    const { view, cleanupListeners } = createBrowserView(mainWindowRef, tabId);
 
     const tab: BrowserTab = {
       id: tabId,
       view,
       url: defaultUrl,
       title: 'New Tab',
-      cleanupListeners: () => {},
+      cleanupListeners,
     };
 
     tabs.set(tabId, tab);
@@ -1444,14 +1504,14 @@ export function getTabs(): Map<string, BrowserTab> {
  */
 export function createTabInternal(mainWindow: BrowserWindow, url: string): string {
   const tabId = randomUUID();
-  const view = createBrowserView(mainWindow, tabId);
+  const { view, cleanupListeners } = createBrowserView(mainWindow, tabId);
 
   const tab: BrowserTab = {
     id: tabId,
     view,
     url,
     title: 'Loading...',
-    cleanupListeners: () => {},
+    cleanupListeners,
   };
 
   tabs.set(tabId, tab);
@@ -1508,7 +1568,14 @@ export function closeTabInternal(mainWindow: BrowserWindow, tabId: string): void
     return;
   }
 
-  // Remove from window if it's active
+  // 1. Cleanup event listeners
+  try {
+    tab.cleanupListeners();
+  } catch (error) {
+    logger.warn(`[TabInternal] Failed to cleanup listeners for ${tabId}:`, error);
+  }
+
+  // 2. Remove from window if it's active
   if (activeTabId === tabId) {
     mainWindow.removeBrowserView(tab.view);
     activeTabId = null;
@@ -1525,7 +1592,17 @@ export function closeTabInternal(mainWindow: BrowserWindow, tabId: string): void
     }
   }
 
-  // Clean up
+  // 3. Destroy webContents explicitly to prevent memory leaks
+  if (!tab.view.webContents.isDestroyed()) {
+    try {
+      (tab.view.webContents as any).destroy();
+      logger.info(`[TabInternal] WebContents destroyed for tab: ${tabId}`);
+    } catch (error) {
+      logger.error(`[TabInternal] Failed to destroy webContents for ${tabId}:`, error);
+    }
+  }
+
+  // 4. Remove from tabs map
   tabs.delete(tabId);
   logger.info(`[TabInternal] Closed tab: ${tabId}`);
 }
