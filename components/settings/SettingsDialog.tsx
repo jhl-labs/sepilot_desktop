@@ -38,6 +38,7 @@ import { LLMSettingsTab } from './LLMSettingsTab';
 import { NetworkSettingsTab } from './NetworkSettingsTab';
 import { ImageGenSettingsTab } from './ImageGenSettingsTab';
 import { MCPSettingsTab } from './MCPSettingsTab';
+import { SkillsSettingsTab } from './SkillsSettingsTab';
 import { QuickInputSettingsTab } from './QuickInputSettingsTab';
 import { ExtensionManagerTab } from './ExtensionManagerTab';
 import { SettingsSidebar, SettingSection } from './SettingsSidebar';
@@ -1071,6 +1072,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 )}
 
                 {activeTab === 'mcp' && <MCPSettingsTab />}
+
+                {activeTab === 'skills' && <SkillsSettingsTab />}
 
                 {activeTab === 'github' && (
                   <GitHubSyncSettings

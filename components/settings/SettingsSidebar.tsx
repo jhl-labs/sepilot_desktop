@@ -16,6 +16,7 @@ import {
   Languages,
   Bot,
   FileText,
+  Package,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -107,6 +108,12 @@ export function SettingsSidebar({
           label: t('settings.mcp.title'),
           icon: Plug,
           description: t('settings.mcp.description'),
+        },
+        {
+          id: 'skills',
+          label: 'Skills',
+          icon: Package,
+          description: 'AI 에이전트에 전문 지식을 추가하는 Skills 관리',
         },
       ],
     },

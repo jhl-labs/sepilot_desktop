@@ -49,36 +49,40 @@ jest.mock('@/components/settings/NetworkSettingsTab', () => ({
   ),
 }));
 
-jest.mock('@/components/settings/ComfyUISettingsTab', () => ({
-  ComfyUISettingsTab: ({ onSave, comfyConfig, setComfyConfig, message }: any) => (
-    <div data-testid="comfyui-settings">
-      <div>ComfyUI Settings</div>
+jest.mock('@/components/settings/ImageGenSettingsTab', () => ({
+  ImageGenSettingsTab: ({ onSave, imageGenConfig, setImageGenConfig, message }: any) => (
+    <div data-testid="imagegen-settings">
+      <div>Image Generation Settings</div>
       <input
-        data-testid="comfy-enabled"
+        data-testid="imagegen-enabled"
         type="checkbox"
-        checked={comfyConfig.enabled}
-        onChange={(e) => setComfyConfig({ ...comfyConfig, enabled: e.target.checked })}
+        checked={imageGenConfig.enabled}
+        onChange={(e) => setImageGenConfig({ ...imageGenConfig, enabled: e.target.checked })}
       />
       <input
-        data-testid="comfy-url"
-        value={comfyConfig.httpUrl}
-        onChange={(e) => setComfyConfig({ ...comfyConfig, httpUrl: e.target.value })}
+        data-testid="imagegen-url"
+        value={imageGenConfig.httpUrl}
+        onChange={(e) => setImageGenConfig({ ...imageGenConfig, httpUrl: e.target.value })}
       />
       <input
-        data-testid="comfy-workflow"
-        value={comfyConfig.workflowId}
-        onChange={(e) => setComfyConfig({ ...comfyConfig, workflowId: e.target.value })}
+        data-testid="imagegen-workflow"
+        value={imageGenConfig.workflowId}
+        onChange={(e) => setImageGenConfig({ ...imageGenConfig, workflowId: e.target.value })}
       />
-      <button onClick={onSave} data-testid="comfy-save">
-        Save ComfyUI
+      <button onClick={onSave} data-testid="imagegen-save">
+        Save Image Generation
       </button>
-      {message && <div data-testid="comfy-message">{message.text}</div>}
+      {message && <div data-testid="imagegen-message">{message.text}</div>}
     </div>
   ),
 }));
 
 jest.mock('@/components/settings/MCPSettingsTab', () => ({
   MCPSettingsTab: () => <div data-testid="mcp-settings">MCP Settings</div>,
+}));
+
+jest.mock('@/components/settings/SkillsSettingsTab', () => ({
+  SkillsSettingsTab: () => <div data-testid="skills-settings">Skills Settings</div>,
 }));
 
 jest.mock('@/components/rag/VectorDBSettings', () => ({
@@ -187,15 +191,15 @@ describe('SettingsDialog', () => {
     });
   });
 
-  it('should switch to ComfyUI tab when clicked', async () => {
+  it('should switch to Image Generation tab when clicked', async () => {
     const user = userEvent.setup();
     render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-    const comfyuiTab = screen.getByRole('button', { name: /ComfyUI/i });
-    await user.click(comfyuiTab);
+    const imagegenTab = screen.getByRole('button', { name: /Image Generation/i });
+    await user.click(imagegenTab);
 
     await waitFor(() => {
-      expect(screen.getByTestId('comfyui-settings')).toBeInTheDocument();
+      expect(screen.getByTestId('imagegen-settings')).toBeInTheDocument();
     });
   });
 
@@ -242,8 +246,9 @@ describe('SettingsDialog', () => {
     expect(screen.getByRole('button', { name: /^LLM$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Network/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /VectorDB/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /ComfyUI/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Image Generation/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /MCP 서버/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Skills/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /GitHub/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /백업\/복구/i })).toBeInTheDocument();
   });
@@ -372,15 +377,15 @@ describe('SettingsDialog', () => {
       localStorage.clear();
     });
 
-    it('should load ComfyUI config from localStorage', async () => {
-      const savedComfyConfig = {
+    it('should load Image Generation config from localStorage', async () => {
+      const savedImageGenConfig = {
         enabled: true,
         httpUrl: 'http://localhost:8188',
         wsUrl: 'ws://localhost:8188/ws',
         workflowId: 'test-workflow',
       };
 
-      localStorage.setItem('sepilot_comfyui_config', JSON.stringify(savedComfyConfig));
+      localStorage.setItem('sepilot_imagegen_config', JSON.stringify(savedImageGenConfig));
 
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
@@ -801,7 +806,7 @@ describe('SettingsDialog', () => {
     });
   });
 
-  describe('ComfyUI 설정 저장', () => {
+  describe('Image Generation 설정 저장', () => {
     beforeEach(() => {
       (isElectron as jest.Mock).mockReturnValue(false);
       localStorage.clear();
@@ -812,22 +817,22 @@ describe('SettingsDialog', () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-      const comfyTab = screen.getByRole('button', { name: /ComfyUI/i });
-      await user.click(comfyTab);
+      const imagegenTab = screen.getByRole('button', { name: /Image Generation/i });
+      await user.click(imagegenTab);
 
       await waitFor(() => {
-        expect(screen.getByTestId('comfyui-settings')).toBeInTheDocument();
+        expect(screen.getByTestId('imagegen-settings')).toBeInTheDocument();
       });
 
-      // Enable ComfyUI
-      const enabledCheckbox = screen.getByTestId('comfy-enabled');
+      // Enable Image Generation
+      const enabledCheckbox = screen.getByTestId('imagegen-enabled');
       await user.click(enabledCheckbox);
 
       // Clear URL
-      const urlInput = screen.getByTestId('comfy-url');
+      const urlInput = screen.getByTestId('imagegen-url');
       await user.clear(urlInput);
 
-      const saveButton = screen.getByTestId('comfy-save');
+      const saveButton = screen.getByTestId('imagegen-save');
       await user.click(saveButton);
 
       await waitFor(() => {
@@ -839,23 +844,23 @@ describe('SettingsDialog', () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-      const comfyTab = screen.getByRole('button', { name: /ComfyUI/i });
-      await user.click(comfyTab);
+      const imagegenTab = screen.getByRole('button', { name: /Image Generation/i });
+      await user.click(imagegenTab);
 
       await waitFor(() => {
-        expect(screen.getByTestId('comfyui-settings')).toBeInTheDocument();
+        expect(screen.getByTestId('imagegen-settings')).toBeInTheDocument();
       });
 
-      const enabledCheckbox = screen.getByTestId('comfy-enabled');
+      const enabledCheckbox = screen.getByTestId('imagegen-enabled');
       await user.click(enabledCheckbox);
 
-      const urlInput = screen.getByTestId('comfy-url');
+      const urlInput = screen.getByTestId('imagegen-url');
       await user.type(urlInput, 'http://localhost:8188');
 
-      const workflowInput = screen.getByTestId('comfy-workflow');
+      const workflowInput = screen.getByTestId('imagegen-workflow');
       await user.clear(workflowInput);
 
-      const saveButton = screen.getByTestId('comfy-save');
+      const saveButton = screen.getByTestId('imagegen-save');
       await user.click(saveButton);
 
       await waitFor(() => {
@@ -863,32 +868,32 @@ describe('SettingsDialog', () => {
       });
     });
 
-    it('should save ComfyUI config successfully', async () => {
+    it('should save Image Generation config successfully', async () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-      const comfyTab = screen.getByRole('button', { name: /ComfyUI/i });
-      await user.click(comfyTab);
+      const imagegenTab = screen.getByRole('button', { name: /Image Generation/i });
+      await user.click(imagegenTab);
 
       await waitFor(() => {
-        expect(screen.getByTestId('comfyui-settings')).toBeInTheDocument();
+        expect(screen.getByTestId('imagegen-settings')).toBeInTheDocument();
       });
 
-      const enabledCheckbox = screen.getByTestId('comfy-enabled');
+      const enabledCheckbox = screen.getByTestId('imagegen-enabled');
       await user.click(enabledCheckbox);
 
-      const urlInput = screen.getByTestId('comfy-url');
+      const urlInput = screen.getByTestId('imagegen-url');
       await user.type(urlInput, 'http://localhost:8188');
 
-      const workflowInput = screen.getByTestId('comfy-workflow');
+      const workflowInput = screen.getByTestId('imagegen-workflow');
       await user.type(workflowInput, 'test-workflow');
 
-      const saveButton = screen.getByTestId('comfy-save');
+      const saveButton = screen.getByTestId('imagegen-save');
       await user.click(saveButton);
 
       await waitFor(() => {
         expect(localStorage.setItem).toHaveBeenCalledWith(
-          'sepilot_comfyui_config',
+          'sepilot_imagegen_config',
           expect.any(String)
         );
       });
