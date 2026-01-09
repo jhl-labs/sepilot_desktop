@@ -36,10 +36,9 @@ describe('BrowserAgentLogsView', () => {
     it('should render empty state when no logs', () => {
       render(<BrowserAgentLogsView />);
 
-      expect(screen.getByText('Agent 실행 로그가 여기에 표시됩니다')).toBeInTheDocument();
-      expect(
-        screen.getByText(/Browser Agent를 실행하면 상세한 실행 과정을 확인할 수 있습니다/)
-      ).toBeInTheDocument();
+      // i18n keys are displayed as-is in tests
+      expect(screen.getByText('browser.agentLogs.emptyMessage')).toBeInTheDocument();
+      expect(screen.getByText('browser.agentLogs.emptyHint')).toBeInTheDocument();
     });
 
     it('should render empty state icon', () => {
@@ -63,22 +62,24 @@ describe('BrowserAgentLogsView', () => {
     it('should render header title', () => {
       render(<BrowserAgentLogsView />);
 
-      expect(screen.getByText('Agent 실행 로그')).toBeInTheDocument();
+      expect(screen.getByText('browser.agentLogs.title')).toBeInTheDocument();
     });
 
     it('should render back button', () => {
-      render(<BrowserAgentLogsView />);
+      const { container } = render(<BrowserAgentLogsView />);
 
-      const backButton = screen.getByTitle('뒤로 가기');
+      // Back button is the first button in the header
+      const backButton = container.querySelector('button');
       expect(backButton).toBeInTheDocument();
     });
 
     it('should call setBrowserViewMode when back button clicked', async () => {
       const user = userEvent.setup();
-      render(<BrowserAgentLogsView />);
+      const { container } = render(<BrowserAgentLogsView />);
 
-      const backButton = screen.getByTitle('뒤로 가기');
-      await user.click(backButton);
+      // Back button is the first button in the header
+      const backButton = container.querySelector('button');
+      await user.click(backButton as HTMLElement);
 
       expect(mockSetBrowserViewMode).toHaveBeenCalledWith('chat');
     });
@@ -86,7 +87,7 @@ describe('BrowserAgentLogsView', () => {
     it('should render clear button', () => {
       render(<BrowserAgentLogsView />);
 
-      const clearButton = screen.getByTitle('로그 전체 삭제');
+      const clearButton = screen.getByTitle('browser.agentLogs.clearAll');
       expect(clearButton).toBeInTheDocument();
     });
 
@@ -94,7 +95,7 @@ describe('BrowserAgentLogsView', () => {
       const user = userEvent.setup();
       render(<BrowserAgentLogsView />);
 
-      const clearButton = screen.getByTitle('로그 전체 삭제');
+      const clearButton = screen.getByTitle('browser.agentLogs.clearAll');
       await user.click(clearButton);
 
       expect(mockClearBrowserAgentLogs).toHaveBeenCalledTimes(1);
@@ -112,7 +113,7 @@ describe('BrowserAgentLogsView', () => {
 
       render(<BrowserAgentLogsView />);
 
-      expect(screen.getByText('실행 중')).toBeInTheDocument();
+      expect(screen.getByText('browser.agentLogs.running')).toBeInTheDocument();
     });
 
     it('should not show running indicator when agent is not running', () => {
@@ -125,7 +126,7 @@ describe('BrowserAgentLogsView', () => {
 
       render(<BrowserAgentLogsView />);
 
-      expect(screen.queryByText('실행 중')).not.toBeInTheDocument();
+      expect(screen.queryByText('browser.agentLogs.running')).not.toBeInTheDocument();
     });
 
     it('should show pulse animation when running', () => {
@@ -200,9 +201,9 @@ describe('BrowserAgentLogsView', () => {
     it('should display phase labels', () => {
       render(<BrowserAgentLogsView />);
 
-      expect(screen.getByText('🧠 사고 중')).toBeInTheDocument();
-      expect(screen.getByText('🔧 도구 호출')).toBeInTheDocument();
-      expect(screen.getByText('✅ 도구 결과')).toBeInTheDocument();
+      expect(screen.getByText('browser.agentLogs.phase.thinking')).toBeInTheDocument();
+      expect(screen.getByText('browser.agentLogs.phase.toolCall')).toBeInTheDocument();
+      expect(screen.getByText('browser.agentLogs.phase.toolResult')).toBeInTheDocument();
     });
 
     it('should display iteration info when available', () => {
@@ -260,7 +261,7 @@ describe('BrowserAgentLogsView', () => {
       render(<BrowserAgentLogsView />);
 
       expect(screen.getByText('Element not found')).toBeInTheDocument();
-      expect(screen.getByText('오류')).toBeInTheDocument();
+      expect(screen.getByText('browser.agentLogs.error')).toBeInTheDocument();
     });
 
     it('should display decision when present', () => {
@@ -285,7 +286,7 @@ describe('BrowserAgentLogsView', () => {
 
       render(<BrowserAgentLogsView />);
 
-      expect(screen.getByText('계속 진행')).toBeInTheDocument();
+      expect(screen.getByText('browser.agentLogs.continue')).toBeInTheDocument();
       expect(screen.getByText(/Scroll down to find more elements/)).toBeInTheDocument();
     });
 
@@ -333,7 +334,7 @@ describe('BrowserAgentLogsView', () => {
 
       render(<BrowserAgentLogsView />);
 
-      expect(screen.getByText('🎉 완료')).toBeInTheDocument();
+      expect(screen.getByText('browser.agentLogs.phase.completion')).toBeInTheDocument();
     });
   });
 
@@ -462,7 +463,7 @@ describe('BrowserAgentLogsView', () => {
 
       render(<BrowserAgentLogsView />);
 
-      expect(screen.getByText('📝 로그')).toBeInTheDocument();
+      expect(screen.getByText('browser.agentLogs.phase.log')).toBeInTheDocument();
     });
 
     it('should handle default icon for unknown level', () => {
