@@ -11,6 +11,32 @@ import { getNetworkConfig, createOctokitAgent } from '@/lib/http';
 import os from 'os';
 
 /**
+ * GitHub Sync 설정 검증 헬퍼 함수
+ * @returns GitHub Sync 설정 객체
+ * @throws 설정이 유효하지 않으면 에러
+ */
+function validateGitHubSyncConfig(): GitHubSyncConfig {
+  const appConfigStr = databaseService.getSetting('app_config');
+  if (!appConfigStr) {
+    throw new Error('GitHub Sync 설정이 없습니다.');
+  }
+
+  const appConfig = JSON.parse(appConfigStr);
+  const githubSync: GitHubSyncConfig | undefined = appConfig.githubSync;
+
+  if (!githubSync || !githubSync.token || !githubSync.owner || !githubSync.repo) {
+    throw new Error('GitHub Sync가 설정되지 않았습니다.');
+  }
+
+  // 에러 리포팅이 활성화되어 있는지 확인
+  if (!githubSync.errorReporting) {
+    throw new Error('에러 리포팅이 비활성화되어 있습니다.');
+  }
+
+  return githubSync;
+}
+
+/**
  * 민감한 정보를 제거하는 함수
  */
 function sanitizeErrorData(data: ErrorReportData): ErrorReportData {
@@ -145,32 +171,8 @@ export function setupErrorReportingHandlers() {
    */
   ipcMain.handle('error-reporting-send', async (_event, errorData: ErrorReportData) => {
     try {
-      // GitHub Sync 설정 확인
-      const appConfigStr = databaseService.getSetting('app_config');
-      if (!appConfigStr) {
-        return {
-          success: false,
-          error: 'GitHub Sync 설정이 없습니다.',
-        };
-      }
-
-      const appConfig = JSON.parse(appConfigStr);
-      const githubSync: GitHubSyncConfig | undefined = appConfig.githubSync;
-
-      if (!githubSync || !githubSync.token || !githubSync.owner || !githubSync.repo) {
-        return {
-          success: false,
-          error: 'GitHub Sync가 설정되지 않았습니다.',
-        };
-      }
-
-      // 에러 리포팅이 활성화되어 있는지 확인
-      if (!githubSync.errorReporting) {
-        return {
-          success: false,
-          error: '에러 리포팅이 비활성화되어 있습니다.',
-        };
-      }
+      // GitHub Sync 설정 검증
+      const githubSync = validateGitHubSyncConfig();
 
       // 민감한 정보 제거
       const sanitizedData = sanitizeErrorData(errorData);
@@ -289,32 +291,8 @@ export function setupErrorReportingHandlers() {
       }
     ) => {
       try {
-        // GitHub Sync 설정 확인
-        const appConfigStr = databaseService.getSetting('app_config');
-        if (!appConfigStr) {
-          return {
-            success: false,
-            error: 'GitHub Sync 설정이 없습니다.',
-          };
-        }
-
-        const appConfig = JSON.parse(appConfigStr);
-        const githubSync: GitHubSyncConfig | undefined = appConfig.githubSync;
-
-        if (!githubSync || !githubSync.token || !githubSync.owner || !githubSync.repo) {
-          return {
-            success: false,
-            error: 'GitHub Sync가 설정되지 않았습니다.',
-          };
-        }
-
-        // 에러 리포팅이 활성화되어 있는지 확인
-        if (!githubSync.errorReporting) {
-          return {
-            success: false,
-            error: '에러 리포팅이 비활성화되어 있습니다.',
-          };
-        }
+        // GitHub Sync 설정 검증
+        const githubSync = validateGitHubSyncConfig();
 
         // Octokit 인스턴스 생성
         const octokit = new Octokit({
