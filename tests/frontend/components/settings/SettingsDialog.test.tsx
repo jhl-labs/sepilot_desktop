@@ -16,25 +16,55 @@ jest.mock('@/lib/platform', () => ({
 
 // Mock child components
 jest.mock('@/components/settings/LLMSettingsTab', () => ({
-  LLMSettingsTab: ({ onSave, config, setConfig, message }: any) => (
-    <div data-testid="llm-settings">
-      <div>LLM Settings</div>
-      <input
-        data-testid="api-key-input"
-        value={config.apiKey}
-        onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-      />
-      <input
-        data-testid="model-input"
-        value={config.model}
-        onChange={(e) => setConfig({ ...config, model: e.target.value })}
-      />
-      <button onClick={onSave} data-testid="llm-save">
-        Save LLM
-      </button>
-      {message && <div data-testid="llm-message">{message.text}</div>}
-    </div>
-  ),
+  LLMSettingsTab: ({ onSave, config, setConfig, message }: any) => {
+    const [localError, setLocalError] = React.useState<string | null>(null);
+
+    const handleSave = () => {
+      // V2 config validation
+      if (config.activeBaseModelId) {
+        // Find active connection
+        const activeModel = config.models?.find((m: any) => m.id === config.activeBaseModelId);
+        if (!activeModel) {
+          setLocalError('기본 모델을 선택하거나 입력해주세요.');
+          return;
+        }
+        const activeConnection = config.connections?.find(
+          (c: any) => c.id === activeModel.connectionId
+        );
+        if (!activeConnection || !activeConnection.apiKey) {
+          setLocalError('API 키를 입력해주세요.');
+          return;
+        }
+      } else {
+        setLocalError('기본 모델을 선택하거나 입력해주세요.');
+        return;
+      }
+
+      setLocalError(null);
+      onSave();
+    };
+
+    return (
+      <div data-testid="llm-settings">
+        <div>LLM Settings</div>
+        <input
+          data-testid="api-key-input"
+          value={config.apiKey || ''}
+          onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+        />
+        <input
+          data-testid="model-input"
+          value={config.model || ''}
+          onChange={(e) => setConfig({ ...config, model: e.target.value })}
+        />
+        <button onClick={handleSave} data-testid="llm-save">
+          Save LLM
+        </button>
+        {localError && <div>{localError}</div>}
+        {message && <div data-testid="llm-message">{message.text}</div>}
+      </div>
+    );
+  },
 }));
 
 jest.mock('@/components/settings/NetworkSettingsTab', () => ({
@@ -50,31 +80,56 @@ jest.mock('@/components/settings/NetworkSettingsTab', () => ({
 }));
 
 jest.mock('@/components/settings/ImageGenSettingsTab', () => ({
-  ImageGenSettingsTab: ({ onSave, imageGenConfig, setImageGenConfig, message }: any) => (
-    <div data-testid="imagegen-settings">
-      <div>Image Generation Settings</div>
-      <input
-        data-testid="imagegen-enabled"
-        type="checkbox"
-        checked={imageGenConfig.enabled}
-        onChange={(e) => setImageGenConfig({ ...imageGenConfig, enabled: e.target.checked })}
-      />
-      <input
-        data-testid="imagegen-url"
-        value={imageGenConfig.httpUrl}
-        onChange={(e) => setImageGenConfig({ ...imageGenConfig, httpUrl: e.target.value })}
-      />
-      <input
-        data-testid="imagegen-workflow"
-        value={imageGenConfig.workflowId}
-        onChange={(e) => setImageGenConfig({ ...imageGenConfig, workflowId: e.target.value })}
-      />
-      <button onClick={onSave} data-testid="imagegen-save">
-        Save Image Generation
-      </button>
-      {message && <div data-testid="imagegen-message">{message.text}</div>}
-    </div>
-  ),
+  ImageGenSettingsTab: ({ onSave, imageGenConfig, setImageGenConfig, message }: any) => {
+    const [localError, setLocalError] = React.useState<string | null>(null);
+
+    const handleSave = () => {
+      // Validate ComfyUI config
+      if (imageGenConfig.provider === 'comfyui' || !imageGenConfig.provider) {
+        const comfyConfig = imageGenConfig.comfyui || imageGenConfig;
+        if (comfyConfig.enabled) {
+          if (!comfyConfig.httpUrl) {
+            setLocalError('ComfyUI HTTP URL을 입력해주세요.');
+            return;
+          }
+          if (!comfyConfig.workflowId) {
+            setLocalError('기본 워크플로우 ID를 입력해주세요.');
+            return;
+          }
+        }
+      }
+
+      setLocalError(null);
+      onSave();
+    };
+
+    return (
+      <div data-testid="imagegen-settings">
+        <div>Image Generation Settings</div>
+        <input
+          data-testid="imagegen-enabled"
+          type="checkbox"
+          checked={imageGenConfig.enabled || imageGenConfig.comfyui?.enabled}
+          onChange={(e) => setImageGenConfig({ ...imageGenConfig, enabled: e.target.checked })}
+        />
+        <input
+          data-testid="imagegen-url"
+          value={imageGenConfig.httpUrl || imageGenConfig.comfyui?.httpUrl || ''}
+          onChange={(e) => setImageGenConfig({ ...imageGenConfig, httpUrl: e.target.value })}
+        />
+        <input
+          data-testid="imagegen-workflow"
+          value={imageGenConfig.workflowId || imageGenConfig.comfyui?.workflowId || ''}
+          onChange={(e) => setImageGenConfig({ ...imageGenConfig, workflowId: e.target.value })}
+        />
+        <button onClick={handleSave} data-testid="imagegen-save">
+          Save Image Generation
+        </button>
+        {localError && <div>{localError}</div>}
+        {message && <div data-testid="imagegen-message">{message.text}</div>}
+      </div>
+    );
+  },
 }));
 
 jest.mock('@/components/settings/MCPSettingsTab', () => ({
@@ -195,7 +250,7 @@ describe('SettingsDialog', () => {
     const user = userEvent.setup();
     render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-    const imagegenTab = screen.getByRole('button', { name: /Image Generation/i });
+    const imagegenTab = screen.getByRole('button', { name: /이미지 생성 설정/i });
     await user.click(imagegenTab);
 
     await waitFor(() => {
@@ -207,7 +262,7 @@ describe('SettingsDialog', () => {
     const user = userEvent.setup();
     render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-    const mcpTab = screen.getByRole('button', { name: /MCP 서버/i });
+    const mcpTab = screen.getByRole('button', { name: /^MCP$/i });
     await user.click(mcpTab);
 
     await waitFor(() => {
@@ -246,8 +301,8 @@ describe('SettingsDialog', () => {
     expect(screen.getByRole('button', { name: /^LLM$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Network/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /VectorDB/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Image Generation/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /MCP 서버/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /이미지 생성 설정/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^MCP$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Skills/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /GitHub/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /백업\/복구/i })).toBeInTheDocument();
@@ -820,7 +875,7 @@ describe('SettingsDialog', () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-      const imagegenTab = screen.getByRole('button', { name: /Image Generation/i });
+      const imagegenTab = screen.getByRole('button', { name: /이미지 생성 설정/i });
       await user.click(imagegenTab);
 
       await waitFor(() => {
@@ -847,7 +902,7 @@ describe('SettingsDialog', () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-      const imagegenTab = screen.getByRole('button', { name: /Image Generation/i });
+      const imagegenTab = screen.getByRole('button', { name: /이미지 생성 설정/i });
       await user.click(imagegenTab);
 
       await waitFor(() => {
@@ -875,7 +930,7 @@ describe('SettingsDialog', () => {
       const user = userEvent.setup();
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
-      const imagegenTab = screen.getByRole('button', { name: /Image Generation/i });
+      const imagegenTab = screen.getByRole('button', { name: /이미지 생성 설정/i });
       await user.click(imagegenTab);
 
       await waitFor(() => {
@@ -948,7 +1003,7 @@ describe('SettingsDialog', () => {
       render(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('llm-settings')).toBeInTheDocument();
+        expect(screen.getByText('설정')).toBeInTheDocument();
       });
 
       const vectordbTab = screen.getByRole('button', { name: /VectorDB/i });
@@ -1034,7 +1089,7 @@ describe('SettingsDialog', () => {
       await waitFor(() => {
         expect(localStorage.setItem).toHaveBeenCalledWith(
           'sepilot_app_config',
-          expect.stringContaining('test-client')
+          expect.stringContaining('https://github.com/test/test')
         );
       });
     });

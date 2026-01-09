@@ -210,9 +210,28 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           // Web: localStorage에서 로드
           const savedConfig = localStorage.getItem('sepilot_llm_config');
           if (savedConfig) {
-            setConfig(mergeLLMConfig(JSON.parse(savedConfig)));
+            const parsedConfig = JSON.parse(savedConfig);
+            // Check if LLM config is V2
+            let llmConfig: LLMConfig;
+            let llmConfigV2: LLMConfigV2 | null = null;
+
+            if (isLLMConfigV2(parsedConfig)) {
+              // V2 config detected
+              llmConfigV2 = parsedConfig as LLMConfigV2;
+              llmConfig = convertV2ToV1(llmConfigV2);
+            } else {
+              // V1 config, migrate to V2
+              llmConfig = mergeLLMConfig(parsedConfig);
+              llmConfigV2 = migrateLLMConfig(llmConfig);
+            }
+
+            setConfig(llmConfig);
+            setConfigV2(llmConfigV2);
           } else {
-            setConfig(createDefaultLLMConfig());
+            const defaultConfig = createDefaultLLMConfig();
+            setConfig(defaultConfig);
+            // Migrate default V1 config to V2
+            setConfigV2(migrateLLMConfig(defaultConfig));
           }
 
           const savedNetworkConfig = localStorage.getItem('sepilot_network_config');
