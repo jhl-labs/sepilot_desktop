@@ -63,7 +63,8 @@ describe('BookmarksList', () => {
 
     render(<BookmarksList />);
 
-    expect(screen.getByText('로딩 중...')).toBeInTheDocument();
+    // i18n key is displayed as-is in tests
+    expect(screen.getByText('browser.bookmarks.loading')).toBeInTheDocument();
   });
 
   it('should load bookmarks and folders on mount', async () => {
@@ -99,7 +100,7 @@ describe('BookmarksList', () => {
     render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('북마크가 없습니다')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.noBookmarks')).toBeInTheDocument();
     });
   });
 
@@ -117,11 +118,11 @@ describe('BookmarksList', () => {
 
     // Wait for loading to complete
     await waitFor(() => {
-      expect(screen.getByText('전체')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.all')).toBeInTheDocument();
     });
 
     // Click dropdown to open folder list
-    const dropdown = screen.getByText('전체').closest('button');
+    const dropdown = screen.getByText('browser.bookmarks.all').closest('button');
     fireEvent.click(dropdown as HTMLElement);
 
     // Check if folders are displayed
@@ -172,7 +173,7 @@ describe('BookmarksList', () => {
     render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('북마크 관리')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.title')).toBeInTheDocument();
     });
   });
 
@@ -194,7 +195,7 @@ describe('BookmarksList', () => {
     const { container } = render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('북마크 관리')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.title')).toBeInTheDocument();
     });
 
     // Back button is the first button in the header
@@ -247,7 +248,7 @@ describe('BookmarksList', () => {
     const { container } = render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('북마크 관리')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.title')).toBeInTheDocument();
     });
 
     // Find add bookmark button (Plus icon in the header)
@@ -257,7 +258,8 @@ describe('BookmarksList', () => {
 
     await waitFor(() => {
       expect(mockElectronAPI.browserView.addBookmark).toHaveBeenCalled();
-      expect(window.alert).toHaveBeenCalledWith('현재 페이지가 북마크에 추가되었습니다.');
+      // i18n key is displayed as-is in tests
+      expect(window.alert).toHaveBeenCalledWith('browser.bookmarks.addSuccess');
     });
   });
 
@@ -278,7 +280,7 @@ describe('BookmarksList', () => {
     const { container } = render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('북마크 관리')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.title')).toBeInTheDocument();
     });
 
     const buttons = container.querySelectorAll('button');
@@ -286,7 +288,8 @@ describe('BookmarksList', () => {
     fireEvent.click(addButton);
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('북마크 추가 실패: Add failed');
+      // i18n key is displayed as-is in tests
+      expect(window.alert).toHaveBeenCalledWith('browser.bookmarks.addFailed');
     });
   });
 
@@ -371,7 +374,8 @@ describe('BookmarksList', () => {
     fireEvent.click(deleteButton);
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('북마크 삭제 실패: Delete failed');
+      // i18n key is displayed as-is in tests
+      expect(window.alert).toHaveBeenCalledWith('browser.bookmarks.deleteBookmarkFailed');
     });
   });
 
@@ -432,7 +436,8 @@ describe('BookmarksList', () => {
     fireEvent.click(bookmark as HTMLElement);
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('북마크 열기 실패: Open failed');
+      // i18n key is displayed as-is in tests
+      expect(window.alert).toHaveBeenCalledWith('browser.bookmarks.openFailed');
     });
   });
 
@@ -449,7 +454,7 @@ describe('BookmarksList', () => {
     const { container } = render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('북마크 관리')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.title')).toBeInTheDocument();
     });
 
     // Click folder add button (second to last button)
@@ -458,7 +463,7 @@ describe('BookmarksList', () => {
     fireEvent.click(folderAddButton);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('폴더 이름')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('browser.bookmarks.folderNamePlaceholder')).toBeInTheDocument();
     });
   });
 
@@ -481,14 +486,14 @@ describe('BookmarksList', () => {
     const { container } = render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('북마크 관리')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.title')).toBeInTheDocument();
     });
 
     const buttons = container.querySelectorAll('button');
     const folderAddButton = buttons[buttons.length - 2];
     fireEvent.click(folderAddButton);
 
-    const input = await screen.findByPlaceholderText('폴더 이름');
+    const input = await screen.findByPlaceholderText('browser.bookmarks.folderNamePlaceholder');
     fireEvent.change(input, { target: { value: 'New Folder' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
@@ -510,18 +515,18 @@ describe('BookmarksList', () => {
     const { container } = render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('북마크 관리')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.title')).toBeInTheDocument();
     });
 
     const buttons = container.querySelectorAll('button');
     const folderAddButton = buttons[buttons.length - 2];
     fireEvent.click(folderAddButton);
 
-    const input = await screen.findByPlaceholderText('폴더 이름');
+    const input = await screen.findByPlaceholderText('browser.bookmarks.folderNamePlaceholder');
     fireEvent.keyDown(input, { key: 'Escape' });
 
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText('폴더 이름')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('browser.bookmarks.folderNamePlaceholder')).not.toBeInTheDocument();
     });
   });
 
@@ -542,19 +547,20 @@ describe('BookmarksList', () => {
     const { container } = render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('북마크 관리')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.title')).toBeInTheDocument();
     });
 
     const buttons = container.querySelectorAll('button');
     const folderAddButton = buttons[buttons.length - 2];
     fireEvent.click(folderAddButton);
 
-    const input = await screen.findByPlaceholderText('폴더 이름');
+    const input = await screen.findByPlaceholderText('browser.bookmarks.folderNamePlaceholder');
     fireEvent.change(input, { target: { value: 'New Folder' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('폴더 추가 실패: Folder add failed');
+      // i18n key is displayed as-is in tests
+      expect(window.alert).toHaveBeenCalledWith('browser.bookmarks.addFolderFailed');
     });
   });
 
@@ -571,11 +577,11 @@ describe('BookmarksList', () => {
     render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('전체')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.all')).toBeInTheDocument();
     });
 
     // Click dropdown
-    const dropdown = screen.getByText('전체').closest('button');
+    const dropdown = screen.getByText('browser.bookmarks.all').closest('button');
     fireEvent.click(dropdown as HTMLElement);
 
     // Click Work folder
@@ -605,11 +611,11 @@ describe('BookmarksList', () => {
     const { container } = render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('전체')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.all')).toBeInTheDocument();
     });
 
     // Click dropdown
-    const dropdown = screen.getByText('전체').closest('button');
+    const dropdown = screen.getByText('browser.bookmarks.all').closest('button');
     fireEvent.click(dropdown as HTMLElement);
 
     await waitFor(() => {
@@ -655,10 +661,10 @@ describe('BookmarksList', () => {
     const { container } = render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('전체')).toBeInTheDocument();
+      expect(screen.getByText('browser.bookmarks.all')).toBeInTheDocument();
     });
 
-    const dropdown = screen.getByText('전체').closest('button');
+    const dropdown = screen.getByText('browser.bookmarks.all').closest('button');
     fireEvent.click(dropdown as HTMLElement);
 
     await waitFor(() => {
@@ -679,7 +685,8 @@ describe('BookmarksList', () => {
       fireEvent.click(deleteButton);
 
       await waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith('폴더 삭제 실패: Delete folder failed');
+        // i18n key is displayed as-is in tests
+        expect(window.alert).toHaveBeenCalledWith('browser.bookmarks.deleteFolderFailed');
       });
     }
   });
@@ -703,7 +710,7 @@ describe('BookmarksList', () => {
       const { container } = render(<BookmarksList />);
 
       await waitFor(() => {
-        expect(screen.getByText('북마크 관리')).toBeInTheDocument();
+        expect(screen.getByText('browser.bookmarks.title')).toBeInTheDocument();
       });
 
       // Click folder plus button
@@ -728,7 +735,8 @@ describe('BookmarksList', () => {
             '[BookmarksList] Error adding folder:',
             expect.any(Error)
           );
-          expect(window.alert).toHaveBeenCalledWith('폴더 추가 중 오류가 발생했습니다.');
+          // i18n key is displayed as-is in tests
+          expect(window.alert).toHaveBeenCalledWith('browser.bookmarks.addFolderError');
         });
       }
 
@@ -753,10 +761,10 @@ describe('BookmarksList', () => {
       const { container } = render(<BookmarksList />);
 
       await waitFor(() => {
-        expect(screen.getByText('전체')).toBeInTheDocument();
+        expect(screen.getByText('browser.bookmarks.all')).toBeInTheDocument();
       });
 
-      const dropdown = screen.getByText('전체').closest('button');
+      const dropdown = screen.getByText('browser.bookmarks.all').closest('button');
       fireEvent.click(dropdown as HTMLElement);
 
       await waitFor(() => {
@@ -781,7 +789,8 @@ describe('BookmarksList', () => {
             '[BookmarksList] Error deleting folder:',
             expect.any(Error)
           );
-          expect(window.alert).toHaveBeenCalledWith('폴더 삭제 중 오류가 발생했습니다.');
+          // i18n key is displayed as-is in tests
+          expect(window.alert).toHaveBeenCalledWith('browser.bookmarks.deleteFolderError');
         });
       }
 
@@ -824,7 +833,8 @@ describe('BookmarksList', () => {
           '[BookmarksList] Error deleting bookmark:',
           expect.any(Error)
         );
-        expect(window.alert).toHaveBeenCalledWith('북마크 삭제 중 오류가 발생했습니다.');
+        // i18n key is displayed as-is in tests
+        expect(window.alert).toHaveBeenCalledWith('browser.bookmarks.deleteBookmarkError');
       });
 
       consoleErrorSpy.mockRestore();
@@ -866,7 +876,8 @@ describe('BookmarksList', () => {
           '[BookmarksList] Error opening bookmark:',
           expect.any(Error)
         );
-        expect(window.alert).toHaveBeenCalledWith('북마크 열기 중 오류가 발생했습니다.');
+        // i18n key is displayed as-is in tests
+        expect(window.alert).toHaveBeenCalledWith('browser.bookmarks.openError');
       });
 
       consoleErrorSpy.mockRestore();
@@ -901,7 +912,8 @@ describe('BookmarksList', () => {
           '[BookmarksList] Error adding bookmark:',
           expect.any(Error)
         );
-        expect(window.alert).toHaveBeenCalledWith('북마크 추가 중 오류가 발생했습니다.');
+        // i18n key is displayed as-is in tests
+        expect(window.alert).toHaveBeenCalledWith('browser.bookmarks.addError');
       });
 
       consoleErrorSpy.mockRestore();
