@@ -251,7 +251,8 @@ export function ConnectionManager({
                   <p className="text-sm text-muted-foreground">
                     {connection.provider === 'openai' && 'OpenAI'}
                     {connection.provider === 'anthropic' && 'Anthropic (Claude)'}
-                    {connection.provider === 'custom' && 'Custom (OpenAI Compatible)'}
+                    {connection.provider === 'gemini' && 'Google Gemini'}
+                    {connection.provider === 'ollama' && 'Ollama'}
                   </p>
                   <p className="text-xs text-muted-foreground font-mono">{connection.baseURL}</p>
                 </div>
@@ -363,8 +364,11 @@ function ConnectionForm({ formData, onChange, onSave, onCancel }: ConnectionForm
           <option value="anthropic" className="bg-background text-foreground">
             Anthropic (Claude)
           </option>
-          <option value="custom" className="bg-background text-foreground">
-            Custom (OpenAI Compatible)
+          <option value="gemini" className="bg-background text-foreground">
+            Google Gemini
+          </option>
+          <option value="ollama" className="bg-background text-foreground">
+            Ollama
           </option>
         </select>
       </div>

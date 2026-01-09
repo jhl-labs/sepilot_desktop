@@ -9,7 +9,6 @@ import { manifest } from './manifest';
 import { PresentationStudio } from './components/PresentationStudio';
 import { PresentationSourceSidebar } from './components/PresentationSidebar';
 import { PresentationHeaderActions } from './components/PresentationHeaderActions';
-import { PresentationSettings } from './components/PresentationSettings';
 import { PresentationSettingsTab } from './components/PresentationSettingsTab';
 import { createPresentationSlice } from './store';
 
@@ -18,7 +17,6 @@ export const presentationExtension: ExtensionDefinition = {
   MainComponent: PresentationStudio,
   SidebarComponent: PresentationSourceSidebar,
   HeaderActionsComponent: PresentationHeaderActions,
-  SettingsComponent: PresentationSettings, // Beta Settings용 (deprecated)
   SettingsTabComponent: PresentationSettingsTab,
   createStoreSlice: createPresentationSlice,
 };

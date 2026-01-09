@@ -33,7 +33,6 @@ export {
   PresentationSourceSidebar,
   PresentationStudio,
   PresentationHeaderActions,
-  PresentationSettings,
   PresentationSettingsTab,
   SlidePreview,
   SlideRenderer,

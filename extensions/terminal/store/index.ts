@@ -178,11 +178,27 @@ export function createTerminalSlice(
       const blocks = loadTerminalHistory();
       const state = get();
 
+      // Sanitize loaded blocks:
+      // If exitCode is undefined (meaning it was running when app closed),
+      // mark it as terminated (-1) and add a note.
+      const sanitizedBlocks = blocks.map((block) => {
+        if (block.exitCode === undefined) {
+          return {
+            ...block,
+            exitCode: -1,
+            output:
+              block.output +
+              '\n\n\x1b[33m[System] Session terminated unexpectedly (App restart)\x1b[0m',
+          };
+        }
+        return block;
+      });
+
       // maxHistoryBlocks 제한 적용
       const limitedBlocks =
-        blocks.length > state.maxHistoryBlocks
-          ? blocks.slice(blocks.length - state.maxHistoryBlocks)
-          : blocks;
+        sanitizedBlocks.length > state.maxHistoryBlocks
+          ? sanitizedBlocks.slice(sanitizedBlocks.length - state.maxHistoryBlocks)
+          : sanitizedBlocks;
 
       set({
         terminalBlocks: limitedBlocks,

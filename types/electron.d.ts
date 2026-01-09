@@ -145,7 +145,7 @@ interface LLMChatOptions {
 
 // LLM 모델 가져오기 설정 타입
 interface LLMFetchModelsConfig {
-  provider: 'openai' | 'anthropic' | 'custom';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama';
   baseURL?: string;
   apiKey: string;
   customHeaders?: Record<string, string>;

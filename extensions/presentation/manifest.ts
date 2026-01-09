@@ -12,7 +12,7 @@ import type { ExtensionManifest } from '@/lib/extensions/types';
  */
 export const manifest: ExtensionManifest = {
   id: 'presentation',
-  name: 'AI Presentation Designer',
+  name: 'PPT Designer',
   description:
     'AI 기반 프레젠테이션 생성 도구. 대화형 인터페이스로 PPT/PDF/HTML 슬라이드를 디자인하고 내보낼 수 있습니다.',
   version: '1.0.0',
@@ -21,7 +21,6 @@ export const manifest: ExtensionManifest = {
   mode: 'presentation',
   showInSidebar: true,
   order: 3, // Chat(1), Editor(2), Presentation(3), Browser(4)
-  betaFlag: 'enablePresentationMode',
   dependencies: [],
   ipcChannels: {
     handlers: ['presentation:export'],

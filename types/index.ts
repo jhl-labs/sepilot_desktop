@@ -85,7 +85,7 @@ export interface Conversation {
 
 export interface VisionModelConfig {
   enabled: boolean;
-  provider: 'openai' | 'anthropic' | 'custom';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama';
   baseURL?: string;
   apiKey?: string;
   model: string;
@@ -95,7 +95,7 @@ export interface VisionModelConfig {
 
 export interface AutocompleteConfig {
   enabled: boolean;
-  provider: 'openai' | 'anthropic' | 'custom';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama';
   baseURL?: string;
   apiKey?: string;
   model: string;
@@ -111,7 +111,7 @@ export interface AutocompleteConfig {
 export interface LLMConnection {
   id: string; // 고유 식별자
   name: string; // 사용자 정의 이름 (예: "My OpenAI", "Local Ollama")
-  provider: 'openai' | 'anthropic' | 'custom';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama';
   baseURL: string;
   apiKey: string;
   customHeaders?: Record<string, string>; // Connection 레벨 커스텀 헤더
@@ -178,7 +178,7 @@ export interface NetworkConfig {
 }
 
 export interface LLMConfig {
-  provider: 'openai' | 'anthropic' | 'custom';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama';
   baseURL: string;
   apiKey: string;
   model: string;

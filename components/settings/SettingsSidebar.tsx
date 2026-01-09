@@ -15,6 +15,7 @@ import {
   FlaskConical,
   Languages,
   Bot,
+  FileText,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -145,6 +146,12 @@ export function SettingsSidebar({
       id: 'documents',
       label: t('settings.categories.documents'),
       items: [
+        {
+          id: 'personal-docs',
+          label: t('settings.personalDocs.title'),
+          icon: FileText,
+          description: t('settings.personalDocs.description'),
+        },
         {
           id: 'team-docs',
           label: t('settings.teamDocs.title'),

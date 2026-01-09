@@ -30,6 +30,7 @@ import { isElectron } from '@/lib/platform';
 import { configureWebLLMClient } from '@/lib/llm/web-client';
 import { changeLanguage, SupportedLanguage, getI18nInstance } from '@/lib/i18n';
 import { GitHubSyncSettings } from '@/components/settings/GitHubSyncSettings';
+import { PersonalDocsSettings } from '@/components/settings/PersonalDocsSettings';
 import { TeamDocsSettings } from '@/components/settings/TeamDocsSettings';
 import { BackupRestoreSettings } from '@/components/settings/BackupRestoreSettings';
 import { GeneralSettingsTab } from './GeneralSettingsTab';
@@ -66,9 +67,7 @@ const createDefaultQuickInputConfig = (): QuickInputConfig => ({
   quickQuestions: [],
 });
 
-const createDefaultBetaConfig = (): BetaConfig => ({
-  enablePresentationMode: false,
-});
+const createDefaultBetaConfig = (): BetaConfig => ({});
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { t } = useTranslation();
@@ -1082,6 +1081,18 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                           detail: { githubSync: newConfig },
                         })
                       );
+                    }}
+                  />
+                )}
+
+                {activeTab === 'personal-docs' && (
+                  <PersonalDocsSettings
+                    config={githubSyncConfig || undefined}
+                    onSave={async (newConfig) => {
+                      setGithubSyncConfig(newConfig);
+                      await persistAppConfig({
+                        githubSync: newConfig,
+                      });
                     }}
                   />
                 )}

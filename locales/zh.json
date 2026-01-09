@@ -386,6 +386,10 @@
     "presentation": {
       "title": "演示文稿"
     },
+    "terminal": {
+      "title": "终端",
+      "description": "基于 AI 的智能终端设置"
+    },
     "mcp": {
       "title": "MCP",
       "description": "Model Context Protocol 服务器设置",

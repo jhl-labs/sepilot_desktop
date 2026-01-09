@@ -20,8 +20,9 @@ export class LLMClient {
     switch (config.provider) {
       case 'openai':
       case 'anthropic':
-      case 'custom':
-        // OpenAI Compatible API를 사용
+      case 'gemini':
+      case 'ollama':
+        // OpenAI Compatible API를 사용 (Gemini, Ollama 모두 OpenAI Compatible API 지원)
         this.provider = new OpenAIProvider(
           config.baseURL,
           config.apiKey,
@@ -76,7 +77,9 @@ export function createProvider(config: LLMConfig): BaseLLMProvider {
   switch (config.provider) {
     case 'openai':
     case 'anthropic':
-    case 'custom':
+    case 'gemini':
+    case 'ollama':
+      // OpenAI Compatible API를 사용 (Gemini, Ollama 모두 OpenAI Compatible API 지원)
       return new OpenAIProvider(
         config.baseURL,
         config.apiKey,

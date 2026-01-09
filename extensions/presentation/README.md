@@ -43,7 +43,7 @@ extensions/presentation/
 import { manifest, PresentationChat, PresentationStudio } from '@/extensions/presentation';
 
 // manifest로 extension 정보 확인
-console.log(manifest.name); // "AI Presentation Designer"
+console.log(manifest.name); // "PPT Designer"
 ```
 
 ### 2. 개별 모듈 import

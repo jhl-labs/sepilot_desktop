@@ -9,7 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
+import { useTranslation } from 'react-i18next';
+
 export function SidebarTerminal() {
+  const { t } = useTranslation();
   const store = useChatStore() as any;
   const {
     sessions,
@@ -56,8 +59,13 @@ export function SidebarTerminal() {
   return (
     <div className="flex flex-col h-full bg-sidebar">
       <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-sm font-semibold tracking-tight">터미널 세션</h2>
-        <Button variant="ghost" size="icon" onClick={handleCreateSession} title="새 터미널">
+        <h2 className="text-sm font-semibold tracking-tight">{t('terminal.sessions')}</h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleCreateSession}
+          title={t('terminal.newTerminal')}
+        >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
@@ -107,9 +115,9 @@ export function SidebarTerminal() {
 
           {sessions?.length === 0 && (
             <div className="text-center py-8 text-muted-foreground text-sm">
-              <p>실행 중인 터미널이 없습니다</p>
+              <p>{t('terminal.noRunningTerminals')}</p>
               <Button variant="link" onClick={handleCreateSession} className="mt-2">
-                새 터미널 만들기
+                {t('terminal.newTerminal')}
               </Button>
             </div>
           )}
@@ -128,12 +136,12 @@ export function SidebarTerminal() {
                 )}
               />
               <span className="font-medium text-muted-foreground">
-                {terminalAgentIsRunning ? 'AI 작업 중...' : '준비됨'}
+                {terminalAgentIsRunning ? t('terminal.aiWorking') : t('terminal.ready')}
               </span>
             </div>
             {runningCommands > 0 && (
               <Badge variant="secondary" className="h-5 text-[10px] px-1.5">
-                {runningCommands} 실행 중
+                {runningCommands} {t('terminal.running')}
               </Badge>
             )}
           </div>

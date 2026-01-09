@@ -608,6 +608,21 @@
       "usage3": "Personal Docs와 구분하여 RAG 검색에 활용할 수 있습니다",
       "usage4": "Pull 버튼으로 언제든지 최신 문서를 동기화하세요"
     },
+    "personalDocs": {
+      "title": "Personal Docs",
+      "description": "개인 문서 동기화 설정",
+      "configuration": "GitHub 설정",
+      "configurationDesc": "개인 문서를 동기화할 GitHub 리포지토리를 설정하세요. 이 설정은 다른 GitHub Sync 기능과 공유됩니다.",
+      "enableSync": "Personal Docs 동기화 활성화",
+      "enableSyncDesc": "이 기능을 켜면 지정된 리포지토리의 문서가 자동으로 동기화됩니다.",
+      "saveSuccess": "설정이 저장되었습니다.",
+      "saveFailed": "설정 저장 실패",
+      "syncSuccess": "동기화 성공!",
+      "syncFailed": "동기화 실패",
+      "syncing": "동기화 중...",
+      "syncNow": "지금 동기화",
+      "note": "Personal Docs는 개인적인 메모나 문서를 저장하고 동기화하는 공간입니다. GitHub Sync 설정을 통해 안전하게 백업하고 여러 기기에서 접근하세요."
+    },
     "github": {
       "title": "GitHub Sync",
       "description": "Personal Docs 동기화"
@@ -834,6 +849,10 @@
     },
     "presentation": {
       "title": "프레젠테이션"
+    },
+    "terminal": {
+      "title": "터미널",
+      "description": "AI 기반 인텔리전트 터미널 설정"
     },
     "mcp": {
       "title": "MCP",
@@ -1907,6 +1926,11 @@
   "terminal": {
     "title": "터미널",
     "newTerminal": "새 터미널",
+    "running": "실행 중",
+    "aiWorking": "AI 작업 중...",
+    "ready": "준비됨",
+    "sessions": "터미널 세션",
+    "noRunningTerminals": "실행 중인 터미널이 없습니다",
     "clear": "지우기",
     "kill": "종료",
     "actions": {
@@ -2328,7 +2352,7 @@
     }
   },
   "presentation": {
-    "title": "AI Presentation Designer",
+    "title": "PPT Designer",
     "onboarding": {
       "title": "프레젠테이션 디자이너",
       "subtitle": "AI와 대화하며 전문적인 PPT를 만들어보세요",

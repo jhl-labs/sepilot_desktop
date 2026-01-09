@@ -608,6 +608,21 @@
       "usage3": "Can be used for RAG search separately from Personal Docs",
       "usage4": "Sync latest documents anytime with Pull button"
     },
+    "personalDocs": {
+      "title": "Personal Docs",
+      "description": "Personal Docs Sync Settings",
+      "configuration": "GitHub Configuration",
+      "configurationDesc": "Configure a GitHub repository to sync personal documents. This setting is shared with other GitHub Sync features.",
+      "enableSync": "Enable Personal Docs Sync",
+      "enableSyncDesc": "When enabled, documents in the specified repository will be automatically synced.",
+      "saveSuccess": "Settings saved.",
+      "saveFailed": "Failed to save settings",
+      "syncSuccess": "Sync successful!",
+      "syncFailed": "Sync failed",
+      "syncing": "Syncing...",
+      "syncNow": "Sync Now",
+      "note": "Personal Docs is a space to store and sync personal notes and documents. Securely back up via GitHub Sync settings and access across devices."
+    },
     "github": {
       "title": "GitHub Sync",
       "description": "Personal Docs sync"
@@ -744,6 +759,10 @@
     },
     "presentation": {
       "title": "Presentation"
+    },
+    "terminal": {
+      "title": "Terminal",
+      "description": "AI-powered intelligent terminal settings"
     },
     "mcp": {
       "title": "MCP",
@@ -1919,6 +1938,11 @@
   "terminal": {
     "title": "Terminal",
     "newTerminal": "New Terminal",
+    "running": "running",
+    "aiWorking": "AI working...",
+    "ready": "Ready",
+    "sessions": "Terminal Sessions",
+    "noRunningTerminals": "No running terminals",
     "clear": "Clear",
     "kill": "Kill",
     "actions": {
@@ -2340,9 +2364,9 @@
     }
   },
   "presentation": {
-    "title": "AI Presentation Designer",
+    "title": "PPT Designer",
     "onboarding": {
-      "title": "Presentation Designer",
+      "title": "PPT Designer",
       "subtitle": "Create professional PPTs with AI chat",
       "templates": "Start with Template",
       "or": "OR",
