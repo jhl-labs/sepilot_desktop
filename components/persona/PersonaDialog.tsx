@@ -86,8 +86,12 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
       setIsCreating(false);
       setEditingId(null);
       setFormData({ name: '', description: '', systemPrompt: '', avatar: '🤖' });
-    } catch (error: any) {
-      toast.error(error.message || t('personaDialog.errors.saveFailed'));
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : String(error) || t('personaDialog.errors.saveFailed')
+      );
     }
   };
 
@@ -95,8 +99,12 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
     if (window.confirm(t('personaDialog.confirm.delete'))) {
       try {
         await deletePersona(id);
-      } catch (error: any) {
-        toast.error(error.message || t('personaDialog.errors.deleteFailed'));
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : String(error) || t('personaDialog.errors.deleteFailed')
+        );
       }
     }
   };

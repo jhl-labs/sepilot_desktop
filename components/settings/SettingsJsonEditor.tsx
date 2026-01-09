@@ -49,11 +49,13 @@ export function SettingsJsonEditor({ config, onSave }: SettingsJsonEditorProps) 
 
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof SyntaxError) {
         setError(t('settings.jsonEditor.syntaxError', { error: err.message }));
       } else {
-        setError(err.message || t('settings.jsonEditor.saveFailed'));
+        setError(
+          err instanceof Error ? err.message : String(err) || t('settings.jsonEditor.saveFailed')
+        );
       }
     } finally {
       setIsSaving(false);
@@ -65,8 +67,12 @@ export function SettingsJsonEditor({ config, onSave }: SettingsJsonEditorProps) 
       const parsed = JSON.parse(jsonText);
       setJsonText(JSON.stringify(parsed, null, 2));
       setError(null);
-    } catch (err: any) {
-      setError(t('settings.jsonEditor.syntaxError', { error: err.message }));
+    } catch (err) {
+      setError(
+        t('settings.jsonEditor.syntaxError', {
+          error: err instanceof Error ? err.message : String(err),
+        })
+      );
     }
   };
 

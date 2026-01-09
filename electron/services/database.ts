@@ -162,6 +162,35 @@ class DatabaseService {
       )
     `);
 
+    // Skills table (Skills 마켓플레이스 시스템)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS skills (
+        id TEXT PRIMARY KEY,
+        manifest TEXT NOT NULL,
+        source TEXT NOT NULL,
+        local_path TEXT NOT NULL,
+        installed_at INTEGER NOT NULL,
+        enabled INTEGER DEFAULT 1,
+        usage_count INTEGER DEFAULT 0,
+        last_used_at INTEGER,
+        created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+        updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+      )
+    `);
+
+    // Skill usage history table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS skill_usage_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        skill_id TEXT NOT NULL,
+        conversation_id TEXT NOT NULL,
+        activated_at INTEGER NOT NULL,
+        context_pattern TEXT,
+        FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+        FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+      )
+    `);
+
     // Create indexes
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_messages_conversation
@@ -171,6 +200,21 @@ class DatabaseService {
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_activities_conversation
       ON activities(conversation_id, created_at DESC)
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_skills_enabled
+      ON skills(enabled)
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_skill_usage_skill_id
+      ON skill_usage_history(skill_id, activated_at DESC)
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_skill_usage_conversation_id
+      ON skill_usage_history(conversation_id, activated_at DESC)
     `);
 
     // Add columns if they don't exist (for migration)

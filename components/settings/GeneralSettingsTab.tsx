@@ -449,7 +449,7 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
       {/* Notification Test Section */}
       <div className="space-y-4">
         <SettingsSectionHeader
-          icon={<Bell className="h-5 w-5" />}
+          icon={Bell}
           title="알림"
           description="백그라운드 스트리밍 완료 알림을 테스트합니다"
         />

@@ -38,9 +38,9 @@ export function PlotlyChart({ data }: PlotlyChartProps) {
 
       setPlotData(parsed);
       setError('');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Plotly parsing error:', err);
-      setError(err.message || 'Failed to parse chart data');
+      setError(err instanceof Error ? err.message : String(err) || 'Failed to parse chart data');
     }
   }, [data]);
 

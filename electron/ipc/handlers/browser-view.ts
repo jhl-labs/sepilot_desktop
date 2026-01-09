@@ -10,6 +10,7 @@ interface BrowserTab {
   view: BrowserView;
   url: string;
   title: string;
+  cleanupListeners: () => void;
 }
 
 interface Snapshot {
@@ -186,6 +187,7 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
       view: newView,
       url,
       title: 'Loading...',
+      cleanupListeners: () => {},
     };
 
     tabs.set(newTabId, newTab);
@@ -334,6 +336,7 @@ export function setupBrowserViewHandlers() {
         view,
         url: defaultUrl,
         title: 'New Tab',
+        cleanupListeners: () => {},
       };
 
       tabs.set(tabId, tab);
@@ -912,6 +915,7 @@ export function setupBrowserViewHandlers() {
         view,
         url: `snapshot://${snapshotId}`,
         title: `${snapshot.title} - Snapshot`,
+        cleanupListeners: () => {},
       };
 
       tabs.set(tabId, tab);
@@ -1155,6 +1159,7 @@ export function setupBrowserViewHandlers() {
         view,
         url: bookmark.url,
         title: bookmark.title,
+        cleanupListeners: () => {},
       };
 
       tabs.set(tabId, tab);
@@ -1230,6 +1235,7 @@ export async function browserCreateTab(url?: string) {
       view,
       url: defaultUrl,
       title: 'New Tab',
+      cleanupListeners: () => {},
     };
 
     tabs.set(tabId, tab);
@@ -1396,6 +1402,7 @@ export function createTabInternal(mainWindow: BrowserWindow, url: string): strin
     view,
     url,
     title: 'Loading...',
+    cleanupListeners: () => {},
   };
 
   tabs.set(tabId, tab);

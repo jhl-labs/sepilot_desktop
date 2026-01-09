@@ -226,73 +226,21 @@ export function setupVectorDBHandlers() {
           overwrite,
         });
 
-        const existingDocuments = await vectorDBService.getAllDocuments();
-        let imported = 0;
-        let overwritten = 0;
-        let skipped = 0;
+        // Import 헬퍼 함수 사용
+        const { processImportDocuments } = await import('../../lib/vectordb/import-helper');
 
-        // 중복 판단을 위한 맵 생성
-        const existingMap = new Map<string, VectorDocument>();
-        for (const doc of existingDocuments) {
-          const originalId = doc.metadata?.originalId || doc.id;
-          existingMap.set(originalId, doc);
+        const result = await processImportDocuments(
+          exportData,
+          {
+            getAllDocuments: () => vectorDBService.getAllDocuments(),
+            deleteDocuments: (ids: string[]) => vectorDBService.delete(ids),
+            insertDocuments: (docs: VectorDocument[]) => vectorDBService.insert(docs),
+          },
+          { overwrite }
+        );
 
-          // title + source 조합도 체크
-          if (doc.metadata?.title && doc.metadata?.source) {
-            const key = `${doc.metadata.title}::${doc.metadata.source}`;
-            existingMap.set(key, doc);
-          }
-        }
-
-        // Import할 문서 처리
-        const documentsToDelete: string[] = [];
-        const documentsToInsert: VectorDocument[] = [];
-
-        for (const doc of exportData.documents) {
-          const originalId = doc.metadata?.originalId || doc.id;
-          const titleSourceKey =
-            doc.metadata?.title && doc.metadata?.source
-              ? `${doc.metadata.title}::${doc.metadata.source}`
-              : null;
-
-          // 중복 체크
-          const isDuplicate =
-            existingMap.has(originalId) || (titleSourceKey && existingMap.has(titleSourceKey));
-
-          if (isDuplicate) {
-            if (overwrite) {
-              // 기존 문서의 모든 청크 찾기
-              const chunkIdsToDelete = existingDocuments
-                .filter((existingDoc) => {
-                  const existingOriginalId = existingDoc.metadata?.originalId || existingDoc.id;
-                  return existingOriginalId === originalId;
-                })
-                .map((d) => d.id);
-
-              documentsToDelete.push(...chunkIdsToDelete);
-              documentsToInsert.push(doc);
-              overwritten++;
-            } else {
-              skipped++;
-            }
-          } else {
-            documentsToInsert.push(doc);
-            imported++;
-          }
-        }
-
-        // 기존 문서 삭제 (overwrite 모드)
-        if (documentsToDelete.length > 0) {
-          await vectorDBService.delete(documentsToDelete);
-        }
-
-        // 새 문서 삽입
-        if (documentsToInsert.length > 0) {
-          await vectorDBService.insert(documentsToInsert);
-        }
-
-        logger.debug('Documents imported successfully', { imported, overwritten, skipped });
-        return { success: true, data: { imported, overwritten, skipped } };
+        logger.debug('Documents imported successfully', result);
+        return { success: true, data: result };
       } catch (error) {
         logger.error('Failed to import documents', error);
         return { success: false, error: (error as Error).message };
