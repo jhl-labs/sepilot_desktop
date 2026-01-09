@@ -119,7 +119,7 @@ describe('BrowserSettings', () => {
     render(<BrowserSettings />);
 
     await waitFor(() => {
-      expect(screen.getByText('Browser 설정')).toBeInTheDocument();
+      expect(screen.getByText('브라우저 설정')).toBeInTheDocument();
     });
   });
 
@@ -138,7 +138,7 @@ describe('BrowserSettings', () => {
     const { container } = render(<BrowserSettings />);
 
     await waitFor(() => {
-      expect(screen.getByText('Browser 설정')).toBeInTheDocument();
+      expect(screen.getByText('브라우저 설정')).toBeInTheDocument();
     });
 
     // Back button is the first button in the header
@@ -238,7 +238,7 @@ describe('BrowserSettings', () => {
     render(<BrowserSettings />);
 
     await waitFor(() => {
-      const placeholders = screen.getAllByText('경로를 불러오는 중...');
+      const placeholders = screen.getAllByText('경로 로딩 중...');
       expect(placeholders).toHaveLength(2);
     });
   });
@@ -252,10 +252,8 @@ describe('BrowserSettings', () => {
     render(<BrowserSettings />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText('페이지 캡처로 저장된 스냅샷 파일이 저장되는 위치입니다.')
-      ).toBeInTheDocument();
-      expect(screen.getByText('북마크 데이터가 저장되는 위치입니다.')).toBeInTheDocument();
+      expect(screen.getByText('페이지 스냅샷이 저장되는 폴더')).toBeInTheDocument();
+      expect(screen.getByText('북마크가 저장되는 폴더')).toBeInTheDocument();
     });
   });
 

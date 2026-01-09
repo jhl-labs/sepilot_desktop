@@ -217,7 +217,7 @@ export function LLMStatusBar({
               models: preservedModels,
               // Preserve connections
               connections: preservedConnections,
-            } as any,
+            } as unknown as LLMConfig,
           };
 
           await window.electronAPI.config.save(mergedConfig);

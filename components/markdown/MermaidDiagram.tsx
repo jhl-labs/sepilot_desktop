@@ -34,18 +34,23 @@ export function MermaidDiagram({ chart, onChartFixed }: MermaidDiagramProps) {
   const [error, setError] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+  const [renderFailCount, setRenderFailCount] = useState(0);
   const [currentChart, setCurrentChart] = useState(chart);
   const [fixHistory, setFixHistory] = useState<FixAttempt[]>([]);
+  const [needsAutoFix, setNeedsAutoFix] = useState(false);
+  const [lastError, setLastError] = useState<string>('');
   const { theme } = useTheme();
 
   // Reset state when chart prop changes
   useEffect(() => {
     setCurrentChart(chart);
-    setRetryCount(0);
+    setRenderFailCount(0);
     setError('');
     setFixHistory([]);
     setTextDiagram('');
+    setSvg('');
+    setNeedsAutoFix(false);
+    setLastError('');
   }, [chart]);
 
   // Convert to text representation using LLM
@@ -178,70 +183,7 @@ Corrected Mermaid code:`;
     [fixHistory]
   );
 
-  // Try to auto-fix on error
-  const attemptAutoFix = useCallback(
-    async (brokenChart: string, errorMsg: string) => {
-      // 이미 수정 중이거나, 최대 횟수 초과시
-      if (isFixing) {
-        return;
-      }
-
-      if (retryCount >= MAX_RETRY_COUNT) {
-        // 최대 재시도 횟수 도달 -> 텍스트 변환 시도
-        if (!textDiagram && !isConverting) {
-          await convertToText(brokenChart);
-        }
-        return;
-      }
-
-      const currentAttempt = retryCount + 1;
-
-      setIsFixing(true);
-      try {
-        const fixedChart = await fixMermaidSyntax(brokenChart, errorMsg, currentAttempt);
-
-        if (fixedChart && fixedChart !== brokenChart) {
-          // 수정된 차트로 업데이트 (렌더링 시도)
-          setCurrentChart(fixedChart);
-          setRetryCount(currentAttempt);
-          // 성공 시 onChartFixed 호출은 렌더링 성공 후에만
-        } else {
-          // 수정 실패
-          setRetryCount(currentAttempt);
-          setFixHistory((prev) => [
-            ...prev,
-            {
-              attemptNumber: currentAttempt,
-              errorMessage: errorMsg,
-              attemptedFix: fixedChart || brokenChart,
-            },
-          ]);
-          // 즉시 다음 단계(텍스트 변환)로 넘어갈지 판단
-          if (currentAttempt >= MAX_RETRY_COUNT) {
-            await convertToText(brokenChart);
-          }
-        }
-      } catch (err) {
-        logger.error(`[MermaidDiagram] Attempt ${currentAttempt} error:`, err);
-        setRetryCount(currentAttempt);
-        setFixHistory((prev) => [
-          ...prev,
-          {
-            attemptNumber: currentAttempt,
-            errorMessage: `${errorMsg} (Fix attempt failed: ${err})`,
-            attemptedFix: brokenChart,
-          },
-        ]);
-        if (currentAttempt >= MAX_RETRY_COUNT) {
-          await convertToText(brokenChart);
-        }
-      } finally {
-        setIsFixing(false);
-      }
-    },
-    [retryCount, isFixing, fixMermaidSyntax, convertToText, textDiagram, isConverting]
-  );
-
+  // Mermaid 렌더링 useEffect
   useEffect(() => {
     const isDark = theme === 'dark';
 
@@ -249,17 +191,14 @@ Corrected Mermaid code:`;
       mermaid.initialize({
         startOnLoad: false,
         theme: isDark ? 'dark' : 'default',
-        // 보안 강화: strict 모드로 XSS 공격 방지
         securityLevel: 'strict',
         fontFamily: 'inherit',
       });
       mermaidInitialized = true;
     } else {
-      // Re-initialize with new theme
       mermaid.initialize({
         startOnLoad: false,
         theme: isDark ? 'dark' : 'default',
-        // 보안 강화: strict 모드로 XSS 공격 방지
         securityLevel: 'strict',
         fontFamily: 'inherit',
       });
@@ -275,6 +214,11 @@ Corrected Mermaid code:`;
         return;
       }
 
+      // 수정 중이면 렌더링 스킵
+      if (isFixing) {
+        return;
+      }
+
       const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
 
       try {
@@ -286,16 +230,21 @@ Corrected Mermaid code:`;
         });
         setSvg(sanitizedSvg);
         setError('');
+        setNeedsAutoFix(false);
+        setLastError('');
 
-        // 렌더링 성공 시 - 이전에 수정이 있었다면 콜백 호출
-        if (retryCount > 0 && currentChart !== chart && onChartFixed) {
+        // 렌더링 성공 시 - 수정이 있었다면 콜백 호출
+        if (renderFailCount > 0 && currentChart !== chart && onChartFixed) {
+          logger.info('[MermaidDiagram] Successfully fixed after', renderFailCount, 'attempts');
           onChartFixed(currentChart);
         }
       } catch (err) {
         const error = err as Error;
-        logger.error(`[MermaidDiagram] Rendering error (attempt ${retryCount + 1}):`, err);
         const errorMsg = error.message || 'Failed to render diagram';
+        logger.error(`[MermaidDiagram] Rendering error (fail count: ${renderFailCount}):`, err);
+
         setError(errorMsg);
+        setLastError(errorMsg);
 
         // Clean up error SVG elements created by mermaid
         const errorElement = document.getElementById(id);
@@ -308,39 +257,37 @@ Corrected Mermaid code:`;
           }
         });
 
-        // 렌더링 실패 - 수정 시도 필요
+        // 렌더링 실패 카운트 증가
+        const newFailCount = renderFailCount + 1;
+        setRenderFailCount(newFailCount);
 
-        // 1. 실패 기록 업데이트
-        if (retryCount > 0 && currentChart !== chart) {
-          setFixHistory((prev) => {
-            const alreadyRecorded = prev.some((h) => h.attemptNumber === retryCount);
-            if (!alreadyRecorded) {
-              return [
-                ...prev,
-                {
-                  attemptNumber: retryCount,
-                  errorMessage: errorMsg,
-                  attemptedFix: currentChart,
-                },
-              ];
-            }
-            return prev;
-          });
-        }
+        // fixHistory에 기록
+        setFixHistory((prev) => {
+          // 중복 방지
+          const alreadyRecorded = prev.some(
+            (h) => h.attemptNumber === newFailCount && h.attemptedFix === currentChart
+          );
+          if (!alreadyRecorded) {
+            return [
+              ...prev,
+              {
+                attemptNumber: newFailCount,
+                errorMessage: errorMsg,
+                attemptedFix: currentChart,
+              },
+            ];
+          }
+          return prev;
+        });
 
-        // 2. 자동 수정 시도 (재시도 횟수가 남았을 때)
-        // 주의: useEffect 내에서 상태 변경을 유발하는 함수 호출 시 순환 참조 주의
-        // 여기서는 에러 발생 시 즉시 복구를 시도해야 함
-        if (retryCount < MAX_RETRY_COUNT && !isFixing) {
-          // 비동기로 호출하여 렌더링 사이클 분리
-          setTimeout(() => {
-            attemptAutoFix(currentChart, errorMsg);
-          }, 0);
-        } else if (retryCount >= MAX_RETRY_COUNT && !textDiagram && !isConverting) {
-          // 더 이상 수정 불가능하면 텍스트 변환
-          setTimeout(() => {
+        // 자동 수정 필요 플래그 설정
+        if (newFailCount < MAX_RETRY_COUNT) {
+          setNeedsAutoFix(true);
+        } else {
+          // 최대 재시도 횟수 도달 -> 텍스트 변환
+          if (!textDiagram && !isConverting) {
             convertToText(currentChart);
-          }, 0);
+          }
         }
       }
     };
@@ -358,13 +305,64 @@ Corrected Mermaid code:`;
   }, [
     currentChart,
     theme,
-    retryCount,
+    textDiagram,
+    isFixing,
+    renderFailCount,
     chart,
     onChartFixed,
-    attemptAutoFix,
+    isConverting,
+    convertToText,
+  ]);
+
+  // 자동 수정 useEffect
+  useEffect(() => {
+    if (!needsAutoFix || isFixing || textDiagram || isConverting) {
+      return;
+    }
+
+    const performAutoFix = async () => {
+      setIsFixing(true);
+      setNeedsAutoFix(false);
+
+      try {
+        logger.info(
+          `[MermaidDiagram] Attempting auto-fix (attempt ${renderFailCount}/${MAX_RETRY_COUNT})`
+        );
+
+        const fixedChart = await fixMermaidSyntax(currentChart, lastError, renderFailCount);
+
+        if (fixedChart && fixedChart !== currentChart) {
+          logger.info('[MermaidDiagram] LLM returned a fix, applying...');
+          // 수정된 차트로 업데이트 (렌더링 useEffect가 자동으로 재시도)
+          setCurrentChart(fixedChart);
+        } else {
+          logger.warn('[MermaidDiagram] LLM failed to provide a valid fix');
+          // LLM이 수정에 실패 -> 다음 단계로
+          if (renderFailCount >= MAX_RETRY_COUNT) {
+            await convertToText(currentChart);
+          }
+        }
+      } catch (err) {
+        logger.error(`[MermaidDiagram] Auto-fix attempt ${renderFailCount} error:`, err);
+        // 에러 발생 시에도 다음 단계로
+        if (renderFailCount >= MAX_RETRY_COUNT) {
+          await convertToText(currentChart);
+        }
+      } finally {
+        setIsFixing(false);
+      }
+    };
+
+    performAutoFix();
+  }, [
+    needsAutoFix,
     isFixing,
     textDiagram,
     isConverting,
+    renderFailCount,
+    currentChart,
+    lastError,
+    fixMermaidSyntax,
     convertToText,
   ]);
 
@@ -383,7 +381,7 @@ Corrected Mermaid code:`;
         <div className="flex items-center justify-between border-b border-primary/50 bg-primary/20 px-4 py-2">
           <span className="text-xs font-medium text-primary flex items-center gap-2">
             <Loader2 className="h-3 w-3 animate-spin" />
-            다이어그램 수정 중... ({retryCount + 1}/{MAX_RETRY_COUNT})
+            다이어그램 수정 중... ({renderFailCount}/{MAX_RETRY_COUNT})
           </span>
         </div>
         <div className="p-4">
@@ -440,11 +438,7 @@ Corrected Mermaid code:`;
   }
 
   if (error) {
-    // fallback to loading or just empty while waiting for auto actions
-    // But if we are here and not fixing/converting, it might mean we are stuck or logic missed something.
-    // However, the side effects in useEffect should trigger fix/convert.
-    // We show a transient error state if needed, or simply nothing if we expect a quick transition.
-    // Given the logic, we might briefly see this before 'isFixing' becomes true.
+    // 에러 상태이면서 수정도 안 하고 변환도 안 하는 중이면 일시적인 상태
     return (
       <div className="my-4 overflow-hidden rounded-lg border border-destructive/50 bg-destructive/10">
         <div className="flex items-center justify-between border-b border-destructive/50 bg-destructive/20 px-4 py-2">

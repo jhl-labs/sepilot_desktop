@@ -80,11 +80,14 @@ export function ComfyUISettingsTab({
 
         setMessage({ type: 'success', text: t('settings.imagegen.comfyui.connectionSuccess') });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to test ComfyUI connection:', error);
       setMessage({
         type: 'error',
-        text: error.message || t('settings.imagegen.comfyui.connectionTestFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('settings.imagegen.comfyui.connectionTestFailed'),
       });
     } finally {
       setIsTestingComfy(false);

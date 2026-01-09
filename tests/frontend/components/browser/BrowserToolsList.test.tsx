@@ -28,22 +28,24 @@ describe('BrowserToolsList', () => {
     it('should render header with title', () => {
       render(<BrowserToolsList />);
 
-      expect(screen.getByText('Browser Agent 도구')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.title')).toBeInTheDocument();
     });
 
     it('should render back button', () => {
-      render(<BrowserToolsList />);
+      const { container } = render(<BrowserToolsList />);
 
-      const backButton = screen.getByTitle('뒤로 가기');
+      // Back button is the first button in the header
+      const backButton = container.querySelector('button');
       expect(backButton).toBeInTheDocument();
     });
 
     it('should call setBrowserViewMode when back button clicked', async () => {
       const user = userEvent.setup();
-      render(<BrowserToolsList />);
+      const { container } = render(<BrowserToolsList />);
 
-      const backButton = screen.getByTitle('뒤로 가기');
-      await user.click(backButton);
+      // Back button is the first button in the header
+      const backButton = container.querySelector('button');
+      await user.click(backButton as HTMLElement);
 
       expect(mockSetBrowserViewMode).toHaveBeenCalledWith('chat');
       expect(mockSetBrowserViewMode).toHaveBeenCalledTimes(1);
@@ -62,9 +64,7 @@ describe('BrowserToolsList', () => {
     it('should display total tools count', () => {
       render(<BrowserToolsList />);
 
-      expect(
-        screen.getByText('Browser Agent가 사용할 수 있는 총 27개의 도구입니다.')
-      ).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.description')).toBeInTheDocument();
     });
   });
 
@@ -72,15 +72,15 @@ describe('BrowserToolsList', () => {
     it('should render Navigation category', () => {
       render(<BrowserToolsList />);
 
-      expect(screen.getByText('Navigation (1)')).toBeInTheDocument();
-      expect(screen.getByText('페이지 이동')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.navigation')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.navigationDesc')).toBeInTheDocument();
     });
 
     it('should render browser_navigate tool', () => {
       render(<BrowserToolsList />);
 
       expect(screen.getByText('browser_navigate')).toBeInTheDocument();
-      expect(screen.getByText('URL로 직접 이동 (http/https 자동 추가)')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.tools.navigate')).toBeInTheDocument();
     });
   });
 
@@ -88,8 +88,10 @@ describe('BrowserToolsList', () => {
     it('should render Page Inspection category', () => {
       render(<BrowserToolsList />);
 
-      expect(screen.getByText('Page Inspection (5)')).toBeInTheDocument();
-      expect(screen.getByText('페이지 정보 파악')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.pageInspection')).toBeInTheDocument();
+      expect(
+        screen.getByText('browser.toolsList.categories.pageInspectionDesc')
+      ).toBeInTheDocument();
     });
 
     it('should render all page inspection tools', () => {
@@ -116,8 +118,10 @@ describe('BrowserToolsList', () => {
     it('should render Page Interaction category', () => {
       render(<BrowserToolsList />);
 
-      expect(screen.getByText('Page Interaction (3)')).toBeInTheDocument();
-      expect(screen.getByText('페이지 조작')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.pageInteraction')).toBeInTheDocument();
+      expect(
+        screen.getByText('browser.toolsList.categories.pageInteractionDesc')
+      ).toBeInTheDocument();
     });
 
     it('should render all page interaction tools', () => {
@@ -133,8 +137,10 @@ describe('BrowserToolsList', () => {
     it('should render Tab Management category', () => {
       render(<BrowserToolsList />);
 
-      expect(screen.getByText('Tab Management (4)')).toBeInTheDocument();
-      expect(screen.getByText('탭 관리')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.tabManagement')).toBeInTheDocument();
+      expect(
+        screen.getByText('browser.toolsList.categories.tabManagementDesc')
+      ).toBeInTheDocument();
     });
 
     it('should render all tab management tools', () => {
@@ -151,8 +157,8 @@ describe('BrowserToolsList', () => {
     it('should render Vision-based Tools category', () => {
       render(<BrowserToolsList />);
 
-      expect(screen.getByText('Vision-based Tools (5)')).toBeInTheDocument();
-      expect(screen.getByText('시각 기반 도구')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.vision')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.visionDesc')).toBeInTheDocument();
     });
 
     it('should render all vision-based tools', () => {
@@ -183,10 +189,8 @@ describe('BrowserToolsList', () => {
     it('should render info message', () => {
       render(<BrowserToolsList />);
 
-      expect(
-        screen.getByText('이 도구들은 Browser Agent가 자동으로 선택하여 사용합니다.')
-      ).toBeInTheDocument();
-      expect(screen.getByText('사용자는 자연어로 명령만 입력하면 됩니다.')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.info.autoSelect')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.info.naturalLanguage')).toBeInTheDocument();
     });
   });
 
@@ -201,8 +205,8 @@ describe('BrowserToolsList', () => {
     it('should render tool descriptions', () => {
       render(<BrowserToolsList />);
 
-      expect(screen.getByText(/URL로 직접 이동/)).toBeInTheDocument();
-      expect(screen.getByText(/현재 페이지의 내용 파악/)).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.tools.navigate')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.tools.getPageContent')).toBeInTheDocument();
     });
 
     it('should apply hover effect classes', () => {
@@ -249,12 +253,12 @@ describe('BrowserToolsList', () => {
     it('should render all 6 categories', () => {
       render(<BrowserToolsList />);
 
-      expect(screen.getByText('Navigation (1)')).toBeInTheDocument();
-      expect(screen.getByText('Page Inspection (5)')).toBeInTheDocument();
-      expect(screen.getByText('Page Interaction (3)')).toBeInTheDocument();
-      expect(screen.getByText('Tab Management (4)')).toBeInTheDocument();
-      expect(screen.getByText('Vision-based Tools (5)')).toBeInTheDocument();
-      expect(screen.getByText('Google Search Tools (9)')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.navigation')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.pageInspection')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.pageInteraction')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.tabManagement')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.vision')).toBeInTheDocument();
+      expect(screen.getByText('browser.toolsList.categories.googleSearch')).toBeInTheDocument();
     });
 
     it('should sum to 18 tools across all categories', () => {

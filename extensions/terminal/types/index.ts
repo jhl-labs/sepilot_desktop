@@ -20,6 +20,7 @@ export interface TerminalBlock {
   // 출력
   output: string; // 명령어 실행 결과
   exitCode?: number; // 종료 코드
+  isRunning?: boolean; // 명령어 실행 중 여부
 
   // AI 분석
   aiAnalysis?: {

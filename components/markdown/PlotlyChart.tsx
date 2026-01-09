@@ -24,7 +24,7 @@ interface PlotlyChartProps {
 
 export function PlotlyChart({ data }: PlotlyChartProps) {
   const [error, setError] = useState<string>('');
-  const [plotData, setPlotData] = useState<any>(null);
+  const [plotData, setPlotData] = useState<unknown>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -38,9 +38,9 @@ export function PlotlyChart({ data }: PlotlyChartProps) {
 
       setPlotData(parsed);
       setError('');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Plotly parsing error:', err);
-      setError(err.message || 'Failed to parse chart data');
+      setError(err instanceof Error ? err.message : String(err) || 'Failed to parse chart data');
     }
   }, [data]);
 

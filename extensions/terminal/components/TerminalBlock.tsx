@@ -19,6 +19,8 @@ import {
   AlertCircle,
   Check,
   Terminal as TerminalIcon,
+  X,
+  Star,
 } from 'lucide-react';
 import { AnsiDisplay } from '@/components/ui/ansi-display';
 import { cn } from '@/lib/utils';
@@ -33,6 +35,8 @@ interface TerminalBlockProps {
   onSelect: () => void;
   onRerun: () => void;
   onDelete: () => void;
+  onCancel?: () => void;
+  onBookmark?: () => void;
   onExecuteSuggestion?: (command: string) => void;
 }
 
@@ -42,6 +46,8 @@ export function TerminalBlock({
   onSelect,
   onRerun,
   onDelete,
+  onCancel,
+  onBookmark,
   onExecuteSuggestion,
 }: TerminalBlockProps) {
   const [copied, setCopied] = React.useState(false);
@@ -80,6 +86,21 @@ export function TerminalBlock({
         </div>
 
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* 취소 버튼 (실행 중일 때만 표시) */}
+          {block.isRunning && onCancel && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive animate-pulse"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancel();
+              }}
+              title="취소 (Ctrl+C)"
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          )}
           <Button
             size="icon"
             variant="ghost"
@@ -92,6 +113,20 @@ export function TerminalBlock({
           >
             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           </Button>
+          {onBookmark && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={(e) => {
+                e.stopPropagation();
+                onBookmark();
+              }}
+              title="북마크 추가"
+            >
+              <Star className="w-3.5 h-3.5" />
+            </Button>
+          )}
           <Button
             size="icon"
             variant="ghost"

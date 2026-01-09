@@ -22,7 +22,11 @@ interface SaveKnowledgeDialogProps {
   onOpenChange: (open: boolean) => void;
   conversation: Conversation | null;
   messages: Message[];
-  onSave: (doc: { title: string; content: string; metadata: Record<string, any> }) => Promise<void>;
+  onSave: (doc: {
+    title: string;
+    content: string;
+    metadata: Record<string, unknown>;
+  }) => Promise<void>;
 }
 
 export function SaveKnowledgeDialog({
@@ -128,9 +132,9 @@ export function SaveKnowledgeDialog({
       setTitle(extractedTitle);
       setContent(analysisText);
       setStep('review');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to analyze conversation:', err);
-      setError(err.message || '대화 분석에 실패했습니다.');
+      setError(err instanceof Error ? err.message : String(err) || '대화 분석에 실패했습니다.');
       setStep('review');
     }
   };
@@ -166,9 +170,13 @@ export function SaveKnowledgeDialog({
         setContent('');
         setError(null);
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to save knowledge:', err);
-      setError(err.message || t('saveKnowledgeDialog.errors.saveFailed'));
+      setError(
+        err instanceof Error
+          ? err.message
+          : String(err) || t('saveKnowledgeDialog.errors.saveFailed')
+      );
       setStep('review');
     }
   };

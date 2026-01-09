@@ -2,153 +2,16 @@ import '@testing-library/jest-dom';
 import { TextEncoder, TextDecoder } from 'util';
 import { ReadableStream } from 'stream/web';
 
+// Import and re-export common mock from shared file
+import { mockElectronAPI } from './mocks/electronAPI';
+export { mockElectronAPI };
+
 // Polyfill TextEncoder/TextDecoder for JSDOM
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder as any;
 
 // Polyfill ReadableStream for LangChain/LangGraph
 (global as any).ReadableStream = ReadableStream;
-
-// Mock window.electronAPI
-export const mockElectronAPI = {
-  platform: 'darwin',
-  chat: {
-    saveConversation: jest.fn(),
-    loadConversations: jest.fn(),
-    deleteConversation: jest.fn(),
-    updateConversationTitle: jest.fn(),
-    saveMessage: jest.fn(),
-    loadMessages: jest.fn(),
-    deleteMessage: jest.fn(),
-  },
-  config: {
-    load: jest.fn(),
-    save: jest.fn(),
-    updateSetting: jest.fn(),
-    getSetting: jest.fn(),
-  },
-  mcp: {
-    addServer: jest.fn(),
-    removeServer: jest.fn(),
-    listServers: jest.fn(),
-    getAllTools: jest.fn(),
-    callTool: jest.fn(),
-    toggleServer: jest.fn(),
-  },
-  auth: {
-    initiateLogin: jest.fn(),
-    githubLogin: jest.fn(),
-    exchangeCode: jest.fn(),
-    saveToken: jest.fn(),
-    getUserInfo: jest.fn(),
-    getToken: jest.fn(),
-    logout: jest.fn(),
-    syncFromGitHub: jest.fn(),
-    syncToGitHub: jest.fn(),
-    onAuthSuccess: jest.fn(),
-    removeAuthSuccessListener: jest.fn(),
-    onOAuthCallback: jest.fn(),
-    removeOAuthCallbackListener: jest.fn(),
-  },
-  llm: {
-    streamChat: jest.fn(),
-    chat: jest.fn(),
-    init: jest.fn(),
-    validate: jest.fn(),
-    fetchModels: jest.fn(),
-    generateTitle: jest.fn(),
-    onStreamChunk: jest.fn(),
-    onStreamDone: jest.fn(),
-    onStreamError: jest.fn(),
-    removeStreamListener: jest.fn(),
-  },
-  vectorDB: {
-    initialize: jest.fn(),
-    createIndex: jest.fn(),
-    deleteIndex: jest.fn(),
-    indexExists: jest.fn(),
-    insert: jest.fn(),
-    search: jest.fn(),
-    delete: jest.fn(),
-    count: jest.fn(),
-    getAll: jest.fn(),
-  },
-  file: {
-    selectImages: jest.fn(),
-    loadImage: jest.fn(),
-    selectDirectory: jest.fn(),
-    read: jest.fn(),
-  },
-  fs: {
-    readDirectory: jest.fn(),
-    readFile: jest.fn(),
-    writeFile: jest.fn(),
-    createFile: jest.fn(),
-    createDirectory: jest.fn(),
-    delete: jest.fn(),
-    rename: jest.fn(),
-    resolvePath: jest.fn((parentPath: string, child: string) => {
-      const separator = parentPath.endsWith('/') ? '' : '/';
-      return Promise.resolve({
-        success: true,
-        data: `${parentPath}${separator}${child}`,
-      });
-    }),
-  },
-  github: {
-    setPrivateKey: jest.fn(),
-    hasPrivateKey: jest.fn(),
-    getRepositories: jest.fn(),
-    syncFromGitHub: jest.fn(),
-    syncToGitHub: jest.fn(),
-  },
-  shell: {
-    openExternal: jest.fn(),
-  },
-  embeddings: {
-    generate: jest.fn(),
-    generateBatch: jest.fn(),
-    validate: jest.fn(),
-  },
-  comfyui: {
-    testConnection: jest.fn(),
-    queuePrompt: jest.fn(),
-    fetchImage: jest.fn(),
-  },
-  browserView: {
-    create: jest.fn(() => Promise.resolve()),
-    loadURL: jest.fn(),
-    goBack: jest.fn(),
-    goForward: jest.fn(),
-    reload: jest.fn(),
-    setBounds: jest.fn(),
-    setVisible: jest.fn(),
-    destroy: jest.fn(),
-    hideAll: jest.fn(() => Promise.resolve()),
-    showActive: jest.fn(() => Promise.resolve()),
-    onDidNavigate: jest.fn(() => jest.fn()),
-    onLoadingState: jest.fn(() => jest.fn()),
-    removeListener: jest.fn(),
-    getBookmarks: jest.fn(),
-    getBookmarkFolders: jest.fn(),
-    addBookmarkFolder: jest.fn(),
-    deleteBookmarkFolder: jest.fn(),
-    deleteBookmark: jest.fn(),
-    addBookmark: jest.fn(),
-    openBookmark: jest.fn(),
-    capturePage: jest.fn(),
-    getSnapshots: jest.fn(),
-    deleteSnapshot: jest.fn(),
-    openSnapshot: jest.fn(),
-    getBrowserSettings: jest.fn(),
-  },
-  activity: {
-    loadActivities: jest.fn(),
-    saveActivity: jest.fn(),
-  },
-  on: jest.fn(),
-  removeListener: jest.fn(),
-};
 
 // Mock localStorage
 const mockLocalStorage = {
@@ -196,33 +59,12 @@ export function disableElectronMode() {
   (window as any).electronAPI = undefined;
 }
 
-// Mock console methods to reduce noise in tests
-const originalConsole = { ...console };
-beforeAll(() => {
-  jest.spyOn(console, 'log').mockImplementation(() => {});
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-  jest.spyOn(console, 'error').mockImplementation(() => {});
-});
+// Import test helpers
+import { setupConsoleMock, setupMockReset } from './mocks/test-helpers';
 
-afterAll(() => {
-  console.log = originalConsole.log;
-  console.warn = originalConsole.warn;
-  console.error = originalConsole.error;
-});
-
-// Reset mocks between tests
-beforeEach(() => {
-  jest.clearAllMocks();
-  disableElectronMode();
-  mockLocalStorage.getItem.mockReset();
-  mockLocalStorage.setItem.mockReset();
-  mockLocalStorage.removeItem.mockReset();
-  mockLocalStorage.clear.mockReset();
-  mockSessionStorage.getItem.mockReset();
-  mockSessionStorage.setItem.mockReset();
-  mockSessionStorage.removeItem.mockReset();
-  mockSessionStorage.clear.mockReset();
-});
+// Setup console mock and mock reset
+setupConsoleMock();
+setupMockReset({ disableElectronMode, mockLocalStorage, mockSessionStorage });
 
 // Mock fetch globally
 global.fetch = jest.fn();

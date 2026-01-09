@@ -276,12 +276,15 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
           });
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to add MCP server:', error);
 
       // 타임아웃 에러 감지 및 특별 처리
-      let errorMessage = error.message || t('settings.mcp.config.messages.failed');
-      if (error.message?.includes('timeout')) {
+      let errorMessage =
+        error instanceof Error
+          ? error.message
+          : String(error) || t('settings.mcp.config.messages.failed');
+      if (error instanceof Error ? error.message : String(error)?.includes('timeout')) {
         errorMessage = t('settings.mcp.config.messages.timeout', {
           hint:
             transport === 'stdio'
