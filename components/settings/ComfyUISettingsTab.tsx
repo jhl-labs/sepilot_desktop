@@ -80,7 +80,7 @@ export function ComfyUISettingsTab({
 
         setMessage({ type: 'success', text: t('settings.imagegen.comfyui.connectionSuccess') });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to test ComfyUI connection:', error);
       setMessage({
         type: 'error',

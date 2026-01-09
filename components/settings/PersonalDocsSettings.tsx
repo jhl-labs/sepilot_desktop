@@ -66,7 +66,7 @@ export function PersonalDocsSettings({ config, onSave }: PersonalDocsSettingsPro
     try {
       await onSave(formData as GitHubSyncConfig);
       setMessage({ type: 'success', text: t('settings.personalDocs.saveSuccess') });
-    } catch (error: any) {
+    } catch (error) {
       setMessage({ type: 'error', text: error.message || t('settings.personalDocs.saveFailed') });
     } finally {
       setIsSaving(false);
@@ -95,7 +95,7 @@ export function PersonalDocsSettings({ config, onSave }: PersonalDocsSettingsPro
       } else {
         throw new Error('Electron API unavailable');
       }
-    } catch (error: any) {
+    } catch (error) {
       setMessage({ type: 'error', text: error.message || t('settings.personalDocs.syncFailed') });
     } finally {
       setIsSyncing(false);

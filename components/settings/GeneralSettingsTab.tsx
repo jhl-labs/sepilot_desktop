@@ -137,7 +137,7 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
         type: 'success',
         message: '테스트 알림이 표시되었습니다. 알림을 클릭하면 해당 대화로 이동합니다.',
       });
-    } catch (error: any) {
+    } catch (error) {
       logger.error('[GeneralSettingsTab] Failed to show test notification:', error);
       setNotificationTestResult({
         type: 'error',

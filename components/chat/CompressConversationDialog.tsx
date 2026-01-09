@@ -162,7 +162,7 @@ export function CompressConversationDialog({
         ),
       });
       setStep('review');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to compress conversation:', err);
       setError(err.message || '대화 압축에 실패했습니다.');
       setStep('review');
@@ -190,7 +190,7 @@ export function CompressConversationDialog({
         setStats({ originalCount: 0, compressedCount: 0, reductionPercent: 0 });
         setError(null);
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to save compressed conversation:', err);
       setError(err.message || t('compressDialog.errors.saveFailed'));
       setStep('review');

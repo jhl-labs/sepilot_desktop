@@ -131,7 +131,7 @@ export function ModelListView({
             connectionName: connection.name,
           });
         });
-      } catch (error: any) {
+      } catch (error) {
         console.error(`Failed to fetch models from ${connection.name}:`, error);
         // error.message에 이미 자세한 정보가 포함되어 있음 (IPC 핸들러에서 생성)
         errors.push({

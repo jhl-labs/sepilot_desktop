@@ -276,7 +276,7 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
           });
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to add MCP server:', error);
 
       // 타임아웃 에러 감지 및 특별 처리

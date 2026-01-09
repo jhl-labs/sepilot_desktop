@@ -279,7 +279,7 @@ export function UnifiedChatInput({
         } else {
           setToolsError(response.error || 'Failed to load tools');
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error('[UnifiedChatInput] Failed to load tools:', error);
         setToolsError(error.message || 'Failed to load tools');
       } finally {
