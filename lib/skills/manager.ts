@@ -366,29 +366,97 @@ export class SkillManager {
     userMessage: string,
     manualSkillIds?: string[]
   ): Promise<ContextMatchResult[]> {
-    // Phase 3에서 구현 예정
-    // TODO: ContextMatcher 통합
-    console.log('[SkillManager] detectAndLoadRelevantSkills() - Not yet implemented (Phase 3)');
+    try {
+      console.log(
+        `[SkillManager] Detecting relevant skills for message: "${userMessage.substring(0, 50)}..."`
+      );
 
-    const results: ContextMatchResult[] = [];
+      // 활성화된 스킬 목록 가져오기
+      const enabledSkills = await this.getEnabledSkills();
+      if (enabledSkills.length === 0) {
+        console.log('[SkillManager] No enabled skills found');
+        return [];
+      }
 
-    // 수동 선택된 스킬 로드
-    if (manualSkillIds && manualSkillIds.length > 0) {
-      for (const skillId of manualSkillIds) {
-        try {
-          await this.loadSkill(skillId);
-          results.push({
-            skillId,
-            score: 1.0, // 수동 선택은 최고 점수
-            matchedPatterns: ['manual'],
-          });
-        } catch (error) {
-          console.error(`[SkillManager] Failed to load manual skill ${skillId}:`, error);
+      // ContextMatcher 동적 import (순환 의존성 방지)
+      const { contextMatcher } = await import('./context-matcher');
+
+      // 관련성 점수 계산
+      const manifests = enabledSkills.map((s) => s.manifest);
+      const matchResults = contextMatcher.match(userMessage, manifests);
+
+      if (matchResults.length === 0) {
+        console.log('[SkillManager] No relevant skills found');
+        return [];
+      }
+
+      console.log(`[SkillManager] Found ${matchResults.length} relevant skills`);
+
+      // 수동 선택된 스킬 우선 로드
+      const loadedResults: ContextMatchResult[] = [];
+
+      if (manualSkillIds && manualSkillIds.length > 0) {
+        for (const skillId of manualSkillIds) {
+          try {
+            await this.loadSkill(skillId);
+            loadedResults.push({
+              skillId,
+              score: 1.0, // 수동 선택은 최고 점수
+              matchedPatterns: ['@mention'],
+            });
+          } catch (error) {
+            console.error(`[SkillManager] Failed to load manual skill ${skillId}:`, error);
+          }
         }
       }
-    }
 
-    return results;
+      // 자동 매칭된 스킬 로드 (상위 3개)
+      const autoMatches = matchResults.slice(0, 3);
+      for (const match of autoMatches) {
+        try {
+          // 이미 수동으로 로드된 경우 스킵
+          if (manualSkillIds && manualSkillIds.includes(match.skillId)) {
+            continue;
+          }
+
+          await this.loadSkill(match.skillId);
+          loadedResults.push(match);
+
+          console.log(
+            `[SkillManager] Auto-loaded skill: ${match.skillId} (score: ${match.score.toFixed(2)})`
+          );
+        } catch (error) {
+          console.error(`[SkillManager] Failed to load skill ${match.skillId}:`, error);
+        }
+      }
+
+      return loadedResults;
+    } catch (error) {
+      console.error('[SkillManager] Error detecting relevant skills:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 스킬 사용 이력 기록
+   *
+   * @param skillId - 스킬 ID
+   * @param conversationId - 대화 ID
+   * @param contextPattern - 매칭된 컨텍스트 패턴 (optional)
+   */
+  async recordUsage(
+    skillId: string,
+    conversationId: string,
+    contextPattern?: string
+  ): Promise<void> {
+    try {
+      // SkillRegistry에 위임
+      const { skillRegistry } = await import('./registry');
+      await skillRegistry.recordUsage(skillId, conversationId, contextPattern);
+    } catch (error) {
+      console.error(`[SkillManager] Failed to record usage for skill ${skillId}:`, error);
+      // 사용 이력 기록 실패는 치명적이지 않으므로 throw하지 않음
+    }
   }
 
   /**

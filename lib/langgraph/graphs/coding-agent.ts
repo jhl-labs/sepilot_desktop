@@ -818,6 +818,40 @@ async function agentNode(state: CodingAgentState): Promise<Partial<CodingAgentSt
     });
   }
 
+  // Skills 주입
+  try {
+    const lastUserMessage = messages
+      .slice()
+      .reverse()
+      .find((m) => m.role === 'user');
+    if (lastUserMessage && lastUserMessage.content) {
+      const { skillsInjector } = await import('../skills-injector');
+      const injectionResult = await skillsInjector.injectSkills(
+        lastUserMessage.content,
+        state.conversationId
+      );
+
+      if (injectionResult.injectedSkills.length > 0) {
+        const skillMessages = skillsInjector.getMessagesFromResult(injectionResult);
+        messagesWithContext.push(...skillMessages);
+
+        emitStreamingChunk(
+          `\n🎯 **${injectionResult.injectedSkills.length}개의 Skill이 활성화되었습니다.**\n\n`,
+          state.conversationId
+        );
+
+        logger.info('[CodingAgent.Agent] Skills injected:', {
+          count: injectionResult.injectedSkills.length,
+          skillIds: injectionResult.injectedSkills,
+          tokens: injectionResult.totalTokens,
+        });
+      }
+    }
+  } catch (skillError) {
+    console.error('[CodingAgent.Agent] Skills injection error:', skillError);
+    // Skill 주입 실패는 치명적이지 않으므로 계속 진행
+  }
+
   // Add selection awareness
   if (state.activeFileSelection && state.activeFileSelection.text) {
     messagesWithContext.push({
