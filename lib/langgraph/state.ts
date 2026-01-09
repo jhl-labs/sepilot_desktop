@@ -49,9 +49,9 @@ export const RAGStateAnnotation = Annotation.Root({
 });
 
 /**
- * Agent State - 도구 사용 포함
+ * Base State Annotations - 모든 Agent에서 공통으로 사용하는 필드
  */
-export const AgentStateAnnotation = Annotation.Root({
+const baseAnnotations = {
   messages: Annotation<Message[]>({
     reducer: (existing: Message[], updates: Message[]) => [...existing, ...updates],
     default: () => [],
@@ -86,6 +86,13 @@ export const AgentStateAnnotation = Annotation.Root({
     reducer: (existing, updates) => [...(existing || []), ...(updates || [])],
     default: () => [],
   }),
+};
+
+/**
+ * Agent State - 도구 사용 포함
+ */
+export const AgentStateAnnotation = Annotation.Root({
+  ...baseAnnotations,
   // Deep Web Research용 planning notes (iteration, forceSynthesize 등)
   planningNotes: Annotation<Record<string, any>>({
     reducer: (_existing: Record<string, any>, update: Record<string, any>) => ({
@@ -100,39 +107,7 @@ export const AgentStateAnnotation = Annotation.Root({
  * Coding Agent State - ReAct Agent with planning, verification, and file tracking
  */
 export const CodingAgentStateAnnotation = Annotation.Root({
-  messages: Annotation<Message[]>({
-    reducer: (existing: Message[], updates: Message[]) => [...existing, ...updates],
-    default: () => [],
-  }),
-  context: Annotation<string>({
-    reducer: (_existing: string, update: string) => update,
-    default: () => '',
-  }),
-  toolCalls: Annotation<ToolCall[]>({
-    reducer: (existing: ToolCall[], updates: ToolCall[]) => [...existing, ...updates],
-    default: () => [],
-  }),
-  toolResults: Annotation<ToolResult[]>({
-    reducer: (existing: ToolResult[], updates: ToolResult[]) => [...existing, ...updates],
-    default: () => [],
-  }),
-  conversationId: Annotation<string>({
-    reducer: (_existing: string, update: string) => update || _existing,
-    default: () => '',
-  }),
-  // Generated images from tools (e.g., generate_image)
-  generatedImages: Annotation<
-    Array<{
-      id: string;
-      base64: string;
-      filename: string;
-      mimeType: string;
-      provider?: 'comfyui' | 'nanobanana';
-    }>
-  >({
-    reducer: (existing, updates) => [...(existing || []), ...(updates || [])],
-    default: () => [],
-  }),
+  ...baseAnnotations,
   // Planning & Verification
   planningNotes: Annotation<string[]>({
     reducer: (existing: string[], updates: string[]) => [...existing, ...updates],

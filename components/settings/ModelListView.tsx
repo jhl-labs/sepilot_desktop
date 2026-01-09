@@ -136,7 +136,10 @@ export function ModelListView({
         // error.message에 이미 자세한 정보가 포함되어 있음 (IPC 핸들러에서 생성)
         errors.push({
           connection: connection.name,
-          error: error.message || t('settings.llm.models.validation.unknownError'),
+          error:
+            error instanceof Error
+              ? error.message
+              : String(error) || t('settings.llm.models.validation.unknownError'),
         });
       }
     }

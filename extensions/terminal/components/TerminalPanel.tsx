@@ -6,14 +6,15 @@
 
 'use client';
 
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Trash2, History, Settings } from 'lucide-react';
+import { Trash2, History, Settings, LayoutGrid, Terminal as TerminalIcon } from 'lucide-react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { TerminalBlock } from './TerminalBlock';
 import { AICommandInput } from './AICommandInput';
 import { SessionTabBar } from './SessionTabBar';
+import { InteractiveTerminal } from './InteractiveTerminal';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/utils/logger';
 
@@ -21,9 +22,28 @@ interface TerminalPanelProps {
   workingDirectory?: string;
 }
 
+// 인터랙티브 명령어 목록 (자동 모드 전환용)
+const INTERACTIVE_COMMANDS = [
+  'vim',
+  'vi',
+  'nano',
+  'emacs',
+  'top',
+  'htop',
+  'less',
+  'more',
+  'man',
+  'ssh',
+  'tail',
+  'watch',
+];
+
 export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
+
+  // 뷰 모드 상태 (Blocks or Interactive)
+  const [viewMode, setViewMode] = useState<'blocks' | 'interactive'>('blocks');
 
   // Store에서 상태 가져오기
   const store = useChatStore();
@@ -208,6 +228,13 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   // 명령어 실행 (직접 또는 AI 생성)
   const handleExecuteCommand = async (command: string, naturalInput?: string) => {
     logger.info('[TerminalPanel] Executing command:', command);
+
+    // 인터랙티브 명령어 감지 → 자동으로 Interactive 모드로 전환
+    const firstCommand = command.trim().split(/\s+/)[0];
+    if (INTERACTIVE_COMMANDS.includes(firstCommand)) {
+      logger.info('[TerminalPanel] Detected interactive command, switching to interactive mode');
+      setViewMode('interactive');
+    }
 
     // 활성 세션 확인
     const activeSession = (store as any).getActiveTerminalSession

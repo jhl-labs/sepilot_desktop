@@ -141,7 +141,7 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
       logger.error('[GeneralSettingsTab] Failed to show test notification:', error);
       setNotificationTestResult({
         type: 'error',
-        message: `알림 표시 실패: ${error.message || '알 수 없는 오류'}`,
+        message: `알림 표시 실패: ${error instanceof Error ? error.message : String(error) || '알 수 없는 오류'}`,
       });
     } finally {
       setIsTestingNotification(false);

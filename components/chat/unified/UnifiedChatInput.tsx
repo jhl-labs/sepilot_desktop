@@ -281,7 +281,9 @@ export function UnifiedChatInput({
         }
       } catch (error) {
         console.error('[UnifiedChatInput] Failed to load tools:', error);
-        setToolsError(error.message || 'Failed to load tools');
+        setToolsError(
+          error instanceof Error ? error.message : String(error) || 'Failed to load tools'
+        );
       } finally {
         setToolsLoading(false);
       }

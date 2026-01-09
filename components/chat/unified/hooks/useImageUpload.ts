@@ -28,7 +28,7 @@ export function useImageUpload() {
       }
     } catch (error) {
       console.error('Failed to select images:', error);
-      setError(error.message || 'Failed to select images');
+      setError(error instanceof Error ? error.message : String(error) || 'Failed to select images');
     }
   }, []);
 
@@ -78,7 +78,11 @@ export function useImageUpload() {
         setSelectedImages((prev) => [...prev, newImage]);
       } catch (error) {
         console.error('Failed to read clipboard image:', error);
-        setError(error.message || '클립보드 이미지를 처리하는 중 오류가 발생했습니다');
+        setError(
+          error instanceof Error
+            ? error.message
+            : String(error) || '클립보드 이미지를 처리하는 중 오류가 발생했습니다'
+        );
       }
     }
   }, []);
