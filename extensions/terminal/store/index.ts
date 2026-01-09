@@ -20,6 +20,7 @@ import {
   clearAllTerminalBlocksFromVectorDB,
 } from './vectordb';
 import { initialSessionState, createSessionActions } from './sessions';
+import { initialBookmarkState, createBookmarkActions } from './bookmarks';
 
 // 자동 저장 디바운서 (1초 후 저장)
 const autoSave = createAutoSaveDebouncer(1000);
@@ -30,6 +31,7 @@ const autoSave = createAutoSaveDebouncer(1000);
 export const initialTerminalState: TerminalStoreState & {
   sessions?: any[];
   activeSessionId?: string | null;
+  bookmarks?: any[];
 } = {
   // 블록 관리
   terminalBlocks: [],
@@ -37,6 +39,9 @@ export const initialTerminalState: TerminalStoreState & {
 
   // 다중 세션 (새로 추가)
   ...initialSessionState,
+
+  // 북마크 (새로 추가)
+  ...initialBookmarkState,
 
   // 세션 관리 (레거시 - 하위 호환성)
   terminalSessionId: null,
@@ -281,6 +286,9 @@ export function createTerminalSlice(
 
     // 다중 세션 관리 액션
     ...createSessionActions(set, get, autoSave),
+
+    // 북마크 관리 액션
+    ...createBookmarkActions(set, get),
   };
 }
 
@@ -292,3 +300,4 @@ export type {
   TerminalStoreActions,
 } from '../types';
 export type { TerminalSession } from '../types/sessions';
+export type { CommandBookmark } from '../types/bookmarks';

@@ -467,3 +467,36 @@ export interface Activity {
 
 // LangGraph Stream Event Types are defined in electron.d.ts
 export type { LangGraphStreamEvent } from './electron';
+
+// Skills types
+export type {
+  SkillCategory,
+  SkillManifest,
+  SkillKnowledge,
+  SkillTemplate,
+  SkillTemplateVariable,
+  SkillToolExample,
+  SkillWorkflow,
+  SkillWorkflowStep,
+  SkillContent,
+  SkillResourceFile,
+  SkillResourceImage,
+  SkillResources,
+  SkillPackage,
+  SkillSourceType,
+  SkillSource,
+  InstalledSkill,
+  SkillUsageHistory,
+  SkillRegistryEntry,
+  SkillSearchFilters,
+  SkillUpdate,
+  SkillValidationResult,
+  SkillStatistics,
+  ContextMatchResult,
+  LoadedSkill,
+  SkillBuilderFormData,
+  SkillExportFormat,
+  SkillImportOptions,
+  SkillContextInjectionResult,
+  SkillManagerConfig,
+} from './skill';

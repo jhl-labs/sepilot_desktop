@@ -123,6 +123,52 @@ interface AuthAPI {
   removeOAuthCallbackListener: (handler: (event: Event, url: string) => void) => void;
 }
 
+// Skills API
+interface SkillsAPI {
+  // Skill 조회
+  getInstalled: () => Promise<IPCResponse<import('./index').InstalledSkill[]>>;
+  getEnabled: () => Promise<IPCResponse<import('./index').InstalledSkill[]>>;
+  getSkill: (skillId: string) => Promise<IPCResponse<import('./index').InstalledSkill | null>>;
+
+  // Skill 관리
+  install: (
+    skillPackage: import('./index').SkillPackage
+  ) => Promise<IPCResponse<import('./index').InstalledSkill>>;
+  installFromLocal: (zipPath: string) => Promise<IPCResponse<import('./index').InstalledSkill>>;
+  remove: (skillId: string) => Promise<IPCResponse>;
+  toggle: (skillId: string, enabled: boolean) => Promise<IPCResponse>;
+
+  // Skill 사용
+  loadSkill: (skillId: string) => Promise<IPCResponse<import('./index').SkillPackage>>;
+  updateUsage: (skillId: string) => Promise<IPCResponse>;
+
+  // Skill 검색 및 마켓플레이스
+  fetchMarketplace: () => Promise<IPCResponse<import('./index').SkillRegistryEntry[]>>;
+  searchSkills: (
+    query: string,
+    filters?: import('./index').SkillSearchFilters
+  ) => Promise<IPCResponse<import('./index').SkillRegistryEntry[]>>;
+  downloadFromMarketplace: (
+    skillPath: string
+  ) => Promise<IPCResponse<import('./index').SkillPackage>>;
+  checkUpdates: () => Promise<IPCResponse<import('./index').SkillUpdate[]>>;
+  updateSkill: (skillId: string) => Promise<IPCResponse<import('./index').InstalledSkill>>;
+
+  // Skill 통계
+  getStatistics: (
+    skillId: string
+  ) => Promise<IPCResponse<import('./index').SkillStatistics | null>>;
+  getUsageHistory: (
+    skillId: string,
+    limit?: number
+  ) => Promise<IPCResponse<import('./index').SkillUsageHistory[]>>;
+
+  // Skill 검증
+  validate: (
+    skillPackage: import('./index').SkillPackage
+  ) => Promise<IPCResponse<import('./index').SkillValidationResult>>;
+}
+
 // LLM 응답 타입
 interface LLMChatResponse {
   content: string;
@@ -973,6 +1019,7 @@ interface ElectronAPI {
   persona: PersonaAPI;
   config: ConfigAPI;
   mcp: MCPAPI;
+  skills: SkillsAPI; // Skills 마켓플레이스 및 관리 API
   auth: AuthAPI;
   llm: LLMAPI;
   langgraph: LangGraphAPI;
@@ -1013,6 +1060,7 @@ export type {
   MCPAPI,
   MCPTool,
   MCPServerStatus,
+  SkillsAPI,
   AuthAPI,
   GitHubUser,
   OAuthLoginInfo,

@@ -9,7 +9,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/utils/logger';
 
 interface InteractiveTerminalProps {
   sessionId: string;
@@ -35,7 +35,7 @@ export function InteractiveTerminal({ sessionId, ptySessionId }: InteractiveTerm
         background: '#1e1e1e',
         foreground: '#d4d4d4',
         cursor: '#ffffff',
-        selection: 'rgba(255, 255, 255, 0.3)',
+        selectionBackground: 'rgba(255, 255, 255, 0.3)',
         black: '#000000',
         red: '#cd3131',
         green: '#0dbc79',
