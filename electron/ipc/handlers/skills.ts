@@ -193,9 +193,9 @@ export function registerSkillsHandlers(): void {
 
         // LoadedSkill을 SkillPackage로 변환
         const skillPackage: SkillPackage = {
-          manifest: loadedSkill.manifest,
-          content: loadedSkill.content,
-          resources: loadedSkill.resources,
+          manifest: loadedSkill.package.manifest,
+          content: loadedSkill.package.content,
+          resources: loadedSkill.package.resources,
         };
 
         return { success: true, data: skillPackage };
@@ -311,22 +311,25 @@ export function registerSkillsHandlers(): void {
   /**
    * Phase 2: GitHub 마켓플레이스에서 스킬 레지스트리 가져오기
    */
-  ipcMain.handle('skills:fetch-marketplace', async (): Promise<IPCResponse> => {
-    try {
-      const registry = await githubIntegration.fetchSkillsRegistry();
-      return { success: true, data: registry };
-    } catch (error) {
-      console.error('[IPC] skills:fetch-marketplace error:', error);
-      return { success: false, error: String(error) };
+  ipcMain.handle(
+    'skills:fetch-marketplace',
+    async (): Promise<IPCResponse<SkillRegistryEntry[]>> => {
+      try {
+        const registry = await githubIntegration.fetchSkillsRegistry();
+        return { success: true, data: registry };
+      } catch (error) {
+        console.error('[IPC] skills:fetch-marketplace error:', error);
+        return { success: false, error: String(error) };
+      }
     }
-  });
+  );
 
   /**
    * Phase 2: 스킬 검색
    */
   ipcMain.handle(
     'skills:search-skills',
-    async (_, query: string, filters: any): Promise<IPCResponse> => {
+    async (_, query: string, filters: any): Promise<IPCResponse<SkillRegistryEntry[]>> => {
       try {
         const results = await githubIntegration.searchSkills(query, filters);
         return { success: true, data: results };
@@ -342,7 +345,7 @@ export function registerSkillsHandlers(): void {
    */
   ipcMain.handle(
     'skills:download-from-marketplace',
-    async (_, skillPath: string): Promise<IPCResponse> => {
+    async (_, skillPath: string): Promise<IPCResponse<InstalledSkill>> => {
       try {
         // GitHub에서 스킬 다운로드
         const skillPackage = await githubIntegration.downloadSkill(skillPath);
@@ -367,7 +370,7 @@ export function registerSkillsHandlers(): void {
   /**
    * Phase 2: 스킬 업데이트 확인
    */
-  ipcMain.handle('skills:check-updates', async (): Promise<IPCResponse> => {
+  ipcMain.handle('skills:check-updates', async (): Promise<IPCResponse<SkillUpdate[]>> => {
     try {
       // 설치된 스킬 목록 가져오기
       const installedSkills = await skillRegistry.getInstalledSkills();
@@ -393,37 +396,40 @@ export function registerSkillsHandlers(): void {
   /**
    * Phase 2: 스킬 업데이트
    */
-  ipcMain.handle('skills:update-skill', async (_, skillId: string): Promise<IPCResponse> => {
-    try {
-      // 기존 스킬 정보 가져오기
-      const existingSkill = await skillRegistry.getSkill(skillId);
-      if (!existingSkill) {
-        return { success: false, error: `Skill not found: ${skillId}` };
+  ipcMain.handle(
+    'skills:update-skill',
+    async (_, skillId: string): Promise<IPCResponse<InstalledSkill>> => {
+      try {
+        // 기존 스킬 정보 가져오기
+        const existingSkill = await skillRegistry.getSkill(skillId);
+        if (!existingSkill) {
+          return { success: false, error: `Skill not found: ${skillId}` };
+        }
+
+        // 마켓플레이스 출처인지 확인
+        if (existingSkill.source.type !== 'marketplace' || !existingSkill.source.url) {
+          return { success: false, error: 'Skill is not from marketplace' };
+        }
+
+        // GitHub 경로 추출 (URL에서)
+        const skillPath = existingSkill.source.url.split('/tree/main/')[1];
+        if (!skillPath) {
+          return { success: false, error: 'Invalid marketplace skill URL' };
+        }
+
+        // GitHub에서 최신 버전 다운로드
+        const skillPackage = await githubIntegration.downloadSkill(skillPath);
+
+        // 스킬 업데이트
+        const updatedSkill = await skillRegistry.updateSkill(skillPackage);
+
+        return { success: true, data: updatedSkill };
+      } catch (error) {
+        console.error('[IPC] skills:update-skill error:', error);
+        return { success: false, error: String(error) };
       }
-
-      // 마켓플레이스 출처인지 확인
-      if (existingSkill.source.type !== 'marketplace' || !existingSkill.source.url) {
-        return { success: false, error: 'Skill is not from marketplace' };
-      }
-
-      // GitHub 경로 추출 (URL에서)
-      const skillPath = existingSkill.source.url.split('/tree/main/')[1];
-      if (!skillPath) {
-        return { success: false, error: 'Invalid marketplace skill URL' };
-      }
-
-      // GitHub에서 최신 버전 다운로드
-      const skillPackage = await githubIntegration.downloadSkill(skillPath);
-
-      // 스킬 업데이트
-      const updatedSkill = await skillRegistry.updateSkill(skillPackage);
-
-      return { success: true, data: updatedSkill };
-    } catch (error) {
-      console.error('[IPC] skills:update-skill error:', error);
-      return { success: false, error: String(error) };
     }
-  });
+  );
 
   console.log('[IPC] Skills handlers registered successfully');
 }

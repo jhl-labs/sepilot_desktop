@@ -26,6 +26,7 @@ import { setupTerminalHandlers } from './handlers/terminal';
 import { setupPersonaHandlers } from './handlers/persona';
 import { setupErrorReportingHandlers } from './handlers/error-reporting';
 import { setupNotificationHandlers } from './handlers/notification';
+import { registerSkillsHandlers } from './handlers/skills';
 import { logger } from '../services/logger';
 import { registerExtensionIpcHandlers } from '../../lib/extensions/loader-main';
 
@@ -60,6 +61,7 @@ export function setupIpcHandlers(
   setupPersonaHandlers();
   setupErrorReportingHandlers();
   setupNotificationHandlers(getMainWindow);
+  registerSkillsHandlers();
 
   // Extension IPC handlers
   registerExtensionIpcHandlers();
@@ -83,3 +85,6 @@ export {
   registerFileHandlers,
   setupComfyUIHandlers,
 };
+
+// Re-export Skills functions
+export { initializeSkills } from './handlers/skills';

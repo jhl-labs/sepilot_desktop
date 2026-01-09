@@ -208,6 +208,7 @@ export interface SkillSource {
   repo?: string; // 'owner/repo' 형식 (GitHub)
   branch?: string; // Git branch (기본값: 'main')
   commit?: string; // 특정 커밋 해시 (버전 고정용)
+  downloadedAt?: number; // 다운로드 시간 (timestamp)
 }
 
 /**
@@ -300,6 +301,11 @@ export interface SkillValidationResult {
   valid: boolean; // 검증 통과 여부
   errors: string[]; // 에러 목록
   warnings: string[]; // 경고 목록
+  missingDependencies?: {
+    // 누락된 의존성
+    mcpServers: string[];
+    extensions: string[];
+  };
 }
 
 /**
