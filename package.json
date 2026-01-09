@@ -2,6 +2,10 @@
   "name": "sepilot-desktop",
   "version": "0.8.0",
   "description": "SEPilot Desktop - LLM Desktop Application with LangGraph, RAG, and MCP",
+  "author": {
+    "name": "JHL Labs",
+    "email": "support@jhl-labs.com"
+  },
   "main": "dist/electron/electron/main.js",
   "scripts": {
     "postinstall": "node scripts/copy-monaco.js",
