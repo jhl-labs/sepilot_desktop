@@ -6,6 +6,10 @@
 import { TextEncoder, TextDecoder } from 'util';
 import { ReadableStream } from 'stream/web';
 
+// Import and re-export common mock from shared file
+import { mockElectronAPI } from './mocks/electronAPI';
+export { mockElectronAPI };
+
 // Polyfill TextEncoder/TextDecoder for Node.js
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder as any;
@@ -40,98 +44,6 @@ const crypto = require('crypto');
     deriveBits: jest.fn(),
     deriveKey: jest.fn(),
   },
-};
-
-// Mock window.electronAPI for backend tests that use it
-export const mockElectronAPI = {
-  platform: 'darwin',
-  chat: {
-    saveConversation: jest.fn(),
-    loadConversations: jest.fn(),
-    deleteConversation: jest.fn(),
-    updateConversationTitle: jest.fn(),
-    saveMessage: jest.fn(),
-    loadMessages: jest.fn(),
-    deleteMessage: jest.fn(),
-  },
-  config: {
-    load: jest.fn(),
-    save: jest.fn(),
-    updateSetting: jest.fn(),
-    getSetting: jest.fn(),
-  },
-  mcp: {
-    addServer: jest.fn(),
-    removeServer: jest.fn(),
-    listServers: jest.fn(),
-    getAllTools: jest.fn(),
-    callTool: jest.fn(),
-    toggleServer: jest.fn(),
-  },
-  auth: {
-    initiateLogin: jest.fn(),
-    githubLogin: jest.fn(),
-    exchangeCode: jest.fn(),
-    saveToken: jest.fn(),
-    getUserInfo: jest.fn(),
-    getToken: jest.fn(),
-    logout: jest.fn(),
-    syncFromGitHub: jest.fn(),
-    syncToGitHub: jest.fn(),
-    onAuthSuccess: jest.fn(),
-    removeAuthSuccessListener: jest.fn(),
-    onOAuthCallback: jest.fn(),
-    removeOAuthCallbackListener: jest.fn(),
-  },
-  llm: {
-    streamChat: jest.fn(),
-    chat: jest.fn(),
-    init: jest.fn(),
-    validate: jest.fn(),
-    fetchModels: jest.fn(),
-    generateTitle: jest.fn(),
-    onStreamChunk: jest.fn(),
-    onStreamDone: jest.fn(),
-    onStreamError: jest.fn(),
-    removeStreamListener: jest.fn(),
-  },
-  vectorDB: {
-    initialize: jest.fn(),
-    createIndex: jest.fn(),
-    deleteIndex: jest.fn(),
-    indexExists: jest.fn(),
-    insert: jest.fn(),
-    search: jest.fn(),
-    delete: jest.fn(),
-    count: jest.fn(),
-    getAll: jest.fn(),
-  },
-  file: {
-    selectImages: jest.fn(),
-    loadImage: jest.fn(),
-  },
-  github: {
-    setPrivateKey: jest.fn(),
-    hasPrivateKey: jest.fn(),
-    getRepositories: jest.fn(),
-    syncFromGitHub: jest.fn(),
-    syncToGitHub: jest.fn(),
-  },
-  shell: {
-    openExternal: jest.fn(),
-  },
-  embeddings: {
-    generate: jest.fn(),
-    generateBatch: jest.fn(),
-    validate: jest.fn(),
-  },
-  comfyui: {
-    testConnection: jest.fn(),
-    queuePrompt: jest.fn(),
-    fetchImage: jest.fn(),
-  },
-  on: jest.fn(),
-  removeListener: jest.fn(),
 };
 
 // Mock localStorage for backend tests
