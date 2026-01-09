@@ -94,8 +94,8 @@ importers:
         specifier: ^0.12.0
         version: 0.12.0
       '@xterm/xterm':
-        specifier: ^5.5.0
-        version: 5.5.0
+        specifier: ^6.0.0
+        version: 6.0.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2165,20 +2165,20 @@ packages:
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
 
-  '@turf/area@7.3.0':
-    resolution: {integrity: sha512-N1feXkRzwiNakzloykPWwTBmZcmHFfL/raGMwJmZ9QoHQZqDNVFrI0bmuX8hALUJ8jzpt/c/91M1CIuRMF9vIw==}
+  '@turf/area@7.3.1':
+    resolution: {integrity: sha512-9nSiwt4zB5QDMcSoTxF28WpK1f741MNKcpUJDiHVRX08CZ4qfGWGV9ZIPQ8TVEn5RE4LyYkFuQ47Z9pdEUZE9Q==}
 
-  '@turf/bbox@7.3.0':
-    resolution: {integrity: sha512-EC5GSUJlhXSiCVCEmgCSheZYm0s1ouKzUNqeEOsEYlqTbMAZ19RWgsg/xH2tjnuUw2JP9eGAUzQnCFX6JEV53w==}
+  '@turf/bbox@7.3.1':
+    resolution: {integrity: sha512-/IyMKoS7P9B0ch5PIlQ6gMfoE8gRr48+cSbzlyexvEjuDuaAV1VURjH1jAthS0ipFG8RrFxFJKnp7TLL1Skong==}
 
-  '@turf/centroid@7.3.0':
-    resolution: {integrity: sha512-6skXlwv6fCkdKsrkniizpEuC1IsAYQEyZG4XIzK5d3FGQTM/lVInLQP+wd9I6FLtW8b/6UbZcIjSU9wP/MMbTA==}
+  '@turf/centroid@7.3.1':
+    resolution: {integrity: sha512-hRnsDdVBH4pX9mAjYympb2q5W8TCMUMNEjcRrAF7HTCyjIuRmjJf8vUtlzf7TTn9RXbsvPc1vtm3kLw20Jm8DQ==}
 
-  '@turf/helpers@7.3.0':
-    resolution: {integrity: sha512-5kWdgwI6e2vGbkt2qOD+Z2BiKQ7dfKN/PtWRLCpvzyOO59rk19R53CHi8nUT/Y1vQLgWmT6eNpiKwsWwPZGIdg==}
+  '@turf/helpers@7.3.1':
+    resolution: {integrity: sha512-zkL34JVhi5XhsuMEO0MUTIIFEJ8yiW1InMu4hu/oRqamlY4mMoZql0viEmH6Dafh/p+zOl8OYvMJ3Vm3rFshgg==}
 
-  '@turf/meta@7.3.0':
-    resolution: {integrity: sha512-fTLqdQqRm8qA2zHHUbBMY++YT9LDQejLG7OD70XF2dwg9nPiF9mUxO7nrsDp2IY8vNmH9OTAiMtlIjb0ssYccg==}
+  '@turf/meta@7.3.1':
+    resolution: {integrity: sha512-NWsfOE5RVtWpLQNkfOF/RrYvLRPwwruxhZUV0UFIzHqfiRJ50aO9Y6uLY4bwCUe2TumLJQSR4yaoA72Rmr2mnQ==}
 
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
@@ -2728,8 +2728,8 @@ packages:
   '@xterm/addon-web-links@0.12.0':
     resolution: {integrity: sha512-4Smom3RPyVp7ZMYOYDoC/9eGJJJqYhnPLGGqJ6wOBfB8VxPViJNSKdgRYb8NpaM6YSelEKbA2SStD7lGyqaobw==}
 
-  '@xterm/xterm@5.5.0':
-    resolution: {integrity: sha512-hqJHYaQb5OptNunnyAnkHyM8aCjZ1MEIDTQu1iIbbTD/xops91NB5yq1ZK/dC2JDbVWtF23zUtl9JE2NqwT87A==}
+  '@xterm/xterm@6.0.0':
+    resolution: {integrity: sha512-TQwDdQGtwwDt+2cgKDLn0IRaSxYu1tSUjgKarSDkUM0ZNiSRXFpjxEsvc/Zgc5kq5omJ+V0a8/kIM2WD3sMOYg==}
 
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
@@ -7247,6 +7247,10 @@ packages:
   sax@1.4.3:
     resolution: {integrity: sha512-yqYn1JhPczigF94DMS+shiDMjDowYO6y9+wB/4WgO0Y19jWYk0lQ4tuG5KI7kj4FTp1wxPj5IFfcrz/s1c3jjQ==}
 
+  sax@1.4.4:
+    resolution: {integrity: sha512-1n3r/tGXO6b6VXMdFT54SHzT9ytu9yr7TaELowdYpMqY/Ao7EnlQGmAQ1+RatX7Tkkdm6hONI2owqNx2aZj5Sw==}
+    engines: {node: '>=11.0.0'}
+
   saxes@6.0.0:
     resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
     engines: {node: '>=v12.22.7'}
@@ -8147,8 +8151,8 @@ packages:
   walker@1.0.8:
     resolution: {integrity: sha512-ts/8E8l5b7kY0vlWLewOkDXMmPdLcVV4GmOQLyxuSswIJsweeFZtAsMF7k1Nszz+TYBQrlYRmzOnr398y1JemQ==}
 
-  watchpack@2.4.4:
-    resolution: {integrity: sha512-c5EGNOiyxxV5qmTtAB7rbiXxi1ooX1pQKMLX/MIabJjRA0SJBQOjKF+KSVfHkr9U1cADPon0mRiVe/riyaiDUA==}
+  watchpack@2.5.0:
+    resolution: {integrity: sha512-e6vZvY6xboSwLz2GD36c16+O/2Z6fKvIf4pOXptw2rY9MVwE/TXc6RGqxD3I3x0a28lwBY7DE+76uTPSsBrrCA==}
     engines: {node: '>=10.13.0'}
 
   watskeburt@5.0.0:
@@ -10503,35 +10507,35 @@ snapshots:
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
-  '@turf/area@7.3.0':
+  '@turf/area@7.3.1':
     dependencies:
-      '@turf/helpers': 7.3.0
-      '@turf/meta': 7.3.0
+      '@turf/helpers': 7.3.1
+      '@turf/meta': 7.3.1
       '@types/geojson': 7946.0.16
       tslib: 2.8.1
 
-  '@turf/bbox@7.3.0':
+  '@turf/bbox@7.3.1':
     dependencies:
-      '@turf/helpers': 7.3.0
-      '@turf/meta': 7.3.0
+      '@turf/helpers': 7.3.1
+      '@turf/meta': 7.3.1
       '@types/geojson': 7946.0.16
       tslib: 2.8.1
 
-  '@turf/centroid@7.3.0':
+  '@turf/centroid@7.3.1':
     dependencies:
-      '@turf/helpers': 7.3.0
-      '@turf/meta': 7.3.0
+      '@turf/helpers': 7.3.1
+      '@turf/meta': 7.3.1
       '@types/geojson': 7946.0.16
       tslib: 2.8.1
 
-  '@turf/helpers@7.3.0':
+  '@turf/helpers@7.3.1':
     dependencies:
       '@types/geojson': 7946.0.16
       tslib: 2.8.1
 
-  '@turf/meta@7.3.0':
+  '@turf/meta@7.3.1':
     dependencies:
-      '@turf/helpers': 7.3.0
+      '@turf/helpers': 7.3.1
       '@types/geojson': 7946.0.16
 
   '@tybys/wasm-util@0.10.1':
@@ -11193,7 +11197,7 @@ snapshots:
 
   '@xterm/addon-web-links@0.12.0': {}
 
-  '@xterm/xterm@5.5.0': {}
+  '@xterm/xterm@6.0.0': {}
 
   '@xtuc/ieee754@1.2.0': {}
 
@@ -15514,7 +15518,7 @@ snapshots:
     dependencies:
       debug: 3.2.7
       iconv-lite: 0.4.24
-      sax: 1.4.3
+      sax: 1.4.4
     transitivePeerDependencies:
       - supports-color
 
@@ -16014,9 +16018,9 @@ snapshots:
       '@plotly/d3-sankey-circular': 0.33.1
       '@plotly/mapbox-gl': 1.13.4(mapbox-gl@1.13.3)
       '@plotly/regl': 2.1.2
-      '@turf/area': 7.3.0
-      '@turf/bbox': 7.3.0
-      '@turf/centroid': 7.3.0
+      '@turf/area': 7.3.1
+      '@turf/bbox': 7.3.1
+      '@turf/centroid': 7.3.1
       base64-arraybuffer: 1.0.2
       canvas-fit: 1.5.0
       color-alpha: 1.0.4
@@ -16735,6 +16739,8 @@ snapshots:
       truncate-utf8-bytes: 1.0.2
 
   sax@1.4.3: {}
+
+  sax@1.4.4: {}
 
   saxes@6.0.0:
     dependencies:
@@ -17762,7 +17768,7 @@ snapshots:
     dependencies:
       makeerror: 1.0.12
 
-  watchpack@2.4.4:
+  watchpack@2.5.0:
     dependencies:
       glob-to-regexp: 0.4.1
       graceful-fs: 4.2.11
@@ -17848,7 +17854,7 @@ snapshots:
       schema-utils: 4.3.3
       tapable: 2.3.0
       terser-webpack-plugin: 5.3.16(webpack@5.103.0)
-      watchpack: 2.4.4
+      watchpack: 2.5.0
       webpack-sources: 3.3.3
     transitivePeerDependencies:
       - '@swc/core'
