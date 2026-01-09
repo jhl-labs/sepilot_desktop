@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --color-background: hsl(0 0% 100%);
@@ -157,4 +157,42 @@ body {
   margin-top: 1rem;
   margin-bottom: 1rem;
   border-color: var(--color-border);
+}
+
+/* xterm.js 터미널 스타일 */
+.xterm {
+  padding: 8px;
+  height: 100%;
+  width: 100%;
+}
+
+.xterm-viewport {
+  overflow-y: auto !important;
+}
+
+.xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+}
+
+.xterm-viewport::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+/* xterm 화면이 깨지는 문제 해결 - 컨테이너 크기 고정 */
+.xterm-screen {
+  width: 100% !important;
+}
+
+/* 터미널 텍스트 선택 스타일 */
+.xterm-selection {
+  opacity: 0.3;
 }

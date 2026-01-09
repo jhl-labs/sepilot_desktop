@@ -125,6 +125,12 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
         conversationId: testConversationId,
         title: testTitle,
         body: '알림 테스트가 성공적으로 완료되었습니다!',
+        // Add rich content for Application Type
+        ...(notificationType === 'application' && {
+          html: `<span style="color: #10b981; font-weight: bold;">성공!</span> 알림 테스트가 <span style="color: #3b82f6;">HTML</span>과 함께 표시됩니다.<br/>더 큰 텍스트와 이미지도 지원합니다.`,
+          imageUrl:
+            'https://images.unsplash.com/photo-1542206395-9feb3edaa68d?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+        }),
       });
 
       setNotificationTestResult({

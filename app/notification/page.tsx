@@ -7,6 +7,8 @@ interface NotificationData {
   conversationId: string;
   title: string;
   body: string;
+  html?: string;
+  imageUrl?: string;
 }
 
 export default function NotificationPage() {
@@ -84,6 +86,8 @@ export default function NotificationPage() {
       <CustomNotification
         title={notification.title}
         message={notification.body}
+        html={notification.html}
+        imageUrl={notification.imageUrl}
         onClick={handleClick}
         onDismiss={handleDismiss} // We need to update CustomNotification to support onDismiss event if not existing
       />

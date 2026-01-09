@@ -44,10 +44,14 @@ export function useNotification() {
       conversationId,
       title,
       body,
+      html,
+      imageUrl,
     }: {
       conversationId: string;
       title: string;
       body: string;
+      html?: string;
+      imageUrl?: string;
     }) => {
       try {
         if (!window.electronAPI?.notification) {
@@ -61,6 +65,8 @@ export function useNotification() {
           conversationId,
           title,
           body,
+          html,
+          imageUrl,
           // @ts-expect-error - type param added to IPC in handler
           type: notificationType,
         });

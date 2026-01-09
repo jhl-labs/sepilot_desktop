@@ -3,7 +3,7 @@ import path from 'path';
 import { logger } from './logger';
 
 const WINDOW_WIDTH = 400;
-const WINDOW_HEIGHT = 150; // Height to accommodate the notification
+const WINDOW_HEIGHT = 400; // Increased height for rich content (images/html)
 const PADDING = 16;
 const AUTO_HIDE_DELAY = 5000;
 
@@ -58,7 +58,13 @@ export class NotificationWindowManager {
     });
   }
 
-  public show(options: { conversationId: string; title: string; body: string }) {
+  public show(options: {
+    conversationId: string;
+    title: string;
+    body: string;
+    html?: string;
+    imageUrl?: string;
+  }) {
     if (!this.window || this.window.isDestroyed()) {
       this.createWindow();
       // Wait for load? Or just try to send later.

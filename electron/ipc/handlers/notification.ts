@@ -28,10 +28,12 @@ export function setupNotificationHandlers(getMainWindow: () => BrowserWindow | n
         conversationId: string;
         title: string;
         body: string;
+        html?: string;
+        imageUrl?: string;
         type?: 'os' | 'application'; // Add type parameter
       }
     ) => {
-      const { conversationId, title, body, type = 'os' } = options;
+      const { conversationId, title, body, html, imageUrl, type = 'os' } = options;
 
       try {
         logger.info(`[Notification] Showing ${type} notification for: ${conversationId}`);
@@ -42,6 +44,8 @@ export function setupNotificationHandlers(getMainWindow: () => BrowserWindow | n
             conversationId,
             title,
             body,
+            html,
+            imageUrl,
           });
           return { success: true };
         }
