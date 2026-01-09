@@ -20,6 +20,7 @@ import {
   Download,
   ExternalLink,
   PackageCheck,
+  Bell,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { SupportedLanguage } from '@/lib/i18n';
@@ -27,6 +28,8 @@ import { logger } from '@/lib/utils/logger';
 import { httpFetch, safeJsonParse } from '@/lib/http';
 import type { NetworkConfig } from '@/types';
 import { MessageSquare } from 'lucide-react';
+import { isElectron } from '@/lib/platform';
+import { useChatStore } from '@/lib/store/chat-store';
 
 // Chat width setting
 const CHAT_WIDTH_KEY = 'sepilot_chat_message_width';
@@ -73,6 +76,15 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
   const [chatWidth, setChatWidth] = useState<number>(DEFAULT_CHAT_WIDTH);
   const [initialChatWidth, setInitialChatWidth] = useState<number>(DEFAULT_CHAT_WIDTH);
 
+  // Notification test state
+  const [isTestingNotification, setIsTestingNotification] = useState(false);
+  const [notificationTestResult, setNotificationTestResult] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+
+  const { conversations, activeConversationId } = useChatStore();
+
   // Load chat width from localStorage on mount
   useEffect(() => {
     const savedWidth = localStorage.getItem(CHAT_WIDTH_KEY);
@@ -94,6 +106,46 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
     setInitialChatWidth(chatWidth);
     // Dispatch custom event to notify ChatArea
     window.dispatchEvent(new CustomEvent('sepilot:chat-width-change', { detail: chatWidth }));
+  };
+
+  const handleTestNotification = async () => {
+    if (!isElectron() || !window.electronAPI?.notification) {
+      setNotificationTestResult({
+        type: 'error',
+        message: '알림 기능은 Electron 환경에서만 사용할 수 있습니다.',
+      });
+      return;
+    }
+
+    setIsTestingNotification(true);
+    setNotificationTestResult(null);
+
+    try {
+      // 현재 활성 대화 또는 첫 번째 대화 사용
+      const testConversationId =
+        activeConversationId || conversations[0]?.id || 'test-conversation';
+      const testConversation = conversations.find((c) => c.id === testConversationId);
+      const testTitle = testConversation?.title || '테스트 대화';
+
+      await window.electronAPI.notification.show({
+        conversationId: testConversationId,
+        title: testTitle,
+        body: '알림 테스트가 성공적으로 완료되었습니다!',
+      });
+
+      setNotificationTestResult({
+        type: 'success',
+        message: '테스트 알림이 표시되었습니다. 알림을 클릭하면 해당 대화로 이동합니다.',
+      });
+    } catch (error: any) {
+      logger.error('[GeneralSettingsTab] Failed to show test notification:', error);
+      setNotificationTestResult({
+        type: 'error',
+        message: `알림 표시 실패: ${error.message || '알 수 없는 오류'}`,
+      });
+    } finally {
+      setIsTestingNotification(false);
+    }
   };
 
   const handleLanguageChange = async (value: string) => {
@@ -390,6 +442,58 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
                 {t('settings.general.chatWidth.previewText')}
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Notification Test Section */}
+      <div className="space-y-4">
+        <SettingsSectionHeader
+          icon={<Bell className="h-5 w-5" />}
+          title="알림"
+          description="백그라운드 스트리밍 완료 알림을 테스트합니다"
+        />
+
+        <div className="space-y-4">
+          <div className="p-4 border rounded-lg bg-muted/20 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              다른 대화를 보고 있거나 앱이 백그라운드에 있을 때 스트리밍이 완료되면 시스템 알림이
+              표시됩니다.
+            </p>
+
+            <Button
+              onClick={handleTestNotification}
+              disabled={isTestingNotification}
+              variant="outline"
+              className="w-full"
+            >
+              {isTestingNotification && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Bell className="mr-2 h-4 w-4" />
+              테스트 알림 보내기
+            </Button>
+
+            {notificationTestResult && (
+              <div
+                className={`p-3 rounded-lg text-sm ${
+                  notificationTestResult.type === 'success'
+                    ? 'bg-green-500/10 text-green-600 border border-green-500/20'
+                    : 'bg-red-500/10 text-red-600 border border-red-500/20'
+                }`}
+              >
+                {notificationTestResult.message}
+              </div>
+            )}
+          </div>
+
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>
+              💡 <strong>팁:</strong>
+            </p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>테스트 알림은 현재 활성 대화 제목으로 표시됩니다</li>
+              <li>알림을 클릭하면 해당 대화로 자동 이동합니다</li>
+              <li>실제 알림은 백그라운드에서 스트리밍이 완료될 때 자동으로 표시됩니다</li>
+            </ul>
           </div>
         </div>
       </div>

@@ -214,42 +214,48 @@ export function MainLayout({ children }: MainLayoutProps) {
   }, [isResizing, handleMouseMove, handleMouseUp]);
 
   // Initialize VectorDB and Embedding from config
-  const initializeFromConfig = useCallback(async (vectorDBConfig?: any, embeddingConfig?: any) => {
-    if (typeof window === 'undefined') {
-      return;
-    }
+  const initializeFromConfig = useCallback(
+    async (
+      vectorDBConfig?: import('@/lib/vectordb/types').VectorDBConfig,
+      embeddingConfig?: import('@/lib/vectordb/types').EmbeddingConfig
+    ) => {
+      if (typeof window === 'undefined') {
+        return;
+      }
 
-    try {
-      // VectorDB 초기화
-      if (vectorDBConfig) {
-        logger.info('[MainLayout] Initializing VectorDB:', vectorDBConfig.type);
+      try {
+        // VectorDB 초기화
+        if (vectorDBConfig) {
+          logger.info('[MainLayout] Initializing VectorDB:', vectorDBConfig.type);
 
-        // SQLite-vec는 브라우저에서 건너뛰기
-        if (vectorDBConfig.type === 'sqlite-vec' && !isElectron()) {
-          logger.info('⊘ Skipping SQLite-vec in browser environment');
-        } else {
-          try {
-            await initializeVectorDB(vectorDBConfig);
-            logger.info('✓ VectorDB initialized:', vectorDBConfig.type);
-          } catch (error) {
-            console.error('✗ Failed to initialize VectorDB:', error);
+          // SQLite-vec는 브라우저에서 건너뛰기
+          if (vectorDBConfig.type === 'sqlite-vec' && !isElectron()) {
+            logger.info('⊘ Skipping SQLite-vec in browser environment');
+          } else {
+            try {
+              await initializeVectorDB(vectorDBConfig);
+              logger.info('✓ VectorDB initialized:', vectorDBConfig.type);
+            } catch (error) {
+              console.error('✗ Failed to initialize VectorDB:', error);
+            }
           }
         }
-      }
 
-      // Embedding 초기화
-      if (embeddingConfig) {
-        try {
-          initializeEmbedding(embeddingConfig);
-          logger.info('✓ Embedding initialized:', embeddingConfig.provider);
-        } catch (error) {
-          console.error('✗ Failed to initialize Embedding:', error);
+        // Embedding 초기화
+        if (embeddingConfig) {
+          try {
+            initializeEmbedding(embeddingConfig);
+            logger.info('✓ Embedding initialized:', embeddingConfig.provider);
+          } catch (error) {
+            console.error('✗ Failed to initialize Embedding:', error);
+          }
         }
+      } catch (error) {
+        console.error('Initialization error:', error);
       }
-    } catch (error) {
-      console.error('Initialization error:', error);
-    }
-  }, []);
+    },
+    []
+  );
 
   // Auto-initialize VectorDB and Embedding on app start
   useEffect(() => {

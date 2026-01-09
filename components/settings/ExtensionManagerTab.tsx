@@ -22,7 +22,7 @@ interface ExtensionManagerTabProps {
 }
 
 function isElectron(): boolean {
-  return typeof window !== 'undefined' && !!(window as any).electronAPI;
+  return typeof window !== 'undefined' && !!window.electronAPI;
 }
 
 export function ExtensionManagerTab({ onSectionChange, message }: ExtensionManagerTabProps) {
@@ -113,11 +113,14 @@ export function ExtensionManagerTab({ onSectionChange, message }: ExtensionManag
         type: 'success',
         text: t('settings.extensions.saved'),
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('[ExtensionManagerTab] Toggle failed:', error);
       setLocalMessage({
         type: 'error',
-        text: error.message || t('settings.extensions.saveFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('settings.extensions.saveFailed'),
       });
 
       // 실패 시 원래 상태로 되돌리기
@@ -175,8 +178,8 @@ export function ExtensionManagerTab({ onSectionChange, message }: ExtensionManag
   };
 
   const loadAppConfig = async (): Promise<Partial<AppConfig>> => {
-    if (isElectron() && (window as any).electronAPI) {
-      const result = await (window as any).electronAPI.config.load();
+    if (isElectron() && window.electronAPI) {
+      const result = await window.electronAPI.config.load();
       return result.data || {};
     } else {
       const saved = localStorage.getItem('sepilot_app_config');
@@ -191,8 +194,8 @@ export function ExtensionManagerTab({ onSectionChange, message }: ExtensionManag
       ...partial,
     };
 
-    if (isElectron() && (window as any).electronAPI) {
-      await (window as any).electronAPI.config.save(newConfig);
+    if (isElectron() && window.electronAPI) {
+      await window.electronAPI.config.save(newConfig as AppConfig);
     }
 
     // localStorage 동기화 (Electron에서도 필요)

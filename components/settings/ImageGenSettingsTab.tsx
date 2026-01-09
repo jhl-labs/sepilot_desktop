@@ -85,11 +85,14 @@ export function ImageGenSettingsTab({
 
         setMessage({ type: 'success', text: t('settings.imagegen.comfyui.connectionSuccess') });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to test ComfyUI connection:', error);
       setMessage({
         type: 'error',
-        text: error.message || t('settings.imagegen.comfyui.connectionTestFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('settings.imagegen.comfyui.connectionTestFailed'),
       });
     } finally {
       setIsTestingConnection(false);
@@ -108,11 +111,14 @@ export function ImageGenSettingsTab({
       // TODO: Implement NanoBanana connection test via IPC
       // For now, just validate API key format
       setMessage({ type: 'success', text: t('settings.imagegen.nanobanana.configValid') });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to test NanoBanana connection:', error);
       setMessage({
         type: 'error',
-        text: error.message || t('settings.imagegen.nanobanana.connectionTestFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('settings.imagegen.nanobanana.connectionTestFailed'),
       });
     } finally {
       setIsTestingConnection(false);
@@ -162,7 +168,10 @@ export function ImageGenSettingsTab({
       </div>
 
       {/* Provider-specific Settings */}
-      <Tabs value={imageGenConfig.provider} onValueChange={(v) => handleProviderChange(v as any)}>
+      <Tabs
+        value={imageGenConfig.provider}
+        onValueChange={(v) => handleProviderChange(v as 'comfyui' | 'nanobanana')}
+      >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="comfyui" className="flex items-center gap-2">
             <Image className="h-4 w-4" />

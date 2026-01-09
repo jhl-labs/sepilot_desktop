@@ -9,6 +9,61 @@ import { httpFetch, httpPost, getNetworkConfig, createOctokitAgent } from '@/lib
 let cachedPrivateKey: string | null = null;
 
 /**
+ * Installation Access Token 획득 헬퍼 함수
+ * @returns Installation Token과 Octokit 인스턴스
+ */
+async function getInstallationAccessToken(
+  baseUrl: string,
+  installationId: string,
+  privateKey: string,
+  networkConfig: NetworkConfig | null
+): Promise<{ token: string; octokit: Octokit }> {
+  // App ID는 config에서 가져옴
+  const configStr = databaseService.getSetting('app_config');
+  if (!configStr) {
+    throw new Error('GitHub App 설정이 완료되지 않았습니다.');
+  }
+  const appConfig = JSON.parse(configStr);
+  const appId = appConfig.github?.appId;
+  if (!appId) {
+    throw new Error('GitHub App ID가 설정되지 않았습니다.');
+  }
+
+  const jwt = generateJWT(appId, privateKey);
+
+  // Installation Access Token 획득 (NetworkConfig 자동 적용)
+  const tokenResponse = await httpPost(
+    `${baseUrl}/api/v3/app/installations/${installationId}/access_tokens`,
+    null,
+    {
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      networkConfig,
+    }
+  );
+
+  if (!tokenResponse.ok) {
+    throw new Error('Installation Access Token 획득 실패');
+  }
+
+  const tokenData = await tokenResponse.json();
+  const installationToken = tokenData.token;
+
+  // Octokit 인스턴스 생성
+  const requestOptions = await createOctokitAgent(networkConfig);
+  const octokit = new Octokit({
+    auth: installationToken,
+    baseUrl: `${baseUrl}/api/v3`,
+    request: requestOptions,
+  });
+
+  return { token: installationToken, octokit };
+}
+
+/**
  * GitHub App IPC 핸들러
  * GHES 및 Network 설정 지원
  */
@@ -198,47 +253,13 @@ export function setupGitHubHandlers() {
           throw new Error('GitHub App Private Key가 설정되지 않았습니다.');
         }
 
-        // App ID는 config에서 가져옴
-        const configStr = databaseService.getSetting('app_config');
-        if (!configStr) {
-          throw new Error('GitHub App 설정이 완료되지 않았습니다.');
-        }
-        const appConfig = JSON.parse(configStr);
-        const appId = appConfig.github?.appId;
-        if (!appId) {
-          throw new Error('GitHub App ID가 설정되지 않았습니다.');
-        }
-
-        const jwt = generateJWT(appId, privateKey);
-
-        // Installation Access Token 획득 (NetworkConfig 자동 적용)
-        const tokenResponse = await httpPost(
-          `${baseUrl}/api/v3/app/installations/${installationId}/access_tokens`,
-          null,
-          {
-            headers: {
-              Authorization: `Bearer ${jwt}`,
-              Accept: 'application/vnd.github+json',
-              'X-GitHub-Api-Version': '2022-11-28',
-            },
-            networkConfig,
-          }
+        // Installation Access Token 획득 및 Octokit 생성
+        const { octokit } = await getInstallationAccessToken(
+          baseUrl,
+          installationId,
+          privateKey,
+          networkConfig
         );
-
-        if (!tokenResponse.ok) {
-          throw new Error('Installation Access Token 획득 실패');
-        }
-
-        const tokenData = await tokenResponse.json();
-        const installationToken = tokenData.token;
-
-        // Octokit으로 파일 가져오기
-        const requestOptions = await createOctokitAgent(networkConfig);
-        const octokit = new Octokit({
-          auth: installationToken,
-          baseUrl: `${baseUrl}/api/v3`,
-          request: requestOptions,
-        });
 
         const [owner, repoName] = repo.split('/');
 
@@ -292,47 +313,13 @@ export function setupGitHubHandlers() {
           throw new Error('GitHub App Private Key가 설정되지 않았습니다.');
         }
 
-        // App ID는 config에서 가져옴
-        const configStr = databaseService.getSetting('app_config');
-        if (!configStr) {
-          throw new Error('GitHub App 설정이 완료되지 않았습니다.');
-        }
-        const savedConfig = JSON.parse(configStr);
-        const appId = savedConfig.github?.appId;
-        if (!appId) {
-          throw new Error('GitHub App ID가 설정되지 않았습니다.');
-        }
-
-        const jwt = generateJWT(appId, privateKey);
-
-        // Installation Access Token 획득 (NetworkConfig 자동 적용)
-        const tokenResponse = await httpPost(
-          `${baseUrl}/api/v3/app/installations/${installationId}/access_tokens`,
-          null,
-          {
-            headers: {
-              Authorization: `Bearer ${jwt}`,
-              Accept: 'application/vnd.github+json',
-              'X-GitHub-Api-Version': '2022-11-28',
-            },
-            networkConfig,
-          }
+        // Installation Access Token 획득 및 Octokit 생성
+        const { octokit } = await getInstallationAccessToken(
+          baseUrl,
+          installationId,
+          privateKey,
+          networkConfig
         );
-
-        if (!tokenResponse.ok) {
-          throw new Error('Installation Access Token 획득 실패');
-        }
-
-        const tokenData = await tokenResponse.json();
-        const installationToken = tokenData.token;
-
-        // Octokit으로 파일 저장
-        const requestOptions = await createOctokitAgent(networkConfig);
-        const octokit = new Octokit({
-          auth: installationToken,
-          baseUrl: `${baseUrl}/api/v3`,
-          request: requestOptions,
-        });
 
         const [owner, repoName] = repo.split('/');
 

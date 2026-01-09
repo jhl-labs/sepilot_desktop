@@ -182,9 +182,12 @@ export function DocsSyncDialog({
           throw new Error(saveResult.error || t('documentsSync.saveError'));
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save personal repo:', error);
-      setMessage({ type: 'error', text: error.message || '설정 저장 실패' });
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : String(error) || '설정 저장 실패',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -271,9 +274,12 @@ export function DocsSyncDialog({
           throw new Error(saveResult.error || t('documentsSync.saveError'));
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save team doc:', error);
-      setMessage({ type: 'error', text: error.message || '설정 저장 실패' });
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : String(error) || '설정 저장 실패',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -306,9 +312,12 @@ export function DocsSyncDialog({
           throw new Error(saveResult.error || t('documentsSync.saveError'));
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete team doc:', error);
-      setMessage({ type: 'error', text: error.message || '삭제 실패' });
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : String(error) || '삭제 실패',
+      });
     }
   };
 
@@ -325,9 +334,7 @@ export function DocsSyncDialog({
               {t('documentsSync.title')}
             </div>
           </DialogTitle>
-          <DialogDescription>
-            {t('documentsSync.description')}
-          </DialogDescription>
+          <DialogDescription>{t('documentsSync.description')}</DialogDescription>
         </DialogHeader>
 
         {message && (
@@ -444,9 +451,7 @@ export function DocsSyncDialog({
                   )}
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {t('documentsSync.hints.saveFirst')}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('documentsSync.hints.saveFirst')}</p>
             </div>
           </TabsContent>
 
@@ -455,7 +460,9 @@ export function DocsSyncDialog({
               <div className="space-y-4 border rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">
-                    {editingTeamId === 'new' ? t('documentsSync.teamDocs.newTitle') : t('documentsSync.teamDocs.editTitle')}
+                    {editingTeamId === 'new'
+                      ? t('documentsSync.teamDocs.newTitle')
+                      : t('documentsSync.teamDocs.editTitle')}
                   </h3>
                   <Button variant="ghost" size="sm" onClick={() => setEditingTeamId(null)}>
                     {t('documentsSync.buttons.cancel')}

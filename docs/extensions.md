@@ -13,6 +13,7 @@ SEPilot Desktop의 Extension System을 사용하여 새로운 기능을 플러�
 - [Store 통합](#store-통합)
 - [타입 정의](#타입-정의)
 - [라이프사이클](#라이프사이클)
+- [Extension Context API](#extension-context-api)
 - [배포](#배포)
 - [예제](#예제)
 - [FAQ](#faq)
@@ -77,6 +78,7 @@ SEPilot Extension System은 VSCode extension과 유사한 플러그인 아키텍
 ```bash
 extensions/
 └── my-extension/
+    ├── definition.ts         # Extension 정의 (필수)
     ├── index.ts              # 메인 진입점
     ├── manifest.ts           # Extension 메타데이터
     ├── README.md             # 문서
@@ -134,33 +136,40 @@ export * from './lib';
 export { createMyExtensionSlice } from './store';
 ```
 
-### 4. Extension Loader에 등록
+### 4. definition.ts 생성
 
-`lib/extensions/loader.ts`의 `loadBuiltinExtensions()` 함수에 추가:
+`extensions/my-extension/definition.ts`:
 
 ```typescript
-async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
-  const extensions: ExtensionDefinition[] = [];
+import type { ExtensionDefinition } from '@/lib/extensions/types';
+import { manifest } from './manifest';
+import { MainComponent, SidebarComponent } from './components';
+import { createMyExtensionSlice } from './store';
 
-  // ... 기존 extension 로드 코드 ...
-
-  // My Extension 로드
-  try {
-    const myExtensionModule = await import('@/extensions/my-extension');
-    extensions.push({
-      manifest: myExtensionModule.manifest,
-      MainComponent: myExtensionModule.MainComponent,
-      SidebarComponent: myExtensionModule.SidebarComponent,
-      createStoreSlice: myExtensionModule.createMyExtensionSlice,
-    });
-    logger.info('[ExtensionLoader] Loaded my-extension');
-  } catch (error) {
-    logger.error('[ExtensionLoader] Failed to load my-extension', { error });
-  }
-
-  return extensions;
-}
+export const myExtension: ExtensionDefinition = {
+  manifest,
+  MainComponent,
+  SidebarComponent,
+  createStoreSlice: createMyExtensionSlice,
+};
 ```
+
+### 5. Extension 중앙 레지스트리에 등록
+
+`extensions/index.ts`에 추가:
+
+```typescript
+import { myExtension } from './my-extension/definition';
+
+export const builtinExtensions: ExtensionDefinition[] = [
+  editorExtension,
+  browserExtension,
+  presentationExtension,
+  myExtension, // 추가
+];
+```
+
+**끝!** Extension이 자동으로 로드됩니다.
 
 ---
 
@@ -170,6 +179,7 @@ async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
 
 ```
 extensions/my-extension/
+├── definition.ts         # Extension 정의 (필수)
 ├── index.ts              # 메인 진입점 (모든 export 통합)
 ├── manifest.ts           # Extension 메타데이터
 ├── README.md             # Extension 문서
@@ -195,6 +205,7 @@ extensions/my-extension/
 
 ### 필수 파일
 
+- `definition.ts` - Extension 정의 (필수)
 - `manifest.ts` - Extension 메타데이터 (필수)
 - `index.ts` - 메인 진입점 (필수)
 
@@ -533,14 +544,25 @@ export interface MyAgentState {
 
 Extension은 다음과 같은 라이프사이클 훅을 제공합니다:
 
-### activate()
+### activate(context?: ExtensionContext)
 
 Extension이 활성화될 때 호출되는 함수입니다.
 
 ```typescript
 // index.ts
-export async function activate() {
+export async function activate(context?: ExtensionContext) {
   console.log('My Extension activated');
+
+  // ExtensionContext 사용 (향후 구현 예정)
+  if (context) {
+    const mode = context.getAppMode();
+    context.logger.info('Activated in mode:', mode);
+
+    // Extension 간 통신
+    context.on('app:mode-changed', (newMode) => {
+      console.log('Mode changed to:', newMode);
+    });
+  }
 
   // 초기화 작업
   await initializeDatabase();
@@ -548,13 +570,13 @@ export async function activate() {
 }
 ```
 
-### deactivate()
+### deactivate(context?: ExtensionContext)
 
 Extension이 비활성화될 때 호출되는 함수입니다.
 
 ```typescript
 // index.ts
-export async function deactivate() {
+export async function deactivate(context?: ExtensionContext) {
   console.log('My Extension deactivated');
 
   // 정리 작업
@@ -563,19 +585,104 @@ export async function deactivate() {
 }
 ```
 
-### Extension Loader에서 사용
+### definition.ts에서 등록
 
 ```typescript
-// lib/extensions/loader.ts
-extensions.push({
-  manifest: myExtensionModule.manifest,
-  MainComponent: myExtensionModule.MainComponent,
-  SidebarComponent: myExtensionModule.SidebarComponent,
-  createStoreSlice: myExtensionModule.createStoreSlice,
-  activate: myExtensionModule.activate,
-  deactivate: myExtensionModule.deactivate,
-});
+// definition.ts
+import { activate, deactivate } from './index';
+
+export const myExtension: ExtensionDefinition = {
+  manifest,
+  MainComponent,
+  SidebarComponent,
+  createStoreSlice: createMyExtensionSlice,
+  activate,
+  deactivate,
+};
 ```
+
+---
+
+## Extension Context API
+
+Extension Context API는 Extension이 앱 상태와 안전하게 상호작용할 수 있는 API를 제공합니다.
+
+### ExtensionContext 인터페이스
+
+```typescript
+export interface ExtensionContext {
+  /** Extension ID */
+  readonly extensionId: string;
+
+  // 앱 상태 조회 (읽기 전용)
+  getAppMode: () => string;
+  getActiveSessionId: () => string | null;
+  getSession: (sessionId: string) => any | null;
+
+  // Extension 전용 스토리지
+  setState: <T>(key: string, value: T) => void;
+  getState: <T>(key: string) => T | undefined;
+  removeState: (key: string) => void;
+
+  // 이벤트 시스템 (Extension 간 통신)
+  on: <T>(event: ExtensionEventType, handler: (data: T) => void) => () => void;
+  emit: <T>(event: ExtensionEventType, data: T) => void;
+
+  // Extension 전용 로거
+  logger: {
+    info: (message: string, meta?: Record<string, unknown>) => void;
+    warn: (message: string, meta?: Record<string, unknown>) => void;
+    error: (message: string, meta?: Record<string, unknown>) => void;
+    debug: (message: string, meta?: Record<string, unknown>) => void;
+  };
+}
+```
+
+### 사용 예제
+
+```typescript
+// Extension activate 함수에서
+export async function activate(context?: ExtensionContext) {
+  if (!context) {
+    console.log('ExtensionContext not available yet');
+    return;
+  }
+
+  // 앱 모드 조회
+  const currentMode = context.getAppMode();
+  context.logger.info('Current app mode:', currentMode);
+
+  // Extension 전용 상태 저장
+  context.setState('lastOpened', Date.now());
+  const lastOpened = context.getState<number>('lastOpened');
+
+  // Extension 간 이벤트 통신
+  const unsubscribe = context.on('app:mode-changed', (newMode: string) => {
+    context.logger.info('Mode changed to:', newMode);
+  });
+
+  // 다른 Extension에게 이벤트 발행
+  context.emit('my-extension:initialized', { version: '1.0.0' });
+}
+```
+
+### Extension 이벤트 타입
+
+```typescript
+export type ExtensionEventType =
+  // 앱 상태 변경 이벤트
+  | 'app:mode-changed'
+  | 'app:session-created'
+  | 'app:session-deleted'
+  | 'app:session-switched'
+  // Extension 생명주기 이벤트
+  | 'extension:activated'
+  | 'extension:deactivated'
+  // 사용자 정의 이벤트 (extension-id:event-name 형식)
+  | `${string}:${string}`;
+```
+
+**Note**: ExtensionContext API는 향후 구현 예정입니다. 현재는 타입 정의만 존재합니다.
 
 ---
 
@@ -765,28 +872,33 @@ Extension Registry가 자동으로 의존성 순서를 해결합니다. 의존�
 
 ### ✅ 수동 수정 필요 (2개)
 
-1. **`lib/store/chat-store.ts`** - Store slice 통합
+1. **`extensions/index.ts`** - Extension 중앙 레지스트리에 등록
 
    ```typescript
-   import type { MyExtensionStoreState, MyExtensionStoreActions } from '@/extensions/my-extension/types';
-   import { createMyExtensionSlice } from '@/extensions/my-extension/store';
+   import { myExtension } from './my-extension/definition';
 
-   interface ChatStore extends MyExtensionStoreState, MyExtensionStoreActions { ... }
-
-   export const useChatStore = create<ChatStore>()((set, get) => ({
-     ...createMyExtensionSlice(set as any, get as any),
-   }));
+   export const builtinExtensions: ExtensionDefinition[] = [
+     editorExtension,
+     browserExtension,
+     presentationExtension,
+     myExtension, // 추가
+   ];
    ```
 
-2. **`lib/extensions/loader.ts`** - Extension 등록
+2. **`lib/store/extension-slices.ts`** - Store slice 통합 (Store가 있는 경우)
+
    ```typescript
-   const myExtensionModule = await import('@/extensions/my-extension');
-   extensions.push({
-     manifest: myExtensionModule.manifest,
-     MainComponent: myExtensionModule.MainComponent,
-     SidebarComponent: myExtensionModule.SidebarComponent,
-     createStoreSlice: myExtensionModule.createMyExtensionSlice,
-   });
+   import { createMyExtensionSlice } from '@/extensions/my-extension/store';
+
+   export const extensionStoreSlices = {
+     createPresentationSlice,
+     createTerminalSlice,
+     createMyExtensionSlice, // 추가
+   };
+
+   export type ExtensionStoreState = ReturnType<typeof createPresentationSlice> &
+     ReturnType<typeof createTerminalSlice> &
+     ReturnType<typeof createMyExtensionSlice>; // 추가
    ```
 
 ### ✅ 자동으로 처리됨 (수정 불필요)

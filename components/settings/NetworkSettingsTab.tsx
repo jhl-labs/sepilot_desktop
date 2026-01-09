@@ -59,7 +59,7 @@ export function NetworkSettingsTab({
                         : networkConfig.proxy?.mode === 'none'
                           ? 'manual'
                           : networkConfig.proxy?.mode || 'manual',
-                    } as any,
+                    },
                   });
                 }}
                 className="sr-only peer"
@@ -83,7 +83,7 @@ export function NetworkSettingsTab({
                         ...networkConfig.proxy,
                         enabled: networkConfig.proxy?.enabled ?? false,
                         mode: e.target.value as 'manual' | 'none',
-                      } as any,
+                      },
                     })
                   }
                   className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-sm"
@@ -108,7 +108,7 @@ export function NetworkSettingsTab({
                           enabled: networkConfig.proxy?.enabled ?? false,
                           mode: networkConfig.proxy?.mode || 'manual',
                           url: e.target.value,
-                        } as any,
+                        },
                       })
                     }
                     placeholder="http://proxy.example.com:8080"
