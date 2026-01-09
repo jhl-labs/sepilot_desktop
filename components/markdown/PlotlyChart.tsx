@@ -24,7 +24,11 @@ interface PlotlyChartProps {
 
 export function PlotlyChart({ data }: PlotlyChartProps) {
   const [error, setError] = useState<string>('');
-  const [plotData, setPlotData] = useState<unknown>(null);
+  const [plotData, setPlotData] = useState<{
+    data?: any[];
+    layout?: any;
+    config?: any;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -117,15 +121,15 @@ export function PlotlyChart({ data }: PlotlyChartProps) {
       {/* Chart */}
       <div className="flex items-center justify-center bg-background p-4">
         <Plot
-          data={plotData.data}
+          data={plotData.data || []}
           layout={{
             autosize: true,
-            ...plotData.layout,
+            ...(plotData.layout || {}),
           }}
           config={{
             responsive: true,
             displayModeBar: true,
-            ...plotData.config,
+            ...(plotData.config || {}),
           }}
           style={{ width: '100%', height: '100%' }}
           useResizeHandler

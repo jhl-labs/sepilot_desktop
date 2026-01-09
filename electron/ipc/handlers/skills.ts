@@ -13,6 +13,8 @@ import type {
   SkillStatistics,
   SkillValidationResult,
   SkillSource,
+  SkillRegistryEntry,
+  SkillUpdate,
 } from '../../../types/skill';
 import type { IPCResponse } from '../../../types/electron';
 import { skillManager } from '../../../lib/skills/manager';

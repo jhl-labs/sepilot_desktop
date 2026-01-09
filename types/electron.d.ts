@@ -1007,7 +1007,14 @@ interface PresentationAPI {
 }
 
 interface NotificationAPI {
-  show: (options: { conversationId: string; title: string; body: string }) => Promise<IPCResponse>;
+  show: (options: {
+    conversationId: string;
+    title: string;
+    body: string;
+    html?: string;
+    imageUrl?: string;
+    type?: string;
+  }) => Promise<IPCResponse>;
 
   onClick: (callback: (conversationId: string) => void) => () => void;
 }

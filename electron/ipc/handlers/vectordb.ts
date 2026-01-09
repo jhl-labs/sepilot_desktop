@@ -227,7 +227,7 @@ export function setupVectorDBHandlers() {
         });
 
         // Import 헬퍼 함수 사용
-        const { processImportDocuments } = await import('../../lib/vectordb/import-helper');
+        const { processImportDocuments } = await import('../../../lib/vectordb/import-helper');
 
         const result = await processImportDocuments(
           exportData,

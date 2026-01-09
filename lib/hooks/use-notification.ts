@@ -67,7 +67,6 @@ export function useNotification() {
           body,
           html,
           imageUrl,
-          // @ts-expect-error - type param added to IPC in handler
           type: notificationType,
         });
       } catch (error) {
