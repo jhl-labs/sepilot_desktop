@@ -39,7 +39,7 @@ import {
 import path from 'path';
 import serve from 'electron-serve';
 import { databaseService } from './services/database';
-import { setupIpcHandlers } from './ipc';
+import { setupIpcHandlers, initializeSkills } from './ipc';
 import { logger } from './services/logger';
 import { initializeLLMClient } from '../lib/llm/client';
 import { vectorDBService } from './services/vectordb';
@@ -612,6 +612,15 @@ app.whenReady().then(async () => {
       'Database Initialization Error',
       `Failed to initialize database: ${error instanceof Error ? error.message : String(error)}\n\nThe application may not function properly.`
     );
+  }
+
+  // Initialize Skills system
+  try {
+    await initializeSkills();
+    logger.info('Skills system initialized successfully');
+  } catch (error) {
+    logger.error('Failed to initialize Skills system:', error);
+    // Non-critical error, continue app initialization
   }
 
   // Setup IPC handlers (terminal handlers will be set up after window creation)

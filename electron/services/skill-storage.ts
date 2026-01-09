@@ -168,13 +168,13 @@ export class SkillStorageService {
 
     // 파일 로드
     const files = await this.loadResourceFiles(resourcesDir);
-    if (files.length > 0) {
+    if (files && files.length > 0) {
       resources.files = files;
     }
 
     // 이미지 로드
     const images = await this.loadResourceImages(resourcesDir);
-    if (images.length > 0) {
+    if (images && images.length > 0) {
       resources.images = images;
     }
 
