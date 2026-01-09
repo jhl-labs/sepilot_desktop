@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SettingsSectionHeader } from './SettingsSectionHeader';
 import {
   Loader2,
@@ -28,8 +29,9 @@ import { logger } from '@/lib/utils/logger';
 import { httpFetch, safeJsonParse } from '@/lib/http';
 import type { NetworkConfig } from '@/types';
 import { MessageSquare } from 'lucide-react';
-import { isElectron } from '@/lib/platform';
+
 import { useChatStore } from '@/lib/store/chat-store';
+import { useNotification, NotificationType } from '@/lib/hooks/use-notification';
 
 // Chat width setting
 const CHAT_WIDTH_KEY = 'sepilot_chat_message_width';
@@ -84,6 +86,7 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
   } | null>(null);
 
   const { conversations, activeConversationId } = useChatStore();
+  const { notificationType, setNotificationType, showNotification } = useNotification();
 
   // Load chat width from localStorage on mount
   useEffect(() => {
@@ -109,25 +112,16 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
   };
 
   const handleTestNotification = async () => {
-    if (!isElectron() || !window.electronAPI?.notification) {
-      setNotificationTestResult({
-        type: 'error',
-        message: '알림 기능은 Electron 환경에서만 사용할 수 있습니다.',
-      });
-      return;
-    }
-
     setIsTestingNotification(true);
     setNotificationTestResult(null);
 
     try {
-      // 현재 활성 대화 또는 첫 번째 대화 사용
       const testConversationId =
         activeConversationId || conversations[0]?.id || 'test-conversation';
       const testConversation = conversations.find((c) => c.id === testConversationId);
       const testTitle = testConversation?.title || '테스트 대화';
 
-      await window.electronAPI.notification.show({
+      await showNotification({
         conversationId: testConversationId,
         title: testTitle,
         body: '알림 테스트가 성공적으로 완료되었습니다!',
@@ -135,7 +129,7 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
 
       setNotificationTestResult({
         type: 'success',
-        message: '테스트 알림이 표시되었습니다. 알림을 클릭하면 해당 대화로 이동합니다.',
+        message: '테스트 알림이 표시되었습니다.',
       });
     } catch (error: any) {
       logger.error('[GeneralSettingsTab] Failed to show test notification:', error);
@@ -446,19 +440,60 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
         </div>
       </div>
 
-      {/* Notification Test Section */}
+      {/* Notification Settings */}
       <div className="space-y-4">
         <SettingsSectionHeader
-          icon={<Bell className="h-5 w-5" />}
-          title="알림"
-          description="백그라운드 스트리밍 완료 알림을 테스트합니다"
+          icon={Bell}
+          title={t('settings.notification.title', '알림 설정')}
+          description={t(
+            'settings.notification.description',
+            '알림 표시 방식과 테스트를 관리합니다'
+          )}
         />
 
-        <div className="space-y-4">
-          <div className="p-4 border rounded-lg bg-muted/20 space-y-3">
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Label>{t('settings.notification.type.label', '알림 유형')}</Label>
+            <RadioGroup
+              value={notificationType}
+              onValueChange={(value) => setNotificationType(value as NotificationType)}
+              className="flex flex-col space-y-1"
+            >
+              <div className="flex items-center space-x-3 space-y-0">
+                <RadioGroupItem value="os" id="notification-os" />
+                <Label htmlFor="notification-os" className="font-normal">
+                  {t('settings.notification.type.os', '시스템 기본 알림 (OS)')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3 space-y-0">
+                <RadioGroupItem value="application" id="notification-app" />
+                <Label htmlFor="notification-app" className="font-normal">
+                  {t('settings.notification.type.app', '애플리케이션 자체 알림 (In-App)')}
+                </Label>
+              </div>
+            </RadioGroup>
             <p className="text-sm text-muted-foreground">
-              다른 대화를 보고 있거나 앱이 백그라운드에 있을 때 스트리밍이 완료되면 시스템 알림이
-              표시됩니다.
+              {notificationType === 'os'
+                ? t(
+                    'settings.notification.type.osDesc',
+                    '운영체제의 알림 센터를 사용합니다. 앱이 최소화되어 있어도 알림을 받을 수 있습니다.'
+                  )
+                : t(
+                    'settings.notification.type.appDesc',
+                    '앱 내에서 디자인된 알림을 표시합니다. 앱이 화면에 보일 때만 유용합니다.'
+                  )}
+            </p>
+          </div>
+
+          <div className="p-4 border rounded-lg bg-muted/20 space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>{t('settings.notification.test.title', '알림 테스트')}</Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {t(
+                'settings.notification.test.description',
+                '선택한 알림 유형으로 테스트 알림을 발송합니다.'
+              )}
             </p>
 
             <Button
@@ -469,7 +504,7 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
             >
               {isTestingNotification && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Bell className="mr-2 h-4 w-4" />
-              테스트 알림 보내기
+              {t('settings.notification.test.button', '테스트 알림 보내기')}
             </Button>
 
             {notificationTestResult && (
@@ -483,17 +518,6 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
                 {notificationTestResult.message}
               </div>
             )}
-          </div>
-
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>
-              💡 <strong>팁:</strong>
-            </p>
-            <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>테스트 알림은 현재 활성 대화 제목으로 표시됩니다</li>
-              <li>알림을 클릭하면 해당 대화로 자동 이동합니다</li>
-              <li>실제 알림은 백그라운드에서 스트리밍이 완료될 때 자동으로 표시됩니다</li>
-            </ul>
           </div>
         </div>
       </div>

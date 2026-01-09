@@ -32,9 +32,11 @@ interface StreamingOptions {
 }
 
 import { useLanguage } from '@/components/providers/i18n-provider';
+import { useNotification } from '@/lib/hooks/use-notification';
 
 export function useMessageStreaming() {
   const { language } = useLanguage();
+  const { showNotification } = useNotification();
   const {
     messages,
     addMessage,
@@ -574,17 +576,11 @@ ${msg.content}
                   const conversation = conversations.find((c) => c.id === conversationId);
                   const conversationTitle = conversation?.title || '새 대화';
 
-                  if (window.electronAPI?.notification) {
-                    window.electronAPI.notification
-                      .show({
-                        conversationId,
-                        title: conversationTitle,
-                        body: '응답이 완료되었습니다.',
-                      })
-                      .catch((error) => {
-                        console.error('[useMessageStreaming] Failed to show notification:', error);
-                      });
-                  }
+                  showNotification({
+                    conversationId,
+                    title: conversationTitle,
+                    body: '응답이 완료되었습니다.',
+                  });
                 }
               }
             }

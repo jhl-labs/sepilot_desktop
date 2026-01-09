@@ -12,6 +12,8 @@ const isWindows = process.platform === 'win32';
 
 let getMainWindowFunc: () => BrowserWindow | null;
 
+import { NotificationWindowManager } from '../../services/notification-window';
+
 export function setupNotificationHandlers(getMainWindow: () => BrowserWindow | null) {
   getMainWindowFunc = getMainWindow;
 
@@ -26,12 +28,25 @@ export function setupNotificationHandlers(getMainWindow: () => BrowserWindow | n
         conversationId: string;
         title: string;
         body: string;
+        type?: 'os' | 'application'; // Add type parameter
       }
     ) => {
-      const { conversationId, title, body } = options;
+      const { conversationId, title, body, type = 'os' } = options;
 
       try {
-        logger.info(`[Notification] Showing notification for conversation: ${conversationId}`);
+        logger.info(`[Notification] Showing ${type} notification for: ${conversationId}`);
+
+        if (type === 'application') {
+          // Show Custom Window Notification
+          NotificationWindowManager.getInstance().show({
+            conversationId,
+            title,
+            body,
+          });
+          return { success: true };
+        }
+
+        // --- OS Notification Logic (Existing) ---
 
         // Get icon path (same as main window icon)
         let iconPath: string;
@@ -58,25 +73,7 @@ export function setupNotificationHandlers(getMainWindow: () => BrowserWindow | n
 
         // Handle notification click
         notification.on('click', () => {
-          logger.info(`[Notification] Clicked for conversation: ${conversationId}`);
-
-          const mainWindow = getMainWindowFunc();
-          if (mainWindow) {
-            // Restore window if minimized
-            if (mainWindow.isMinimized()) {
-              mainWindow.restore();
-            }
-
-            // Show and focus window
-            mainWindow.show();
-            mainWindow.focus();
-
-            // Send message to renderer to switch conversation
-            mainWindow.webContents.send('notification:click', conversationId);
-            logger.info(`[Notification] Sent conversation switch request: ${conversationId}`);
-          } else {
-            logger.warn('[Notification] Main window not found');
-          }
+          handleNotificationClick(conversationId);
         });
 
         // Show notification
@@ -91,5 +88,39 @@ export function setupNotificationHandlers(getMainWindow: () => BrowserWindow | n
     }
   );
 
+  // New handler for custom window clicks
+  ipcMain.handle('notification:click', (event, conversationId: string) => {
+    handleNotificationClick(conversationId);
+    // Constructively hide the notification window
+    NotificationWindowManager.getInstance().hide();
+  });
+
+  // New handler for closing custom window
+  ipcMain.handle('notification:close', () => {
+    NotificationWindowManager.getInstance().hide();
+  });
+
   logger.info('[Notification] Handlers registered');
+}
+
+function handleNotificationClick(conversationId: string) {
+  logger.info(`[Notification] Clicked for conversation: ${conversationId}`);
+
+  const mainWindow = getMainWindowFunc();
+  if (mainWindow) {
+    // Restore window if minimized
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+
+    // Show and focus window
+    mainWindow.show();
+    mainWindow.focus();
+
+    // Send message to renderer to switch conversation
+    mainWindow.webContents.send('notification:click', conversationId);
+    logger.info(`[Notification] Sent conversation switch request: ${conversationId}`);
+  } else {
+    logger.warn('[Notification] Main window not found');
+  }
 }

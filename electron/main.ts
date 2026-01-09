@@ -47,6 +47,7 @@ import { AppConfig } from '../types';
 import { initializeBuiltinTools } from '../lib/mcp/tools/executor';
 import { getPTYManager } from './services/pty-manager';
 import { isLLMConfigV2, convertV2ToV1 } from '../lib/config/llm-config-migration';
+import { NotificationWindowManager } from './services/notification-window';
 
 let mainWindow: BrowserWindow | null = null;
 let quickInputWindow: BrowserWindow | null = null;
@@ -625,6 +626,10 @@ app.whenReady().then(async () => {
   // Initialize builtin tools (file_read, file_write, file_edit, file_list)
   initializeBuiltinTools();
   logger.info('Builtin tools initialized');
+
+  // Initialize Notification Window Manager
+  NotificationWindowManager.getInstance();
+  logger.info('NotificationWindowManager initialized');
 
   // Create tray
   createTray();
