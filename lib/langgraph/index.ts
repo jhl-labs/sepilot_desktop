@@ -351,39 +351,14 @@ export class GraphFactory {
       };
     }
 
-    try {
-      logger.info('[GraphFactory] Starting stream with config:', config);
-      logger.info('[GraphFactory] Using state type:', stateType);
+    logger.info('[GraphFactory] Starting stream with config:', config);
+    logger.info('[GraphFactory] Using state type:', stateType);
 
-      const stream = await graph.stream(initialState, {
-        recursionLimit: 100,
-      });
+    const stream = await graph.stream(initialState, {
+      recursionLimit: 100,
+    });
 
-      for await (const event of stream) {
-        const entries = Object.entries(event);
-
-        if (entries.length > 0) {
-          const [nodeName, stateUpdate] = entries[0];
-
-          yield {
-            type: 'node',
-            node: nodeName,
-            data: stateUpdate,
-          };
-        }
-      }
-
-      yield {
-        type: 'end',
-      };
-    } catch (error: any) {
-      console.error('[GraphFactory] Stream error:', error);
-
-      yield {
-        type: 'error',
-        error: error.message || 'Graph execution failed',
-      };
-    }
+    yield* this.processGraphStream(stream);
   }
 
   /**
@@ -688,24 +663,13 @@ export class GraphFactory {
   }
 
   /**
-   * 그래프 실행 (스트리밍) - 하위 호환성
-   * @deprecated Use streamWithConfig instead
-   *
-   * LangGraph의 stream 메서드를 사용하여 실시간 업데이트 제공
+   * Graph stream 처리 공통 로직
+   * @param stream LangGraph stream iterator
    */
-  static async *stream(
-    type: GraphType,
-    messages: Message[],
-    _options?: GraphOptions
+  private static async *processGraphStream(
+    stream: AsyncIterableIterator<any>
   ): AsyncGenerator<StreamEvent> {
-    const graph = await this.getGraph(type);
-    const initialState = await this.createInitialState(type, messages);
-
     try {
-      const stream = await graph.stream(initialState, {
-        recursionLimit: 50,
-      });
-
       for await (const event of stream) {
         const entries = Object.entries(event);
 
@@ -731,6 +695,27 @@ export class GraphFactory {
         error: error.message || 'Graph execution failed',
       };
     }
+  }
+
+  /**
+   * 그래프 실행 (스트리밍) - 하위 호환성
+   * @deprecated Use streamWithConfig instead
+   *
+   * LangGraph의 stream 메서드를 사용하여 실시간 업데이트 제공
+   */
+  static async *stream(
+    type: GraphType,
+    messages: Message[],
+    _options?: GraphOptions
+  ): AsyncGenerator<StreamEvent> {
+    const graph = await this.getGraph(type);
+    const initialState = await this.createInitialState(type, messages);
+
+    const stream = await graph.stream(initialState, {
+      recursionLimit: 50,
+    });
+
+    yield* this.processGraphStream(stream);
   }
 
   /**
