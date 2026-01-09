@@ -21,9 +21,13 @@ import {
   Terminal as TerminalIcon,
   X,
   Star,
+  Maximize2,
 } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AnsiDisplay } from '@/components/ui/ansi-display';
 import { cn } from '@/lib/utils';
+import { InteractiveTerminal } from './InteractiveTerminal';
+import { useChatStore } from '@/lib/store/chat-store';
 
 import type { TerminalBlock as TerminalBlockType } from '../types';
 import { formatDistanceToNow } from 'date-fns';
@@ -38,6 +42,63 @@ interface TerminalBlockProps {
   onCancel?: () => void;
   onBookmark?: () => void;
   onExecuteSuggestion?: (command: string) => void;
+}
+
+/**
+ * InteractiveTerminal Wrapper
+ * sessionId로 ptySessionId를 찾아서 InteractiveTerminal에 전달
+ */
+function InteractiveTerminalWrapper({
+  blockId,
+  sessionId,
+}: {
+  blockId: string;
+  sessionId: string;
+}) {
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const store = useChatStore();
+  const sessions = (store as any).sessions || [];
+  const session = sessions.find((s: any) => s.id === sessionId);
+
+  if (!session) {
+    return (
+      <div className="mb-2 p-3 rounded bg-destructive/5 border border-destructive/20 text-xs text-destructive">
+        Error: Session not found (ID: {sessionId})
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Embedded Interactive Terminal */}
+      <div
+        className="mb-2 rounded border border-border overflow-hidden relative"
+        style={{ height: '400px' }}
+      >
+        <InteractiveTerminal sessionId={sessionId} ptySessionId={session.ptySessionId} />
+
+        {/* Fullscreen Button */}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute top-2 right-2 h-7 w-7 bg-background/80 hover:bg-background"
+          onClick={() => setIsFullscreen(true)}
+          title="전체화면"
+        >
+          <Maximize2 className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Fullscreen Dialog */}
+      <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+        <DialogContent className="max-w-full h-screen p-0 gap-0">
+          <div className="h-full w-full">
+            <InteractiveTerminal sessionId={sessionId} ptySessionId={session.ptySessionId} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 export function TerminalBlock({
@@ -174,15 +235,21 @@ export function TerminalBlock({
       </div>
 
       {/* 출력 */}
-      {block.output && (
-        <div
-          className={cn(
-            'mb-2 p-3 rounded text-xs font-mono whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto',
-            isError ? 'bg-destructive/5 border border-destructive/20' : 'bg-muted/50'
-          )}
-        >
-          <AnsiDisplay text={block.output} />
-        </div>
+      {block.isInteractive ? (
+        /* Interactive Terminal (xterm.js) */
+        <InteractiveTerminalWrapper blockId={block.id} sessionId={block.sessionId} />
+      ) : (
+        /* 일반 출력 */
+        block.output && (
+          <div
+            className={cn(
+              'mb-2 p-3 rounded text-xs font-mono whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto',
+              isError ? 'bg-destructive/5 border border-destructive/20' : 'bg-muted/50'
+            )}
+          >
+            <AnsiDisplay text={block.output} />
+          </div>
+        )
       )}
 
       {/* Exit Code */}

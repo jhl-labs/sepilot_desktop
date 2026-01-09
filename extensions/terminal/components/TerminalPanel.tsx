@@ -6,15 +6,14 @@
 
 'use client';
 
-import React, { useEffect, useRef, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Trash2, History, Settings, LayoutGrid, Terminal as TerminalIcon } from 'lucide-react';
+import { Trash2, History } from 'lucide-react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { TerminalBlock } from './TerminalBlock';
 import { AICommandInput } from './AICommandInput';
 import { SessionTabBar } from './SessionTabBar';
-import { InteractiveTerminal } from './InteractiveTerminal';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/utils/logger';
 
@@ -41,9 +40,6 @@ const INTERACTIVE_COMMANDS = [
 export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
-
-  // 뷰 모드 상태 (Blocks or Interactive)
-  const [viewMode, setViewMode] = useState<'blocks' | 'interactive'>('blocks');
 
   // Store에서 상태 가져오기
   const store = useChatStore();
@@ -230,11 +226,12 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
   const handleExecuteCommand = async (command: string, naturalInput?: string) => {
     logger.info('[TerminalPanel] Executing command:', command);
 
-    // 인터랙티브 명령어 감지 → 자동으로 Interactive 모드로 전환
+    // 인터랙티브 명령어 감지
     const firstCommand = command.trim().split(/\s+/)[0];
-    if (INTERACTIVE_COMMANDS.includes(firstCommand)) {
-      logger.info('[TerminalPanel] Detected interactive command, switching to interactive mode');
-      setViewMode('interactive');
+    const isInteractiveCommand = INTERACTIVE_COMMANDS.includes(firstCommand);
+
+    if (isInteractiveCommand) {
+      logger.info('[TerminalPanel] Detected interactive command:', firstCommand);
     }
 
     // 활성 세션 확인
@@ -258,6 +255,7 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
       sessionId: activeSession.id,
       exitCode: undefined,
       isRunning: true, // 명령어 실행 중으로 표시
+      isInteractive: isInteractiveCommand, // 인터랙티브 명령어일 경우 true
     });
 
     try {
@@ -532,142 +530,87 @@ export function TerminalPanel({ workingDirectory }: TerminalPanelProps) {
           <span className="text-xs text-muted-foreground font-mono">
             {currentCwd || workingDirectory || '~'}
           </span>
-          {isTerminalFocused && viewMode === 'blocks' && (
-            <span className="text-[10px] bg-accent text-accent-foreground px-1.5 py-0.5 rounded animate-pulse">
-              Interactive Mode
-            </span>
-          )}
         </div>
-        {/* Mode toggle & buttons */}
-        <div className="flex items-center gap-2">
-          {/* View Mode Toggle */}
-          <div className="flex gap-1 border rounded-md p-0.5">
-            <Button
-              size="sm"
-              variant={viewMode === 'blocks' ? 'default' : 'ghost'}
-              className="h-7 px-2 text-xs"
-              onClick={() => setViewMode('blocks')}
-              title="Blocks 모드 (Warp 스타일)"
-            >
-              <LayoutGrid className="w-3 h-3 mr-1" />
-              Blocks
-            </Button>
-            <Button
-              size="sm"
-              variant={viewMode === 'interactive' ? 'default' : 'ghost'}
-              className="h-7 px-2 text-xs"
-              onClick={() => setViewMode('interactive')}
-              title="Interactive 모드 (vim, nano 등)"
-            >
-              <TerminalIcon className="w-3 h-3 mr-1" />
-              Interactive
-            </Button>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8"
-              onClick={toggleHistory}
-              title="히스토리"
-            >
-              <History className="w-4 h-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8"
-              onClick={clearTerminalBlocks}
-              title="모두 지우기"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
+        {/* Action buttons */}
+        <div className="flex gap-1">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={toggleHistory}
+            title="히스토리"
+          >
+            <History className="w-4 h-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={clearTerminalBlocks}
+            title="모두 지우기"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
       {/* 세션 탭 */}
       <SessionTabBar />
 
-      {/* 터미널 뷰 영역 */}
-      {viewMode === 'blocks' ? (
-        /* 블록 리스트 - 포커스 가능 영역 */
-        <div
-          className={cn(
-            'flex-1 relative outline-none ring-offset-background transition-colors min-h-0',
-            isTerminalFocused ? 'ring-2 ring-primary/20 bg-accent/5' : ''
-          )}
-          tabIndex={0}
-          ref={terminalContainerRef}
-          onFocus={() => setIsTerminalFocused(true)}
-          onBlur={() => setIsTerminalFocused(false)}
-          onKeyDown={handleTerminalKeyDown}
-          onClick={() => terminalContainerRef.current?.focus()}
-        >
-          <ScrollArea className="h-full p-4" ref={scrollRef}>
-            {/* ... contents ... */}
-            {sessionBlocks.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-center">
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    터미널 명령어를 실행하거나 AI에게 작업을 요청하세요
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    자연어로 &quot;최근 수정된 파일 보여줘&quot; 같은 요청을 할 수 있습니다
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-0">
-                {sessionBlocks.map((block: any) => (
-                  <TerminalBlock
-                    key={block.id}
-                    block={block}
-                    isActive={block.id === activeBlockId}
-                    onSelect={() => {
-                      // TODO: 블록 선택 시 activeBlockId 업데이트
-                    }}
-                    onRerun={() => handleRerunBlock(block.id)}
-                    onDelete={() => removeTerminalBlock(block.id)}
-                    onCancel={() => handleCancelCommand(block.id)}
-                    onBookmark={() => handleBookmarkCommand(block.id)}
-                    onExecuteSuggestion={handleExecuteSuggestion}
-                  />
-                ))}
-              </div>
-            )}
-            <div ref={scrollAnchorRef} />
-          </ScrollArea>
-
-          {/* 포커스 안내 오버레이 (마우스 오버 시 또는 포커스 없을 때) */}
-          {!isTerminalFocused && sessionBlocks.length > 0 && (
-            <div className="absolute top-2 right-2 pointer-events-none opacity-50">
-              <span className="text-[10px] bg-muted px-1 rounded border">Click to interact</span>
-            </div>
-          )}
-        </div>
-      ) : (
-        /* Interactive Terminal (xterm.js) */
-        <div className="flex-1 relative min-h-0">
-          {activeSessionId && (store as any).getActiveTerminalSession ? (
-            <InteractiveTerminal
-              sessionId={activeSessionId}
-              ptySessionId={(store as any).getActiveTerminalSession().ptySessionId}
-            />
-          ) : (
+      {/* 터미널 뷰 영역 - Blocks 모드 */}
+      <div
+        className={cn(
+          'flex-1 relative outline-none ring-offset-background transition-colors min-h-0',
+          isTerminalFocused ? 'ring-2 ring-primary/20 bg-accent/5' : ''
+        )}
+        tabIndex={0}
+        ref={terminalContainerRef}
+        onFocus={() => setIsTerminalFocused(true)}
+        onBlur={() => setIsTerminalFocused(false)}
+        onKeyDown={handleTerminalKeyDown}
+        onClick={() => terminalContainerRef.current?.focus()}
+      >
+        <ScrollArea className="h-full p-4" ref={scrollRef}>
+          {sessionBlocks.length === 0 ? (
             <div className="flex h-full items-center justify-center text-center">
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">세션을 찾을 수 없습니다</p>
+                <p className="text-sm text-muted-foreground">
+                  터미널 명령어를 실행하거나 AI에게 작업을 요청하세요
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  새 세션을 생성하거나 기존 세션을 선택하세요
+                  자연어로 &quot;최근 수정된 파일 보여줘&quot; 같은 요청을 할 수 있습니다
                 </p>
               </div>
             </div>
+          ) : (
+            <div className="space-y-0">
+              {sessionBlocks.map((block: any) => (
+                <TerminalBlock
+                  key={block.id}
+                  block={block}
+                  isActive={block.id === activeBlockId}
+                  onSelect={() => {
+                    // TODO: 블록 선택 시 activeBlockId 업데이트
+                  }}
+                  onRerun={() => handleRerunBlock(block.id)}
+                  onDelete={() => removeTerminalBlock(block.id)}
+                  onCancel={() => handleCancelCommand(block.id)}
+                  onBookmark={() => handleBookmarkCommand(block.id)}
+                  onExecuteSuggestion={handleExecuteSuggestion}
+                />
+              ))}
+            </div>
           )}
-        </div>
-      )}
+          <div ref={scrollAnchorRef} />
+        </ScrollArea>
+
+        {/* 포커스 안내 오버레이 (마우스 오버 시 또는 포커스 없을 때) */}
+        {!isTerminalFocused && sessionBlocks.length > 0 && (
+          <div className="absolute top-2 right-2 pointer-events-none opacity-50">
+            <span className="text-[10px] bg-muted px-1 rounded border">Click to interact</span>
+          </div>
+        )}
+      </div>
 
       {/* 입력 창 */}
       <AICommandInput

@@ -21,6 +21,7 @@ export interface TerminalBlock {
   output: string; // 명령어 실행 결과
   exitCode?: number; // 종료 코드
   isRunning?: boolean; // 명령어 실행 중 여부
+  isInteractive?: boolean; // 인터랙티브 모드 (xterm.js 사용)
 
   // AI 분석
   aiAnalysis?: {
