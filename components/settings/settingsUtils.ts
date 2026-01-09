@@ -202,24 +202,34 @@ export const normalizeBaseUrl = (baseURL?: string) => {
   return target.replace(/\/$/, '');
 };
 
-export const extractModelIds = (payload: any): string[] => {
+export const extractModelIds = (payload: unknown): string[] => {
   if (!payload) {
     return [];
   }
 
-  const normalize = (entry: any) =>
-    entry?.id || entry?.name || entry?.slug || (typeof entry === 'string' ? entry : null);
+  const normalize = (entry: unknown): string | null => {
+    if (typeof entry === 'string') {
+      return entry;
+    }
+    if (typeof entry === 'object' && entry !== null) {
+      const obj = entry as Record<string, unknown>;
+      return (obj.id as string) || (obj.name as string) || (obj.slug as string) || null;
+    }
+    return null;
+  };
 
-  if (Array.isArray(payload.data)) {
-    return payload.data.map(normalize).filter(Boolean);
+  const payloadObj = payload as Record<string, unknown>;
+
+  if (Array.isArray(payloadObj.data)) {
+    return payloadObj.data.map(normalize).filter((id): id is string => id !== null);
   }
 
-  if (Array.isArray(payload.models)) {
-    return payload.models.map(normalize).filter(Boolean);
+  if (Array.isArray(payloadObj.models)) {
+    return payloadObj.models.map(normalize).filter((id): id is string => id !== null);
   }
 
   if (Array.isArray(payload)) {
-    return payload.map(normalize).filter(Boolean);
+    return payload.map(normalize).filter((id): id is string => id !== null);
   }
 
   return [];
@@ -289,7 +299,7 @@ export const fetchAvailableModels = async ({
     throw new Error(`모델 목록을 불러오지 못했습니다. (${response.status} ${errorText})`);
   }
 
-  const payload = await safeJsonParse<any>(response, endpoint);
+  const payload = await safeJsonParse<unknown>(response, endpoint);
   const models = extractModelIds(payload);
   return Array.from(new Set(models)).sort();
 };

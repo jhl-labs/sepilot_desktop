@@ -246,7 +246,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   const handleSaveKnowledge = async (doc: {
     title: string;
     content: string;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
   }) => {
     try {
       // Create RawDocument
@@ -277,9 +277,11 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
       }
 
       logger.info('Knowledge saved successfully:', doc.title);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save knowledge:', error);
-      throw new Error(error.message || '지식 저장에 실패했습니다.');
+      throw new Error(
+        error instanceof Error ? error.message : String(error) || '지식 저장에 실패했습니다.'
+      );
     }
   };
 
@@ -313,9 +315,11 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
       }
 
       logger.info('Conversation compressed successfully');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to compress conversation:', error);
-      throw new Error(error.message || '대화 압축에 실패했습니다.');
+      throw new Error(
+        error instanceof Error ? error.message : String(error) || '대화 압축에 실패했습니다.'
+      );
     }
   };
 
