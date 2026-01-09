@@ -65,7 +65,10 @@ function getFoldersMetaPath() {
   return path.join(getBookmarksDir(), 'folders.json');
 }
 
-function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserView {
+function createBrowserView(
+  mainWindow: BrowserWindow,
+  tabId: string
+): { view: BrowserView; cleanupListeners: () => void } {
   const view = new BrowserView({
     webPreferences: {
       nodeIntegration: false,
@@ -87,192 +90,180 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
   );
 
-  // Inject stealth script on every page load to bypass bot detection
-  view.webContents.on('did-start-loading', () => {
-    view.webContents
-      .executeJavaScript(
-        `
-      // Wrap in IIFE to avoid variable redeclaration errors
-      (function() {
-        // Skip if already injected
-        if (window.__stealthInjected) return;
-        window.__stealthInjected = true;
+  // Define all event handlers as named functions for cleanup
+  const handlers = {
+    // Inject stealth script on every page load to bypass bot detection
+    didStartLoadingStealth: () => {
+      view.webContents
+        .executeJavaScript(
+          `
+        // Wrap in IIFE to avoid variable redeclaration errors
+        (function() {
+          // Skip if already injected
+          if (window.__stealthInjected) return;
+          window.__stealthInjected = true;
 
-        // Remove webdriver flag
-        Object.defineProperty(navigator, 'webdriver', {
-          get: () => false,
-          configurable: true,
-        });
+          // Remove webdriver flag
+          Object.defineProperty(navigator, 'webdriver', {
+            get: () => false,
+            configurable: true,
+          });
 
-        // Add chrome object
-        if (!window.chrome) {
-          window.chrome = {
-            runtime: {},
-            loadTimes: function () {},
-            csi: function () {},
-            app: {},
-          };
-        }
-
-        // Improve permissions API (save original before overriding)
-        if (!window.__originalPermissionsQuery) {
-          window.__originalPermissionsQuery = window.navigator.permissions.query;
-          window.navigator.permissions.query = (parameters) => {
-            return parameters.name === 'notifications'
-              ? Promise.resolve({ state: 'denied' })
-              : window.__originalPermissionsQuery(parameters);
-          };
-        }
-
-        // Add plugins
-        Object.defineProperty(navigator, 'plugins', {
-          get: () => [
-            {
-              0: { type: 'application/x-google-chrome-pdf', suffixes: 'pdf', description: 'Portable Document Format' },
-              description: 'Portable Document Format',
-              filename: 'internal-pdf-viewer',
-              length: 1,
-              name: 'Chrome PDF Plugin',
-            },
-            {
-              0: { type: 'application/pdf', suffixes: 'pdf', description: '' },
-              description: '',
-              filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
-              length: 1,
-              name: 'Chrome PDF Viewer',
-            },
-          ],
-          configurable: true,
-        });
-
-        // Set natural languages
-        Object.defineProperty(navigator, 'languages', {
-          get: () => ['ko-KR', 'ko', 'en-US', 'en'],
-          configurable: true,
-        });
-
-        // Override WebGL parameters
-        try {
-          if (!window.__webglPatched) {
-            window.__webglPatched = true;
-            const getParameter = WebGLRenderingContext.prototype.getParameter;
-            WebGLRenderingContext.prototype.getParameter = function (parameter) {
-              if (parameter === 37445) return 'Intel Inc.';
-              if (parameter === 37446) return 'Intel Iris OpenGL Engine';
-              return getParameter.apply(this, [parameter]);
+          // Add chrome object
+          if (!window.chrome) {
+            window.chrome = {
+              runtime: {},
+              loadTimes: function () {},
+              csi: function () {},
+              app: {},
             };
           }
-        } catch (err) {}
-      })();
-    `
-      )
-      .catch(() => {
-        // Ignore errors - script may not execute on some pages
-      });
-  });
 
-  // Handle new window/popup requests - open in new tab
-  view.webContents.setWindowOpenHandler(({ url, frameName, features }) => {
-    logger.info('[BrowserView] ===== WINDOW OPEN HANDLER CALLED =====');
-    logger.info('[BrowserView] URL:', url);
-    logger.info('[BrowserView] Frame name:', frameName);
-    logger.info('[BrowserView] Features:', features);
+          // Improve permissions API (save original before overriding)
+          if (!window.__originalPermissionsQuery) {
+            window.__originalPermissionsQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => {
+              return parameters.name === 'notifications'
+                ? Promise.resolve({ state: 'denied' })
+                : window.__originalPermissionsQuery(parameters);
+            };
+          }
 
-    // Create new tab for popup
-    const newTabId = randomUUID();
-    const newView = createBrowserView(mainWindow, newTabId);
+          // Add plugins
+          Object.defineProperty(navigator, 'plugins', {
+            get: () => [
+              {
+                0: { type: 'application/x-google-chrome-pdf', suffixes: 'pdf', description: 'Portable Document Format' },
+                description: 'Portable Document Format',
+                filename: 'internal-pdf-viewer',
+                length: 1,
+                name: 'Chrome PDF Plugin',
+              },
+              {
+                0: { type: 'application/pdf', suffixes: 'pdf', description: '' },
+                description: '',
+                filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
+                length: 1,
+                name: 'Chrome PDF Viewer',
+              },
+            ],
+            configurable: true,
+          });
 
-    const newTab: BrowserTab = {
-      id: newTabId,
-      view: newView,
-      url,
-      title: 'Loading...',
-      cleanupListeners: () => {},
-    };
+          // Set natural languages
+          Object.defineProperty(navigator, 'languages', {
+            get: () => ['ko-KR', 'ko', 'en-US', 'en'],
+            configurable: true,
+          });
 
-    tabs.set(newTabId, newTab);
+          // Override WebGL parameters
+          try {
+            if (!window.__webglPatched) {
+              window.__webglPatched = true;
+              const getParameter = WebGLRenderingContext.prototype.getParameter;
+              WebGLRenderingContext.prototype.getParameter = function (parameter) {
+                if (parameter === 37445) return 'Intel Inc.';
+                if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+                return getParameter.apply(this, [parameter]);
+              };
+            }
+          } catch (err) {}
+        })();
+      `
+        )
+        .catch(() => {
+          // Ignore errors - script may not execute on some pages
+        });
+    },
 
-    // Switch to new tab
-    if (activeTabId) {
-      const currentTab = tabs.get(activeTabId);
-      if (currentTab) {
-        mainWindow.removeBrowserView(currentTab.view);
-      }
-    }
+    // Handle new window/popup requests - open in new tab
+    windowOpenHandler: ({ url, frameName, features }: { url: string; frameName: string; features: string }) => {
+      logger.info('[BrowserView] ===== WINDOW OPEN HANDLER CALLED =====');
+      logger.info('[BrowserView] URL:', url);
+      logger.info('[BrowserView] Frame name:', frameName);
+      logger.info('[BrowserView] Features:', features);
 
-    mainWindow.addBrowserView(newView);
-    activeTabId = newTabId;
-    setActiveBrowserView(newView); // For browser control
+      // Create new tab for popup
+      const newTabId = randomUUID();
+      const { view: newView, cleanupListeners: newCleanup } = createBrowserView(mainWindow, newTabId);
 
-    // Load popup URL in new tab
-    newView.webContents.loadURL(url).catch((error) => {
-      logger.error('[BrowserView] Failed to load popup URL:', error);
-    });
-
-    // Notify renderer about new tab
-    mainWindow.webContents.send('browser-view:tab-created', {
-      tabId: newTabId,
-      url,
-    });
-
-    return { action: 'deny' };
-  });
-
-  // Debug: Track navigation attempts
-  view.webContents.on('will-navigate', (event, url) => {
-    logger.info('[BrowserView] will-navigate:', url);
-  });
-
-  // Handle console messages for debugging
-  view.webContents.on('console-message', (_, level, message) => {
-    // level: 0=verbose, 1=info, 2=warning, 3=error
-
-    // 무시할 패턴들 (외부 페이지의 harmless errors)
-    const ignoredPatterns = [
-      'TypeError',
-      'postMessage',
-      'The target origin provided',
-      "does not match the recipient window's origin",
-    ];
-
-    const shouldIgnore = ignoredPatterns.some((pattern) => message.includes(pattern));
-
-    if (shouldIgnore) {
-      // External page errors/warnings - log as debug only
-      logger.debug(`[BrowserView Console] ${message}`);
-    } else if (level >= 2) {
-      logger.warn(`[BrowserView Console] ${message}`);
-    } else if (level === 1) {
-      logger.info(`[BrowserView Console] ${message}`);
-    }
-    // verbose(0)는 로깅하지 않음
-  });
-
-  // Handle navigation errors
-  view.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-    if (errorCode !== -3) {
-      logger.error(
-        `[BrowserView] Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`
-      );
-    }
-  });
-
-  // Navigation events
-  view.webContents.on('did-navigate', (_, url) => {
-    const tab = tabs.get(tabId);
-    if (tab) {
-      tab.url = url;
-      mainWindow.webContents.send('browser-view:did-navigate', {
-        tabId,
+      const newTab: BrowserTab = {
+        id: newTabId,
+        view: newView,
         url,
-        canGoBack: view.webContents.canGoBack(),
-        canGoForward: view.webContents.canGoForward(),
-      });
-    }
-  });
+        title: 'Loading...',
+        cleanupListeners: newCleanup,
+      };
 
-  view.webContents.on('did-navigate-in-page', (_, url, isMainFrame) => {
-    if (isMainFrame) {
+      tabs.set(newTabId, newTab);
+
+      // Switch to new tab
+      if (activeTabId) {
+        const currentTab = tabs.get(activeTabId);
+        if (currentTab) {
+          mainWindow.removeBrowserView(currentTab.view);
+        }
+      }
+
+      mainWindow.addBrowserView(newView);
+      activeTabId = newTabId;
+      setActiveBrowserView(newView); // For browser control
+
+      // Load popup URL in new tab
+      newView.webContents.loadURL(url).catch((error) => {
+        logger.error('[BrowserView] Failed to load popup URL:', error);
+      });
+
+      // Notify renderer about new tab
+      mainWindow.webContents.send('browser-view:tab-created', {
+        tabId: newTabId,
+        url,
+      });
+
+      return { action: 'deny' as const };
+    },
+
+    // Debug: Track navigation attempts
+    willNavigate: (event: Event, url: string) => {
+      logger.info('[BrowserView] will-navigate:', url);
+    },
+
+    // Handle console messages for debugging
+    consoleMessage: (_: Event, level: number, message: string) => {
+      // level: 0=verbose, 1=info, 2=warning, 3=error
+
+      // 무시할 패턴들 (외부 페이지의 harmless errors)
+      const ignoredPatterns = [
+        'TypeError',
+        'postMessage',
+        'The target origin provided',
+        "does not match the recipient window's origin",
+      ];
+
+      const shouldIgnore = ignoredPatterns.some((pattern) => message.includes(pattern));
+
+      if (shouldIgnore) {
+        // External page errors/warnings - log as debug only
+        logger.debug(`[BrowserView Console] ${message}`);
+      } else if (level >= 2) {
+        logger.warn(`[BrowserView Console] ${message}`);
+      } else if (level === 1) {
+        logger.info(`[BrowserView Console] ${message}`);
+      }
+      // verbose(0)는 로깅하지 않음
+    },
+
+    // Handle navigation errors
+    didFailLoad: (event: Event, errorCode: number, errorDescription: string, validatedURL: string) => {
+      if (errorCode !== -3) {
+        logger.error(
+          `[BrowserView] Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`
+        );
+      }
+    },
+
+    // Navigation events
+    didNavigate: (_: Event, url: string) => {
       const tab = tabs.get(tabId);
       if (tab) {
         tab.url = url;
@@ -283,37 +274,95 @@ function createBrowserView(mainWindow: BrowserWindow, tabId: string): BrowserVie
           canGoForward: view.webContents.canGoForward(),
         });
       }
-    }
-  });
+    },
 
-  view.webContents.on('did-start-loading', () => {
-    mainWindow.webContents.send('browser-view:loading-state', {
-      tabId,
-      isLoading: true,
-    });
-  });
+    // In-page navigation
+    didNavigateInPage: (_: Event, url: string, isMainFrame: boolean) => {
+      if (isMainFrame) {
+        const tab = tabs.get(tabId);
+        if (tab) {
+          tab.url = url;
+          mainWindow.webContents.send('browser-view:did-navigate', {
+            tabId,
+            url,
+            canGoBack: view.webContents.canGoBack(),
+            canGoForward: view.webContents.canGoForward(),
+          });
+        }
+      }
+    },
 
-  view.webContents.on('did-stop-loading', () => {
-    mainWindow.webContents.send('browser-view:loading-state', {
-      tabId,
-      isLoading: false,
-      canGoBack: view.webContents.canGoBack(),
-      canGoForward: view.webContents.canGoForward(),
-    });
-  });
-
-  view.webContents.on('page-title-updated', (_, title) => {
-    const tab = tabs.get(tabId);
-    if (tab) {
-      tab.title = title;
-      mainWindow.webContents.send('browser-view:title-updated', {
+    // Loading state start
+    didStartLoadingState: () => {
+      mainWindow.webContents.send('browser-view:loading-state', {
         tabId,
-        title,
+        isLoading: true,
       });
-    }
-  });
+    },
 
-  return view;
+    // Loading state stop
+    didStopLoading: () => {
+      mainWindow.webContents.send('browser-view:loading-state', {
+        tabId,
+        isLoading: false,
+        canGoBack: view.webContents.canGoBack(),
+        canGoForward: view.webContents.canGoForward(),
+      });
+    },
+
+    // Page title updates
+    pageTitleUpdated: (_: Event, title: string) => {
+      const tab = tabs.get(tabId);
+      if (tab) {
+        tab.title = title;
+        mainWindow.webContents.send('browser-view:title-updated', {
+          tabId,
+          title,
+        });
+      }
+    },
+  };
+
+  // Register all event listeners
+  view.webContents.on('did-start-loading', handlers.didStartLoadingStealth);
+  view.webContents.setWindowOpenHandler(handlers.windowOpenHandler);
+  view.webContents.on('will-navigate', handlers.willNavigate);
+  view.webContents.on('console-message', handlers.consoleMessage);
+  view.webContents.on('did-fail-load', handlers.didFailLoad);
+  view.webContents.on('did-navigate', handlers.didNavigate);
+  view.webContents.on('did-navigate-in-page', handlers.didNavigateInPage);
+  view.webContents.on('did-start-loading', handlers.didStartLoadingState);
+  view.webContents.on('did-stop-loading', handlers.didStopLoading);
+  view.webContents.on('page-title-updated', handlers.pageTitleUpdated);
+
+  // Create cleanup function to remove all listeners
+  const cleanupListeners = () => {
+    if (view.webContents.isDestroyed()) {
+      logger.debug(`[BrowserView] WebContents already destroyed for tab: ${tabId}`);
+      return;
+    }
+
+    try {
+      view.webContents.removeListener('did-start-loading', handlers.didStartLoadingStealth);
+      view.webContents.removeListener('will-navigate', handlers.willNavigate);
+      view.webContents.removeListener('console-message', handlers.consoleMessage);
+      view.webContents.removeListener('did-fail-load', handlers.didFailLoad);
+      view.webContents.removeListener('did-navigate', handlers.didNavigate);
+      view.webContents.removeListener('did-navigate-in-page', handlers.didNavigateInPage);
+      view.webContents.removeListener('did-start-loading', handlers.didStartLoadingState);
+      view.webContents.removeListener('did-stop-loading', handlers.didStopLoading);
+      view.webContents.removeListener('page-title-updated', handlers.pageTitleUpdated);
+
+      // Reset window open handler to default (empty handler)
+      view.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
+      logger.info(`[BrowserView] Listeners cleaned up for tab: ${tabId}`);
+    } catch (error) {
+      logger.error(`[BrowserView] Error cleaning up listeners for tab ${tabId}:`, error);
+    }
+  };
+
+  return { view, cleanupListeners };
 }
 
 export function setupBrowserViewHandlers() {
@@ -329,14 +378,14 @@ export function setupBrowserViewHandlers() {
       const tabId = randomUUID();
       const defaultUrl = url || 'https://euno.news';
 
-      const view = createBrowserView(mainWindow, tabId);
+      const { view, cleanupListeners } = createBrowserView(mainWindow, tabId);
 
       const tab: BrowserTab = {
         id: tabId,
         view,
         url: defaultUrl,
         title: 'New Tab',
-        cleanupListeners: () => {},
+        cleanupListeners,
       };
 
       tabs.set(tabId, tab);
@@ -908,14 +957,14 @@ export function setupBrowserViewHandlers() {
 
       // Always create a new tab for snapshots
       const tabId = randomUUID();
-      const view = createBrowserView(mainWindow, tabId);
+      const { view, cleanupListeners } = createBrowserView(mainWindow, tabId);
 
       const tab: BrowserTab = {
         id: tabId,
         view,
         url: `snapshot://${snapshotId}`,
         title: `${snapshot.title} - Snapshot`,
-        cleanupListeners: () => {},
+        cleanupListeners,
       };
 
       tabs.set(tabId, tab);
@@ -1152,14 +1201,14 @@ export function setupBrowserViewHandlers() {
 
       // Always create a new tab for bookmarks
       const tabId = randomUUID();
-      const view = createBrowserView(mainWindow, tabId);
+      const { view, cleanupListeners } = createBrowserView(mainWindow, tabId);
 
       const tab: BrowserTab = {
         id: tabId,
         view,
         url: bookmark.url,
         title: bookmark.title,
-        cleanupListeners: () => {},
+        cleanupListeners,
       };
 
       tabs.set(tabId, tab);

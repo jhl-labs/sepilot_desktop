@@ -24,7 +24,7 @@ interface PlotlyChartProps {
 
 export function PlotlyChart({ data }: PlotlyChartProps) {
   const [error, setError] = useState<string>('');
-  const [plotData, setPlotData] = useState<any>(null);
+  const [plotData, setPlotData] = useState<unknown>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
