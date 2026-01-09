@@ -58,7 +58,8 @@ describe('SnapshotsList', () => {
 
     render(<SnapshotsList />);
 
-    expect(screen.getByText('로딩 중...')).toBeInTheDocument();
+    // i18n key is displayed as-is in tests
+    expect(screen.getByText('browser.snapshots.loading')).toBeInTheDocument();
   });
 
   it('should load snapshots on mount', async () => {
@@ -85,7 +86,7 @@ describe('SnapshotsList', () => {
     render(<SnapshotsList />);
 
     await waitFor(() => {
-      expect(screen.getByText('저장된 스냅샷이 없습니다')).toBeInTheDocument();
+      expect(screen.getByText('browser.snapshots.noSnapshots')).toBeInTheDocument();
     });
   });
 
@@ -122,7 +123,7 @@ describe('SnapshotsList', () => {
     render(<SnapshotsList />);
 
     await waitFor(() => {
-      expect(screen.getByText('스냅샷 관리')).toBeInTheDocument();
+      expect(screen.getByText('browser.snapshots.title')).toBeInTheDocument();
     });
   });
 
@@ -140,7 +141,7 @@ describe('SnapshotsList', () => {
     const { container } = render(<SnapshotsList />);
 
     await waitFor(() => {
-      expect(screen.getByText('스냅샷 관리')).toBeInTheDocument();
+      expect(screen.getByText('browser.snapshots.title')).toBeInTheDocument();
     });
 
     // Back button is the first button in the header
@@ -233,7 +234,8 @@ describe('SnapshotsList', () => {
     fireEvent.click(deleteButton);
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('스냅샷 삭제 실패: Delete failed');
+      // i18n key is displayed as-is in tests
+      expect(window.alert).toHaveBeenCalledWith('browser.snapshots.deleteFailed');
     });
   });
 
@@ -258,7 +260,8 @@ describe('SnapshotsList', () => {
     fireEvent.click(deleteButton);
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('스냅샷 삭제 중 오류가 발생했습니다.');
+      // i18n key is displayed as-is in tests
+      expect(window.alert).toHaveBeenCalledWith('browser.snapshots.deleteError');
       expect(consoleSpy).toHaveBeenCalledWith(
         '[SnapshotsList] Error deleting snapshot:',
         expect.any(Error)
@@ -318,7 +321,8 @@ describe('SnapshotsList', () => {
     fireEvent.click(snapshotCard as HTMLElement);
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('스냅샷 열기 실패: Open failed');
+      // i18n key is displayed as-is in tests
+      expect(window.alert).toHaveBeenCalledWith('browser.snapshots.openFailed');
     });
   });
 
@@ -342,7 +346,8 @@ describe('SnapshotsList', () => {
     fireEvent.click(snapshotCard as HTMLElement);
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('스냅샷 열기 중 오류가 발생했습니다.');
+      // i18n key is displayed as-is in tests
+      expect(window.alert).toHaveBeenCalledWith('browser.snapshots.openError');
       expect(consoleSpy).toHaveBeenCalledWith(
         '[SnapshotsList] Error opening snapshot:',
         expect.any(Error)
