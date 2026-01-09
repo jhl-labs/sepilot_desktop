@@ -87,15 +87,11 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
       setEditingId(null);
       setFormData({ name: '', description: '', systemPrompt: '', avatar: '🤖' });
     } catch (error) {
-<<<<<<< Updated upstream
       toast.error(
         error instanceof Error
           ? error.message
           : String(error) || t('personaDialog.errors.saveFailed')
       );
-=======
-      toast.error(error instanceof Error ? error.message : String(error) || t('personaDialog.errors.saveFailed'));
->>>>>>> Stashed changes
     }
   };
 
@@ -104,15 +100,11 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
       try {
         await deletePersona(id);
       } catch (error) {
-<<<<<<< Updated upstream
         toast.error(
           error instanceof Error
             ? error.message
             : String(error) || t('personaDialog.errors.deleteFailed')
         );
-=======
-        toast.error(error instanceof Error ? error.message : String(error) || t('personaDialog.errors.deleteFailed'));
->>>>>>> Stashed changes
       }
     }
   };

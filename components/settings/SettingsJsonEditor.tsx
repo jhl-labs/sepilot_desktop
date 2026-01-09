@@ -51,15 +51,15 @@ export function SettingsJsonEditor({ config, onSave }: SettingsJsonEditorProps) 
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       if (err instanceof SyntaxError) {
-        setError(t('settings.jsonEditor.syntaxError', { error: err instanceof Error ? err.message : String(err) }));
+        setError(
+          t('settings.jsonEditor.syntaxError', {
+            error: err instanceof Error ? err.message : String(err),
+          })
+        );
       } else {
-<<<<<<< Updated upstream
         setError(
           err instanceof Error ? err.message : String(err) || t('settings.jsonEditor.saveFailed')
         );
-=======
-        setError(err instanceof Error ? err.message : String(err) || t('settings.jsonEditor.saveFailed'));
->>>>>>> Stashed changes
       }
     } finally {
       setIsSaving(false);
@@ -72,15 +72,11 @@ export function SettingsJsonEditor({ config, onSave }: SettingsJsonEditorProps) 
       setJsonText(JSON.stringify(parsed, null, 2));
       setError(null);
     } catch (err) {
-<<<<<<< Updated upstream
       setError(
         t('settings.jsonEditor.syntaxError', {
           error: err instanceof Error ? err.message : String(err),
         })
       );
-=======
-      setError(t('settings.jsonEditor.syntaxError', { error: err instanceof Error ? err.message : String(err) }));
->>>>>>> Stashed changes
     }
   };
 
