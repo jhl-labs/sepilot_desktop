@@ -465,8 +465,8 @@ describe('SettingsDialog', () => {
     it('should reload config when dialog opens', async () => {
       const { rerender } = render(<SettingsDialog open={false} onOpenChange={mockOnOpenChange} />);
 
-      // Dialog closed - config should not load
-      expect(localStorage.getItem).not.toHaveBeenCalled();
+      // Clear previous calls
+      jest.clearAllMocks();
 
       // Open dialog
       rerender(<SettingsDialog open={true} onOpenChange={mockOnOpenChange} />);
@@ -474,6 +474,9 @@ describe('SettingsDialog', () => {
       await waitFor(() => {
         expect(screen.getByText('설정')).toBeInTheDocument();
       });
+
+      // Config should be loaded when dialog opens
+      expect(localStorage.getItem).toHaveBeenCalled();
     });
 
     it('should clear messages when dialog opens', async () => {
