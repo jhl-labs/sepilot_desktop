@@ -98,11 +98,14 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
           throw new Error(result.error || t('settings.githubOAuth.messages.privateKeySaveFailed'));
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to upload private key:', error);
       setMessage({
         type: 'error',
-        text: error.message || t('settings.githubOAuth.messages.privateKeyUploadFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('settings.githubOAuth.messages.privateKeyUploadFailed'),
       });
     }
   };
@@ -136,11 +139,14 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
         });
         setCurrentStep('verify');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to open installation page:', error);
       setMessage({
         type: 'error',
-        text: error.message || t('settings.githubOAuth.messages.installPageFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('settings.githubOAuth.messages.installPageFailed'),
       });
     }
   };
@@ -188,11 +194,14 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
       } else {
         throw new Error(t('settings.githubOAuth.messages.electronApiUnavailable'));
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to verify installation:', error);
       setMessage({
         type: 'error',
-        text: error.message || t('settings.githubOAuth.messages.verificationFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('settings.githubOAuth.messages.verificationFailed'),
       });
       setRepositories([]);
     } finally {
@@ -236,11 +245,14 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
           throw new Error(result.error || t('settings.githubOAuth.messages.testFailed'));
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Connection test failed:', error);
       setMessage({
         type: 'error',
-        text: error.message || t('settings.githubOAuth.messages.testFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('settings.githubOAuth.messages.testFailed'),
       });
     } finally {
       setIsTesting(false);
@@ -281,11 +293,14 @@ export function GitHubOAuthSettings({ config, onSave }: GitHubOAuthSettingsProps
       await onSave(newConfig);
       setMessage({ type: 'success', text: t('settings.githubOAuth.messages.saveSuccess') });
       setCurrentStep('complete');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save GitHub config:', error);
       setMessage({
         type: 'error',
-        text: error.message || t('settings.githubOAuth.messages.saveFailed'),
+        text:
+          error instanceof Error
+            ? error.message
+            : String(error) || t('settings.githubOAuth.messages.saveFailed'),
       });
     } finally {
       setIsSaving(false);

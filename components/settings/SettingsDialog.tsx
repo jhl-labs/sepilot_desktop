@@ -359,7 +359,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
     // Merge all config sections: partial (new) > currentConfig (DB) > appConfigSnapshot (fallback)
     const merged: AppConfig = {
-      llm: mergedLLM as any, // LLMConfigV2 is stored as llm in AppConfig
+      llm: mergedLLM as unknown as LLMConfig, // LLMConfigV2 is stored as llm in AppConfig
       network:
         partial.network ??
         currentConfig.network ??
@@ -418,18 +418,22 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       let v1Config: LLMConfig;
       try {
         v1Config = convertV2ToV1(configV2);
-      } catch (error: any) {
+      } catch (error) {
         console.error('[SettingsDialog] V2 to V1 conversion failed:', error);
 
         let userMessage = t('settings.conversionFailed');
 
         // Provide specific error messages
-        if (error.message?.includes('No active base model')) {
+        if (
+          error instanceof Error ? error.message : String(error)?.includes('No active base model')
+        ) {
           userMessage = t('settings.llm.validation.noActiveBaseModel');
-        } else if (error.message?.includes('connection')) {
+        } else if (error instanceof Error ? error.message : String(error)?.includes('connection')) {
           userMessage = t('settings.llm.validation.connectionNotExists');
         } else {
-          userMessage = t('settings.conversionError', { error: error.message });
+          userMessage = t('settings.conversionError', {
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
 
         setMessage({ type: 'error', text: userMessage });
@@ -449,7 +453,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             'connections:',
             configV2.connections.length
           );
-          savedConfig = await persistAppConfig({ llm: configV2 as any, network: networkConfig });
+          savedConfig = await persistAppConfig({
+            llm: configV2 as unknown as LLMConfig,
+            network: networkConfig,
+          });
           if (savedConfig) {
             // Verify models were preserved
             if (isLLMConfigV2(savedConfig.llm)) {
@@ -504,9 +511,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       );
 
       setMessage({ type: 'success', text: t('settings.saved') });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save config:', error);
-      setMessage({ type: 'error', text: error.message || t('settings.saveFailed') });
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : String(error) || t('settings.saveFailed'),
+      });
     } finally {
       setIsSaving(false);
     }
@@ -553,8 +563,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       );
 
       setMessage({ type: 'success', text: t('settings.network.saved') });
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || t('settings.saveFailed') });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : String(error) || t('settings.saveFailed'),
+      });
     } finally {
       setIsSaving(false);
     }
@@ -600,11 +613,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       );
 
       setImageGenMessage({ type: 'success', text: t('settings.imagegen.saved') });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save ImageGen config:', error);
       setImageGenMessage({
         type: 'error',
-        text: error.message || t('settings.saveFailed'),
+        text: error instanceof Error ? error.message : String(error) || t('settings.saveFailed'),
       });
     } finally {
       setIsImageGenSaving(false);
@@ -690,11 +703,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       }
 
       setMessage({ type: 'success', text: t('settings.quickinput.saved') });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save QuickInput config:', error);
       setMessage({
         type: 'error',
-        text: error.message || t('settings.saveFailed'),
+        text: error instanceof Error ? error.message : String(error) || t('settings.saveFailed'),
       });
     } finally {
       setIsSaving(false);
@@ -725,11 +738,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       );
 
       setMessage({ type: 'success', text: t('settings.beta.saved') });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save Beta config:', error);
       setMessage({
         type: 'error',
-        text: error.message || t('settings.saveFailed'),
+        text: error instanceof Error ? error.message : String(error) || t('settings.saveFailed'),
       });
     } finally {
       setIsSaving(false);
@@ -807,7 +820,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       );
 
       logger.info('VectorDB and Embedding configuration saved and initialized successfully');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save VectorDB config:', error);
       throw error;
     }
@@ -832,7 +845,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       if (isElectron() && window.electronAPI) {
         const savedConfig = await persistAppConfig({
           ...newConfig,
-          llm: llmConfigV2 as any,
+          llm: llmConfigV2 as unknown as LLMConfig,
         });
         if (savedConfig) {
           await window.electronAPI.llm.init({ ...savedConfig, llm: llmConfig });
@@ -903,7 +916,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           detail: newConfig,
         })
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save JSON config:', error);
       throw error;
     }
@@ -912,7 +925,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   // Get current AppConfig for JSON editor
   const getCurrentAppConfig = (): AppConfig => {
     return {
-      llm: (configV2 as any) || config,
+      llm: (configV2 as unknown as LLMConfig) || config,
       network: networkConfig,
       mcp: appConfigSnapshot?.mcp ?? [],
       vectorDB: vectorDBConfig ?? undefined,

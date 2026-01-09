@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Download, Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
+import type { Conversation, Message, AppConfig } from '@/types';
 
 interface BackupData {
   version: string;
   exportDate: string;
-  conversations: any[];
-  messages: any[];
-  settings?: any;
+  conversations: Conversation[];
+  messages: Message[];
+  settings?: AppConfig;
 }
 
 export function BackupRestoreSettings() {
@@ -46,7 +47,7 @@ export function BackupRestoreSettings() {
       const conversations = conversationsResult.data || [];
 
       // Load all messages for each conversation
-      const allMessages: any[] = [];
+      const allMessages: Message[] = [];
       for (const conv of conversations) {
         const messagesResult = await window.electronAPI.chat.loadMessages(conv.id);
         if (messagesResult.success && messagesResult.data) {
@@ -64,7 +65,7 @@ export function BackupRestoreSettings() {
         exportDate: new Date().toISOString(),
         conversations,
         messages: allMessages,
-        settings,
+        settings: settings ?? undefined,
       };
 
       // Convert to XML
@@ -88,11 +89,13 @@ export function BackupRestoreSettings() {
           messages: allMessages.length,
         }),
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Export error:', error);
       setStatusMessage({
         type: 'error',
-        text: t('settings.backup.exportFailed', { error: error.message }),
+        text: t('settings.backup.exportFailed', {
+          error: error instanceof Error ? error.message : String(error),
+        }),
       });
     } finally {
       setIsExporting(false);
@@ -117,8 +120,8 @@ export function BackupRestoreSettings() {
       input.type = 'file';
       input.accept = '.xml';
 
-      input.onchange = async (e: any) => {
-        const file = e.target?.files?.[0];
+      input.onchange = async (e: Event) => {
+        const file = (e.target as HTMLInputElement)?.files?.[0];
         if (!file) {
           setIsImporting(false);
           return;
@@ -162,11 +165,13 @@ export function BackupRestoreSettings() {
           setTimeout(() => {
             window.location.reload();
           }, 2000);
-        } catch (error: any) {
+        } catch (error) {
           console.error('Import error:', error);
           setStatusMessage({
             type: 'error',
-            text: t('settings.backup.importFailed', { error: error.message }),
+            text: t('settings.backup.importFailed', {
+              error: error instanceof Error ? error.message : String(error),
+            }),
           });
         } finally {
           setIsImporting(false);
@@ -174,11 +179,13 @@ export function BackupRestoreSettings() {
       };
 
       input.click();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Import error:', error);
       setStatusMessage({
         type: 'error',
-        text: t('settings.backup.importFailed', { error: error.message }),
+        text: t('settings.backup.importFailed', {
+          error: error instanceof Error ? error.message : String(error),
+        }),
       });
       setIsImporting(false);
     }
@@ -218,10 +225,10 @@ export function BackupRestoreSettings() {
     xml += '  <messages>\n';
     for (const msg of data.messages) {
       xml += '    <message>\n';
-      xml += `      <id>${escapeXML(msg.id)}</id>\n`;
-      xml += `      <conversation-id>${escapeXML(msg.conversation_id)}</conversation-id>\n`;
-      xml += `      <role>${escapeXML(msg.role)}</role>\n`;
-      xml += `      <content>${escapeXML(msg.content)}</content>\n`;
+      xml += `      <id>${escapeXML(msg.id || '')}</id>\n`;
+      xml += `      <conversation-id>${escapeXML(msg.conversation_id || '')}</conversation-id>\n`;
+      xml += `      <role>${escapeXML(msg.role || 'user')}</role>\n`;
+      xml += `      <content>${escapeXML(msg.content || '')}</content>\n`;
       xml += `      <created-at>${msg.created_at}</created-at>\n`;
 
       // Images (optional)
@@ -296,7 +303,7 @@ export function BackupRestoreSettings() {
     const exportDate = root.querySelector('export-date')?.textContent || new Date().toISOString();
 
     // Parse conversations
-    const conversations: any[] = [];
+    const conversations: Conversation[] = [];
     const conversationNodes = root.querySelectorAll('conversations > conversation');
     conversationNodes.forEach((node) => {
       conversations.push({
@@ -308,13 +315,13 @@ export function BackupRestoreSettings() {
     });
 
     // Parse messages
-    const messages: any[] = [];
+    const messages: Message[] = [];
     const messageNodes = root.querySelectorAll('messages > message');
     messageNodes.forEach((node) => {
-      const msg: any = {
+      const msg: Partial<Message> = {
         id: node.querySelector('id')?.textContent || '',
         conversation_id: node.querySelector('conversation-id')?.textContent || '',
-        role: node.querySelector('role')?.textContent || 'user',
+        role: (node.querySelector('role')?.textContent as Message['role']) || 'user',
         content: node.querySelector('content')?.textContent || '',
         created_at: parseInt(node.querySelector('created-at')?.textContent || '0'),
       };
@@ -324,7 +331,7 @@ export function BackupRestoreSettings() {
       if (imageNodes.length > 0) {
         msg.images = [];
         imageNodes.forEach((imgNode) => {
-          msg.images.push({
+          msg.images!.push({
             id: imgNode.querySelector('id')?.textContent || '',
             filename: imgNode.querySelector('filename')?.textContent || '',
             mimeType: imgNode.querySelector('mime-type')?.textContent || '',
@@ -338,7 +345,7 @@ export function BackupRestoreSettings() {
       if (docNodes.length > 0) {
         msg.referenced_documents = [];
         docNodes.forEach((docNode) => {
-          msg.referenced_documents.push({
+          msg.referenced_documents!.push({
             id: docNode.querySelector('id')?.textContent || '',
             title: docNode.querySelector('title')?.textContent || '',
             source: docNode.querySelector('source')?.textContent || '',
@@ -347,7 +354,7 @@ export function BackupRestoreSettings() {
         });
       }
 
-      messages.push(msg);
+      messages.push(msg as Message);
     });
 
     // Parse settings (optional)
