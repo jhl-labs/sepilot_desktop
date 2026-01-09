@@ -340,16 +340,18 @@ function createBrowserView(
   };
 
   // Register all event listeners
-  view.webContents.on('did-start-loading', handlers.didStartLoadingStealth);
+  // Type assertion needed due to Electron's overly restrictive event listener types
+  const webContents = view.webContents as any;
+  webContents.on('did-start-loading', handlers.didStartLoadingStealth);
   view.webContents.setWindowOpenHandler(handlers.windowOpenHandler);
-  view.webContents.on('will-navigate', handlers.willNavigate);
-  view.webContents.on('console-message', handlers.consoleMessage);
-  view.webContents.on('did-fail-load', handlers.didFailLoad);
-  view.webContents.on('did-navigate', handlers.didNavigate);
-  view.webContents.on('did-navigate-in-page', handlers.didNavigateInPage);
-  view.webContents.on('did-start-loading', handlers.didStartLoadingState);
-  view.webContents.on('did-stop-loading', handlers.didStopLoading);
-  view.webContents.on('page-title-updated', handlers.pageTitleUpdated);
+  webContents.on('will-navigate', handlers.willNavigate);
+  webContents.on('console-message', handlers.consoleMessage);
+  webContents.on('did-fail-load', handlers.didFailLoad);
+  webContents.on('did-navigate', handlers.didNavigate);
+  webContents.on('did-navigate-in-page', handlers.didNavigateInPage);
+  webContents.on('did-start-loading', handlers.didStartLoadingState);
+  webContents.on('did-stop-loading', handlers.didStopLoading);
+  webContents.on('page-title-updated', handlers.pageTitleUpdated);
 
   // Create cleanup function to remove all listeners
   const cleanupListeners = () => {
@@ -359,15 +361,17 @@ function createBrowserView(
     }
 
     try {
-      view.webContents.removeListener('did-start-loading', handlers.didStartLoadingStealth);
-      view.webContents.removeListener('will-navigate', handlers.willNavigate);
-      view.webContents.removeListener('console-message', handlers.consoleMessage);
-      view.webContents.removeListener('did-fail-load', handlers.didFailLoad);
-      view.webContents.removeListener('did-navigate', handlers.didNavigate);
-      view.webContents.removeListener('did-navigate-in-page', handlers.didNavigateInPage);
-      view.webContents.removeListener('did-start-loading', handlers.didStartLoadingState);
-      view.webContents.removeListener('did-stop-loading', handlers.didStopLoading);
-      view.webContents.removeListener('page-title-updated', handlers.pageTitleUpdated);
+      // Type assertion needed due to Electron's overly restrictive removeListener types
+      const webContents = view.webContents as any;
+      webContents.removeListener('did-start-loading', handlers.didStartLoadingStealth);
+      webContents.removeListener('will-navigate', handlers.willNavigate);
+      webContents.removeListener('console-message', handlers.consoleMessage);
+      webContents.removeListener('did-fail-load', handlers.didFailLoad);
+      webContents.removeListener('did-navigate', handlers.didNavigate);
+      webContents.removeListener('did-navigate-in-page', handlers.didNavigateInPage);
+      webContents.removeListener('did-start-loading', handlers.didStartLoadingState);
+      webContents.removeListener('did-stop-loading', handlers.didStopLoading);
+      webContents.removeListener('page-title-updated', handlers.pageTitleUpdated);
 
       // Reset window open handler to default (empty handler)
       view.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
