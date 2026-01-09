@@ -59,33 +59,12 @@ export function disableElectronMode() {
   (window as any).electronAPI = undefined;
 }
 
-// Mock console methods to reduce noise in tests
-const originalConsole = { ...console };
-beforeAll(() => {
-  jest.spyOn(console, 'log').mockImplementation(() => {});
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-  jest.spyOn(console, 'error').mockImplementation(() => {});
-});
+// Import test helpers
+import { setupConsoleMock, setupMockReset } from './mocks/test-helpers';
 
-afterAll(() => {
-  console.log = originalConsole.log;
-  console.warn = originalConsole.warn;
-  console.error = originalConsole.error;
-});
-
-// Reset mocks between tests
-beforeEach(() => {
-  jest.clearAllMocks();
-  disableElectronMode();
-  mockLocalStorage.getItem.mockReset();
-  mockLocalStorage.setItem.mockReset();
-  mockLocalStorage.removeItem.mockReset();
-  mockLocalStorage.clear.mockReset();
-  mockSessionStorage.getItem.mockReset();
-  mockSessionStorage.setItem.mockReset();
-  mockSessionStorage.removeItem.mockReset();
-  mockSessionStorage.clear.mockReset();
-});
+// Setup console mock and mock reset
+setupConsoleMock();
+setupMockReset({ disableElectronMode, mockLocalStorage, mockSessionStorage });
 
 // Mock fetch globally
 global.fetch = jest.fn();

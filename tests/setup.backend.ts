@@ -127,32 +127,9 @@ export function disableElectronMode() {
 // Export mocks for direct access
 export { mockLocalStorage, mockSessionStorage };
 
-// Mock console methods to reduce noise in tests
-const originalConsole = { ...console };
-beforeAll(() => {
-  jest.spyOn(console, 'log').mockImplementation(() => {});
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-  jest.spyOn(console, 'error').mockImplementation(() => {});
-});
+// Import test helpers
+import { setupConsoleMock, setupMockReset } from './mocks/test-helpers';
 
-afterAll(() => {
-  console.log = originalConsole.log;
-  console.warn = originalConsole.warn;
-  console.error = originalConsole.error;
-});
-
-// Reset mocks between tests
-beforeEach(() => {
-  jest.clearAllMocks();
-  disableElectronMode();
-  mockLocalStorage.getItem.mockReset();
-  mockLocalStorage.setItem.mockReset();
-  mockLocalStorage.removeItem.mockReset();
-  mockLocalStorage.clear.mockReset();
-  // Reset crypto.randomUUID mock
-  if ((global as any).crypto && (global as any).crypto.randomUUID) {
-    ((global as any).crypto.randomUUID as jest.Mock).mockReturnValue(
-      '12345678-1234-4567-8901-123456789012'
-    );
-  }
-});
+// Setup console mock and mock reset
+setupConsoleMock();
+setupMockReset({ disableElectronMode, mockLocalStorage });
