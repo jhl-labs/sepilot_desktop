@@ -14,6 +14,14 @@ import type { Message, ImageAttachment, ToolCall } from '@/types';
 import { generateId } from '@/lib/utils/id-generator';
 import { getVisualizationInstructions } from '@/lib/langgraph/utils/system-message';
 import type { ToolResult } from '@/lib/langgraph/types';
+import {
+  createFlowTracker,
+  addFlowNode,
+  completeFlow,
+  generateMermaidDiagram,
+  generateFlowSummary,
+  type AgentFlowTracker,
+} from '@/lib/utils/agent-flow-visualizer';
 
 interface StreamingOptions {
   conversationId: string;
@@ -71,6 +79,12 @@ export function useMessageStreaming() {
       let cleanupEventHandler: (() => void) | null = null;
       let cleanupDoneHandler: (() => void) | null = null;
       let cleanupErrorHandler: (() => void) | null = null;
+
+      // Agent flow tracker for Coding mode
+      let flowTracker: AgentFlowTracker | null = null;
+      if (thinkingMode === 'coding') {
+        flowTracker = createFlowTracker();
+      }
 
       try {
         // Add user message
@@ -328,6 +342,16 @@ export function useMessageStreaming() {
                   status: statusMap[nodeStatus] || 'working',
                   message: detailedMessage,
                 });
+
+                // Track node in flow tracker
+                if (flowTracker && event.node) {
+                  addFlowNode(
+                    flowTracker,
+                    event.node,
+                    eventData.iterationCount,
+                    eventData.statusMessage
+                  );
+                }
               }
 
               if (allMsgs && allMsgs.length > 0) {
@@ -524,6 +548,17 @@ ${msg.content}
               }
               if (!abortControllerRef.current?.signal.aborted) {
                 scheduleUpdate({}, true);
+
+                // Add Mermaid diagram for Coding Agent flow
+                if (flowTracker) {
+                  completeFlow(flowTracker);
+                  const mermaidDiagram = generateMermaidDiagram(flowTracker);
+                  const flowSummary = generateFlowSummary(flowTracker);
+
+                  // Append flow visualization to the message
+                  const finalContent = `${accumulatedContent}\n\n---\n\n## 🔄 Agent Execution Flow\n\n${flowSummary}\n\n${mermaidDiagram}`;
+                  scheduleUpdate({ content: finalContent }, true);
+                }
 
                 // 백그라운드 스트리밍 감지 및 알림 (신규 추가)
                 const state = useChatStore.getState();
