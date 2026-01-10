@@ -66,6 +66,20 @@ const loadURL = isDev
       scheme: 'app',
     });
 
+// Register 'app' scheme as privileged to prevent OS from handling it as external link
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      secure: true,
+      standard: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true, // Recommended for file streaming
+    },
+  },
+]);
+
 // Toggle menu visibility
 function toggleMenuVisibility() {
   if (!mainWindow) return;
@@ -195,9 +209,15 @@ async function createWindow() {
     logger.info('Loaded development server');
   } else {
     // 프로덕션: electron-serve를 통해 app:// 프로토콜로 로드
-    // electron-serve가 app:// 프로토콜을 등록하므로 직접 사용
-    mainWindow.loadURL('app://./index.html');
-    logger.info('Loaded production build via app:// protocol');
+    // electron-serve가 app:// 프로토콜을 등록하므로 loadURL을 호출해야 함
+    if (loadURL) {
+      await loadURL(mainWindow);
+      logger.info('Loaded production build via app:// protocol and registered handler');
+    } else {
+      // Fallback (should not happen if configured correctly)
+      mainWindow.loadURL('app://./index.html');
+      logger.warn('loadURL function missing, manually loading app:// protocol');
+    }
   }
 
   // 창 닫기 동작을 숨기기로 변경 (tray로 최소화)
@@ -249,7 +269,8 @@ async function createQuickInputWindow() {
   if (isDev) {
     quickInputWindow.loadURL('http://localhost:3000/quick-input');
   } else {
-    // electron-serve를 사용하면 app:// 프로토콜이 자동 등록됨
+    // electron-serve를 사용하면 app:// 프로토콜이 자동 등록됨 (main.ts의 loadURL 호출 이후)
+    // quick-input 폴더의 index.html을 로드
     quickInputWindow.loadURL('app://./quick-input/index.html');
   }
 
@@ -636,19 +657,21 @@ app.whenReady().then(async () => {
   initializeBuiltinTools();
   logger.info('Builtin tools initialized');
 
-  // Initialize Notification Window Manager
-  NotificationWindowManager.getInstance();
-  logger.info('NotificationWindowManager initialized');
-
   // Create tray
   createTray();
   logger.info('Tray created');
 
+  // Create window and ensure protocol is registered (await it)
+  // This must be done BEFORE NotificationWindowManager, which relies on 'app://' protocol
+  await createWindow();
+
+  // Initialize Notification Window Manager
+  // This creates a hidden window which loads 'app://...', so the protocol must be ready
+  NotificationWindowManager.getInstance();
+  logger.info('NotificationWindowManager initialized');
+
   // Register global shortcuts from config
   await registerShortcuts();
-
-  // Create window
-  createWindow();
 
   // Setup terminal handlers with mainWindow after window is created
   if (mainWindow) {

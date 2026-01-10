@@ -137,6 +137,7 @@ async function loadBuiltinExtensions(): Promise<ExtensionDefinition[]> {
  *
  * @param extensionPath - extension 경로 (예: '@/extensions/my-extension')
  */
+/*
 export async function loadExtension(extensionPath: string): Promise<void> {
   try {
     const module = await import(extensionPath);
@@ -166,6 +167,7 @@ export async function loadExtension(extensionPath: string): Promise<void> {
     throw error;
   }
 }
+*/
 
 /**
  * Extension 언로드 (런타임)

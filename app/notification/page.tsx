@@ -77,6 +77,16 @@ export default function NotificationPage() {
     window.electronAPI?.notification?.close?.();
   };
 
+  // Force body background to be transparent
+  useEffect(() => {
+    document.body.style.backgroundColor = 'transparent';
+    document.documentElement.style.backgroundColor = 'transparent';
+    return () => {
+      document.body.style.backgroundColor = '';
+      document.documentElement.style.backgroundColor = '';
+    };
+  }, []);
+
   if (!notification) {
     return null;
   }
@@ -89,7 +99,7 @@ export default function NotificationPage() {
         html={notification.html}
         imageUrl={notification.imageUrl}
         onClick={handleClick}
-        onDismiss={handleDismiss} // We need to update CustomNotification to support onDismiss event if not existing
+        onDismiss={handleDismiss}
       />
     </div>
   );

@@ -484,6 +484,7 @@ const electronAPI = {
       'download-progress',
       'create-new-chat-with-message',
       'window:focus-changed',
+      'notification:update-content',
     ];
 
     if (validChannels.includes(channel)) {
@@ -674,6 +675,9 @@ const electronAPI = {
       ipcRenderer.on('notification:click', handler);
       return () => ipcRenderer.removeListener('notification:click', handler);
     },
+
+    emitClick: (conversationId: string) => ipcRenderer.invoke('notification:click', conversationId),
+    close: () => ipcRenderer.invoke('notification:close'),
   },
 };
 

@@ -1,4 +1,4 @@
-import { BrowserWindow, screen, ipcMain } from 'electron';
+import { BrowserWindow, screen, ipcMain, app } from 'electron';
 import path from 'path';
 import { logger } from './logger';
 
@@ -23,8 +23,11 @@ export class NotificationWindowManager {
     return NotificationWindowManager.instance;
   }
 
+  private pendingNotification: any = null;
+  private isLoaded = false;
+
   private createWindow() {
-    const isDev = process.env.NODE_ENV === 'development';
+    const isDev = !app.isPackaged;
 
     this.window = new BrowserWindow({
       width: WINDOW_WIDTH,
@@ -50,11 +53,21 @@ export class NotificationWindowManager {
 
     this.window.on('closed', () => {
       this.window = null;
+      this.isLoaded = false;
     });
 
     // Handle initial load failures or readiness
     this.window.webContents.on('did-finish-load', () => {
       logger.info('[NotificationWindow] Window loaded');
+      this.isLoaded = true;
+      if (this.pendingNotification) {
+        this.window?.webContents.send('notification:update-content', this.pendingNotification);
+        this.pendingNotification = null;
+      }
+    });
+
+    this.window.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      logger.error(`[NotificationWindow] Failed to load: ${errorDescription} (${errorCode})`);
     });
   }
 
@@ -86,7 +99,16 @@ export class NotificationWindowManager {
     // Send content
     // We need to wait until webContents is ready if we just created it.
     // But since we initialize in main.ts, it should be ready.
-    this.window.webContents.send('notification:update-content', options);
+    // Enable mouse events for interaction, but keep underlying window clickable when transparent areas are clicked?
+    // Electron transparent windows are tricky. Often we want 'ignore-mouse-events' for transparent parts.
+    // For now, let's assume the window rectangle captures clicks.
+
+    if (this.isLoaded && this.window.webContents) {
+      this.window.webContents.send('notification:update-content', options);
+    } else {
+      this.pendingNotification = options;
+    }
+
     this.window.showInactive(); // Show without focusing
 
     // Auto hide
