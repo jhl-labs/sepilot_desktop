@@ -39,6 +39,7 @@ export class NotificationWindowManager {
       alwaysOnTop: true,
       skipTaskbar: true,
       focusable: false, // Don't take focus when shown
+      backgroundColor: '#00000000', // Ensure transparent background
       webPreferences: {
         preload: path.join(__dirname, '../preload.js'),
         nodeIntegration: false,

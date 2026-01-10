@@ -127,9 +127,16 @@ export function GeneralSettingsTab({ onSave, isSaving, message }: GeneralSetting
         body: '알림 테스트가 성공적으로 완료되었습니다!',
         // Add rich content for Application Type
         ...(notificationType === 'application' && {
-          html: `<span style="color: #10b981; font-weight: bold;">성공!</span> 알림 테스트가 <span style="color: #3b82f6;">HTML</span>과 함께 표시됩니다.<br/>더 큰 텍스트와 이미지도 지원합니다.`,
+          html: `
+            <div style="font-family: sans-serif;">
+              <span style="color: #10b981; font-weight: 700; font-size: 0.95em;">✓ Connected</span>
+              <div style="margin-top: 4px; color: inherit;">
+                Your <strong>Deep Learning Agent</strong> has successfully analyzed the repository.
+              </div>
+            </div>
+          `,
           imageUrl:
-            'https://images.unsplash.com/photo-1542206395-9feb3edaa68d?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+            'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=800&auto=format&fit=crop&q=80',
         }),
       });
 
