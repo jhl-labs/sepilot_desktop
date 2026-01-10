@@ -34,6 +34,92 @@ const SkillSourceSchema = z.object({
 });
 
 /**
+ * Load builtin skills from builtin-skills directory
+ */
+async function loadBuiltinSkills(): Promise<void> {
+  console.log('[Skills] Loading builtin skills...');
+
+  try {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const { app } = await import('electron');
+
+    // builtin-skills 디렉토리 경로
+    const builtinSkillsDir = path.join(app.getAppPath(), 'builtin-skills');
+
+    // 디렉토리 존재 확인
+    try {
+      await fs.access(builtinSkillsDir);
+    } catch {
+      console.log('[Skills] No builtin-skills directory found, skipping...');
+      return;
+    }
+
+    // 디렉토리 내 모든 스킬 폴더 스캔
+    const entries = await fs.readdir(builtinSkillsDir, { withFileTypes: true });
+    const skillDirs = entries.filter((entry) => entry.isDirectory());
+
+    console.log(`[Skills] Found ${skillDirs.length} builtin skill(s)`);
+
+    // 각 스킬 로드 및 설치
+    for (const dir of skillDirs) {
+      const skillDir = path.join(builtinSkillsDir, dir.name);
+
+      try {
+        // skill.json (manifest) 읽기
+        const manifestPath = path.join(skillDir, 'skill.json');
+        const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+        const manifest = JSON.parse(manifestContent);
+
+        // content.json 읽기
+        const contentPath = path.join(skillDir, 'content.json');
+        const contentContent = await fs.readFile(contentPath, 'utf-8');
+        const content = JSON.parse(contentContent);
+
+        // SkillPackage 생성
+        const skillPackage: SkillPackage = {
+          manifest,
+          content,
+          resources: undefined, // builtin skills는 리소스 없음
+        };
+
+        // Source 정의
+        const source: SkillSource = {
+          type: 'builtin',
+          url: `builtin://${manifest.id}`,
+        };
+
+        // 이미 설치되어 있는지 확인
+        const existingSkill = await skillRegistry.getSkill(manifest.id);
+
+        if (existingSkill) {
+          // 버전 체크 - 버전이 다르면 업데이트
+          if (existingSkill.manifest.version !== manifest.version) {
+            console.log(
+              `[Skills] Updating builtin skill: ${manifest.name} (${existingSkill.manifest.version} → ${manifest.version})`
+            );
+            await skillRegistry.updateSkill(skillPackage);
+          } else {
+            console.log(`[Skills] Builtin skill already installed: ${manifest.name}`);
+          }
+        } else {
+          // 새로 설치
+          console.log(`[Skills] Installing builtin skill: ${manifest.name}`);
+          await skillRegistry.installSkill(skillPackage, source);
+        }
+      } catch (error) {
+        console.error(`[Skills] Failed to load builtin skill from ${dir.name}:`, error);
+      }
+    }
+
+    console.log('[Skills] Builtin skills loaded successfully');
+  } catch (error) {
+    console.error('[Skills] Failed to load builtin skills:', error);
+    // builtin skills 로드 실패는 전체 초기화를 막지 않음
+  }
+}
+
+/**
  * Initialize Skills system on app startup
  */
 export async function initializeSkills(): Promise<void> {
@@ -46,6 +132,9 @@ export async function initializeSkills(): Promise<void> {
 
     // Skill Manager 초기화 (manifests 로드)
     await skillManager.initialize();
+
+    // Builtin Skills 자동 로드
+    await loadBuiltinSkills();
 
     console.log('[Skills] Skills system initialized successfully');
   } catch (error) {

@@ -1,0 +1,11 @@
+{
+  "id": "com.sepilot.builtin.coding-guide",
+  "name": "SEPilot 코딩 가이드",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "SEPilot Desktop 개발 시 따라야 할 코딩 규칙과 아키텍처 패턴",
+  "category": "productivity",
+  "tags": ["sepilot", "coding", "guide", "electron", "nextjs", "typescript", "architecture"],
+  "autoLoad": true,
+  "contextPatterns": ["sepilot", "electron", "ipc", "설정", "아키텍처", "코드 리뷰"]
+}

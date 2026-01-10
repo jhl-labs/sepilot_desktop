@@ -1,0 +1,110 @@
+{
+  "systemPrompt": "당신은 SEPilot Desktop 프로젝트에서 작업하고 있습니다. 다음 아키텍처 원칙과 코딩 규칙을 반드시 따라야 합니다.",
+  "knowledge": [
+    {
+      "title": "프로젝트 구조",
+      "content": "# SEPilot Desktop 프로젝트 구조\n\n## 기술 스택\n- **Frontend**: Next.js 14 (App Router), React, TypeScript, Tailwind CSS, shadcn/ui\n- **Backend**: Electron Main Process (Node.js, TypeScript)\n- **통신**: IPC (Inter-Process Communication)\n- **AI**: LangGraph, Claude API\n- **데이터베이스**: SQLite (better-sqlite3)\n\n## 디렉토리 구조\n```\napp/                 # Next.js App Router (Frontend)\ncomponents/          # React 컴포넌트\n  ├── ui/            # shadcn/ui 기본 컴포넌트\n  ├── chat/          # 채팅 관련 컴포넌트\n  ├── settings/      # 설정 관련 컴포넌트\n  └── ...            # 기타 도메인별 컴포넌트\nelectron/            # Electron Main/Preload\n  ├── ipc/           # IPC 핸들러\n  ├── services/      # Backend 서비스\n  └── utils/         # Backend 유틸리티\nlib/                 # 공유 라이브러리\n  ├── langgraph/     # LangGraph Agent\n  ├── llm/           # LLM 제공자\n  ├── mcp/           # MCP 통합\n  ├── skills/        # Skills 시스템\n  └── extensions/    # Extensions 시스템\ntypes/               # TypeScript 타입 정의\n```"
+    },
+    {
+      "title": "IPC 통신 패턴",
+      "content": "# Electron IPC 통신 패턴\n\n## 기본 원칙\n\n1. **Frontend → Backend**: `window.electron.invoke('channel-name', data)`\n2. **Backend → Frontend**: `event.sender.send('channel-name', data)`\n3. **스트리밍 데이터는 반드시 IPC 이벤트로 전송** (HTTP 불가)\n\n## IPC 핸들러 작성 규칙\n\n### 위치\n- 모든 IPC 핸들러는 `electron/ipc/handlers/` 디렉토리에 배치\n- 도메인별로 파일 분리 (예: `chat.ts`, `settings.ts`, `skills.ts`)\n\n### 타입 안전성\n```typescript\nimport { ipcMain } from 'electron';\nimport type { IPCResponse } from '../../types/electron';\n\n// ✅ 올바른 예시: 제네릭 타입 명시\nipcMain.handle(\n  'skills:get-installed',\n  async (): Promise<IPCResponse<InstalledSkill[]>> => {\n    try {\n      const skills = await skillRegistry.getInstalledSkills();\n      return { success: true, data: skills };\n    } catch (error) {\n      console.error('[IPC] error:', error);\n      return { success: false, error: String(error) };\n    }\n  }\n);\n\n// ❌ 잘못된 예시: 제네릭 타입 누락\nipcMain.handle('skills:get-installed', async (): Promise<IPCResponse> => {\n  // IPCResponse는 기본적으로 IPCResponse<void>로 추론됨\n});\n```\n\n### 에러 처리\n- 항상 try-catch로 에러 처리\n- 에러 메시지를 `String(error)`로 변환\n- 콘솔 로그에 `[IPC]` prefix 사용"
+    },
+    {
+      "title": "TypeScript Strict Mode 규칙",
+      "content": "# TypeScript Strict Mode 규칙\n\n## 기본 원칙\n\n1. **any 타입 금지**: 명확한 타입 정의 사용\n2. **제네릭 타입 명시**: 기본 타입에 의존하지 말고 명시적으로 작성\n3. **옵셔널 체이닝 사용**: `?.` 연산자로 안전하게 접근\n4. **타입 가드 사용**: `typeof`, `instanceof`, 커스텀 타입 가드\n\n## 인터페이스 정의\n\n```typescript\n// ✅ 올바른 예시\nexport interface SkillSource {\n  type: SkillSourceType;\n  url?: string;\n  repo?: string;\n  branch?: string;\n  commit?: string;\n  downloadedAt?: number;  // 모든 필드 명시\n}\n\n// ❌ 잘못된 예시: 사용되는 필드가 타입에 없음\nconst source: SkillSource = {\n  type: 'marketplace',\n  url: 'https://...',\n  downloadedAt: Date.now(),  // ← 타입 정의에 없으면 에러\n};\n```\n\n## 중첩 객체 접근\n\n```typescript\n// ✅ 올바른 예시: 타입 구조에 맞게 접근\ninterface LoadedSkill {\n  skillId: string;\n  package: SkillPackage;  // manifest, content, resources는 여기 안에\n  loadedAt: number;\n}\n\nconst manifest = loadedSkill.package.manifest;  // ✅\n\n// ❌ 잘못된 예시: 직접 접근 불가\nconst manifest = loadedSkill.manifest;  // ❌ LoadedSkill에 manifest 필드 없음\n```"
+    },
+    {
+      "title": "컴포넌트 설계 원칙",
+      "content": "# React 컴포넌트 설계 원칙\n\n## 기본 원칙\n\n1. **작고 재사용 가능한 컴포넌트 구성**\n2. **shadcn/ui 컴포넌트 최대 활용**\n3. **비즈니스 로직과 UI 분리**\n4. **Props 타입 명시**\n\n## 컴포넌트 구조\n\n```typescript\n'use client';\n\nimport { useState, useEffect } from 'react';\nimport { Button } from '@/components/ui/button';\nimport type { MyDataType } from '@/types';\n\ninterface MyComponentProps {\n  data: MyDataType;\n  onAction: (id: string) => void;\n  className?: string;\n}\n\nexport function MyComponent({ data, onAction, className }: MyComponentProps) {\n  const [state, setState] = useState<StateType>({});\n  \n  useEffect(() => {\n    // 초기화 로직\n  }, []);\n  \n  return (\n    <div className={className}>\n      {/* UI */}\n    </div>\n  );\n}\n```\n\n## 데이터 페칭\n\n```typescript\n// ✅ 올바른 예시: Electron API 사용\nconst loadData = async () => {\n  try {\n    if (window.electronAPI?.myAPI) {\n      const result = await window.electronAPI.myAPI.getData();\n      if (result.success && result.data) {\n        setData(result.data);\n      }\n    }\n  } catch (error) {\n    console.error('Failed to load data:', error);\n  }\n};\n\n// ❌ 잘못된 예시: HTTP fetch 사용 (Electron에서는 IPC 사용)\nconst loadData = async () => {\n  const response = await fetch('/api/data');\n  const data = await response.json();\n  setData(data);\n};\n```"
+    },
+    {
+      "title": "데이터 저장 규칙",
+      "content": "# 데이터 저장 규칙\n\n## 저장소 선택\n\n### 1. 임시/캐시 데이터\n- **사용**: `localStorage`\n- **예시**: UI 상태, 임시 설정, 캐시된 데이터\n\n```typescript\n// ✅ 임시 데이터는 localStorage 사용\nlocalStorage.setItem('ui-state', JSON.stringify(state));\nconst state = JSON.parse(localStorage.getItem('ui-state') || '{}');\n```\n\n### 2. 영구 저장 데이터\n- **사용**: Electron fs API (파일 시스템)\n- **위치**: `app.getPath('userData')`\n- **예시**: 사용자 설정, 대화 기록, 스킬 데이터\n\n```typescript\n// ✅ 영구 데이터는 Electron 서비스 사용\nconst config = await window.electronAPI.config.get();\nawait window.electronAPI.config.set(newConfig);\n```\n\n### 3. 데이터베이스\n- **사용**: SQLite (better-sqlite3)\n- **위치**: `electron/services/` 디렉토리\n- **예시**: Skills, Conversations, Usage History\n\n```typescript\n// ✅ 데이터베이스 서비스 패턴\nexport class SkillDatabaseService {\n  private db: Database | null = null;\n  \n  initialize(dbPath: string): void {\n    this.db = new Database(dbPath);\n    this.createTables();\n  }\n  \n  getAllSkills(): InstalledSkill[] {\n    const rows = this.db!.prepare('SELECT * FROM skills').all();\n    return rows.map(this.rowToSkill);\n  }\n}\n```"
+    },
+    {
+      "title": "보안 규칙",
+      "content": "# 보안 규칙\n\n## 필수 검증\n\n### 1. API 키, 토큰 하드코딩 금지\n```typescript\n// ❌ 절대 하지 말 것\nconst API_KEY = 'sk-1234567890abcdef';\n\n// ✅ 올바른 방법: 사용자 설정에서 로드\nconst config = await window.electronAPI.config.get();\nconst apiKey = config.anthropicApiKey;\n```\n\n### 2. 사용자 경로 보호\n```typescript\n// ❌ 사용자 경로 하드코딩 금지\nconst filePath = '/home/myname/documents/file.txt';\n\n// ✅ 상대 경로 또는 app.getPath 사용\nconst userDataPath = app.getPath('userData');\nconst filePath = path.join(userDataPath, 'data', 'file.txt');\n```\n\n### 3. XSS, SQL Injection 방지\n- Markdown 렌더링 시 sanitize 사용\n- SQL 쿼리는 prepared statement 사용\n- 사용자 입력 검증\n\n```typescript\n// ✅ Prepared statement 사용\nconst stmt = db.prepare('SELECT * FROM skills WHERE id = ?');\nconst skill = stmt.get(skillId);\n\n// ❌ SQL Injection 위험\nconst skill = db.prepare(`SELECT * FROM skills WHERE id = '${skillId}'`).get();\n```"
+    }
+  ],
+  "templates": [
+    {
+      "id": "ipc-handler",
+      "name": "IPC 핸들러 템플릿",
+      "description": "새로운 IPC 핸들러를 작성할 때 사용하는 템플릿",
+      "prompt": "```typescript\nimport { ipcMain } from 'electron';\nimport type { IPCResponse } from '../../types/electron';\nimport type { {{DataType}} } from '../../types';\n\n/**\n * {{Description}}\n */\nipcMain.handle(\n  '{{channel}}',\n  async (_, {{params}}): Promise<IPCResponse<{{DataType}}>> => {\n    try {\n      // 비즈니스 로직\n      const result = await {{service}}.{{method}}({{params}});\n      return { success: true, data: result };\n    } catch (error) {\n      console.error('[IPC] {{channel}} error:', error);\n      return { success: false, error: String(error) };\n    }\n  }\n);\n```",
+      "variables": [
+        {
+          "name": "channel",
+          "description": "IPC 채널 이름 (예: 'skills:get-installed')",
+          "required": true
+        },
+        {
+          "name": "DataType",
+          "description": "반환 데이터 타입",
+          "required": true
+        },
+        {
+          "name": "params",
+          "description": "파라미터 목록",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "service",
+          "description": "사용할 서비스",
+          "required": true
+        },
+        {
+          "name": "method",
+          "description": "호출할 메서드",
+          "required": true
+        },
+        {
+          "name": "Description",
+          "description": "핸들러 설명",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "react-component",
+      "name": "React 컴포넌트 템플릿",
+      "description": "새로운 React 컴포넌트를 작성할 때 사용하는 템플릿",
+      "prompt": "```typescript\n'use client';\n\nimport { useState, useEffect } from 'react';\nimport { Button } from '@/components/ui/button';\nimport type { {{DataType}} } from '@/types';\n\ninterface {{ComponentName}}Props {\n  {{props}}\n}\n\nexport function {{ComponentName}}({ {{propsList}} }: {{ComponentName}}Props) {\n  const [data, setData] = useState<{{DataType}}[]>([]);\n  const [isLoading, setIsLoading] = useState(false);\n\n  useEffect(() => {\n    loadData();\n  }, []);\n\n  const loadData = async () => {\n    setIsLoading(true);\n    try {\n      if (window.electronAPI?.{{api}}) {\n        const result = await window.electronAPI.{{api}}.{{method}}();\n        if (result.success && result.data) {\n          setData(result.data);\n        }\n      }\n    } catch (error) {\n      console.error('Failed to load data:', error);\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  return (\n    <div>\n      {/* UI */}\n    </div>\n  );\n}\n```",
+      "variables": [
+        {
+          "name": "ComponentName",
+          "description": "컴포넌트 이름 (PascalCase)",
+          "required": true
+        },
+        {
+          "name": "DataType",
+          "description": "데이터 타입",
+          "required": true
+        },
+        {
+          "name": "props",
+          "description": "Props 정의",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "propsList",
+          "description": "Props 파라미터 목록",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "api",
+          "description": "Electron API 이름",
+          "required": true
+        },
+        {
+          "name": "method",
+          "description": "API 메서드",
+          "required": true
+        }
+      ]
+    }
+  ]
+}
