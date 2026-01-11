@@ -22,7 +22,8 @@ export class LLMClient {
       case 'anthropic':
       case 'gemini':
       case 'ollama':
-        // OpenAI Compatible API를 사용 (Gemini, Ollama 모두 OpenAI Compatible API 지원)
+      case 'custom':
+        // OpenAI Compatible API를 사용 (Gemini, Ollama, Custom 모두 OpenAI Compatible API 지원)
         this.provider = new OpenAIProvider(
           config.baseURL,
           config.apiKey,
