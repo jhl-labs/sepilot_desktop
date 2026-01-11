@@ -19,6 +19,7 @@ import type {
   SkillResources,
 } from '../../types/skill';
 import { createOctokitAgent } from '@/lib/http';
+import { compareVersions, isBreakingChange } from './version-utils';
 
 /**
  * GitHub Integration 설정
@@ -293,7 +294,10 @@ export class GitHubIntegration {
 
       return resources;
     } catch (error) {
-      console.error(`[GitHubIntegration] Failed to download resources from ${resourcesPath}:`, error);
+      console.error(
+        `[GitHubIntegration] Failed to download resources from ${resourcesPath}:`,
+        error
+      );
       throw error;
     }
   }
@@ -341,10 +345,7 @@ export class GitHubIntegration {
    * @param filters - 검색 필터
    * @returns 필터링된 SkillRegistryEntry 배열
    */
-  async searchSkills(
-    query: string,
-    filters?: SkillSearchFilters
-  ): Promise<SkillRegistryEntry[]> {
+  async searchSkills(query: string, filters?: SkillSearchFilters): Promise<SkillRegistryEntry[]> {
     const registry = await this.fetchSkillsRegistry();
 
     let results = registry;
@@ -370,9 +371,7 @@ export class GitHubIntegration {
 
       // 태그 필터
       if (filters.tags && filters.tags.length > 0) {
-        results = results.filter((skill) =>
-          filters.tags!.some((tag) => skill.tags.includes(tag))
-        );
+        results = results.filter((skill) => filters.tags!.some((tag) => skill.tags.includes(tag)));
       }
 
       // 검증된 스킬만
@@ -412,7 +411,7 @@ export class GitHubIntegration {
       }
 
       // 버전 비교
-      const comparison = this.compareVersions(installed.version, registryEntry.version);
+      const comparison = compareVersions(installed.version, registryEntry.version);
 
       if (comparison < 0) {
         // 설치된 버전이 레지스트리 버전보다 낮음 (업데이트 가능)
@@ -421,7 +420,7 @@ export class GitHubIntegration {
           currentVersion: installed.version,
           latestVersion: registryEntry.version,
           changelog: registryEntry.changelog,
-          breaking: this.isBreakingChange(installed.version, registryEntry.version),
+          breaking: isBreakingChange(installed.version, registryEntry.version),
         });
       }
     }
@@ -457,40 +456,6 @@ export class GitHubIntegration {
       console.error(`[GitHubIntegration] Failed to fetch stats for ${skillPath}:`, error);
       return { stars: 0, downloads: 0 };
     }
-  }
-
-  /**
-   * Semantic Versioning 비교
-   *
-   * @returns -1: v1 < v2, 0: v1 === v2, 1: v1 > v2
-   */
-  private compareVersions(v1: string, v2: string): number {
-    const parts1 = v1.split('-')[0].split('.').map(Number); // Pre-release 제거
-    const parts2 = v2.split('-')[0].split('.').map(Number);
-
-    for (let i = 0; i < 3; i++) {
-      const p1 = parts1[i] || 0;
-      const p2 = parts2[i] || 0;
-
-      if (p1 > p2) {
-        return 1;
-      }
-      if (p1 < p2) {
-        return -1;
-      }
-    }
-
-    return 0;
-  }
-
-  /**
-   * Breaking Change 여부 확인 (Major 버전 변경)
-   */
-  private isBreakingChange(oldVersion: string, newVersion: string): boolean {
-    const oldMajor = parseInt(oldVersion.split('.')[0], 10);
-    const newMajor = parseInt(newVersion.split('.')[0], 10);
-
-    return newMajor > oldMajor;
   }
 
   /**

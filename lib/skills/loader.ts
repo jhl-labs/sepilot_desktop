@@ -8,6 +8,7 @@
  */
 
 import type { SkillPackage, SkillManifest } from '../../types/skill';
+import { compareVersions } from './version-utils';
 
 /**
  * Skill 로드 옵션
@@ -262,35 +263,11 @@ export class SkillLoader {
       // package.json에서 현재 앱 버전 가져오기
       const { version: currentVersion } = await import('../../package.json');
 
-      return this.compareVersions(currentVersion, manifest.minAppVersion) >= 0;
+      return compareVersions(currentVersion, manifest.minAppVersion) >= 0;
     } catch (error) {
       console.error('[SkillLoader] Failed to check compatibility:', error);
       return true; // 체크 실패 시 호환되는 것으로 간주
     }
-  }
-
-  /**
-   * Semantic Versioning 비교
-   *
-   * @returns -1: v1 < v2, 0: v1 === v2, 1: v1 > v2
-   */
-  private compareVersions(v1: string, v2: string): number {
-    const parts1 = v1.split('-')[0].split('.').map(Number); // Pre-release 제거
-    const parts2 = v2.split('-')[0].split('.').map(Number);
-
-    for (let i = 0; i < 3; i++) {
-      const p1 = parts1[i] || 0;
-      const p2 = parts2[i] || 0;
-
-      if (p1 > p2) {
-        return 1;
-      }
-      if (p1 < p2) {
-        return -1;
-      }
-    }
-
-    return 0;
   }
 
   /**
