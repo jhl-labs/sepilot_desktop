@@ -10,6 +10,38 @@
 import { MCPTool } from '../types';
 
 // =============================================================================
+// 공통 스키마 조각
+// =============================================================================
+
+/**
+ * 언어 필터 스키마 (모든 검색 도구에서 공통으로 사용)
+ */
+const languageProperty = {
+  type: 'string' as const,
+  description: '언어 필터',
+  enum: ['ko', 'en', 'ja', 'zh-CN', 'zh-TW', 'es', 'fr', 'de', 'ru', 'ar', 'pt', 'it'],
+};
+
+/**
+ * 지역 필터 스키마 (모든 검색 도구에서 공통으로 사용)
+ */
+const regionProperty = {
+  type: 'string' as const,
+  description: '지역 필터',
+  enum: ['KR', 'US', 'GB', 'JP', 'CN', 'DE', 'FR', 'ES', 'IT', 'CA', 'AU'],
+};
+
+/**
+ * 최대 결과 개수 스키마 (모든 검색 도구에서 공통으로 사용)
+ */
+const maxResultsProperty = {
+  type: 'number' as const,
+  description: '최대 결과 개수. 기본값: 10',
+  minimum: 1,
+  maximum: 100,
+};
+
+// =============================================================================
 // 검색 도구 (5개)
 // =============================================================================
 
@@ -50,22 +82,9 @@ export const googleSearchTool: MCPTool = {
         description: '파일 타입 필터 (pdf, doc, xls, ppt 등)',
         enum: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf'],
       },
-      language: {
-        type: 'string',
-        description: '언어 필터 (ko, en, ja 등)',
-        enum: ['ko', 'en', 'ja', 'zh-CN', 'zh-TW', 'es', 'fr', 'de', 'ru', 'ar', 'pt', 'it'],
-      },
-      region: {
-        type: 'string',
-        description: '지역 필터 (KR, US, JP 등)',
-        enum: ['KR', 'US', 'GB', 'JP', 'CN', 'DE', 'FR', 'ES', 'IT', 'CA', 'AU'],
-      },
-      maxResults: {
-        type: 'number',
-        description: '최대 결과 개수 (1-100). 기본값: 10',
-        minimum: 1,
-        maximum: 100,
-      },
+      language: languageProperty,
+      region: regionProperty,
+      maxResults: maxResultsProperty,
     },
     required: ['query'],
   },
@@ -91,22 +110,9 @@ export const googleSearchNewsTool: MCPTool = {
         description: '날짜 필터 (hour, day, week, month, year). 기본값: week',
         enum: ['hour', 'day', 'week', 'month', 'year'],
       },
-      language: {
-        type: 'string',
-        description: '언어 필터',
-        enum: ['ko', 'en', 'ja', 'zh-CN', 'zh-TW', 'es', 'fr', 'de', 'ru', 'ar', 'pt', 'it'],
-      },
-      region: {
-        type: 'string',
-        description: '지역 필터',
-        enum: ['KR', 'US', 'GB', 'JP', 'CN', 'DE', 'FR', 'ES', 'IT', 'CA', 'AU'],
-      },
-      maxResults: {
-        type: 'number',
-        description: '최대 결과 개수. 기본값: 10',
-        minimum: 1,
-        maximum: 100,
-      },
+      language: languageProperty,
+      region: regionProperty,
+      maxResults: maxResultsProperty,
     },
     required: ['query'],
   },
@@ -225,22 +231,9 @@ export const googleSearchAdvancedTool: MCPTool = {
         description: '날짜 필터',
         enum: ['anytime', 'hour', 'day', 'week', 'month', 'year', 'custom'],
       },
-      language: {
-        type: 'string',
-        description: '언어 필터',
-        enum: ['ko', 'en', 'ja', 'zh-CN', 'zh-TW', 'es', 'fr', 'de', 'ru', 'ar', 'pt', 'it'],
-      },
-      region: {
-        type: 'string',
-        description: '지역 필터',
-        enum: ['KR', 'US', 'GB', 'JP', 'CN', 'DE', 'FR', 'ES', 'IT', 'CA', 'AU'],
-      },
-      maxResults: {
-        type: 'number',
-        description: '최대 결과 개수. 기본값: 10',
-        minimum: 1,
-        maximum: 100,
-      },
+      language: languageProperty,
+      region: regionProperty,
+      maxResults: maxResultsProperty,
     },
     required: ['query'],
   },
