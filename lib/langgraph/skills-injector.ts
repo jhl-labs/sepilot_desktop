@@ -285,6 +285,46 @@ export class SkillsInjector {
   }
 
   /**
+   * Graph 노드에서 Skills를 주입하고 메시지로 변환하는 헬퍼
+   *
+   * @param query 사용자 쿼리
+   * @param conversationId 대화 ID
+   * @param emitChunk 스트리밍 청크 전송 함수
+   * @param logPrefix 로그 프리픽스 (예: '[Deep]', '[Sequential]')
+   * @returns Skill 메시지 배열
+   */
+  async injectSkillsForGraph(
+    query: string,
+    conversationId: string,
+    emitChunk: (chunk: string, convId: string) => void,
+    logPrefix: string
+  ): Promise<Message[]> {
+    const skillMessages: Message[] = [];
+    try {
+      const injectionResult = await this.injectSkills(query, conversationId);
+
+      if (injectionResult.injectedSkills.length > 0) {
+        skillMessages.push(...this.getMessagesFromResult(injectionResult));
+
+        emitChunk(
+          `\n🎯 **${injectionResult.injectedSkills.length}개의 Skill이 활성화되었습니다.**\n\n`,
+          conversationId
+        );
+
+        console.log(`${logPrefix} Skills injected:`, {
+          count: injectionResult.injectedSkills.length,
+          skillIds: injectionResult.injectedSkills,
+          tokens: injectionResult.totalTokens,
+        });
+      }
+    } catch (skillError) {
+      console.error(`${logPrefix} Skills injection error:`, skillError);
+    }
+
+    return skillMessages;
+  }
+
+  /**
    * 주입 결과를 Message 형식으로 변환
    *
    * @param injectionResult 주입 결과

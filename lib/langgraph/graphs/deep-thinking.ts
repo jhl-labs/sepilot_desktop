@@ -116,29 +116,13 @@ async function initialAnalysisNode(state: DeepThinkingState) {
   };
 
   // Skills 주입
-  const skillMessages: Message[] = [];
-  try {
-    const { skillsInjector } = await import('../skills-injector');
-    const injectionResult = await skillsInjector.injectSkills(query, state.conversationId);
-
-    if (injectionResult.injectedSkills.length > 0) {
-      skillMessages.push(...skillsInjector.getMessagesFromResult(injectionResult));
-
-      emitStreamingChunk(
-        `\n🎯 **${injectionResult.injectedSkills.length}개의 Skill이 활성화되었습니다.**\n\n`,
-        state.conversationId
-      );
-
-      logger.info('[Deep] Skills injected:', {
-        count: injectionResult.injectedSkills.length,
-        skillIds: injectionResult.injectedSkills,
-        tokens: injectionResult.totalTokens,
-      });
-    }
-  } catch (skillError) {
-    console.error('[Deep] Skills injection error:', skillError);
-    // Skill 주입 실패는 치명적이지 않으므로 계속 진행
-  }
+  const { skillsInjector } = await import('../skills-injector');
+  const skillMessages = await skillsInjector.injectSkillsForGraph(
+    query,
+    state.conversationId,
+    emitStreamingChunk,
+    '[Deep]'
+  );
 
   let analysis = '';
   for await (const chunk of LLMService.streamChat(
