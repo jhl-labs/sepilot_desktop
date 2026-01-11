@@ -15,6 +15,35 @@ import type {
 
 export class SkillDatabaseService {
   /**
+   * Row 데이터를 InstalledSkill 객체로 파싱
+   */
+  private parseSkillRow(row: any[]): InstalledSkill {
+    return {
+      id: row[0] as string,
+      manifest: JSON.parse(row[1] as string) as SkillManifest,
+      source: JSON.parse(row[2] as string) as SkillSource,
+      localPath: row[3] as string,
+      installedAt: row[4] as number,
+      enabled: (row[5] as number) === 1,
+      usageCount: row[6] as number,
+      lastUsedAt: row[7] ? (row[7] as number) : undefined,
+    };
+  }
+
+  /**
+   * Row 데이터를 SkillUsageHistory 객체로 파싱
+   */
+  private parseUsageHistoryRow(row: any[]): SkillUsageHistory {
+    return {
+      id: row[0] as number,
+      skillId: row[1] as string,
+      conversationId: row[2] as string,
+      activatedAt: row[3] as number,
+      contextPattern: row[4] ? (row[4] as string) : undefined,
+    };
+  }
+
+  /**
    * 모든 설치된 Skills 조회
    */
   getAllSkills(): InstalledSkill[] {
@@ -33,16 +62,7 @@ export class SkillDatabaseService {
     const skills: InstalledSkill[] = [];
     for (const row of result[0].values) {
       try {
-        skills.push({
-          id: row[0] as string,
-          manifest: JSON.parse(row[1] as string) as SkillManifest,
-          source: JSON.parse(row[2] as string) as SkillSource,
-          localPath: row[3] as string,
-          installedAt: row[4] as number,
-          enabled: (row[5] as number) === 1,
-          usageCount: row[6] as number,
-          lastUsedAt: row[7] ? (row[7] as number) : undefined,
-        });
+        skills.push(this.parseSkillRow(row));
       } catch (error) {
         console.error('[SkillDB] Failed to parse skill row:', error);
       }
@@ -71,16 +91,7 @@ export class SkillDatabaseService {
     const skills: InstalledSkill[] = [];
     for (const row of result[0].values) {
       try {
-        skills.push({
-          id: row[0] as string,
-          manifest: JSON.parse(row[1] as string) as SkillManifest,
-          source: JSON.parse(row[2] as string) as SkillSource,
-          localPath: row[3] as string,
-          installedAt: row[4] as number,
-          enabled: true,
-          usageCount: row[6] as number,
-          lastUsedAt: row[7] ? (row[7] as number) : undefined,
-        });
+        skills.push(this.parseSkillRow(row));
       } catch (error) {
         console.error('[SkillDB] Failed to parse skill row:', error);
       }
@@ -109,16 +120,7 @@ export class SkillDatabaseService {
     const row = result[0].values[0];
 
     try {
-      return {
-        id: row[0] as string,
-        manifest: JSON.parse(row[1] as string) as SkillManifest,
-        source: JSON.parse(row[2] as string) as SkillSource,
-        localPath: row[3] as string,
-        installedAt: row[4] as number,
-        enabled: (row[5] as number) === 1,
-        usageCount: row[6] as number,
-        lastUsedAt: row[7] ? (row[7] as number) : undefined,
-      };
+      return this.parseSkillRow(row);
     } catch (error) {
       console.error('[SkillDB] Failed to parse skill:', error);
       return null;
@@ -243,13 +245,7 @@ export class SkillDatabaseService {
 
     const histories: SkillUsageHistory[] = [];
     for (const row of result[0].values) {
-      histories.push({
-        id: row[0] as number,
-        skillId: row[1] as string,
-        conversationId: row[2] as string,
-        activatedAt: row[3] as number,
-        contextPattern: row[4] ? (row[4] as string) : undefined,
-      });
+      histories.push(this.parseUsageHistoryRow(row));
     }
 
     return histories;
@@ -275,13 +271,7 @@ export class SkillDatabaseService {
 
     const histories: SkillUsageHistory[] = [];
     for (const row of result[0].values) {
-      histories.push({
-        id: row[0] as number,
-        skillId: row[1] as string,
-        conversationId: row[2] as string,
-        activatedAt: row[3] as number,
-        contextPattern: row[4] ? (row[4] as string) : undefined,
-      });
+      histories.push(this.parseUsageHistoryRow(row));
     }
 
     return histories;
