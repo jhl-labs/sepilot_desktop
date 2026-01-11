@@ -13,6 +13,7 @@ import { createBaseSystemMessage } from '../utils/system-message';
 
 // Cache for MCP tools to reduce overhead
 import { logger } from '@/lib/utils/logger';
+import { getBuiltinTools } from '@/lib/mcp/tools/builtin-tools';
 
 // Main Process에서 LLM 설정 가져오기
 async function getLLMConfigFromDB(): Promise<{ maxTokens: number; temperature: number } | null> {
@@ -300,7 +301,7 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
 
     logger.info(`[Agent] Tools enabled in config: ${toolsEnabled}`);
 
-    // MCP 도구 가져오기 (Built-in tools는 Coding Agent에서만 사용)
+    // MCP 도구 및 Built-in 도구 가져오기
     // Note: generateWithToolsNode는 Electron Main Process에서 실행되므로
     // IPC가 아닌 직접 메서드를 사용해야 함.
 
@@ -311,7 +312,9 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       if (cachedTools && now - lastCacheTime < TOOLS_CACHE_TTL) {
         availableTools = cachedTools;
       } else {
-        availableTools = MCPServerManager.getAllToolsInMainProcess();
+        const mcpTools = MCPServerManager.getAllToolsInMainProcess();
+        const builtinTools = getBuiltinTools();
+        availableTools = [...builtinTools, ...mcpTools];
         cachedTools = availableTools;
         lastCacheTime = now;
       }
@@ -323,7 +326,7 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
         availableTools.map((t) => ({
           name: t.name,
           description: t.description,
-          server: t.serverName,
+          server: t.serverName || 'builtin',
         }))
       );
     }
@@ -505,30 +508,29 @@ export async function generateWithToolsNode(state: AgentState): Promise<Partial<
       imageGenConfig?.nanobanana?.askOptionsOnGenerate === true;
 
     // 기본 시스템 메시지 (시각화 지침 포함)를 기반으로 도구 가이드라인 추가
-    const toolGuidelines = `
+    let toolGuidelines = '';
+
+    if (toolsForLLM.length > 0) {
+      const toolDescriptions = toolsForLLM
+        .map((t: any) => `- **${t.function.name}**: ${t.function.description}`)
+        .join('\n');
+
+      toolGuidelines = `
 
 # Tool Usage Guidelines
 
 **CRITICAL: You have access to powerful tools - USE THEM!**
 
+You have the following tools available:
+${toolDescriptions}
+
 When a user asks for information that requires external data or actions, you MUST use the available tools instead of explaining that you cannot access it.
 
 ## When to Use Tools
 
-1. **GitHub Operations**: If the user asks about repositories, files, issues, or any GitHub-related information:
-   - Use \`search_repositories\` to find repositories
-   - Use \`get_file_contents\` to read files from repositories
-   - Use \`create_issue\` to create issues
-   - Use \`create_or_update_file\` to modify files
-   - Use \`push_files\` to push multiple files
-
-2. **Web Search**: If the user asks for current information, news, or web content:
-   - Use search tools to find up-to-date information
-   - Don't rely on your training data for current events
-
-3. **File Operations**: If the user asks to read, write, or modify files:
-   - Use file operation tools immediately
-   - Don't just provide code snippets - actually execute the operations
+1. **Information Retrieval**: Use search or file tools to find information not in your training data.
+2. **Action Execution**: Use tools to perform actions like file modification or system commands if requested.
+3. **Verification**: Use tools to check the status of the system or validity of your assumptions.
 
 ## Tool Usage Best Practices
 
@@ -536,7 +538,7 @@ When a user asks for information that requires external data or actions, you MUS
 2. **One Tool Call Per Task**: Usually one comprehensive tool call is sufficient
 3. **Analyze Results**: After receiving a tool result, analyze it thoroughly and provide a complete answer
 4. **Don't Repeat**: Avoid calling the same tool multiple times with similar parameters unless explicitly needed
-5. **Work with Available Data**: If a tool result is truncated, work with the available information rather than searching again
+5. **Work with Available Data**: If a tool result is truncated, work with the available information rather than requesting additional searches
 6. **Provide Final Answers**: Always prioritize providing a final answer over making additional tool calls
 
 ## Critical: Handling Tool Errors
@@ -551,10 +553,6 @@ When you receive a tool error (marked with "Error:" in the result):
 4. **Suggest Alternatives**: If possible, suggest alternative approaches or tools the user can try
 5. **Be Honest**: If you cannot complete the task without the tool, clearly state that
 
-**Example of CORRECT error handling:**
-❌ BAD: "I searched GitHub and found these repositories..." (when the search actually failed)
-✅ GOOD: "The GitHub search tool failed with error: [error message]. I cannot provide search results without access to the GitHub API. Please check your network connection or API credentials."
-
 **Remember**: It's better to admit a tool failed than to provide false information that misleads the user.
 
 ## Important Notes
@@ -563,6 +561,7 @@ When you receive a tool error (marked with "Error:" in the result):
 - **Don't say you cannot access something** - check if there's a tool for it first
 - **Tools are your primary way** to interact with external systems and get real-time data
 - **When tools fail, NEVER fabricate results** - always be honest about the failure`;
+    }
 
     let systemContent = createBaseSystemMessage(toolGuidelines);
 

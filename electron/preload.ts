@@ -678,6 +678,7 @@ const electronAPI = {
 
     emitClick: (conversationId: string) => ipcRenderer.invoke('notification:click', conversationId),
     close: () => ipcRenderer.invoke('notification:close'),
+    ready: () => ipcRenderer.invoke('notification:ready'),
   },
 };
 

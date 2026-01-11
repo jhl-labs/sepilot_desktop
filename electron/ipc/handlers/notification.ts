@@ -17,8 +17,11 @@ import { NotificationWindowManager } from '../../services/notification-window';
 export function setupNotificationHandlers(getMainWindow: () => BrowserWindow | null) {
   getMainWindowFunc = getMainWindow;
 
-  // Remove existing handler for hot reload
+  // Remove existing handlers to prevent "second handler" errors on hot reload
   ipcMain.removeHandler('notification:show');
+  ipcMain.removeHandler('notification:click');
+  ipcMain.removeHandler('notification:close');
+  ipcMain.removeHandler('notification:ready');
 
   ipcMain.handle(
     'notification:show',
@@ -100,8 +103,15 @@ export function setupNotificationHandlers(getMainWindow: () => BrowserWindow | n
   });
 
   // New handler for closing custom window
+  // New handler for closing custom window
   ipcMain.handle('notification:close', () => {
     NotificationWindowManager.getInstance().hide();
+  });
+
+  // New handler for notification ready signal (Handshake)
+  ipcMain.handle('notification:ready', () => {
+    logger.info('[Notification] Received ready signal from window');
+    NotificationWindowManager.getInstance().resendContent();
   });
 
   logger.info('[Notification] Handlers registered');

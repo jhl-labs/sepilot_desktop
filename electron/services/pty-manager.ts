@@ -64,8 +64,11 @@ export class PTYManager {
     const platform = os.platform();
 
     if (platform === 'win32') {
-      // Windows: PowerShell 우선
-      return { shell: 'powershell.exe', args: [] };
+      // Windows: PowerShell with ExecutionPolicy Bypass to avoid profile script errors
+      return {
+        shell: 'powershell.exe',
+        args: ['-ExecutionPolicy', 'Bypass', '-NoLogo'],
+      };
     } else {
       // macOS/Linux: SHELL 환경변수 또는 /bin/bash
       return {
@@ -130,22 +133,12 @@ export class PTYManager {
       });
 
       // PTY 데이터 이벤트 → Renderer로 전송
-      ptyProcess.on('data', (data) => {
-        logger.info(`[PTYManager] Session ${sessionId} data:`, {
-          length: data.length,
-          preview: data.substring(0, 50),
-          hasWindow: !!this.mainWindow,
-          isDestroyed: this.mainWindow?.isDestroyed(),
-        });
-
+      ptyProcess.on('data', (data: string) => {
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
           this.mainWindow.webContents.send('terminal:data', {
             sessionId,
             data,
           });
-          logger.info(`[PTYManager] Data sent to renderer for session ${sessionId}`);
-        } else {
-          logger.warn(`[PTYManager] Cannot send data - window unavailable`);
         }
       });
 

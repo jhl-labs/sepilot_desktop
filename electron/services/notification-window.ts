@@ -25,6 +25,11 @@ export class NotificationWindowManager {
 
   private pendingNotification: any = null;
   private isLoaded = false;
+  private mainWindowRef: BrowserWindow | null = null;
+
+  public setMainWindow(window: BrowserWindow) {
+    this.mainWindowRef = window;
+  }
 
   private createWindow() {
     const isDev = !app.isPackaged;
@@ -48,10 +53,6 @@ export class NotificationWindowManager {
       },
     });
 
-    const url = isDev ? 'http://localhost:3000/notification' : 'app://./notification/index.html';
-
-    this.window.loadURL(url);
-
     this.window.on('closed', () => {
       this.window = null;
       this.isLoaded = false;
@@ -61,18 +62,28 @@ export class NotificationWindowManager {
     this.window.webContents.on('did-finish-load', () => {
       logger.info('[NotificationWindow] Window loaded');
       this.isLoaded = true;
-      if (this.pendingNotification) {
-        this.window?.webContents.send('notification:update-content', this.pendingNotification);
-        this.pendingNotification = null;
-      }
+      // We don't send here anymore, we wait for 'notification:ready' from React
+      // But for safety/legacy (non-react?), we can leave the check or rely solely on handshake.
+      // Let's rely on handshake for the initial load to ensure React is ready.
     });
 
     this.window.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
       logger.error(`[NotificationWindow] Failed to load: ${errorDescription} (${errorCode})`);
     });
+
+    const url = isDev ? 'http://localhost:3000/notification' : 'app://./notification/index.html';
+    logger.info(`[NotificationWindow] Loading URL: ${url}`);
+    this.window.loadURL(url);
   }
 
-  public show(options: {
+  public resendContent() {
+    if (this.window && this.window.webContents && this.pendingNotification) {
+      logger.info('[NotificationWindowManager] Resending content on ready signal');
+      this.window.webContents.send('notification:update-content', this.pendingNotification);
+    }
+  }
+
+  public async show(options: {
     conversationId: string;
     title: string;
     body: string;
@@ -81,9 +92,6 @@ export class NotificationWindowManager {
   }) {
     if (!this.window || this.window.isDestroyed()) {
       this.createWindow();
-      // Wait for load? Or just try to send later.
-      // Simplest is to recreate and wait briefly or rely on ready-to-show.
-      // For now, let's assume it's pre-warmed or we wait a bit.
     }
 
     if (!this.window) return;
@@ -94,23 +102,79 @@ export class NotificationWindowManager {
       this.hideTimeout = null;
     }
 
+    // Proxy Image if present (Bypass CSP/CORS)
+    if (options.imageUrl && options.imageUrl.startsWith('http')) {
+      try {
+        logger.info(`[NotificationWindow] Proxying image: ${options.imageUrl}`);
+        const response = await fetch(options.imageUrl);
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const base64 = buffer.toString('base64');
+          const mimeType = response.headers.get('content-type') || 'image/png';
+          options.imageUrl = `data:${mimeType};base64,${base64}`;
+          logger.info('[NotificationWindow] Image successfully proxied to Base64');
+        } else {
+          logger.warn(
+            `[NotificationWindow] Failed to fetch image: ${response.status} ${response.statusText}`
+          );
+        }
+      } catch (error) {
+        logger.error('[NotificationWindow] Error proxying image:', error);
+      }
+    }
+
     // Position window
     this.updatePosition();
 
-    // Send content
-    // We need to wait until webContents is ready if we just created it.
-    // But since we initialize in main.ts, it should be ready.
-    // Enable mouse events for interaction, but keep underlying window clickable when transparent areas are clicked?
-    // Electron transparent windows are tricky. Often we want 'ignore-mouse-events' for transparent parts.
-    // For now, let's assume the window rectangle captures clicks.
+    // always update pending
+    this.pendingNotification = options;
 
-    if (this.isLoaded && this.window.webContents) {
-      this.window.webContents.send('notification:update-content', options);
-    } else {
-      this.pendingNotification = options;
+    // Send immediately if webContents is available (don't wait for isLoaded flag)
+    // React handles duplicate updates gracefully, and this ensures hot-reload or
+    // already-loaded windows get the update.
+    if (this.window && this.window.webContents) {
+      logger.info('[NotificationWindowManager] Sending content immediately (Aggressive)');
+      try {
+        this.window.webContents.send('notification:update-content', options);
+      } catch (e) {
+        logger.error('[NotificationWindowManager] Failed to send content:', e);
+      }
     }
 
-    this.window.showInactive(); // Show without focusing
+    this.window.showInactive();
+
+    this.window.showInactive();
+
+    // Flash the main window taskbar icon
+    // Find the main window dynamically to ensure we have the live reference
+    const windows = BrowserWindow.getAllWindows();
+    // Main window is usually the one that is NOT this notification window and is visible/minimized
+    const mainWin = windows.find(
+      (w) => w !== this.window && w.getTitle() === 'SEPilot Desktop' && !w.isDestroyed()
+    );
+
+    if (mainWin) {
+      logger.info(
+        `[NotificationWindowManager] Found main window (ID: ${mainWin.id}), Attempting to flash`
+      );
+      try {
+        mainWin.flashFrame(true);
+
+        // Stop flashing when window gets focus
+        // removeAllListeners prevents stacking listeners on multiple notifications
+        mainWin.removeAllListeners('focus');
+        mainWin.once('focus', () => {
+          if (!mainWin.isDestroyed()) {
+            mainWin.flashFrame(false);
+          }
+        });
+      } catch (error) {
+        logger.error('[NotificationWindowManager] Failed to flash frame:', error);
+      }
+    } else {
+      logger.warn('[NotificationWindowManager] Could not find main window to flash');
+    }
 
     // Auto hide
     this.hideTimeout = setTimeout(() => {
@@ -121,7 +185,6 @@ export class NotificationWindowManager {
   public hide() {
     if (this.window && !this.window.isDestroyed()) {
       this.window.hide();
-      // Also clear content to reset state?
       this.window.webContents.send('notification:update-content', null);
     }
   }
@@ -129,13 +192,13 @@ export class NotificationWindowManager {
   private updatePosition() {
     if (!this.window) return;
 
-    const dummy = screen.getPrimaryDisplay(); // Fallback
     const primaryDisplay = screen.getPrimaryDisplay();
     const { workArea } = primaryDisplay;
 
     const x = workArea.x + workArea.width - WINDOW_WIDTH - PADDING;
     const y = workArea.y + workArea.height - WINDOW_HEIGHT - PADDING;
 
+    logger.info(`[NotificationWindow] Positioning at x:${x}, y:${y}`);
     this.window.setBounds({ x, y, width: WINDOW_WIDTH, height: WINDOW_HEIGHT });
   }
 }

@@ -22,8 +22,11 @@ import {
   X,
   Star,
   Maximize2,
+  Minimize2,
+  Keyboard,
+  Eye,
 } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+// Dialog 제거 - CSS 기반 전체화면 사용
 import { AnsiDisplay } from '@/components/ui/ansi-display';
 import { cn } from '@/lib/utils';
 import { InteractiveTerminal } from './InteractiveTerminal';
@@ -36,6 +39,7 @@ import { ko } from 'date-fns/locale';
 interface TerminalBlockProps {
   block: TerminalBlockType;
   isActive: boolean;
+  isLastBlock?: boolean; // 마지막 블록 여부 - 마지막 블록만 InteractiveTerminal 사용
   onSelect: () => void;
   onRerun: () => void;
   onDelete: () => void;
@@ -47,18 +51,43 @@ interface TerminalBlockProps {
 /**
  * InteractiveTerminal Wrapper
  * sessionId로 ptySessionId를 찾아서 InteractiveTerminal에 전달
+ * 기본: ReadOnly 모드 (스크롤만 가능)
+ * Interactive 모드: 키 입력 가능
+ * 전체화면: CSS로 기존 터미널을 확대
  */
 function InteractiveTerminalWrapper({
   blockId,
   sessionId,
+  initialOutput,
+  pendingCommand,
 }: {
   blockId: string;
   sessionId: string;
+  initialOutput?: string; // 마운트 시 표시할 캡처된 output
+  pendingCommand?: string; // 초기화 완료 후 실행할 명령어
 }) {
   const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const [isReadOnly, setIsReadOnly] = React.useState(true); // 기본: 읽기 전용
+  const [commandSent, setCommandSent] = React.useState(false); // 명령어 전송 완료 여부
   const store = useChatStore();
   const sessions = (store as any).sessions || [];
   const session = sessions.find((s: any) => s.id === sessionId);
+
+  // ESC 키로 전체화면 종료 또는 Interactive 모드 종료
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isFullscreen) {
+          setIsFullscreen(false);
+        } else if (!isReadOnly) {
+          setIsReadOnly(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen, isReadOnly]);
 
   if (!session) {
     return (
@@ -68,42 +97,76 @@ function InteractiveTerminalWrapper({
     );
   }
 
-  return (
-    <>
-      {/* Embedded Interactive Terminal */}
-      <div
-        className="mb-2 rounded border border-border overflow-hidden relative"
-        style={{ height: '400px' }}
-      >
-        <InteractiveTerminal sessionId={sessionId} ptySessionId={session.ptySessionId} />
+  // 높이 결정: 전체화면이면 100vh, 아니면 적절한 크기
+  const height = isFullscreen ? '100vh' : '280px';
 
-        {/* Fullscreen Button */}
+  return (
+    <div
+      className={cn(
+        'mb-2 rounded border border-border overflow-hidden relative transition-all duration-200',
+        isFullscreen && 'fixed inset-0 z-50 rounded-none border-none',
+        !isReadOnly && !isFullscreen && 'ring-2 ring-primary/50' // Interactive 모드 표시
+      )}
+      style={{ height }}
+    >
+      <InteractiveTerminal
+        sessionId={sessionId}
+        ptySessionId={session.ptySessionId}
+        readOnly={isReadOnly}
+        initialOutput={initialOutput}
+        pendingCommand={commandSent ? undefined : pendingCommand}
+        onCommandSent={() => setCommandSent(true)}
+      />
+
+      {/* 컨트롤 버튼들 */}
+      <div className="absolute top-2 right-2 flex gap-1 z-10">
+        {/* Interactive/ReadOnly 토글 버튼 */}
         <Button
           size="icon"
           variant="ghost"
-          className="absolute top-2 right-2 h-7 w-7 bg-background/80 hover:bg-background"
-          onClick={() => setIsFullscreen(true)}
-          title="전체화면"
+          className={cn(
+            'h-7 w-7 bg-background/80 hover:bg-background',
+            !isReadOnly && 'bg-primary/20 text-primary'
+          )}
+          onClick={() => setIsReadOnly(!isReadOnly)}
+          title={isReadOnly ? 'Interactive 모드로 전환' : 'ReadOnly 모드로 전환 (ESC)'}
         >
-          <Maximize2 className="w-4 h-4" />
+          {isReadOnly ? <Keyboard className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </Button>
+
+        {/* Fullscreen 토글 버튼 */}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7 bg-background/80 hover:bg-background"
+          onClick={() => setIsFullscreen(!isFullscreen)}
+          title={isFullscreen ? '전체화면 종료 (ESC)' : '전체화면'}
+        >
+          {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </Button>
       </div>
 
-      {/* Fullscreen Dialog */}
-      <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
-        <DialogContent className="max-w-full h-screen p-0 gap-0">
-          <div className="h-full w-full">
-            <InteractiveTerminal sessionId={sessionId} ptySessionId={session.ptySessionId} />
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+      {/* 모드 안내 */}
+      {!isFullscreen && (
+        <div className="absolute bottom-2 left-2 text-[10px] text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded">
+          {isReadOnly ? '읽기 전용 (🎹 클릭하여 입력 모드)' : '입력 모드 (ESC로 종료)'}
+        </div>
+      )}
+
+      {/* 전체화면 안내 */}
+      {isFullscreen && (
+        <div className="absolute bottom-4 left-4 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+          ESC로 종료 | {isReadOnly ? '🎹 입력 모드' : '👁 읽기 전용'}
+        </div>
+      )}
+    </div>
   );
 }
 
 export function TerminalBlock({
   block,
   isActive,
+  isLastBlock = false,
   onSelect,
   onRerun,
   onDelete,
@@ -235,11 +298,16 @@ export function TerminalBlock({
       </div>
 
       {/* 출력 */}
-      {block.isInteractive ? (
-        /* Interactive Terminal (xterm.js) */
-        <InteractiveTerminalWrapper blockId={block.id} sessionId={block.sessionId} />
+      {block.isInteractive && isLastBlock ? (
+        /* Interactive Terminal (xterm.js) - 마지막 블록만 사용 (PTY 세션 공유 문제 해결) */
+        <InteractiveTerminalWrapper
+          blockId={block.id}
+          sessionId={block.sessionId}
+          initialOutput={block.output}
+          pendingCommand={block.isRunning ? block.command : undefined}
+        />
       ) : (
-        /* 일반 출력 */
+        /* 이전 블록 또는 비-인터랙티브 출력 - AnsiDisplay로 캡처된 output 표시 */
         block.output && (
           <div
             className={cn(

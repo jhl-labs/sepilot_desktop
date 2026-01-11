@@ -542,7 +542,7 @@ app.whenReady().then(async () => {
           "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* ws://localhost:* wss://localhost:* data: blob:",
           "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* https://cdn.jsdelivr.net",
           "style-src 'self' 'unsafe-inline' http://localhost:* https://cdn.jsdelivr.net",
-          "img-src 'self' data: blob: http://localhost:* sepilot-file:",
+          "img-src 'self' data: blob: http://localhost:* sepilot-file: https:",
           "font-src 'self' data: https://cdn.jsdelivr.net",
           "connect-src 'self' http: https: ws: wss: data: blob:",
           "frame-src 'none'",
@@ -553,7 +553,7 @@ app.whenReady().then(async () => {
           "default-src 'self' data: blob:",
           "script-src 'self' 'unsafe-inline'",
           "style-src 'self' 'unsafe-inline'",
-          "img-src 'self' data: blob: sepilot-file:",
+          "img-src 'self' data: blob: sepilot-file: https:",
           "font-src 'self' data:",
           "connect-src 'self' http: https: ws: wss: data: blob:",
           "frame-src 'none'",
@@ -667,7 +667,10 @@ app.whenReady().then(async () => {
 
   // Initialize Notification Window Manager
   // This creates a hidden window which loads 'app://...', so the protocol must be ready
-  NotificationWindowManager.getInstance();
+  const notificationManager = NotificationWindowManager.getInstance();
+  if (mainWindow) {
+    notificationManager.setMainWindow(mainWindow);
+  }
   logger.info('NotificationWindowManager initialized');
 
   // Register global shortcuts from config

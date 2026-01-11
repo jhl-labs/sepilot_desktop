@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CustomNotification } from '@/components/ui/custom-notification';
+import { X, MessageSquare } from 'lucide-react';
 
 interface NotificationData {
   conversationId: string;
@@ -15,77 +15,42 @@ export default function NotificationPage() {
   const [notification, setNotification] = useState<NotificationData | null>(null);
 
   useEffect(() => {
-    // Listen for notification updates from Main process
-    if (window.electronAPI) {
-      window.electronAPI.on('notification:update-content', (event: any, data: any) => {
-        console.log('Received notification update:', data);
-        setNotification(data);
-      });
-    }
-
-    // Auto-close logic is handled by main process window hide,
-    // but we can add animation triggers here if we want.
-  }, []);
-
-  const handleClick = () => {
-    if (notification && window.electronAPI) {
-      window.electronAPI.notification.onClick((_conversationId) => {
-        // This listener is in the main window context usually.
-        // But here we are in the notification window.
-        // We need to send a message to main process that we were clicked.
-      });
-
-      // Sending click event back to main process
-      // We'll reuse the existing IPC mechanism or add a specific one.
-      // Since 'notification:click' is usually sent FROM main TO renderer,
-      // we need a way to tell Main "I was clicked".
-      // Let's assume we can invoke a handler.
-
-      // Checking exposed API...
-      // We might need to add a method to trigger the click action in main process
-      // or just "activate" the app.
-
-      // For now, let's use a workaround or new IPC.
-      // Actually, looking at preload.ts, we don't have a direct "I was clicked" invoker
-      // other than `notification.show` which is for showing.
-
-      // Let's add a new IPC handler in the plan step later or assume we add `notification:clicked` invoke.
-      // For this file creation, I will assume `window.electronAPI.notification.clicked()` exists
-      // or I will use `window.electronAPI.invoke('notification:clicked', conversationId)` directly if possible
-      // but `electronAPI` is typed.
-
-      // Let's use `window.electronAPI.notification.show` as a template but we need a new one.
-      // I'll add `clicked` to the IPC handlers list in `preload.ts` later.
-      // For now, I'll use `window.electron.ipcRenderer.invoke` via `any` cast if needed,
-      // but better to stick to the pattern.
-
-      // Wait, `notification.onClick` in preload is for RECEIVING the click event (renderer listening).
-      // We are the notification window. We need to SEND the click event.
-
-      // I will implement `window.electronAPI.notification.emitClick(conversationId)` in preload.
-      // For the React component:
-      // @ts-expect-error - emitClick method will be added to notification API
-      window.electronAPI?.notification?.emitClick?.(notification.conversationId);
-    }
-  };
-
-  const handleDismiss = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setNotification(null);
-    // Tell main process to hide window
-    // @ts-expect-error - close method will be added to notification API
-    window.electronAPI?.notification?.close?.();
-  };
-
-  // Force body background to be transparent
-  useEffect(() => {
+    // 1. Setup Background (Transparent)
     document.body.style.backgroundColor = 'transparent';
     document.documentElement.style.backgroundColor = 'transparent';
+
+    // 2. Setup IPC
+    if (window.electronAPI) {
+      window.electronAPI.on('notification:update-content', (data: any) => {
+        setNotification(data);
+      });
+
+      // Signal Ready
+      // @ts-expect-error - ready method will be added to notification API
+      window.electronAPI.notification?.ready?.();
+    }
+
     return () => {
       document.body.style.backgroundColor = '';
       document.documentElement.style.backgroundColor = '';
     };
   }, []);
+
+  const handleClick = () => {
+    if (notification && window.electronAPI) {
+      // @ts-expect-error - emitClick method will be added to notification API
+      window.electronAPI.notification?.emitClick?.(notification.conversationId);
+    }
+  };
+
+  const handleClose = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setNotification(null);
+    // @ts-expect-error - close method will be added to notification API
+    window.electronAPI?.notification?.close?.();
+  };
 
   if (!notification) {
     return null;
@@ -93,14 +58,66 @@ export default function NotificationPage() {
 
   return (
     <div className="flex h-screen w-screen items-end justify-end p-4 bg-transparent overflow-hidden">
-      <CustomNotification
-        title={notification.title}
-        message={notification.body}
-        html={notification.html}
-        imageUrl={notification.imageUrl}
+      <div
+        className="group relative flex w-full max-w-sm flex-col overflow-hidden rounded-xl border border-white/20 bg-white/90 dark:bg-gray-900/90 shadow-2xl backdrop-blur-md cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] ring-1 ring-black/5 dark:ring-white/10"
         onClick={handleClick}
-        onDismiss={handleDismiss}
-      />
+        role="alert"
+      >
+        {/* Progress Bar (Optional, can add later) */}
+
+        <div className="flex w-full p-4 gap-4">
+          {/* Icon Section */}
+          <div className="flex-shrink-0 pt-1">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-sm text-white">
+              <MessageSquare className="h-5 w-5" />
+            </div>
+          </div>
+
+          {/* Content Section */}
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-start justify-between">
+              <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                {notification.title}
+              </p>
+
+              {/* Timestamp or Secondary Info could go here */}
+            </div>
+
+            {notification.html ? (
+              <div
+                className="text-sm text-gray-600 dark:text-gray-300 prose-sm line-clamp-2"
+                dangerouslySetInnerHTML={{ __html: notification.html }}
+              />
+            ) : (
+              <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 leading-relaxed">
+                {notification.body}
+              </p>
+            )}
+
+            {notification.imageUrl && (
+              <div className="mt-3 relative rounded-lg overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm group-hover:shadow-md transition-shadow">
+                {}
+                <img
+                  src={notification.imageUrl}
+                  alt="Attachment"
+                  className="w-full h-auto object-cover max-h-48"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Close Button */}
+          <div className="flex-shrink-0 -mr-1 -mt-1">
+            <button
+              onClick={handleClose}
+              className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+              title="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
