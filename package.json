@@ -84,7 +84,7 @@
     "electron-serve": "^3.0.0",
     "eventsource": "^4.1.0",
     "https-proxy-agent": "^7.0.6",
-    "i18next": "^25.7.3",
+    "i18next": "^25.7.4",
     "lucide-react": "^0.562.0",
     "mammoth": "^1.11.0",
     "markdown-to-jsx": "9.5.0",
