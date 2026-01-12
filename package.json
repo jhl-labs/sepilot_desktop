@@ -171,7 +171,7 @@
     "typescript": "^5.9.3",
     "util": "^0.12.5",
     "wait-on": "^9.0.3",
-    "webpack-bundle-analyzer": "^5.1.0"
+    "webpack-bundle-analyzer": "^5.1.1"
   },
   "optionalDependencies": {
     "node-pty": "1.1.0"
