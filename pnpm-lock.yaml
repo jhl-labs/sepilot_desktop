@@ -130,8 +130,8 @@ importers:
         specifier: ^1.11.0
         version: 1.11.0
       markdown-to-jsx:
-        specifier: 9.5.0
-        version: 9.5.0(react@19.2.3)
+        specifier: 9.5.5
+        version: 9.5.5(react@19.2.3)
       mermaid:
         specifier: ^11.12.2
         version: 11.12.2
@@ -2181,20 +2181,20 @@ packages:
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
 
-  '@turf/area@7.3.0':
-    resolution: {integrity: sha512-N1feXkRzwiNakzloykPWwTBmZcmHFfL/raGMwJmZ9QoHQZqDNVFrI0bmuX8hALUJ8jzpt/c/91M1CIuRMF9vIw==}
+  '@turf/area@7.3.1':
+    resolution: {integrity: sha512-9nSiwt4zB5QDMcSoTxF28WpK1f741MNKcpUJDiHVRX08CZ4qfGWGV9ZIPQ8TVEn5RE4LyYkFuQ47Z9pdEUZE9Q==}
 
-  '@turf/bbox@7.3.0':
-    resolution: {integrity: sha512-EC5GSUJlhXSiCVCEmgCSheZYm0s1ouKzUNqeEOsEYlqTbMAZ19RWgsg/xH2tjnuUw2JP9eGAUzQnCFX6JEV53w==}
+  '@turf/bbox@7.3.1':
+    resolution: {integrity: sha512-/IyMKoS7P9B0ch5PIlQ6gMfoE8gRr48+cSbzlyexvEjuDuaAV1VURjH1jAthS0ipFG8RrFxFJKnp7TLL1Skong==}
 
-  '@turf/centroid@7.3.0':
-    resolution: {integrity: sha512-6skXlwv6fCkdKsrkniizpEuC1IsAYQEyZG4XIzK5d3FGQTM/lVInLQP+wd9I6FLtW8b/6UbZcIjSU9wP/MMbTA==}
+  '@turf/centroid@7.3.1':
+    resolution: {integrity: sha512-hRnsDdVBH4pX9mAjYympb2q5W8TCMUMNEjcRrAF7HTCyjIuRmjJf8vUtlzf7TTn9RXbsvPc1vtm3kLw20Jm8DQ==}
 
-  '@turf/helpers@7.3.0':
-    resolution: {integrity: sha512-5kWdgwI6e2vGbkt2qOD+Z2BiKQ7dfKN/PtWRLCpvzyOO59rk19R53CHi8nUT/Y1vQLgWmT6eNpiKwsWwPZGIdg==}
+  '@turf/helpers@7.3.1':
+    resolution: {integrity: sha512-zkL34JVhi5XhsuMEO0MUTIIFEJ8yiW1InMu4hu/oRqamlY4mMoZql0viEmH6Dafh/p+zOl8OYvMJ3Vm3rFshgg==}
 
-  '@turf/meta@7.3.0':
-    resolution: {integrity: sha512-fTLqdQqRm8qA2zHHUbBMY++YT9LDQejLG7OD70XF2dwg9nPiF9mUxO7nrsDp2IY8vNmH9OTAiMtlIjb0ssYccg==}
+  '@turf/meta@7.3.1':
+    resolution: {integrity: sha512-NWsfOE5RVtWpLQNkfOF/RrYvLRPwwruxhZUV0UFIzHqfiRJ50aO9Y6uLY4bwCUe2TumLJQSR4yaoA72Rmr2mnQ==}
 
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
@@ -2389,6 +2389,9 @@ packages:
 
   '@types/node@25.0.3':
     resolution: {integrity: sha512-W609buLVRVmeW693xKfzHeIV6nJGGz98uCPfeXI1ELMLXVeKYZ9m15fAMSaUPBHYLGFsVRcMmSCksQOrZV9BYA==}
+
+  '@types/node@25.0.6':
+    resolution: {integrity: sha512-NNu0sjyNxpoiW3YuVFfNz7mxSQ+S4X2G28uqg2s+CzoqoQjLPsWSbsFFyztIAqt2vb8kfEAsJNepMGPTxFDx3Q==}
 
   '@types/path-browserify@1.0.3':
     resolution: {integrity: sha512-ZmHivEbNCBtAfcrFeBCiTjdIc2dey0l7oCGNGpSuRTy8jP6UVND7oUowlvDujBy8r2Hoa8bfFUOCiPWfmtkfxw==}
@@ -5971,8 +5974,8 @@ packages:
   markdown-table@2.0.0:
     resolution: {integrity: sha512-Ezda85ToJUBhM6WGaG6veasyym+Tbs3cMAw/ZhOPqXiYsr0jgocBV3j3nx+4lk47plLlIqjwuTm/ywVI+zjJ/A==}
 
-  markdown-to-jsx@9.5.0:
-    resolution: {integrity: sha512-6PhWz9md8btrE52LDM4KHSzXf2HKCG+2oGNVw/eQhMP6h51dfZVHb9mt1zWYvQ7wM+xOK8WWaijzEhjB0qIpUg==}
+  markdown-to-jsx@9.5.5:
+    resolution: {integrity: sha512-HgbtKV8TDvYNO/QzlOp3OcSweKYpYmzf8zM15vFfeigSTyoE9wcgs/3Qmx+I8zipfOsTWOTWaB14qRxZImSb7g==}
     engines: {node: '>= 18'}
     peerDependencies:
       react: '>= 16.0.0'
@@ -7263,6 +7266,10 @@ packages:
   sax@1.4.3:
     resolution: {integrity: sha512-yqYn1JhPczigF94DMS+shiDMjDowYO6y9+wB/4WgO0Y19jWYk0lQ4tuG5KI7kj4FTp1wxPj5IFfcrz/s1c3jjQ==}
 
+  sax@1.4.4:
+    resolution: {integrity: sha512-1n3r/tGXO6b6VXMdFT54SHzT9ytu9yr7TaELowdYpMqY/Ao7EnlQGmAQ1+RatX7Tkkdm6hONI2owqNx2aZj5Sw==}
+    engines: {node: '>=11.0.0'}
+
   saxes@6.0.0:
     resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
     engines: {node: '>=v12.22.7'}
@@ -8163,8 +8170,8 @@ packages:
   walker@1.0.8:
     resolution: {integrity: sha512-ts/8E8l5b7kY0vlWLewOkDXMmPdLcVV4GmOQLyxuSswIJsweeFZtAsMF7k1Nszz+TYBQrlYRmzOnr398y1JemQ==}
 
-  watchpack@2.4.4:
-    resolution: {integrity: sha512-c5EGNOiyxxV5qmTtAB7rbiXxi1ooX1pQKMLX/MIabJjRA0SJBQOjKF+KSVfHkr9U1cADPon0mRiVe/riyaiDUA==}
+  watchpack@2.5.0:
+    resolution: {integrity: sha512-e6vZvY6xboSwLz2GD36c16+O/2Z6fKvIf4pOXptw2rY9MVwE/TXc6RGqxD3I3x0a28lwBY7DE+76uTPSsBrrCA==}
     engines: {node: '>=10.13.0'}
 
   watskeburt@5.0.0:
@@ -10537,35 +10544,35 @@ snapshots:
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
-  '@turf/area@7.3.0':
+  '@turf/area@7.3.1':
     dependencies:
-      '@turf/helpers': 7.3.0
-      '@turf/meta': 7.3.0
+      '@turf/helpers': 7.3.1
+      '@turf/meta': 7.3.1
       '@types/geojson': 7946.0.16
       tslib: 2.8.1
 
-  '@turf/bbox@7.3.0':
+  '@turf/bbox@7.3.1':
     dependencies:
-      '@turf/helpers': 7.3.0
-      '@turf/meta': 7.3.0
+      '@turf/helpers': 7.3.1
+      '@turf/meta': 7.3.1
       '@types/geojson': 7946.0.16
       tslib: 2.8.1
 
-  '@turf/centroid@7.3.0':
+  '@turf/centroid@7.3.1':
     dependencies:
-      '@turf/helpers': 7.3.0
-      '@turf/meta': 7.3.0
+      '@turf/helpers': 7.3.1
+      '@turf/meta': 7.3.1
       '@types/geojson': 7946.0.16
       tslib: 2.8.1
 
-  '@turf/helpers@7.3.0':
+  '@turf/helpers@7.3.1':
     dependencies:
       '@types/geojson': 7946.0.16
       tslib: 2.8.1
 
-  '@turf/meta@7.3.0':
+  '@turf/meta@7.3.1':
     dependencies:
-      '@turf/helpers': 7.3.0
+      '@turf/helpers': 7.3.1
       '@types/geojson': 7946.0.16
 
   '@tybys/wasm-util@0.10.1':
@@ -10810,6 +10817,10 @@ snapshots:
       undici-types: 6.21.0
 
   '@types/node@25.0.3':
+    dependencies:
+      undici-types: 7.16.0
+
+  '@types/node@25.0.6':
     dependencies:
       undici-types: 7.16.0
 
@@ -14735,7 +14746,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 25.0.3
+      '@types/node': 25.0.6
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
@@ -15316,7 +15327,7 @@ snapshots:
     dependencies:
       repeat-string: 1.6.1
 
-  markdown-to-jsx@9.5.0(react@19.2.3):
+  markdown-to-jsx@9.5.5(react@19.2.3):
     optionalDependencies:
       react: 19.2.3
 
@@ -15548,7 +15559,7 @@ snapshots:
     dependencies:
       debug: 3.2.7
       iconv-lite: 0.4.24
-      sax: 1.4.3
+      sax: 1.4.4
     transitivePeerDependencies:
       - supports-color
 
@@ -16048,9 +16059,9 @@ snapshots:
       '@plotly/d3-sankey-circular': 0.33.1
       '@plotly/mapbox-gl': 1.13.4(mapbox-gl@1.13.3)
       '@plotly/regl': 2.1.2
-      '@turf/area': 7.3.0
-      '@turf/bbox': 7.3.0
-      '@turf/centroid': 7.3.0
+      '@turf/area': 7.3.1
+      '@turf/bbox': 7.3.1
+      '@turf/centroid': 7.3.1
       base64-arraybuffer: 1.0.2
       canvas-fit: 1.5.0
       color-alpha: 1.0.4
@@ -16769,6 +16780,8 @@ snapshots:
       truncate-utf8-bytes: 1.0.2
 
   sax@1.4.3: {}
+
+  sax@1.4.4: {}
 
   saxes@6.0.0:
     dependencies:
@@ -17796,7 +17809,7 @@ snapshots:
     dependencies:
       makeerror: 1.0.12
 
-  watchpack@2.4.4:
+  watchpack@2.5.0:
     dependencies:
       glob-to-regexp: 0.4.1
       graceful-fs: 4.2.11
@@ -17882,7 +17895,7 @@ snapshots:
       schema-utils: 4.3.3
       tapable: 2.3.0
       terser-webpack-plugin: 5.3.16(webpack@5.103.0)
-      watchpack: 2.4.4
+      watchpack: 2.5.0
       webpack-sources: 3.3.3
     transitivePeerDependencies:
       - '@swc/core'
