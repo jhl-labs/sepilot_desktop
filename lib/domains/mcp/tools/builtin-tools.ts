@@ -49,7 +49,7 @@ import type {
   GoogleSearchOptions,
   GoogleExtractResultsOptions,
   GoogleVisitResultOptions,
-} from '@sepilot/extension-browser';
+} from '@sepilot/extension-sdk/types';
 
 const execPromise = promisify(exec);
 const execFilePromise = promisify(execFile);

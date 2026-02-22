@@ -8,7 +8,7 @@
 import type { Message, ImageAttachment } from '@/types';
 import type { Persona } from '@/types/persona';
 import type { ThinkingMode } from '@/lib/domains/agent';
-import type { BrowserAgentLogEntry } from '@sepilot/extension-browser';
+import type { BrowserAgentLogEntry } from '@sepilot/extension-sdk/types';
 
 /**
  * Chat 모드

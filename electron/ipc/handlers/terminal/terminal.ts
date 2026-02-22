@@ -252,6 +252,7 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
         logger.info('[Terminal IPC] Executing command:', args.command);
 
         // run_command tool 동적 import (Main Process용)
+        // @ts-ignore - Extension module resolved at runtime
         const { executeRunCommand } = await import('@sepilot/extension-terminal');
 
         const result = await executeRunCommand({
@@ -303,6 +304,7 @@ export function setupTerminalHandlers(mainWindow?: BrowserWindow) {
         logger.info('[Terminal IPC] AI command request:', args.naturalInput);
 
         // Terminal Agent 동적 import (Main Process용)
+        // @ts-ignore - Extension module resolved at runtime
         const { createTerminalAgentGraph } = (await import(
           /* webpackIgnore: true */ '@sepilot/extension-terminal/agents/terminal-agent-graph'
         )) as { createTerminalAgentGraph: (maxIterations?: number) => any };

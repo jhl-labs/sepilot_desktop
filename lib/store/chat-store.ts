@@ -20,7 +20,7 @@ import type {
   BrowserAgentLogEntry,
   BrowserAgentLLMConfig,
   BrowserChatFontConfig,
-} from '@/resources/extensions/browser/src/types';
+} from '@sepilot/extension-sdk/types';
 import type { Persona } from '@/types/persona';
 import { BUILTIN_PERSONAS } from '@/types/persona';
 import {

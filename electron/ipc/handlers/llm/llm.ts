@@ -782,6 +782,7 @@ Return ONLY the title, without quotes or additional text.`,
 
         // Initialize Extension's LLM client (separate singleton in extension bundle)
         try {
+          // @ts-ignore - Extension module resolved at runtime
           const editorAgentGraph =
             await import('@sepilot/extension-editor/agents/editor-agent-graph');
           if (
@@ -1039,6 +1040,7 @@ CRITICAL RULES:
 
         // Initialize Extension's LLM client (separate singleton in extension bundle)
         try {
+          // @ts-ignore - Extension module resolved at runtime
           const editorExtension = await import('@sepilot/extension-editor');
           if (
             editorExtension &&

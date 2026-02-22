@@ -20,7 +20,7 @@ import type {
   GoogleSearchResultItem,
   GoogleExtractResultsOptions,
   GoogleVisitResultOptions,
-} from '@sepilot/extension-browser';
+} from '@sepilot/extension-sdk/types';
 
 /**
  * 자연스러운 지연 (bot 감지 방지)
