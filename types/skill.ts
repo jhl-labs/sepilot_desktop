@@ -198,6 +198,15 @@ export interface SkillPackage {
 export type SkillSourceType = 'github' | 'local' | 'marketplace' | 'builtin';
 
 /**
+ * Skill Trust Level
+ *
+ * 설치 소스의 신뢰 수준
+ * - trusted: 앱 내부/검증된 소스
+ * - untrusted: 외부/사용자 입력 소스
+ */
+export type SkillTrustLevel = 'trusted' | 'untrusted';
+
+/**
  * Skill Source
  *
  * 스킬의 설치 소스 정보
@@ -405,6 +414,7 @@ export interface SkillImportOptions {
  */
 export interface SkillContextInjectionResult {
   injectedSkills: string[]; // 주입된 스킬 ID 목록
+  injectedSkillNames: string[]; // 주입된 스킬 표시 이름 목록
   systemPrompts: string[]; // 주입된 시스템 프롬프트 목록
   totalTokens: number; // 총 토큰 수
   skippedSkills?: string[]; // 토큰 제한으로 건너뛴 스킬

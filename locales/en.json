@@ -71,6 +71,7 @@
       "core": "Core Settings",
       "integrations": "Integrations",
       "features": "Features",
+      "extensionSettings": "Extension Settings",
       "documents": "Documents",
       "system": "System"
     },
@@ -109,6 +110,23 @@
         "previewText": "This is a preview of the chat message. Adjust the slider to set your preferred width."
       },
       "saved": "General settings saved!"
+    },
+    "notification": {
+      "title": "Notification Settings",
+      "description": "Manage notification display method and testing",
+      "saved": "Notification settings saved!",
+      "type": {
+        "label": "Notification Type",
+        "os": "System Default Notification (OS)",
+        "app": "Application Native Notification (In-App)",
+        "osDesc": "Uses the operating system's notification center. You can receive notifications even when the app is minimized.",
+        "appDesc": "Displays a designed notification within the app. Useful only when the app is visible on screen."
+      },
+      "test": {
+        "title": "Notification Test",
+        "description": "Send a test notification with the selected notification type.",
+        "button": "Send Test Notification"
+      }
     },
     "llm": {
       "title": "LLM",
@@ -160,7 +178,8 @@
           "selectConnection": "Select a connection",
           "modelId": "Model ID",
           "modelIdPlaceholder": "e.g., gpt-4, claude-3-5-sonnet-20241022",
-          "addButton": "Add Model"
+          "addButton": "Add Model",
+          "fetchFailedHint": "Some LLM servers don't support the /v1/models endpoint. If you know the model ID, you can add it manually."
         },
         "configured": {
           "title": "Configured Models",
@@ -354,14 +373,15 @@
         "providerVertexAi": "Google Vertex AI (Direct Connection)",
         "vertexAiDescription": "Use Google Cloud Vertex AI directly. OAuth 2 access token is required.",
         "apiDescription": "Use NanoBanana API. Available with simple API key.",
-        "vertexAiApiKeyLabel": "Google Cloud API Key (OAuth 2 Token)",
+        "vertexAiApiKeyLabel": "Google Cloud OAuth 2 Access Token",
         "apiKeyLabel": "NanoBanana API Key",
-        "vertexAiApiKeyPlaceholder": "Google Cloud OAuth 2 Token",
+        "vertexAiApiKeyPlaceholder": "Google OAuth 2 access token",
         "apiKeyPlaceholder": "NanoBanana API Key",
-        "vertexAiApiKeyDescription": "Enter OAuth 2 access token issued from Google Cloud Console.",
+        "vertexAiApiKeyDescription": "Enter an OAuth 2 access token for Vertex AI.",
         "apiKeyDescription": "Enter API Key issued from https://nanobananaapi.ai",
         "projectId": "Project ID",
         "projectIdPlaceholder": "my-project-id",
+        "projectIdRequired": "Please enter Google Cloud Project ID for Vertex AI.",
         "projectIdDescription": "Google Cloud Project ID (required when using Vertex AI)",
         "location": "Location",
         "locationPlaceholder": "us-central1",
@@ -562,6 +582,104 @@
         }
       }
     },
+    "skills": {
+      "title": "Skills System",
+      "description": "Skills enhance AI agents by injecting domain specific knowledge.\nYou can download community-created skills from the marketplace or create your own.",
+      "openMarketplace": "Open Marketplace",
+      "comingSoon": "Coming Soon",
+      "importLocal": "Import from Local",
+      "localImportGuide": "Inside each skill folder, either provide <1>manifest.json</1> (or <3>skill.json</3>) + <5>content.json</5>, or just a single <7>SKILL.md/skill.md</7> file to register/update a skill.",
+      "userSkillsFolder": "User Skills Folder",
+      "userSkillsFolderDesc": "After selecting a folder, scan recursively discovers skill folders and bulk registers/updates them (e.g., .claude/skills layout).",
+      "currentFolder": "Current Folder: {{path}}",
+      "notSet": "Not Set",
+      "selectFolder": "Select Skills Folder",
+      "scanning": "Scanning...",
+      "scanFolder": "Scan Skills Folder",
+      "dedupeStrategy": "Duplicate Skill Selection Strategy",
+      "strategies": {
+        "version": "Version Priority (Latest modification time if same version)",
+        "mtime": "Latest Modification Time Priority",
+        "first": "Keep First Found"
+      },
+      "includeHidden": "Scan hidden directories (starting with .) as well (required for paths like .claude)",
+      "copyFailures": "Copy Failure List",
+      "recentFailures": "Recent Scan Failures",
+      "installedSkills": "Installed Skills",
+      "installedSkillsDesc": "Manage installed skills and enable/disable them.",
+      "toasts": {
+        "importFailed": "Failed to register local skill.",
+        "importSuccess": "Local skill registered.",
+        "importError": "An error occurred while registering local skill.",
+        "saveFolderFailed": "Failed to save user skills folder.",
+        "saveFolderSuccess": "User skills folder set.",
+        "saveFolderError": "An error occurred while setting user skills folder.",
+        "scanFailed": "Failed to scan user skills folder.",
+        "scanPartial": "Skills folder scan partially completed.",
+        "scanPartialDesc": "{{imported}} registered/updated, {{failed}} failed out of {{scanned}} targets ({{deduplicated}} deduplicated){{failureExample}}",
+        "scanNoSkills": "No scannable skills found.",
+        "scanNoSkillsDesc": "Check folders that contain manifest.json (or skill.json) + content.json, or a SKILL.md/skill.md file. If the path is under .claude, enable hidden-directory scanning as well.",
+        "scanComplete": "Skills folder scan completed.",
+        "scanCompleteDesc": "{{imported}} registered/updated out of {{scanned}} targets ({{deduplicated}} deduplicated)",
+        "scanError": "An error occurred while scanning user skills folder.",
+        "saveStrategyFailed": "Failed to save duplicate skill selection strategy.",
+        "saveHiddenOptionFailed": "Failed to save hidden folder scan option.",
+        "copyFailuresSuccess": "Copied recent scan failure items.",
+        "copyFailuresError": "Failed to copy failure items."
+      },
+      "manager": {
+        "noSkills": {
+          "title": "No Installed Skills",
+          "description": "Download skills from the marketplace or install them locally."
+        },
+        "stats": {
+          "total": "Total Skills",
+          "enabled": "Enabled",
+          "usage": "Total Usage"
+        },
+        "sources": {
+          "builtin": {
+            "label": "Built-in Skills",
+            "desc": "Default skills provided by SEPilot"
+          },
+          "local": {
+            "label": "Local Skills",
+            "desc": "Skills added manually from local folder"
+          },
+          "marketplace": {
+            "label": "Marketplace",
+            "desc": "Skills installed from community marketplace"
+          },
+          "github": {
+            "label": "GitHub",
+            "desc": "Skills installed from GitHub repository"
+          }
+        },
+        "table": {
+          "name": "Skill Name",
+          "category": "Category",
+          "version": "Version",
+          "usage": "Usage Count",
+          "installed": "Installed Date",
+          "enabled": "Enabled",
+          "lastUsed": "Last used: {{date}}",
+          "neverUsed": "Never",
+          "cannotRemoveBuiltin": "Cannot remove built-in skills",
+          "removeTooltip": "Remove Skill"
+        },
+        "deleteDialog": {
+          "title": "Remove Skill",
+          "desc": "Are you sure you want to remove <1>{{name}}</1> skill?",
+          "warning": "This action cannot be undone."
+        }
+      },
+      "openGuide": "Show skill writing guide",
+      "hideGuide": "Hide skill writing guide",
+      "skillGuideTitle": "Skill Creation Guide",
+      "skillGuideDescription": "You can create a skill with just one SKILL.md (or skill.md) file.",
+      "skillGuideSummary": "The recommended format is Markdown-based SKILL.md.\n- Scanning recursively traverses subfolders\n- Format 1: manifest.json/skill.json + content.json\n- Format 2 (recommended): SKILL.md/skill.md (+ YAML frontmatter)\nTip: If your skills are in hidden folders such as .claude, turn on 'Scan hidden directories'.",
+      "skillGuideExample": "---\nid: local.react-reviewer\nname: React Reviewer\nversion: 1.0.0\nauthor: Your Name\ndescription: Skill focused on React code reviews\ncategory: web-development\ntags:\n  - react\n  - review\ncontextPatterns:\n  - react\n  - code review\nsystemPrompt: |\n  Prioritize React review criteria: performance, accessibility, and maintainability.\n---\n\n# Review Checklist\n- Check state management patterns\n- Suggest rendering optimization points\n- Verify missing test coverage\n"
+    },
     "teamDocs": {
       "title": "Team Docs",
       "description": "Team document sync (Multiple Repos)",
@@ -649,6 +767,8 @@
       "save": "Save Settings",
       "saving": "Saving...",
       "dataSync": "Data Sync",
+      "pull": "Pull",
+      "pulling": "Pulling...",
       "push": "Push",
       "pushing": "Pushing...",
       "syncAll": "Sync All (Enabled items only)",
@@ -687,10 +807,16 @@
         "testFailed": "Connection test failed",
         "saveSuccess": "GitHub Sync settings saved!",
         "saveFailed": "Failed to save settings",
+        "pullSuccess": "Settings pulled from GitHub!",
+        "pullFailed": "Failed to pull settings",
         "syncSuccess": "{{type}} sync complete!",
         "syncFailed": "{{type}} sync failed",
         "saveFirst": "Please save settings first."
       }
+    },
+    "githubActions": {
+      "title": "GitHub Actions",
+      "description": "Manage GitHub Actions CI/CD workflows"
     },
     "backup": {
       "title": "Backup/Restore",
@@ -730,7 +856,252 @@
       "author": "Author",
       "saved": "Extension settings saved",
       "saveFailed": "Failed to save extension settings",
-      "notFound": "Extension not found"
+      "notFound": "Extension not found",
+      "architect": {
+        "title": "Architecture Analyzer",
+        "description": "Analyze codebase architecture with statistics, static analysis, and dependency graphs",
+        "selectFolder": "Select Folder",
+        "fullAnalysis": "Full Analysis",
+        "steps": "Steps",
+        "analyzing": "Analyzing...",
+        "analyzedPath": "Analyzed Path",
+        "analysisComplete": "Analysis Complete",
+        "analysisCompleteDesc": "4-step full analysis completed successfully",
+        "partialAnalysisComplete": "Analysis Complete (Partial)",
+        "partialAnalysisCompleteDesc": "{{completed}} analysis completed successfully. AI analysis failed, but other results are available.",
+        "analysisFailed": "Analysis Failed",
+        "unknownError": "An unknown error occurred",
+        "noAnalysis": "No analysis results",
+        "selectFolderPrompt": "Select a folder to start analyzing",
+        "overview": "Overview",
+        "languages": "Languages",
+        "settings": "Settings",
+        "totalFiles": "Total Files",
+        "totalLines": "Total Lines",
+        "codeLines": "Code Lines",
+        "commentLines": "Comment Lines",
+        "languageBreakdown": "Language Breakdown",
+        "languageBreakdownDesc": "Programming language statistics in the project",
+        "language": "Language",
+        "files": "Files",
+        "blank": "Blank",
+        "comment": "Comment",
+        "code": "Code",
+        "percentage": "Percentage",
+        "lines": "lines",
+        "additionalStats": "Additional Statistics",
+        "blankLines": "Blank Lines",
+        "avgLinesPerFile": "Avg. Lines per File",
+        "languageCount": "Language Count",
+        "currentAnalysis": "Current Analysis",
+        "history": "History",
+        "noHistory": "No analysis history",
+        "startAnalyzing": "Select a folder to start analyzing",
+        "clocStatus": "cloc Installation Status",
+        "clocStatusDesc": "cloc tool must be installed to run analysis",
+        "checkingCloc": "Checking cloc installation...",
+        "clocInstalled": "cloc is installed",
+        "clocNotInstalled": "cloc is not installed",
+        "installCloc": "Install cloc:",
+        "recheckCloc": "Re-check",
+        "excludePatterns": "Exclude Patterns",
+        "excludePatternsDesc": "Folder/file patterns to exclude from analysis",
+        "addPattern": "Add pattern...",
+        "noExcludePatterns": "No exclude patterns",
+        "historySettings": "History Settings",
+        "historySettingsDesc": "Analysis history management options",
+        "maxHistorySize": "Max History Size",
+        "maxHistorySizeDesc": "Maximum number of analysis records to keep",
+        "clearHistory": "Clear History",
+        "electronOnly": "This feature is only available in Electron environment",
+        "issues": "Issues",
+        "runStaticAnalysis": "Run Static Analysis",
+        "noStaticAnalysis": "No static analysis has been run",
+        "totalErrors": "Total Errors",
+        "totalWarnings": "Total Warnings",
+        "totalIssues": "Total Issues",
+        "shown": "shown",
+        "issuesList": "Issues List",
+        "issuesListDesc": "ESLint and TypeScript compiler issues",
+        "noIssues": "No issues found!",
+        "noMatchingIssues": "No matching issues found",
+        "severity": "Severity",
+        "source": "Source",
+        "location": "Location",
+        "rule": "Rule",
+        "dependencies": "Dependencies",
+        "aiRefactor": "AI Refactor",
+        "noDependencyAnalysis": "No dependency analysis has been run",
+        "runDependencyAnalysis": "Run Dependency Analysis",
+        "totalDependencies": "Total Dependencies",
+        "circularDependencies": "Circular Dependencies",
+        "avgDependencies": "Avg. Dependencies",
+        "circularDependenciesFound": "Circular Dependencies Found",
+        "circularDependenciesDesc": "Removing circular dependencies improves code maintainability",
+        "cycle": "Cycle",
+        "file": "File",
+        "dependencyGraph": "Dependency Graph",
+        "dependencyGraphDesc": "Visualizes inter-file dependencies. Red indicates circular dependencies.",
+        "noAIAnalysis": "No AI analysis has been run",
+        "runAIAnalysis": "Run AI Analysis",
+        "aiAnalyzing": "AI Analyzing...",
+        "aiAnalyzingDesc": "Analyzing codebase and generating refactoring suggestions",
+        "aiSummary": "AI Summary",
+        "analyzedAt": "Analyzed At",
+        "priorityHigh": "High",
+        "priorityMedium": "Medium",
+        "priorityLow": "Low",
+        "refactorSuggestions": "Refactoring Suggestions",
+        "suggestionsFound": "suggestions found",
+        "noSuggestions": "No suggestions. Codebase is in good shape!",
+        "itemDescription": "Description",
+        "reasoning": "Reasoning",
+        "estimatedImpact": "Estimated Impact",
+        "affectedFiles": "Affected Files",
+        "staticAnalysisComplete": "Static Analysis Complete",
+        "staticAnalysisCompleteDesc": "ESLint and TypeScript analysis completed successfully",
+        "dependencyAnalysisComplete": "Dependency Analysis Complete",
+        "dependencyAnalysisCompleteDesc": "madge dependency analysis completed successfully",
+        "aiAnalysisComplete": "AI Analysis Complete",
+        "aiAnalysisCompleteDesc": "AI refactoring suggestions generated successfully"
+      },
+      "prReview": {
+        "title": "GitHub PR Review",
+        "description": "AI-powered code review",
+        "loadPR": "Load PR",
+        "loading": "Loading...",
+        "refreshPR": "Refresh",
+        "clearSession": "End Session",
+        "startAnalysis": "Start AI Analysis",
+        "stopAnalysis": "Stop Analysis",
+        "analyzing": "AI is analyzing the code...",
+        "noAnalysis": "No analysis results yet. Click 'Start AI Analysis' button.",
+        "sidebar": {
+          "title": "PR Review",
+          "description": "AI-powered code review",
+          "prUrl": "PR URL (Optional)",
+          "prUrlPlaceholder": "https://github.com/owner/repo/pull/123",
+          "parse": "Parse",
+          "owner": "Owner",
+          "ownerPlaceholder": "e.g., facebook",
+          "repository": "Repository",
+          "repositoryPlaceholder": "e.g., react",
+          "pullNumber": "Pull Request Number",
+          "pullNumberPlaceholder": "e.g., 123",
+          "currentPR": "Current PR",
+          "repo": "Repository:",
+          "author": "Author:",
+          "state": "State:",
+          "changes": "Changes:",
+          "recentReviews": "Recent Reviews",
+          "recentReviewsDesc": "Previously performed review history",
+          "loadHistory": "Load",
+          "deleteHistory": "Delete",
+          "deleteConfirm": "Delete \"{{title}}\" review history?",
+          "suggestions": "suggestions",
+          "howToUse": "How to Use",
+          "step1": "Enter GitHub PR URL or input manually",
+          "step2": "Load PR to see information",
+          "step3": "Click 'Start AI Analysis' in main panel",
+          "step4": "Review results and post to GitHub"
+        },
+        "tabs": {
+          "overview": "Overview",
+          "files": "Files",
+          "analysis": "Analysis",
+          "conversation": "Conversation"
+        },
+        "overview": {
+          "title": "PR Information",
+          "state": "State:",
+          "author": "Author:",
+          "baseBranch": "Base Branch:",
+          "headBranch": "Head Branch:",
+          "changedFiles": "Changed Files:",
+          "additions": "Additions:",
+          "deletions": "Deletions:",
+          "prDescription": "Description"
+        },
+        "analysis": {
+          "title": "Review Suggestions",
+          "unposted": "unposted",
+          "postToGitHub": "Post to GitHub",
+          "event": {
+            "comment": "Comment",
+            "approve": "Approve",
+            "requestChanges": "Request Changes"
+          },
+          "posted": "Posted",
+          "line": "Line",
+          "edit": "Edit",
+          "remove": "Remove",
+          "postSingle": "Post Single",
+          "editPrompt": "Edit review comment:"
+        },
+        "conversation": {
+          "title": "Talk with AI",
+          "description": "Ask questions and request additional analysis about the PR.",
+          "placeholder": "Type a message...",
+          "emptyState": "Type a message below to start conversation."
+        },
+        "diff": {
+          "additions": "Additions",
+          "deletions": "Deletions",
+          "changes": "Changes",
+          "addComment": "Add Comment",
+          "expand": "Expand",
+          "collapse": "Collapse"
+        },
+        "comment": {
+          "title": "Add Comment",
+          "file": "File",
+          "line": "Line",
+          "side": "Side",
+          "severity": "Severity",
+          "critical": "Critical",
+          "warning": "Warning",
+          "suggestion": "Suggestion",
+          "placeholder": "Enter review comment...",
+          "cancel": "Cancel",
+          "add": "Add Comment"
+        },
+        "settings": {
+          "title": "GitHub PR Review Settings",
+          "description": "Configure AI-powered code review behavior",
+          "patRequired": "GitHub PAT Required",
+          "patRequiredDesc": "GitHub PR Review reuses GitHub Actions Extension's PAT. Set up PAT in Settings → GitHub Actions.",
+          "patScopes": "Required scopes: repo (read and write)",
+          "goToSettings": "Go to Settings",
+          "reviewPreferences": "Review Preferences",
+          "reviewPreferencesDesc": "Configure AI review style and focus areas",
+          "commentStyle": "Comment Style",
+          "commentStyleDesc": "Tone and style of AI-generated comments",
+          "constructive": "Constructive",
+          "constructiveDesc": "Friendly and constructive feedback",
+          "strict": "Strict",
+          "strictDesc": "Rigorous and detailed feedback",
+          "minimal": "Minimal",
+          "minimalDesc": "Concise and essential only",
+          "focusAreas": "Focus Areas",
+          "focusAreasDesc": "Areas AI should focus on (multiple selection)",
+          "security": "Security",
+          "performance": "Performance",
+          "maintainability": "Maintainability",
+          "testing": "Testing",
+          "documentation": "Documentation",
+          "autoAnalyze": "Auto Analyze",
+          "autoAnalyzeDesc": "Automatically start analysis when PR is loaded",
+          "strictnessLevel": "Strictness Level",
+          "strictnessLevelDesc": "How strict the code review should be",
+          "relaxed": "Relaxed",
+          "balanced": "Balanced",
+          "strictLevel": "Strict"
+        },
+        "empty": {
+          "title": "GitHub PR Review",
+          "description": "Load a PR from the sidebar to start AI-powered code review."
+        }
+      }
     },
     "beta": {
       "title": "Beta",
@@ -758,11 +1129,18 @@
       "saveFailed": "Failed to save settings."
     },
     "presentation": {
-      "title": "Presentation"
+      "title": "Presentation",
+      "description": "AI-powered presentation generation tool with interactive PPT/PDF/HTML export workflows",
+      "saved": "Presentation settings saved"
     },
     "terminal": {
       "title": "Terminal",
-      "description": "AI-powered intelligent terminal settings"
+      "description": "AI-powered intelligent terminal settings",
+      "saved": "Terminal settings saved"
+    },
+    "scheduler": {
+      "title": "Scheduler",
+      "description": "Configure scheduled tasks to automatically run agents in the background"
     },
     "mcp": {
       "title": "MCP",
@@ -816,6 +1194,10 @@
           "delete": "Delete Server",
           "activate": "Activate",
           "deactivate": "Deactivate"
+        },
+        "actions": {
+          "selectAll": "Select all",
+          "deselectAll": "Deselect all"
         },
         "agentInfo": "Tools on this server can be used by LLM in Agent mode. Enable server to use tools.",
         "expand": {
@@ -993,6 +1375,34 @@
         "saveSuccess": "GitHub settings saved!",
         "saveFailed": "Failed to save settings."
       }
+    },
+    "architect": {
+      "title": "Architecture Analyzer",
+      "description": "Analyze codebase architecture with statistics, static analysis, and dependency graphs",
+      "saved": "Architect settings saved"
+    },
+    "confluence": {
+      "title": "Confluence Space Manager",
+      "description": "Synchronize Confluence spaces with low-call strategy and manage local cache",
+      "saved": "Confluence settings saved"
+    },
+    "gitDesktopAssistant": {
+      "title": "Git Desktop Assistant",
+      "description": "Desktop workflow assistant for local Git, commit autocomplete, and PR suggestions"
+    },
+    "mailFileWatcher": {
+      "title": "Enterprise Mail File Integration",
+      "description": "Configure folder watch and Python parser based mail notifications"
+    },
+    "git-desktop-assistant": {
+      "saved": "Git Desktop Assistant settings saved"
+    },
+    "mail-file-watcher": {
+      "saved": "Mail File Watcher settings saved"
+    },
+    "githubProject": {
+      "title": "GitHub Project",
+      "description": "Configure GitHub Projects extension settings"
     }
   },
   "chat": {
@@ -1001,7 +1411,7 @@
       "select": "Select Directory",
       "selecting": "Selecting...",
       "remove": "Remove Work Directory",
-      "warning": "Working directory required for Coding Agent",
+      "warning": "Working directory required for Coding/Cowork Agent",
       "selectNow": "Select Now"
     },
     "welcome": {
@@ -1950,6 +2360,304 @@
       "newTerminal": "New Terminal (Ctrl+Shift+`)"
     }
   },
+  "scheduler": {
+    "title": "Scheduled Tasks",
+    "addTask": "Add New Task",
+    "taskName": "Task Name",
+    "taskDescription": "Description",
+    "schedule": "Schedule",
+    "scheduleType": "Schedule Type",
+    "preset": "Preset",
+    "cron": "Cron Expression",
+    "presetEveryMinute": "Every Minute (for testing)",
+    "presetHourly": "Hourly",
+    "presetDaily": "Daily",
+    "presetWeekly": "Weekly",
+    "presetMonthly": "Monthly",
+    "time": "Time",
+    "dayOfWeek": "Day of Week",
+    "dayOfMonth": "Day of Month",
+    "prompt": "Prompt",
+    "thinkingMode": "Thinking Mode",
+    "enableRAG": "Enable RAG",
+    "enableTools": "Enable Tools",
+    "allowedTools": "Allowed Tools",
+    "resultHandlers": "Result Handlers",
+    "createConversation": "Create New Conversation",
+    "sendNotification": "Send Notification",
+    "saveToFile": "Save to File",
+    "notificationTitle": "Notification Title",
+    "fileDirectory": "Save Directory",
+    "fileFormat": "File Format",
+    "executionHistory": "Execution History",
+    "lastExecuted": "Last Executed",
+    "nextExecution": "Next Execution",
+    "runNow": "Run Now",
+    "edit": "Edit",
+    "delete": "Delete",
+    "enable": "Enable",
+    "disable": "Disable",
+    "save": "Save",
+    "cancel": "Cancel",
+    "taskCount": "{{count}} task(s)",
+    "activeCount": "{{count}} active",
+    "noTasks": "No tasks configured",
+    "cronExpression": "Cron Expression",
+    "cronHelp": "Min Hour Day Month Weekday (e.g., 0 9 * * 1-5 = Weekdays at 9 AM)",
+    "filename": "Filename",
+    "filenameTemplate": "Filename Template (e.g., result_{timestamp}.md)",
+    "viewHistory": "View History",
+    "status": {
+      "success": "Success",
+      "error": "Error",
+      "running": "Running",
+      "cancelled": "Cancelled"
+    },
+    "validation": {
+      "nameRequired": "Please enter a task name",
+      "promptRequired": "Please enter a prompt",
+      "invalidCron": "Invalid cron expression",
+      "selectAtLeastOneHandler": "Please select at least one result handler"
+    },
+    "confirmDelete": "Are you sure you want to delete this task?",
+    "deleteSuccess": "Task deleted successfully",
+    "deleteFailed": "Failed to delete task",
+    "saveSuccess": "Task saved successfully",
+    "saveFailed": "Failed to save task",
+    "runSuccess": "Task executed successfully",
+    "runFailed": "Failed to execute task",
+    "loadFailed": "Failed to load tasks",
+    "duration": "Duration",
+    "resultSummary": "Result Summary",
+    "errorMessage": "Error Message",
+    "conversationCreated": "Conversation Created",
+    "fileSaved": "File Saved",
+    "notificationSent": "Notification Sent",
+    "toolsExecuted": "Tools Executed",
+    "toolsBlocked": "Tools Blocked",
+    "daySunday": "Sunday",
+    "dayMonday": "Monday",
+    "dayTuesday": "Tuesday",
+    "dayWednesday": "Wednesday",
+    "dayThursday": "Thursday",
+    "dayFriday": "Friday",
+    "daySaturday": "Saturday",
+    "taskLabel": "Task: {{taskName}}",
+    "allTasksExecutionHistory": "Execution history for all tasks",
+    "loadingHistory": "Loading...",
+    "noExecutionHistory": "No execution history",
+    "historyExecutedAt": "Executed At",
+    "historyStatus": "Status",
+    "historyResultProcessing": "Result Processing",
+    "historyTrigger": "Trigger",
+    "historyAttempts": "Attempts",
+    "toggleEnabled": "Task enabled",
+    "toggleDisabled": "Task disabled",
+    "toggleFailed": "Failed to update task status",
+    "deleteWarning": "This action cannot be undone. Delete this task?",
+    "trigger": {
+      "manual": "Manual",
+      "schedule": "Scheduled",
+      "catch-up": "Catch-up"
+    },
+    "filterStatus": "Filter by Status",
+    "filterTrigger": "Filter by Trigger",
+    "filterAll": "All",
+    "filterFromDate": "From Date",
+    "filterToDate": "To Date",
+    "filterInvalidDateRange": "From Date must be earlier than or equal to To Date",
+    "presetLast24Hours": "Last 24h",
+    "presetLast7Days": "Last 7 days",
+    "presetLast30Days": "Last 30 days",
+    "clearFilters": "Clear filters"
+  },
+  "messageSubscription": {
+    "title": "Message Subscription",
+    "description": "Subscribe to messages from external API server and receive notifications",
+    "tabs": {
+      "connection": "Connection",
+      "queue": "Queue",
+      "ai": "AI Settings",
+      "notification": "Notifications"
+    },
+    "connection": {
+      "type": "Connection Type",
+      "polling": "HTTP Polling",
+      "websocket": "WebSocket (Coming Soon)",
+      "nats": "NATS JetStream",
+      "natsUrl": "NATS Server URL",
+      "natsUrlPlaceholder": "nats://broker.example.com:4222",
+      "natsConsumerId": "Consumer ID (Optional)",
+      "natsConsumerIdPlaceholder": "Consumer ID",
+      "natsConsumerSecret": "Consumer Secret (Optional)",
+      "natsConsumerSecretPlaceholder": "Consumer Secret",
+      "natsStreamName": "Stream Name",
+      "natsSubject": "Subject Pattern",
+      "natsSubjectPlaceholder": "webhooks.>",
+      "natsBatchSize": "Fetch Batch Size",
+      "url": "API URL",
+      "urlPlaceholder": "https://api.example.com/messages",
+      "urlRequired": "Please enter API URL",
+      "pollingInterval": "Polling Interval (seconds)",
+      "authToken": "Auth Token (Optional)",
+      "authTokenPlaceholder": "Bearer token...",
+      "refreshNow": "Refresh Now",
+      "refreshSuccess": "Received {{count}} new message(s)",
+      "refreshFailed": "Refresh failed: {{error}}",
+      "status": "Connection Status",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "lastPolled": "Last Polled",
+      "testConnection": "Test Connection"
+    },
+    "queue": {
+      "maxQueueSize": "Max Queue Size",
+      "maxQueueSizeDesc": "Set the maximum size of the message queue",
+      "retentionDays": "Retention Period (days)",
+      "retentionDaysDesc": "Number of days to retain completed messages",
+      "autoProcess": "Auto Process",
+      "autoProcessDesc": "Automatically process incoming messages",
+      "retryAttempts": "Retry Attempts",
+      "retryAttemptsDesc": "Number of retry attempts on processing failure",
+      "status": {
+        "title": "Queue Status",
+        "pending": "Pending",
+        "processing": "Processing",
+        "completed": "Completed",
+        "failed": "Failed",
+        "totalProcessed": "Total Processed"
+      },
+      "actions": {
+        "cleanup": "Cleanup Completed Messages",
+        "cleanupSuccess": "Cleaned up {{count}} old message(s)",
+        "cleanupFailed": "Cleanup failed: {{error}}"
+      }
+    },
+    "ai": {
+      "useAIProcessing": "Use AI Summarization",
+      "useAIProcessingDesc": "When enabled, messages are summarized by AI. When disabled, original content is displayed.",
+      "thinkingMode": "Thinking Mode",
+      "instant": "Instant Response",
+      "sequential": "Sequential Thinking",
+      "promptTemplate": "Summary Prompt (Optional)",
+      "promptTemplatePlaceholder": "Using default template",
+      "promptTemplateDesc": "You can use {type}, {source}, {title}, {content} variables"
+    },
+    "notification": {
+      "show": "Show Notifications",
+      "showDesc": "Display notification when new message is processed",
+      "type": "Notification Type",
+      "typeGlobalDesc": "Notification type is managed in global Settings > Notification.",
+      "os": "OS Native",
+      "application": "In-App Notification"
+    },
+    "queueViewer": {
+      "title": "Queue Management",
+      "description": "View and manage message queue status",
+      "tabs": {
+        "failed": "Failed",
+        "pending": "Pending",
+        "completed": "Completed",
+        "guide": "Guide"
+      },
+      "guide": {
+        "button": "Open Guide",
+        "purposeTitle": "Purpose of this page",
+        "purposeBody": "This operational page helps you quickly recover failed messages, prevent queue buildup, and keep your message automation pipeline stable.",
+        "integrationTitle": "Integration and operation tips",
+        "integrationItems": {
+          "connection": "Configure API URL and auth token first in Message Subscription > Connection settings, then monitor queue health here.",
+          "autoProcess": "When auto-process is enabled, incoming messages are processed immediately, and failed jobs can be retried from this page.",
+          "recovery": "Review each failed error, then reprocess to validate whether external issues (expired auth, temporary outage, etc.) are resolved.",
+          "monitoring": "Run completed-message cleanup regularly, and if backlog grows, review polling interval and external API status together."
+        }
+      },
+      "columns": {
+        "title": "Title",
+        "type": "Type",
+        "time": "Time",
+        "error": "Error",
+        "conversation": "Conversation",
+        "actions": "Actions"
+      },
+      "actions": {
+        "reprocess": "Reprocess",
+        "viewConversation": "View Conversation",
+        "delete": "Delete",
+        "reprocessSuccess": "Reprocessing message",
+        "reprocessFailed": "Reprocess failed: {{error}}",
+        "deleteSuccess": "Message deleted",
+        "deleteFailed": "Delete failed: {{error}}"
+      },
+      "empty": "No messages"
+    },
+    "apiFormat": {
+      "title": "API Response Standard Format",
+      "description": "External API must respond in the following format",
+      "example": "Example"
+    },
+    "enabled": "Subscription Enabled",
+    "disabled": "Subscription Disabled",
+    "start": "Start Subscription",
+    "stop": "Stop Subscription",
+    "startSuccess": "Message subscription started",
+    "startFailed": "Failed to start subscription: {{error}}",
+    "stopSuccess": "Message subscription stopped",
+    "stopFailed": "Failed to stop subscription: {{error}}",
+    "saveSuccess": "Settings saved successfully",
+    "saveFailed": "Failed to save settings: {{error}}",
+    "help": {
+      "subscription": {
+        "buttonAria": "Open message subscription help",
+        "title": "Message Subscription Guide",
+        "description": "Message Subscription connects your app to an external service so new messages are fetched on schedule and processed automatically.",
+        "whatItDoesTitle": "What does this feature do?",
+        "whatItDoesBody": "It polls your configured API URL, stores incoming messages in the queue, and links processing results to notifications and conversations.",
+        "howToUseTitle": "How do I use it?",
+        "steps": {
+          "step1": "Enter the API URL and polling interval in Connection settings.",
+          "step2": "Add an auth token if needed, then click Save.",
+          "step3": "Click \"Start Subscription\" in the top-right to enable it.",
+          "step4": "Use the manual refresh button to verify connectivity and message intake immediately."
+        }
+      },
+      "queue": {
+        "buttonAria": "Open queue management help",
+        "title": "Queue Management Guide",
+        "description": "Queue Management lets you track processing status, recover failed items, and clean up unnecessary queue data.",
+        "whatItDoesTitle": "What does this feature do?",
+        "whatItDoesBody": "It shows pending/processing/completed/failed counts and supports reprocessing failures, deleting messages, and cleaning old completed records.",
+        "howToUseTitle": "How do I use it?",
+        "steps": {
+          "step1": "Check the top status cards to understand current queue backlog.",
+          "step2": "Open the Failed tab, review errors, and try \"Reprocess\".",
+          "step3": "Use \"Delete\" for items that should not be processed.",
+          "step4": "Run \"Cleanup Completed Messages\" periodically for storage and performance hygiene."
+        }
+      }
+    },
+    "guide": {
+      "openButton": "View feature guide",
+      "title": "Message Subscription Guide",
+      "description": "You can review what this page does, why it exists, how to use it, and how to integrate it with external systems.",
+      "purposeTitle": "Purpose",
+      "purposeBody": "Message Subscription periodically fetches messages from an external API, stores them in SEPilot queue, and can continue to AI processing and notifications automatically.",
+      "usageTitle": "How to use",
+      "usageSteps": {
+        "step1": "In Connection settings, enter API URL, polling interval, and auth token, then save.",
+        "step2": "Click Start Subscription in the top-right to activate collection.",
+        "step3": "Adjust processing policies in Queue/AI settings (retry, auto-process, summarization mode).",
+        "step4": "Choose whether to show completion notifications in Notification settings."
+      },
+      "integrationTitle": "Integration",
+      "integrationSteps": {
+        "step1": "Prepare an external endpoint that returns message list JSON payloads.",
+        "step2": "If authentication is required, configure Bearer token or custom headers.",
+        "step3": "Use manual refresh first to validate connectivity and incoming data.",
+        "step4": "Use Queue Management to reprocess/delete failed items for stable operations."
+      }
+    }
+  },
   "documents": {
     "untitled": "Untitled",
     "title": "Uploaded Documents",
@@ -2162,6 +2870,14 @@
       "default": "Type a message... (Shift+Enter for new line)"
     },
     "settings": "Settings",
+    "workingDirectory": {
+      "set": "Set Working Directory",
+      "change": "Change Working Directory",
+      "selecting": "Selecting...",
+      "requiredForCoding": "Set a working directory before sending in Coding mode.",
+      "autoSendBlocked": "Quick input is blocked in Coding mode until a working directory is set.",
+      "tooltip": "Working Directory"
+    },
     "thinking": {
       "instant": "Instant",
       "instant.desc": "Quick response",
@@ -2174,7 +2890,25 @@
       "deepWebResearch": "Deep Web Research",
       "deepWebResearch.desc": "Web search-based deep research",
       "coding": "Coding",
-      "coding.desc": "Coding optimization"
+      "coding.desc": "Coding optimization",
+      "cowork": "Cowork",
+      "cowork.desc": "Collaborative execution with tools"
+    },
+    "cowork": {
+      "panel": {
+        "title": "Team Task Board",
+        "objective": "Objective",
+        "tokens": "Tokens",
+        "waitingFor": "Waiting",
+        "dependency": "depends"
+      }
+    },
+    "trust": {
+      "title": "Input trust level",
+      "trusted": "Trusted input",
+      "trustedDesc": "Apply baseline approval policy.",
+      "untrusted": "Untrusted input",
+      "untrustedDesc": "Always require explicit approval for risky tools."
     },
     "tools": {
       "status": "{{active}}/{{total}} enabled",
@@ -2184,7 +2918,12 @@
       "error": "Error loading tools: {{error}}",
       "errorHint": "Check MCP server settings. Ensure servers are enabled and configured correctly.",
       "noTools": "No tools available",
-      "noToolsHint": "Add MCP servers in Settings to enable tools. Check if servers are enabled."
+      "noToolsHint": "Add MCP servers in Settings to enable tools. Check if servers are enabled.",
+      "serverStatusTitle": "MCP server issues",
+      "serverIssueStatus": {
+        "error": "Error",
+        "disconnected": "Disconnected"
+      }
     },
     "imageGen": "Image Generation",
     "fileDrop": {
@@ -2195,7 +2934,23 @@
       "thinking": "🤔 Thinking...",
       "executing": "⚙️ Executing...",
       "working": "🔄 Working...",
-      "stop": "Stop"
+      "stop": "Stop",
+      "approvalHistory": "Approval history ({{count}})",
+      "timeline": {
+        "title": "Approval timeline",
+        "count": "{{visible}}/{{total}}",
+        "risk": "risk: {{level}}",
+        "decisions": {
+          "approved": "Approved",
+          "feedback": "Needs approval",
+          "denied": "Denied"
+        },
+        "sources": {
+          "policy": "policy",
+          "system": "system",
+          "user": "user"
+        }
+      }
     },
     "actions": {
       "stop": "Stop (Esc)",
@@ -2208,6 +2963,9 @@
     "imageUpload": {
       "tooltip": "Attach image",
       "ariaLabel": "Attach image button"
+    },
+    "persona": {
+      "switched": "Switched persona to {{name}}"
     }
   },
   "quickInput": {
@@ -2265,6 +3023,8 @@
       "deep.desc": "Deep thinking - Highest quality (slow)",
       "coding": "Coding (beta)",
       "coding.desc": "Complex coding tasks - ReAct Agent",
+      "cowork": "Cowork (beta)",
+      "cowork.desc": "Collaborative execution tasks - Tool-first Agent",
       "imageGenOnly": "Only Instant mode is available in image generation mode"
     },
     "rag": {

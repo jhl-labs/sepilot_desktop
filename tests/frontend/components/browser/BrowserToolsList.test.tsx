@@ -7,19 +7,16 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { BrowserToolsList } from '@/extensions/browser/components/BrowserToolsList';
-import { useChatStore } from '@/lib/store/chat-store';
+import { useExtensionStore } from '@sepilot/extension-sdk/store';
 
-// Mock useChatStore
-jest.mock('@/lib/store/chat-store', () => ({
-  useChatStore: jest.fn(),
-}));
+const mockUseExtensionStore = useExtensionStore as jest.Mock;
 
 describe('BrowserToolsList', () => {
   const mockSetBrowserViewMode = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useChatStore as unknown as jest.Mock).mockReturnValue({
+    mockUseExtensionStore.mockReturnValue({
       setBrowserViewMode: mockSetBrowserViewMode,
     });
   });
@@ -107,9 +104,7 @@ describe('BrowserToolsList', () => {
     it('should show NEW badge for search_elements', () => {
       render(<BrowserToolsList />);
 
-      const searchElements = screen.getByText('search_elements');
       const newBadges = screen.getAllByText('NEW');
-
       expect(newBadges.length).toBeGreaterThan(0);
     });
   });
@@ -261,14 +256,14 @@ describe('BrowserToolsList', () => {
       expect(screen.getByText('browser.toolsList.categories.googleSearch')).toBeInTheDocument();
     });
 
-    it('should sum to 18 tools across all categories', () => {
+    it('should sum to 27 tools across all categories', () => {
       expect(1 + 5 + 3 + 4 + 5 + 9).toBe(27);
     });
   });
 
   describe('Badge Variants', () => {
     it('should use default variant for NEW badges', () => {
-      const { container } = render(<BrowserToolsList />);
+      render(<BrowserToolsList />);
 
       const newBadges = screen.getAllByText('NEW');
       newBadges.forEach((badge) => {

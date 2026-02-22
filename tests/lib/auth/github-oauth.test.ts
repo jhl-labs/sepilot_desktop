@@ -2,7 +2,7 @@
  * GitHubOAuth 테스트
  */
 
-import { GitHubOAuth, githubOAuth } from '@/lib/auth/github-oauth';
+import { GitHubOAuth, githubOAuth } from '@/lib/domains/auth/github-oauth';
 import {
   enableElectronMode,
   disableElectronMode,

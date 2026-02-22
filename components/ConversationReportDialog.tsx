@@ -67,8 +67,8 @@ export function ConversationReportDialog({
 
   // 대화 요약 정보
   const messageCount = messages.length;
-  const userMessageCount = messages.filter((m) => m.role === 'user').length;
-  const assistantMessageCount = messages.filter((m) => m.role === 'assistant').length;
+  const userMessageCount = messages.filter((m: any) => m.role === 'user').length;
+  const assistantMessageCount = messages.filter((m: any) => m.role === 'assistant').length;
   const hasToolCalls = messages.some((m) => m.tool_calls && m.tool_calls.length > 0);
 
   return (

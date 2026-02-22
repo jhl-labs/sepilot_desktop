@@ -43,11 +43,19 @@ export interface ToolApprovalData {
   }>;
 }
 
+export interface DiscussInputData {
+  type: 'discuss-input';
+  conversationId: string;
+  stepIndex: number;
+  question: string;
+}
+
 export type InteractiveBlock =
   | InteractiveSelectData
   | InteractiveInputData
   | ToolResultData
-  | ToolApprovalData;
+  | ToolApprovalData
+  | DiscussInputData;
 
 export interface ParsedContent {
   segments: Array<{
@@ -62,7 +70,7 @@ export interface ParsedContent {
 export function parseInteractiveContent(markdown: string): ParsedContent {
   const segments: ParsedContent['segments'] = [];
   const blockRegex =
-    /:::(interactive-select|interactive-input|tool-result|tool-approval)\n([\s\S]*?):::/g;
+    /:::(interactive-select|interactive-input|tool-result|tool-approval|discuss-input)\n([\s\S]*?):::/g;
 
   let lastIndex = 0;
   let match;
@@ -94,6 +102,8 @@ export function parseInteractiveContent(markdown: string): ParsedContent {
       parsedBlock = parseToolResult(blockContent);
     } else if (blockType === 'tool-approval') {
       parsedBlock = parseToolApproval(blockContent);
+    } else if (blockType === 'discuss-input') {
+      parsedBlock = parseDiscussInput(blockContent);
     }
 
     if (parsedBlock) {
@@ -286,5 +296,40 @@ function parseToolApproval(content: string): ToolApprovalData {
     type: 'tool-approval',
     messageId,
     toolCalls,
+  };
+}
+
+function parseDiscussInput(content: string): DiscussInputData {
+  const lines = content.trim().split('\n');
+  let conversationId = '';
+  let stepIndex = 0;
+  let question = '';
+  let questionStarted = false;
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    // Once question field starts, capture all remaining lines as multiline question
+    if (questionStarted) {
+      question += `\n${trimmedLine}`;
+    } else if (trimmedLine.startsWith('conversationId:')) {
+      conversationId = trimmedLine.substring(15).trim();
+    } else if (trimmedLine.startsWith('stepIndex:')) {
+      const indexStr = trimmedLine.substring(10).trim();
+      const indexNum = parseInt(indexStr, 10);
+      if (!isNaN(indexNum)) {
+        stepIndex = indexNum;
+      }
+    } else if (trimmedLine.startsWith('question:')) {
+      question = trimmedLine.substring(9).trim();
+      questionStarted = true;
+    }
+  }
+
+  return {
+    type: 'discuss-input',
+    conversationId,
+    stepIndex,
+    question,
   };
 }

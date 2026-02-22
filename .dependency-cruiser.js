@@ -8,6 +8,18 @@ module.exports = {
       from: {},
       to: {
         circular: true,
+        // 동적 import는 제외 (런타임 순환 참조가 발생하지 않음)
+        dependencyTypesNot: ['dynamic-import'],
+      },
+    },
+    {
+      name: 'no-circular-dynamic',
+      severity: 'warn',
+      comment: 'Dynamic import circular dependencies (less critical)',
+      from: {},
+      to: {
+        circular: true,
+        dependencyTypes: ['dynamic-import'],
       },
     },
     {

@@ -1,0 +1,21 @@
+{
+  "systemPrompt": "당신은 성능 최적화 전문가입니다. React 렌더링 병목, 메모리 누수, 번들 크기 문제, IPC 통신 오버헤드 등 다양한 성능 이슈를 진단하고 최적화 방안을 제시합니다. 항상 측정 기반으로 접근하며(추측 금지), 최적화 전후 성능 지표 비교를 권장합니다. 사용자 체감 성능(UX)을 최우선으로 고려합니다.",
+  "knowledge": [
+    {
+      "title": "React 렌더링 최적화",
+      "content": "# React 렌더링 최적화\n\n## 불필요한 리렌더링 방지\n- React.memo(): props가 변경되지 않으면 리렌더링을 건너뜁니다\n- useMemo(): 비용이 큰 계산 결과를 캐싱합니다\n- useCallback(): 함수 참조를 안정화하여 자식 리렌더링을 방지합니다\n\n## Zustand 셀렉터 최적화\n```typescript\n// 나쁨: 전체 store 구독 → 모든 변경에 리렌더링\nconst store = useChatStore();\n// 좋음: 필요한 상태만 구독\nconst messages = useChatStore((s) => s.messages);\n```\n\n## 가상화 (Virtualization)\n- 긴 목록은 react-virtualized 또는 tanstack-virtual 사용\n- 채팅 메시지 목록, 파일 트리에 적용합니다\n\n## 측정 도구\n- React DevTools Profiler로 렌더링 시간 측정\n- why-did-you-render로 불필요한 리렌더링 추적\n- Chrome Performance 탭에서 플레임 차트 분석"
+    },
+    {
+      "title": "번들 크기 최적화",
+      "content": "# 번들 크기 최적화\n\n## 분석 도구\n- `pnpm run build && npx @next/bundle-analyzer` 로 번들 구성 확인\n- 대형 의존성을 식별하고 대안을 검토합니다\n\n## 코드 분할 (Code Splitting)\n- Next.js dynamic import: `dynamic(() => import('./Heavy'), { ssr: false })`\n- 조건부 로드: 사용자가 기능을 사용할 때만 로드합니다\n- Extension은 이미 별도 번들로 분리되어 있습니다\n\n## Tree Shaking 최적화\n- barrel 파일(index.ts)에서 re-export 시 사용하지 않는 모듈이 포함될 수 있습니다\n- 직접 import 경로를 사용합니다: `from 'lodash/debounce'`\n- sideEffects: false를 package.json에 설정합니다\n\n## 이미지 최적화\n- SVG 아이콘: lucide-react의 트리 셰이킹 활용\n- 이미지: Next.js Image 컴포넌트로 자동 최적화\n- 대형 에셋은 lazy loading 적용"
+    },
+    {
+      "title": "메모리 관리",
+      "content": "# 메모리 관리\n\n## 메모리 누수 패턴\n- 이벤트 리스너 미해제: useEffect cleanup에서 반드시 removeListener\n- 타이머 미정리: setInterval/setTimeout을 cleanup에서 clear\n- 클로저에 의한 참조 유지: 큰 객체를 클로저가 참조하지 않도록 주의\n- IPC 리스너 누적: on() 등록 후 removeListener 필수\n\n## 예방 패턴\n```typescript\nuseEffect(() => {\n  const handler = (event: Event) => { /* ... */ };\n  window.addEventListener('resize', handler);\n  return () => window.removeEventListener('resize', handler);\n}, []);\n```\n\n## 진단 도구\n- Chrome DevTools Memory 탭: 힙 스냅샷 비교\n- Performance Monitor: JS Heap Size 실시간 추적\n- process.memoryUsage(): Main Process 메모리 확인\n\n## Electron 특화\n- BrowserView 소멸 시 리소스 해제 확인\n- 대용량 IPC 데이터는 스트리밍으로 분할 전송"
+    },
+    {
+      "title": "IPC 성능 최적화",
+      "content": "# IPC 성능 최적화\n\n## 직렬화 비용 줄이기\n- IPC 메시지는 structuredClone으로 직렬화됩니다\n- 큰 객체보다 필요한 필드만 전송합니다\n- Buffer/ArrayBuffer는 전송 시 복사 대신 전달(transfer)됩니다\n\n## 배치 처리\n```typescript\n// 나쁨: N번 IPC 호출\nfor (const id of ids) { await invoke('get-item', id); }\n// 좋음: 1번 배치 호출\nconst items = await invoke('get-items-batch', ids);\n```\n\n## 스트리밍 최적화\n- 토큰 스트리밍: 개별 토큰이 아닌 청크 단위로 전송합니다\n- 디바운스: 빠른 연속 이벤트는 requestAnimationFrame으로 묶습니다\n- AbortController로 불필요한 스트리밍을 즉시 중단합니다\n\n## 캐싱 전략\n- 자주 조회하는 설정은 Renderer에 캐싱합니다\n- 변경 빈도가 낮은 데이터는 TTL 기반 캐시를 적용합니다\n- 캐시 무효화: 관련 IPC 이벤트 수신 시 갱신"
+    }
+  ]
+}

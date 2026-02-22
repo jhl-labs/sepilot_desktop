@@ -8,8 +8,10 @@ import type {
   NetworkConfig,
   ImageAttachment,
   ImageGenConfig,
+  NanoBananaConfig,
 } from './index';
 import type { Persona } from './persona';
+import type { TypedInvoke } from './ipc-channels';
 
 // IPC 응답 타입
 interface IPCResponse<T = void> {
@@ -20,10 +22,15 @@ interface IPCResponse<T = void> {
 
 interface ChatAPI {
   saveConversation: (conversation: Conversation) => Promise<IPCResponse>;
+  saveConversationsBulk: (conversations: Conversation[]) => Promise<IPCResponse<{ saved: number }>>;
   loadConversations: () => Promise<IPCResponse<Conversation[]>>;
+  searchConversations: (
+    query: string
+  ) => Promise<IPCResponse<Array<{ conversation: Conversation; matchedMessages: Message[] }>>>;
   deleteConversation: (id: string) => Promise<IPCResponse>;
   updateConversationTitle: (id: string, title: string) => Promise<IPCResponse>;
   saveMessage: (message: Message) => Promise<IPCResponse>;
+  saveMessagesBulk: (messages: Message[]) => Promise<IPCResponse<{ saved: number }>>;
   loadMessages: (conversationId: string) => Promise<IPCResponse<Message[]>>;
   deleteMessage: (id: string) => Promise<IPCResponse>;
   deleteConversationMessages: (conversationId: string) => Promise<IPCResponse>;
@@ -65,13 +72,14 @@ interface MCPTool {
     required?: string[];
   };
   serverName: string;
+  enabled?: boolean;
 }
 
 // MCP 서버 상태 타입
 interface MCPServerStatus {
   status: 'connected' | 'disconnected' | 'connecting' | 'error';
   toolCount?: number;
-  tools?: string[];
+  tools?: Array<{ name: string; enabled: boolean }>;
   errorMessage?: string;
 }
 
@@ -87,6 +95,8 @@ interface MCPAPI {
   ) => Promise<IPCResponse<unknown>>;
   toggleServer: (name: string) => Promise<IPCResponse>;
   getServerStatus: (name: string) => Promise<IPCResponse<MCPServerStatus>>;
+  toggleTool: (serverName: string, toolName: string, enabled: boolean) => Promise<IPCResponse>;
+  setDisabledTools: (serverName: string, disabledTools: string[]) => Promise<IPCResponse>;
 }
 
 // GitHub 사용자 정보 타입
@@ -132,9 +142,27 @@ interface SkillsAPI {
 
   // Skill 관리
   install: (
-    skillPackage: import('./index').SkillPackage
+    skillPackage: import('./index').SkillPackage,
+    source: import('./index').SkillSource
   ) => Promise<IPCResponse<import('./index').InstalledSkill>>;
-  installFromLocal: (zipPath: string) => Promise<IPCResponse<import('./index').InstalledSkill>>;
+  installFromLocal: (folderPath: string) => Promise<IPCResponse<import('./index').InstalledSkill>>;
+  installFromLocalFolder?: (
+    folderPath: string
+  ) => Promise<IPCResponse<import('./index').InstalledSkill>>;
+  setUserSkillsFolder: (folderPath: string) => Promise<IPCResponse>;
+  getUserSkillsFolder: () => Promise<IPCResponse<string | null>>;
+  scanUserSkillsFolder: (options?: {
+    dedupeStrategy?: 'version_then_mtime' | 'mtime_only' | 'first_seen';
+    includeHiddenDirs?: boolean;
+  }) => Promise<
+    IPCResponse<{
+      scanned: number;
+      deduplicated: number;
+      imported: import('./index').InstalledSkill[];
+      failed: Array<{ path: string; error: string }>;
+    }>
+  >;
+  selectSkillsFolder: () => Promise<IPCResponse<string | null>>;
   remove: (skillId: string) => Promise<IPCResponse>;
   toggle: (skillId: string, enabled: boolean) => Promise<IPCResponse>;
 
@@ -191,7 +219,7 @@ interface LLMChatOptions {
 
 // LLM 모델 가져오기 설정 타입
 interface LLMFetchModelsConfig {
-  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
   baseURL?: string;
   apiKey: string;
   customHeaders?: Record<string, string>;
@@ -226,6 +254,7 @@ interface LLMAPI {
       lineNumber: number;
       hasContextBefore: boolean;
       hasContextAfter: boolean;
+      wordWrapColumn?: number;
     };
   }) => Promise<IPCResponse<{ completion: string }>>;
   editorAction: (params: {
@@ -270,10 +299,12 @@ interface GraphConfig {
     | 'tree-of-thought'
     | 'deep'
     | 'coding'
+    | 'cowork'
     | 'browser-agent'
     | 'editor-agent'
     | 'terminal-agent'
     | 'deep-web-research';
+  inputTrustLevel?: 'trusted' | 'untrusted';
   enableRAG: boolean;
   enableTools: boolean;
 }
@@ -305,6 +336,8 @@ interface LangGraphToolApprovalRequestEvent extends LangGraphStreamEventBase {
   type: 'tool_approval_request';
   messageId: string;
   toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+  note?: string;
+  riskLevel?: 'low' | 'medium' | 'high';
 }
 
 interface LangGraphToolApprovalResultEvent extends LangGraphStreamEventBase {
@@ -335,6 +368,11 @@ interface LangGraphCompletionEvent extends LangGraphStreamEventBase {
   iterations?: number;
 }
 
+interface LangGraphReferencedDocumentsEvent extends LangGraphStreamEventBase {
+  type: 'referenced_documents';
+  referenced_documents: Array<{ id: string; title: string; source: string; content: string }>;
+}
+
 type LangGraphStreamEvent =
   | LangGraphStreamingEvent
   | LangGraphImageProgressEvent
@@ -342,13 +380,16 @@ type LangGraphStreamEvent =
   | LangGraphToolApprovalResultEvent
   | LangGraphNodeEvent
   | LangGraphErrorEvent
-  | LangGraphCompletionEvent;
+  | LangGraphCompletionEvent
+  | LangGraphReferencedDocumentsEvent;
 
 // Tool approval request data type
 interface LangGraphToolApprovalRequest {
   conversationId: string;
   messageId: string;
   toolCalls: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+  note?: string;
+  riskLevel?: 'low' | 'medium' | 'high';
 }
 
 interface LangGraphStreamDoneData {
@@ -381,6 +422,8 @@ interface LangGraphAPI {
     callback: (data: LangGraphToolApprovalRequest) => void
   ) => (...args: unknown[]) => void;
   respondToolApproval: (conversationId: string, approved: boolean) => Promise<IPCResponse>;
+  // Discuss Input (Human-in-the-loop)
+  submitDiscussInput: (conversationId: string, userInput: string) => Promise<IPCResponse>;
   // Abort streaming
   abort: (conversationId: string) => Promise<IPCResponse>;
   // Stop Browser Agent
@@ -618,6 +661,9 @@ interface GitHubSyncAPI {
   getMasterKey: () => Promise<IPCResponse<string>>;
   testConnection: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
   syncSettings: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
+  pullSettings: (
+    config: import('./index').GitHubSyncConfig
+  ) => Promise<IPCResponse<import('./index').AppConfig>>;
   syncDocuments: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
   syncImages: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
   syncConversations: (config: import('./index').GitHubSyncConfig) => Promise<GitHubSyncResult>;
@@ -674,6 +720,7 @@ interface TeamDocsAPI {
   }>;
   pushDocument: (params: {
     teamDocsId: string;
+    documentId?: string;
     githubPath: string;
     oldGithubPath?: string; // 파일명 변경 감지용
     title: string;
@@ -757,6 +804,13 @@ interface ComfyUIAPI {
     apiKey: string | undefined,
     networkConfig: NetworkConfig | null
   ) => Promise<IPCResponse<string>>;
+}
+
+interface NanoBananaAPI {
+  testConnection: (
+    config: NanoBananaConfig,
+    networkConfig: NetworkConfig | null
+  ) => Promise<IPCResponse>;
 }
 
 // Update 관련 타입
@@ -960,6 +1014,7 @@ interface TerminalAPI {
   write: (sessionId: string, data: string) => Promise<IPCResponse>;
   resize: (sessionId: string, cols: number, rows: number) => Promise<IPCResponse>;
   killSession: (sessionId: string) => Promise<IPCResponse>;
+  cancelCommand: (sessionId: string) => Promise<IPCResponse>;
   getSessions: () => Promise<IPCResponse<TerminalSession[]>>;
   // Command execution
   executeCommand: (
@@ -1001,8 +1056,8 @@ interface TerminalAPI {
 
 interface PresentationAPI {
   exportSlides: (
-    slides: import('./presentation').PresentationSlide[],
-    format: import('./presentation').PresentationExportFormat
+    slides: any[], // PresentationSlide[] - Extension 타입이므로 any 사용
+    format: any // PresentationExportFormat - Extension 타입이므로 any 사용
   ) => Promise<string>;
 }
 
@@ -1013,10 +1068,49 @@ interface NotificationAPI {
     body: string;
     html?: string;
     imageUrl?: string;
-    type?: string;
-  }) => Promise<IPCResponse>;
+    type?: 'os' | 'application';
+  }) => Promise<{ success: boolean; error?: string; type?: 'os' | 'application' }>;
 
   onClick: (callback: (conversationId: string) => void) => () => void;
+  emitClick: (conversationId: string) => Promise<{ success: boolean }>;
+  close: () => Promise<{ success: boolean }>;
+  ready: () => Promise<{ success: boolean }>;
+}
+
+interface MessageSubscriptionAPI {
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+  refresh: () => Promise<{ success: boolean; count: number; error?: string }>;
+  getStatus: () => Promise<{ isConnected: boolean; lastPolled?: number; lastError?: string }>;
+  getConfig: () => Promise<import('./message-subscription').MessageSubscriptionConfig | null>;
+  saveConfig: (
+    config: import('./message-subscription').MessageSubscriptionConfig
+  ) => Promise<import('./message-subscription').MessageSubscriptionConfig>;
+  getQueueStatus: () => Promise<import('./message-subscription').MessageQueueStatus>;
+  getFailedMessages: () => Promise<import('./message-subscription').QueuedMessage[]>;
+  getPendingMessages: () => Promise<import('./message-subscription').QueuedMessage[]>;
+  getCompletedMessages: () => Promise<import('./message-subscription').QueuedMessage[]>;
+  reprocessMessage: (hash: string) => Promise<void>;
+  deleteMessage: (hash: string) => Promise<void>;
+  cleanupQueue: () => Promise<{ deletedCount: number }>;
+}
+
+interface SchedulerAPI {
+  createTask: (
+    task: import('./scheduler').ScheduledTask
+  ) => Promise<IPCResponse<import('./scheduler').ScheduledTask>>;
+  updateTask: (
+    taskId: string,
+    updates: Partial<import('./scheduler').ScheduledTask>
+  ) => Promise<IPCResponse<import('./scheduler').ScheduledTask>>;
+  deleteTask: (taskId: string) => Promise<IPCResponse>;
+  loadTasks: () => Promise<IPCResponse<import('./scheduler').ScheduledTask[]>>;
+  runNow: (taskId: string) => Promise<IPCResponse<import('./scheduler').ExecutionRecord>>;
+  getHistory: (
+    taskId?: string,
+    limit?: number
+  ) => Promise<IPCResponse<import('./scheduler').ExecutionRecord[]>>;
+  onConversationCreated: (callback: (_event: any, data: any) => void) => () => void;
 }
 
 interface ElectronAPI {
@@ -1040,6 +1134,7 @@ interface ElectronAPI {
   shell: ShellAPI;
   embeddings: EmbeddingsAPI;
   comfyui: ComfyUIAPI;
+  nanobanana: NanoBananaAPI;
   update: UpdateAPI;
   quickInput: QuickInputAPI;
   browserView: BrowserViewAPI;
@@ -1047,9 +1142,28 @@ interface ElectronAPI {
   terminal: TerminalAPI;
   presentation: PresentationAPI;
   notification: NotificationAPI;
+  messageSubscription: MessageSubscriptionAPI;
+  scheduler: SchedulerAPI;
   on: (channel: string, callback: (...args: unknown[]) => void) => void;
   removeListener: (channel: string, callback: (...args: unknown[]) => void) => void;
   invoke: <T = any>(channel: string, ...args: any[]) => Promise<T>;
+
+  /**
+   * 타입 안전한 IPC invoke
+   *
+   * 채널 이름에 따라 자동으로 Request/Response 타입이 추론됩니다.
+   *
+   * @example
+   * ```typescript
+   * // 타입이 자동으로 추론됨
+   * const result = await window.electronAPI.typedInvoke('llm-chat', messages, options);
+   * // result: { content: string; usage?: any }
+   *
+   * const files = await window.electronAPI.typedInvoke('file:list', '/home/user');
+   * // files: { files: string[] }
+   * ```
+   */
+  typedInvoke: TypedInvoke;
 }
 
 declare global {
@@ -1113,5 +1227,6 @@ export type {
   Bookmark,
   BookmarkFolder,
   NotificationAPI,
+  SchedulerAPI,
   ElectronAPI,
 };

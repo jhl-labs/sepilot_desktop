@@ -81,6 +81,7 @@ export const mockElectronAPI = {
     delete: jest.fn(),
     rename: jest.fn(),
     fileExists: jest.fn(),
+    searchFiles: jest.fn(),
     resolvePath: jest.fn((parentPath: string, child: string) => {
       const separator = parentPath.endsWith('/') ? '' : '/';
       return Promise.resolve({

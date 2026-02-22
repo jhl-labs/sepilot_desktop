@@ -1,0 +1,108 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"],
+      "@sepilot/extension-sdk": ["./node_modules/@sepilot/extension-sdk/dist/index.d.ts"],
+      "@sepilot/extension-sdk/ui": ["./node_modules/@sepilot/extension-sdk/dist/ui/index.d.ts"],
+      "@sepilot/extension-sdk/ui/*": ["./node_modules/@sepilot/extension-sdk/dist/ui/*"],
+      "@sepilot/extension-sdk/utils": [
+        "./node_modules/@sepilot/extension-sdk/dist/utils/index.d.ts"
+      ],
+      "@sepilot/extension-sdk/utils/*": ["./node_modules/@sepilot/extension-sdk/dist/utils/*"],
+      "@sepilot/extension-sdk/hooks": [
+        "./node_modules/@sepilot/extension-sdk/dist/hooks/index.d.ts"
+      ],
+      "@sepilot/extension-sdk/hooks/*": ["./node_modules/@sepilot/extension-sdk/dist/hooks/*"],
+      "@sepilot/extension-sdk/types": [
+        "./node_modules/@sepilot/extension-sdk/dist/types/index.d.ts"
+      ],
+      "@sepilot/extension-sdk/ipc": ["./node_modules/@sepilot/extension-sdk/dist/ipc/index.d.ts"],
+      "@sepilot/extension-sdk/runtime": [
+        "./node_modules/@sepilot/extension-sdk/dist/runtime/index.d.ts"
+      ],
+      "@sepilot/extension-sdk/store": [
+        "./node_modules/@sepilot/extension-sdk/dist/store/index.d.ts"
+      ],
+      "@sepilot/extension-sdk/chat": ["./node_modules/@sepilot/extension-sdk/dist/chat/index.d.ts"],
+      "@sepilot/extension-sdk/services": [
+        "./node_modules/@sepilot/extension-sdk/dist/services/index.d.ts"
+      ],
+      "@sepilot/extension-sdk/agent": [
+        "./node_modules/@sepilot/extension-sdk/dist/agent/index.d.ts"
+      ],
+      "@sepilot/extension-sdk/host": ["./node_modules/@sepilot/extension-sdk/dist/host/index.d.ts"],
+      "@sepilot/extension-architect": ["./resources/extensions/architect/src/index.ts"],
+      "@sepilot/extension-architect/*": ["./resources/extensions/architect/src/*"],
+      "@sepilot/extension-browser": ["./resources/extensions/browser/src/index.ts"],
+      "@sepilot/extension-browser/*": ["./resources/extensions/browser/src/*"],
+      "@sepilot/extension-editor": ["./resources/extensions/editor/src/index.tsx"],
+      "@sepilot/extension-editor/*": ["./resources/extensions/editor/src/*"],
+      "@sepilot/extension-github-actions": ["./resources/extensions/github-actions/src/index.ts"],
+      "@sepilot/extension-github-actions/*": ["./resources/extensions/github-actions/src/*"],
+      "@sepilot/extension-github-pr-review": [
+        "./resources/extensions/github-pr-review/src/index.ts"
+      ],
+      "@sepilot/extension-github-pr-review/*": ["./resources/extensions/github-pr-review/src/*"],
+      "@sepilot/extension-github-project": ["./resources/extensions/github-project/src/index.ts"],
+      "@sepilot/extension-github-project/*": ["./resources/extensions/github-project/src/*"],
+      "@sepilot/extension-presentation": ["./resources/extensions/presentation/src/index.ts"],
+      "@sepilot/extension-presentation/*": ["./resources/extensions/presentation/src/*"],
+      "@sepilot/extension-terminal": ["./resources/extensions/terminal/src/index.ts"],
+      "@sepilot/extension-terminal/*": ["./resources/extensions/terminal/src/*"]
+    },
+    "target": "ES2020",
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "extensions.d.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "lib/**/*.ts",
+    "lib/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "extensions/**/*.ts",
+    "extensions/**/*.tsx",
+    "hooks/**/*.ts",
+    "hooks/**/*.tsx",
+    "types/**/*.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "out/types/**/*.ts",
+    "out/dev/types/**/*.ts",
+    "e2e_tests/**/*.ts",
+    "playwright.config.ts",
+    "commitlint.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "electron",
+    "dist",
+    "out",
+    ".next",
+    "components/_deprecated",
+    "lib/extension-sdk"
+  ]
+}

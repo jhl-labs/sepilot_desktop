@@ -7,13 +7,13 @@
 
 import type { Message, ImageAttachment } from '@/types';
 import type { Persona } from '@/types/persona';
-import type { ThinkingMode } from '@/lib/langgraph';
-import type { BrowserAgentLogEntry } from '@/extensions/browser/types';
+import type { ThinkingMode } from '@/lib/domains/agent';
+import type { BrowserAgentLogEntry } from '@sepilot/extension-browser';
 
 /**
  * Chat 모드
  */
-export type ChatMode = 'main' | 'browser' | 'editor';
+export type ChatMode = 'main' | 'browser' | 'editor' | 'terminal';
 
 /**
  * Chat 기능 플래그
@@ -102,6 +102,7 @@ export interface ChatConfig {
   onRAGToggle?: (enabled: boolean) => void;
   onToolsToggle?: (enabled: boolean) => void;
   onImageGenerationToggle?: (enabled: boolean) => void;
+  onCodeRun?: (code: string, language: string) => Promise<void>;
 }
 
 /**
@@ -111,4 +112,11 @@ export interface ChatConfig {
 export interface PluginProps {
   mode: ChatMode;
   config: ChatConfig;
+}
+
+export interface TextFileAttachment {
+  id: string;
+  filename: string;
+  content: string; // The text content of the file
+  size: number;
 }

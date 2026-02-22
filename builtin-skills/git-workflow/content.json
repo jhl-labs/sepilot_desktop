@@ -1,0 +1,64 @@
+{
+  "systemPrompt": "당신은 Git 워크플로우 전문가입니다. 효율적인 버전 관리, 브랜치 전략, 커밋 메시지 작성, PR 리뷰 프로세스를 지원합니다. 팀 협업 시 충돌을 최소화하고 이력을 깔끔하게 유지하는 방법을 제시합니다. SEPilot 프로젝트의 한국어 커밋 메시지 규칙과 Semantic Commit 형식을 준수합니다.",
+  "knowledge": [
+    {
+      "title": "Git 브랜치 전략",
+      "content": "# Git 브랜치 전략\n\n## 브랜치 네이밍 규칙\n- feature/{기능명}: 새 기능 개발 (예: feature/mcp-tool-support)\n- fix/{이슈번호}-{설명}: 버그 수정 (예: fix/42-ipc-timeout)\n- refactor/{대상}: 리팩토링 (예: refactor/chat-store-split)\n- docs/{대상}: 문서 작업 (예: docs/extension-guide)\n\n## 작업 흐름\n1. main에서 feature 브랜치 생성\n2. 작은 단위로 커밋 (하나의 논리적 변경 = 하나의 커밋)\n3. PR 생성 전 main을 rebase하여 최신 상태 유지\n4. PR 리뷰 완료 후 squash merge\n\n## 주의사항\n- main 브랜치에 직접 push하지 않습니다\n- force push는 공유 브랜치에서 절대 사용하지 않습니다\n- 작업 시작 전 항상 git pull로 최신 상태를 유지합니다"
+    },
+    {
+      "title": "커밋 메시지 작성",
+      "content": "# 커밋 메시지 작성 규칙\n\n## Semantic Commit 형식\n```\n{type}({scope}): {한국어 설명}\n\n{본문 (선택)}\n```\n\n## 타입 (type)\n- feat: 새 기능 추가\n- fix: 버그 수정\n- refactor: 리팩토링 (기능 변경 없음)\n- docs: 문서 수정\n- chore: 빌드, 설정 변경\n- test: 테스트 추가/수정\n- style: 코드 포맷팅 (기능 변경 없음)\n- perf: 성능 개선\n\n## 좋은 커밋 메시지 예시\n```\nfeat(mcp): Google Search 도구 연동 추가\nfix(chat): 스트리밍 중 메시지 중복 표시 문제 수정\nrefactor(store): chat-store에서 extension slice 분리\n```\n\n## 나쁜 커밋 메시지 예시\n```\nupdate code  ← 무엇을 왜 변경했는지 알 수 없음\nfix bug      ← 어떤 버그인지 알 수 없음\nwip          ← 작업 중인 커밋은 완료 후 정리\n```"
+    },
+    {
+      "title": "PR 워크플로우",
+      "content": "# PR (Pull Request) 워크플로우\n\n## PR 작성 규칙\n- 제목: 70자 이내, 변경 사항을 한 줄로 요약\n- 본문: Summary(변경 요약), Test Plan(테스트 방법) 포함\n- 관련 이슈 번호 링크 (Closes #42)\n\n## PR 크기 가이드\n- 이상적: 200~400줄 변경\n- 경고: 500줄 이상 시 분할을 고려합니다\n- 큰 변경은 여러 PR로 나누되, 각 PR이 독립적으로 동작해야 합니다\n\n## 코드 리뷰 에티켓\n- 리뷰어: 코드가 아닌 문제 해결에 집중합니다\n- 작성자: 모든 코멘트에 응답합니다 (동의/반론/질문)\n- 차단 사유가 아닌 제안은 'nit:' prefix를 사용합니다\n\n## 머지 전 체크리스트\n- lint, type-check 통과 확인\n- 테스트 통과 확인\n- 충돌 해결 완료 확인\n- release_notes 업데이트 확인"
+    },
+    {
+      "title": "충돌 해결과 Git 명령어",
+      "content": "# 충돌 해결과 유용한 Git 명령어\n\n## 충돌 해결 절차\n1. `git fetch origin && git rebase origin/main`\n2. 충돌 파일 확인: `git status`\n3. 에디터에서 충돌 마커(<<<, ===, >>>)를 찾아 수정\n4. 수정 후: `git add {파일} && git rebase --continue`\n5. 복잡한 충돌: `git rebase --abort`로 되돌린 후 전략 재검토\n\n## 유용한 명령어\n```bash\n# 특정 커밋의 변경 내용 확인\ngit show {commit-hash}\n# 파일별 변경 이력 추적\ngit log --follow -p {파일경로}\n# 특정 줄의 마지막 수정자 확인\ngit blame {파일경로}\n# 스테이징 취소 (변경 내용 유지)\ngit reset HEAD {파일}\n# 커밋 간 차이 비교\ngit diff {commit1}..{commit2}\n```\n\n## 위험한 명령어 (주의)\n- `git reset --hard`: 모든 변경사항 삭제 (복구 어려움)\n- `git push --force`: 원격 이력 덮어쓰기 (팀원 작업 손실 가능)\n- `git clean -fd`: 추적되지 않는 파일/디렉토리 삭제"
+    }
+  ],
+  "templates": [
+    {
+      "id": "commit-message",
+      "name": "커밋 메시지 템플릿",
+      "description": "Semantic Commit 형식의 한국어 커밋 메시지를 작성할 때 사용하는 템플릿",
+      "prompt": "{{type}}({{scope}}): {{설명}}\n\n{{본문}}",
+      "variables": [
+        {
+          "name": "type",
+          "description": "feat / fix / refactor / docs / chore / test / style / perf",
+          "required": true
+        },
+        {
+          "name": "scope",
+          "description": "변경 범위 (예: chat, mcp, store, extension)",
+          "required": true
+        },
+        { "name": "설명", "description": "변경 사항 한 줄 요약 (한국어)", "required": true },
+        { "name": "본문", "description": "상세 설명 (선택)", "required": false, "default": "" }
+      ]
+    },
+    {
+      "id": "pr-description",
+      "name": "PR 설명 템플릿",
+      "description": "Pull Request 생성 시 사용하는 설명 템플릿",
+      "prompt": "## Summary\n{{요약}}\n\n## Changes\n{{변경목록}}\n\n## Test Plan\n{{테스트계획}}\n\n## Related Issues\n{{관련이슈}}",
+      "variables": [
+        { "name": "요약", "description": "PR 변경 사항 요약 (1-3줄)", "required": true },
+        {
+          "name": "변경목록",
+          "description": "주요 변경 사항 목록 (bullet points)",
+          "required": true
+        },
+        { "name": "테스트계획", "description": "검증 방법 (체크리스트)", "required": true },
+        {
+          "name": "관련이슈",
+          "description": "관련 이슈 번호 (예: Closes #42)",
+          "required": false,
+          "default": ""
+        }
+      ]
+    }
+  ]
+}

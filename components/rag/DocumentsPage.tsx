@@ -9,15 +9,15 @@ import {
   EmbeddingConfig,
   VectorDocument,
   ChunkStrategy,
-} from '@/lib/vectordb/types';
+} from '@/lib/domains/rag/types';
 import {
   getVectorDB,
   getEmbeddingProvider,
   deleteDocuments,
   getAllDocuments,
-} from '@/lib/vectordb';
+} from '@/lib/domains/rag';
 import { generateId } from '@/lib/utils/id-generator';
-import { indexDocuments } from '@/lib/vectordb/indexing';
+import { indexDocuments } from '@/lib/domains/rag/indexing';
 import { isElectron } from '@/lib/platform';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus } from 'lucide-react';
@@ -50,7 +50,14 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
     if (isElectron() && window.electronAPI) {
       try {
         const result = await window.electronAPI.config.load();
-        logger.debug('[DocumentsPage] Loaded config from DB', result);
+        logger.debug('[DocumentsPage] Loaded config from DB', {
+          success: result.success,
+          hasData: !!result.data,
+          hasVectorDB: !!result.data?.vectorDB,
+          hasEmbedding: !!result.data?.embedding,
+          hasGitHubSync: !!result.data?.githubSync,
+          teamDocsCount: result.data?.teamDocs?.length || 0,
+        });
         if (result.success && result.data) {
           if (result.data.vectorDB) {
             logger.info('[DocumentsPage] VectorDB config loaded from DB');
@@ -69,7 +76,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
 
     // Web 환경 또는 DB 로드 실패 시 localStorage에서 로드
     const savedVectorDBConfig = localStorage.getItem('sepilot_vectordb_config');
-    logger.debug('[DocumentsPage] savedVectorDBConfig from localStorage:', savedVectorDBConfig);
+    logger.debug('[DocumentsPage] VectorDB config exists in localStorage:', !!savedVectorDBConfig);
     if (savedVectorDBConfig) {
       const parsed = JSON.parse(savedVectorDBConfig);
       logger.info('[DocumentsPage] VectorDB config loaded from localStorage');
@@ -79,7 +86,10 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
     }
 
     const savedEmbeddingConfig = localStorage.getItem('sepilot_embedding_config');
-    logger.debug('[DocumentsPage] savedEmbeddingConfig from localStorage:', savedEmbeddingConfig);
+    logger.debug(
+      '[DocumentsPage] Embedding config exists in localStorage:',
+      !!savedEmbeddingConfig
+    );
     if (savedEmbeddingConfig) {
       const parsed = JSON.parse(savedEmbeddingConfig);
       logger.info('[DocumentsPage] Embedding config loaded from localStorage');

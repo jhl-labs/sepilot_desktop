@@ -1,9 +1,26 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { ExecutionHistoryQuery } from '../types/scheduler';
 
 // Fix global is not defined error
 // Electron sandbox 환경에서 global 객체가 없으므로 globalThis로 매핑
 if (typeof global === 'undefined') {
   (window as any).global = globalThis;
+}
+
+type IpcResult<T = unknown> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+};
+
+function unwrapIpcData<T>(result: IpcResult<T>, channel: string): T {
+  if (!result || typeof result !== 'object') {
+    throw new Error(`[IPC] Invalid response from ${channel}`);
+  }
+  if (!result.success) {
+    throw new Error(result.error || `[IPC] ${channel} failed`);
+  }
+  return result.data as T;
 }
 
 // Renderer 프로세스에 안전하게 노출할 API
@@ -14,11 +31,15 @@ const electronAPI = {
   // Chat operations
   chat: {
     saveConversation: (conversation: any) => ipcRenderer.invoke('save-conversation', conversation),
+    saveConversationsBulk: (conversations: any[]) =>
+      ipcRenderer.invoke('save-conversations-bulk', conversations),
     loadConversations: () => ipcRenderer.invoke('load-conversations'),
+    searchConversations: (query: string) => ipcRenderer.invoke('search-conversations', query),
     deleteConversation: (id: string) => ipcRenderer.invoke('delete-conversation', id),
     updateConversationTitle: (id: string, title: string) =>
       ipcRenderer.invoke('update-conversation-title', id, title),
     saveMessage: (message: any) => ipcRenderer.invoke('save-message', message),
+    saveMessagesBulk: (messages: any[]) => ipcRenderer.invoke('save-messages-bulk', messages),
     loadMessages: (conversationId: string) => ipcRenderer.invoke('load-messages', conversationId),
     deleteMessage: (id: string) => ipcRenderer.invoke('delete-message', id),
     deleteConversationMessages: (conversationId: string) =>
@@ -67,6 +88,10 @@ const electronAPI = {
     listPrompts: (serverName: string) => ipcRenderer.invoke('mcp-list-prompts', serverName),
     getPrompt: (serverName: string, promptName: string, args?: Record<string, string>) =>
       ipcRenderer.invoke('mcp-get-prompt', serverName, promptName, args),
+    toggleTool: (serverName: string, toolName: string, enabled: boolean) =>
+      ipcRenderer.invoke('mcp-toggle-tool', serverName, toolName, enabled),
+    setDisabledTools: (serverName: string, disabledTools: string[]) =>
+      ipcRenderer.invoke('mcp-set-disabled-tools', serverName, disabledTools),
   },
 
   // Auth operations
@@ -143,6 +168,15 @@ const electronAPI = {
       language?: string;
       useRag?: boolean;
       useTools?: boolean;
+      metadata?: {
+        currentLine: string;
+        previousLine: string;
+        nextLine: string;
+        lineNumber: number;
+        hasContextBefore: boolean;
+        hasContextAfter: boolean;
+        wordWrapColumn?: number;
+      };
     }) => ipcRenderer.invoke('llm-editor-autocomplete', context),
     editorAction: (params: {
       action: // 코드용 AI 액션
@@ -159,7 +193,8 @@ const electronAPI = {
         | 'simplify'
         | 'fix-grammar'
         | 'summarize'
-        | 'translate';
+        | 'translate'
+        | 'custom';
       text: string;
       language?: string;
       targetLanguage?: string;
@@ -170,6 +205,9 @@ const electronAPI = {
         filePath?: string;
         lineStart: number;
         lineEnd: number;
+        useRag?: boolean;
+        useTools?: boolean;
+        wordWrapColumn?: number;
       };
     }) => ipcRenderer.invoke('llm-editor-action', params),
   },
@@ -227,6 +265,8 @@ const electronAPI = {
     },
     respondToolApproval: (conversationId: string, approved: boolean) =>
       ipcRenderer.invoke('langgraph-tool-approval-response', conversationId, approved),
+    submitDiscussInput: (conversationId: string, userInput: string) =>
+      ipcRenderer.invoke('langgraph-discuss-input-response', conversationId, userInput),
     abort: (conversationId: string) => ipcRenderer.invoke('langgraph-abort', conversationId),
     stopBrowserAgent: (conversationId: string) =>
       ipcRenderer.invoke('langgraph-stop-browser-agent', conversationId),
@@ -366,6 +406,7 @@ const electronAPI = {
     getMasterKey: () => ipcRenderer.invoke('github-sync-get-master-key'),
     testConnection: (config: any) => ipcRenderer.invoke('github-sync-test-connection', config),
     syncSettings: (config: any) => ipcRenderer.invoke('github-sync-settings', config),
+    pullSettings: (config: any) => ipcRenderer.invoke('github-sync-pull-settings', config),
     syncDocuments: (config: any) => ipcRenderer.invoke('github-sync-documents', config),
     syncImages: (config: any) => ipcRenderer.invoke('github-sync-images', config),
     syncConversations: (config: any) => ipcRenderer.invoke('github-sync-conversations', config),
@@ -382,7 +423,9 @@ const electronAPI = {
     syncAll: () => ipcRenderer.invoke('team-docs-sync-all'),
     pushDocument: (params: {
       teamDocsId: string;
+      documentId?: string;
       githubPath: string;
+      oldGithubPath?: string;
       title: string;
       content: string;
       metadata?: Record<string, any>;
@@ -471,6 +514,12 @@ const electronAPI = {
       ),
   },
 
+  // NanoBanana operations (CORS 문제 해결)
+  nanobanana: {
+    testConnection: (config: any, networkConfig: any) =>
+      ipcRenderer.invoke('nanobanana-test-connection', config, networkConfig),
+  },
+
   // Update operations
   update: {
     check: () => ipcRenderer.invoke('update:check'),
@@ -485,6 +534,7 @@ const electronAPI = {
       'create-new-chat-with-message',
       'window:focus-changed',
       'notification:update-content',
+      'extensions:main-ready',
     ];
 
     if (validChannels.includes(channel)) {
@@ -628,12 +678,23 @@ const electronAPI = {
     resize: (sessionId: string, cols: number, rows: number) =>
       ipcRenderer.invoke('terminal:resize', sessionId, cols, rows),
     killSession: (sessionId: string) => ipcRenderer.invoke('terminal:kill-session', sessionId),
+    cancelCommand: (sessionId: string) => ipcRenderer.invoke('terminal:cancel-command', sessionId),
     getSessions: () => ipcRenderer.invoke('terminal:get-sessions'),
     // Command execution
     executeCommand: (command: string, cwd?: string, timeout?: number) =>
       ipcRenderer.invoke('terminal:execute-command', { command, cwd, timeout }),
-    aiCommand: (naturalInput: string, currentCwd?: string, recentBlocks?: any[]) =>
-      ipcRenderer.invoke('terminal:ai-command', { naturalInput, currentCwd, recentBlocks }),
+    aiCommand: (
+      naturalInput: string,
+      currentCwd?: string,
+      recentBlocks?: any[],
+      clientRequestId?: string
+    ) =>
+      ipcRenderer.invoke('terminal:ai-command', {
+        naturalInput,
+        currentCwd,
+        recentBlocks,
+        clientRequestId,
+      }),
     autocomplete: (cwd: string, input: string) =>
       ipcRenderer.invoke('terminal:autocomplete', { cwd, input }),
     // Event listeners
@@ -667,8 +728,14 @@ const electronAPI = {
 
   // Notification operations
   notification: {
-    show: (options: { conversationId: string; title: string; body: string }) =>
-      ipcRenderer.invoke('notification:show', options),
+    show: (options: {
+      conversationId: string;
+      title: string;
+      body: string;
+      html?: string;
+      imageUrl?: string;
+      type?: 'os' | 'application';
+    }) => ipcRenderer.invoke('notification:show', options),
 
     onClick: (callback: (conversationId: string) => void) => {
       const handler = (_: any, conversationId: string) => callback(conversationId);
@@ -679,6 +746,224 @@ const electronAPI = {
     emitClick: (conversationId: string) => ipcRenderer.invoke('notification:click', conversationId),
     close: () => ipcRenderer.invoke('notification:close'),
     ready: () => ipcRenderer.invoke('notification:ready'),
+  },
+
+  // Message Subscription operations
+  messageSubscription: {
+    // 구독 관리
+    start: async () => {
+      const result = await ipcRenderer.invoke('message-subscription:start');
+      return unwrapIpcData(result, 'message-subscription:start');
+    },
+    stop: async () => {
+      const result = await ipcRenderer.invoke('message-subscription:stop');
+      return unwrapIpcData(result, 'message-subscription:stop');
+    },
+    refresh: async () => {
+      const result = await ipcRenderer.invoke('message-subscription:refresh');
+      return unwrapIpcData<{ success: boolean; count: number; error?: string }>(
+        result,
+        'message-subscription:refresh'
+      );
+    },
+    getStatus: async () => {
+      const result = await ipcRenderer.invoke('message-subscription:get-status');
+      return unwrapIpcData(result, 'message-subscription:get-status');
+    },
+
+    // 설정 관리
+    getConfig: async () => {
+      const result = await ipcRenderer.invoke('message-subscription:get-config');
+      return unwrapIpcData(result, 'message-subscription:get-config');
+    },
+    saveConfig: async (config: any) => {
+      const result = await ipcRenderer.invoke('message-subscription:save-config', config);
+      return unwrapIpcData(result, 'message-subscription:save-config');
+    },
+
+    // 큐 관리
+    getQueueStatus: async () => {
+      const result = await ipcRenderer.invoke('message-subscription:get-queue-status');
+      return unwrapIpcData(result, 'message-subscription:get-queue-status');
+    },
+    getFailedMessages: async () => {
+      const result = await ipcRenderer.invoke('message-subscription:get-failed-messages');
+      return unwrapIpcData<any[]>(result, 'message-subscription:get-failed-messages') || [];
+    },
+    getPendingMessages: async () => {
+      const result = await ipcRenderer.invoke('message-subscription:get-pending-messages');
+      return unwrapIpcData<any[]>(result, 'message-subscription:get-pending-messages') || [];
+    },
+    getCompletedMessages: async () => {
+      const result = await ipcRenderer.invoke('message-subscription:get-completed-messages');
+      return unwrapIpcData<any[]>(result, 'message-subscription:get-completed-messages') || [];
+    },
+    reprocessMessage: async (hash: string) => {
+      const result = await ipcRenderer.invoke('message-subscription:reprocess-message', hash);
+      return unwrapIpcData(result, 'message-subscription:reprocess-message');
+    },
+    deleteMessage: async (hash: string) => {
+      const result = await ipcRenderer.invoke('message-subscription:delete-message', hash);
+      return unwrapIpcData(result, 'message-subscription:delete-message');
+    },
+    cleanupQueue: async () => {
+      const result = await ipcRenderer.invoke('message-subscription:cleanup-queue');
+      return unwrapIpcData(result, 'message-subscription:cleanup-queue');
+    },
+  },
+
+  // Scheduler operations
+  scheduler: {
+    createTask: (task: any) => ipcRenderer.invoke('scheduler-create-task', task),
+    updateTask: (taskId: string, updates: any) =>
+      ipcRenderer.invoke('scheduler-update-task', taskId, updates),
+    deleteTask: (taskId: string) => ipcRenderer.invoke('scheduler-delete-task', taskId),
+    loadTasks: () => ipcRenderer.invoke('scheduler-load-tasks'),
+    runNow: (taskId: string) => ipcRenderer.invoke('scheduler-run-now', taskId),
+    getHistory: (taskId?: string, filters?: ExecutionHistoryQuery) =>
+      ipcRenderer.invoke('scheduler-get-history', {
+        taskId,
+        filters,
+      }),
+    onConversationCreated: (callback: (_event: any, data: any) => void) => {
+      ipcRenderer.on('scheduler:conversation-created', callback);
+      return () => {
+        ipcRenderer.removeListener('scheduler:conversation-created', callback);
+      };
+    },
+  },
+
+  // Extension operations
+  extension: {
+    discover: () => ipcRenderer.invoke('extension:discover'),
+    install: (packageName: string) => ipcRenderer.invoke('extension:install', { packageName }),
+    uninstall: (packageName: string) => ipcRenderer.invoke('extension:uninstall', { packageName }),
+    checkUpdates: () => ipcRenderer.invoke('extension:check-updates'),
+    scanLocal: () => ipcRenderer.invoke('extension:scan-local'),
+    installFromFile: (filePath: string) =>
+      ipcRenderer.invoke('extension:install-from-file', { filePath }),
+    uninstallLocal: (extensionId: string, version: string) =>
+      ipcRenderer.invoke('extension:uninstall-local', { extensionId, version }),
+    // Extension 로딩 진단 정보 조회 (Portable 빌드 디버깅용)
+    diagnostics: () => ipcRenderer.invoke('extension:diagnostics'),
+    // Renderer 환경에서 Extension 진단 실행 (런타임 체크 포함)
+    diagnoseRenderer: async (extensionId: string) => {
+      try {
+        // Extension Registry에서 직접 Extension 가져오기
+        const { extensionRegistry } = await import('../lib/extensions/registry');
+        const extension = extensionRegistry.get(extensionId);
+
+        if (!extension) {
+          return {
+            success: false,
+            error: `Extension not found: ${extensionId}`,
+          };
+        }
+
+        if (!extension.diagnostics) {
+          return {
+            success: false,
+            error: `Extension '${extensionId}' does not provide a diagnostics function`,
+          };
+        }
+
+        // Renderer 환경에서 diagnostics 함수 실행
+        const result = await Promise.resolve(extension.diagnostics());
+
+        return {
+          success: true,
+          data: result,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  },
+
+  // Skills operations
+  skills: {
+    // 설치된 스킬 목록 조회
+    getInstalled: () => ipcRenderer.invoke('skills:get-installed'),
+    // 활성화된 스킬만 조회
+    getEnabled: () => ipcRenderer.invoke('skills:get-enabled'),
+    // 특정 스킬 조회
+    getSkill: (skillId: string) => ipcRenderer.invoke('skills:get-skill', skillId),
+    // 스킬 설치
+    install: (skillPackage: any, source: any) =>
+      ipcRenderer.invoke('skills:install', skillPackage, source),
+    // 로컬 ZIP에서 스킬 설치
+    installFromLocal: (zipPath: string) => ipcRenderer.invoke('skills:install-from-local', zipPath),
+    // Backward compatibility for older callers
+    installFromLocalFolder: (zipPath: string) =>
+      ipcRenderer.invoke('skills:install-from-local', zipPath),
+    // 스킬 제거
+    remove: (skillId: string) => ipcRenderer.invoke('skills:remove', skillId),
+    // 스킬 활성화/비활성화
+    toggle: (skillId: string, enabled: boolean) =>
+      ipcRenderer.invoke('skills:toggle', skillId, enabled),
+    // 스킬 로드 (Lazy loading)
+    loadSkill: (skillId: string) => ipcRenderer.invoke('skills:load-skill', skillId),
+    // 스킬 사용 이력 업데이트
+    updateUsage: (skillId: string) => ipcRenderer.invoke('skills:update-usage', skillId),
+    // 스킬 통계 조회
+    getStatistics: (skillId: string) => ipcRenderer.invoke('skills:get-statistics', skillId),
+    // 스킬 사용 이력 조회
+    getUsageHistory: (skillId: string, limit?: number) =>
+      ipcRenderer.invoke('skills:get-usage-history', skillId, limit),
+    // 스킬 패키지 검증
+    validate: (skillPackage: any) => ipcRenderer.invoke('skills:validate', skillPackage),
+    // 마켓플레이스에서 스킬 검색
+    fetchMarketplace: () => ipcRenderer.invoke('skills:fetch-marketplace'),
+    // 스킬 검색
+    searchSkills: (query: string, filters?: any) =>
+      ipcRenderer.invoke('skills:search-skills', query, filters),
+    // 마켓플레이스에서 스킬 다운로드
+    downloadFromMarketplace: (skillPath: string) =>
+      ipcRenderer.invoke('skills:download-from-marketplace', skillPath),
+    // 업데이트 확인
+    checkUpdates: () => ipcRenderer.invoke('skills:check-updates'),
+    // 스킬 업데이트
+    updateSkill: (skillId: string) => ipcRenderer.invoke('skills:update-skill', skillId),
+    // 사용자 스킬 폴더 설정
+    setUserSkillsFolder: (folderPath: string) =>
+      ipcRenderer.invoke('skills:set-user-skills-folder', folderPath),
+    // 사용자 스킬 폴더 조회
+    getUserSkillsFolder: () => ipcRenderer.invoke('skills:get-user-skills-folder'),
+    // 사용자 스킬 폴더 스캔 및 로드
+    scanUserSkillsFolder: (options?: {
+      dedupeStrategy?: 'version_then_mtime' | 'mtime_only' | 'first_seen';
+      includeHiddenDirs?: boolean;
+    }) => ipcRenderer.invoke('skills:scan-user-skills-folder', options),
+    // 폴더 선택 다이얼로그
+    selectSkillsFolder: () => ipcRenderer.invoke('skills:select-folder'),
+  },
+
+  // Generic IPC invoke for extensions
+  // Extension store slices에서 사용되는 generic IPC 호출
+  invoke: <T = any>(channel: string, ...args: any[]): Promise<T> => {
+    return ipcRenderer.invoke(channel, ...args);
+  },
+
+  /**
+   * 타입 안전한 IPC invoke
+   *
+   * 채널 이름에 따라 자동으로 Request/Response 타입이 추론됩니다.
+   *
+   * @example
+   * ```typescript
+   * // 타입이 자동으로 추론됨
+   * const result = await window.electronAPI.typedInvoke('llm-chat', messages, options);
+   * // result: { content: string; usage?: any }
+   *
+   * const files = await window.electronAPI.typedInvoke('file:list', '/home/user');
+   * // files: { files: string[] }
+   * ```
+   */
+  typedInvoke: (channel: string, ...args: any[]): Promise<any> => {
+    return ipcRenderer.invoke(channel, ...args);
   },
 };
 

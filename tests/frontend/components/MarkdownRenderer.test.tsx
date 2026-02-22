@@ -7,6 +7,23 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
 
+// Mock utilities
+jest.mock('@/lib/utils/clipboard', () => ({
+  copyToClipboard: jest.fn(() => Promise.resolve(true)),
+}));
+
+jest.mock('@/lib/utils/logger', () => ({
+  logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+}));
+
+jest.mock('sonner', () => ({
+  toast: { success: jest.fn(), error: jest.fn() },
+}));
+
+jest.mock('@/lib/platform', () => ({
+  isElectron: jest.fn(() => false),
+}));
+
 // Mock CodeBlock component
 jest.mock('@/components/markdown/CodeBlock', () => ({
   CodeBlock: ({ language, code }: { language: string; code: string }) => (

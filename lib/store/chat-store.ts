@@ -8,29 +8,35 @@ import {
   AgentProgress,
 } from '@/types';
 import { generateId } from '@/lib/utils/id-generator';
-import type { GraphType, ThinkingMode, GraphConfig } from '@/lib/langgraph';
+import type {
+  GraphType,
+  ThinkingMode,
+  GraphConfig,
+  InputTrustLevel,
+} from '@/lib/domains/agent/types';
 import { isElectron } from '@/lib/platform';
+// Extension 타입 imports (타입은 런타임에 영향 없으므로 유지)
 import type {
   BrowserAgentLogEntry,
   BrowserAgentLLMConfig,
   BrowserChatFontConfig,
-} from '@/extensions/browser/types';
+} from '@/resources/extensions/browser/src/types';
 import type { Persona } from '@/types/persona';
 import { BUILTIN_PERSONAS } from '@/types/persona';
-import type {
-  EditorAppearanceConfig,
-  EditorLLMPromptsConfig,
-} from '@/extensions/editor/types/editor-settings';
 import {
   DEFAULT_EDITOR_APPEARANCE,
   DEFAULT_EDITOR_LLM_PROMPTS,
-} from '@/extensions/editor/types/editor-settings';
+  type EditorAppearanceConfig,
+  type EditorLLMPromptsConfig,
+} from '@/lib/store/editor-defaults';
 import {
   mergeExtensionStoreSlices,
   type ExtensionStoreState,
   type AppMode,
 } from './extension-slices';
-import type { ExtensionDefinition } from '@/lib/extensions/types';
+import type { ExtensionDefinition, ExtensionRuntimeContext } from '@/lib/extensions/types';
+import type { ScheduledTask, ExecutionRecord, ExecutionHistoryQuery } from '@/types/scheduler';
+import { chunkArray } from '@/lib/utils/batch';
 
 // App mode types
 import { logger } from '@/lib/utils/logger';
@@ -56,7 +62,11 @@ export interface OpenFile {
 const STORAGE_KEYS = {
   CONVERSATIONS: 'sepilot_conversations',
   MESSAGES: 'sepilot_messages',
+  PENDING_TOOL_APPROVAL: 'sepilot_pending_tool_approval',
 };
+
+const PENDING_APPROVAL_MAX_AGE_MS = 15 * 60 * 1000;
+const DUPLICATE_MESSAGE_SAVE_BATCH_SIZE = 100;
 
 function loadFromLocalStorage<T>(key: string, defaultValue: T): T {
   if (typeof window === 'undefined') {
@@ -80,6 +90,65 @@ function saveToLocalStorage<T>(key: string, value: T): void {
   } catch (error) {
     console.error('Failed to save to localStorage:', error);
   }
+}
+
+function loadPendingToolApprovalFromStorage(): PendingToolApproval | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const parsed = loadFromLocalStorage<PendingToolApproval | null>(
+    STORAGE_KEYS.PENDING_TOOL_APPROVAL,
+    null
+  );
+  if (!parsed) {
+    return null;
+  }
+
+  const isExpired = Date.now() - parsed.timestamp > PENDING_APPROVAL_MAX_AGE_MS;
+  if (isExpired) {
+    localStorage.removeItem(STORAGE_KEYS.PENDING_TOOL_APPROVAL);
+    return null;
+  }
+
+  if (
+    typeof parsed.conversationId !== 'string' ||
+    typeof parsed.messageId !== 'string' ||
+    !Array.isArray(parsed.toolCalls)
+  ) {
+    localStorage.removeItem(STORAGE_KEYS.PENDING_TOOL_APPROVAL);
+    return null;
+  }
+
+  return parsed;
+}
+
+function persistPendingToolApproval(approval: PendingToolApproval | null): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  if (!approval) {
+    localStorage.removeItem(STORAGE_KEYS.PENDING_TOOL_APPROVAL);
+    return;
+  }
+  saveToLocalStorage(STORAGE_KEYS.PENDING_TOOL_APPROVAL, approval);
+}
+
+function getPendingApprovalIdentity(approval: PendingToolApproval): string {
+  if (typeof approval.requestKey === 'string' && approval.requestKey.trim().length > 0) {
+    return `key:${approval.requestKey}`;
+  }
+  return `msg:${approval.conversationId}:${approval.messageId}`;
+}
+
+function getPendingApprovalQueueFromState(state: {
+  pendingToolApproval: PendingToolApproval | null;
+  pendingToolApprovalQueue?: PendingToolApproval[];
+}): PendingToolApproval[] {
+  if (Array.isArray(state.pendingToolApprovalQueue) && state.pendingToolApprovalQueue.length > 0) {
+    return [...state.pendingToolApprovalQueue];
+  }
+  return state.pendingToolApproval ? [state.pendingToolApproval] : [];
 }
 
 // Load working directory from localStorage and verify it exists
@@ -119,7 +188,7 @@ async function loadWorkingDirectory(): Promise<string | null> {
   }
 }
 
-interface ChatStore extends ExtensionStoreState {
+type ChatStore = ExtensionStoreState & {
   // State
   conversations: Conversation[];
   activeConversationId: string | null;
@@ -141,12 +210,19 @@ interface ChatStore extends ExtensionStoreState {
 
   // New: Thinking Mode and Feature Toggles
   thinkingMode: ThinkingMode;
+  inputTrustLevel: InputTrustLevel;
   enableRAG: boolean;
   enableTools: boolean;
   enabledTools: Set<string>; // Individual tool enable/disable
   enableImageGeneration: boolean;
   selectedImageGenProvider: 'comfyui' | 'nanobanana' | null; // User-selected provider for this session
   workingDirectory: string | null; // Coding Agent working directory
+
+  // Scheduler State
+  scheduledTasks: ScheduledTask[];
+  executionHistory: ExecutionRecord[];
+  isLoadingTasks: boolean;
+  isLoadingHistory: boolean;
 
   // Saved settings for image generation mode (restored when disabling image generation)
   savedThinkingMode: ThinkingMode | null;
@@ -155,6 +231,7 @@ interface ChatStore extends ExtensionStoreState {
 
   // Tool Approval (Human-in-the-loop)
   pendingToolApproval: PendingToolApproval | null;
+  pendingToolApprovalQueue: PendingToolApproval[];
   alwaysApproveToolsForSession: boolean; // Session-wide auto-approval (like Claude Code)
 
   // Editor Selection State (for Agent Interaction)
@@ -174,9 +251,15 @@ interface ChatStore extends ExtensionStoreState {
   // Agent Progress (Coding Agent, Editor Agent 등)
   agentProgress: Map<string, AgentProgress>; // conversationId -> progress
 
+  // Cowork Agent 상태
+  coworkPlan: import('@/lib/domains/agent/types').CoworkPlan | null;
+  coworkTeamStatus: 'idle' | 'planning' | 'executing' | 'synthesizing';
+  coworkTokensConsumed: number;
+  coworkTotalTokenBudget: number;
+
   // Browser Mode Chat (simple side chat)
   browserChatMessages: Message[];
-  browserViewMode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs';
+  browserViewMode: 'chat' | 'snapshots' | 'bookmarks' | 'tools' | 'logs';
 
   // Browser Agent Logs (실행 과정 가시성)
   browserAgentLogs: BrowserAgentLogEntry[];
@@ -231,6 +314,7 @@ interface ChatStore extends ExtensionStoreState {
   updateConversationTitle: (id: string, title: string) => Promise<void>;
   updateConversationPersona: (id: string, personaId: string | null) => Promise<void>;
   updateConversationSettings: (id: string, settings: ConversationChatSettings) => Promise<void>;
+  togglePinConversation: (id: string) => Promise<void>;
   loadConversations: () => Promise<void>;
   searchConversations: (
     query: string
@@ -254,6 +338,7 @@ interface ChatStore extends ExtensionStoreState {
 
   // Actions - Graph Config
   setThinkingMode: (mode: ThinkingMode) => void;
+  setInputTrustLevel: (level: InputTrustLevel) => void;
   setEnableRAG: (enable: boolean) => void;
   setEnableTools: (enable: boolean) => void;
   toggleTool: (toolName: string) => void;
@@ -267,6 +352,8 @@ interface ChatStore extends ExtensionStoreState {
   // Actions - Tool Approval (Human-in-the-loop)
   setPendingToolApproval: (approval: PendingToolApproval) => void;
   clearPendingToolApproval: () => void;
+  clearPendingToolApprovalForConversation: (conversationId: string) => void;
+  clearAllPendingToolApprovals: () => void;
   setAlwaysApproveToolsForSession: (enable: boolean) => void;
 
   // Actions - Image Generation Progress
@@ -284,12 +371,22 @@ interface ChatStore extends ExtensionStoreState {
   clearAgentProgress: (conversationId: string) => void;
   getAgentProgress: (conversationId: string) => AgentProgress | undefined;
 
+  // Actions - Cowork
+  setCoworkPlan: (plan: import('@/lib/domains/agent/types').CoworkPlan | null) => void;
+  updateCoworkTaskStatus: (
+    taskId: string,
+    status: import('@/lib/domains/agent/types').CoworkTaskStatus,
+    result?: string
+  ) => void;
+  setCoworkTeamStatus: (status: 'idle' | 'planning' | 'executing' | 'synthesizing') => void;
+  resetCoworkState: () => void;
+
   // Actions - Browser Chat
   addBrowserChatMessage: (message: Omit<Message, 'id' | 'created_at' | 'conversation_id'>) => void;
-  updateBrowserChatMessage: (id: string, updates: Partial<Message>) => void;
+  updateBrowserChatMessage: (id: string, updates: Partial<Message> | string) => void;
   clearBrowserChat: () => void;
   setBrowserViewMode: (
-    mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs'
+    mode: 'chat' | 'snapshots' | 'bookmarks' | 'tools' | 'logs' | 'settings'
   ) => void;
 
   // Actions - Extension-specific: Provided by Extension Store Slices
@@ -391,13 +488,101 @@ interface ChatStore extends ExtensionStoreState {
   updateActiveExtensions: (extensions: ExtensionDefinition[]) => void;
   refreshExtensions: () => void;
 
+  // Actions - Scheduler
+  loadTasks: () => Promise<void>;
+  createTask: (task: ScheduledTask) => Promise<void>;
+  updateTask: (taskId: string, updates: Partial<ScheduledTask>) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  runTaskNow: (taskId: string) => Promise<void>;
+  loadExecutionHistory: (taskId?: string, filters?: ExecutionHistoryQuery) => Promise<void>;
+
   // Deprecated: kept for backward compatibility
   setGraphType: (type: GraphType) => void;
+};
+
+/**
+ * Extension Runtime Context 생성
+ * Extension의 createStoreSlice 함수에 전달될 runtime context를 생성합니다.
+ */
+function createExtensionRuntimeContext(): ExtensionRuntimeContext {
+  return {
+    // IPC Bridge
+    ipc: {
+      invoke: async <T>(channel: string, data?: any) => {
+        if (!isElectron() || !window.electronAPI) {
+          logger.warn(`[ExtensionRuntime] IPC invoke failed: Electron API not available`, {
+            channel,
+          });
+          return {
+            success: false,
+            error: 'Electron API not available',
+          };
+        }
+        return window.electronAPI.invoke(channel, data) as Promise<{
+          success: boolean;
+          data?: T;
+          error?: string;
+        }>;
+      },
+      on: (channel: string, handler: (data: any) => void) => {
+        if (!isElectron() || !window.electronAPI) {
+          logger.warn(`[ExtensionRuntime] IPC on failed: Electron API not available`, { channel });
+          return () => {};
+        }
+        const cleanup = window.electronAPI.on(channel, handler);
+        return typeof cleanup === 'function' ? cleanup : () => {};
+      },
+      send: (channel: string, data?: any) => {
+        if (!isElectron() || !window.electronAPI) {
+          logger.warn(`[ExtensionRuntime] IPC send failed: Electron API not available`, {
+            channel,
+          });
+          return;
+        }
+        // ElectronAPI에 send가 없으면 invoke로 대체 (non-blocking)
+        if ('send' in window.electronAPI && typeof window.electronAPI.send === 'function') {
+          (window.electronAPI as any).send(channel, data);
+        } else {
+          // send가 없으면 invoke로 처리 (fire-and-forget)
+          window.electronAPI.invoke(channel, data).catch((err: any) => {
+            logger.error(`[ExtensionRuntime] IPC send via invoke failed`, { channel, error: err });
+          });
+        }
+      },
+    },
+
+    // Logger
+    logger: {
+      info: (message: string, meta?: any) => logger.info(message, meta),
+      warn: (message: string, meta?: any) => logger.warn(message, meta),
+      error: (message: string, meta?: any) => logger.error(message, meta),
+      debug: (message: string, meta?: any) => logger.debug(message, meta),
+    },
+
+    // Platform detection
+    platform: {
+      isElectron: () => isElectron(),
+      isMac: () =>
+        typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0,
+      isWindows: () =>
+        typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('WIN') >= 0,
+      isLinux: () =>
+        typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('LINUX') >= 0,
+    },
+
+    // Optional: LLM provider (미래 확장용)
+    llm: undefined,
+
+    // Optional: Agent factory (미래 확장용)
+    agent: undefined,
+  };
 }
+
+const initialPendingToolApproval = loadPendingToolApprovalFromStorage();
 
 export const useChatStore = create<ChatStore>((set, get) => ({
   // Extension Slices: All extension store slices are integrated first
-  ...mergeExtensionStoreSlices(set as any, get as any),
+  ...mergeExtensionStoreSlices(set as any, get as any, createExtensionRuntimeContext()),
 
   // Initial state
   conversations: [],
@@ -420,6 +605,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // New: Graph Configuration
   thinkingMode: 'instant',
+  inputTrustLevel: 'trusted',
   enableRAG: false,
   enableTools: false,
   enabledTools: new Set<string>(),
@@ -433,7 +619,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   savedEnableTools: null,
 
   // Tool Approval (Human-in-the-loop)
-  pendingToolApproval: null,
+  pendingToolApproval: initialPendingToolApproval,
+  pendingToolApprovalQueue: initialPendingToolApproval ? [initialPendingToolApproval] : [],
   alwaysApproveToolsForSession: false,
   activeFileSelection: null,
 
@@ -442,6 +629,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Agent Progress
   agentProgress: new Map<string, AgentProgress>(),
+
+  // Cowork
+  coworkPlan: null,
+  coworkTeamStatus: 'idle' as const,
+  coworkTokensConsumed: 0,
+  coworkTotalTokenBudget: 200000,
 
   // Browser Chat
   browserChatMessages: [],
@@ -614,15 +807,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   editorEnableInlineAutocomplete: (() => {
     if (typeof window === 'undefined') {
-      return false;
+      return true; // Default to true
     }
     try {
       const saved = localStorage.getItem('sepilot_editor_enable_inline_autocomplete');
-      return saved === 'true';
+      return saved === null ? true : saved === 'true'; // Default to true if not set
     } catch (error) {
       console.error('Failed to load editor inline autocomplete setting from localStorage:', error);
     }
-    return false;
+    return true; // Default to true
   })(),
 
   // Chat Mode View
@@ -666,11 +859,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Conversations
   createConversation: async () => {
-    const state = get();
+    const state = get() as any;
 
     // Default settings for new conversation
     const defaultChatSettings: ConversationChatSettings = {
       thinkingMode: 'instant',
+      inputTrustLevel: 'trusted',
       enableRAG: false,
       enableTools: false,
       enabledTools: [],
@@ -719,7 +913,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
 
     // Update state and fallback to localStorage if DB save failed
-    set((currentState) => {
+    set((currentState: any) => {
       const newConversations = [newConversation, ...currentState.conversations];
       // Web or Electron DB save failed: localStorage에 저장
       if (!saved) {
@@ -736,6 +930,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         messagesCache: newCache,
         // Apply default settings to global state
         thinkingMode: 'instant',
+        inputTrustLevel: 'trusted',
         enableRAG: false,
         enableTools: false,
         enabledTools: new Set(),
@@ -747,15 +942,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   deleteConversation: async (id: string) => {
-    const state = get();
+    const state = get() as any;
     const wasActive = state.activeConversationId === id;
     const wasStreaming = state.streamingConversations.has(id);
 
-    // If the conversation was streaming, abort and cleanup
+    // If the conversation was streaming, abort the specific stream.
+    // Note: Do NOT call removeAllStreamListeners() here — it removes ALL
+    // langgraph-stream-event listeners globally, which kills Extension
+    // (Editor, Browser) stream listeners too. abort(id) already cleans up
+    // the specific conversation's stream and sends langgraph-stream-done.
     if (wasStreaming && isElectron() && window.electronAPI?.langgraph) {
       try {
         await window.electronAPI.langgraph.abort(id);
-        window.electronAPI.langgraph.removeAllStreamListeners();
         console.warn(`[deleteConversation] Aborted streaming for conversation: ${id}`);
       } catch (error) {
         console.error('[deleteConversation] Failed to abort streaming:', error);
@@ -764,8 +962,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     // Immediately update UI state to prevent input blocking
     // This prevents the textarea from being disabled during async DB operation
-    set((currentState) => {
-      const filtered = currentState.conversations.filter((c) => c.id !== id);
+    set((currentState: any) => {
+      const filtered = currentState.conversations.filter((c: any) => c.id !== id);
       const newActiveId = wasActive ? filtered[0]?.id || null : currentState.activeConversationId;
 
       // Remove from streaming conversations if it was streaming
@@ -784,7 +982,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           : null;
 
       // Get messages for the new active conversation from cache
-      const newMessages = newActiveId ? newCache.get(newActiveId) || [] : [];
+      const newMessages: any[] = newActiveId ? (newCache.get(newActiveId) as any[]) || [] : [];
 
       return {
         conversations: filtered,
@@ -800,10 +998,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     // If we switched to a different conversation, load its messages
     if (wasActive) {
-      const newState = get();
+      const newState = get() as any;
       if (newState.activeConversationId) {
         // Load messages for the new active conversation (non-blocking)
-        get().setActiveConversation(newState.activeConversationId);
+        (get() as any)
+          .setActiveConversation(newState.activeConversationId)
+          .catch((error: Error) => {
+            console.error('[deleteConversation] Failed to load new conversation messages:', error);
+          });
       }
     }
 
@@ -824,7 +1026,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
     // If DB delete failed or web mode, delete from localStorage
     if (!deleted) {
-      const currentState = get();
+      const currentState = get() as any;
       const filtered = currentState.conversations;
       saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, filtered);
       // 메시지도 삭제
@@ -838,8 +1040,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   duplicateConversation: async (id: string) => {
-    const state = get();
-    const sourceConversation = state.conversations.find((c) => c.id === id);
+    const state = get() as any;
+    const sourceConversation = state.conversations.find((c: any) => c.id === id);
     if (!sourceConversation) {
       throw new Error('Source conversation not found');
     }
@@ -873,7 +1075,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     };
 
     // Duplicate messages with new IDs
-    const duplicatedMessages: Message[] = sourceMessages.map((msg) => ({
+    const duplicatedMessages: Message[] = sourceMessages.map((msg: any) => ({
       ...msg,
       id: generateId(),
       conversation_id: newConversation.id,
@@ -886,10 +1088,39 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       try {
         const result = await window.electronAPI.chat.saveConversation(newConversation);
         if (result.success) {
-          saved = true;
-          // Save duplicated messages
-          for (const message of duplicatedMessages) {
-            await window.electronAPI.chat.saveMessage(message);
+          let messagesSaved = true;
+
+          if (duplicatedMessages.length > 0) {
+            const messageBatches = chunkArray(
+              duplicatedMessages,
+              DUPLICATE_MESSAGE_SAVE_BATCH_SIZE
+            );
+
+            for (const messageBatch of messageBatches) {
+              const batchSaveResult = await window.electronAPI.chat.saveMessagesBulk(messageBatch);
+              if (!batchSaveResult.success) {
+                messagesSaved = false;
+                console.error(
+                  '[duplicateConversation] Failed to save duplicated message batch:',
+                  batchSaveResult.error
+                );
+                break;
+              }
+            }
+          }
+
+          if (messagesSaved) {
+            saved = true;
+          } else {
+            // Best-effort rollback to avoid partial duplicate in DB
+            await window.electronAPI.chat
+              .deleteConversation(newConversation.id)
+              .catch((rollbackError) => {
+                console.error(
+                  '[duplicateConversation] Failed to rollback duplicated conversation:',
+                  rollbackError
+                );
+              });
           }
         } else {
           console.error('Failed to save duplicated conversation to DB:', result.error);
@@ -900,7 +1131,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
 
     // Update state and fallback to localStorage if DB save failed
-    set((currentState) => {
+    set((currentState: any) => {
       const newConversations = [newConversation, ...currentState.conversations];
       if (!saved) {
         saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, newConversations);
@@ -927,12 +1158,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setActiveConversation: async (id: string) => {
-    const state = get();
+    const state = get() as any;
     const isCurrentlyStreaming = state.streamingConversations.has(id);
     const cachedMessages = state.messagesCache.get(id);
 
     // Find the conversation to load its settings
-    const conversation = state.conversations.find((c) => c.id === id);
+    const conversation = state.conversations.find((c: any) => c.id === id);
     if (!conversation) {
       console.error('Conversation not found:', id);
       return;
@@ -951,6 +1182,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         logger.info(
           '[setActiveConversation] Restoring thinkingMode:',
           conversationSettings.thinkingMode
+        );
+      }
+      if (conversationSettings.inputTrustLevel !== undefined) {
+        settingsUpdate.inputTrustLevel = conversationSettings.inputTrustLevel;
+        logger.info(
+          '[setActiveConversation] Restoring inputTrustLevel:',
+          conversationSettings.inputTrustLevel
         );
       }
       if (conversationSettings.enableRAG !== undefined) {
@@ -986,6 +1224,20 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         );
       }
 
+      const restoredThinkingMode =
+        (settingsUpdate.thinkingMode as ThinkingMode | undefined) ?? state.thinkingMode;
+
+      if (restoredThinkingMode === 'cowork') {
+        settingsUpdate.enableTools = true;
+        settingsUpdate.inputTrustLevel = 'untrusted';
+        logger.info('[setActiveConversation] Cowork mode requires tools, forcing enableTools=true');
+      }
+
+      if (settingsUpdate.inputTrustLevel === undefined) {
+        settingsUpdate.inputTrustLevel =
+          restoredThinkingMode === 'cowork' ? 'untrusted' : 'trusted';
+      }
+
       // CRITICAL: Enforce consistency - if image generation is enabled, tools must be enabled
       if (settingsUpdate.enableImageGeneration === true) {
         logger.info(
@@ -997,6 +1249,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       }
     } else {
       logger.info('[setActiveConversation] No chatSettings found, using defaults');
+      settingsUpdate.inputTrustLevel = 'trusted';
     }
 
     // If we have cached messages (e.g., from background streaming), use them immediately
@@ -1055,7 +1308,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       }
 
       // Update both messages and cache
-      set((currentState) => {
+      set((currentState: any) => {
         const newCache = new Map(currentState.messagesCache);
         newCache.set(id, loadedMessages);
         return {
@@ -1086,8 +1339,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       }
     }
 
-    set((state) => {
-      const updatedConversations = state.conversations.map((c) =>
+    set((state: any) => {
+      const updatedConversations = state.conversations.map((c: any) =>
         c.id === id ? { ...c, title, updated_at: Date.now() } : c
       );
       // Web or Electron DB update failed: localStorage에 저장
@@ -1099,8 +1352,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   updateConversationPersona: async (id: string, personaId: string | null) => {
-    set((state) => {
-      const updatedConversations = state.conversations.map((c) =>
+    set((state: any) => {
+      const updatedConversations = state.conversations.map((c: any) =>
         c.id === id ? { ...c, personaId: personaId || undefined, updated_at: Date.now() } : c
       );
 
@@ -1115,8 +1368,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     // Note: Electron DB는 chatSettings 필드를 아직 완전히 지원하지 않으므로
     // localStorage를 주로 사용합니다. 향후 DB 스키마 업데이트 시 개선 예정
 
-    set((state) => {
-      const updatedConversations = state.conversations.map((c) =>
+    set((state: any) => {
+      const updatedConversations = state.conversations.map((c: any) =>
         c.id === id
           ? {
               ...c,
@@ -1133,72 +1386,157 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     });
   },
 
+  togglePinConversation: async (id: string) => {
+    const state = get() as any;
+    const conversation = state.conversations.find((c: any) => c.id === id);
+    if (!conversation) {
+      return;
+    }
+
+    const isPinned = !conversation.isPinned;
+
+    // Update in memory
+    set((state: any) => {
+      const updatedConversations = state.conversations.map((c: any) =>
+        c.id === id ? { ...c, isPinned, updated_at: Date.now() } : c
+      );
+
+      // Update in database if Electron
+      if (isElectron() && window.electronAPI) {
+        window.electronAPI.chat
+          .saveConversation({ ...conversation, isPinned, updated_at: Date.now() })
+          .catch((err) => console.error('Failed to save pinned status to DB:', err));
+      }
+
+      // Update in localStorage
+      saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, updatedConversations);
+
+      return { conversations: updatedConversations };
+    });
+  },
+
   searchConversations: async (query: string) => {
-    if (!query.trim()) {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) {
       return [];
     }
 
-    const searchTerm = query.toLowerCase();
-    const results: Array<{ conversation: Conversation; matchedMessages: Message[] }> = [];
+    const searchTerm = normalizedQuery.toLowerCase();
 
-    // Search through all conversations
-    for (const conversation of get().conversations) {
-      // Check if conversation title matches
-      const titleMatches = conversation.title.toLowerCase().includes(searchTerm);
-
-      // Load messages for this conversation
-      let conversationMessages: Message[] = [];
-
-      if (isElectron() && window.electronAPI) {
-        try {
-          const result = await window.electronAPI.chat.loadMessages(conversation.id);
-          if (result.success && result.data) {
-            conversationMessages = result.data;
-          }
-        } catch (error) {
-          console.error('Failed to load messages for search:', error);
+    if (isElectron() && window.electronAPI?.chat?.searchConversations) {
+      try {
+        const result = await window.electronAPI.chat.searchConversations(normalizedQuery);
+        if (result.success && result.data) {
+          return result.data;
         }
-      } else {
-        // Web: localStorage에서 로드
-        const allMessages = loadFromLocalStorage<Record<string, Message[]>>(
-          STORAGE_KEYS.MESSAGES,
-          {}
-        );
-        conversationMessages = allMessages[conversation.id] || [];
+        console.error('Failed to search conversations via IPC:', result.error);
+      } catch (error) {
+        console.error('Search IPC failed, using fallback search:', error);
       }
+    }
 
-      // Find matching messages
-      const matchedMessages = conversationMessages.filter((msg) =>
-        msg.content.toLowerCase().includes(searchTerm)
-      );
+    const state = get() as any;
+    const conversations = state.conversations as Conversation[];
+    const resultsByConversation = new Map<
+      string,
+      { conversation: Conversation; matchedMessages: Message[] }
+    >();
 
-      // Add to results if title matches or has matching messages
-      if (titleMatches || matchedMessages.length > 0) {
-        results.push({
+    for (const conversation of conversations) {
+      if (conversation.title.toLowerCase().includes(searchTerm)) {
+        resultsByConversation.set(conversation.id, {
           conversation,
-          matchedMessages,
+          matchedMessages: [],
         });
       }
     }
 
-    // Sort by relevance: title matches first, then by number of matched messages
+    const messagesByConversation: Record<string, Message[]> = {};
+
+    if (isElectron() && window.electronAPI) {
+      const cachedMessages = state.messagesCache as Map<string, Message[]>;
+      for (const [conversationId, messages] of cachedMessages.entries()) {
+        messagesByConversation[conversationId] = messages;
+      }
+
+      const conversationIdsToLoad = conversations
+        .filter((conversation) => {
+          if (messagesByConversation[conversation.id]) {
+            return false;
+          }
+          return !conversation.title.toLowerCase().includes(searchTerm);
+        })
+        .map((conversation) => conversation.id);
+
+      if (conversationIdsToLoad.length > 0) {
+        const loadedResults = await Promise.allSettled(
+          conversationIdsToLoad.map((conversationId) =>
+            window.electronAPI.chat.loadMessages(conversationId)
+          )
+        );
+
+        loadedResults.forEach((loadedResult, index) => {
+          const conversationId = conversationIdsToLoad[index];
+          if (
+            loadedResult.status === 'fulfilled' &&
+            loadedResult.value.success &&
+            loadedResult.value.data
+          ) {
+            messagesByConversation[conversationId] = loadedResult.value.data;
+          } else {
+            messagesByConversation[conversationId] = [];
+          }
+        });
+      }
+    } else {
+      const allMessages = loadFromLocalStorage<Record<string, Message[]>>(
+        STORAGE_KEYS.MESSAGES,
+        {}
+      );
+      Object.assign(messagesByConversation, allMessages);
+    }
+
+    for (const conversation of conversations) {
+      const conversationMessages = messagesByConversation[conversation.id] || [];
+      const matchedMessages = conversationMessages.filter((msg) =>
+        msg.content.toLowerCase().includes(searchTerm)
+      );
+
+      if (matchedMessages.length > 0) {
+        const existing = resultsByConversation.get(conversation.id);
+        if (existing) {
+          existing.matchedMessages = matchedMessages;
+        } else {
+          resultsByConversation.set(conversation.id, {
+            conversation,
+            matchedMessages,
+          });
+        }
+      }
+    }
+
+    const results = Array.from(resultsByConversation.values());
     results.sort((a, b) => {
       const aTitleMatch = a.conversation.title.toLowerCase().includes(searchTerm) ? 1 : 0;
       const bTitleMatch = b.conversation.title.toLowerCase().includes(searchTerm) ? 1 : 0;
 
       if (aTitleMatch !== bTitleMatch) {
-        return bTitleMatch - aTitleMatch; // Title matches first
+        return bTitleMatch - aTitleMatch;
       }
 
-      return b.matchedMessages.length - a.matchedMessages.length; // More matches first
+      if (a.matchedMessages.length !== b.matchedMessages.length) {
+        return b.matchedMessages.length - a.matchedMessages.length;
+      }
+
+      return b.conversation.updated_at - a.conversation.updated_at;
     });
 
     return results;
   },
 
   // Messages
-  addMessage: async (message, conversationId) => {
-    const activeId = conversationId || get().activeConversationId;
+  addMessage: async (message: any, conversationId?: string) => {
+    const activeId = conversationId || (get() as any).activeConversationId;
     if (!activeId) {
       throw new Error('No active conversation');
     }
@@ -1228,35 +1566,36 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       saveToLocalStorage(STORAGE_KEYS.MESSAGES, allMessages);
     }
 
-    // Update both UI messages and cache
-    set((state) => {
-      // Always update the cache for this conversation
+    // Update both UI messages and cache in a single atomic set call
+    set((state: any) => {
       const newCache = new Map(state.messagesCache);
-      const cachedMessages = newCache.get(activeId) || [];
-      newCache.set(activeId, [...cachedMessages, newMessage]);
+      const cachedMessages: any[] = (newCache.get(activeId) as any[]) || [];
+      const updatedCachedMessages = [...cachedMessages, newMessage];
+      newCache.set(activeId, updatedCachedMessages);
 
       return {
         // Only update UI if this is the active conversation
-        messages:
-          state.activeConversationId === activeId
-            ? [...state.messages, newMessage]
-            : state.messages,
+        messages: state.activeConversationId === activeId ? updatedCachedMessages : state.messages,
         messagesCache: newCache,
       };
     });
 
     // Update conversation updated_at
-    const conversation = get().conversations.find((c) => c.id === activeId);
+    const conversation = (get() as any).conversations.find((c: any) => c.id === activeId);
     if (conversation) {
       if (isElectron() && window.electronAPI) {
-        await window.electronAPI.chat.saveConversation({
-          ...conversation,
-          updated_at: Date.now(),
-        });
+        try {
+          await window.electronAPI.chat.saveConversation({
+            ...conversation,
+            updated_at: Date.now(),
+          });
+        } catch (error) {
+          console.error('[addMessage] Failed to update conversation timestamp:', error);
+        }
       }
 
-      set((state) => {
-        const updatedConversations = state.conversations.map((c) =>
+      set((state: any) => {
+        const updatedConversations = state.conversations.map((c: any) =>
           c.id === activeId ? { ...c, updated_at: Date.now() } : c
         );
         // Web: localStorage에 저장
@@ -1270,30 +1609,31 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     return newMessage;
   },
 
-  updateMessage: (id: string, updates: Partial<Message>, conversationId) => {
-    set((state) => {
+  updateMessage: (id: string, updates: Partial<Message>, conversationId?: string) => {
+    set((state: any) => {
       const targetConvId = conversationId || state.activeConversationId;
       if (!targetConvId) {
         return state;
       }
 
-      // Always update the cache for this conversation
+      // 1. Prepare updated messages for the target conversation
       const newCache = new Map(state.messagesCache);
-      const cachedMessages = newCache.get(targetConvId) || [];
-      const updatedCachedMessages = cachedMessages.map((m) =>
+      const cachedMessages: any[] = (newCache.get(targetConvId) as any[]) || [];
+      const updatedMessages = cachedMessages.map((m: any) =>
         m.id === id ? { ...m, ...updates } : m
       );
-      newCache.set(targetConvId, updatedCachedMessages);
 
-      // Update UI only if the message belongs to the currently active conversation
+      // 2. Update cache
+      newCache.set(targetConvId, updatedMessages);
+
+      // 3. If target is active, update both. If not, only update cache.
       if (state.activeConversationId === targetConvId) {
         return {
-          messages: state.messages.map((m) => (m.id === id ? { ...m, ...updates } : m)),
+          messages: updatedMessages,
           messagesCache: newCache,
         };
       }
 
-      // Background conversation: only update cache
       return {
         messagesCache: newCache,
       };
@@ -1301,7 +1641,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   deleteMessage: async (id: string) => {
-    const activeId = get().activeConversationId;
+    const activeId = (get() as any).activeConversationId;
 
     // Delete from database
     if (isElectron() && window.electronAPI) {
@@ -1317,24 +1657,25 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         {}
       );
       if (allMessages[activeId]) {
-        allMessages[activeId] = allMessages[activeId].filter((m) => m.id !== id);
+        allMessages[activeId] = allMessages[activeId].filter((m: any) => m.id !== id);
         saveToLocalStorage(STORAGE_KEYS.MESSAGES, allMessages);
       }
     }
 
-    set((state) => {
-      // Also delete from cache
-      const newCache = new Map(state.messagesCache);
-      if (activeId) {
-        const cachedMessages = newCache.get(activeId) || [];
-        newCache.set(
-          activeId,
-          cachedMessages.filter((m) => m.id !== id)
-        );
+    set((state: any) => {
+      if (!activeId) {
+        return state;
       }
 
+      // 1. Update cache
+      const newCache = new Map(state.messagesCache);
+      const cachedMessages: any[] = (newCache.get(activeId) as any[]) || [];
+      const updatedMessages = cachedMessages.filter((m: any) => m.id !== id);
+      newCache.set(activeId, updatedMessages);
+
+      // 2. Update both UI and cache (assuming only deleting from active conversation for now)
       return {
-        messages: state.messages.filter((m) => m.id !== id),
+        messages: updatedMessages,
         messagesCache: newCache,
       };
     });
@@ -1345,7 +1686,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   clearMessagesCache: (conversationId: string) => {
-    set((state) => {
+    set((state: any) => {
       const newCache = new Map(state.messagesCache);
       newCache.delete(conversationId);
       return { messagesCache: newCache };
@@ -1354,7 +1695,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Streaming actions (conversation-specific)
   startStreaming: (conversationId: string, messageId: string) => {
-    set((state) => {
+    set((state: any) => {
       const newMap = new Map(state.streamingConversations);
       newMap.set(conversationId, messageId);
 
@@ -1369,7 +1710,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   stopStreaming: (conversationId: string) => {
-    set((state) => {
+    set((state: any) => {
       const newMap = new Map(state.streamingConversations);
       newMap.delete(conversationId);
 
@@ -1384,7 +1725,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   isConversationStreaming: (conversationId: string) => {
-    return get().streamingConversations.has(conversationId);
+    return (get() as any).streamingConversations.has(conversationId);
   },
 
   setAppFocused: (focused: boolean) => {
@@ -1393,16 +1734,51 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Graph Configuration
   setThinkingMode: (mode: ThinkingMode) => {
-    set({ thinkingMode: mode });
+    const shouldForceTools = mode === 'cowork';
+    const shouldForceUntrustedInput = mode === 'cowork';
+    set((state: any) => ({
+      thinkingMode: mode,
+      inputTrustLevel: shouldForceUntrustedInput ? 'untrusted' : state.inputTrustLevel,
+      enableTools: shouldForceTools ? true : state.enableTools,
+    }));
 
     // Update active conversation's settings
-    const state = get();
+    const state = get() as any;
     if (state.activeConversationId) {
-      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      const conversation = state.conversations.find(
+        (c: any) => c.id === state.activeConversationId
+      );
       if (conversation) {
-        get().updateConversationSettings(state.activeConversationId, {
+        (get() as any).updateConversationSettings(state.activeConversationId, {
           ...conversation.chatSettings,
           thinkingMode: mode,
+          inputTrustLevel: mode === 'cowork' ? 'untrusted' : state.inputTrustLevel,
+          ...(shouldForceTools ? { enableTools: true } : {}),
+        });
+      }
+    }
+  },
+
+  setInputTrustLevel: (level: InputTrustLevel) => {
+    const state = get() as any;
+
+    if (state.thinkingMode === 'cowork' && level !== 'untrusted') {
+      console.warn(
+        '[setInputTrustLevel] Cowork mode requires untrusted input mode. Ignoring trusted value.'
+      );
+      return;
+    }
+
+    set({ inputTrustLevel: level });
+
+    if (state.activeConversationId) {
+      const conversation = state.conversations.find(
+        (c: any) => c.id === state.activeConversationId
+      );
+      if (conversation) {
+        (get() as any).updateConversationSettings(state.activeConversationId, {
+          ...conversation.chatSettings,
+          inputTrustLevel: level,
         });
       }
     }
@@ -1412,11 +1788,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ enableRAG: enable });
 
     // Update active conversation's settings
-    const state = get();
+    const state = get() as any;
     if (state.activeConversationId) {
-      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      const conversation = state.conversations.find(
+        (c: any) => c.id === state.activeConversationId
+      );
       if (conversation) {
-        get().updateConversationSettings(state.activeConversationId, {
+        (get() as any).updateConversationSettings(state.activeConversationId, {
           ...conversation.chatSettings,
           enableRAG: enable,
         });
@@ -1425,7 +1803,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setEnableTools: (enable: boolean) => {
-    const state = get();
+    const state = get() as any;
 
     // CRITICAL: Cannot disable tools when image generation is active
     if (!enable && state.enableImageGeneration) {
@@ -1435,13 +1813,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       return;
     }
 
+    // Cowork mode always requires tools.
+    if (!enable && state.thinkingMode === 'cowork') {
+      console.warn('[setEnableTools] Cannot disable tools while cowork mode is active. Ignoring.');
+      return;
+    }
+
     set({ enableTools: enable });
 
     // Update active conversation's settings
     if (state.activeConversationId) {
-      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      const conversation = state.conversations.find(
+        (c: any) => c.id === state.activeConversationId
+      );
       if (conversation) {
-        get().updateConversationSettings(state.activeConversationId, {
+        (get() as any).updateConversationSettings(state.activeConversationId, {
           ...conversation.chatSettings,
           enableTools: enable,
         });
@@ -1450,7 +1836,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   toggleTool: (toolName: string) => {
-    set((state) => {
+    set((state: any) => {
       const newEnabledTools = new Set(state.enabledTools);
       if (newEnabledTools.has(toolName)) {
         newEnabledTools.delete(toolName);
@@ -1463,11 +1849,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     });
 
     // Update active conversation's settings
-    const state = get();
+    const state = get() as any;
     if (state.activeConversationId) {
-      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      const conversation = state.conversations.find(
+        (c: any) => c.id === state.activeConversationId
+      );
       if (conversation) {
-        get().updateConversationSettings(state.activeConversationId, {
+        (get() as any).updateConversationSettings(state.activeConversationId, {
           ...conversation.chatSettings,
           enabledTools: Array.from(state.enabledTools),
           enableTools: state.enableTools,
@@ -1481,11 +1869,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ enabledTools: new Set(toolNames), enableTools: toolNames.length > 0 });
 
     // Update active conversation's settings
-    const state = get();
+    const state = get() as any;
     if (state.activeConversationId) {
-      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      const conversation = state.conversations.find(
+        (c: any) => c.id === state.activeConversationId
+      );
       if (conversation) {
-        get().updateConversationSettings(state.activeConversationId, {
+        (get() as any).updateConversationSettings(state.activeConversationId, {
           ...conversation.chatSettings,
           enabledTools: toolNames,
           enableTools: toolNames.length > 0,
@@ -1498,11 +1888,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ enabledTools: new Set<string>() });
 
     // Update active conversation's settings
-    const state = get();
+    const state = get() as any;
     if (state.activeConversationId) {
-      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      const conversation = state.conversations.find(
+        (c: any) => c.id === state.activeConversationId
+      );
       if (conversation) {
-        get().updateConversationSettings(state.activeConversationId, {
+        (get() as any).updateConversationSettings(state.activeConversationId, {
           ...conversation.chatSettings,
           enabledTools: [],
         });
@@ -1511,7 +1903,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setEnableImageGeneration: (enable: boolean) => {
-    const state = get();
+    const state = get() as any;
     if (enable) {
       // Save current settings before enabling image generation mode
       set({
@@ -1539,13 +1931,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
 
     // Update active conversation's settings
-    const currentState = get();
+    const currentState = get() as any;
     if (currentState.activeConversationId) {
       const conversation = currentState.conversations.find(
-        (c) => c.id === currentState.activeConversationId
+        (c: any) => c.id === currentState.activeConversationId
       );
       if (conversation) {
-        get().updateConversationSettings(currentState.activeConversationId, {
+        (get() as any).updateConversationSettings(currentState.activeConversationId, {
           ...conversation.chatSettings,
           enableImageGeneration: enable,
         });
@@ -1557,11 +1949,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ selectedImageGenProvider: provider });
 
     // Update active conversation's settings
-    const state = get();
+    const state = get() as any;
     if (state.activeConversationId) {
-      const conversation = state.conversations.find((c) => c.id === state.activeConversationId);
+      const conversation = state.conversations.find(
+        (c: any) => c.id === state.activeConversationId
+      );
       if (conversation) {
-        get().updateConversationSettings(state.activeConversationId, {
+        (get() as any).updateConversationSettings(state.activeConversationId, {
           ...conversation.chatSettings,
           selectedImageGenProvider: provider,
         });
@@ -1570,7 +1964,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setWorkingDirectory: (directory: string | null) => {
-    set({ workingDirectory: directory, expandedFolderPaths: new Set<string>() });
+    set({
+      workingDirectory: directory,
+      expandedFolderPaths: new Set<string>(),
+      fileTreeRefreshTrigger: Date.now(),
+    });
     // Save to localStorage for persistence
     if (directory) {
       localStorage.setItem('sepilot_working_directory', directory);
@@ -1580,11 +1978,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   getGraphConfig: (): GraphConfig => {
-    const state = get();
+    const state = get() as any;
+    const normalizedEnableTools = state.thinkingMode === 'cowork' ? true : state.enableTools;
+    const inputTrustLevel =
+      state.thinkingMode === 'cowork' ? 'untrusted' : (state.inputTrustLevel ?? 'trusted');
     return {
       thinkingMode: state.thinkingMode,
+      inputTrustLevel,
       enableRAG: state.enableRAG,
-      enableTools: state.enableTools,
+      enableTools: normalizedEnableTools,
       enableImageGeneration: state.enableImageGeneration,
       workingDirectory: state.workingDirectory || undefined,
       activeFileSelection: state.activeFileSelection || undefined,
@@ -1597,24 +1999,111 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     // Map old GraphType to new configuration
     switch (type) {
       case 'chat':
-        set({ graphType: type, thinkingMode: 'instant', enableRAG: false, enableTools: false });
+        set({
+          graphType: type,
+          thinkingMode: 'instant',
+          inputTrustLevel: 'trusted',
+          enableRAG: false,
+          enableTools: false,
+        });
         break;
       case 'rag':
-        set({ graphType: type, thinkingMode: 'instant', enableRAG: true, enableTools: false });
+        set({
+          graphType: type,
+          thinkingMode: 'instant',
+          inputTrustLevel: 'trusted',
+          enableRAG: true,
+          enableTools: false,
+        });
         break;
       case 'agent':
-        set({ graphType: type, thinkingMode: 'instant', enableRAG: false, enableTools: true });
+        set({
+          graphType: type,
+          thinkingMode: 'instant',
+          inputTrustLevel: 'trusted',
+          enableRAG: false,
+          enableTools: true,
+        });
         break;
     }
   },
 
   // Tool Approval (Human-in-the-loop)
   setPendingToolApproval: (approval: PendingToolApproval) => {
-    set({ pendingToolApproval: approval });
+    set((state: any) => {
+      const queue = getPendingApprovalQueueFromState(state);
+      const identity = getPendingApprovalIdentity(approval);
+      const existingIndex = queue.findIndex(
+        (item) => getPendingApprovalIdentity(item as PendingToolApproval) === identity
+      );
+
+      if (existingIndex >= 0) {
+        queue[existingIndex] = {
+          ...(queue[existingIndex] as PendingToolApproval),
+          ...approval,
+        };
+      } else {
+        queue.push(approval);
+      }
+
+      const activeApproval = queue[0] || null;
+      persistPendingToolApproval(activeApproval);
+
+      return {
+        pendingToolApproval: activeApproval,
+        pendingToolApprovalQueue: queue,
+      };
+    });
   },
 
   clearPendingToolApproval: () => {
-    set({ pendingToolApproval: null });
+    set((state: any) => {
+      const queue = getPendingApprovalQueueFromState(state);
+      if (queue.length > 0) {
+        queue.shift();
+      }
+
+      const activeApproval = queue[0] || null;
+      persistPendingToolApproval(activeApproval);
+
+      return {
+        pendingToolApproval: activeApproval,
+        pendingToolApprovalQueue: queue,
+      };
+    });
+  },
+
+  clearPendingToolApprovalForConversation: (conversationId: string) => {
+    if (typeof conversationId !== 'string' || conversationId.trim().length === 0) {
+      return;
+    }
+
+    set((state: any) => {
+      const queue = getPendingApprovalQueueFromState(state);
+      const targetIndex = queue.findIndex(
+        (item) => (item as PendingToolApproval).conversationId === conversationId
+      );
+
+      if (targetIndex >= 0) {
+        queue.splice(targetIndex, 1);
+      }
+
+      const activeApproval = queue[0] || null;
+      persistPendingToolApproval(activeApproval);
+
+      return {
+        pendingToolApproval: activeApproval,
+        pendingToolApprovalQueue: queue,
+      };
+    });
+  },
+
+  clearAllPendingToolApprovals: () => {
+    persistPendingToolApproval(null);
+    set({
+      pendingToolApproval: null,
+      pendingToolApprovalQueue: [],
+    });
   },
 
   setAlwaysApproveToolsForSession: (enable: boolean) => {
@@ -1623,7 +2112,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Image Generation Progress
   setImageGenerationProgress: (progress: ImageGenerationProgress) => {
-    set((state) => {
+    set((state: any) => {
       const newMap = new Map(state.imageGenerationProgress);
       newMap.set(progress.conversationId, progress);
       return { imageGenerationProgress: newMap };
@@ -1634,18 +2123,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     conversationId: string,
     updates: Partial<ImageGenerationProgress>
   ) => {
-    set((state) => {
+    set((state: any) => {
       const newMap = new Map(state.imageGenerationProgress);
       const existing = newMap.get(conversationId);
       if (existing) {
-        newMap.set(conversationId, { ...existing, ...updates });
+        newMap.set(conversationId, { ...(existing as object), ...updates });
       }
       return { imageGenerationProgress: newMap };
     });
   },
 
   clearImageGenerationProgress: (conversationId: string) => {
-    set((state) => {
+    set((state: any) => {
       const newMap = new Map(state.imageGenerationProgress);
       newMap.delete(conversationId);
       return { imageGenerationProgress: newMap };
@@ -1653,12 +2142,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   getImageGenerationProgress: (conversationId: string) => {
-    return get().imageGenerationProgress.get(conversationId);
+    return (get() as any).imageGenerationProgress.get(conversationId);
   },
 
   // Agent Progress
   setAgentProgress: (conversationId: string, progress: AgentProgress) => {
-    set((state) => {
+    set((state: any) => {
       const newMap = new Map(state.agentProgress);
       newMap.set(conversationId, progress);
       return { agentProgress: newMap };
@@ -1666,18 +2155,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   updateAgentProgress: (conversationId: string, updates: Partial<AgentProgress>) => {
-    set((state) => {
+    set((state: any) => {
       const newMap = new Map(state.agentProgress);
       const existing = newMap.get(conversationId);
       if (existing) {
-        newMap.set(conversationId, { ...existing, ...updates });
+        newMap.set(conversationId, { ...(existing as object), ...updates });
       }
       return { agentProgress: newMap };
     });
   },
 
   clearAgentProgress: (conversationId: string) => {
-    set((state) => {
+    set((state: any) => {
       const newMap = new Map(state.agentProgress);
       newMap.delete(conversationId);
       return { agentProgress: newMap };
@@ -1685,7 +2174,49 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   getAgentProgress: (conversationId: string) => {
-    return get().agentProgress.get(conversationId);
+    return (get() as any).agentProgress.get(conversationId);
+  },
+
+  // Cowork Actions
+  setCoworkPlan: (plan) => {
+    set({ coworkPlan: plan });
+  },
+
+  updateCoworkTaskStatus: (taskId, status, result) => {
+    set((state: any) => {
+      if (!state.coworkPlan) {
+        return {};
+      }
+      const updatedTasks = state.coworkPlan.tasks.map((t: any) =>
+        t.id === taskId
+          ? {
+              ...t,
+              status,
+              ...(result !== undefined ? { result } : {}),
+              ...(status === 'in_progress' ? { startedAt: new Date().toISOString() } : {}),
+              ...(status === 'completed' || status === 'failed'
+                ? { completedAt: new Date().toISOString() }
+                : {}),
+            }
+          : t
+      );
+      return {
+        coworkPlan: { ...state.coworkPlan, tasks: updatedTasks },
+      };
+    });
+  },
+
+  setCoworkTeamStatus: (status) => {
+    set({ coworkTeamStatus: status });
+  },
+
+  resetCoworkState: () => {
+    set({
+      coworkPlan: null,
+      coworkTeamStatus: 'idle' as const,
+      coworkTokensConsumed: 0,
+      coworkTotalTokenBudget: 200000,
+    });
   },
 
   // App Mode Actions
@@ -1702,15 +2233,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   // File Clipboard Actions
-  setFileClipboard: (clipboard) => {
+  setFileClipboard: (clipboard: any) => {
     set({ fileClipboard: clipboard });
   },
 
-  copyFiles: (paths) => {
+  copyFiles: (paths: any) => {
     set({ fileClipboard: { operation: 'copy', paths } });
   },
 
-  cutFiles: (paths) => {
+  cutFiles: (paths: any) => {
     set({ fileClipboard: { operation: 'cut', paths } });
   },
 
@@ -1727,14 +2258,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       created_at: Date.now(),
     };
 
-    set((state) => ({
+    set((state: any) => ({
       browserChatMessages: [...state.browserChatMessages, newMessage],
     }));
   },
 
-  updateBrowserChatMessage: (id: string, updates: Partial<Message>) => {
-    set((state) => ({
-      browserChatMessages: state.browserChatMessages.map((m) =>
+  updateBrowserChatMessage: (id: string, updatesOrContent: Partial<Message> | string) => {
+    const updates =
+      typeof updatesOrContent === 'string' ? { content: updatesOrContent } : updatesOrContent;
+
+    set((state: any) => ({
+      browserChatMessages: state.browserChatMessages.map((m: any) =>
         m.id === id ? { ...m, ...updates } : m
       ),
     }));
@@ -1745,8 +2279,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setBrowserViewMode: (
-    mode: 'chat' | 'snapshots' | 'bookmarks' | 'settings' | 'tools' | 'logs'
+    mode: 'chat' | 'snapshots' | 'bookmarks' | 'tools' | 'logs' | 'settings'
   ) => {
+    // 레거시 번들 호환: 구버전 렌더러가 'settings' 모드를 전달하면
+    // 사이드바 렌더링 대신 글로벌 Settings 다이얼로그를 열고 chat 모드 유지
+    if (mode === 'settings') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('sepilot:open-settings', {
+            detail: { section: 'browser' },
+          })
+        );
+      }
+      set({ browserViewMode: 'chat' });
+      return;
+    }
     set({ browserViewMode: mode });
   },
 
@@ -1757,7 +2304,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       id: generateId(),
       timestamp: Date.now(),
     };
-    set((state) => ({
+    set((state: any) => ({
       browserAgentLogs: [...state.browserAgentLogs, newLog],
     }));
   },
@@ -1776,7 +2323,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Browser Agent LLM Config Actions
   setBrowserAgentLLMConfig: (config: Partial<BrowserAgentLLMConfig>) => {
-    set((state) => {
+    set((state: any) => {
       const newConfig = { ...state.browserAgentLLMConfig, ...config };
       // localStorage에 저장
       if (typeof window !== 'undefined') {
@@ -1802,7 +2349,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Browser Chat Font Config Actions
   setBrowserChatFontConfig: (config: Partial<BrowserChatFontConfig>) => {
-    set((state) => {
+    set((state: any) => {
       const newConfig = { ...state.browserChatFontConfig, ...config };
       // localStorage에 저장
       if (typeof window !== 'undefined') {
@@ -1833,21 +2380,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       created_at: Date.now(),
     };
 
-    set((state) => ({
+    set((state: any) => ({
       editorChatMessages: [...state.editorChatMessages, newMessage],
     }));
   },
 
   updateEditorChatMessage: (id: string, updates: Partial<Message>) => {
-    set((state) => ({
-      editorChatMessages: state.editorChatMessages.map((m) =>
+    set((state: any) => ({
+      editorChatMessages: state.editorChatMessages.map((m: any) =>
         m.id === id ? { ...m, ...updates } : m
       ),
     }));
   },
 
   clearEditorChat: async () => {
-    const state = get();
+    const state = get() as any;
     // Abort streaming if active
     if (state.editorChatStreaming && isElectron() && window.electronAPI?.langgraph) {
       try {
@@ -1856,10 +2403,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         console.error('[clearEditorChat] Failed to abort streaming:', error);
       }
     }
+    persistPendingToolApproval(null);
     set({
       editorChatMessages: [],
       editorChatStreaming: false,
       pendingToolApproval: null, // Clear any pending approval that might block UI
+      pendingToolApprovalQueue: [],
     });
   },
 
@@ -1876,7 +2425,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   toggleExpandedFolder: (path: string) => {
-    set((state) => {
+    set((state: any) => {
       const newExpanded = new Set(state.expandedFolderPaths);
       if (newExpanded.has(path)) {
         newExpanded.delete(path);
@@ -1888,7 +2437,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   addExpandedFolders: (paths: string[]) => {
-    set((state) => {
+    set((state: any) => {
       const newExpanded = new Set(state.expandedFolderPaths);
       paths.forEach((path) => newExpanded.add(path));
       return { expandedFolderPaths: newExpanded };
@@ -1901,7 +2450,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Editor Settings
   setEditorAppearanceConfig: (config: Partial<EditorAppearanceConfig>) => {
-    set((state) => {
+    set((state: any) => {
       const newConfig = { ...state.editorAppearanceConfig, ...config };
       if (typeof window !== 'undefined') {
         localStorage.setItem('sepilot_editor_appearance_config', JSON.stringify(newConfig));
@@ -1918,7 +2467,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setEditorLLMPromptsConfig: (config: Partial<EditorLLMPromptsConfig>) => {
-    set((state) => {
+    set((state: any) => {
       const newConfig = { ...state.editorLLMPromptsConfig, ...config };
       if (typeof window !== 'undefined') {
         localStorage.setItem('sepilot_editor_llm_prompts_config', JSON.stringify(newConfig));
@@ -1949,7 +2498,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   toggleEditorChatTool: (toolName: string) => {
-    set((state) => {
+    set((state: any) => {
       const newEnabled = new Set(state.editorChatEnabledTools);
       if (newEnabled.has(toolName)) {
         newEnabled.delete(toolName);
@@ -1998,7 +2547,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   loadWorkingDirectory: async () => {
     const savedDir = await loadWorkingDirectory();
     if (savedDir) {
-      set({ workingDirectory: savedDir });
+      set({ workingDirectory: savedDir, fileTreeRefreshTrigger: Date.now() });
     }
   },
 
@@ -2006,9 +2555,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   openFile: (
     file: Omit<OpenFile, 'isDirty'> & { initialPosition?: { lineNumber: number; column?: number } }
   ) => {
-    set((state) => {
+    set((state: any) => {
       // Check if file is already open
-      const existingFileIndex = state.openFiles.findIndex((f) => f.path === file.path);
+      const existingFileIndex = state.openFiles.findIndex((f: any) => f.path === file.path);
       if (existingFileIndex !== -1) {
         // File already open, update initialPosition if provided and set as active
         if (file.initialPosition) {
@@ -2036,8 +2585,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   closeFile: (path: string) => {
-    set((state) => {
-      const filtered = state.openFiles.filter((f) => f.path !== path);
+    set((state: any) => {
+      const filtered = state.openFiles.filter((f: any) => f.path !== path);
       const newActiveFilePath =
         state.activeFilePath === path ? filtered[0]?.path || null : state.activeFilePath;
 
@@ -2049,8 +2598,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   closeOtherFiles: (path: string) => {
-    set((state) => {
-      const fileToKeep = state.openFiles.find((f) => f.path === path);
+    set((state: any) => {
+      const fileToKeep = state.openFiles.find((f: any) => f.path === path);
       if (!fileToKeep) {
         return state;
       }
@@ -2062,13 +2611,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   closeFilesToRight: (path: string) => {
-    set((state) => {
-      const index = state.openFiles.findIndex((f) => f.path === path);
+    set((state: any) => {
+      const index = state.openFiles.findIndex((f: any) => f.path === path);
       if (index === -1) {
         return state;
       }
       const filesToKeep = state.openFiles.slice(0, index + 1);
-      const newActiveFilePath = filesToKeep.some((f) => f.path === state.activeFilePath)
+      const newActiveFilePath = filesToKeep.some((f: any) => f.path === state.activeFilePath)
         ? state.activeFilePath
         : filesToKeep[filesToKeep.length - 1]?.path || null;
       return {
@@ -2079,9 +2628,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   closeSavedFiles: () => {
-    set((state) => {
-      const dirtyFiles = state.openFiles.filter((f) => f.isDirty);
-      const newActiveFilePath = dirtyFiles.some((f) => f.path === state.activeFilePath)
+    set((state: any) => {
+      const dirtyFiles = state.openFiles.filter((f: any) => f.isDirty);
+      const newActiveFilePath = dirtyFiles.some((f: any) => f.path === state.activeFilePath)
         ? state.activeFilePath
         : dirtyFiles[0]?.path || null;
       return {
@@ -2096,8 +2645,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   updateFileContent: (path: string, content: string) => {
-    set((state) => {
-      const updatedFiles = state.openFiles.map((file) =>
+    set((state: any) => {
+      const updatedFiles = state.openFiles.map((file: any) =>
         file.path === path ? { ...file, content, isDirty: true } : file
       );
 
@@ -2106,8 +2655,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   markFileDirty: (path: string, isDirty: boolean) => {
-    set((state) => {
-      const updatedFiles = state.openFiles.map((file) =>
+    set((state: any) => {
+      const updatedFiles = state.openFiles.map((file: any) =>
         file.path === path ? { ...file, isDirty } : file
       );
 
@@ -2116,8 +2665,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   clearInitialPosition: (path: string) => {
-    set((state) => {
-      const updatedFiles = state.openFiles.map((file) =>
+    set((state: any) => {
+      const updatedFiles = state.openFiles.map((file: any) =>
         file.path === path ? { ...file, initialPosition: undefined } : file
       );
 
@@ -2130,7 +2679,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   reorderFiles: (fromIndex: number, toIndex: number) => {
-    set((state) => {
+    set((state: any) => {
       const newFiles = [...state.openFiles];
       const [movedFile] = newFiles.splice(fromIndex, 1);
       newFiles.splice(toIndex, 0, movedFile);
@@ -2138,13 +2687,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     });
   },
 
-  setActiveFileSelection: (selection) => {
+  setActiveFileSelection: (selection: any) => {
     set({ activeFileSelection: selection });
   },
 
   // Extension Actions
-  updateActiveExtensions: (extensions) => {
-    set((state) => ({
+  updateActiveExtensions: (extensions: any) => {
+    set((state: any) => ({
       activeExtensions: extensions,
       extensionsVersion: state.extensionsVersion + 1,
     }));
@@ -2154,7 +2703,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     // ExtensionRegistry에서 활성화된 Extension 목록을 가져와서 업데이트
     // 이 함수는 ExtensionRegistry.activate/deactivate 후에 자동으로 호출됨
     // 여기서는 버전만 증가시켜서 리렌더링 트리거
-    set((state) => ({
+    set((state: any) => ({
       extensionsVersion: state.extensionsVersion + 1,
     }));
   },
@@ -2183,7 +2732,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
-  addPersona: async (persona) => {
+  addPersona: async (persona: any) => {
     const newPersona: Persona = {
       ...persona,
       id: generateId(),
@@ -2198,12 +2747,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         await window.electronAPI.persona.save(newPersona);
       } else {
         // Web: localStorage에 저장
-        const currentState = get();
-        const userPersonas = currentState.personas.filter((p) => !p.isBuiltin);
+        const currentState = get() as any;
+        const userPersonas = currentState.personas.filter((p: any) => !p.isBuiltin);
         localStorage.setItem('sepilot_personas', JSON.stringify([...userPersonas, newPersona]));
       }
 
-      set((state) => ({
+      set((state: any) => ({
         personas: [...state.personas, newPersona],
       }));
     } catch (error) {
@@ -2212,9 +2761,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
-  updatePersona: async (id, updates) => {
-    const currentState = get();
-    const persona = currentState.personas.find((p) => p.id === id);
+  updatePersona: async (id: any, updates: any) => {
+    const currentState = get() as any;
+    const persona = currentState.personas.find((p: any) => p.id === id);
 
     if (!persona) {
       throw new Error('Persona not found');
@@ -2237,13 +2786,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       } else {
         // Web: localStorage에 업데이트
         const userPersonas = currentState.personas
-          .filter((p) => !p.isBuiltin)
-          .map((p) => (p.id === id ? updatedPersona : p));
+          .filter((p: any) => !p.isBuiltin)
+          .map((p: any) => (p.id === id ? updatedPersona : p));
         localStorage.setItem('sepilot_personas', JSON.stringify(userPersonas));
       }
 
-      set((state) => ({
-        personas: state.personas.map((p) => (p.id === id ? updatedPersona : p)),
+      set((state: any) => ({
+        personas: state.personas.map((p: any) => (p.id === id ? updatedPersona : p)),
       }));
     } catch (error) {
       console.error('Failed to update persona:', error);
@@ -2251,9 +2800,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
-  deletePersona: async (id) => {
-    const currentState = get();
-    const persona = currentState.personas.find((p) => p.id === id);
+  deletePersona: async (id: any) => {
+    const currentState = get() as any;
+    const persona = currentState.personas.find((p: any) => p.id === id);
 
     if (!persona) {
       throw new Error('Persona not found');
@@ -2269,12 +2818,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         await window.electronAPI.persona.delete(id);
       } else {
         // Web: localStorage에서 삭제
-        const userPersonas = currentState.personas.filter((p) => !p.isBuiltin && p.id !== id);
+        const userPersonas = currentState.personas.filter((p: any) => !p.isBuiltin && p.id !== id);
         localStorage.setItem('sepilot_personas', JSON.stringify(userPersonas));
       }
 
-      set((state) => ({
-        personas: state.personas.filter((p) => p.id !== id),
+      set((state: any) => ({
+        personas: state.personas.filter((p: any) => p.id !== id),
         // 삭제된 페르소나가 활성화되어 있었다면 기본으로 변경
         activePersonaId: state.activePersonaId === id ? 'default' : state.activePersonaId,
       }));
@@ -2284,7 +2833,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
-  setActivePersona: (personaId) => {
+  setActivePersona: (personaId: any) => {
     set({ activePersonaId: personaId });
     // TODO: localStorage에 저장하여 앱 재시작 시에도 유지
     if (typeof window !== 'undefined') {

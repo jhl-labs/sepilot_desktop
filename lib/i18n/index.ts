@@ -8,19 +8,6 @@ import ko from '@/locales/ko.json';
 import en from '@/locales/en.json';
 import zh from '@/locales/zh.json';
 
-// Import extension translation files
-import editorKo from '@/extensions/editor/locales/ko.json';
-import editorEn from '@/extensions/editor/locales/en.json';
-import editorZh from '@/extensions/editor/locales/zh.json';
-
-import browserKo from '@/extensions/browser/locales/ko.json';
-import browserEn from '@/extensions/browser/locales/en.json';
-import browserZh from '@/extensions/browser/locales/zh.json';
-
-import presentationKo from '@/extensions/presentation/locales/ko.json';
-import presentationEn from '@/extensions/presentation/locales/en.json';
-import presentationZh from '@/extensions/presentation/locales/zh.json';
-
 // Supported languages
 import { logger } from '@/lib/utils/logger';
 export const SUPPORTED_LANGUAGES = [
@@ -37,41 +24,11 @@ export const DEFAULT_LANGUAGE: SupportedLanguage = 'ko';
 // Language storage key
 export const LANGUAGE_STORAGE_KEY = 'sepilot_language';
 
-/**
- * Deep merge two objects
- */
-function deepMerge(target: any, source: any): any {
-  const output = { ...target };
-  if (isObject(target) && isObject(source)) {
-    Object.keys(source).forEach((key) => {
-      if (isObject(source[key])) {
-        if (!(key in target)) {
-          Object.assign(output, { [key]: source[key] });
-        } else {
-          output[key] = deepMerge(target[key], source[key]);
-        }
-      } else {
-        Object.assign(output, { [key]: source[key] });
-      }
-    });
-  }
-  return output;
-}
-
-function isObject(item: any): boolean {
-  return item && typeof item === 'object' && !Array.isArray(item);
-}
-
-// Merge extension translations with main app translations
-const mergedKo = deepMerge(deepMerge(deepMerge(ko, editorKo), browserKo), presentationKo);
-const mergedEn = deepMerge(deepMerge(deepMerge(en, editorEn), browserEn), presentationEn);
-const mergedZh = deepMerge(deepMerge(deepMerge(zh, editorZh), browserZh), presentationZh);
-
 // Translation resources
 export const resources = {
-  ko: { translation: mergedKo },
-  en: { translation: mergedEn },
-  zh: { translation: mergedZh },
+  ko: { translation: ko },
+  en: { translation: en },
+  zh: { translation: zh },
 };
 
 /**

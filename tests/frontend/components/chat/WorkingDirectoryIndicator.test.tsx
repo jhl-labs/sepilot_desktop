@@ -58,9 +58,20 @@ describe('WorkingDirectoryIndicator', () => {
     render(<WorkingDirectoryIndicator />);
 
     // When no directory is set, it shows a warning message
-    expect(
-      screen.getByText(/코딩 에이전트를 사용하려면 작업 디렉토리가 필요합니다/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/작업 디렉토리가 필요합니다/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /지금 선택/ })).toBeInTheDocument();
+  });
+
+  it('should render in cowork mode', () => {
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      workingDirectory: null,
+      setWorkingDirectory: mockSetWorkingDirectory,
+      thinkingMode: 'cowork',
+    });
+
+    render(<WorkingDirectoryIndicator />);
+
+    expect(screen.getByText(/작업 디렉토리가 필요합니다/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /지금 선택/ })).toBeInTheDocument();
   });
 

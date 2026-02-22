@@ -1,0 +1,44 @@
+{
+  "extends": "./electron/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist/electron",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@sepilot/extension-sdk": ["./node_modules/@sepilot/extension-sdk/src/index.ts"],
+      "@sepilot/extension-sdk/ui": ["./node_modules/@sepilot/extension-sdk/src/ui/index.ts"],
+      "@sepilot/extension-sdk/ui/*": ["./node_modules/@sepilot/extension-sdk/src/ui/*"],
+      "@sepilot/extension-sdk/utils": ["./node_modules/@sepilot/extension-sdk/src/utils/index.ts"],
+      "@sepilot/extension-sdk/utils/*": ["./node_modules/@sepilot/extension-sdk/src/utils/*"],
+      "@sepilot/extension-sdk/hooks/*": ["./node_modules/@sepilot/extension-sdk/src/hooks/*"],
+      "@sepilot/extension-sdk/types": ["./node_modules/@sepilot/extension-sdk/src/types/index.ts"],
+      "@sepilot/extension-sdk/ipc": ["./node_modules/@sepilot/extension-sdk/src/ipc/index.ts"],
+      "@sepilot/extension-sdk/runtime": [
+        "./node_modules/@sepilot/extension-sdk/src/runtime/index.ts"
+      ],
+      "@sepilot/extension-terminal/agents/*": ["./resources/extensions/terminal/dist/agents/*"]
+    },
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["electron/**/*.ts", "lib/**/*.ts", "types/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "lib/extension-sdk/**/*",
+    "lib/extensions/loader.ts",
+    "lib/extensions/extension-imports.ts",
+    "lib/extensions/use-extensions.ts",
+    "resources/**/*",
+    "app/**/*",
+    "components/**/*",
+    "hooks/**/*",
+    ".next/**/*",
+    "out/**/*",
+    "dist/**/*",
+    "electron/cli/**/*",
+    "electron/test-import.ts"
+  ]
+}

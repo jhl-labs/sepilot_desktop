@@ -1,23 +1,33 @@
 'use client';
 
+import React from 'react';
+
 import { useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 import { WorkingDirectoryIndicator } from '@/components/chat/WorkingDirectoryIndicator';
 import { UpdateNotificationDialog } from '@/components/UpdateNotificationDialog';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useChatStore } from '@/lib/store/chat-store';
-import { useSessionRestore } from '@/lib/auth/use-session-restore';
-import { useExtensionsInit, useExtension } from '@/lib/extensions/use-extensions';
+import { useSessionRestore } from '@/lib/domains/auth/use-session-restore';
+import { useExtension } from '@/lib/extensions/use-extensions';
+import { useShallow } from 'zustand/react/shallow';
 
 import { logger } from '@/lib/utils/logger';
 export default function Home() {
   const { appMode, createConversation, setActiveConversation, setAppMode, setActiveEditorTab } =
-    useChatStore();
-
-  // Extension 시스템 초기화
-  const { isLoaded: extensionsLoaded } = useExtensionsInit();
+    useChatStore(
+      useShallow((state) => ({
+        appMode: state.appMode,
+        createConversation: state.createConversation,
+        setActiveConversation: state.setActiveConversation,
+        setAppMode: state.setAppMode,
+        setActiveEditorTab: state.setActiveEditorTab,
+      }))
+    );
 
   // 현재 모드에 해당하는 extension 조회
+  // Extension 초기화는 ExtensionProvider (layout.tsx)에서 수행됨
   const currentExtension = useExtension(appMode);
 
   // 앱 시작 시 세션 자동 복원
@@ -150,15 +160,47 @@ export default function Home() {
     }
 
     // Extension 기반 모드 (Editor, Browser, Presentation 등 모두 동적 로딩)
-    if (extensionsLoaded && currentExtension?.MainComponent) {
+    if (currentExtension?.MainComponent) {
       const ExtensionComponent = currentExtension.MainComponent;
-      return <ExtensionComponent />;
+      return (
+        <ErrorBoundary
+          fallback={
+            <div className="flex h-full items-center justify-center">
+              <div className="max-w-md p-6 border border-destructive rounded-lg bg-destructive/5">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-destructive">Extension 오류</p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentExtension.manifest.name || currentExtension.manifest.id} Extension에서
+                    오류가 발생했습니다.
+                  </p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="mt-4 px-4 py-2 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                  >
+                    앱 새로고침
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+          onError={(error, errorInfo) => {
+            logger.error(`[Extension:${currentExtension.manifest.id}] Component error:`, {
+              error,
+              errorInfo,
+              extensionId: currentExtension.manifest.id,
+              extensionVersion: currentExtension.manifest.version,
+            });
+          }}
+        >
+          <ExtensionComponent />
+        </ErrorBoundary>
+      );
     }
 
     // Extension이 로드되지 않았거나 컴포넌트가 없는 경우
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
-        {extensionsLoaded ? `Extension for mode "${appMode}" not found` : 'Loading extensions...'}
+        Extension for mode &quot;{appMode}&quot; not found
       </div>
     );
   };

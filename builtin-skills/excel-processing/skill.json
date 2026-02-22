@@ -1,0 +1,43 @@
+{
+  "id": "com.sepilot.builtin.excel-processing",
+  "name": "Excel 데이터 처리 가이드",
+  "version": "1.1.0",
+  "author": "SEPilot Team",
+  "description": "기존 Excel 파일을 읽고 데이터를 분석하거나 내용을 수정하는 Python 스크립트 워크플로우를 제공합니다",
+  "category": "productivity",
+  "tags": [
+    "excel",
+    "xlsx",
+    "xls",
+    "csv",
+    "엑셀",
+    "스프레드시트",
+    "데이터 분석",
+    "pandas",
+    "openpyxl",
+    "피벗"
+  ],
+  "autoLoad": false,
+  "contextPatterns": [
+    "엑셀 읽",
+    "엑셀 분석",
+    "엑셀 수정",
+    "엑셀 편집",
+    "엑셀 열",
+    "excel 읽",
+    "excel 분석",
+    "excel 수정",
+    "excel 편집",
+    "xlsx 읽",
+    "xlsx 분석",
+    "xlsx 수정",
+    "xlsx 열",
+    "스프레드시트 읽",
+    "스프레드시트 분석",
+    "스프레드시트 수정",
+    "셀 수정",
+    "엑셀 데이터",
+    "엑셀 파일",
+    "read excel"
+  ]
+}

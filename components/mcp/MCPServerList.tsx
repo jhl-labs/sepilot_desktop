@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Trash2,
   ChevronDown,
@@ -25,7 +27,7 @@ import {
   Code,
   Zap,
 } from 'lucide-react';
-import { MCPServerConfig } from '@/lib/mcp/types';
+import { MCPServerConfig } from '@/lib/domains/mcp/types';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -48,18 +50,21 @@ interface MCPServerListProps {
 interface ServerWithStatus extends MCPServerConfig {
   status?: 'connected' | 'disconnected' | 'connecting' | 'error';
   toolCount?: number;
-  tools?: string[];
+  tools?: Array<{ name: string; enabled: boolean }>;
   lastConnected?: number;
   errorMessage?: string;
 }
 
 export function MCPServerList({ onRefresh }: MCPServerListProps) {
   const { t } = useTranslation();
+  const MCP_UPDATED_EVENT = 'sepilot:mcp-updated';
   const [servers, setServers] = useState<ServerWithStatus[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedServer, setExpandedServer] = useState<string | null>(null);
   const [togglingServer, setTogglingServer] = useState<string | null>(null);
   const [refreshingServer, setRefreshingServer] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [actionError, setActionError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; serverName: string | null }>({
     open: false,
     serverName: null,
@@ -85,6 +90,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
                   status: statusResult.success ? statusResult.data?.status : 'disconnected',
                   toolCount: statusResult.data?.toolCount,
                   tools: statusResult.data?.tools,
+                  errorMessage: statusResult.data?.errorMessage,
                 };
               } catch {
                 return {
@@ -95,6 +101,9 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
             })
           );
           setServers(serversWithStatus);
+          setActionError(null);
+        } else if (!result.success) {
+          setActionError(result.error || 'Failed to load MCP servers');
         }
       }
     } catch (error) {
@@ -104,20 +113,38 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
     }
   };
 
+  const filteredServers = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return servers;
+    }
+    const query = searchQuery.toLowerCase();
+    return servers.filter((server) => {
+      const nameMatch = server.name.toLowerCase().includes(query);
+      const toolMatch = server.tools?.some((tool) => tool.name.toLowerCase().includes(query));
+      return nameMatch || toolMatch;
+    });
+  }, [servers, searchQuery]);
+
   const handleToggle = async (name: string) => {
     setTogglingServer(name);
+    setActionError(null);
     try {
       if (window.electronAPI) {
         const result = await window.electronAPI.mcp.toggleServer(name);
         if (result.success) {
+          window.dispatchEvent(new CustomEvent(MCP_UPDATED_EVENT));
           await loadServers();
           onRefresh?.();
         } else {
           console.error('Failed to toggle server:', result.error);
+          setActionError(result.error || 'Failed to toggle server');
+          await loadServers();
         }
       }
     } catch (error) {
       console.error('Failed to toggle MCP server:', error);
+      setActionError(error instanceof Error ? error.message : String(error));
+      await loadServers();
     } finally {
       setTogglingServer(null);
     }
@@ -125,16 +152,28 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
 
   const handleRefreshServer = async (name: string) => {
     setRefreshingServer(name);
+    setActionError(null);
     try {
       if (window.electronAPI) {
         // 서버 재연결
-        await window.electronAPI.mcp.toggleServer(name);
-        await window.electronAPI.mcp.toggleServer(name);
+        const disableResult = await window.electronAPI.mcp.toggleServer(name);
+        if (!disableResult.success) {
+          throw new Error(disableResult.error || 'Failed to reconnect server');
+        }
+
+        const enableResult = await window.electronAPI.mcp.toggleServer(name);
+        if (!enableResult.success) {
+          throw new Error(enableResult.error || 'Failed to reconnect server');
+        }
+
+        window.dispatchEvent(new CustomEvent(MCP_UPDATED_EVENT));
         await loadServers();
         onRefresh?.();
       }
     } catch (error) {
       console.error('Failed to refresh MCP server:', error);
+      setActionError(error instanceof Error ? error.message : String(error));
+      await loadServers();
     } finally {
       setRefreshingServer(null);
     }
@@ -146,18 +185,95 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
       return;
     }
 
+    setActionError(null);
     try {
       if (window.electronAPI) {
         const result = await window.electronAPI.mcp.removeServer(name);
         if (result.success) {
+          window.dispatchEvent(new CustomEvent(MCP_UPDATED_EVENT));
           await loadServers();
           onRefresh?.();
+        } else {
+          setActionError(result.error || 'Failed to remove MCP server');
+          await loadServers();
         }
       }
     } catch (error) {
       console.error('Failed to remove MCP server:', error);
+      setActionError(error instanceof Error ? error.message : String(error));
+      await loadServers();
     } finally {
       setDeleteDialog({ open: false, serverName: null });
+    }
+  };
+
+  const handleToggleTool = async (serverName: string, toolName: string, enabled: boolean) => {
+    setActionError(null);
+    try {
+      // Optimistic update
+      setServers((prev) =>
+        prev.map((s) => {
+          if (s.name === serverName && s.tools) {
+            return {
+              ...s,
+              tools: s.tools.map((t) => (t.name === toolName ? { ...t, enabled } : t)),
+            };
+          }
+          return s;
+        })
+      );
+
+      if (window.electronAPI) {
+        const result = await window.electronAPI.mcp.toggleTool(serverName, toolName, enabled);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to toggle tool');
+        }
+        window.dispatchEvent(new CustomEvent(MCP_UPDATED_EVENT));
+      }
+    } catch (error) {
+      console.error('Failed to toggle tool:', error);
+      setActionError(error instanceof Error ? error.message : String(error));
+      loadServers(); // Revert on error
+    }
+  };
+
+  const handleToggleAllTools = async (serverName: string, enableAll: boolean) => {
+    setActionError(null);
+    try {
+      const server = servers.find((s) => s.name === serverName);
+      if (!server || !server.tools) {
+        return;
+      }
+
+      const allToolNames = server.tools.map((t) => t.name);
+
+      // Optimistic update
+      setServers((prev) =>
+        prev.map((s) => {
+          if (s.name === serverName && s.tools) {
+            return {
+              ...s,
+              tools: s.tools.map((t) => ({ ...t, enabled: enableAll })),
+            };
+          }
+          return s;
+        })
+      );
+
+      if (window.electronAPI) {
+        // If enabling all, disabled list is empty.
+        // If disabling all, disabled list contains all tools.
+        const disabledTools = enableAll ? [] : allToolNames;
+        const result = await window.electronAPI.mcp.setDisabledTools(serverName, disabledTools);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to update tool state');
+        }
+        window.dispatchEvent(new CustomEvent(MCP_UPDATED_EVENT));
+      }
+    } catch (error) {
+      console.error('Failed to toggle all tools:', error);
+      setActionError(error instanceof Error ? error.message : String(error));
+      loadServers();
     }
   };
 
@@ -228,7 +344,7 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && servers.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
         <div className="relative">
@@ -269,384 +385,358 @@ export function MCPServerList({ onRefresh }: MCPServerListProps) {
 
   return (
     <TooltipProvider>
-      <div className="space-y-3">
-        {/* Server Count Header */}
-        <div className="flex items-center justify-between px-1">
-          <p className="text-sm text-muted-foreground">
-            {t('settings.mcp.serverList.totalServers', { count: servers.length })}
-          </p>
-          <Button variant="ghost" size="sm" onClick={loadServers} className="h-8 gap-1.5">
-            <RefreshCw className={cn('h-3.5 w-3.5', isLoading && 'animate-spin')} />
-            {t('settings.mcp.serverList.refresh')}
+      <div className="space-y-4">
+        {actionError && (
+          <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {actionError}
+          </div>
+        )}
+
+        {/* Search & Refresh */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t(
+                'settings.mcp.serverList.searchPlaceholder',
+                'Search servers and tools...'
+              )}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button variant="outline" size="icon" onClick={loadServers} disabled={isLoading}>
+            <span className="sr-only">{t('settings.mcp.serverList.refresh')}</span>
+            <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
           </Button>
         </div>
 
         {/* Server List */}
-        {servers.map((server) => {
-          const Icon = getServerIcon(server);
-          const isExpanded = expandedServer === server.name;
-          const isToggling = togglingServer === server.name;
-          const isRefreshing = refreshingServer === server.name;
-          const isEnabled = server.enabled !== false;
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <p className="text-sm text-muted-foreground">
+              {t('settings.mcp.serverList.totalServers', { count: filteredServers.length })}
+            </p>
+          </div>
 
-          return (
-            <div
-              key={server.name}
-              className={cn(
-                'rounded-xl border-2 transition-all duration-200 overflow-hidden',
-                isEnabled
-                  ? 'bg-card border-border hover:border-primary/30 shadow-sm hover:shadow-md'
-                  : 'bg-muted/20 border-dashed border-muted-foreground/20 opacity-70'
-              )}
-            >
-              {/* Main Row */}
-              <div className="flex items-center gap-4 p-4">
-                {/* Server Icon */}
-                <div
-                  className={cn(
-                    'flex h-12 w-12 items-center justify-center rounded-xl shrink-0 transition-colors',
-                    isEnabled
-                      ? server.transport === 'sse'
-                        ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400'
-                        : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                      : 'bg-muted text-muted-foreground'
-                  )}
-                >
-                  <Icon className="h-6 w-6" />
-                </div>
+          {filteredServers.map((server) => {
+            const Icon = getServerIcon(server);
+            const isExpanded = expandedServer === server.name || !!searchQuery;
+            const isToggling = togglingServer === server.name;
+            const isRefreshing = refreshingServer === server.name;
+            const isEnabled = server.enabled !== false;
 
-                {/* Server Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-base truncate">{server.name}</h4>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'text-[10px] px-1.5 py-0 h-5 font-medium',
-                        getStatusColor(server.status)
-                      )}
-                    >
-                      {getStatusIcon(server.status)}
-                      <span className="ml-1">{getStatusText(server.status)}</span>
-                    </Badge>
+            const tools = server.tools || [];
+            const enabledToolsCount = tools.filter((t) => t.enabled !== false).length;
+            const allToolsEnabled = tools.length > 0 && enabledToolsCount === tools.length;
+
+            return (
+              <div
+                key={server.name}
+                className={cn(
+                  'rounded-xl border-2 transition-all duration-200 overflow-hidden',
+                  isEnabled
+                    ? 'bg-card border-border hover:border-primary/30 shadow-sm hover:shadow-md'
+                    : 'bg-muted/20 border-dashed border-muted-foreground/20 opacity-70'
+                )}
+              >
+                {/* Main Row */}
+                <div className="flex items-center gap-4 p-4">
+                  {/* Server Icon */}
+                  <div
+                    className={cn(
+                      'flex h-12 w-12 items-center justify-center rounded-xl shrink-0 transition-colors',
+                      isEnabled
+                        ? server.transport === 'sse'
+                          ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                        : 'bg-muted text-muted-foreground'
+                    )}
+                  >
+                    <Icon className="h-6 w-6" />
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      {server.transport === 'sse' ? (
-                        <>
-                          <Cloud className="h-3 w-3" />
-                          SSE
-                        </>
-                      ) : (
-                        <>
-                          <Terminal className="h-3 w-3" />
-                          stdio
-                        </>
-                      )}
-                    </span>
-                    {server.toolCount !== undefined && server.toolCount > 0 && (
+
+                  {/* Server Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-base truncate">{server.name}</h4>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'text-[10px] px-1.5 py-0 h-5 font-medium',
+                          getStatusColor(server.status)
+                        )}
+                      >
+                        {getStatusIcon(server.status)}
+                        <span className="ml-1">{getStatusText(server.status)}</span>
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <Wrench className="h-3 w-3" />
-                        {t('settings.mcp.serverList.toolCount', { count: server.toolCount })}
+                        {server.transport === 'sse' ? (
+                          <>
+                            <Cloud className="h-3 w-3" />
+                            SSE
+                          </>
+                        ) : (
+                          <>
+                            <Terminal className="h-3 w-3" />
+                            stdio
+                          </>
+                        )}
                       </span>
-                    )}
-                    {server.transport === 'sse' && server.url && (
-                      <span className="truncate max-w-[200px] font-mono text-[10px]">
-                        {server.url}
-                      </span>
-                    )}
-                    {server.transport === 'stdio' && server.command && (
-                      <span className="truncate font-mono text-[10px]">{server.command}</span>
-                    )}
+                      {server.toolCount !== undefined && server.toolCount > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Wrench className="h-3 w-3" />
+                          {t('settings.mcp.serverList.toolCount', { count: enabledToolsCount })}
+                          {enabledToolsCount !== server.toolCount && (
+                            <span className="text-muted-foreground/60"> / {server.toolCount}</span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Refresh Button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRefreshServer(server.name)}
+                          disabled={isRefreshing || !isEnabled}
+                          className="h-8 w-8"
+                        >
+                          <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t('settings.mcp.serverList.tooltips.reconnect')}
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* Toggle Switch */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center">
+                          {isToggling ? (
+                            <div className="h-8 w-12 flex items-center justify-center">
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            </div>
+                          ) : (
+                            <Switch
+                              checked={isEnabled}
+                              onCheckedChange={() => handleToggle(server.name)}
+                              className="data-[state=checked]:bg-green-500"
+                            />
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t(
+                          isEnabled
+                            ? 'settings.mcp.serverList.tooltips.deactivate'
+                            : 'settings.mcp.serverList.tooltips.activate'
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* Expand Button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setExpandedServer(isExpanded ? null : server.name)}
+                          className="h-8 w-8"
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isExpanded
+                          ? t('settings.mcp.serverList.expand.hide')
+                          : t('settings.mcp.serverList.expand.show')}
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* Delete Button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteDialog({ open: true, serverName: server.name })}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t('settings.mcp.serverList.tooltips.delete')}
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  {/* Refresh Button */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRefreshServer(server.name)}
-                        disabled={isRefreshing || !isEnabled}
-                        className="h-8 w-8"
-                      >
-                        <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {t('settings.mcp.serverList.tooltips.reconnect')}
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Toggle Switch */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center">
-                        {isToggling ? (
-                          <div className="h-8 w-12 flex items-center justify-center">
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          </div>
-                        ) : (
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={() => handleToggle(server.name)}
-                            className="data-[state=checked]:bg-green-500"
-                          />
-                        )}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {t(
-                        isEnabled
-                          ? 'settings.mcp.serverList.tooltips.deactivate'
-                          : 'settings.mcp.serverList.tooltips.activate'
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Expand Button */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setExpandedServer(isExpanded ? null : server.name)}
-                        className="h-8 w-8"
-                      >
-                        {isExpanded ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {isExpanded
-                        ? t('settings.mcp.serverList.expand.hide')
-                        : t('settings.mcp.serverList.expand.show')}
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Delete Button */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteDialog({ open: true, serverName: server.name })}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('settings.mcp.serverList.tooltips.delete')}</TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
-
-              {/* Expanded Details */}
-              {isExpanded && (
-                <div className="border-t bg-muted/30 px-4 py-4">
-                  <div className="grid gap-4">
-                    {/* Connection Info */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">
-                          {t('settings.mcp.serverList.labels.transport')}
-                        </p>
-                        <div className="flex items-center gap-1.5">
-                          {server.transport === 'sse' ? (
-                            <Cloud className="h-4 w-4 text-cyan-500" />
-                          ) : (
-                            <Terminal className="h-4 w-4 text-blue-500" />
-                          )}
-                          <span className="text-sm font-medium">
-                            {server.transport.toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">
-                          {t('settings.mcp.serverList.labels.status')}
-                        </p>
-                        <div className="flex items-center gap-1.5">
-                          {server.enabled !== false ? (
-                            <>
-                              <Power className="h-4 w-4 text-green-500" />
-                              <span className="text-sm font-medium">
-                                {t('settings.mcp.serverList.status.active')}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <PowerOff className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm font-medium">
-                                {t('settings.mcp.serverList.status.inactive')}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">
-                          {t('settings.mcp.serverList.labels.registeredTools')}
-                        </p>
-                        <div className="flex items-center gap-1.5">
-                          <Wrench className="h-4 w-4 text-orange-500" />
-                          <span className="text-sm font-medium">
-                            {t('settings.mcp.serverList.toolsUnit', {
-                              count: server.toolCount ?? 0,
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                      {server.transport === 'stdio' && (
+                {/* Expanded Details */}
+                {isExpanded && (
+                  <div className="border-t bg-muted/30 px-4 py-4">
+                    <div className="grid gap-4">
+                      {/* Connection Info */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="space-y-1">
                           <p className="text-xs font-medium text-muted-foreground">
-                            {t('settings.mcp.serverList.labels.argCount')}
+                            {t('settings.mcp.serverList.labels.transport')}
                           </p>
-                          <span className="text-sm font-medium">
-                            {t('settings.mcp.serverList.labels.argCountValue', {
-                              count: server.args?.length ?? 0,
+                          <div className="flex items-center gap-1.5">
+                            {server.transport === 'sse' ? (
+                              <Cloud className="h-4 w-4 text-cyan-500" />
+                            ) : (
+                              <Terminal className="h-4 w-4 text-blue-500" />
+                            )}
+                            <span className="text-sm font-medium">
+                              {server.transport.toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground">
+                            {t('settings.mcp.serverList.labels.status')}
+                          </p>
+                          <div className="flex items-center gap-1.5">
+                            {server.enabled !== false ? (
+                              <>
+                                <Power className="h-4 w-4 text-green-500" />
+                                <span className="text-sm font-medium">
+                                  {t('settings.mcp.serverList.status.active')}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <PowerOff className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm font-medium">
+                                  {t('settings.mcp.serverList.status.inactive')}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {/* More details if needed */}
+                      </div>
+
+                      {server.status === 'error' && server.errorMessage && (
+                        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                          {server.errorMessage}
+                        </div>
+                      )}
+
+                      {/* Tool Management Section */}
+                      {server.tools && server.tools.length > 0 && (
+                        <div className="space-y-3 pt-2 border-t border-dashed">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium">
+                              {t('settings.mcp.serverList.labels.availableTools')}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={() => handleToggleAllTools(server.name, !allToolsEnabled)}
+                              >
+                                {allToolsEnabled
+                                  ? t('settings.mcp.serverList.actions.deselectAll')
+                                  : t('settings.mcp.serverList.actions.selectAll')}
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {server.tools.map((tool) => {
+                              const toolEnabled = tool.enabled !== false;
+                              return (
+                                <div
+                                  key={tool.name}
+                                  className={cn(
+                                    'flex items-center gap-3 p-2 rounded-lg border transition-colors',
+                                    toolEnabled
+                                      ? 'bg-background border-border'
+                                      : 'bg-muted/50 border-transparent text-muted-foreground'
+                                  )}
+                                >
+                                  <Checkbox
+                                    id={`${server.name}-${tool.name}`}
+                                    checked={toolEnabled}
+                                    onCheckedChange={(checked: boolean) =>
+                                      handleToggleTool(server.name, tool.name, checked)
+                                    }
+                                  />
+                                  <label
+                                    htmlFor={`${server.name}-${tool.name}`}
+                                    className="text-sm font-mono flex-1 cursor-pointer select-none truncate"
+                                    title={tool.name}
+                                  >
+                                    {tool.name}
+                                  </label>
+                                </div>
+                              );
                             })}
-                          </span>
+                          </div>
                         </div>
                       )}
                     </div>
-
-                    {/* Command/URL */}
-                    {server.transport === 'stdio' ? (
-                      <>
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium text-muted-foreground">
-                            {t('settings.mcp.serverList.labels.execCommand')}
-                          </p>
-                          <code className="block rounded-lg bg-background border px-3 py-2 font-mono text-xs">
-                            {server.command}
-                          </code>
-                        </div>
-                        {(server.args?.length ?? 0) > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium text-muted-foreground">
-                              {t('settings.mcp.serverList.labels.execArgs')}
-                            </p>
-                            <div className="rounded-lg bg-background border p-3 space-y-1">
-                              {server.args?.map((arg, index) => (
-                                <code
-                                  key={index}
-                                  className="block font-mono text-xs text-foreground/80"
-                                >
-                                  {arg}
-                                </code>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium text-muted-foreground">
-                            {t('settings.mcp.serverList.labels.sseUrl')}
-                          </p>
-                          <code className="block rounded-lg bg-background border px-3 py-2 font-mono text-xs break-all">
-                            {server.url}
-                          </code>
-                        </div>
-                        {server.headers && Object.keys(server.headers).length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium text-muted-foreground">
-                              {t('settings.mcp.serverList.labels.headers')}
-                            </p>
-                            <div className="rounded-lg bg-background border p-3 space-y-1">
-                              {Object.entries(server.headers).map(([key, value]) => (
-                                <code
-                                  key={key}
-                                  className="block font-mono text-xs text-foreground/80"
-                                >
-                                  {key}:{' '}
-                                  {key.toLowerCase().includes('auth') ||
-                                  key.toLowerCase().includes('key')
-                                    ? '••••••••'
-                                    : value}
-                                </code>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-
-                    {/* Tools List */}
-                    {server.tools && server.tools.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">
-                          {t('settings.mcp.serverList.labels.availableTools')}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {server.tools.map((tool) => (
-                            <Badge key={tool} variant="secondary" className="text-xs font-mono">
-                              {tool}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Info */}
-                    <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/10 p-3">
-                      <Zap className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <p className="text-xs text-muted-foreground">
-                        {t('settings.mcp.serverList.agentInfo')}
-                      </p>
-                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        open={deleteDialog.open}
-        onOpenChange={(open) =>
-          setDeleteDialog({ open, serverName: open ? deleteDialog.serverName : null })
-        }
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('settings.mcp.serverList.deleteDialog.title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              <div className="space-y-2">
-                <p>
-                  {t('settings.mcp.serverList.deleteDialog.question', {
-                    name: deleteDialog.serverName,
-                  })}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {t('settings.mcp.serverList.deleteDialog.warning')}
-                </p>
+                )}
               </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {t('settings.mcp.serverList.deleteDialog.cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRemove}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {t('settings.mcp.serverList.deleteDialog.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            );
+          })}
+        </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog
+          open={deleteDialog.open}
+          onOpenChange={(open) =>
+            setDeleteDialog({ open, serverName: open ? deleteDialog.serverName : null })
+          }
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('settings.mcp.serverList.deleteDialog.title')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                <div className="space-y-2">
+                  <p>
+                    {t('settings.mcp.serverList.deleteDialog.question', {
+                      name: deleteDialog.serverName,
+                    })}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('settings.mcp.serverList.deleteDialog.warning')}
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {t('settings.mcp.serverList.deleteDialog.cancel')}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleRemove}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {t('settings.mcp.serverList.deleteDialog.confirm')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </TooltipProvider>
   );
 }

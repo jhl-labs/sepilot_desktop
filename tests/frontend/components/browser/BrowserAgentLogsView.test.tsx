@@ -7,13 +7,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { BrowserAgentLogsView } from '@/extensions/browser/components/BrowserAgentLogsView';
-import { useChatStore } from '@/lib/store/chat-store';
+import { useExtensionStore } from '@sepilot/extension-sdk/store';
 import type { BrowserAgentLogEntry } from '@/extensions/browser/types';
 
-// Mock useChatStore
-jest.mock('@/lib/store/chat-store', () => ({
-  useChatStore: jest.fn(),
-}));
+const mockUseExtensionStore = useExtensionStore as jest.Mock;
 
 describe('BrowserAgentLogsView', () => {
   const mockClearBrowserAgentLogs = jest.fn();
@@ -25,7 +22,7 @@ describe('BrowserAgentLogsView', () => {
 
   describe('Empty State', () => {
     beforeEach(() => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -51,7 +48,7 @@ describe('BrowserAgentLogsView', () => {
 
   describe('Header', () => {
     beforeEach(() => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -104,7 +101,7 @@ describe('BrowserAgentLogsView', () => {
 
   describe('Running State', () => {
     it('should show running indicator when agent is running', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [],
         browserAgentIsRunning: true,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -117,7 +114,7 @@ describe('BrowserAgentLogsView', () => {
     });
 
     it('should not show running indicator when agent is not running', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -130,7 +127,7 @@ describe('BrowserAgentLogsView', () => {
     });
 
     it('should show pulse animation when running', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [],
         browserAgentIsRunning: true,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -182,7 +179,7 @@ describe('BrowserAgentLogsView', () => {
     ];
 
     beforeEach(() => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: mockLogs,
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -251,7 +248,7 @@ describe('BrowserAgentLogsView', () => {
         },
       };
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [errorLog],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -277,7 +274,7 @@ describe('BrowserAgentLogsView', () => {
         },
       };
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [decisionLog],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -303,7 +300,7 @@ describe('BrowserAgentLogsView', () => {
         },
       };
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [longLog],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -325,7 +322,7 @@ describe('BrowserAgentLogsView', () => {
         message: 'Task completed',
       };
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [completionLog],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -348,7 +345,7 @@ describe('BrowserAgentLogsView', () => {
         message: 'Info message',
       };
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [infoLog],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -370,7 +367,7 @@ describe('BrowserAgentLogsView', () => {
         message: 'Success message',
       };
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [successLog],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -392,7 +389,7 @@ describe('BrowserAgentLogsView', () => {
         message: 'Error message',
       };
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [errorLog],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -408,7 +405,7 @@ describe('BrowserAgentLogsView', () => {
 
   describe('Auto Scroll', () => {
     it('should have scrollable container', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -432,7 +429,7 @@ describe('BrowserAgentLogsView', () => {
         message: 'Unknown level log',
       };
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [unknownLevelLog],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -454,7 +451,7 @@ describe('BrowserAgentLogsView', () => {
         message: 'Unknown phase log',
       };
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [unknownPhaseLog],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -475,7 +472,7 @@ describe('BrowserAgentLogsView', () => {
         message: 'Default icon test',
       };
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [defaultIconLog],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,
@@ -498,7 +495,7 @@ describe('BrowserAgentLogsView', () => {
         message: 'Warning message',
       };
 
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
+      mockUseExtensionStore.mockReturnValue({
         browserAgentLogs: [warningLog],
         browserAgentIsRunning: false,
         clearBrowserAgentLogs: mockClearBrowserAgentLogs,

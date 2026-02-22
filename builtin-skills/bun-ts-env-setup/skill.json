@@ -1,0 +1,24 @@
+{
+  "id": "com.sepilot.builtin.bun-ts-env-setup",
+  "name": "Bun/TypeScript 실행 환경",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "SEPilot 전용 Bun 기반 TypeScript/JavaScript 실행 환경을 자동으로 구성합니다",
+  "category": "devops",
+  "tags": ["bun", "typescript", "javascript", "ts", "js", "node", "npm"],
+  "autoLoad": false,
+  "contextPatterns": [
+    "bun 실행",
+    "bun run",
+    "bun install",
+    "bun 설치",
+    "bun 환경",
+    "bunx 실행",
+    "typescript 실행 환경",
+    "ts 스크립트 실행",
+    "ts script 실행",
+    "node 스크립트 실행",
+    "타입스크립트 실행",
+    "자바스크립트 실행 환경"
+  ]
+}

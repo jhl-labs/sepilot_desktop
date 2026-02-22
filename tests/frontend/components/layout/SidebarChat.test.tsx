@@ -25,14 +25,6 @@ jest.mock('@/components/layout/ChatHistory', () => ({
   ),
 }));
 
-jest.mock('@/components/chat/ChatChatArea', () => ({
-  ChatChatArea: () => <div data-testid="chat-chat-area">Chat Chat Area</div>,
-}));
-
-jest.mock('@/components/rag/DocumentList', () => ({
-  DocumentList: () => <div data-testid="document-list">Document List</div>,
-}));
-
 jest.mock('@/components/persona/PersonaDialog', () => ({
   PersonaDialog: ({
     open,

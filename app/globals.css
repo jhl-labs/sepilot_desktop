@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+/* External library CSS - moved here to avoid Electron Main Process errors */
+@import '@xterm/xterm/css/xterm.css';
+@import 'reactflow/dist/style.css';
+
 @theme {
   --color-background: hsl(0 0% 100%);
   --color-foreground: hsl(222.2 84% 4.9%);

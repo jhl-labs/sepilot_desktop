@@ -8,15 +8,21 @@ import { useRef, useEffect } from 'react';
 import type { ChatDataSource } from '../types';
 
 export function useChatMessages(dataSource: ChatDataSource) {
-  const { messages, streamingState } = dataSource;
+  const { messages: rawMessages, streamingState } = dataSource;
+  // Ensure messages is always an array (prevents undefined access before store slice is registered)
+  const messages = rawMessages ?? [];
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      }, 0);
     }
-  }, [messages]);
+  }, [messages, streamingState]);
 
   const isStreaming = !!streamingState;
 

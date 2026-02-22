@@ -134,7 +134,7 @@ describe('NetworkSettingsTab', () => {
       ...defaultNetworkConfig,
       proxy: {
         enabled: true,
-        mode: 'system',
+        mode: 'none',
       },
     };
 

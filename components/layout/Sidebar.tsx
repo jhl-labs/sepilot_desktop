@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/lib/store/chat-store';
 import { useState, useEffect } from 'react';
 import { BetaConfig } from '@/types';
-import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { SidebarChat } from './SidebarChat';
-import { useExtension, useExtensions } from '@/lib/extensions/use-extensions';
+import { useExtensions } from '@/lib/extensions/use-extensions';
 import { isElectron } from '@/lib/platform';
 import * as LucideIcons from 'lucide-react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
+import { runPromisesInBatches } from '@/lib/utils/batch';
 
 interface SidebarProps {
   onDocumentsClick?: () => void;
@@ -24,25 +26,30 @@ interface SidebarProps {
   onConversationClick?: () => void;
 }
 
+const DELETE_CONVERSATION_BATCH_SIZE = 10;
+
 export function Sidebar({
   onDocumentsClick,
   onGalleryClick,
   onConversationClick,
 }: SidebarProps = {}) {
   const { t } = useTranslation();
-  const {
-    appMode,
-    setAppMode,
-    conversations,
-    createConversation,
-    deleteConversation,
-    setChatViewMode,
-  } = useChatStore();
+  const { appMode, setAppMode, createConversation, deleteConversation, setChatViewMode } =
+    useChatStore(
+      useShallow((state) => ({
+        appMode: state.appMode,
+        setAppMode: state.setAppMode,
+        createConversation: state.createConversation,
+        deleteConversation: state.deleteConversation,
+        setChatViewMode: state.setChatViewMode,
+      }))
+    );
 
   // Get current extension for dynamic sidebar rendering
-  const currentExtension = useExtension(appMode);
+  // useExtensions()는 extensionsVersion을 구독하므로 Extension 로드 시 자동 업데이트됨
+  // useExtension()은 mode 변경 시에만 재실행되므로 Extension 로딩 타이밍 이슈가 있음
   const { activeExtensions: allExtensions } = useExtensions();
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const currentExtension = allExtensions.find((ext) => ext.manifest.mode === appMode) ?? null;
   const [betaConfig, setBetaConfig] = useState<BetaConfig>({});
 
   // Load beta config
@@ -97,6 +104,7 @@ export function Sidebar({
   const modeLabel = getModeLabel();
 
   const handleDeleteAll = async () => {
+    const { conversations } = useChatStore.getState();
     if (conversations.length === 0) {
       return;
     }
@@ -110,10 +118,22 @@ export function Sidebar({
       const newConversationId = await createConversation();
 
       // 그 다음 기존 대화들을 삭제 (새로 만든 대화는 제외)
-      for (const conversation of conversations) {
-        if (conversation.id !== newConversationId) {
-          await deleteConversation(conversation.id);
+      const conversationIdsToDelete = conversations
+        .filter((conversation: { id: string }) => conversation.id !== newConversationId)
+        .map((conversation: { id: string }) => conversation.id);
+
+      const deleteResults = await runPromisesInBatches(
+        conversationIdsToDelete,
+        DELETE_CONVERSATION_BATCH_SIZE,
+        async (conversationId) => {
+          await deleteConversation(conversationId);
+          return conversationId;
         }
+      );
+
+      const failedCount = deleteResults.filter((result) => result.status === 'rejected').length;
+      if (failedCount > 0) {
+        console.error(`[Sidebar] Failed to delete ${failedCount} conversations`);
       }
     }
   };
@@ -195,25 +215,39 @@ export function Sidebar({
 
       {/* Render mode-specific component */}
       <div className="flex-1 min-h-0">
-        {appMode === 'chat' && (
-          <SidebarChat
-            onGalleryClick={onGalleryClick}
-            onConversationClick={onConversationClick}
-            onSettingsClick={() => setSettingsOpen(true)}
-            onDocumentsClick={onDocumentsClick}
-          />
-        )}
-        {/* Extension-based sidebar rendering (Editor, Browser, Presentation 등) */}
-        {appMode !== 'chat' &&
-          currentExtension?.SidebarComponent &&
-          (() => {
-            const ExtensionSidebar = currentExtension.SidebarComponent;
-            return <ExtensionSidebar />;
-          })()}
+        <ErrorBoundary
+          fallback={
+            <div className="flex h-full items-center justify-center p-4">
+              <div className="max-w-sm space-y-2 text-center">
+                <p className="text-sm font-medium text-destructive">사이드바 오류</p>
+                <p className="text-xs text-muted-foreground">
+                  사이드바를 표시하는 중 오류가 발생했습니다.
+                </p>
+              </div>
+            </div>
+          }
+        >
+          {appMode === 'chat' && (
+            <SidebarChat
+              onGalleryClick={onGalleryClick}
+              onConversationClick={onConversationClick}
+              onSettingsClick={() => {
+                window.dispatchEvent(new CustomEvent('sepilot:open-settings'));
+              }}
+              onDocumentsClick={onDocumentsClick}
+            />
+          )}
+          {/* Extension-based sidebar rendering (Editor, Browser, Presentation 등) */}
+          {appMode !== 'chat' &&
+            currentExtension?.SidebarComponent &&
+            (() => {
+              const ExtensionSidebar = currentExtension.SidebarComponent as React.ComponentType<{
+                onDocumentsClick?: () => void;
+              }>;
+              return <ExtensionSidebar onDocumentsClick={onDocumentsClick} />;
+            })()}
+        </ErrorBoundary>
       </div>
-
-      {/* Settings Dialog */}
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }

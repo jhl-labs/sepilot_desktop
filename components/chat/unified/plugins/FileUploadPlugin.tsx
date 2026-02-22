@@ -22,6 +22,22 @@ export function FileUploadPlugin({ onFileDrop, isTextFile, children }: FileUploa
   const [isDragging, setIsDragging] = useState(false);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
+  const readImageAsDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result;
+        if (typeof base64 === 'string') {
+          resolve(base64);
+          return;
+        }
+        reject(new Error('Failed to convert dropped image to base64'));
+      };
+      reader.onerror = () => reject(reader.error || new Error('Failed to read dropped image'));
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -55,31 +71,46 @@ export function FileUploadPlugin({ onFileDrop, isTextFile, children }: FileUploa
     const textContents: string[] = [];
     const imageFiles: { filename: string; mimeType: string; base64: string }[] = [];
 
-    for (const file of files) {
-      // 텍스트 파일인지 확인
-      if (isTextFile(file)) {
-        try {
+    const parsedResults = await Promise.allSettled(
+      files.map(async (file) => {
+        if (isTextFile(file)) {
           const text = await file.text();
-          textContents.push(`📄 **${file.name}**\n\`\`\`\n${text}\n\`\`\``);
-        } catch (error) {
-          console.error(`Failed to read file ${file.name}:`, error);
+          return {
+            type: 'text' as const,
+            payload: `📄 **${file.name}**\n\`\`\`\n${text}\n\`\`\``,
+          };
         }
-      } else if (file.type.startsWith('image/')) {
-        // 이미지 파일 처리
-        try {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const base64 = event.target?.result as string;
-            imageFiles.push({
+
+        if (file.type.startsWith('image/')) {
+          const base64 = await readImageAsDataUrl(file);
+          return {
+            type: 'image' as const,
+            payload: {
               filename: file.name,
               mimeType: file.type,
               base64,
-            });
+            },
           };
-          reader.readAsDataURL(file);
-        } catch (error) {
-          console.error(`Failed to read image ${file.name}:`, error);
         }
+
+        return null;
+      })
+    );
+
+    for (const result of parsedResults) {
+      if (result.status === 'rejected') {
+        console.error('Failed to process dropped file:', result.reason);
+        continue;
+      }
+
+      if (!result.value) {
+        continue;
+      }
+
+      if (result.value.type === 'text') {
+        textContents.push(result.value.payload);
+      } else {
+        imageFiles.push(result.value.payload);
       }
     }
 

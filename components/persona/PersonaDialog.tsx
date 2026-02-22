@@ -30,7 +30,7 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
     avatar: '🤖',
   });
 
-  const activePersona = personas.find((p) => p.id === activePersonaId);
+  const activePersona = personas.find((p: any) => p.id === activePersonaId);
 
   // Builtin persona의 번역된 이름, 설명, systemPrompt를 가져오는 헬퍼 함수
   const getPersonaDisplayText = (
@@ -145,7 +145,7 @@ export function PersonaDialog({ open, onOpenChange }: PersonaDialogProps) {
 
             <ScrollArea className="h-[calc(100%-40px)]">
               <div className="space-y-1">
-                {personas.map((persona) => (
+                {personas.map((persona: any) => (
                   <div
                     key={persona.id}
                     className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${

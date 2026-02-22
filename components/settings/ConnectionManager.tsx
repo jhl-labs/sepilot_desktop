@@ -142,7 +142,7 @@ export function ConnectionManager({
 
   const handleDelete = (id: string) => {
     // Find models that reference this connection
-    const referencedModels = models.filter((m) => m.connectionId === id);
+    const referencedModels = models.filter((m: any) => m.connectionId === id);
 
     if (referencedModels.length > 0) {
       const modelNames = referencedModels.map((m) => m.displayName || m.modelId).join(', ');
@@ -161,7 +161,7 @@ export function ConnectionManager({
       // Delete associated models
       if (onModelsChange) {
         const modelIdsToDelete = referencedModels.map((m) => m.id);
-        onModelsChange(models.filter((m) => !modelIdsToDelete.includes(m.id)));
+        onModelsChange(models.filter((m: any) => !modelIdsToDelete.includes(m.id)));
 
         // Clear active model selections if they reference deleted models
         if (onActiveModelsChange) {

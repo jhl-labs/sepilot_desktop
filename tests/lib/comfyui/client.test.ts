@@ -7,7 +7,7 @@ import {
   getComfyUIClient,
   initializeComfyUIClient,
   isComfyUIEnabled,
-} from '@/lib/comfyui/client';
+} from '@/lib/domains/integration/comfyui/client';
 import type { ComfyUIConfig } from '@/types';
 
 describe('ComfyUIClient', () => {

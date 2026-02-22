@@ -17,9 +17,9 @@ import {
   ChatState,
   RAGState,
   AgentState,
-} from '@/lib/langgraph/state';
+} from '@/lib/domains/agent/state';
 import { Message, ToolCall } from '@/types';
-import { Document, ToolResult } from '@/lib/langgraph/types';
+import { Document, ToolResult } from '@/lib/domains/agent/types';
 
 describe.skip('langgraph state', () => {
   describe('ChatStateAnnotation', () => {

@@ -6,7 +6,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { UnifiedChatArea } from '@/components/chat/unified/UnifiedChatArea';
-import { ChatConfig, ChatMode } from '@/components/chat/unified/types';
+import { ChatConfig, ChatMode, ChatDataSource } from '@/components/chat/unified/types';
 import { Message } from '@/types';
 
 // Mock hooks
@@ -19,25 +19,25 @@ jest.mock('@/components/chat/unified/hooks/useChatMessages', () => ({
 }));
 
 // Mock child components
-jest.mock('@/components/chat/MessageBubble', () => ({
+jest.mock('@/components/chat/unified/components/MessageBubble', () => ({
   MessageBubble: ({ message }: { message: Message }) => (
     <div data-testid={`message-${message.id}`}>{message.content}</div>
   ),
 }));
 
-jest.mock('@/components/chat/ToolResult', () => ({
+jest.mock('@/components/chat/unified/components/ToolResult', () => ({
   ToolResult: () => <div data-testid="tool-result">Tool Result</div>,
 }));
 
-jest.mock('@/components/chat/InteractiveSelect', () => ({
+jest.mock('@/components/chat/unified/components/InteractiveSelect', () => ({
   InteractiveSelect: () => <div data-testid="interactive-select">Interactive Select</div>,
 }));
 
-jest.mock('@/components/chat/InteractiveInput', () => ({
+jest.mock('@/components/chat/unified/components/InteractiveInput', () => ({
   InteractiveInput: () => <div data-testid="interactive-input">Interactive Input</div>,
 }));
 
-jest.mock('@/components/chat/ToolApprovalRequest', () => ({
+jest.mock('@/components/chat/unified/components/ToolApprovalRequest', () => ({
   ToolApprovalRequest: () => <div data-testid="tool-approval-request">Tool Approval Request</div>,
 }));
 
@@ -62,23 +62,30 @@ jest.mock('@/lib/utils/clipboard', () => ({
 }));
 
 describe('UnifiedChatArea', () => {
+  const createMockDataSource = (messages: Message[] = []): ChatDataSource => ({
+    messages,
+    streamingState: null,
+    addMessage: jest.fn().mockResolvedValue({ id: 'new-msg', created_at: Date.now() }),
+    updateMessage: jest.fn(),
+    clearMessages: jest.fn(),
+    startStreaming: jest.fn(),
+    stopStreaming: jest.fn(),
+  });
+
   const createDefaultConfig = (overrides?: Partial<ChatConfig>): ChatConfig => ({
     mode: 'main' as ChatMode,
     features: {
-      fileUpload: true,
-      imageAttachment: true,
-      codeExecution: false,
-      toolApproval: true,
-      editRegenerate: true,
+      enableFileUpload: true,
+      enableImageUpload: true,
+      enableToolApproval: true,
+      enableEdit: true,
+      enableRegenerate: true,
     },
     style: {
       fontSize: '1rem',
-      showTimestamps: false,
     },
-    dataSource: {
-      conversationId: 'test-conv',
-      messages: [],
-    },
+    dataSource: createMockDataSource(),
+    conversationId: 'test-conv',
     ...overrides,
   });
 
@@ -118,10 +125,7 @@ describe('UnifiedChatArea', () => {
     ];
 
     const config = createDefaultConfig({
-      dataSource: {
-        conversationId: 'test-conv',
-        messages,
-      },
+      dataSource: createMockDataSource(messages),
     });
 
     // Mock useChatMessages to return messages
@@ -164,7 +168,6 @@ describe('UnifiedChatArea', () => {
     const config = createDefaultConfig({
       style: {
         fontSize: '1.5rem',
-        showTimestamps: false,
       },
     });
 
@@ -225,10 +228,7 @@ describe('UnifiedChatArea', () => {
     ];
 
     const config = createDefaultConfig({
-      dataSource: {
-        conversationId: 'test-conv',
-        messages,
-      },
+      dataSource: createMockDataSource(messages),
     });
 
     const { useChatMessages } = require('@/components/chat/unified/hooks/useChatMessages');

@@ -1,4 +1,0 @@
-
-> sepilot-desktop@0.6.20 lint C:\git\sepilot_desktop
-> eslint .
-

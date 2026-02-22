@@ -1,4 +1,56 @@
 // Global type definitions
+// SDK 공유 타입 re-export (Extension과 Host 모두에서 사용)
+import type {
+  Message as SDKMessage,
+  ToolCall as SDKToolCall,
+  ImageAttachment as SDKImageAttachment,
+  FileChange as SDKFileChange,
+  ReferencedDocument as SDKReferencedDocument,
+  ThinkingMode as SDKThinkingMode,
+  GraphConfig as SDKGraphConfig,
+  ToolResult as SDKToolResult,
+  ToolApprovalCallback as SDKToolApprovalCallback,
+  StreamEvent as SDKStreamEvent,
+  ApprovalHistoryEntry as SDKApprovalHistoryEntry,
+  AgentTraceMetrics as SDKAgentTraceMetrics,
+  CompletionChecklist as SDKCompletionChecklist,
+  VerificationStatus as SDKVerificationStatus,
+  WorkingMemory as SDKWorkingMemory,
+  LLMOptions as SDKLLMOptions,
+  LLMResponse as SDKLLMResponse,
+  NetworkConfig as SDKNetworkConfig,
+  SupportedLanguage as SDKSupportedLanguage,
+} from '@sepilot/extension-sdk/types';
+
+// Re-export SDK types with consistent naming
+export type {
+  SDKMessage,
+  SDKToolCall,
+  SDKImageAttachment,
+  SDKFileChange,
+  SDKReferencedDocument,
+  SDKThinkingMode,
+  SDKGraphConfig,
+  SDKToolResult,
+  SDKToolApprovalCallback,
+  SDKStreamEvent,
+  SDKApprovalHistoryEntry,
+  SDKAgentTraceMetrics,
+  SDKCompletionChecklist,
+  SDKVerificationStatus,
+  SDKWorkingMemory,
+  SDKLLMOptions,
+  SDKLLMResponse,
+  SDKNetworkConfig,
+  SDKSupportedLanguage,
+};
+
+// Application-specific type aliases for internal use
+export type ApprovalHistoryEntry = SDKApprovalHistoryEntry;
+export type AgentTraceMetrics = SDKAgentTraceMetrics;
+export type CompletionChecklist = SDKCompletionChecklist;
+export type VerificationStatus = SDKVerificationStatus;
+export type WorkingMemory = SDKWorkingMemory;
 
 export interface ReferencedDocument {
   id: string;
@@ -50,6 +102,11 @@ export interface PendingToolApproval {
   messageId: string;
   toolCalls: ToolCall[];
   timestamp: number;
+  requestKey?: string;
+  note?: string;
+  riskLevel?: 'low' | 'medium' | 'high';
+  traceMetrics?: AgentTraceMetrics;
+  approvalHistory?: ApprovalHistoryEntry[];
 }
 
 /**
@@ -64,9 +121,11 @@ export interface ConversationChatSettings {
     | 'deep'
     | 'deep-web-research'
     | 'coding'
+    | 'cowork'
     | 'browser-agent'
     | 'editor-agent'
     | 'terminal-agent';
+  inputTrustLevel?: 'trusted' | 'untrusted';
   enableRAG?: boolean;
   enableTools?: boolean;
   enabledTools?: string[]; // Individual tool names
@@ -81,11 +140,12 @@ export interface Conversation {
   updated_at: number;
   personaId?: string; // 대화에 지정된 페르소나 ID
   chatSettings?: ConversationChatSettings; // 대화별 채팅 설정
+  isPinned?: boolean; // 대화 고정 여부
 }
 
 export interface VisionModelConfig {
   enabled: boolean;
-  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
   baseURL?: string;
   apiKey?: string;
   model: string;
@@ -95,7 +155,7 @@ export interface VisionModelConfig {
 
 export interface AutocompleteConfig {
   enabled: boolean;
-  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
   baseURL?: string;
   apiKey?: string;
   model: string;
@@ -111,7 +171,7 @@ export interface AutocompleteConfig {
 export interface LLMConnection {
   id: string; // 고유 식별자
   name: string; // 사용자 정의 이름 (예: "My OpenAI", "Local Ollama")
-  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
   baseURL: string;
   apiKey: string;
   customHeaders?: Record<string, string>; // Connection 레벨 커스텀 헤더
@@ -178,7 +238,7 @@ export interface NetworkConfig {
 }
 
 export interface LLMConfig {
-  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
   baseURL: string;
   apiKey: string;
   model: string;
@@ -239,7 +299,7 @@ export interface ComfyUIConfig {
 export interface NanoBananaConfig {
   enabled: boolean;
   provider?: 'nanobananaapi' | 'vertex-ai'; // API provider: nanobananaapi.ai (default) or Google Vertex AI
-  apiKey: string; // API Key (nanobananaapi.ai) or Google Cloud API Key (Vertex AI)
+  apiKey: string; // API Key (nanobananaapi.ai) or OAuth 2 access token (Vertex AI)
   projectId?: string; // Google Cloud Project ID (only for Vertex AI)
   location?: string; // Default: 'us-central1' (only for Vertex AI)
   model?: string; // 'imagen-3.0-fast-generate-001' or 'imagen-3.0-generate-001' (only for Vertex AI)
@@ -286,6 +346,8 @@ export interface AgentProgress {
   maxIterations: number;
   status: string; // 'thinking' | 'executing' | 'working' | etc.
   message: string;
+  approvalHistory?: ApprovalHistoryEntry[];
+  traceMetrics?: AgentTraceMetrics;
 }
 
 export interface MCPServerConfig {
@@ -301,6 +363,7 @@ export interface MCPServerConfig {
   // SSE 전송 방식용
   url?: string; // SSE endpoint URL
   headers?: Record<string, string>; // Custom headers (e.g., Authorization, API keys)
+  disabledTools?: string[]; // Disabled tools list
 }
 
 /**
@@ -430,9 +493,14 @@ export interface GeneralConfig {
   language: 'ko' | 'en' | 'zh';
 }
 
+export interface NotificationConfig {
+  type: 'os' | 'application';
+}
+
 export interface AppConfig {
   llm: LLMConfig;
   general?: GeneralConfig;
+  notification?: NotificationConfig;
   network?: NetworkConfig;
   vectorDB?: VectorDBConfig;
   embedding?: EmbeddingConfig;

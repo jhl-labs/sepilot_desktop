@@ -7,8 +7,8 @@ import {
   fetchGitHubDocument,
   fetchGitHubDirectory,
   fetchDocument,
-} from '@/lib/documents/fetchers';
-import type { DocumentSource } from '@/lib/documents/types';
+} from '@/lib/domains/document/fetchers';
+import type { DocumentSource } from '@/lib/domains/document/types';
 
 describe('document fetchers', () => {
   beforeEach(() => {

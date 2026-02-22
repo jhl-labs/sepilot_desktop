@@ -1,6 +1,6 @@
 jest.mock('nanoid', () => ({ nanoid: () => 'test-nanoid' }));
 
-import { convertV2ToV1 } from '@/lib/config/llm-config-migration';
+import { convertV2ToV1 } from '@/lib/domains/config/llm-config-migration';
 import { LLMConfigV2 } from '@/types';
 
 describe('convertV2ToV1 - customHeaders inheritance', () => {

@@ -2,7 +2,7 @@
  * Config 암호화/복호화 테스트
  */
 
-import { encryptConfig, decryptConfig, validatePassword } from '@/lib/config/encryption';
+import { encryptConfig, decryptConfig, validatePassword } from '@/lib/domains/config/encryption';
 
 describe('encryption', () => {
   const testPassword = 'test-master-password-123';

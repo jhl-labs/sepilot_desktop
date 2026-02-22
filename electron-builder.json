@@ -4,6 +4,7 @@
   "publish": null,
   "npmRebuild": false,
   "buildDependenciesFromSource": false,
+  "asar": true,
   "directories": {
     "output": "release",
     "buildResources": "assets"
@@ -19,15 +20,29 @@
     "!node_modules/**/tests/**/*",
     "!node_modules/**/*.test.js",
     "!node_modules/**/*.spec.js",
-    "package.json"
+    "package.json",
+    "!resources/extensions/**/*",
+    "!extensions/**/*"
   ],
   "asarUnpack": [
     "node_modules/**/*.node",
     "node_modules/**/*.wasm",
+    "node_modules/**/*.dll",
     "node_modules/sql.js/**/*",
-    "node_modules/better-sqlite3/**/*"
+    "node_modules/better-sqlite3/**/*",
+    "node_modules/sharp/**/*",
+    "node_modules/@vscode/ripgrep/**/*",
+    "node_modules/node-pty/**/*"
   ],
-  "extraResources": ["assets/**"],
+  "extraResources": [
+    "assets/**",
+    {
+      "from": "extensions",
+      "to": "extensions",
+      "filter": ["**/*.sepx"]
+    }
+  ],
+  "extraFiles": [],
   "mac": {
     "category": "public.app-category.developer-tools",
     "target": ["dmg", "zip"],
@@ -38,10 +53,14 @@
     "entitlementsInherit": "assets/entitlements.mac.plist"
   },
   "win": {
-    "target": ["nsis", "portable"],
+    "target": ["nsis"],
     "icon": "assets/icon.ico",
     "signAndEditExecutable": false,
     "verifyUpdateCodeSignature": false
+  },
+  "portable": {
+    "useZip": false,
+    "artifactName": "${productName} ${version} Portable.${ext}"
   },
   "linux": {
     "target": ["AppImage", "deb"],

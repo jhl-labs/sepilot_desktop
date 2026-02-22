@@ -18,8 +18,10 @@ import { useConfigLoader } from './unified/hooks/useConfigLoader';
 import { isElectron } from '@/lib/platform';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { logger } from '@/lib/utils/logger';
+import { Bot } from 'lucide-react';
 import type { ChatConfig } from './unified/types';
 import type { ImageAttachment } from '@/types';
+import { useShallow } from 'zustand/react/shallow';
 
 export function ChatContainer() {
   const { t } = useTranslation();
@@ -34,7 +36,20 @@ export function ChatContainer() {
     deleteMessage,
     addMessage,
     agentProgress,
-  } = useChatStore();
+  } = useChatStore(
+    useShallow((state) => ({
+      messages: state.messages,
+      activeConversationId: state.activeConversationId,
+      streamingConversations: state.streamingConversations,
+      personas: state.personas,
+      activePersonaId: state.activePersonaId,
+      conversations: state.conversations,
+      updateMessage: state.updateMessage,
+      deleteMessage: state.deleteMessage,
+      addMessage: state.addMessage,
+      agentProgress: state.agentProgress,
+    }))
+  );
 
   // Load LLM and ImageGen config
   const { imageGenAvailable, mounted } = useConfigLoader();
@@ -47,11 +62,15 @@ export function ChatContainer() {
 
   // Get current conversation's persona
   const currentConversation = activeConversationId
-    ? conversations.find((c) => c.id === activeConversationId)
+    ? conversations.find((c: any) => c.id === activeConversationId)
     : null;
+
+  // Validate conversation existence
+  const isConversationValid = !!currentConversation;
+
   const conversationPersonaId = currentConversation?.personaId;
   const effectivePersonaId = conversationPersonaId || activePersonaId;
-  const activePersona = personas.find((p) => p.id === effectivePersonaId);
+  const activePersona = personas.find((p: any) => p.id === effectivePersonaId);
 
   // Get streaming state
   const streamingMessageId = activeConversationId
@@ -142,18 +161,17 @@ export function ChatContainer() {
       return;
     }
 
-    // Abort IPC stream
-    if (isElectron() && window.electronAPI?.langgraph) {
-      try {
-        await window.electronAPI.langgraph.abort(activeConversationId);
-      } catch (error) {
-        logger.error('[ChatContainer] Failed to abort stream:', error);
-      }
-      window.electronAPI.langgraph.removeAllStreamListeners();
-    }
-
-    // Stop streaming via hook
+    // 1. Immediately abort frontend (instant UI response)
     stopCurrentStreaming();
+
+    // 2. Tell backend to abort (fire-and-forget for faster response)
+    if (isElectron() && window.electronAPI?.langgraph) {
+      window.electronAPI.langgraph.abort(activeConversationId).catch((error) => {
+        logger.error('[ChatContainer] Failed to abort stream:', error);
+      });
+      // Note: Don't call removeAllStreamListeners() here.
+      // The streaming hook's finally block handles listener cleanup.
+    }
   }, [activeConversationId, stopCurrentStreaming]);
 
   // Handle message edit (from MessageBubble)
@@ -163,7 +181,7 @@ export function ChatContainer() {
 
       // Save to database
       if (window.electronAPI && activeConversationId) {
-        const message = messages.find((m) => m.id === messageId);
+        const message = messages.find((m: any) => m.id === messageId);
         if (message) {
           await window.electronAPI.chat.saveMessage({
             ...message,
@@ -183,7 +201,7 @@ export function ChatContainer() {
       }
 
       // Find the assistant message to regenerate
-      const messageIndex = messages.findIndex((m) => m.id === messageId);
+      const messageIndex = messages.findIndex((m: any) => m.id === messageId);
       if (messageIndex === -1 || messages[messageIndex].role !== 'assistant') {
         return;
       }
@@ -193,7 +211,7 @@ export function ChatContainer() {
 
       // Find the user message before it
       const previousMessages = messages.slice(0, messageIndex);
-      const lastUserMessage = [...previousMessages].reverse().find((m) => m.role === 'user');
+      const lastUserMessage = [...previousMessages].reverse().find((m: any) => m.role === 'user');
 
       if (!lastUserMessage) {
         return;
@@ -205,11 +223,23 @@ export function ChatContainer() {
     [activeConversationId, messages, deleteMessage, handleSendMessage]
   );
 
-  if (!activeConversationId) {
+  if (!activeConversationId || !isConversationValid) {
     return (
-      <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-        <h2 className="mb-2 text-xl font-semibold">{t('chat.welcome.title')}</h2>
-        <p className="text-center text-sm">{t('chat.welcome.subtitle')}</p>
+      <div className="flex h-full flex-col items-center justify-center text-muted-foreground p-6">
+        <div className="max-w-md w-full text-center space-y-4">
+          <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+            <Bot className="w-8 h-8 text-muted-foreground/50" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground">{t('chat.welcome.title')}</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {t('chat.welcome.subtitle')}
+          </p>
+          <div className="pt-4 grid grid-cols-1 gap-2">
+            <p className="text-xs text-muted-foreground/70 italic">
+              사이드바에서 대화를 선택하거나 새 대화를 시작해보세요.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -222,17 +252,28 @@ export function ChatContainer() {
       </ErrorBoundary>
 
       {/* Unified Chat Input */}
-      <UnifiedChatInput
-        config={chatConfig}
-        onSendMessage={handleSendMessage}
-        onStopStreaming={handleStopStreaming}
-        isStreaming={isStreaming}
-        imageGenAvailable={imageGenAvailable}
-        mounted={mounted}
-        agentProgress={
-          activeConversationId ? agentProgress.get(activeConversationId) || null : null
+      <ErrorBoundary
+        fallback={
+          <div className="p-4 border-t bg-destructive/5">
+            <p className="text-sm text-destructive font-medium">입력 영역 오류</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              메시지 입력 영역을 표시하는 중 오류가 발생했습니다.
+            </p>
+          </div>
         }
-      />
+      >
+        <UnifiedChatInput
+          config={chatConfig}
+          onSendMessage={handleSendMessage}
+          onStopStreaming={handleStopStreaming}
+          isStreaming={isStreaming}
+          imageGenAvailable={imageGenAvailable}
+          mounted={mounted}
+          agentProgress={
+            activeConversationId ? agentProgress.get(activeConversationId) || null : null
+          }
+        />
+      </ErrorBoundary>
     </div>
   );
 }

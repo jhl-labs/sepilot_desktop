@@ -25,11 +25,13 @@ describe('ChatStore', () => {
       activeFilePath: null,
       activeEditorTab: 'files',
       thinkingMode: 'instant',
+      inputTrustLevel: 'trusted',
       enableRAG: false,
       enableTools: false,
       enableImageGeneration: false,
       workingDirectory: null,
       pendingToolApproval: null,
+      pendingToolApprovalQueue: [],
       alwaysApproveToolsForSession: false,
       imageGenerationProgress: new Map(),
       browserChatMessages: [],
@@ -274,9 +276,16 @@ describe('ChatStore', () => {
 
   describe('updateMessage', () => {
     it('should update message content', () => {
+      const messages = [
+        { id: 'msg-1', role: 'assistant' as const, content: 'Hello', created_at: 100 },
+      ];
+      const cache = new Map<string, any[]>();
+      cache.set('conv-1', messages);
+
       useChatStore.setState({
         activeConversationId: 'conv-1',
-        messages: [{ id: 'msg-1', role: 'assistant', content: 'Hello', created_at: 100 }],
+        messages,
+        messagesCache: cache,
       });
 
       useChatStore.getState().updateMessage('msg-1', { content: 'Updated content' });
@@ -286,9 +295,16 @@ describe('ChatStore', () => {
     });
 
     it('should not update if conversation ID does not match', () => {
+      const messages = [
+        { id: 'msg-1', role: 'assistant' as const, content: 'Hello', created_at: 100 },
+      ];
+      const cache = new Map<string, any[]>();
+      cache.set('conv-1', messages);
+
       useChatStore.setState({
         activeConversationId: 'conv-1',
-        messages: [{ id: 'msg-1', role: 'assistant', content: 'Hello', created_at: 100 }],
+        messages,
+        messagesCache: cache,
       });
 
       useChatStore.getState().updateMessage('msg-1', { content: 'Updated' }, 'conv-2');
@@ -465,6 +481,21 @@ describe('ChatStore', () => {
       expect(useChatStore.getState().thinkingMode).toBe('instant');
     });
 
+    it('should set input trust level', () => {
+      useChatStore.getState().setInputTrustLevel('untrusted');
+      expect(useChatStore.getState().inputTrustLevel).toBe('untrusted');
+
+      useChatStore.getState().setInputTrustLevel('trusted');
+      expect(useChatStore.getState().inputTrustLevel).toBe('trusted');
+    });
+
+    it('should force untrusted input trust level in cowork mode', () => {
+      useChatStore.getState().setInputTrustLevel('trusted');
+      useChatStore.getState().setThinkingMode('cowork');
+
+      expect(useChatStore.getState().inputTrustLevel).toBe('untrusted');
+    });
+
     it('should enable/disable RAG', () => {
       useChatStore.getState().setEnableRAG(true);
       expect(useChatStore.getState().enableRAG).toBe(true);
@@ -500,6 +531,7 @@ describe('ChatStore', () => {
     it('should get graph config', () => {
       useChatStore.setState({
         thinkingMode: 'deep',
+        inputTrustLevel: 'untrusted',
         enableRAG: true,
         enableTools: false,
         enableImageGeneration: true,
@@ -509,6 +541,7 @@ describe('ChatStore', () => {
 
       expect(config).toEqual({
         thinkingMode: 'deep',
+        inputTrustLevel: 'untrusted',
         enableRAG: true,
         enableTools: false,
         enableImageGeneration: true,
@@ -540,6 +573,90 @@ describe('ChatStore', () => {
       useChatStore.getState().setPendingToolApproval(approval);
       useChatStore.getState().clearPendingToolApproval();
       expect(useChatStore.getState().pendingToolApproval).toBeNull();
+    });
+
+    it('should queue multiple pending approvals and process in FIFO order', () => {
+      const approval1 = {
+        conversationId: 'conv-1',
+        messageId: 'msg-1',
+        toolCalls: [{ id: 'tool-1', name: 'file_read', arguments: { path: '/a.txt' } }],
+        timestamp: Date.now(),
+      };
+      const approval2 = {
+        conversationId: 'conv-2',
+        messageId: 'msg-2',
+        toolCalls: [{ id: 'tool-2', name: 'command_execute', arguments: { command: 'pwd' } }],
+        timestamp: Date.now() + 1,
+      };
+
+      useChatStore.getState().setPendingToolApproval(approval1 as any);
+      useChatStore.getState().setPendingToolApproval(approval2 as any);
+
+      expect(useChatStore.getState().pendingToolApproval?.conversationId).toBe('conv-1');
+      expect(useChatStore.getState().pendingToolApprovalQueue).toHaveLength(2);
+
+      useChatStore.getState().clearPendingToolApproval();
+
+      expect(useChatStore.getState().pendingToolApproval?.conversationId).toBe('conv-2');
+      expect(useChatStore.getState().pendingToolApprovalQueue).toHaveLength(1);
+    });
+
+    it('should upsert pending approval when requestKey is duplicated', () => {
+      const first = {
+        conversationId: 'conv-1',
+        messageId: 'msg-1',
+        toolCalls: [{ id: 'tool-1', name: 'file_read', arguments: { path: '/a.txt' } }],
+        timestamp: Date.now(),
+        requestKey: 'same-request',
+        note: 'first',
+      };
+      const updated = {
+        conversationId: 'conv-1',
+        messageId: 'msg-1',
+        toolCalls: [{ id: 'tool-1', name: 'file_read', arguments: { path: '/a.txt' } }],
+        timestamp: Date.now() + 10,
+        requestKey: 'same-request',
+        note: 'updated',
+      };
+
+      useChatStore.getState().setPendingToolApproval(first as any);
+      useChatStore.getState().setPendingToolApproval(updated as any);
+
+      expect(useChatStore.getState().pendingToolApprovalQueue).toHaveLength(1);
+      expect(useChatStore.getState().pendingToolApproval?.note).toBe('updated');
+    });
+
+    it('should clear pending approval for a specific conversation without popping the queue head', () => {
+      const approval1 = {
+        conversationId: 'conv-1',
+        messageId: 'msg-1',
+        toolCalls: [{ id: 'tool-1', name: 'file_read', arguments: { path: '/a.txt' } }],
+        timestamp: Date.now(),
+      };
+      const approval2 = {
+        conversationId: 'conv-2',
+        messageId: 'msg-2',
+        toolCalls: [{ id: 'tool-2', name: 'command_execute', arguments: { command: 'pwd' } }],
+        timestamp: Date.now() + 1,
+      };
+      const approval3 = {
+        conversationId: 'conv-3',
+        messageId: 'msg-3',
+        toolCalls: [{ id: 'tool-3', name: 'file_write', arguments: { path: '/b.txt' } }],
+        timestamp: Date.now() + 2,
+      };
+
+      useChatStore.getState().setPendingToolApproval(approval1 as any);
+      useChatStore.getState().setPendingToolApproval(approval2 as any);
+      useChatStore.getState().setPendingToolApproval(approval3 as any);
+
+      useChatStore.getState().clearPendingToolApprovalForConversation('conv-2');
+
+      expect(useChatStore.getState().pendingToolApproval?.conversationId).toBe('conv-1');
+      expect(useChatStore.getState().pendingToolApprovalQueue).toHaveLength(2);
+      expect(
+        useChatStore.getState().pendingToolApprovalQueue.map((item: any) => item.conversationId)
+      ).toEqual(['conv-1', 'conv-3']);
     });
 
     it('should set always approve tools for session', () => {

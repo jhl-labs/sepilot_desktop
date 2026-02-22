@@ -26,11 +26,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 
-import { VectorDocument } from '@/lib/vectordb/types';
-import { DocumentSourceType } from '@/lib/documents/types';
-import { ChunkStrategy } from '@/lib/vectordb/types';
-import { fetchDocument } from '@/lib/documents/fetchers';
-import { cleanDocumentsWithLLM } from '@/lib/documents/cleaner';
+import { VectorDocument } from '@/lib/domains/rag/types';
+import { DocumentSourceType } from '@/lib/domains/document/types';
+import { ChunkStrategy } from '@/lib/domains/rag/types';
+import { fetchDocument } from '@/lib/domains/document/fetchers';
+import { cleanDocumentsWithLLM } from '@/lib/domains/document/cleaner';
 import { TeamDocsConfig } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -56,18 +56,34 @@ function FallbackEditor({
   );
 }
 
-// Dynamic import with fallback for editor extension
+// Dynamic import with Extension initialization via registry
+// Use SingleFileEditorWithContext which already has ExtensionAPIContextProvider
 const SingleFileEditor = dynamic(
-  () =>
-    import('@/extensions/editor/components/SingleFileEditor')
-      .then((mod) => mod.SingleFileEditor)
-      .catch((err) => {
-        console.warn(
-          '[DocumentDialog] Editor extension not available, using fallback:',
-          err.message
-        );
-        return FallbackEditor;
-      }),
+  async () => {
+    try {
+      // Runtime loading via extensionRegistry (아키텍처 원칙 준수)
+      const { extensionRegistry } = await import('@/lib/extensions/registry');
+
+      // Extension 활성화
+      if (!extensionRegistry.isActive('editor')) {
+        await extensionRegistry.activate('editor');
+        console.log('[DocumentDialog] Editor extension activated successfully');
+      }
+
+      // Extension 정의 가져오기
+      const ext = extensionRegistry.get('editor');
+      if (!ext?.definition?.MainComponent) {
+        throw new Error('Editor extension MainComponent not found');
+      }
+
+      // SingleFileEditorWithContext 반환
+      const MainComponent = ext.definition.MainComponent as any;
+      return { default: MainComponent.SingleFileEditorWithContext || MainComponent };
+    } catch (err: any) {
+      console.warn('[DocumentDialog] Editor extension not available, using fallback:', err.message);
+      return { default: FallbackEditor };
+    }
+  },
   {
     ssr: false,
     loading: () => (
@@ -94,6 +110,41 @@ interface DocumentDialogProps {
     documents: { content: string; metadata: Record<string, unknown> }[],
     chunkStrategy?: ChunkStrategy
   ) => Promise<void>;
+}
+
+const DEFAULT_TEAM_DOCS_PATH = 'sepilot/documents';
+
+function normalizeGitHubPath(path: string): string {
+  return path.replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+/g, '/').trim();
+}
+
+function sanitizeFilenameBase(filename: string): string {
+  const sanitized = filename
+    .replace(/[<>:"/\\|?*]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return sanitized || 'Untitled';
+}
+
+function buildTeamGithubPath(
+  docsPath: string | undefined,
+  folderPath: string,
+  title: string
+): string {
+  const docsRoot = normalizeGitHubPath(docsPath || DEFAULT_TEAM_DOCS_PATH);
+  const normalizedFolder = normalizeGitHubPath(folderPath || '');
+  const relativeFolder =
+    normalizedFolder === docsRoot
+      ? ''
+      : normalizedFolder.startsWith(`${docsRoot}/`)
+        ? normalizedFolder.slice(docsRoot.length + 1)
+        : normalizedFolder;
+  let titleBase = sanitizeFilenameBase(title);
+  if (titleBase.toLowerCase().endsWith('.md')) {
+    titleBase = titleBase.slice(0, -3).trim() || 'Untitled';
+  }
+  const filename = `${titleBase}.md`;
+  return relativeFolder ? `${docsRoot}/${relativeFolder}/${filename}` : `${docsRoot}/${filename}`;
 }
 
 export function DocumentDialog({
@@ -136,7 +187,7 @@ export function DocumentDialog({
   // Focus management
   const titleInputRef = useRef<HTMLInputElement>(null);
 
-  // Load Team Docs configs on mount (for create mode)
+  // Load Team Docs configs
   useEffect(() => {
     const loadTeamDocs = async () => {
       try {
@@ -144,9 +195,18 @@ export function DocumentDialog({
           const result = await window.electronAPI.config.load();
           if (result.success && result.data?.teamDocs) {
             setTeamDocs(result.data.teamDocs);
-            if (result.data.teamDocs.length > 0) {
-              setSelectedTeamDocsId(result.data.teamDocs[0].id);
-            }
+            setSelectedTeamDocsId((prev) => {
+              if (mode === 'edit' && document?.metadata?.teamDocsId) {
+                const documentTeamId = String(document.metadata.teamDocsId);
+                if (result.data.teamDocs.some((td) => td.id === documentTeamId)) {
+                  return documentTeamId;
+                }
+              }
+              if (prev && result.data.teamDocs.some((td) => td.id === prev)) {
+                return prev;
+              }
+              return result.data.teamDocs[0]?.id || '';
+            });
           }
         }
       } catch (error) {
@@ -154,20 +214,25 @@ export function DocumentDialog({
       }
     };
 
-    if (open && mode === 'create') {
+    if (open) {
       loadTeamDocs();
     }
-  }, [open, mode]);
+  }, [open, mode, document]);
 
   // Initialize edit mode data
   useEffect(() => {
-    if (mode === 'edit' && document) {
+    if (open && mode === 'edit' && document) {
       setTitle(document.metadata?.title || '');
       setSource(document.metadata?.source || '');
       setFolderPath(document.metadata?.folderPath || '');
       setContent(document.content || '');
+      const group = document.metadata?.docGroup === 'team' ? 'team' : 'personal';
+      setDocGroup(group);
+      if (group === 'team' && document.metadata?.teamDocsId) {
+        setSelectedTeamDocsId(String(document.metadata.teamDocsId));
+      }
     }
-  }, [mode, document]);
+  }, [open, mode, document]);
 
   // Reset form when dialog opens/closes
   useEffect(() => {
@@ -178,10 +243,10 @@ export function DocumentDialog({
       setFolderPath('');
       setContent('');
       setMessage(null);
+      setDocGroup('personal');
 
       if (mode === 'create') {
         setSourceType('manual');
-        setDocGroup('personal');
         setSelectedTeamDocsId('');
         setHttpUrl('');
         setGithubRepoUrl('');
@@ -215,6 +280,7 @@ export function DocumentDialog({
       setMessage(null);
 
       try {
+        const isTeamDoc = document.metadata?.docGroup === 'team';
         const updatedMetadata: Record<string, unknown> = {
           ...document.metadata,
           title: title.trim() || t('documents.untitled'),
@@ -223,7 +289,7 @@ export function DocumentDialog({
           updatedAt: Date.now(),
         };
 
-        if (document.metadata?.docGroup === 'team' && !pushToGitHub) {
+        if (isTeamDoc) {
           updatedMetadata.modifiedLocally = true;
         }
 
@@ -233,7 +299,7 @@ export function DocumentDialog({
           metadata: updatedMetadata,
         });
 
-        if (pushToGitHub && document.metadata?.docGroup === 'team') {
+        if (pushToGitHub && isTeamDoc) {
           if (!document.metadata.teamDocsId) {
             throw new Error(t('documentDialog.errors.teamDocsIdMissing'));
           }
@@ -241,13 +307,22 @@ export function DocumentDialog({
           try {
             const newTitle = title.trim() || t('documents.untitled');
             const newFolderPath = folderPath.trim();
-            let githubPath = document.metadata.githubPath as string;
-            const oldTitle = document.metadata.title as string;
-            const oldFolderPath = document.metadata.folderPath as string;
-            if (newTitle !== oldTitle || newFolderPath !== oldFolderPath) {
-              githubPath = newFolderPath ? `${newFolderPath}/${newTitle}.md` : `${newTitle}.md`;
+            const teamConfig = teamDocs.find(
+              (td) => td.id === String(document.metadata.teamDocsId)
+            );
+            if (!teamConfig) {
+              throw new Error(t('documentDialog.errors.teamDocsIdMissing'));
             }
+
+            const oldTitle = String(document.metadata.title || '');
+            const oldFolderPath = String(document.metadata.folderPath || '');
+            let githubPath = String(document.metadata.githubPath || '');
+            if (!githubPath || newTitle !== oldTitle || newFolderPath !== oldFolderPath) {
+              githubPath = buildTeamGithubPath(teamConfig.docsPath, newFolderPath, newTitle);
+            }
+
             const result = await window.electronAPI.teamDocs.pushDocument({
+              documentId: document.id,
               teamDocsId: document.metadata.teamDocsId as string,
               githubPath: githubPath,
               oldGithubPath: document.metadata.githubPath as string,
@@ -318,6 +393,7 @@ export function DocumentDialog({
             base.teamDocsId = selectedTeamDocsId;
             base.teamName = selectedTeam?.name;
             base.source = `${selectedTeam?.owner}/${selectedTeam?.repo}`;
+            base.modifiedLocally = true;
           }
           return base;
         };
@@ -636,19 +712,21 @@ export function DocumentDialog({
               >
                 <div className="flex-1 relative border-t min-h-0">
                   <SingleFileEditor
-                    content={content}
-                    language="markdown"
-                    theme="vs-dark"
-                    onChange={(value) => setContent(value || '')}
-                    options={{
-                      minimap: { enabled: false },
-                      fontSize: 14,
-                      wordWrap: 'on',
-                      lineNumbers: 'on',
-                      padding: { top: 16, bottom: 16 },
-                      scrollBeyondLastLine: false,
-                      automaticLayout: true,
-                    }}
+                    {...({
+                      content,
+                      language: 'markdown',
+                      theme: 'vs-dark',
+                      onChange: (value: any) => setContent(value || ''),
+                      options: {
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        wordWrap: 'on',
+                        lineNumbers: 'on',
+                        padding: { top: 16, bottom: 16 },
+                        scrollBeyondLastLine: false,
+                        automaticLayout: true,
+                      },
+                    } as any)}
                   />
                 </div>
               </TabsContent>
@@ -793,18 +871,21 @@ export function DocumentDialog({
             <div className="flex-1 flex flex-col min-h-0">
               <div className="flex-1 relative border-t min-h-0">
                 <SingleFileEditor
-                  content={content}
-                  language="markdown"
-                  theme="vs-dark"
-                  onChange={(value) => setContent(value || '')}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    wordWrap: 'on',
-                    lineNumbers: 'on',
-                    padding: { top: 16, bottom: 16 },
-                    automaticLayout: true,
-                  }}
+                  {...({
+                    content,
+                    language: 'markdown',
+                    theme: 'vs-dark',
+                    onChange: (value: any) => setContent(value || ''),
+                    options: {
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      wordWrap: 'on',
+                      lineNumbers: 'on',
+                      padding: { top: 16, bottom: 16 },
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                    },
+                  } as any)}
                 />
               </div>
             </div>

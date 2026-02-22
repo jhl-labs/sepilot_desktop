@@ -2,7 +2,11 @@
  * LLM HTTP Utils 테스트
  */
 
-import { createFetchOptions, fetchWithConfig, createAuthHeader } from '@/lib/llm/http-utils';
+import {
+  createFetchOptions,
+  fetchWithConfig,
+  createAuthHeader,
+} from '@/lib/domains/llm/http-utils';
 import type { LLMConfig } from '@/types';
 
 describe('http-utils', () => {

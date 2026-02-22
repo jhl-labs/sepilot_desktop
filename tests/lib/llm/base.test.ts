@@ -2,7 +2,7 @@
  * BaseLLMProvider 테스트
  */
 
-import { BaseLLMProvider, LLMOptions, LLMResponse, StreamChunk } from '@/lib/llm/base';
+import { BaseLLMProvider, LLMOptions, LLMResponse, StreamChunk } from '@/lib/domains/llm/base';
 import type { Message, LLMConfig } from '@/types';
 
 // Create a concrete implementation for testing

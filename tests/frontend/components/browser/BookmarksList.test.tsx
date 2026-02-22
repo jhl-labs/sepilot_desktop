@@ -7,14 +7,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { BookmarksList } from '@/extensions/browser/components/BookmarksList';
 import { enableElectronMode, mockElectronAPI } from '../../../setup';
-import * as chatStoreModule from '@/lib/store/chat-store';
+import { useExtensionStore } from '@sepilot/extension-sdk/store';
+import { isElectron } from '@sepilot/extension-sdk/utils';
 
-// Mock useChatStore
-jest.mock('@/lib/store/chat-store', () => ({
-  useChatStore: jest.fn(() => ({
-    setBrowserViewMode: jest.fn(),
-  })),
-}));
+const mockUseExtensionStore = useExtensionStore as jest.Mock;
+const mockIsElectron = isElectron as jest.Mock;
 
 describe('BookmarksList', () => {
   const mockBookmarks = [
@@ -38,14 +35,20 @@ describe('BookmarksList', () => {
     { id: 'f2', name: 'Personal', createdAt: Date.now() - 1000 },
   ];
 
+  const mockSetBrowserViewMode = jest.fn();
+
   const originalAlert = window.alert;
   const originalConfirm = window.confirm;
 
   beforeEach(() => {
     jest.clearAllMocks();
     enableElectronMode();
+    mockIsElectron.mockReturnValue(true);
     window.alert = jest.fn();
     window.confirm = jest.fn(() => true);
+    mockUseExtensionStore.mockReturnValue({
+      setBrowserViewMode: mockSetBrowserViewMode,
+    });
   });
 
   afterEach(() => {
@@ -116,16 +119,13 @@ describe('BookmarksList', () => {
 
     render(<BookmarksList />);
 
-    // Wait for loading to complete
+    // Wait for loading to complete - use getAllByText since DropdownMenu mock
+    // renders both trigger and content (both contain 'browser.bookmarks.all')
     await waitFor(() => {
-      expect(screen.getByText('browser.bookmarks.all')).toBeInTheDocument();
+      expect(screen.getAllByText('browser.bookmarks.all').length).toBeGreaterThan(0);
     });
 
-    // Click dropdown to open folder list
-    const dropdown = screen.getByText('browser.bookmarks.all').closest('button');
-    fireEvent.click(dropdown as HTMLElement);
-
-    // Check if folders are displayed
+    // Check if folders are displayed (always visible with the mock)
     await waitFor(() => {
       expect(screen.getByText('Work')).toBeInTheDocument();
       expect(screen.getByText('Personal')).toBeInTheDocument();
@@ -153,6 +153,7 @@ describe('BookmarksList', () => {
   });
 
   it('should not load when not in Electron', () => {
+    mockIsElectron.mockReturnValue(false);
     (window as any).electronAPI = undefined;
 
     render(<BookmarksList />);
@@ -178,11 +179,6 @@ describe('BookmarksList', () => {
   });
 
   it('should call setBrowserViewMode when back button is clicked', async () => {
-    const mockSetBrowserViewMode = jest.fn();
-    (chatStoreModule.useChatStore as jest.Mock).mockReturnValue({
-      setBrowserViewMode: mockSetBrowserViewMode,
-    });
-
     (mockElectronAPI.browserView.getBookmarks as jest.Mock).mockResolvedValue({
       success: true,
       data: [],
@@ -392,11 +388,6 @@ describe('BookmarksList', () => {
       success: true,
     });
 
-    const mockSetBrowserViewMode = jest.fn();
-    (chatStoreModule.useChatStore as jest.Mock).mockReturnValue({
-      setBrowserViewMode: mockSetBrowserViewMode,
-    });
-
     render(<BookmarksList />);
 
     await waitFor(() => {
@@ -463,7 +454,9 @@ describe('BookmarksList', () => {
     fireEvent.click(folderAddButton);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('browser.bookmarks.folderNamePlaceholder')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('browser.bookmarks.folderNamePlaceholder')
+      ).toBeInTheDocument();
     });
   });
 
@@ -526,7 +519,9 @@ describe('BookmarksList', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
 
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText('browser.bookmarks.folderNamePlaceholder')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('browser.bookmarks.folderNamePlaceholder')
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -576,16 +571,13 @@ describe('BookmarksList', () => {
 
     render(<BookmarksList />);
 
+    // Wait for data to load (bookmarks are rendered after loading completes)
     await waitFor(() => {
-      expect(screen.getByText('browser.bookmarks.all')).toBeInTheDocument();
+      expect(screen.getByText('Example Site')).toBeInTheDocument();
     });
 
-    // Click dropdown
-    const dropdown = screen.getByText('browser.bookmarks.all').closest('button');
-    fireEvent.click(dropdown as HTMLElement);
-
-    // Click Work folder
-    const workFolder = await screen.findByText('Work');
+    // Click Work folder (visible since DropdownMenu mock renders content inline)
+    const workFolder = screen.getByText('Work');
     fireEvent.click(workFolder);
 
     await waitFor(() => {
@@ -611,36 +603,42 @@ describe('BookmarksList', () => {
     const { container } = render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('browser.bookmarks.all')).toBeInTheDocument();
+      expect(screen.getAllByText('browser.bookmarks.all').length).toBeGreaterThan(0);
     });
 
-    // Click dropdown
-    const dropdown = screen.getByText('browser.bookmarks.all').closest('button');
-    fireEvent.click(dropdown as HTMLElement);
-
+    // Folders are already visible (DropdownMenu mock renders content inline)
     await waitFor(() => {
       expect(screen.getByText('Work')).toBeInTheDocument();
     });
 
-    // Find delete button in dropdown (Trash icon)
-    const deleteButtons = container.querySelectorAll('button');
-    // Find the trash button after Work folder item
-    let deleteButton = null;
-    for (let i = 0; i < deleteButtons.length; i++) {
-      const btn = deleteButtons[i];
-      if (btn.querySelector('svg') && btn.className.includes('h-4 w-4')) {
-        deleteButton = btn;
-        break;
-      }
-    }
-
-    if (deleteButton) {
-      fireEvent.click(deleteButton);
+    // Find delete button inside the dropdown menu items
+    // The folder delete buttons have class 'h-4 w-4 ml-1'
+    const deleteButtons = container.querySelectorAll('button.h-4.w-4.ml-1');
+    if (deleteButtons.length > 0) {
+      fireEvent.click(deleteButtons[0]);
 
       await waitFor(() => {
         expect(window.confirm).toHaveBeenCalled();
         expect(mockElectronAPI.browserView.deleteBookmarkFolder).toHaveBeenCalledWith('f1');
       });
+    } else {
+      // Fallback: find by scanning all buttons with SVG trash icon inside dropdown items
+      const allButtons = container.querySelectorAll('button');
+      let deleteButton = null;
+      for (let i = 0; i < allButtons.length; i++) {
+        const btn = allButtons[i];
+        if (btn.querySelector('.lucide-trash') && btn.className.includes('h-4')) {
+          deleteButton = btn;
+          break;
+        }
+      }
+      if (deleteButton) {
+        fireEvent.click(deleteButton);
+        await waitFor(() => {
+          expect(window.confirm).toHaveBeenCalled();
+          expect(mockElectronAPI.browserView.deleteBookmarkFolder).toHaveBeenCalledWith('f1');
+        });
+      }
     }
   });
 
@@ -661,21 +659,20 @@ describe('BookmarksList', () => {
     const { container } = render(<BookmarksList />);
 
     await waitFor(() => {
-      expect(screen.getByText('browser.bookmarks.all')).toBeInTheDocument();
+      expect(screen.getAllByText('browser.bookmarks.all').length).toBeGreaterThan(0);
     });
 
-    const dropdown = screen.getByText('browser.bookmarks.all').closest('button');
-    fireEvent.click(dropdown as HTMLElement);
-
+    // Folders are already visible (DropdownMenu mock renders inline)
     await waitFor(() => {
       expect(screen.getByText('Work')).toBeInTheDocument();
     });
 
-    const deleteButtons = container.querySelectorAll('button');
+    // Find folder delete button
+    const allButtons = container.querySelectorAll('button');
     let deleteButton = null;
-    for (let i = 0; i < deleteButtons.length; i++) {
-      const btn = deleteButtons[i];
-      if (btn.querySelector('svg') && btn.className.includes('h-4 w-4')) {
+    for (let i = 0; i < allButtons.length; i++) {
+      const btn = allButtons[i];
+      if (btn.querySelector('.lucide-trash') && btn.className.includes('h-4')) {
         deleteButton = btn;
         break;
       }
@@ -761,21 +758,20 @@ describe('BookmarksList', () => {
       const { container } = render(<BookmarksList />);
 
       await waitFor(() => {
-        expect(screen.getByText('browser.bookmarks.all')).toBeInTheDocument();
+        expect(screen.getAllByText('browser.bookmarks.all').length).toBeGreaterThan(0);
       });
 
-      const dropdown = screen.getByText('browser.bookmarks.all').closest('button');
-      fireEvent.click(dropdown as HTMLElement);
-
+      // Folders are already visible (DropdownMenu mock renders inline)
       await waitFor(() => {
         expect(screen.getByText('Test Folder')).toBeInTheDocument();
       });
 
-      const deleteButtons = container.querySelectorAll('button');
+      // Find folder delete button
+      const allButtons = container.querySelectorAll('button');
       let deleteButton = null;
-      for (let i = 0; i < deleteButtons.length; i++) {
-        const btn = deleteButtons[i];
-        if (btn.querySelector('svg') && btn.className.includes('h-4 w-4')) {
+      for (let i = 0; i < allButtons.length; i++) {
+        const btn = allButtons[i];
+        if (btn.querySelector('.lucide-trash') && btn.className.includes('h-4')) {
           deleteButton = btn;
           break;
         }

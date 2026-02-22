@@ -1,0 +1,24 @@
+{
+  "id": "com.sepilot.builtin.debugging",
+  "name": "디버깅 가이드",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "체계적인 디버깅 방법론, 브레이크포인트 전략, 로그 분석, Electron 디버깅 기법을 제공합니다",
+  "category": "productivity",
+  "tags": ["debug", "디버깅", "error", "bug", "버그", "troubleshooting", "stack trace"],
+  "autoLoad": false,
+  "contextPatterns": [
+    "debug",
+    "디버깅",
+    "버그 수정",
+    "버그 원인",
+    "bug fix",
+    "에러 해결",
+    "에러 원인",
+    "오류 해결",
+    "crash",
+    "traceback",
+    "stack trace",
+    "breakpoint"
+  ]
+}

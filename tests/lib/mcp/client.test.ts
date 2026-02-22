@@ -2,14 +2,14 @@
  * MCPClient 테스트
  */
 
-import { MCPClient } from '@/lib/mcp/client';
+import { MCPClient } from '@/lib/domains/mcp/client';
 import type {
   MCPServerConfig,
   MCPTool,
   JSONRPCRequest,
   JSONRPCResponse,
   MCPInitializeResult,
-} from '@/lib/mcp/types';
+} from '@/lib/domains/mcp/types';
 
 // Create a concrete implementation for testing
 class TestMCPClient extends MCPClient {

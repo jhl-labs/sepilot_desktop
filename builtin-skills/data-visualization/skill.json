@@ -1,0 +1,43 @@
+{
+  "id": "com.sepilot.builtin.data-visualization",
+  "name": "데이터 분석 및 시각화 가이드",
+  "version": "1.1.0",
+  "author": "SEPilot Team",
+  "description": "Plotly.js 차트, Mermaid 다이어그램, Python(pandas/matplotlib) 기반 데이터 분석 및 시각화를 지원합니다",
+  "category": "productivity",
+  "tags": [
+    "plotly",
+    "mermaid",
+    "visualization",
+    "차트",
+    "그래프",
+    "시각화",
+    "데이터 분석",
+    "pandas",
+    "matplotlib",
+    "대시보드"
+  ],
+  "autoLoad": false,
+  "contextPatterns": [
+    "plotly",
+    "mermaid",
+    "차트 생성",
+    "chart 생성",
+    "그래프 시각화",
+    "시각화",
+    "데이터 분석",
+    "pandas",
+    "matplotlib",
+    "대시보드",
+    "scatter plot",
+    "bar chart",
+    "pie chart",
+    "히스토그램",
+    "통계 분석",
+    "데이터셋",
+    "히트맵",
+    "flowchart",
+    "sequence diagram",
+    "간트 차트"
+  ]
+}

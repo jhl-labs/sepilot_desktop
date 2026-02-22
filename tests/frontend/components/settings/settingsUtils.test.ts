@@ -9,9 +9,13 @@ import {
   createDefaultAutocompleteConfig,
   createDefaultLLMConfig,
   createDefaultComfyUIConfig,
+  createDefaultNanoBananaConfig,
+  createDefaultImageGenConfig,
   mergeLLMConfig,
   mergeNetworkConfig,
   mergeComfyConfig,
+  mergeNanoBananaConfig,
+  mergeImageGenConfig,
   normalizeBaseUrl,
   extractModelIds,
 } from '@/components/settings/settingsUtils';
@@ -180,7 +184,7 @@ describe('settingsUtils', () => {
       const incoming = {
         proxy: {
           enabled: true,
-          mode: 'http' as const,
+          mode: 'manual' as const,
           url: 'http://proxy.example.com:8080',
         },
       };
@@ -188,7 +192,7 @@ describe('settingsUtils', () => {
       const config = mergeNetworkConfig(incoming);
 
       expect(config.proxy?.enabled).toBe(true);
-      expect(config.proxy?.mode).toBe('http');
+      expect(config.proxy?.mode).toBe('manual');
       expect(config.proxy?.url).toBe('http://proxy.example.com:8080');
     });
 
@@ -237,6 +241,102 @@ describe('settingsUtils', () => {
       expect(config.httpUrl).toBe('http://custom:8188');
       expect(config.steps).toBe(50);
       expect(config.cfgScale).toBe(7); // Default value
+    });
+  });
+
+  describe('createDefaultNanoBananaConfig', () => {
+    it('should create default NanoBanana config', () => {
+      const config = createDefaultNanoBananaConfig();
+
+      expect(config).toEqual({
+        enabled: false,
+        provider: 'nanobananaapi',
+        apiKey: '',
+        projectId: '',
+        location: 'us-central1',
+        model: 'imagen-3.0-generate-001',
+        negativePrompt: '',
+        aspectRatio: '1:1',
+        numberOfImages: 1,
+        seed: -1,
+        outputMimeType: 'image/png',
+        compressionQuality: 90,
+        askOptionsOnGenerate: false,
+      });
+    });
+  });
+
+  describe('createDefaultImageGenConfig', () => {
+    it('should create default ImageGen config with comfyui and nanobanana', () => {
+      const config = createDefaultImageGenConfig();
+
+      expect(config.provider).toBe('comfyui');
+      expect(config.comfyui).toEqual(createDefaultComfyUIConfig());
+      expect(config.nanobanana).toEqual(createDefaultNanoBananaConfig());
+    });
+  });
+
+  describe('mergeNanoBananaConfig', () => {
+    it('should return default config when no incoming config', () => {
+      const config = mergeNanoBananaConfig();
+
+      expect(config).toEqual(createDefaultNanoBananaConfig());
+    });
+
+    it('should merge partial incoming config', () => {
+      const incoming = {
+        enabled: true,
+        apiKey: 'test-key',
+        model: 'custom-model',
+      };
+
+      const config = mergeNanoBananaConfig(incoming);
+
+      expect(config.enabled).toBe(true);
+      expect(config.apiKey).toBe('test-key');
+      expect(config.model).toBe('custom-model');
+      expect(config.aspectRatio).toBe('1:1'); // Default value preserved
+    });
+  });
+
+  describe('mergeImageGenConfig', () => {
+    it('should return default config when no incoming config', () => {
+      const config = mergeImageGenConfig();
+
+      expect(config).toEqual(createDefaultImageGenConfig());
+    });
+
+    it('should merge provider change', () => {
+      const config = mergeImageGenConfig({ provider: 'nanobanana' });
+
+      expect(config.provider).toBe('nanobanana');
+    });
+
+    it('should merge comfyui sub-config', () => {
+      const config = mergeImageGenConfig({
+        comfyui: { enabled: true, steps: 50 },
+      });
+
+      expect(config.comfyui.enabled).toBe(true);
+      expect(config.comfyui.steps).toBe(50);
+      expect(config.comfyui.cfgScale).toBe(7); // Default preserved
+    });
+
+    it('should merge nanobanana sub-config', () => {
+      const config = mergeImageGenConfig({
+        nanobanana: { enabled: true, numberOfImages: 4 },
+      });
+
+      expect(config.nanobanana.enabled).toBe(true);
+      expect(config.nanobanana.numberOfImages).toBe(4);
+      expect(config.nanobanana.aspectRatio).toBe('1:1'); // Default preserved
+    });
+
+    it('should keep default sub-configs when not provided', () => {
+      const config = mergeImageGenConfig({ provider: 'comfyui' });
+
+      expect(config.comfyui).toEqual(createDefaultComfyUIConfig());
+      expect(config.nanobanana).toEqual(createDefaultNanoBananaConfig());
     });
   });
 

@@ -99,9 +99,7 @@ async function createSslOnlyAgent(
   agentOptions: Record<string, unknown>
 ): Promise<HttpAgentType | undefined> {
   try {
-    // Use Function constructor to avoid webpack static analysis
-    const importModule = new Function('name', 'return import(name)');
-    const https = await importModule('node' + ':https');
+    const https = await import(/* webpackIgnore: true */ 'node:https');
     return new https.Agent(agentOptions);
   } catch (error) {
     logger.warn('[HTTP Agent] Failed to create HTTPS agent:', error);
@@ -117,28 +115,14 @@ async function createNoProxyAgent(
   agentOptions: Record<string, unknown>
 ): Promise<HttpAgentType | undefined> {
   try {
-    // undici Agent 사용 - 환경 변수를 무시하도록 설정
-    // Use dynamic import via new Function to avoid webpack bundling and type errors
-    const importModule = new Function('name', 'return import(name)');
-    const { Agent } = await importModule('undici');
+    // Node.js native https.Agent 사용
+    // undici Agent는 Node.js http.request와 호환되지 않아 ERR_INVALID_ARG_TYPE 발생
+    const https = await import(/* webpackIgnore: true */ 'node:https');
 
-    // undici Agent 옵션 변환
-    const connectOptions: Record<string, unknown> = {};
-
-    // SSL 검증 설정 변환 (rejectUnauthorized는 connect 옵션 내부)
-    if (agentOptions.rejectUnauthorized === false) {
-      connectOptions.rejectUnauthorized = false;
-    }
-
-    // connections.proxy를 빈 객체로 설정하여 환경 변수 프록시 무시
-    const noProxyOptions: Record<string, unknown> = {
-      connect: connectOptions,
-    };
-
-    logger.debug('[HTTP Agent] Creating undici no-proxy agent (ignores env vars)', {
+    logger.debug('[HTTP Agent] Creating native HTTPS agent (no proxy)', {
       sslVerify: agentOptions.rejectUnauthorized !== false,
     });
-    return new Agent(noProxyOptions);
+    return new https.Agent(agentOptions);
   } catch (error) {
     logger.warn('[HTTP Agent] Failed to create no-proxy agent:', error);
     return undefined;

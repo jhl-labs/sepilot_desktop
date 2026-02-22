@@ -1,0 +1,26 @@
+{
+  "id": "com.sepilot.builtin.python-env-setup",
+  "name": "Python 실행 환경 (venv)",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "SEPilot 전용 Python 가상환경(venv)을 자동으로 구성하고 패키지를 격리 설치합니다",
+  "category": "devops",
+  "tags": ["python", "venv", "pip", "환경", "가상환경", "패키지"],
+  "autoLoad": false,
+  "contextPatterns": [
+    "python 스크립트",
+    "python 실행",
+    "python 환경",
+    "pip install",
+    "pip 설치",
+    "패키지 설치",
+    "가상환경",
+    "venv",
+    "python script",
+    "run python",
+    ".py 파일",
+    ".py 실행",
+    "파이썬 실행",
+    "파이썬 스크립트"
+  ]
+}

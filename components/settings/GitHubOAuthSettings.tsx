@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle, AlertCircle, Github, TestTube2, ChevronRight } from 'lucide-react';
 import { GitHubOAuthConfig } from '@/types';
-import { GitHubRepository } from '@/lib/auth/types';
+import { GitHubRepository } from '@/lib/domains/auth/types';
 
 interface GitHubOAuthSettingsProps {
   config: GitHubOAuthConfig | null;

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Download, Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { isElectron } from '@/lib/platform';
 import type { Conversation, Message, AppConfig } from '@/types';
+import { chunkArray, runPromisesInBatches } from '@/lib/utils/batch';
 
 interface BackupData {
   version: string;
@@ -15,6 +16,10 @@ interface BackupData {
   messages: Message[];
   settings?: AppConfig;
 }
+
+const EXPORT_MESSAGE_LOAD_BATCH_SIZE = 12;
+const IMPORT_CONVERSATION_BATCH_SIZE = 20;
+const IMPORT_MESSAGE_BATCH_SIZE = 80;
 
 export function BackupRestoreSettings() {
   const { t } = useTranslation();
@@ -48,10 +53,14 @@ export function BackupRestoreSettings() {
 
       // Load all messages for each conversation
       const allMessages: Message[] = [];
-      for (const conv of conversations) {
-        const messagesResult = await window.electronAPI.chat.loadMessages(conv.id);
-        if (messagesResult.success && messagesResult.data) {
-          allMessages.push(...messagesResult.data);
+      const messageLoadResults = await runPromisesInBatches(
+        conversations,
+        EXPORT_MESSAGE_LOAD_BATCH_SIZE,
+        (conv) => window.electronAPI.chat.loadMessages(conv.id)
+      );
+      for (const result of messageLoadResults) {
+        if (result.status === 'fulfilled' && result.value.success && result.value.data) {
+          allMessages.push(...result.value.data);
         }
       }
 
@@ -135,23 +144,32 @@ export function BackupRestoreSettings() {
 
           setStatusMessage({ type: 'info', text: t('settings.backup.restoring') });
 
-          // Restore conversations
+          // Restore conversations (bulk IPC to reduce round trips)
+          const conversationChunks = chunkArray(
+            backupData.conversations,
+            IMPORT_CONVERSATION_BATCH_SIZE
+          );
+          const conversationRestoreResults = await Promise.allSettled(
+            conversationChunks.map((chunk) => window.electronAPI.chat.saveConversationsBulk(chunk))
+          );
           let conversationsRestored = 0;
-          for (const conv of backupData.conversations) {
-            const result = await window.electronAPI.chat.saveConversation(conv);
-            if (result.success) {
-              conversationsRestored++;
+          conversationRestoreResults.forEach((result, index) => {
+            if (result.status === 'fulfilled' && result.value.success) {
+              conversationsRestored += result.value.data?.saved ?? conversationChunks[index].length;
             }
-          }
+          });
 
-          // Restore messages
+          // Restore messages (bulk IPC to reduce round trips)
+          const messageChunks = chunkArray(backupData.messages, IMPORT_MESSAGE_BATCH_SIZE);
+          const messageRestoreResults = await Promise.allSettled(
+            messageChunks.map((chunk) => window.electronAPI.chat.saveMessagesBulk(chunk))
+          );
           let messagesRestored = 0;
-          for (const msg of backupData.messages) {
-            const result = await window.electronAPI.chat.saveMessage(msg);
-            if (result.success) {
-              messagesRestored++;
+          messageRestoreResults.forEach((result, index) => {
+            if (result.status === 'fulfilled' && result.value.success) {
+              messagesRestored += result.value.data?.saved ?? messageChunks[index].length;
             }
-          }
+          });
 
           setStatusMessage({
             type: 'success',

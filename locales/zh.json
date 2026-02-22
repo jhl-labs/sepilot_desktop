@@ -65,6 +65,7 @@
       "core": "核心设置",
       "integrations": "集成",
       "features": "功能",
+      "extensionSettings": "扩展设置",
       "documents": "文档",
       "system": "系统"
     },
@@ -103,6 +104,23 @@
         "previewText": "这是聊天消息的预览。调整滑块以设置您喜欢的宽度。"
       },
       "saved": "通用设置已保存！"
+    },
+    "notification": {
+      "title": "通知设置",
+      "description": "管理通知显示方式和测试",
+      "saved": "通知设置已保存！",
+      "type": {
+        "label": "通知类型",
+        "os": "系统默认通知 (OS)",
+        "app": "应用程序内置通知 (In-App)",
+        "osDesc": "使用操作系统的通知中心。即使应用最小化也能收到通知。",
+        "appDesc": "在应用内显示设计的通知。仅在应用可见时有用。"
+      },
+      "test": {
+        "title": "通知测试",
+        "description": "使用选定的通知类型发送测试通知。",
+        "button": "发送测试通知"
+      }
     },
     "llm": {
       "title": "LLM",
@@ -154,7 +172,8 @@
           "selectConnection": "请选择连接",
           "modelId": "模型 ID",
           "modelIdPlaceholder": "例如：gpt-4, claude-3-5-sonnet-20241022",
-          "addButton": "添加模型"
+          "addButton": "添加模型",
+          "fetchFailedHint": "某些 LLM 服务器不支持 /v1/models 端点。如果您知道模型 ID，可以手动添加。"
         },
         "configured": {
           "title": "已配置的模型",
@@ -357,13 +376,14 @@
         "enableToggleHint": "启用切换以编辑下面的设置。",
         "vertexAiDescription": "直接使用 Google Cloud Vertex AI。需要 OAuth 2 访问令牌。",
         "apiDescription": "使用 NanoBanana API。可通过简单的 API 密钥使用。",
-        "vertexAiApiKeyLabel": "Google Cloud API Key（OAuth 2 Token）",
+        "vertexAiApiKeyLabel": "Google Cloud OAuth 2 访问令牌",
         "apiKeyLabel": "NanoBanana API Key",
-        "vertexAiApiKeyPlaceholder": "Google Cloud OAuth 2 Token",
+        "vertexAiApiKeyPlaceholder": "Google OAuth 2 访问令牌",
         "apiKeyPlaceholder": "NanoBanana API Key",
-        "vertexAiApiKeyDescription": "输入从 Google Cloud Console 颁发的 OAuth 2 访问令牌。",
+        "vertexAiApiKeyDescription": "输入用于 Vertex AI 的 OAuth 2 访问令牌。",
         "apiKeyDescription": "输入从 https://nanobananaapi.ai 颁发的 API Key",
         "projectIdDescription": "Google Cloud Project ID（使用 Vertex AI 时必需）",
+        "projectIdRequired": "使用 Vertex AI 时请输入 Google Cloud Project ID。",
         "locationDescription": "Google Cloud 区域（默认：us-central1）",
         "modelDescription": "Fast：快速生成，Standard：更高质量",
         "askOptions": "生成图像时询问选项",
@@ -384,11 +404,18 @@
       "saved": "图像生成设置已保存！"
     },
     "presentation": {
-      "title": "演示文稿"
+      "title": "演示文稿",
+      "description": "AI 驱动的演示文稿生成与 PPT/PDF/HTML 导出设置",
+      "saved": "演示文稿设置已保存"
     },
     "terminal": {
       "title": "终端",
-      "description": "基于 AI 的智能终端设置"
+      "description": "基于 AI 的智能终端设置",
+      "saved": "终端设置已保存"
+    },
+    "scheduler": {
+      "title": "调度器",
+      "description": "配置定时任务以在后台自动运行代理"
     },
     "mcp": {
       "title": "MCP",
@@ -443,6 +470,10 @@
           "delete": "删除服务器",
           "activate": "激活",
           "deactivate": "停用"
+        },
+        "actions": {
+          "selectAll": "全选",
+          "deselectAll": "取消全选"
         },
         "agentInfo": "LLM 可以在代理模式下使用此服务器的工具。必须启用服务器才能使用工具。",
         "expand": {
@@ -860,6 +891,8 @@
       "saveFailed": "保存设置失败",
       "saveFirst": "请先保存设置。",
       "dataSync": "数据同步",
+      "pull": "拉取",
+      "pulling": "拉取中...",
       "pushing": "推送中...",
       "syncingAll": "正在同步全部...",
       "syncAll": "同步全部（仅已启用项）",
@@ -917,6 +950,10 @@
         "generic": "{{type}} 同步失败"
       }
     },
+    "githubActions": {
+      "title": "GitHub Actions",
+      "description": "管理 GitHub Actions CI/CD 工作流"
+    },
     "backup": {
       "title": "备份/恢复",
       "description": "数据备份和恢复",
@@ -955,7 +992,252 @@
       "author": "作者",
       "saved": "扩展设置已保存",
       "saveFailed": "扩展设置保存失败",
-      "notFound": "未找到扩展"
+      "notFound": "未找到扩展",
+      "architect": {
+        "title": "架构分析器",
+        "description": "通过统计、静态分析和依赖图分析代码库架构",
+        "selectFolder": "选择文件夹",
+        "fullAnalysis": "完整分析",
+        "steps": "步骤",
+        "analyzing": "分析中...",
+        "analyzedPath": "分析路径",
+        "analysisComplete": "分析完成",
+        "analysisCompleteDesc": "4步完整分析已成功完成",
+        "partialAnalysisComplete": "分析完成（部分）",
+        "partialAnalysisCompleteDesc": "{{completed}} 分析已成功完成。AI 分析失败，但其他结果可用。",
+        "analysisFailed": "分析失败",
+        "unknownError": "发生未知错误",
+        "noAnalysis": "无分析结果",
+        "selectFolderPrompt": "选择文件夹开始分析",
+        "overview": "概览",
+        "languages": "语言",
+        "settings": "设置",
+        "totalFiles": "总文件数",
+        "totalLines": "总行数",
+        "codeLines": "代码行",
+        "commentLines": "注释行",
+        "languageBreakdown": "语言分解",
+        "languageBreakdownDesc": "项目中的编程语言统计",
+        "language": "语言",
+        "files": "文件",
+        "blank": "空行",
+        "comment": "注释",
+        "code": "代码",
+        "percentage": "百分比",
+        "lines": "行",
+        "additionalStats": "附加统计",
+        "blankLines": "空行",
+        "avgLinesPerFile": "每个文件平均行数",
+        "languageCount": "语言数量",
+        "currentAnalysis": "当前分析",
+        "history": "历史",
+        "noHistory": "无分析历史",
+        "startAnalyzing": "选择文件夹开始分析",
+        "clocStatus": "cloc 安装状态",
+        "clocStatusDesc": "必须安装 cloc 工具才能运行分析",
+        "checkingCloc": "检查 cloc 安装中...",
+        "clocInstalled": "cloc 已安装",
+        "clocNotInstalled": "cloc 未安装",
+        "installCloc": "安装 cloc：",
+        "recheckCloc": "重新检查",
+        "excludePatterns": "排除模式",
+        "excludePatternsDesc": "从分析中排除的文件夹/文件模式",
+        "addPattern": "添加模式...",
+        "noExcludePatterns": "无排除模式",
+        "historySettings": "历史设置",
+        "historySettingsDesc": "分析历史管理选项",
+        "maxHistorySize": "最大历史大小",
+        "maxHistorySizeDesc": "保留的分析记录最大数量",
+        "clearHistory": "清除历史",
+        "electronOnly": "此功能仅在 Electron 环境中可用",
+        "issues": "问题",
+        "runStaticAnalysis": "运行静态分析",
+        "noStaticAnalysis": "尚未运行静态分析",
+        "totalErrors": "总错误",
+        "totalWarnings": "总警告",
+        "totalIssues": "总问题",
+        "shown": "显示",
+        "issuesList": "问题列表",
+        "issuesListDesc": "ESLint 和 TypeScript 编译器问题",
+        "noIssues": "未发现问题！",
+        "noMatchingIssues": "未找到匹配的问题",
+        "severity": "严重程度",
+        "source": "来源",
+        "location": "位置",
+        "rule": "规则",
+        "dependencies": "依赖关系",
+        "aiRefactor": "AI 重构",
+        "noDependencyAnalysis": "尚未运行依赖分析",
+        "runDependencyAnalysis": "运行依赖分析",
+        "totalDependencies": "总依赖数",
+        "circularDependencies": "循环依赖",
+        "avgDependencies": "平均依赖",
+        "circularDependenciesFound": "发现循环依赖",
+        "circularDependenciesDesc": "消除循环依赖可提高代码可维护性",
+        "cycle": "循环",
+        "file": "文件",
+        "dependencyGraph": "依赖图",
+        "dependencyGraphDesc": "可视化文件间依赖关系。红色表示循环依赖。",
+        "noAIAnalysis": "尚未运行 AI 分析",
+        "runAIAnalysis": "运行 AI 分析",
+        "aiAnalyzing": "AI 分析中...",
+        "aiAnalyzingDesc": "分析代码库并生成重构建议",
+        "aiSummary": "AI 摘要",
+        "analyzedAt": "分析时间",
+        "priorityHigh": "高",
+        "priorityMedium": "中",
+        "priorityLow": "低",
+        "refactorSuggestions": "重构建议",
+        "suggestionsFound": "个建议",
+        "noSuggestions": "无建议。代码库状态良好！",
+        "itemDescription": "描述",
+        "reasoning": "理由",
+        "estimatedImpact": "预期影响",
+        "affectedFiles": "受影响文件",
+        "staticAnalysisComplete": "静态分析完成",
+        "staticAnalysisCompleteDesc": "ESLint 和 TypeScript 分析已成功完成",
+        "dependencyAnalysisComplete": "依赖分析完成",
+        "dependencyAnalysisCompleteDesc": "madge 依赖分析已成功完成",
+        "aiAnalysisComplete": "AI 分析完成",
+        "aiAnalysisCompleteDesc": "AI 重构建议已成功生成"
+      },
+      "prReview": {
+        "title": "GitHub PR 审查",
+        "description": "AI 驱动的代码审查",
+        "loadPR": "加载 PR",
+        "loading": "加载中...",
+        "refreshPR": "刷新",
+        "clearSession": "结束会话",
+        "startAnalysis": "开始 AI 分析",
+        "stopAnalysis": "停止分析",
+        "analyzing": "AI 正在分析代码...",
+        "noAnalysis": "尚无分析结果。请点击「开始 AI 分析」按钮。",
+        "sidebar": {
+          "title": "PR 审查",
+          "description": "AI 驱动的代码审查",
+          "prUrl": "PR URL（可选）",
+          "prUrlPlaceholder": "https://github.com/owner/repo/pull/123",
+          "parse": "解析",
+          "owner": "所有者",
+          "ownerPlaceholder": "例如：facebook",
+          "repository": "仓库",
+          "repositoryPlaceholder": "例如：react",
+          "pullNumber": "Pull Request 编号",
+          "pullNumberPlaceholder": "例如：123",
+          "currentPR": "当前 PR",
+          "repo": "仓库：",
+          "author": "作者：",
+          "state": "状态：",
+          "changes": "更改：",
+          "recentReviews": "最近审查",
+          "recentReviewsDesc": "之前执行的审查历史",
+          "loadHistory": "加载",
+          "deleteHistory": "删除",
+          "deleteConfirm": "删除\"{{title}}\"审查历史？",
+          "suggestions": "建议",
+          "howToUse": "使用方法",
+          "step1": "输入 GitHub PR URL 或手动输入",
+          "step2": "加载 PR 以查看信息",
+          "step3": "在主面板中点击「开始 AI 分析」",
+          "step4": "查看结果并发布到 GitHub"
+        },
+        "tabs": {
+          "overview": "概览",
+          "files": "文件",
+          "analysis": "分析",
+          "conversation": "对话"
+        },
+        "overview": {
+          "title": "PR 信息",
+          "state": "状态：",
+          "author": "作者：",
+          "baseBranch": "基础分支：",
+          "headBranch": "头部分支：",
+          "changedFiles": "更改文件：",
+          "additions": "添加：",
+          "deletions": "删除：",
+          "prDescription": "描述"
+        },
+        "analysis": {
+          "title": "审查建议",
+          "unposted": "未发布",
+          "postToGitHub": "发布到 GitHub",
+          "event": {
+            "comment": "评论",
+            "approve": "批准",
+            "requestChanges": "请求更改"
+          },
+          "posted": "已发布",
+          "line": "行",
+          "edit": "编辑",
+          "remove": "移除",
+          "postSingle": "单独发布",
+          "editPrompt": "编辑审查评论："
+        },
+        "conversation": {
+          "title": "与 AI 对话",
+          "description": "提问并请求关于 PR 的额外分析。",
+          "placeholder": "输入消息...",
+          "emptyState": "在下方输入消息以开始对话。"
+        },
+        "diff": {
+          "additions": "添加",
+          "deletions": "删除",
+          "changes": "更改",
+          "addComment": "添加评论",
+          "expand": "展开",
+          "collapse": "折叠"
+        },
+        "comment": {
+          "title": "添加评论",
+          "file": "文件",
+          "line": "行",
+          "side": "侧",
+          "severity": "严重程度",
+          "critical": "严重",
+          "warning": "警告",
+          "suggestion": "建议",
+          "placeholder": "输入审查评论...",
+          "cancel": "取消",
+          "add": "添加评论"
+        },
+        "settings": {
+          "title": "GitHub PR 审查设置",
+          "description": "配置 AI 驱动的代码审查行为",
+          "patRequired": "需要 GitHub PAT",
+          "patRequiredDesc": "GitHub PR 审查重用 GitHub Actions 扩展的 PAT。请在设置 → GitHub Actions 中设置 PAT。",
+          "patScopes": "所需权限：repo（读取和写入）",
+          "goToSettings": "前往设置",
+          "reviewPreferences": "审查偏好",
+          "reviewPreferencesDesc": "配置 AI 审查风格和重点领域",
+          "commentStyle": "评论风格",
+          "commentStyleDesc": "AI 生成评论的语气和风格",
+          "constructive": "建设性",
+          "constructiveDesc": "友好且建设性的反馈",
+          "strict": "严格",
+          "strictDesc": "严谨且详细的反馈",
+          "minimal": "简约",
+          "minimalDesc": "简洁且仅包含要点",
+          "focusAreas": "重点领域",
+          "focusAreasDesc": "AI 应关注的领域（多选）",
+          "security": "安全",
+          "performance": "性能",
+          "maintainability": "可维护性",
+          "testing": "测试",
+          "documentation": "文档",
+          "autoAnalyze": "自动分析",
+          "autoAnalyzeDesc": "加载 PR 时自动开始分析",
+          "strictnessLevel": "严格程度",
+          "strictnessLevelDesc": "代码审查应有多严格",
+          "relaxed": "宽松",
+          "balanced": "平衡",
+          "strictLevel": "严格"
+        },
+        "empty": {
+          "title": "GitHub PR 审查",
+          "description": "从侧边栏加载 PR 以开始 AI 驱动的代码审查。"
+        }
+      }
     },
     "beta": {
       "title": "Beta",
@@ -981,6 +1263,34 @@
       "llmRequired": "需要 LLM 配置。",
       "syntaxError": "JSON 语法错误：{{error}}",
       "saveFailed": "保存设置失败。"
+    },
+    "architect": {
+      "title": "架构分析器",
+      "description": "通过统计、静态分析和依赖图分析代码库架构",
+      "saved": "架构分析器设置已保存"
+    },
+    "confluence": {
+      "title": "Confluence 空间管理器",
+      "description": "以低调用方式同步 Confluence 空间并管理本地缓存",
+      "saved": "Confluence 设置已保存"
+    },
+    "gitDesktopAssistant": {
+      "title": "Git 桌面助手",
+      "description": "用于本地 Git、提交信息自动补全和 PR 建议的桌面工作流助手"
+    },
+    "mailFileWatcher": {
+      "title": "企业邮件文件集成",
+      "description": "配置目录监听与 Python 解析器邮件通知"
+    },
+    "git-desktop-assistant": {
+      "saved": "Git 桌面助手设置已保存"
+    },
+    "mail-file-watcher": {
+      "saved": "邮件文件监听设置已保存"
+    },
+    "githubProject": {
+      "title": "GitHub Project",
+      "description": "管理 GitHub Project 扩展设置"
     }
   },
   "chat": {
@@ -989,7 +1299,7 @@
       "select": "选择目录",
       "selecting": "选择中...",
       "remove": "移除工作目录",
-      "warning": "编程助手需要设置工作目录",
+      "warning": "编程/协作助手需要设置工作目录",
       "selectNow": "立即选择"
     },
     "welcome": {
@@ -1880,6 +2190,283 @@
       "newTerminal": "新建终端 (Ctrl+Shift+`)"
     }
   },
+  "scheduler": {
+    "title": "定时任务",
+    "addTask": "添加新任务",
+    "taskName": "任务名称",
+    "taskDescription": "描述",
+    "schedule": "调度",
+    "scheduleType": "调度类型",
+    "preset": "预设",
+    "cron": "Cron 表达式",
+    "presetEveryMinute": "每分钟（测试用）",
+    "presetHourly": "每小时",
+    "presetDaily": "每天",
+    "presetWeekly": "每周",
+    "presetMonthly": "每月",
+    "time": "时间",
+    "dayOfWeek": "星期",
+    "dayOfMonth": "日期",
+    "prompt": "提示",
+    "thinkingMode": "思考模式",
+    "enableRAG": "启用 RAG",
+    "enableTools": "启用工具",
+    "allowedTools": "允许的工具",
+    "resultHandlers": "结果处理",
+    "createConversation": "创建新对话",
+    "sendNotification": "发送通知",
+    "saveToFile": "保存到文件",
+    "notificationTitle": "通知标题",
+    "fileDirectory": "保存目录",
+    "fileFormat": "文件格式",
+    "executionHistory": "执行历史",
+    "lastExecuted": "上次执行",
+    "nextExecution": "下次执行",
+    "runNow": "立即运行",
+    "edit": "编辑",
+    "delete": "删除",
+    "enable": "启用",
+    "disable": "禁用",
+    "save": "保存",
+    "cancel": "取消",
+    "taskCount": "{{count}} 个任务",
+    "activeCount": "{{count}} 个活动",
+    "noTasks": "未配置任务",
+    "cronExpression": "Cron 表达式",
+    "cronHelp": "分 时 日 月 周 (例如: 0 9 * * 1-5 = 工作日上午9点)",
+    "filename": "文件名",
+    "filenameTemplate": "文件名模板（例如：result_{timestamp}.md）",
+    "viewHistory": "查看历史",
+    "status": {
+      "success": "成功",
+      "error": "错误",
+      "running": "运行中",
+      "cancelled": "已取消"
+    },
+    "validation": {
+      "nameRequired": "请输入任务名称",
+      "promptRequired": "请输入提示",
+      "invalidCron": "无效的 Cron 表达式",
+      "selectAtLeastOneHandler": "请至少选择一个结果处理方式"
+    },
+    "confirmDelete": "确定要删除此任务吗？",
+    "deleteSuccess": "任务已成功删除",
+    "deleteFailed": "删除任务失败",
+    "saveSuccess": "任务已成功保存",
+    "saveFailed": "保存任务失败",
+    "runSuccess": "任务已成功执行",
+    "runFailed": "执行任务失败",
+    "loadFailed": "加载任务失败",
+    "duration": "持续时间",
+    "resultSummary": "结果摘要",
+    "errorMessage": "错误消息",
+    "conversationCreated": "已创建对话",
+    "fileSaved": "已保存文件",
+    "notificationSent": "已发送通知",
+    "toolsExecuted": "已执行的工具",
+    "toolsBlocked": "已阻止的工具",
+    "daySunday": "星期日",
+    "dayMonday": "星期一",
+    "dayTuesday": "星期二",
+    "dayWednesday": "星期三",
+    "dayThursday": "星期四",
+    "dayFriday": "星期五",
+    "daySaturday": "星期六",
+    "taskLabel": "任务：{{taskName}}",
+    "allTasksExecutionHistory": "所有任务的执行历史",
+    "loadingHistory": "加载中...",
+    "noExecutionHistory": "没有执行历史",
+    "historyExecutedAt": "执行时间",
+    "historyStatus": "状态",
+    "historyResultProcessing": "结果处理",
+    "historyTrigger": "触发方式",
+    "historyAttempts": "尝试次数",
+    "toggleEnabled": "任务已启用",
+    "toggleDisabled": "任务已禁用",
+    "toggleFailed": "更新任务状态失败",
+    "deleteWarning": "此操作无法撤销。确定要删除该任务吗？",
+    "trigger": {
+      "manual": "手动",
+      "schedule": "计划",
+      "catch-up": "补偿执行"
+    },
+    "filterStatus": "按状态筛选",
+    "filterTrigger": "按触发方式筛选",
+    "filterAll": "全部",
+    "filterFromDate": "开始日期",
+    "filterToDate": "结束日期",
+    "filterInvalidDateRange": "开始日期不能晚于结束日期",
+    "presetLast24Hours": "最近24小时",
+    "presetLast7Days": "最近7天",
+    "presetLast30Days": "最近30天",
+    "clearFilters": "清除筛选"
+  },
+  "messageSubscription": {
+    "title": "消息订阅",
+    "description": "订阅来自外部API服务器的消息并接收通知",
+    "tabs": {
+      "connection": "连接设置",
+      "queue": "队列设置",
+      "ai": "AI设置",
+      "notification": "通知设置"
+    },
+    "connection": {
+      "type": "连接类型",
+      "polling": "HTTP轮询",
+      "websocket": "WebSocket（即将推出）",
+      "nats": "NATS JetStream",
+      "natsUrl": "NATS 服务器 URL",
+      "natsUrlPlaceholder": "nats://broker.example.com:4222",
+      "natsConsumerId": "Consumer ID（可选）",
+      "natsConsumerIdPlaceholder": "Consumer ID",
+      "natsConsumerSecret": "Consumer Secret（可选）",
+      "natsConsumerSecretPlaceholder": "Consumer Secret",
+      "natsStreamName": "Stream 名称",
+      "natsSubject": "Subject 模式",
+      "natsSubjectPlaceholder": "webhooks.>",
+      "natsBatchSize": "Fetch 批量大小",
+      "url": "API URL",
+      "urlPlaceholder": "https://api.example.com/messages",
+      "urlRequired": "请输入API URL",
+      "pollingInterval": "轮询间隔（秒）",
+      "authToken": "认证令牌（可选）",
+      "authTokenPlaceholder": "Bearer token...",
+      "refreshNow": "立即刷新",
+      "refreshSuccess": "收到{{count}}条新消息",
+      "refreshFailed": "刷新失败：{{error}}",
+      "status": "连接状态",
+      "connected": "已连接",
+      "disconnected": "未连接",
+      "lastPolled": "上次轮询",
+      "testConnection": "测试连接"
+    },
+    "queue": {
+      "maxQueueSize": "最大队列大小",
+      "maxQueueSizeDesc": "设置消息队列的最大大小",
+      "retentionDays": "保留期限（天）",
+      "retentionDaysDesc": "保留已完成消息的天数",
+      "autoProcess": "自动处理",
+      "autoProcessDesc": "自动处理传入的消息",
+      "retryAttempts": "重试次数",
+      "retryAttemptsDesc": "处理失败时的重试次数",
+      "status": {
+        "title": "队列状态",
+        "pending": "待处理",
+        "processing": "处理中",
+        "completed": "已完成",
+        "failed": "失败",
+        "totalProcessed": "总处理数"
+      },
+      "actions": {
+        "cleanup": "清理已完成的消息",
+        "cleanupSuccess": "已清理{{count}}条旧消息",
+        "cleanupFailed": "清理失败：{{error}}"
+      }
+    },
+    "ai": {
+      "useAIProcessing": "使用AI摘要",
+      "useAIProcessingDesc": "启用时，AI会对消息进行摘要。禁用时，显示原始内容。",
+      "thinkingMode": "思考模式",
+      "instant": "即时响应",
+      "sequential": "顺序思考",
+      "promptTemplate": "摘要提示（可选）",
+      "promptTemplatePlaceholder": "使用默认模板",
+      "promptTemplateDesc": "可以使用{type}、{source}、{title}、{content}变量"
+    },
+    "notification": {
+      "show": "显示通知",
+      "showDesc": "处理新消息时显示通知",
+      "type": "通知类型",
+      "typeGlobalDesc": "通知类型在全局设置 > 通知设置中管理。",
+      "os": "操作系统原生",
+      "application": "应用内通知"
+    },
+    "queueViewer": {
+      "title": "队列管理",
+      "description": "查看和管理消息队列状态",
+      "tabs": {
+        "failed": "失败",
+        "pending": "待处理",
+        "completed": "已完成",
+        "guide": "使用说明"
+      },
+      "guide": {
+        "button": "打开说明页",
+        "purposeTitle": "此页面的目的",
+        "purposeBody": "该页面用于快速恢复失败消息、避免队列积压，并持续保障自动化消息处理流程稳定运行。",
+        "integrationTitle": "集成与运维要点",
+        "integrationItems": {
+          "connection": "请先在“消息订阅 > 连接设置”中配置 API URL 与认证令牌，再在此页面观察队列状态。",
+          "autoProcess": "启用自动处理后，新消息会立即处理；若失败，可在本页执行重处理。",
+          "recovery": "先查看失败错误信息，再执行重处理，以确认外部问题（令牌过期、临时故障等）是否已恢复。",
+          "monitoring": "建议定期清理已完成消息；若积压上升，请同时检查轮询间隔与外部 API 状态。"
+        }
+      },
+      "columns": {
+        "title": "标题",
+        "type": "类型",
+        "time": "时间",
+        "error": "错误",
+        "conversation": "会话",
+        "actions": "操作"
+      },
+      "actions": {
+        "reprocess": "重新处理",
+        "viewConversation": "查看会话",
+        "delete": "删除",
+        "reprocessSuccess": "正在重新处理消息",
+        "reprocessFailed": "重新处理失败：{{error}}",
+        "deleteSuccess": "消息已删除",
+        "deleteFailed": "删除失败：{{error}}"
+      },
+      "empty": "无消息"
+    },
+    "apiFormat": {
+      "title": "API响应标准格式",
+      "description": "外部API必须以以下格式响应",
+      "example": "示例"
+    },
+    "enabled": "订阅已启用",
+    "disabled": "订阅已禁用",
+    "start": "开始订阅",
+    "stop": "停止订阅",
+    "startSuccess": "消息订阅已启动",
+    "startFailed": "启动订阅失败：{{error}}",
+    "stopSuccess": "消息订阅已停止",
+    "stopFailed": "停止订阅失败：{{error}}",
+    "saveSuccess": "设置已保存",
+    "saveFailed": "保存设置失败：{{error}}",
+    "help": {
+      "subscription": {
+        "buttonAria": "打开消息订阅帮助",
+        "title": "消息订阅说明",
+        "description": "消息订阅用于将应用连接到外部服务，按周期拉取新消息并自动处理。",
+        "whatItDoesTitle": "这个功能是做什么的？",
+        "whatItDoesBody": "系统会轮询你配置的 API URL，把新消息写入队列，并将处理结果关联到通知和对话。",
+        "howToUseTitle": "如何使用？",
+        "steps": {
+          "step1": "在连接设置中填写 API URL 和轮询间隔。",
+          "step2": "如有需要填写认证令牌，然后点击保存。",
+          "step3": "点击右上角“开始订阅”启用功能。",
+          "step4": "可使用手动刷新按钮立即确认连接和消息拉取是否正常。"
+        }
+      },
+      "queue": {
+        "buttonAria": "打开队列管理帮助",
+        "title": "队列管理说明",
+        "description": "队列管理用于跟踪处理状态、恢复失败项，并清理不需要的队列数据。",
+        "whatItDoesTitle": "这个功能是做什么的？",
+        "whatItDoesBody": "它会显示待处理/处理中/已完成/失败状态，并支持失败重处理、消息删除和完成消息清理。",
+        "howToUseTitle": "如何使用？",
+        "steps": {
+          "step1": "先查看顶部状态卡片，确认当前队列积压情况。",
+          "step2": "进入失败标签页查看错误原因，并尝试“重新处理”。",
+          "step3": "对无需处理的项目使用“删除”保持队列整洁。",
+          "step4": "定期执行“清理已完成的消息”，优化存储与性能。"
+        }
+      }
+    }
+  },
   "documents": {
     "untitled": "无标题",
     "title": "已上传文档",
@@ -2092,6 +2679,14 @@
       "default": "输入消息... (Shift+Enter 换行)"
     },
     "settings": "设置",
+    "workingDirectory": {
+      "set": "设置工作目录",
+      "change": "更改工作目录",
+      "selecting": "选择中...",
+      "requiredForCoding": "在 Coding 模式发送前，请先设置工作目录。",
+      "autoSendBlocked": "未设置工作目录，Coding 模式下的快速输入已被阻止。",
+      "tooltip": "工作目录"
+    },
     "thinking": {
       "instant": "Instant",
       "instant.desc": "快速响应",
@@ -2104,7 +2699,25 @@
       "deepWebResearch": "Deep Web Research",
       "deepWebResearch.desc": "基于网络搜索的深入研究",
       "coding": "Coding",
-      "coding.desc": "编码优化"
+      "coding.desc": "编码优化",
+      "cowork": "Cowork",
+      "cowork.desc": "使用工具的协作执行"
+    },
+    "cowork": {
+      "panel": {
+        "title": "团队任务看板",
+        "objective": "目标",
+        "tokens": "令牌",
+        "waitingFor": "等待",
+        "dependency": "依赖"
+      }
+    },
+    "trust": {
+      "title": "输入信任级别",
+      "trusted": "可信输入",
+      "trustedDesc": "应用基础审批策略。",
+      "untrusted": "不可信输入",
+      "untrustedDesc": "高风险工具始终需要显式审批。"
     },
     "tools": {
       "status": "{{active}}/{{total}} 已启用",
@@ -2114,7 +2727,12 @@
       "error": "加载工具时出错：{{error}}",
       "errorHint": "请检查 MCP 服务器设置。确保服务器已启用并正确配置。",
       "noTools": "没有可用工具",
-      "noToolsHint": "在设置中添加 MCP 服务器以启用工具。检查服务器是否已启用。"
+      "noToolsHint": "在设置中添加 MCP 服务器以启用工具。检查服务器是否已启用。",
+      "serverStatusTitle": "MCP 服务器问题",
+      "serverIssueStatus": {
+        "error": "错误",
+        "disconnected": "连接断开"
+      }
     },
     "imageGen": "图像生成",
     "fileDrop": {
@@ -2125,7 +2743,23 @@
       "thinking": "🤔 思考中...",
       "executing": "⚙️ 执行中...",
       "working": "🔄 工作中...",
-      "stop": "停止"
+      "stop": "停止",
+      "approvalHistory": "审批历史 ({{count}})",
+      "timeline": {
+        "title": "审批时间线",
+        "count": "{{visible}}/{{total}}",
+        "risk": "风险: {{level}}",
+        "decisions": {
+          "approved": "已批准",
+          "feedback": "需审批",
+          "denied": "已拒绝"
+        },
+        "sources": {
+          "policy": "策略",
+          "system": "系统",
+          "user": "用户"
+        }
+      }
     },
     "actions": {
       "stop": "停止 (Esc)",
@@ -2138,6 +2772,9 @@
     "imageUpload": {
       "tooltip": "附加图片",
       "ariaLabel": "附加图片按钮"
+    },
+    "persona": {
+      "switched": "已切换角色为 {{name}}"
     }
   },
   "quickInput": {
@@ -2195,6 +2832,8 @@
       "deep.desc": "深度思考 - 最高质量(慢)",
       "coding": "Coding (beta)",
       "coding.desc": "复杂编码任务 - ReAct Agent",
+      "cowork": "Cowork (beta)",
+      "cowork.desc": "协作执行任务 - Tool-first Agent",
       "imageGenOnly": "图像生成模式下仅可使用即时模式"
     },
     "rag": {

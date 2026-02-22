@@ -22,22 +22,33 @@ jest.mock('react-syntax-highlighter', () => ({
   ),
 }));
 
-jest.mock('react-syntax-highlighter/dist/esm/styles/prism', () => ({
+jest.mock('react-syntax-highlighter/dist/cjs/styles/prism', () => ({
   oneDark: {},
   oneLight: {},
+}));
+
+// Mock clipboard utility
+jest.mock('@/lib/utils/clipboard', () => ({
+  copyToClipboard: jest.fn(() => Promise.resolve(true)),
+}));
+
+// Mock platform check
+jest.mock('@/lib/platform', () => ({
+  isElectron: jest.fn(() => false),
+}));
+
+// Mock sonner
+jest.mock('sonner', () => ({
+  toast: {
+    success: jest.fn(),
+    error: jest.fn(),
+  },
 }));
 
 describe('CodeBlock', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useTheme as jest.Mock).mockReturnValue({ theme: 'light' });
-
-    // Mock clipboard
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: jest.fn().mockResolvedValue(undefined),
-      },
-    });
   });
 
   it('should render code with syntax highlighting', () => {
@@ -61,6 +72,7 @@ describe('CodeBlock', () => {
   });
 
   it('should copy code to clipboard', async () => {
+    const { copyToClipboard } = require('@/lib/utils/clipboard');
     const code = 'console.log("test");';
     render(<CodeBlock language="javascript" code={code} />);
 
@@ -68,7 +80,7 @@ describe('CodeBlock', () => {
     fireEvent.click(copyButton);
 
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(code);
+      expect(copyToClipboard).toHaveBeenCalledWith(code);
       expect(screen.getByText('복사됨')).toBeInTheDocument();
     });
   });

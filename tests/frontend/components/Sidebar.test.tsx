@@ -10,8 +10,15 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { Conversation } from '@/types';
 
 // Mock useChatStore
-jest.mock('@/lib/store/chat-store', () => ({
-  useChatStore: jest.fn(),
+jest.mock('@/lib/store/chat-store', () => {
+  const fn = jest.fn() as jest.Mock & { getState: jest.Mock };
+  fn.getState = jest.fn();
+  return { useChatStore: fn };
+});
+
+// Mock zustand/react/shallow to pass selector through
+jest.mock('zustand/react/shallow', () => ({
+  useShallow: (fn: any) => fn,
 }));
 
 // Mock SettingsDialog
@@ -70,6 +77,37 @@ jest.mock('@/components/layout/SidebarChat', () => ({
   ),
 }));
 
+// Mock extensions
+jest.mock('@/lib/extensions/use-extensions', () => ({
+  useExtension: jest.fn((mode: string) => {
+    if (mode === 'editor') {
+      return {
+        manifest: { id: 'editor', name: 'Editor', mode: 'editor', icon: 'FileCode' },
+        SidebarComponent: () => <div data-testid="sidebar-editor">Sidebar Editor</div>,
+      };
+    }
+    if (mode === 'browser') {
+      return {
+        manifest: { id: 'browser', name: 'Browser', mode: 'browser', icon: 'Globe' },
+        SidebarComponent: () => <div data-testid="sidebar-browser">Sidebar Browser</div>,
+      };
+    }
+    return null;
+  }),
+  useExtensions: jest.fn(() => ({
+    activeExtensions: [
+      {
+        id: 'editor',
+        manifest: { id: 'editor', name: 'Editor', mode: 'editor', icon: 'FileCode', order: 1 },
+      },
+      {
+        id: 'browser',
+        manifest: { id: 'browser', name: 'Browser', mode: 'browser', icon: 'Globe', order: 2 },
+      },
+    ],
+  })),
+}));
+
 // Mock window.confirm
 global.confirm = jest.fn(() => true);
 
@@ -106,9 +144,18 @@ describe('Sidebar', () => {
     browserChatMessages: [],
   };
 
+  // Helper to set up both useChatStore() and useChatStore.getState()
+  const setupStore = (storeOverrides: Record<string, any> = {}) => {
+    const storeValue = { ...mockChatStore, ...storeOverrides };
+    const store = useChatStore as unknown as jest.Mock & { getState: jest.Mock };
+    store.mockReturnValue(storeValue);
+    store.getState.mockReturnValue(storeValue);
+    return storeValue;
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    (useChatStore as unknown as jest.Mock).mockReturnValue(mockChatStore);
+    setupStore();
   });
 
   it('should render sidebar in chat mode', () => {
@@ -119,8 +166,7 @@ describe('Sidebar', () => {
   });
 
   it('should render sidebar in editor mode', () => {
-    const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
-    (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
+    setupStore({ appMode: 'editor' as const });
 
     render(<Sidebar />);
 
@@ -155,8 +201,7 @@ describe('Sidebar', () => {
   });
 
   it('should switch to chat mode', async () => {
-    const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
-    (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
+    setupStore({ appMode: 'editor' as const });
 
     render(<Sidebar />);
 
@@ -249,8 +294,7 @@ describe('Sidebar', () => {
   });
 
   it('should render SidebarEditor only in editor mode', () => {
-    const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
-    (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
+    setupStore({ appMode: 'editor' as const });
 
     render(<Sidebar />);
 
@@ -261,8 +305,7 @@ describe('Sidebar', () => {
 
   describe('Browser mode', () => {
     it('should render SidebarBrowser in browser mode', () => {
-      const browserMockStore = { ...mockChatStore, appMode: 'browser' as const };
-      (useChatStore as unknown as jest.Mock).mockReturnValue(browserMockStore);
+      setupStore({ appMode: 'browser' as const });
 
       render(<Sidebar />);
 
@@ -288,7 +331,9 @@ describe('Sidebar', () => {
   });
 
   describe('Editor view mode', () => {
-    it('should show files and search buttons in editor mode', () => {
+    // These tests are now handled by extension-specific sidebar components (SidebarEditor)
+    // TODO: Move these tests to SidebarEditor.test.tsx
+    it.skip('should show files and search buttons in editor mode', () => {
       const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
       (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
 
@@ -298,7 +343,7 @@ describe('Sidebar', () => {
       expect(screen.getByTitle('전체 검색')).toBeInTheDocument();
     });
 
-    it('should switch to search view mode', () => {
+    it.skip('should switch to search view mode', () => {
       const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
       (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
 
@@ -310,7 +355,7 @@ describe('Sidebar', () => {
       expect(editorMockStore.setEditorViewMode).toHaveBeenCalledWith('search');
     });
 
-    it('should switch to files view mode', () => {
+    it.skip('should switch to files view mode', () => {
       const editorMockStore = {
         ...mockChatStore,
         appMode: 'editor' as const,
@@ -326,7 +371,7 @@ describe('Sidebar', () => {
       expect(editorMockStore.setEditorViewMode).toHaveBeenCalledWith('files');
     });
 
-    it('should highlight active view mode', () => {
+    it.skip('should highlight active view mode', () => {
       const editorMockStore = { ...mockChatStore, appMode: 'editor' as const };
       (useChatStore as unknown as jest.Mock).mockReturnValue(editorMockStore);
 
@@ -376,8 +421,7 @@ describe('Sidebar', () => {
 
   describe('Chat mode actions', () => {
     beforeEach(() => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        ...mockChatStore,
+      setupStore({
         appMode: 'chat',
         chatViewMode: 'history',
         setAppMode: jest.fn(),
@@ -390,8 +434,7 @@ describe('Sidebar', () => {
     it('should create new conversation when Plus button clicked', async () => {
       const mockCreateConversation = jest.fn();
       const mockSetChatViewMode = jest.fn();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        ...mockChatStore,
+      setupStore({
         appMode: 'chat',
         createConversation: mockCreateConversation,
         setChatViewMode: mockSetChatViewMode,
@@ -418,8 +461,7 @@ describe('Sidebar', () => {
     it('should delete all conversations when confirmed', async () => {
       const mockDeleteConversation = jest.fn();
       const mockCreateConversation = jest.fn();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        ...mockChatStore,
+      setupStore({
         appMode: 'chat',
         conversations: mockConversations,
         deleteConversation: mockDeleteConversation,
@@ -446,8 +488,7 @@ describe('Sidebar', () => {
 
     it('should not delete conversations when cancelled', async () => {
       const mockDeleteConversation = jest.fn();
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        ...mockChatStore,
+      setupStore({
         appMode: 'chat',
         conversations: mockConversations,
         deleteConversation: mockDeleteConversation,
@@ -466,8 +507,7 @@ describe('Sidebar', () => {
     });
 
     it('should not call confirm when no conversations', () => {
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        ...mockChatStore,
+      setupStore({
         appMode: 'chat',
         conversations: [],
       });

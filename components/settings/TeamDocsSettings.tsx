@@ -90,7 +90,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
     }
 
     try {
-      const newConfigs = configs.filter((c) => c.id !== id);
+      const newConfigs = configs.filter((c: any) => c.id !== id);
       await onSave(newConfigs);
       setConfigs(newConfigs);
       setMessage({ type: 'success', text: t('settings.teamDocs.deleteSuccess') });
@@ -247,7 +247,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
   };
 
   const handleSyncAll = async () => {
-    const enabledConfigs = configs.filter((c) => c.enabled);
+    const enabledConfigs = configs.filter((c: any) => c.enabled);
     if (enabledConfigs.length === 0) {
       setMessage({ type: 'error', text: t('settings.teamDocs.noEnabledConfigs') });
       return;
@@ -312,7 +312,7 @@ export function TeamDocsSettings({ teamDocs, onSave }: TeamDocsSettingsProps) {
           <Button
             variant="outline"
             onClick={handleSyncAll}
-            disabled={isSyncingAll || configs.filter((c) => c.enabled).length === 0}
+            disabled={isSyncingAll || configs.filter((c: any) => c.enabled).length === 0}
           >
             {isSyncingAll ? (
               <>

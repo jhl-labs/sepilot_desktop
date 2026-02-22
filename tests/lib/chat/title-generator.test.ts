@@ -2,7 +2,7 @@
  * Title Generator 테스트
  */
 
-import { generateConversationTitle, shouldGenerateTitle } from '@/lib/chat/title-generator';
+import { generateConversationTitle, shouldGenerateTitle } from '@/lib/domains/chat/title-generator';
 import type { Message } from '@/types';
 import { enableElectronMode, disableElectronMode, mockElectronAPI } from '../../setup';
 

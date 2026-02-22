@@ -1,0 +1,41 @@
+{
+  "id": "com.sepilot.builtin.pptx-processing",
+  "name": "PowerPoint 편집 가이드",
+  "version": "1.2.0",
+  "author": "SEPilot Team",
+  "description": "기존 PowerPoint 파일을 읽고 슬라이드를 수정, 추가, 삭제하는 Python 스크립트 워크플로우를 제공합니다",
+  "category": "productivity",
+  "tags": [
+    "pptx",
+    "powerpoint",
+    "파워포인트",
+    "프레젠테이션",
+    "슬라이드",
+    "발표",
+    "presentation",
+    "slide"
+  ],
+  "autoLoad": false,
+  "contextPatterns": [
+    "pptx 읽",
+    "pptx 수정",
+    "pptx 편집",
+    "파워포인트 수정",
+    "파워포인트 편집",
+    "프레젠테이션 수정",
+    "프레젠테이션 편집",
+    "슬라이드 수정",
+    "슬라이드 편집",
+    "슬라이드 추가",
+    "슬라이드 디자인",
+    "발표자료 수정",
+    "발표자료 디자인",
+    "read pptx",
+    "edit pptx",
+    "modify pptx",
+    "ppt 수정",
+    "ppt 편집",
+    "ppt 디자인",
+    "python-pptx"
+  ]
+}

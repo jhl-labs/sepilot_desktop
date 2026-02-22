@@ -1,0 +1,22 @@
+{
+  "id": "com.sepilot.builtin.architecture",
+  "name": "아키텍처 설계 가이드",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "소프트웨어 아키텍처 설계 원칙, 클린 아키텍처, 모듈 분리, DDD 패턴을 제공합니다",
+  "category": "productivity",
+  "tags": ["architecture", "design", "pattern", "아키텍처", "설계", "클린 아키텍처", "DDD"],
+  "autoLoad": false,
+  "contextPatterns": [
+    "architecture",
+    "아키텍처",
+    "system design",
+    "소프트웨어 설계",
+    "아키텍처 설계",
+    "design pattern",
+    "디자인 패턴",
+    "클린 아키텍처",
+    "모듈 분리",
+    "DDD"
+  ]
+}

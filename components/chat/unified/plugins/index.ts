@@ -11,4 +11,5 @@ export { FontScalePlugin } from './FontScalePlugin';
 export { ImageAttachmentPlugin } from './ImageAttachmentPlugin';
 export { FileUploadPlugin } from './FileUploadPlugin';
 export { PersonaPlugin } from './PersonaPlugin';
+export { FileReferencePlugin } from './FileReferencePlugin';
 export { EditRegeneratePlugin, shouldEnableEditRegenerate } from './EditRegeneratePlugin';

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { X, MessageSquare } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 interface NotificationData {
   conversationId: string;
@@ -21,13 +22,19 @@ export default function NotificationPage() {
 
     // 2. Setup IPC
     if (window.electronAPI) {
-      window.electronAPI.on('notification:update-content', (data: any) => {
-        setNotification(data);
-      });
+      const handleNotificationUpdate = (data: unknown) => {
+        setNotification(data as NotificationData | null);
+      };
+      window.electronAPI.on('notification:update-content', handleNotificationUpdate);
 
       // Signal Ready
-      // @ts-expect-error - ready method will be added to notification API
-      window.electronAPI.notification?.ready?.();
+      void window.electronAPI.notification.ready();
+
+      return () => {
+        window.electronAPI.removeListener('notification:update-content', handleNotificationUpdate);
+        document.body.style.backgroundColor = '';
+        document.documentElement.style.backgroundColor = '';
+      };
     }
 
     return () => {
@@ -38,8 +45,7 @@ export default function NotificationPage() {
 
   const handleClick = () => {
     if (notification && window.electronAPI) {
-      // @ts-expect-error - emitClick method will be added to notification API
-      window.electronAPI.notification?.emitClick?.(notification.conversationId);
+      void window.electronAPI.notification.emitClick(notification.conversationId);
     }
   };
 
@@ -48,16 +54,24 @@ export default function NotificationPage() {
       e.stopPropagation();
     }
     setNotification(null);
-    // @ts-expect-error - close method will be added to notification API
-    window.electronAPI?.notification?.close?.();
+    if (window.electronAPI?.notification) {
+      void window.electronAPI.notification.close();
+    }
   };
+
+  const sanitizedHtml = useMemo(() => {
+    if (!notification?.html) {
+      return null;
+    }
+    return DOMPurify.sanitize(notification.html);
+  }, [notification?.html]);
 
   if (!notification) {
     return null;
   }
 
   return (
-    <div className="flex h-screen w-screen items-end justify-end p-4 bg-transparent overflow-hidden">
+    <div className="flex h-screen w-screen items-start justify-end p-4 bg-transparent overflow-hidden">
       <div
         className="group relative flex w-full max-w-sm flex-col overflow-hidden rounded-xl border border-white/20 bg-white/90 dark:bg-gray-900/90 shadow-2xl backdrop-blur-md cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] ring-1 ring-black/5 dark:ring-white/10"
         onClick={handleClick}
@@ -83,10 +97,10 @@ export default function NotificationPage() {
               {/* Timestamp or Secondary Info could go here */}
             </div>
 
-            {notification.html ? (
+            {sanitizedHtml ? (
               <div
                 className="text-sm text-gray-600 dark:text-gray-300 prose-sm line-clamp-2"
-                dangerouslySetInnerHTML={{ __html: notification.html }}
+                dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
               />
             ) : (
               <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 leading-relaxed">

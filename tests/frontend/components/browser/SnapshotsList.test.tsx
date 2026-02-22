@@ -7,14 +7,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { SnapshotsList } from '@/extensions/browser/components/SnapshotsList';
 import { enableElectronMode, mockElectronAPI } from '../../../setup';
-import * as chatStoreModule from '@/lib/store/chat-store';
+import { useExtensionStore } from '@sepilot/extension-sdk/store';
+import { isElectron } from '@sepilot/extension-sdk/utils';
 
-// Mock useChatStore
-jest.mock('@/lib/store/chat-store', () => ({
-  useChatStore: jest.fn(() => ({
-    setBrowserViewMode: jest.fn(),
-  })),
-}));
+const mockUseExtensionStore = useExtensionStore as jest.Mock;
+const mockIsElectron = isElectron as jest.Mock;
 
 describe('SnapshotsList', () => {
   const mockSnapshots = [
@@ -36,14 +33,20 @@ describe('SnapshotsList', () => {
     },
   ];
 
+  const mockSetBrowserViewMode = jest.fn();
+
   const originalConfirm = window.confirm;
   const originalAlert = window.alert;
 
   beforeEach(() => {
     jest.clearAllMocks();
     enableElectronMode();
+    mockIsElectron.mockReturnValue(true);
     window.confirm = jest.fn(() => true);
     window.alert = jest.fn();
+    mockUseExtensionStore.mockReturnValue({
+      setBrowserViewMode: mockSetBrowserViewMode,
+    });
   });
 
   afterEach(() => {
@@ -107,6 +110,7 @@ describe('SnapshotsList', () => {
   });
 
   it('should not load when not in Electron', () => {
+    mockIsElectron.mockReturnValue(false);
     (window as any).electronAPI = undefined;
 
     render(<SnapshotsList />);
@@ -128,11 +132,6 @@ describe('SnapshotsList', () => {
   });
 
   it('should call setBrowserViewMode when back button is clicked', async () => {
-    const mockSetBrowserViewMode = jest.fn();
-    (chatStoreModule.useChatStore as jest.Mock).mockReturnValue({
-      setBrowserViewMode: mockSetBrowserViewMode,
-    });
-
     (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
       success: true,
       data: [],
@@ -280,11 +279,6 @@ describe('SnapshotsList', () => {
       success: true,
     });
 
-    const mockSetBrowserViewMode = jest.fn();
-    (chatStoreModule.useChatStore as jest.Mock).mockReturnValue({
-      setBrowserViewMode: mockSetBrowserViewMode,
-    });
-
     render(<SnapshotsList />);
 
     await waitFor(() => {
@@ -379,6 +373,7 @@ describe('SnapshotsList', () => {
 
   it('should not delete when not in Electron', async () => {
     enableElectronMode();
+    mockIsElectron.mockReturnValue(true);
     (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
       success: true,
       data: mockSnapshots,
@@ -391,6 +386,7 @@ describe('SnapshotsList', () => {
     });
 
     // Disable Electron mode after loading
+    mockIsElectron.mockReturnValue(false);
     (window as any).electronAPI = undefined;
 
     const allButtons = screen.getAllByRole('button');
@@ -403,6 +399,7 @@ describe('SnapshotsList', () => {
 
   it('should not open when not in Electron', async () => {
     enableElectronMode();
+    mockIsElectron.mockReturnValue(true);
     (mockElectronAPI.browserView.getSnapshots as jest.Mock).mockResolvedValue({
       success: true,
       data: mockSnapshots,
@@ -415,6 +412,7 @@ describe('SnapshotsList', () => {
     });
 
     // Disable Electron mode after loading
+    mockIsElectron.mockReturnValue(false);
     (window as any).electronAPI = undefined;
 
     const snapshotCard = screen.getByText('Example Page').closest('div');

@@ -239,7 +239,48 @@ describe('ToolApprovalDialog', () => {
     render(<ToolApprovalDialog onApprove={jest.fn()} onReject={jest.fn()} />);
 
     // Should indicate 2 tools
-    expect(screen.getByText(/2/)).toBeInTheDocument();
+    expect(screen.getByText(/AI가 2개의 도구를 실행하려고 합니다/)).toBeInTheDocument();
+  });
+
+  it('should show review inbox when queued approvals exist', () => {
+    const queuedApproval = {
+      conversationId: 'conv-2',
+      messageId: 'msg-2',
+      toolCalls: [
+        {
+          id: 'tool-3',
+          name: 'command_execute',
+          arguments: { command: 'npm install' },
+        },
+      ],
+      timestamp: Date.now(),
+      requestKey: 'queue-2',
+      riskLevel: 'medium' as const,
+    };
+
+    (useChatStore as unknown as jest.Mock).mockReturnValue({
+      pendingToolApproval: {
+        ...mockPendingToolApproval,
+        conversationId: 'conv-1',
+        timestamp: Date.now(),
+        requestKey: 'queue-1',
+      },
+      pendingToolApprovalQueue: [
+        {
+          ...mockPendingToolApproval,
+          conversationId: 'conv-1',
+          timestamp: Date.now(),
+          requestKey: 'queue-1',
+        },
+        queuedApproval,
+      ],
+    });
+
+    render(<ToolApprovalDialog onApprove={jest.fn()} onReject={jest.fn()} />);
+
+    expect(screen.getByText('Review Inbox')).toBeInTheDocument();
+    expect(screen.getByText(/대기 1건/)).toBeInTheDocument();
+    expect(screen.getByText(/command_execute/)).toBeInTheDocument();
   });
 
   it('should handle empty tool arguments', () => {

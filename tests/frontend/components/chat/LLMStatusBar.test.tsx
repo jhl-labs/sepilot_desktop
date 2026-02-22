@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { LLMStatusBar } from '@/components/chat/LLMStatusBar';
+import { LLMStatusBar } from '@/components/chat/unified/components/LLMStatusBar';
 import { LLMConfig } from '@/types';
 
 describe('LLMStatusBar', () => {

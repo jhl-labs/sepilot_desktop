@@ -5,11 +5,12 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ImageGenerationProgressBar } from '@/components/chat/ImageGenerationProgressBar';
+import { ImageGenerationProgressBar } from '@/components/chat/unified/components/ImageGenerationProgressBar';
 import { ImageGenerationProgress } from '@/types';
 
 describe('ImageGenerationProgressBar', () => {
   const baseProgress: ImageGenerationProgress = {
+    conversationId: 'conv-1',
     messageId: 'msg-1',
     status: 'queued',
     progress: 0,

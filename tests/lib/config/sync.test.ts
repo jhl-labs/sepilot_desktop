@@ -2,7 +2,7 @@
  * ConfigSync 테스트
  */
 
-import { ConfigSync, configSync, AppConfig } from '@/lib/config/sync';
+import { ConfigSync, configSync, AppConfig } from '@/lib/domains/config/sync';
 
 // Mock @octokit/rest
 jest.mock('@octokit/rest', () => ({
@@ -21,7 +21,7 @@ jest.mock('@octokit/rest', () => ({
 }));
 
 // Mock encryption
-jest.mock('@/lib/config/encryption', () => ({
+jest.mock('@/lib/domains/config/encryption', () => ({
   encryptConfig: jest.fn((data: string) => Buffer.from(`encrypted:${data}`).toString('base64')),
   decryptConfig: jest.fn((data: string) => {
     const decoded = Buffer.from(data, 'base64').toString();
@@ -63,7 +63,7 @@ describe('ConfigSync', () => {
 
   describe('initialize', () => {
     it('should initialize with token and get user info', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
 
@@ -80,10 +80,10 @@ describe('ConfigSync', () => {
     });
 
     it('should return true if repo exists', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.get as jest.Mock).mockResolvedValue({ data: {} });
+      (mockOctokit.repos.get as unknown as jest.Mock).mockResolvedValue({ data: {} });
 
       await sync.initialize(testToken);
       const exists = await sync.repoExists();
@@ -96,10 +96,10 @@ describe('ConfigSync', () => {
     });
 
     it('should return false if repo does not exist', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.get as jest.Mock).mockRejectedValue({ status: 404 });
+      (mockOctokit.repos.get as unknown as jest.Mock).mockRejectedValue({ status: 404 });
 
       await sync.initialize(testToken);
       const exists = await sync.repoExists();
@@ -114,10 +114,12 @@ describe('ConfigSync', () => {
     });
 
     it('should create private repo', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.createForAuthenticatedUser as jest.Mock).mockResolvedValue({ data: {} });
+      (mockOctokit.repos.createForAuthenticatedUser as unknown as jest.Mock).mockResolvedValue({
+        data: {},
+      });
 
       await sync.initialize(testToken);
       await sync.createRepo();
@@ -137,10 +139,10 @@ describe('ConfigSync', () => {
     });
 
     it('should return null if repo does not exist', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.get as jest.Mock).mockRejectedValue({ status: 404 });
+      (mockOctokit.repos.get as unknown as jest.Mock).mockRejectedValue({ status: 404 });
 
       await sync.initialize(testToken);
       const config = await sync.syncFromGitHub(testPassword);
@@ -153,11 +155,11 @@ describe('ConfigSync', () => {
         'base64'
       );
 
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.get as jest.Mock).mockResolvedValue({ data: {} });
-      (mockOctokit.repos.getContent as jest.Mock).mockResolvedValue({
+      (mockOctokit.repos.get as unknown as jest.Mock).mockResolvedValue({ data: {} });
+      (mockOctokit.repos.getContent as unknown as jest.Mock).mockResolvedValue({
         data: { content: Buffer.from(encryptedContent).toString('base64') },
       });
 
@@ -168,11 +170,11 @@ describe('ConfigSync', () => {
     });
 
     it('should return null if config file does not exist', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.get as jest.Mock).mockResolvedValue({ data: {} });
-      (mockOctokit.repos.getContent as jest.Mock).mockRejectedValue({ status: 404 });
+      (mockOctokit.repos.get as unknown as jest.Mock).mockResolvedValue({ data: {} });
+      (mockOctokit.repos.getContent as unknown as jest.Mock).mockRejectedValue({ status: 404 });
 
       await sync.initialize(testToken);
       const config = await sync.syncFromGitHub(testPassword);
@@ -181,11 +183,11 @@ describe('ConfigSync', () => {
     });
 
     it('should throw error on other errors', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.get as jest.Mock).mockResolvedValue({ data: {} });
-      (mockOctokit.repos.getContent as jest.Mock).mockRejectedValue({ status: 500 });
+      (mockOctokit.repos.get as unknown as jest.Mock).mockResolvedValue({ data: {} });
+      (mockOctokit.repos.getContent as unknown as jest.Mock).mockRejectedValue({ status: 500 });
 
       await sync.initialize(testToken);
 
@@ -199,13 +201,17 @@ describe('ConfigSync', () => {
     });
 
     it('should create repo if it does not exist', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.get as jest.Mock).mockRejectedValue({ status: 404 });
-      (mockOctokit.repos.createForAuthenticatedUser as jest.Mock).mockResolvedValue({ data: {} });
-      (mockOctokit.repos.getContent as jest.Mock).mockRejectedValue({ status: 404 });
-      (mockOctokit.repos.createOrUpdateFileContents as jest.Mock).mockResolvedValue({ data: {} });
+      (mockOctokit.repos.get as unknown as jest.Mock).mockRejectedValue({ status: 404 });
+      (mockOctokit.repos.createForAuthenticatedUser as unknown as jest.Mock).mockResolvedValue({
+        data: {},
+      });
+      (mockOctokit.repos.getContent as unknown as jest.Mock).mockRejectedValue({ status: 404 });
+      (mockOctokit.repos.createOrUpdateFileContents as unknown as jest.Mock).mockResolvedValue({
+        data: {},
+      });
 
       await sync.initialize(testToken);
       await sync.syncToGitHub(testConfig, testPassword);
@@ -214,14 +220,16 @@ describe('ConfigSync', () => {
     });
 
     it('should update existing file', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.get as jest.Mock).mockResolvedValue({ data: {} });
-      (mockOctokit.repos.getContent as jest.Mock).mockResolvedValue({
+      (mockOctokit.repos.get as unknown as jest.Mock).mockResolvedValue({ data: {} });
+      (mockOctokit.repos.getContent as unknown as jest.Mock).mockResolvedValue({
         data: { sha: 'existing-sha-123' },
       });
-      (mockOctokit.repos.createOrUpdateFileContents as jest.Mock).mockResolvedValue({ data: {} });
+      (mockOctokit.repos.createOrUpdateFileContents as unknown as jest.Mock).mockResolvedValue({
+        data: {},
+      });
 
       await sync.initialize(testToken);
       await sync.syncToGitHub(testConfig, testPassword);
@@ -235,12 +243,14 @@ describe('ConfigSync', () => {
     });
 
     it('should create new file if it does not exist', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.get as jest.Mock).mockResolvedValue({ data: {} });
-      (mockOctokit.repos.getContent as jest.Mock).mockRejectedValue({ status: 404 });
-      (mockOctokit.repos.createOrUpdateFileContents as jest.Mock).mockResolvedValue({ data: {} });
+      (mockOctokit.repos.get as unknown as jest.Mock).mockResolvedValue({ data: {} });
+      (mockOctokit.repos.getContent as unknown as jest.Mock).mockRejectedValue({ status: 404 });
+      (mockOctokit.repos.createOrUpdateFileContents as unknown as jest.Mock).mockResolvedValue({
+        data: {},
+      });
 
       await sync.initialize(testToken);
       await sync.syncToGitHub(testConfig, testPassword);
@@ -259,13 +269,13 @@ describe('ConfigSync', () => {
     });
 
     it('should delete existing file', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.getContent as jest.Mock).mockResolvedValue({
+      (mockOctokit.repos.getContent as unknown as jest.Mock).mockResolvedValue({
         data: { sha: 'file-sha-123' },
       });
-      (mockOctokit.repos.deleteFile as jest.Mock).mockResolvedValue({ data: {} });
+      (mockOctokit.repos.deleteFile as unknown as jest.Mock).mockResolvedValue({ data: {} });
 
       await sync.initialize(testToken);
       await sync.deleteConfig();
@@ -280,10 +290,10 @@ describe('ConfigSync', () => {
     });
 
     it('should not throw if file does not exist', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.getContent as jest.Mock).mockRejectedValue({ status: 404 });
+      (mockOctokit.repos.getContent as unknown as jest.Mock).mockRejectedValue({ status: 404 });
 
       await sync.initialize(testToken);
 
@@ -291,10 +301,10 @@ describe('ConfigSync', () => {
     });
 
     it('should throw on other errors', async () => {
-      (mockOctokit.users.getAuthenticated as jest.Mock).mockResolvedValue({
+      (mockOctokit.users.getAuthenticated as unknown as jest.Mock).mockResolvedValue({
         data: { login: 'testuser' },
       });
-      (mockOctokit.repos.getContent as jest.Mock).mockRejectedValue({ status: 500 });
+      (mockOctokit.repos.getContent as unknown as jest.Mock).mockRejectedValue({ status: 500 });
 
       await sync.initialize(testToken);
 

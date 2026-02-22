@@ -4,9 +4,11 @@ const typescriptParser = require('@typescript-eslint/parser');
 const reactPlugin = require('eslint-plugin-react');
 const reactHooksPlugin = require('eslint-plugin-react-hooks');
 const nextPlugin = require('@next/eslint-plugin-next');
+const { fixupPluginRules } = require('@eslint/compat');
+const path = require('node:path');
 
 module.exports = [
-  // Ignore patterns (기존 .eslintignore 내용)
+  // Ignore patterns (기존 .eslintignore 내용 통합)
   {
     ignores: [
       'node_modules/**',
@@ -34,6 +36,21 @@ module.exports = [
       'lighthouserc.json',
       'components/_deprecated/**',
       'extensions/**',
+      'lib/extension-sdk/**',
+      'lib/extensions/**', // Extension loader는 lint 제외 (project references 충돌)
+      'resources/extensions/**',
+      '.migration-backup*/**',
+      'release/**',
+      '.test-extensions/**',
+      'sepilot-desktop-extension-*/**',
+      // Additional patterns from .eslintignore
+      '**/*.config.js',
+      '**/*.config.ts',
+      '**/*.d.ts',
+      '.turbo/**',
+      '.cache/**',
+      'temp/**',
+      'tmp/**',
     ],
   },
 
@@ -51,7 +68,8 @@ module.exports = [
         ecmaFeatures: {
           jsx: true,
         },
-        project: './tsconfig.json',
+        tsconfigRootDir: path.resolve(__dirname),
+        project: ['./tsconfig.frontend.json', './tsconfig.backend.json'],
       },
       globals: {
         // TypeScript globals
@@ -86,9 +104,9 @@ module.exports = [
     },
     plugins: {
       '@typescript-eslint': typescriptEslint,
-      react: reactPlugin,
-      'react-hooks': reactHooksPlugin,
-      '@next/next': nextPlugin,
+      react: fixupPluginRules(reactPlugin),
+      'react-hooks': fixupPluginRules(reactHooksPlugin),
+      '@next/next': fixupPluginRules(nextPlugin),
     },
     rules: {
       // TypeScript rules
@@ -120,6 +138,8 @@ module.exports = [
 
       // General rules
       'no-console': 'off',
+      // TypeScript handles identifier resolution better than ESLint's core no-undef rule.
+      'no-undef': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
       eqeqeq: ['error', 'always'],

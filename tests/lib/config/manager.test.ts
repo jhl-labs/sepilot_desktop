@@ -2,7 +2,7 @@
  * ConfigManager 테스트
  */
 
-import { ConfigManager, STORAGE_KEYS, DEFAULT_LLM_CONFIG } from '@/lib/config/manager';
+import { ConfigManager, STORAGE_KEYS, DEFAULT_LLM_CONFIG } from '@/lib/domains/config/manager';
 import { enableElectronMode, disableElectronMode, mockElectronAPI } from '../../setup';
 import type { AppConfig, LLMConfig } from '@/types';
 

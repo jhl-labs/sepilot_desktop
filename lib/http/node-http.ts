@@ -42,11 +42,9 @@ export async function httpsRequest(
   const { networkConfig: injectedConfig, body, ...requestOptions } = options;
   const networkConfig = injectedConfig ?? (await getNetworkConfig());
 
-  // Use Function constructor to avoid webpack static analysis
-  const importModule = new Function('name', 'return import(name)');
-  const https = await importModule('node' + ':https');
-  const http = await importModule('node' + ':http');
-  const { URL } = await importModule('node' + ':url');
+  const https = await import(/* webpackIgnore: true */ 'node:https');
+  const http = await import(/* webpackIgnore: true */ 'node:http');
+  const { URL } = await import(/* webpackIgnore: true */ 'node:url');
 
   const parsedUrl = new URL(url);
   const isHttps = parsedUrl.protocol === 'https:';

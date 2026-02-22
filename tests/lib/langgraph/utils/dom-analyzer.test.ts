@@ -9,7 +9,7 @@ import {
   searchElements,
   type DOMAnalysis,
   type SemanticElement,
-} from '@/lib/langgraph/utils/dom-analyzer';
+} from '@/lib/domains/agent/utils/dom-analyzer';
 
 describe('DOMAnalyzer', () => {
   describe('getImplicitRole', () => {

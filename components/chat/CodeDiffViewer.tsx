@@ -92,8 +92,8 @@ export function CodeDiffViewer({
         <>
           <div className="bg-muted/20 p-3 max-h-[400px] overflow-auto font-mono text-xs">
             {diffLines.map((line, idx) => {
-              let bgClass = '';
-              let textClass = '';
+              let bgClass: string;
+              let textClass: string;
               let prefix = ' ';
 
               switch (line.type) {

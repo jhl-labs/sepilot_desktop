@@ -1,4 +1,16 @@
-import { renderHtml } from '@/extensions/presentation/lib';
+// Mock @sepilot/extension-sdk/utils before importing
+jest.mock(
+  '@sepilot/extension-sdk/utils',
+  () => ({
+    isElectron: jest.fn(() => false),
+  }),
+  { virtual: true }
+);
+
+// Use require to bypass TypeScript path resolution issues
+// The jest moduleNameMapper handles runtime resolution correctly
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { renderHtml } = require('@/extensions/presentation/lib/index');
 
 describe('presentation exporters', () => {
   it('renders slides into HTML with bullets and prompts', () => {

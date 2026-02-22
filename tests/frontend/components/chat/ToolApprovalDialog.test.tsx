@@ -37,16 +37,20 @@ describe('ToolApprovalDialog', () => {
     },
   ];
 
+  const mockPendingApproval = {
+    conversationId: 'conv-1',
+    messageId: 'msg-1',
+    toolCalls: mockToolCalls,
+    timestamp: Date.now(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     enableElectronMode();
 
     (useChatStore as unknown as jest.Mock).mockReturnValue({
-      pendingToolApproval: {
-        conversationId: 'conv-1',
-        messageId: 'msg-1',
-        toolCalls: mockToolCalls,
-      },
+      pendingToolApproval: mockPendingApproval,
+      pendingToolApprovalQueue: [],
     });
 
     // Mock file.read to return some content
@@ -56,6 +60,7 @@ describe('ToolApprovalDialog', () => {
   it('should not render when pendingToolApproval is null', () => {
     (useChatStore as unknown as jest.Mock).mockReturnValue({
       pendingToolApproval: null,
+      pendingToolApprovalQueue: [],
     });
 
     const { container } = render(
@@ -107,7 +112,7 @@ describe('ToolApprovalDialog', () => {
   it('should call onReject when reject button clicked', () => {
     render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
-    const rejectButton = screen.getByText('아니오');
+    const rejectButton = screen.getByText(/아니오/);
     fireEvent.click(rejectButton);
 
     expect(mockOnReject).toHaveBeenCalled();
@@ -116,7 +121,7 @@ describe('ToolApprovalDialog', () => {
   it('should call onApprove with toolCalls when approve button clicked', () => {
     render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
 
-    const approveButton = screen.getByText('예');
+    const approveButton = screen.getByText(/예 \(이번 1회\)/);
     fireEvent.click(approveButton);
 
     expect(mockOnApprove).toHaveBeenCalledWith(mockToolCalls);
@@ -172,6 +177,7 @@ describe('ToolApprovalDialog', () => {
       pendingToolApproval: {
         conversationId: 'conv-1',
         messageId: 'msg-1',
+        timestamp: Date.now(),
         toolCalls: [
           {
             id: 'tool-write',
@@ -183,6 +189,7 @@ describe('ToolApprovalDialog', () => {
           },
         ],
       },
+      pendingToolApprovalQueue: [],
     });
 
     render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
@@ -209,7 +216,7 @@ describe('ToolApprovalDialog', () => {
 
     // CodeDiffViewer should show file path
     await waitFor(() => {
-      expect(screen.getByText('/test/file.txt')).toBeInTheDocument();
+      expect(screen.getAllByText('/test/file.txt').length).toBeGreaterThan(0);
     });
   });
 
@@ -218,6 +225,7 @@ describe('ToolApprovalDialog', () => {
       pendingToolApproval: {
         conversationId: 'conv-1',
         messageId: 'msg-1',
+        timestamp: Date.now(),
         toolCalls: [
           {
             id: 'tool-write',
@@ -229,6 +237,7 @@ describe('ToolApprovalDialog', () => {
           },
         ],
       },
+      pendingToolApprovalQueue: [],
     });
 
     (mockElectronAPI.file.read as jest.Mock).mockRejectedValue(new Error('File not found'));
@@ -243,7 +252,7 @@ describe('ToolApprovalDialog', () => {
     fireEvent.click(fileWriteTool);
 
     await waitFor(() => {
-      expect(screen.getByText('/new/file.txt')).toBeInTheDocument();
+      expect(screen.getAllByText('/new/file.txt').length).toBeGreaterThan(0);
     });
   });
 
@@ -258,6 +267,7 @@ describe('ToolApprovalDialog', () => {
       pendingToolApproval: {
         conversationId: 'conv-1',
         messageId: 'msg-1',
+        timestamp: Date.now(),
         toolCalls: [
           {
             id: 'tool-1',
@@ -266,6 +276,7 @@ describe('ToolApprovalDialog', () => {
           },
         ],
       },
+      pendingToolApprovalQueue: [],
     });
 
     render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
@@ -285,6 +296,7 @@ describe('ToolApprovalDialog', () => {
       pendingToolApproval: {
         conversationId: 'conv-1',
         messageId: 'msg-1',
+        timestamp: Date.now(),
         toolCalls: [
           {
             id: 'tool-1',
@@ -293,6 +305,7 @@ describe('ToolApprovalDialog', () => {
           },
         ],
       },
+      pendingToolApprovalQueue: [],
     });
 
     render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
@@ -323,6 +336,7 @@ describe('ToolApprovalDialog', () => {
       pendingToolApproval: {
         conversationId: 'conv-1',
         messageId: 'msg-1',
+        timestamp: Date.now(),
         toolCalls: [
           {
             id: 'tool-invalid',
@@ -335,6 +349,7 @@ describe('ToolApprovalDialog', () => {
           },
         ],
       },
+      pendingToolApprovalQueue: [],
     });
 
     render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
@@ -354,6 +369,7 @@ describe('ToolApprovalDialog', () => {
       pendingToolApproval: {
         conversationId: 'conv-1',
         messageId: 'msg-1',
+        timestamp: Date.now(),
         toolCalls: [
           {
             id: 'tool-edit',
@@ -366,6 +382,7 @@ describe('ToolApprovalDialog', () => {
           },
         ],
       },
+      pendingToolApprovalQueue: [],
     });
 
     render(<ToolApprovalDialog onApprove={mockOnApprove} onReject={mockOnReject} />);
@@ -380,7 +397,7 @@ describe('ToolApprovalDialog', () => {
     fireEvent.click(fileEditTool);
 
     await waitFor(() => {
-      expect(screen.getByText('/test/file.txt')).toBeInTheDocument();
+      expect(screen.getAllByText('/test/file.txt').length).toBeGreaterThan(0);
     });
   });
 });

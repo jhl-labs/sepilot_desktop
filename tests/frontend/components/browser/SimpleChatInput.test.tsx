@@ -7,57 +7,42 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { SimpleChatInput } from '@/extensions/browser/components/SimpleChatInput';
-import { useChatStore } from '@/lib/store/chat-store';
+import { useExtensionStore, getExtensionStoreState } from '@sepilot/extension-sdk/store';
+import { useLangGraphStream } from '@sepilot/extension-sdk';
 
-// Mock useChatStore
-jest.mock('@/lib/store/chat-store', () => ({
-  useChatStore: jest.fn(),
-}));
-
-// Mock platform check
-jest.mock('@/lib/platform', () => ({
-  isElectron: jest.fn(() => false),
-}));
-
-// Mock WebLLMClient with delay
-const createSlowStreamMock = () =>
-  async function* () {
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    yield { content: 'Hello', done: false };
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    yield { content: ' ', done: false };
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    yield { content: 'World', done: false };
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    yield { done: true };
-  };
-
-jest.mock('@/lib/llm/web-client', () => ({
-  getWebLLMClient: jest.fn(() => ({
-    stream: createSlowStreamMock(),
-  })),
-}));
+const mockUseExtensionStore = useExtensionStore as jest.Mock;
+const mockGetExtensionStoreState = getExtensionStoreState as jest.Mock;
+const mockUseLangGraphStream = useLangGraphStream as jest.Mock;
 
 describe('SimpleChatInput', () => {
   const mockAddBrowserChatMessage = jest.fn();
   const mockUpdateBrowserChatMessage = jest.fn();
+  const mockStartStream = jest.fn();
+  const mockStopStream = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    (useChatStore as unknown as jest.Mock).mockReturnValue({
+    mockUseExtensionStore.mockReturnValue({
       addBrowserChatMessage: mockAddBrowserChatMessage,
       updateBrowserChatMessage: mockUpdateBrowserChatMessage,
       browserChatMessages: [],
     });
 
-    // Mock getState for streaming updates
-    (useChatStore as any).getState = jest.fn(() => ({
+    mockGetExtensionStoreState.mockReturnValue({
       browserChatMessages: [
         { id: 'msg-1', role: 'user', content: 'Test', created_at: Date.now() },
         { id: 'msg-2', role: 'assistant', content: '', created_at: Date.now() },
       ],
-    }));
+    });
+
+    mockStartStream.mockResolvedValue(undefined);
+    mockStopStream.mockResolvedValue(undefined);
+
+    mockUseLangGraphStream.mockReturnValue({
+      startStream: mockStartStream,
+      stopStream: mockStopStream,
+    });
   });
 
   it('should render input textarea', () => {
@@ -70,7 +55,7 @@ describe('SimpleChatInput', () => {
   it('should render send button', () => {
     render(<SimpleChatInput />);
 
-    const sendButton = screen.getByRole('button', { name: /전송/ });
+    const sendButton = screen.getByTitle('전송 (Enter)');
     expect(sendButton).toBeInTheDocument();
   });
 
@@ -87,7 +72,7 @@ describe('SimpleChatInput', () => {
   it('should disable send button when input is empty', () => {
     render(<SimpleChatInput />);
 
-    const sendButton = screen.getByRole('button', { name: /전송/ });
+    const sendButton = screen.getByTitle('전송 (Enter)');
     expect(sendButton).toBeDisabled();
   });
 
@@ -98,8 +83,26 @@ describe('SimpleChatInput', () => {
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test message');
 
-    const sendButton = screen.getByRole('button', { name: /전송/ });
+    const sendButton = screen.getByTitle('전송 (Enter)');
     expect(sendButton).toBeEnabled();
+  });
+
+  it('should send message on button click', async () => {
+    const user = userEvent.setup();
+    render(<SimpleChatInput />);
+
+    const textarea = screen.getByRole('textbox');
+    await user.type(textarea, 'Test message');
+
+    const sendButton = screen.getByTitle('전송 (Enter)');
+    await user.click(sendButton);
+
+    await waitFor(() => {
+      expect(mockAddBrowserChatMessage).toHaveBeenCalledWith({
+        role: 'user',
+        content: 'Test message',
+      });
+    });
   });
 
   it('should send message on Enter key', async () => {
@@ -137,7 +140,7 @@ describe('SimpleChatInput', () => {
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
     await user.type(textarea, 'Test message');
 
-    const sendButton = screen.getByRole('button', { name: /전송/ });
+    const sendButton = screen.getByTitle('전송 (Enter)');
     await user.click(sendButton);
 
     await waitFor(() => {
@@ -152,7 +155,7 @@ describe('SimpleChatInput', () => {
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, '   '); // Only whitespace
 
-    const sendButton = screen.getByRole('button', { name: /전송/ });
+    const sendButton = screen.getByTitle('전송 (Enter)');
     await user.click(sendButton);
 
     expect(mockAddBrowserChatMessage).not.toHaveBeenCalled();
@@ -165,7 +168,7 @@ describe('SimpleChatInput', () => {
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, '  Test message  ');
 
-    const sendButton = screen.getByRole('button', { name: /전송/ });
+    const sendButton = screen.getByTitle('전송 (Enter)');
     await user.click(sendButton);
 
     await waitFor(() => {
@@ -201,7 +204,7 @@ describe('SimpleChatInput', () => {
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test');
 
-    const sendButton = screen.getByRole('button', { name: /전송/ });
+    const sendButton = screen.getByTitle('전송 (Enter)');
     await user.click(sendButton);
 
     await waitFor(() => {
@@ -212,6 +215,101 @@ describe('SimpleChatInput', () => {
     });
   });
 
+  it('should call startStream when sending message', async () => {
+    const user = userEvent.setup();
+    render(<SimpleChatInput />);
+
+    const textarea = screen.getByRole('textbox');
+    await user.type(textarea, 'Test');
+
+    const sendButton = screen.getByTitle('전송 (Enter)');
+    await user.click(sendButton);
+
+    await waitFor(() => {
+      expect(mockStartStream).toHaveBeenCalledWith('Test', 'browser-agent');
+    });
+  });
+
+  it('should show stop button when streaming', async () => {
+    // Make startStream hang to simulate streaming
+    mockStartStream.mockImplementation(() => new Promise(() => {}));
+
+    const user = userEvent.setup();
+    render(<SimpleChatInput />);
+
+    const textarea = screen.getByRole('textbox');
+    await user.type(textarea, 'Test');
+
+    const sendButton = screen.getByTitle('전송 (Enter)');
+    await user.click(sendButton);
+
+    await waitFor(
+      () => {
+        const stopButton = screen.getByTitle('중지 (Esc)');
+        expect(stopButton).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
+  });
+
+  it('should call stopStream when stop button clicked', async () => {
+    // Make startStream hang to simulate streaming
+    mockStartStream.mockImplementation(() => new Promise(() => {}));
+
+    const user = userEvent.setup();
+    render(<SimpleChatInput />);
+
+    const textarea = screen.getByRole('textbox');
+    await user.type(textarea, 'Test');
+
+    const sendButton = screen.getByTitle('전송 (Enter)');
+    await user.click(sendButton);
+
+    await waitFor(
+      () => {
+        expect(screen.getByTitle('중지 (Esc)')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
+
+    const stopButton = screen.getByTitle('중지 (Esc)');
+    await user.click(stopButton);
+
+    await waitFor(() => {
+      expect(mockStopStream).toHaveBeenCalled();
+    });
+  });
+
+  it('should stop streaming on Escape key', async () => {
+    // Make startStream hang to simulate streaming
+    mockStartStream.mockImplementation(() => new Promise(() => {}));
+
+    const user = userEvent.setup();
+    render(<SimpleChatInput />);
+
+    const textarea = screen.getByRole('textbox');
+    await user.type(textarea, 'Test');
+
+    const sendButton = screen.getByTitle('전송 (Enter)');
+    await user.click(sendButton);
+
+    // Wait for streaming to start
+    await waitFor(
+      () => {
+        expect(screen.getByTitle('중지 (Esc)')).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
+
+    // Press Escape key
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    // Should call stopStream
+    await waitFor(() => {
+      expect(mockStopStream).toHaveBeenCalled();
+    });
+  });
+
   it('should enable textarea after streaming completes', async () => {
     const user = userEvent.setup();
     render(<SimpleChatInput />);
@@ -219,12 +317,12 @@ describe('SimpleChatInput', () => {
     const textarea = screen.getByRole('textbox');
     await user.type(textarea, 'Test');
 
-    const sendButton = screen.getByRole('button', { name: /전송/ });
+    const sendButton = screen.getByTitle('전송 (Enter)');
     await user.click(sendButton);
 
-    // Wait for streaming to complete
+    // Wait for streaming to complete (startStream resolves immediately)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /전송/ })).toBeInTheDocument();
+      expect(screen.getByTitle('전송 (Enter)')).toBeInTheDocument();
     });
 
     // Textarea should be enabled again
@@ -233,220 +331,50 @@ describe('SimpleChatInput', () => {
     });
   });
 
-  describe('스트리밍 중지 기능', () => {
-    beforeEach(() => {
-      // Use slower mock for stop tests
-      const mockWebLLMClient = require('@/lib/llm/web-client');
-      mockWebLLMClient.getWebLLMClient.mockReturnValue({
-        stream: createSlowStreamMock(),
+  it('should handle stream error', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    mockStartStream.mockRejectedValue(new Error('Network error'));
+
+    const user = userEvent.setup();
+    render(<SimpleChatInput />);
+
+    const textarea = screen.getByRole('textbox');
+    await user.type(textarea, 'Test');
+
+    const sendButton = screen.getByTitle('전송 (Enter)');
+    await user.click(sendButton);
+
+    // Should update assistant message with error
+    await waitFor(() => {
+      expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith('msg-2', {
+        content: 'Error: Network error',
       });
     });
 
-    it('should show stop button when streaming', async () => {
-      const user = userEvent.setup();
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      // Stop button should appear during streaming
-      await waitFor(
-        () => {
-          const stopButton = screen.getByRole('button', { name: /중지/ });
-          expect(stopButton).toBeInTheDocument();
-        },
-        { timeout: 3000 }
-      );
-    });
-
-    it('should stop streaming when stop button clicked', async () => {
-      const user = userEvent.setup();
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      // Wait for stop button
-      const stopButton = await screen.findByRole('button', { name: /중지/ }, { timeout: 3000 });
-      await user.click(stopButton);
-
-      // Should show send button again
-      await waitFor(
-        () => {
-          expect(screen.getByRole('button', { name: /전송/ })).toBeInTheDocument();
-        },
-        { timeout: 3000 }
-      );
-    });
-
-    it('should stop streaming on Escape key', async () => {
-      const user = userEvent.setup();
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      // Wait for streaming to start
-      await waitFor(
-        () => {
-          expect(screen.getByRole('button', { name: /중지/ })).toBeInTheDocument();
-        },
-        { timeout: 3000 }
-      );
-
-      // Press Escape key
-      fireEvent.keyDown(window, { key: 'Escape' });
-
-      // Should show send button again
-      await waitFor(
-        () => {
-          expect(screen.getByRole('button', { name: /전송/ })).toBeInTheDocument();
-        },
-        { timeout: 3000 }
-      );
-    });
-
-    it('should not send message while streaming', async () => {
-      const user = userEvent.setup();
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'First message');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      // Clear mock calls from first send
-      mockAddBrowserChatMessage.mockClear();
-
-      // Try to send another message while streaming
-      await user.type(textarea, 'Second message');
-
-      // Stop button should be shown
-      const stopButton = await screen.findByRole('button', { name: /중지/ }, { timeout: 3000 });
-      expect(stopButton).toBeInTheDocument();
-
-      // Enter should not send while streaming
-      fireEvent.keyDown(textarea, { key: 'Enter' });
-
-      // Should not call addBrowserChatMessage
-      expect(mockAddBrowserChatMessage).not.toHaveBeenCalled();
-    });
+    consoleSpy.mockRestore();
   });
 
-  describe('에러 처리', () => {
-    it('should handle stream error', async () => {
-      const mockWebLLMClient = require('@/lib/llm/web-client');
-      mockWebLLMClient.getWebLLMClient.mockReturnValue({
-        stream: jest.fn(async function* () {
-          throw new Error('Network error');
-        }),
-      });
+  it('should handle unknown error type', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    mockStartStream.mockRejectedValue('Unknown error');
 
-      const user = userEvent.setup();
-      render(<SimpleChatInput />);
+    const user = userEvent.setup();
+    render(<SimpleChatInput />);
 
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test');
+    const textarea = screen.getByRole('textbox');
+    await user.type(textarea, 'Test');
 
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
+    const sendButton = screen.getByTitle('전송 (Enter)');
+    await user.click(sendButton);
 
-      // Should update assistant message with error
-      await waitFor(() => {
-        expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith('msg-2', {
-          content: 'Error: Network error',
-        });
+    // Should update with generic error message
+    await waitFor(() => {
+      expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith('msg-2', {
+        content: 'Error: Failed to get response',
       });
     });
 
-    it('should handle unknown error type', async () => {
-      const mockWebLLMClient = require('@/lib/llm/web-client');
-      mockWebLLMClient.getWebLLMClient.mockReturnValue({
-        stream: jest.fn(async function* () {
-          throw 'Unknown error';
-        }),
-      });
-
-      const user = userEvent.setup();
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      // Should update with generic error message
-      await waitFor(() => {
-        expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith('msg-2', {
-          content: 'Error: Failed to get response',
-        });
-      });
-    });
-  });
-
-  describe('웹 스트리밍', () => {
-    it('should update assistant message with streamed content', async () => {
-      const user = userEvent.setup();
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      // Should update assistant message progressively
-      await waitFor(() => {
-        expect(mockUpdateBrowserChatMessage).toHaveBeenCalled();
-      });
-    });
-
-    it('should respect abort signal during streaming', async () => {
-      // Create a longer streaming mock that can be aborted
-      const mockWebLLMClient = require('@/lib/llm/web-client');
-      mockWebLLMClient.getWebLLMClient.mockReturnValue({
-        stream: jest.fn(async function* () {
-          for (let i = 0; i < 100; i++) {
-            yield { content: `chunk ${i}`, done: false };
-            await new Promise((resolve) => setTimeout(resolve, 10));
-          }
-          yield { done: true };
-        }),
-      });
-
-      const user = userEvent.setup();
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      // Wait a bit then stop
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /중지/ })).toBeInTheDocument();
-      });
-
-      const stopButton = screen.getByRole('button', { name: /중지/ });
-      await user.click(stopButton);
-
-      // Should stop streaming
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /전송/ })).toBeInTheDocument();
-      });
-    });
+    consoleSpy.mockRestore();
   });
 
   describe('텍스트 영역 자동 리사이즈', () => {
@@ -481,13 +409,13 @@ describe('SimpleChatInput', () => {
 
       await user.type(textarea, 'Test');
 
-      const sendButton = screen.getByRole('button', { name: /전송/ });
+      const sendButton = screen.getByTitle('전송 (Enter)');
       await user.click(sendButton);
 
       // Wait for streaming to complete
       await waitFor(
         () => {
-          expect(screen.getByRole('button', { name: /전송/ })).toBeInTheDocument();
+          expect(screen.getByTitle('전송 (Enter)')).toBeInTheDocument();
         },
         { timeout: 5000 }
       );
@@ -508,9 +436,7 @@ describe('SimpleChatInput', () => {
     it('should not show progress UI initially', () => {
       render(<SimpleChatInput />);
 
-      expect(screen.queryByText(/생각 중/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/실행 중/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/작업 중/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Agent 실행 중/)).not.toBeInTheDocument();
     });
 
     it('should render progress bar container', () => {
@@ -526,26 +452,6 @@ describe('SimpleChatInput', () => {
       // Send icon should be present
       const sendIcon = container.querySelector('svg');
       expect(sendIcon).toBeInTheDocument();
-    });
-
-    it('should show Square icon when streaming', async () => {
-      const user = userEvent.setup();
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      // Wait for stop button
-      await waitFor(
-        () => {
-          const stopButton = screen.getByRole('button', { name: /중지/ });
-          expect(stopButton).toBeInTheDocument();
-        },
-        { timeout: 3000 }
-      );
     });
 
     it('should have placeholder text', () => {
@@ -581,13 +487,15 @@ describe('SimpleChatInput', () => {
     });
 
     it('should show stop button with correct title when streaming', async () => {
+      mockStartStream.mockImplementation(() => new Promise(() => {}));
+
       const user = userEvent.setup();
       render(<SimpleChatInput />);
 
       const textarea = screen.getByRole('textbox');
       await user.type(textarea, 'Test');
 
-      const sendButton = screen.getByRole('button', { name: /전송/ });
+      const sendButton = screen.getByTitle('전송 (Enter)');
       await user.click(sendButton);
 
       await waitFor(
@@ -622,390 +530,6 @@ describe('SimpleChatInput', () => {
         '.relative.flex.items-end.gap-2.rounded-lg.border.border-input.bg-background'
       );
       expect(innerContainer).toBeInTheDocument();
-    });
-  });
-
-  describe('Electron Environment - Browser Agent', () => {
-    const mockStopBrowserAgent = jest.fn();
-    const mockStream = jest.fn();
-    const mockOnStreamEvent = jest.fn();
-    let eventHandlerCleanup: (() => void) | null = null;
-
-    beforeEach(() => {
-      // Mock Electron environment
-      const { isElectron } = require('@/lib/platform');
-      (isElectron as jest.Mock).mockReturnValue(true);
-
-      // Setup electronAPI mock
-      eventHandlerCleanup = jest.fn();
-      mockOnStreamEvent.mockReturnValue(eventHandlerCleanup);
-
-      // Set window.electronAPI
-      (window as any).electronAPI = {
-        langgraph: {
-          stopBrowserAgent: mockStopBrowserAgent,
-          stream: mockStream,
-          onStreamEvent: mockOnStreamEvent,
-        },
-      };
-
-      jest.clearAllMocks();
-
-      (useChatStore as unknown as jest.Mock).mockReturnValue({
-        addBrowserChatMessage: mockAddBrowserChatMessage,
-        updateBrowserChatMessage: mockUpdateBrowserChatMessage,
-        browserChatMessages: [],
-      });
-
-      (useChatStore as any).getState = jest.fn(() => ({
-        browserChatMessages: [
-          { id: 'msg-1', role: 'user', content: 'Test', created_at: Date.now() },
-          { id: 'msg-2', role: 'assistant', content: '', created_at: Date.now() },
-        ],
-      }));
-    });
-
-    afterEach(() => {
-      // Restore isElectron to false
-      const { isElectron } = require('@/lib/platform');
-      (isElectron as jest.Mock).mockReturnValue(false);
-      delete (window as any).electronAPI;
-    });
-
-    it('should call Browser Agent when sending message in Electron', async () => {
-      const user = userEvent.setup();
-      mockStream.mockResolvedValue(undefined);
-
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test Browser Agent');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      await waitFor(() => {
-        expect(mockStream).toHaveBeenCalled();
-      });
-
-      // Check stream was called with correct parameters
-      const streamCall = mockStream.mock.calls[0];
-      expect(streamCall[0]).toEqual({
-        thinkingMode: 'browser-agent',
-        enableRAG: false,
-        enableTools: true,
-        enableImageGeneration: false,
-      });
-      expect(streamCall[2]).toBe('browser-chat-temp');
-    });
-
-    it('should handle streaming events from Browser Agent', async () => {
-      const user = userEvent.setup();
-      let capturedEventHandler: ((event: any) => void) | null = null;
-
-      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
-        capturedEventHandler = handler;
-        return eventHandlerCleanup;
-      });
-
-      mockStream.mockImplementation(async () => {
-        // Simulate streaming events
-        if (capturedEventHandler) {
-          capturedEventHandler({ type: 'streaming', chunk: 'Hello' });
-          capturedEventHandler({ type: 'streaming', chunk: ' World' });
-        }
-      });
-
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test streaming');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      await waitFor(() => {
-        expect(mockUpdateBrowserChatMessage).toHaveBeenCalled();
-      });
-
-      // Check that streaming updates were applied
-      expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith('msg-2', {
-        content: expect.stringContaining('Hello'),
-      });
-    });
-
-    it('should handle progress events from Browser Agent', async () => {
-      const user = userEvent.setup();
-      let capturedEventHandler: ((event: any) => void) | null = null;
-
-      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
-        capturedEventHandler = handler;
-        return eventHandlerCleanup;
-      });
-
-      mockStream.mockImplementation(async () => {
-        if (capturedEventHandler) {
-          capturedEventHandler({
-            type: 'progress',
-            data: {
-              iteration: 1,
-              maxIterations: 30,
-              status: 'working',
-              message: 'AI 작업 중...',
-            },
-          });
-        }
-      });
-
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test progress');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      await waitFor(() => {
-        expect(mockStream).toHaveBeenCalled();
-      });
-
-      // Progress events are handled internally (setAgentProgress)
-      // We can't directly test the UI without more complex setup
-    });
-
-    it('should handle node execution results from Browser Agent', async () => {
-      const user = userEvent.setup();
-      let capturedEventHandler: ((event: any) => void) | null = null;
-
-      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
-        capturedEventHandler = handler;
-        return eventHandlerCleanup;
-      });
-
-      mockStream.mockImplementation(async () => {
-        if (capturedEventHandler) {
-          capturedEventHandler({
-            type: 'node',
-            data: {
-              messages: [
-                { role: 'user', content: 'Test' },
-                { role: 'assistant', content: 'Response from agent' },
-              ],
-            },
-          });
-        }
-      });
-
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test node result');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      await waitFor(() => {
-        expect(mockUpdateBrowserChatMessage).toHaveBeenCalledWith('msg-2', {
-          content: 'Response from agent',
-        });
-      });
-    });
-
-    it('should cleanup event listener after streaming completes', async () => {
-      const user = userEvent.setup();
-      mockStream.mockResolvedValue(undefined);
-
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test cleanup');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      await waitFor(() => {
-        expect(eventHandlerCleanup).toHaveBeenCalled();
-      });
-    });
-
-    it.skip('should handle stream event errors gracefully', async () => {
-      // Note: This test is skipped because the error is thrown during event handling
-      // which makes it difficult to test without causing test failures
-      const user = userEvent.setup();
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      let capturedEventHandler: ((event: any) => void) | null = null;
-
-      // Store original getState
-      const originalGetState = (useChatStore as any).getState;
-
-      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
-        capturedEventHandler = handler;
-        return eventHandlerCleanup;
-      });
-
-      // Mock useChatStore.getState to throw error when called
-      (useChatStore as any).getState = jest.fn(() => {
-        throw new Error('getState error');
-      });
-
-      mockStream.mockImplementation(async () => {
-        if (capturedEventHandler) {
-          // Trigger code that calls getState (streaming event)
-          capturedEventHandler({ type: 'streaming', chunk: 'test' });
-        }
-      });
-
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test error handling');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          expect.stringContaining('[SimpleChatInput] Stream event error:'),
-          expect.anything()
-        );
-      });
-
-      // Restore original getState
-      (useChatStore as any).getState = originalGetState;
-      consoleErrorSpy.mockRestore();
-    });
-
-    it('should handle null stream events', async () => {
-      const user = userEvent.setup();
-      let capturedEventHandler: ((event: any) => void) | null = null;
-
-      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
-        capturedEventHandler = handler;
-        return eventHandlerCleanup;
-      });
-
-      mockStream.mockImplementation(async () => {
-        if (capturedEventHandler) {
-          // Send null event (should be ignored - line 106)
-          capturedEventHandler(null);
-          capturedEventHandler(undefined);
-          // Then send valid event
-          capturedEventHandler({ type: 'streaming', chunk: 'test' });
-        }
-      });
-
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test null event');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      await waitFor(() => {
-        // Should still process valid event after null
-        expect(mockUpdateBrowserChatMessage).toHaveBeenCalled();
-      });
-    });
-
-    it.skip('should respect abort signal during Electron streaming', async () => {
-      // Note: This test is skipped because the abort signal timing is complex
-      // The event handler may still process events that are triggered before abort completes
-      const user = userEvent.setup();
-      let capturedEventHandler: ((event: any) => void) | null = null;
-
-      mockOnStreamEvent.mockImplementation((handler: (event: any) => void) => {
-        capturedEventHandler = handler;
-        return eventHandlerCleanup;
-      });
-
-      mockStream.mockImplementation(async () => {
-        // Keep stream open for abort test
-        return new Promise(() => {});
-      });
-
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test abort');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      // Wait for streaming to start
-      await waitFor(() => {
-        const stopButton = screen.queryByRole('button', { name: /중지/ });
-        expect(stopButton).toBeInTheDocument();
-      });
-
-      const stopButton = screen.getByRole('button', { name: /중지/ });
-      await user.click(stopButton);
-
-      // Now send event after abort - should be ignored (line 110)
-      if (capturedEventHandler) {
-        capturedEventHandler({ type: 'streaming', chunk: 'Should not appear' });
-      }
-
-      // After abort, stream events should be ignored
-      expect(mockUpdateBrowserChatMessage).not.toHaveBeenCalled();
-    });
-
-    it('should call stopBrowserAgent when stop button clicked in Electron', async () => {
-      const user = userEvent.setup();
-      mockStopBrowserAgent.mockResolvedValue(undefined);
-      mockStream.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 1000)));
-
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test stop agent');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      await waitFor(() => {
-        const stopButton = screen.queryByRole('button', { name: /중지/ });
-        expect(stopButton).toBeInTheDocument();
-      });
-
-      const stopButton = screen.getByRole('button', { name: /중지/ });
-      await user.click(stopButton);
-
-      await waitFor(() => {
-        expect(mockStopBrowserAgent).toHaveBeenCalledWith('browser-chat-temp');
-      });
-    });
-
-    it('should handle stopBrowserAgent errors gracefully', async () => {
-      const user = userEvent.setup();
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      mockStopBrowserAgent.mockRejectedValue(new Error('Stop failed'));
-      mockStream.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 1000)));
-
-      render(<SimpleChatInput />);
-
-      const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'Test stop error');
-
-      const sendButton = screen.getByRole('button', { name: /전송/ });
-      await user.click(sendButton);
-
-      await waitFor(() => {
-        const stopButton = screen.queryByRole('button', { name: /중지/ });
-        expect(stopButton).toBeInTheDocument();
-      });
-
-      const stopButton = screen.getByRole('button', { name: /중지/ });
-      await user.click(stopButton);
-
-      await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-          '[useLangGraphStream:browser] Failed to stop agent:',
-          expect.any(Error)
-        );
-      });
-
-      consoleErrorSpy.mockRestore();
     });
   });
 });

@@ -2,11 +2,11 @@
  * LLMClient 테스트
  */
 
-import { LLMClient, getLLMClient, initializeLLMClient } from '@/lib/llm/client';
+import { LLMClient, getLLMClient, initializeLLMClient } from '@/lib/domains/llm/client';
 import type { LLMConfig } from '@/types';
 
 // Mock OpenAIProvider
-jest.mock('@/lib/llm/providers/openai', () => ({
+jest.mock('@/lib/domains/llm/providers/openai', () => ({
   OpenAIProvider: jest.fn().mockImplementation(() => ({
     chat: jest.fn(),
     stream: jest.fn(),
@@ -124,7 +124,7 @@ describe('LLMClient', () => {
     });
 
     it('getLLMClient should return singleton instance', () => {
-      const { getLLMClient } = require('@/lib/llm/client');
+      const { getLLMClient } = require('@/lib/domains/llm/client');
 
       const client1 = getLLMClient();
       const client2 = getLLMClient();
@@ -133,7 +133,7 @@ describe('LLMClient', () => {
     });
 
     it('initializeLLMClient should configure the singleton', () => {
-      const { getLLMClient, initializeLLMClient } = require('@/lib/llm/client');
+      const { getLLMClient, initializeLLMClient } = require('@/lib/domains/llm/client');
 
       initializeLLMClient(mockConfig);
       const client = getLLMClient();

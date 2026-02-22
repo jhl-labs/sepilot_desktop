@@ -6,12 +6,27 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { DocumentList } from '@/components/rag/DocumentList';
-import { getAllDocuments } from '@/lib/vectordb/client';
-import { VectorDocument } from '@/lib/vectordb/types';
+import { getAllDocuments, getAllEmptyFolders } from '@/lib/domains/rag/client';
+import { VectorDocument } from '@/lib/domains/rag/types';
 
-// Mock getAllDocuments
-jest.mock('@/lib/vectordb/client', () => ({
+// Mock rag client
+jest.mock('@/lib/domains/rag/client', () => ({
   getAllDocuments: jest.fn(),
+  exportDocuments: jest.fn(),
+  importDocuments: jest.fn(),
+  updateDocumentMetadata: jest.fn(),
+  getAllEmptyFolders: jest.fn(),
+  createEmptyFolder: jest.fn(),
+  deleteEmptyFolder: jest.fn(),
+}));
+
+// Mock child dialogs
+jest.mock('@/components/rag/FolderManageDialog', () => ({
+  FolderManageDialog: () => null,
+}));
+
+jest.mock('@/components/rag/DocsSyncDialog', () => ({
+  DocsSyncDialog: () => null,
 }));
 
 // Mock window.confirm
@@ -25,6 +40,7 @@ describe('DocumentList', () => {
       metadata: {
         title: 'Document 1',
         source: 'upload',
+        docGroup: 'personal',
         uploadedAt: new Date('2024-01-01').toISOString(),
       },
     },
@@ -37,6 +53,7 @@ describe('DocumentList', () => {
       metadata: {
         title: 'Document 2',
         source: 'manual',
+        docGroup: 'personal',
         cleaned: true,
         uploadedAt: new Date('2024-01-02').toISOString(),
       },
@@ -50,6 +67,7 @@ describe('DocumentList', () => {
       metadata: {
         title: 'Chunked Document',
         source: 'upload',
+        docGroup: 'personal',
         originalId: 'chunked-doc',
         chunkIndex: 0,
       },
@@ -60,6 +78,7 @@ describe('DocumentList', () => {
       metadata: {
         title: 'Chunked Document',
         source: 'upload',
+        docGroup: 'personal',
         originalId: 'chunked-doc',
         chunkIndex: 1,
       },
@@ -67,9 +86,10 @@ describe('DocumentList', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     (global.confirm as jest.Mock).mockReturnValue(true);
     (getAllDocuments as jest.Mock).mockResolvedValue(mockDocuments);
+    (getAllEmptyFolders as jest.Mock).mockResolvedValue([]);
   });
 
   const switchToGridView = async () => {
@@ -90,7 +110,7 @@ describe('DocumentList', () => {
       render(<DocumentList />);
 
       await waitFor(() => {
-        expect(screen.getByText('(2개)')).toBeInTheDocument();
+        expect(screen.getByText(/2개/)).toBeInTheDocument();
       });
     });
 
@@ -129,7 +149,7 @@ describe('DocumentList', () => {
       render(<DocumentList />);
 
       await waitFor(() => {
-        expect(screen.getByText('(0개)')).toBeInTheDocument();
+        expect(screen.getByText(/0개/)).toBeInTheDocument();
       });
     });
   });
@@ -144,11 +164,12 @@ describe('DocumentList', () => {
       });
     });
 
-    it('should display document source for uploaded docs', async () => {
+    it('should display personal doc label', async () => {
       render(<DocumentList />);
 
       await waitFor(() => {
-        expect(screen.getByText(/출처: upload/)).toBeInTheDocument();
+        const elements = screen.getAllByText(/개인 문서/);
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
@@ -408,8 +429,8 @@ describe('DocumentList', () => {
     });
 
     it('should show loading state during refresh', async () => {
-      let resolveGetDocs: any;
-      const promise = new Promise((resolve) => {
+      let resolveGetDocs: (value: VectorDocument[]) => void;
+      const promise = new Promise<VectorDocument[]>((resolve) => {
         resolveGetDocs = resolve;
       });
       (getAllDocuments as jest.Mock).mockReturnValue(promise);
@@ -423,7 +444,7 @@ describe('DocumentList', () => {
         expect(refreshButton).toBeDisabled();
       });
 
-      resolveGetDocs(mockDocuments);
+      resolveGetDocs!(mockDocuments);
 
       await waitFor(() => {
         expect(refreshButton).not.toBeDisabled();
@@ -431,8 +452,8 @@ describe('DocumentList', () => {
     });
 
     it('should disable refresh button when loading', async () => {
-      let resolveGetDocs: any;
-      const promise = new Promise((resolve) => {
+      let resolveGetDocs: (value: VectorDocument[]) => void;
+      const promise = new Promise<VectorDocument[]>((resolve) => {
         resolveGetDocs = resolve;
       });
       (getAllDocuments as jest.Mock).mockReturnValue(promise);
@@ -444,7 +465,7 @@ describe('DocumentList', () => {
         expect(refreshButton).toBeDisabled();
       });
 
-      resolveGetDocs(mockDocuments);
+      resolveGetDocs!(mockDocuments);
     });
 
     it('should call onRefresh callback with refresh function', async () => {
@@ -473,7 +494,7 @@ describe('DocumentList', () => {
       });
 
       // Should show only 1 document (merged from 2 chunks)
-      expect(screen.getByText('(1개)')).toBeInTheDocument();
+      expect(screen.getByText(/1개/)).toBeInTheDocument();
     });
 
     it('should merge chunks in correct order', async () => {

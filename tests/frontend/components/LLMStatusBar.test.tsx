@@ -5,14 +5,14 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { LLMStatusBar, ToolInfo } from '@/components/chat/LLMStatusBar';
+import { LLMStatusBar, ToolInfo } from '@/components/chat/unified/components/LLMStatusBar';
 import { LLMConfig, Message } from '@/types';
 
 const mockLLMConfig: LLMConfig = {
   provider: 'openai',
   model: 'gpt-4',
   apiKey: 'test-key',
-  baseUrl: 'https://api.openai.com/v1',
+  baseURL: 'https://api.openai.com/v1',
   maxTokens: 2000,
   temperature: 0.7,
 };

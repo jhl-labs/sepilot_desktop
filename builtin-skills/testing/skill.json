@@ -1,0 +1,24 @@
+{
+  "id": "com.sepilot.builtin.testing",
+  "name": "테스트 가이드",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "Jest, React Testing Library, Playwright 등 다양한 레벨의 테스트 작성 전략과 패턴을 제공합니다",
+  "category": "productivity",
+  "tags": ["test", "jest", "playwright", "TDD", "unit test", "e2e", "테스트", "통합 테스트"],
+  "autoLoad": false,
+  "contextPatterns": [
+    "테스트 작성",
+    "테스트 코드",
+    "test 작성",
+    "jest",
+    "playwright",
+    "TDD",
+    "unit test",
+    "e2e 테스트",
+    "통합 테스트",
+    "테스트 커버리지",
+    "mock 패턴",
+    "테스트 전략"
+  ]
+}
