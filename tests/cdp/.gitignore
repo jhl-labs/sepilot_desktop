@@ -1,6 +1,0 @@
-# CDP Test Output
-*.log
-*.pid
-screenshots/
-test-results/
-*.json.bak
