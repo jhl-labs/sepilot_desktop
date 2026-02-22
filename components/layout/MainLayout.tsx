@@ -7,10 +7,12 @@ import { useChatStore } from '@/lib/store/chat-store';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { DocumentsPage } from '@/components/rag/DocumentsPage';
 import { GalleryView } from '@/components/gallery/GalleryView';
-import { initializeVectorDB } from '@/lib/vectordb/client';
-import { initializeEmbedding } from '@/lib/vectordb/embeddings/client';
+import { initializeVectorDB } from '@/lib/domains/rag/client';
+import { initializeEmbedding } from '@/lib/domains/rag/embeddings/client';
 import { isElectron } from '@/lib/platform';
 import { copyToClipboard } from '@/lib/utils/clipboard';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useShallow } from 'zustand/react/shallow';
 
 import { logger } from '@/lib/utils/logger';
 interface MainLayoutProps {
@@ -54,11 +56,13 @@ function saveSidebarWidth(mode: string, width: number) {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] = useState<
+    import('@/components/settings/SettingsSidebar').SettingSection | undefined
+  >();
   const [isResizing, setIsResizing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('chat');
   const {
     createConversation,
-    messages,
     activeConversationId,
     streamingConversations,
     loadConversations,
@@ -66,7 +70,18 @@ export function MainLayout({ children }: MainLayoutProps) {
     appMode,
     activeEditorTab,
     browserViewMode,
-  } = useChatStore();
+  } = useChatStore(
+    useShallow((state) => ({
+      createConversation: state.createConversation,
+      activeConversationId: state.activeConversationId,
+      streamingConversations: state.streamingConversations,
+      loadConversations: state.loadConversations,
+      setAppMode: state.setAppMode,
+      appMode: state.appMode,
+      activeEditorTab: state.activeEditorTab,
+      browserViewMode: state.browserViewMode,
+    }))
+  );
 
   // Dynamic sidebar width per mode (Map for any mode including extensions)
   const [sidebarWidths, setSidebarWidths] = useState<Map<string, number>>(new Map());
@@ -139,7 +154,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       meta: true,
       shift: true,
       handler: async () => {
-        const lastAssistantMessage = [...messages].reverse().find((m) => m.role === 'assistant');
+        const currentMessages = useChatStore.getState().messages;
+        const lastAssistantMessage = [...currentMessages]
+          .reverse()
+          .find((m: any) => m.role === 'assistant');
 
         if (lastAssistantMessage) {
           await copyToClipboard(lastAssistantMessage.content);
@@ -216,8 +234,8 @@ export function MainLayout({ children }: MainLayoutProps) {
   // Initialize VectorDB and Embedding from config
   const initializeFromConfig = useCallback(
     async (
-      vectorDBConfig?: import('@/lib/vectordb/types').VectorDBConfig,
-      embeddingConfig?: import('@/lib/vectordb/types').EmbeddingConfig
+      vectorDBConfig?: import('@/lib/domains/rag/types').VectorDBConfig,
+      embeddingConfig?: import('@/lib/domains/rag/types').EmbeddingConfig
     ) => {
       if (typeof window === 'undefined') {
         return;
@@ -226,15 +244,15 @@ export function MainLayout({ children }: MainLayoutProps) {
       try {
         // VectorDB 초기화
         if (vectorDBConfig) {
-          logger.info('[MainLayout] Initializing VectorDB:', vectorDBConfig.type);
+          logger.debug('[MainLayout] Initializing VectorDB:', vectorDBConfig.type);
 
           // SQLite-vec는 브라우저에서 건너뛰기
           if (vectorDBConfig.type === 'sqlite-vec' && !isElectron()) {
-            logger.info('⊘ Skipping SQLite-vec in browser environment');
+            logger.debug('⊘ Skipping SQLite-vec in browser environment');
           } else {
             try {
               await initializeVectorDB(vectorDBConfig);
-              logger.info('✓ VectorDB initialized:', vectorDBConfig.type);
+              logger.debug('✓ VectorDB initialized:', vectorDBConfig.type);
             } catch (error) {
               console.error('✗ Failed to initialize VectorDB:', error);
             }
@@ -245,7 +263,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         if (embeddingConfig) {
           try {
             initializeEmbedding(embeddingConfig);
-            logger.info('✓ Embedding initialized:', embeddingConfig.provider);
+            logger.debug('✓ Embedding initialized:', embeddingConfig.provider);
           } catch (error) {
             console.error('✗ Failed to initialize Embedding:', error);
           }
@@ -290,38 +308,16 @@ export function MainLayout({ children }: MainLayoutProps) {
           }
         }
 
-        // VectorDB 초기화
-        if (vectorDBConfig) {
-          logger.info('[MainLayout] VectorDB type:', vectorDBConfig.type);
-
-          // SQLite-vec는 브라우저에서 건너뛰기
-          if (vectorDBConfig.type === 'sqlite-vec' && !isElectron()) {
-            logger.info('⊘ Skipping SQLite-vec in browser environment');
-          } else {
-            try {
-              await initializeVectorDB(vectorDBConfig);
-              logger.info('✓ VectorDB auto-initialized:', vectorDBConfig.type);
-            } catch (error) {
-              console.error('✗ Failed to auto-initialize VectorDB:', error);
-            }
-          }
+        // VectorDB & Embedding 초기화 (중복 방지를 위해 initializeFromConfig만 호출)
+        if (vectorDBConfig || embeddingConfig) {
+          logger.info('[MainLayout] Auto-initializing from config...', {
+            vectorDB: vectorDBConfig?.type,
+            embedding: embeddingConfig?.provider,
+          });
+          await initializeFromConfig(vectorDBConfig, embeddingConfig);
         } else {
-          logger.info('[MainLayout] No VectorDB config found');
+          logger.info('[MainLayout] No VectorDB or Embedding config found');
         }
-
-        // Embedding 초기화
-        if (embeddingConfig) {
-          try {
-            initializeEmbedding(embeddingConfig);
-            logger.info('✓ Embedding auto-initialized:', embeddingConfig.provider);
-          } catch (error) {
-            console.error('✗ Failed to auto-initialize Embedding:', error);
-          }
-        } else {
-          logger.info('[MainLayout] No Embedding config found');
-        }
-
-        await initializeFromConfig(vectorDBConfig, embeddingConfig);
       } catch (error) {
         console.error('Auto-initialization error:', error);
       }
@@ -335,6 +331,17 @@ export function MainLayout({ children }: MainLayoutProps) {
     // Zustand store 함수를 직접 호출 (의존성 없음)
     loadConversations();
   }, []); // Empty deps - only run once on mount
+
+  // 스케줄러가 새 대화를 생성하면 대화 목록 갱신
+  useEffect(() => {
+    if (!isElectron() || !window.electronAPI?.scheduler?.onConversationCreated) {
+      return;
+    }
+    const cleanup = window.electronAPI.scheduler.onConversationCreated(() => {
+      loadConversations();
+    });
+    return cleanup;
+  }, [loadConversations]);
 
   // Listen for config updates from SettingsDialog
   useEffect(() => {
@@ -438,6 +445,54 @@ export function MainLayout({ children }: MainLayoutProps) {
     }
   }, [settingsOpen, viewMode, appMode, activeEditorTab, browserViewMode]);
 
+  // Dispatch settings visibility change event for extensions
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('sepilot:settings-visibility-change', {
+        detail: { open: settingsOpen },
+      })
+    );
+  }, [settingsOpen]);
+
+  // Listen for open-settings event from other components (e.g. Sidebar, Extensions)
+  useEffect(() => {
+    const handleOpenSettings = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        section?: import('@/components/settings/SettingsSidebar').SettingSection;
+      }>;
+      logger.info('[MainLayout] Received sepilot:open-settings event');
+      setSettingsInitialSection(customEvent.detail?.section);
+      setSettingsOpen(true);
+    };
+
+    const handleOpenSettingsMessage = (
+      event: MessageEvent<{
+        source?: string;
+        type?: string;
+        detail?: {
+          section?: import('@/components/settings/SettingsSidebar').SettingSection;
+        };
+      }>
+    ) => {
+      if (
+        event.data?.source !== 'sepilot-extension' ||
+        event.data?.type !== 'sepilot:open-settings'
+      ) {
+        return;
+      }
+      setSettingsInitialSection(event.data.detail?.section);
+      setSettingsOpen(true);
+    };
+
+    window.addEventListener('sepilot:open-settings', handleOpenSettings);
+    window.addEventListener('message', handleOpenSettingsMessage);
+
+    return () => {
+      window.removeEventListener('sepilot:open-settings', handleOpenSettings);
+      window.removeEventListener('message', handleOpenSettingsMessage);
+    };
+  }, []);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
       {/* Sidebar */}
@@ -462,13 +517,68 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {viewMode === 'chat' && children}
-        {viewMode === 'documents' && <DocumentsPage onBack={() => setViewMode('chat')} />}
-        {viewMode === 'gallery' && <GalleryView onClose={() => setViewMode('chat')} />}
+        {viewMode === 'chat' && (
+          <ErrorBoundary
+            fallback={
+              <div className="flex h-full items-center justify-center p-8">
+                <div className="max-w-md space-y-2 text-center">
+                  <p className="text-sm font-medium text-destructive">메인 콘텐츠 오류</p>
+                  <p className="text-xs text-muted-foreground">
+                    페이지를 표시하는 중 오류가 발생했습니다.
+                  </p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="mt-4 px-4 py-2 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                  >
+                    앱 새로고침
+                  </button>
+                </div>
+              </div>
+            }
+          >
+            {children}
+          </ErrorBoundary>
+        )}
+        {viewMode === 'documents' && (
+          <ErrorBoundary>
+            <DocumentsPage onBack={() => setViewMode('chat')} />
+          </ErrorBoundary>
+        )}
+        {viewMode === 'gallery' && (
+          <ErrorBoundary>
+            <GalleryView onClose={() => setViewMode('chat')} />
+          </ErrorBoundary>
+        )}
       </div>
 
       {/* Settings Dialog */}
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <ErrorBoundary
+        fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="max-w-md space-y-2 rounded-lg border border-destructive bg-background p-6 text-center shadow-lg">
+              <p className="text-sm font-medium text-destructive">설정 다이얼로그 오류</p>
+              <p className="text-xs text-muted-foreground">
+                설정을 표시하는 중 오류가 발생했습니다.
+              </p>
+              <button
+                onClick={() => {
+                  setSettingsOpen(false);
+                  window.location.reload();
+                }}
+                className="mt-4 rounded bg-primary px-4 py-2 text-xs text-primary-foreground hover:bg-primary/90"
+              >
+                닫기 및 앱 새로고침
+              </button>
+            </div>
+          </div>
+        }
+      >
+        <SettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          initialSection={settingsInitialSection}
+        />
+      </ErrorBoundary>
     </div>
   );
 }

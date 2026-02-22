@@ -18,7 +18,7 @@ interface MermaidDiagramProps {
 // Initialize mermaid once
 let mermaidInitialized = false;
 
-const MAX_RETRY_COUNT = 2;
+const MAX_RETRY_COUNT = 3;
 
 interface FixAttempt {
   attemptNumber: number;
@@ -76,7 +76,7 @@ ${brokenChart}`;
           setTextDiagram(result.data.content);
         }
       } else {
-        const { getLLMClient } = await import('@/lib/llm/client');
+        const { getLLMClient } = await import('@/lib/domains/llm/client');
         const client = getLLMClient();
         if (client.isConfigured()) {
           const provider = client.getProvider();
@@ -109,27 +109,57 @@ ${brokenChart}`;
         // 이전 시도 기록이 있으면 프롬프트에 포함
         let historyContext = '';
         if (fixHistory.length > 0) {
-          historyContext = '\n\nPrevious fix attempts that FAILED:\n';
+          historyContext = '\n\nPrevious fix attempts that FAILED (Do NOT repeat these):\n';
           fixHistory.forEach((attempt) => {
             historyContext += `\nAttempt ${attempt.attemptNumber}:\n`;
             historyContext += `Error: ${attempt.errorMessage}\n`;
             historyContext += `Tried fix:\n${attempt.attemptedFix}\n`;
             historyContext += '--- This approach did NOT work ---\n';
           });
-          historyContext +=
-            '\nIMPORTANT: Try a DIFFERENT approach from the previous attempts above.\n';
         }
 
-        const prompt = `Fix the following Mermaid diagram syntax error. Return ONLY the corrected Mermaid code without any explanation or markdown code blocks.
-${historyContext}
+        // Strategy based on attempt number
+        let strategyInstructions = '';
+        if (attemptNumber === 1) {
+          strategyInstructions = `
+STRATEGY: SYNTAX REPAIR
+1. Check for unescaped special characters in labels (e.g., [], (), {}, "").
+   - CORRECT: A["Label with (parentheses)"]
+   - INCORRECT: A[Label with (parentheses)]
+2. Check for invalid arrow syntax or node definitions.
+3. Ensure the graph direction (TD, LR, etc.) is valid.
+4. If using 'subgraph', ensure it is closed properly with 'end'.
+`;
+        } else {
+          strategyInstructions = `
+STRATEGY: SIMPLIFICATION (Aggressive Fix)
+1. The previous syntax fix failed. This time, SIMPLIFY the diagram.
+2. Remove non-essential styling, classes, or complex labels.
+3. Shorten long labels that might cause rendering issues.
+4. If the graph is too complex, reduce it to key nodes only.
+5. STRICTLY ensure basic syntax is correct.
+`;
+        }
+
+        const prompt = `You are an expert in Mermaid.js. A Mermaid diagram failed to render. Fix it.
+
+CONTEXT:
 Current Error: ${errorMsg}
 
-Current broken Mermaid code:
+${historyContext}
+
+${strategyInstructions}
+
+RULES:
+- Return ONLY the corrected Mermaid code.
+- Do NOT include markdown code blocks (no \`\`\`mermaid).
+- Do NOT include explanations.
+- The output must be directly renderable by Mermaid.js.
+
+BROKEN CODE:
 ${brokenChart}
 
-${attemptNumber === 1 ? 'First attempt - try the most common fixes.' : 'Second attempt - try a completely different approach from the first attempt.'}
-
-Corrected Mermaid code:`;
+CORRECTED CODE:`;
 
         const messages = [
           { role: 'user' as const, content: prompt, id: 'fix-mermaid', created_at: Date.now() },
@@ -139,7 +169,7 @@ Corrected Mermaid code:`;
           // Electron: Use IPC llm.chat
           const result = await window.electronAPI.llm.chat(messages, {
             maxTokens: 2000,
-            temperature: 0.3,
+            temperature: 0.2, // Lower temperature for more deterministic code
           });
           if (result.success && result.data?.content) {
             // Clean up the response - remove markdown code blocks if present
@@ -153,7 +183,7 @@ Corrected Mermaid code:`;
           }
         } else {
           // Web: Use LLMClient directly
-          const { getLLMClient } = await import('@/lib/llm/client');
+          const { getLLMClient } = await import('@/lib/domains/llm/client');
           const client = getLLMClient();
           if (client.isConfigured()) {
             const provider = client.getProvider();
@@ -162,7 +192,7 @@ Corrected Mermaid code:`;
             ];
             const response = await provider.chat(webMessages, {
               maxTokens: 2000,
-              temperature: 0.3,
+              temperature: 0.2,
             });
             if (response?.content) {
               let fixed = response.content.trim();

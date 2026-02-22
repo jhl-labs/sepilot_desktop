@@ -1,0 +1,23 @@
+{
+  "id": "com.sepilot.builtin.security",
+  "name": "보안 감사 가이드",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "OWASP Top 10, Electron 보안 모범사례, 입력 검증, API 키 관리 등 보안 취약점 분석 가이드를 제공합니다",
+  "category": "productivity",
+  "tags": ["security", "보안", "OWASP", "XSS", "injection", "CSP", "취약점", "vulnerability"],
+  "autoLoad": false,
+  "contextPatterns": [
+    "보안 검사",
+    "보안 취약점",
+    "security audit",
+    "security review",
+    "vulnerability",
+    "XSS",
+    "SQL injection",
+    "CSRF",
+    "취약점 분석",
+    "인증 보안",
+    "OWASP"
+  ]
+}

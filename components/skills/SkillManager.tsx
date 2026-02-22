@@ -38,12 +38,14 @@ import {
 } from 'lucide-react';
 import type { InstalledSkill, SkillSourceType } from '@/types';
 import { cn } from '@/lib/utils';
+import { Trans, useTranslation } from 'react-i18next';
 
 interface SkillManagerProps {
   onRefresh?: () => void;
 }
 
 export function SkillManager({ onRefresh }: SkillManagerProps) {
+  const { t, i18n } = useTranslation();
   const [skills, setSkills] = useState<InstalledSkill[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [togglingSkill, setTogglingSkill] = useState<string | null>(null);
@@ -157,23 +159,11 @@ export function SkillManager({ onRefresh }: SkillManagerProps) {
   };
 
   const getSourceLabel = (sourceType: SkillSourceType): string => {
-    const labels: Record<SkillSourceType, string> = {
-      builtin: '내장 스킬',
-      local: '로컬 스킬',
-      marketplace: '마켓플레이스',
-      github: 'GitHub',
-    };
-    return labels[sourceType] || sourceType;
+    return t(`settings.skills.manager.sources.${sourceType}.label`, sourceType);
   };
 
   const getSourceDescription = (sourceType: SkillSourceType): string => {
-    const descriptions: Record<SkillSourceType, string> = {
-      builtin: 'SEPilot에 기본으로 제공되는 스킬',
-      local: '로컬에서 직접 추가한 스킬',
-      marketplace: '커뮤니티 마켓플레이스에서 설치한 스킬',
-      github: 'GitHub 저장소에서 설치한 스킬',
-    };
-    return descriptions[sourceType] || '';
+    return t(`settings.skills.manager.sources.${sourceType}.desc`, '');
   };
 
   const toggleGroup = (sourceType: SkillSourceType) => {
@@ -204,11 +194,20 @@ export function SkillManager({ onRefresh }: SkillManagerProps) {
   };
 
   const formatDate = (timestamp: number): string => {
-    return new Date(timestamp).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    try {
+      return new Date(timestamp).toLocaleDateString(i18n.language, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      // Fallback if i18n.language is invalid for some reason
+      return new Date(timestamp).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    }
   };
 
   if (isLoading) {
@@ -223,9 +222,11 @@ export function SkillManager({ onRefresh }: SkillManagerProps) {
     return (
       <div className="rounded-lg border border-dashed p-12 text-center">
         <Package className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-semibold">설치된 스킬이 없습니다</h3>
+        <h3 className="mt-4 text-lg font-semibold">
+          {t('settings.skills.manager.noSkills.title')}
+        </h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          마켓플레이스에서 스킬을 다운로드하거나 로컬에서 설치하세요
+          {t('settings.skills.manager.noSkills.description')}
         </p>
       </div>
     );
@@ -276,7 +277,13 @@ export function SkillManager({ onRefresh }: SkillManagerProps) {
               </Badge>
             </TooltipTrigger>
             <TooltipContent>
-              <p>마지막 사용: {skill.lastUsedAt ? formatDate(skill.lastUsedAt) : '없음'}</p>
+              <p>
+                {skill.lastUsedAt
+                  ? t('settings.skills.manager.table.lastUsed', {
+                      date: formatDate(skill.lastUsedAt),
+                    })
+                  : t('settings.skills.manager.table.neverUsed')}
+              </p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -322,7 +329,9 @@ export function SkillManager({ onRefresh }: SkillManagerProps) {
             </TooltipTrigger>
             <TooltipContent>
               <p>
-                {skill.source.type === 'builtin' ? '내장 스킬은 제거할 수 없습니다' : '스킬 제거'}
+                {skill.source.type === 'builtin'
+                  ? t('settings.skills.manager.table.cannotRemoveBuiltin')
+                  : t('settings.skills.manager.table.removeTooltip')}
               </p>
             </TooltipContent>
           </Tooltip>
@@ -339,7 +348,9 @@ export function SkillManager({ onRefresh }: SkillManagerProps) {
           <div className="rounded-lg border bg-card p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">전체 스킬</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {t('settings.skills.manager.stats.total')}
+                </p>
                 <p className="text-2xl font-bold">{skills.length}</p>
               </div>
               <Package className="h-8 w-8 text-muted-foreground" />
@@ -348,7 +359,9 @@ export function SkillManager({ onRefresh }: SkillManagerProps) {
           <div className="rounded-lg border bg-card p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">활성화됨</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {t('settings.skills.manager.stats.enabled')}
+                </p>
                 <p className="text-2xl font-bold text-green-500">
                   {skills.filter((s) => s.enabled).length}
                 </p>
@@ -359,7 +372,9 @@ export function SkillManager({ onRefresh }: SkillManagerProps) {
           <div className="rounded-lg border bg-card p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">총 사용 횟수</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {t('settings.skills.manager.stats.usage')}
+                </p>
                 <p className="text-2xl font-bold">
                   {skills.reduce((sum, s) => sum + (s.usageCount || 0), 0)}
                 </p>
@@ -433,12 +448,24 @@ export function SkillManager({ onRefresh }: SkillManagerProps) {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-[40%]">스킬 이름</TableHead>
-                            <TableHead className="w-[15%]">카테고리</TableHead>
-                            <TableHead className="w-[10%]">버전</TableHead>
-                            <TableHead className="w-[10%] text-center">사용 횟수</TableHead>
-                            <TableHead className="w-[15%]">설치일</TableHead>
-                            <TableHead className="w-[10%] text-center">활성화</TableHead>
+                            <TableHead className="w-[40%]">
+                              {t('settings.skills.manager.table.name')}
+                            </TableHead>
+                            <TableHead className="w-[15%]">
+                              {t('settings.skills.manager.table.category')}
+                            </TableHead>
+                            <TableHead className="w-[10%]">
+                              {t('settings.skills.manager.table.version')}
+                            </TableHead>
+                            <TableHead className="w-[10%] text-center">
+                              {t('settings.skills.manager.table.usage')}
+                            </TableHead>
+                            <TableHead className="w-[15%]">
+                              {t('settings.skills.manager.table.installed')}
+                            </TableHead>
+                            <TableHead className="w-[10%] text-center">
+                              {t('settings.skills.manager.table.enabled')}
+                            </TableHead>
                             <TableHead className="w-[5%]"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -460,20 +487,24 @@ export function SkillManager({ onRefresh }: SkillManagerProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>스킬 제거</AlertDialogTitle>
+            <AlertDialogTitle>{t('settings.skills.manager.deleteDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-semibold">{deleteDialog.skillName}</span> 스킬을
-              제거하시겠습니까?
-              <br />이 작업은 되돌릴 수 없습니다.
+              <Trans
+                i18nKey="settings.skills.manager.deleteDialog.desc"
+                values={{ name: deleteDialog.skillName }}
+                components={{ 1: <span className="font-semibold" /> }}
+              />
+              <br />
+              {t('settings.skills.manager.deleteDialog.warning')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemove}
               className="bg-destructive hover:bg-destructive/90"
             >
-              제거
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

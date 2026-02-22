@@ -1,0 +1,53 @@
+{
+  "systemPrompt": "당신은 코드 리뷰 전문가입니다. 코드의 품질, 가독성, 유지보수성을 체계적으로 분석하고, SOLID 원칙 준수 여부와 코드 스멜을 식별하여 구체적인 개선 방안을 제시합니다. 리뷰 시 항상 '좋은 점'과 '개선할 점'을 균형 있게 제시하고, 모든 피드백에는 이유와 개선 코드 예시를 포함합니다.",
+  "knowledge": [
+    {
+      "title": "코드 리뷰 체크리스트",
+      "content": "# 코드 리뷰 체크리스트\n\n## 기능 정확성\n- 요구사항을 올바르게 구현했는가\n- 엣지 케이스를 처리했는가\n- 에러 핸들링이 적절한가\n\n## 코드 품질\n- 함수/메서드가 단일 책임을 가지는가 (20줄 이하 권장)\n- 변수/함수 이름이 의도를 명확히 전달하는가\n- 중복 코드가 있는가\n- 매직 넘버 대신 상수를 사용했는가\n\n## 타입 안전성\n- any 타입을 사용하지 않았는가\n- 옵셔널 체이닝과 null 체크가 적절한가\n- 제네릭 타입이 명시되었는가\n\n## 성능\n- 불필요한 리렌더링이 발생하지 않는가\n- 메모이제이션이 필요한 곳에 적용되었는가\n- N+1 쿼리 문제가 없는가"
+    },
+    {
+      "title": "SOLID 원칙",
+      "content": "# SOLID 원칙 적용 가이드\n\n## S - 단일 책임 원칙 (SRP)\n클래스/함수는 하나의 이유로만 변경되어야 합니다. 예: UI 렌더링과 데이터 페칭을 분리합니다.\n\n## O - 개방-폐쇄 원칙 (OCP)\n확장에는 열리고 수정에는 닫혀야 합니다. 예: 전략 패턴으로 새 동작을 추가합니다.\n\n## L - 리스코프 치환 원칙 (LSP)\n하위 타입은 상위 타입을 대체할 수 있어야 합니다. 예: 인터페이스 계약을 준수합니다.\n\n## I - 인터페이스 분리 원칙 (ISP)\n클라이언트가 사용하지 않는 메서드에 의존하지 않아야 합니다. 예: 큰 인터페이스를 작은 것으로 분리합니다.\n\n## D - 의존성 역전 원칙 (DIP)\n고수준 모듈이 저수준 모듈에 의존하지 않고, 추상화에 의존해야 합니다."
+    },
+    {
+      "title": "코드 스멜 감지",
+      "content": "# 주요 코드 스멜 패턴\n\n## 긴 함수 (Long Method)\n30줄 이상의 함수는 분리를 고려합니다. 추출 메서드(Extract Method) 리팩토링을 적용합니다.\n\n## 긴 매개변수 목록 (Long Parameter List)\n3개 이상의 매개변수는 객체로 묶습니다. 옵션 객체 패턴을 사용합니다.\n\n## 중복 코드 (Duplicated Code)\n동일 로직이 2곳 이상에 존재하면 공통 함수로 추출합니다.\n\n## 과도한 조건문 (Complex Conditionals)\n중첩된 if문은 Early Return 패턴이나 전략 패턴으로 단순화합니다.\n\n## 데이터 클럼프 (Data Clumps)\n항상 함께 전달되는 데이터 그룹은 별도 객체로 묶습니다.\n\n## 추측성 일반화 (Speculative Generality)\n현재 불필요한 추상화는 제거합니다. YAGNI 원칙을 따릅니다."
+    },
+    {
+      "title": "리팩토링 패턴",
+      "content": "# 실용적 리팩토링 패턴\n\n## 추출 메서드 (Extract Method)\n복잡한 로직을 의미 있는 이름의 함수로 분리합니다.\n```typescript\n// Before: 인라인 로직\nconst filtered = items.filter(i => i.active && i.date > now && i.type === 'A');\n// After: 의도가 명확한 함수\nconst filtered = items.filter(isActiveRecentTypeA);\n```\n\n## Early Return\n중첩 조건문을 가드 절(Guard Clause)로 변환합니다.\n```typescript\n// Before: 깊은 중첩\nif (user) { if (user.active) { doWork(); } }\n// After: 가드 절\nif (!user) return;\nif (!user.active) return;\ndoWork();\n```\n\n## 합성 함수 (Compose Functions)\n작은 순수 함수들을 조합하여 복잡한 로직을 표현합니다.\n\n## 전략 패턴 (Strategy Pattern)\nswitch/if-else 분기를 객체 매핑으로 대체합니다."
+    }
+  ],
+  "templates": [
+    {
+      "id": "pr-review-comment",
+      "name": "PR 리뷰 코멘트 템플릿",
+      "description": "Pull Request 코드 리뷰 시 체계적인 피드백을 작성할 때 사용하는 템플릿",
+      "prompt": "## 코드 리뷰: {{파일경로}}\n\n### 좋은 점\n- {{좋은점}}\n\n### 개선 제안\n| 위치 | 심각도 | 내용 |\n|------|--------|------|\n| L{{라인번호}} | {{심각도}} | {{개선내용}} |\n\n### 요약\n- 승인 여부: {{승인여부}}\n- 우선 수정 사항: {{우선수정사항}}",
+      "variables": [
+        { "name": "파일경로", "description": "리뷰 대상 파일 경로", "required": true },
+        { "name": "좋은점", "description": "코드에서 잘 작성된 부분", "required": true },
+        {
+          "name": "라인번호",
+          "description": "개선이 필요한 줄 번호",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "심각도",
+          "description": "critical / major / minor / nit",
+          "required": false,
+          "default": "minor"
+        },
+        { "name": "개선내용", "description": "구체적인 개선 제안", "required": true },
+        { "name": "승인여부", "description": "Approve / Request Changes", "required": true },
+        {
+          "name": "우선수정사항",
+          "description": "머지 전 반드시 수정할 사항",
+          "required": false,
+          "default": ""
+        }
+      ]
+    }
+  ]
+}

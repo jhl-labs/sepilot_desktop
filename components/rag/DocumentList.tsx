@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,8 +35,8 @@ import {
   getAllEmptyFolders,
   createEmptyFolder,
   deleteEmptyFolder,
-} from '@/lib/vectordb/client';
-import { VectorDocument, DocumentTreeNode } from '@/lib/vectordb/types';
+} from '@/lib/domains/rag/client';
+import { VectorDocument, DocumentTreeNode } from '@/lib/domains/rag/types';
 import { TeamDocsConfig, GitHubSyncConfig } from '@/types';
 import { FolderManageDialog } from './FolderManageDialog';
 import { DocsSyncDialog } from './DocsSyncDialog';
@@ -58,6 +58,7 @@ interface DocumentListProps {
 
 export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: DocumentListProps) {
   const { t } = useTranslation();
+  const [chunkedDocuments, setChunkedDocuments] = useState<VectorDocument[]>([]);
   const [documents, setDocuments] = useState<VectorDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -122,63 +123,40 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     }
   };
 
-  // 문서 필터링 (Personal 또는 특정 Team Docs)
-  const filterByActiveTab = (docs: VectorDocument[]): VectorDocument[] => {
-    if (activeTab === 'personal') {
-      // Personal Docs만 표시
-      return docs.filter((doc) => {
-        const docGroup = doc.metadata?.docGroup || 'personal';
-        return docGroup === 'personal';
-      });
-    } else {
-      // Team 탭: 선택된 Team Docs만 표시
-      if (!selectedTeamDocsId) {
-        return [];
+  const mergeChunkedDocuments = (docs: VectorDocument[]): VectorDocument[] => {
+    const groupedDocs = new Map<string, VectorDocument>();
+
+    for (const doc of docs) {
+      const originalId = doc.metadata?.originalId || doc.id;
+      const chunkIndex = doc.metadata?.chunkIndex ?? 0;
+
+      if (groupedDocs.has(originalId)) {
+        const existingDoc = groupedDocs.get(originalId)!;
+        const chunks = existingDoc.metadata._chunks || [];
+        chunks.push({ index: chunkIndex, content: doc.content });
+        chunks.sort((a: DocumentChunk, b: DocumentChunk) => a.index - b.index);
+        existingDoc.metadata._chunks = chunks;
+        continue;
       }
-      return docs.filter((doc) => {
-        return doc.metadata?.teamDocsId === selectedTeamDocsId;
+
+      groupedDocs.set(originalId, {
+        ...doc,
+        id: originalId,
+        metadata: {
+          ...doc.metadata,
+          originalId,
+          _chunks: [{ index: chunkIndex, content: doc.content }],
+        },
       });
     }
-  };
 
-  // 검색 필터링
-  const filterDocuments = (docs: VectorDocument[]): VectorDocument[] => {
-    // 먼저 activeTab으로 필터링 (Personal 또는 특정 Team Docs)
-    const filtered = filterByActiveTab(docs);
-
-    if (!searchQuery.trim()) {
-      return filtered;
-    }
-
-    const query = searchQuery.toLowerCase();
-
-    return filtered.filter((doc) => {
-      // 제목 검색
-      const title = doc.metadata?.title?.toLowerCase() || '';
-      if (title.includes(query)) {
-        return true;
-      }
-
-      // 폴더 경로 검색
-      const folderPath = doc.metadata?.folderPath?.toLowerCase() || '';
-      if (folderPath.includes(query)) {
-        return true;
-      }
-
-      // 내용 검색 (청크 포함)
-      if (doc.content.toLowerCase().includes(query)) {
-        return true;
-      }
-
-      // 청크 내용 검색
-      const chunks = doc.metadata?._chunks || [];
-      for (const chunk of chunks) {
-        if (chunk.content && chunk.content.toLowerCase().includes(query)) {
-          return true;
-        }
-      }
-
-      return false;
+    return Array.from(groupedDocs.values()).map((doc) => {
+      const chunks = doc.metadata._chunks || [];
+      const mergedContent = chunks.map((c: DocumentChunk) => c.content).join('\n');
+      return {
+        ...doc,
+        content: mergedContent,
+      };
     });
   };
 
@@ -191,45 +169,9 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
       // 특수 문서 (폴더 등) 필터링 - 실제 문서만
       const docs = allDocs.filter((doc) => doc.metadata?._docType !== 'folder');
+      const mergedDocs = mergeChunkedDocuments(docs);
 
-      // 청크된 문서들을 원본 문서 단위로 그룹화
-      const groupedDocs = new Map<string, VectorDocument>();
-
-      for (const doc of docs) {
-        const originalId = doc.metadata?.originalId || doc.id;
-        const chunkIndex = doc.metadata?.chunkIndex ?? 0;
-
-        if (groupedDocs.has(originalId)) {
-          // 기존 그룹에 청크 추가
-          const existingDoc = groupedDocs.get(originalId)!;
-          const chunks = existingDoc.metadata._chunks || [];
-          chunks.push({ index: chunkIndex, content: doc.content });
-          chunks.sort((a: DocumentChunk, b: DocumentChunk) => a.index - b.index);
-          existingDoc.metadata._chunks = chunks;
-        } else {
-          // 새 그룹 생성
-          groupedDocs.set(originalId, {
-            ...doc,
-            id: originalId,
-            metadata: {
-              ...doc.metadata,
-              originalId,
-              _chunks: [{ index: chunkIndex, content: doc.content }],
-            },
-          });
-        }
-      }
-
-      // 청크들을 합쳐서 최종 문서 리스트 생성
-      const mergedDocs = Array.from(groupedDocs.values()).map((doc) => {
-        const chunks = doc.metadata._chunks || [];
-        const mergedContent = chunks.map((c: DocumentChunk) => c.content).join('\n');
-        return {
-          ...doc,
-          content: mergedContent,
-        };
-      });
-
+      setChunkedDocuments(docs);
       setDocuments(mergedDocs);
       logger.info(
         `[DocumentList] Loaded ${docs.length} chunks, grouped into ${mergedDocs.length} documents`
@@ -264,17 +206,26 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     try {
       if (typeof window !== 'undefined' && window.electronAPI?.config) {
         const result = await window.electronAPI.config.load();
-        logger.info('[DocumentList] Config load result:', result);
+        logger.info('[DocumentList] Config load completed', {
+          success: result.success,
+          hasData: !!result.data,
+          teamDocsCount: result.data?.teamDocs?.length || 0,
+          hasPersonalRepo: !!result.data?.githubSync,
+        });
         if (result.success && result.data) {
-          if (result.data.teamDocs) {
-            logger.info('[DocumentList] Team Docs loaded:', result.data.teamDocs);
-            setTeamDocs(result.data.teamDocs);
-            // 첫 번째 Team Docs를 기본 선택
-            if (result.data.teamDocs.length > 0) {
-              setSelectedTeamDocsId(result.data.teamDocs[0].id);
-            }
+          const teamDocsConfigs = result.data.teamDocs || [];
+          if (teamDocsConfigs.length > 0) {
+            setTeamDocs(teamDocsConfigs);
+            setSelectedTeamDocsId((prev) => {
+              if (prev && teamDocsConfigs.some((td) => td.id === prev)) {
+                return prev;
+              }
+              return teamDocsConfigs[0]?.id || '';
+            });
           } else {
             logger.info('[DocumentList] No teamDocs in config');
+            setTeamDocs([]);
+            setSelectedTeamDocsId('');
           }
           if (result.data.githubSync) {
             setPersonalRepo(result.data.githubSync);
@@ -321,8 +272,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
     try {
       // 원본 문서 ID와 매칭되는 모든 청크 ID 찾기
-      const allDocs = await getAllDocuments();
-      const chunkIdsToDelete = allDocs
+      const chunkIdsToDelete = chunkedDocuments
         .filter((doc) => {
           const originalId = doc.metadata?.originalId || doc.id;
           return originalId === id;
@@ -458,7 +408,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
     // 0. 빈 폴더부터 생성
     emptyFolders.forEach((folderPath) => {
-      const pathParts = folderPath.split('/').filter((p) => p.trim());
+      const pathParts = folderPath.split('/').filter((p: any) => p.trim());
       let currentPath = '';
 
       pathParts.forEach((part, index) => {
@@ -490,7 +440,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     docs.forEach((doc) => {
       const folderPath = doc.metadata?.folderPath as string | undefined;
       if (folderPath) {
-        const pathParts = folderPath.split('/').filter((p) => p.trim());
+        const pathParts = folderPath.split('/').filter((p: any) => p.trim());
         let currentPath = '';
 
         pathParts.forEach((part, index) => {
@@ -670,28 +620,22 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       setIsLoading(true);
       setMessage(null);
 
-      // 원본 문서 ID와 매칭되는 모든 청크 ID 찾기
-      const allDocs = await getAllDocuments();
-      const chunkIdsToUpdate = allDocs
-        .filter((d) => {
-          const originalId = d.metadata?.originalId || d.id;
-          return originalId === doc.id;
-        })
-        .map((d) => d.id);
+      // 원본 문서 ID와 매칭되는 모든 청크 찾기
+      const docsToUpdate = chunkedDocuments.filter((d) => {
+        const originalId = d.metadata?.originalId || d.id;
+        return originalId === doc.id;
+      });
 
-      // 업데이트할 ID 목록 (청크가 있으면 청크들, 없으면 원본 문서)
-      const idsToUpdate = chunkIdsToUpdate.length > 0 ? chunkIdsToUpdate : [doc.id];
+      const resolvedDocsToUpdate = docsToUpdate.length > 0 ? docsToUpdate : [doc];
 
       // 모든 청크의 메타데이터 업데이트
-      for (const id of idsToUpdate) {
-        const docToUpdate = allDocs.find((d) => d.id === id);
-        if (docToUpdate) {
-          const updatedMetadata = {
-            ...docToUpdate.metadata,
-            folderPath: targetFolderPath,
-          };
-          await updateDocumentMetadata(id, updatedMetadata);
-        }
+      for (const docToUpdate of resolvedDocsToUpdate) {
+        const updatedMetadata = {
+          ...docToUpdate.metadata,
+          folderPath: targetFolderPath,
+          ...(docToUpdate.metadata?.docGroup === 'team' ? { modifiedLocally: true } : {}),
+        };
+        await updateDocumentMetadata(docToUpdate.id, updatedMetadata);
       }
 
       // 빈 폴더 목록에서 제거 (문서가 있으면 더 이상 빈 폴더가 아님)
@@ -750,6 +694,50 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       handleMoveToFolder(draggedDoc, targetFolderPath);
     }
   };
+
+  const filteredDocuments = useMemo(() => {
+    const activeTabFiltered =
+      activeTab === 'personal'
+        ? documents.filter((doc) => (doc.metadata?.docGroup || 'personal') === 'personal')
+        : selectedTeamDocsId
+          ? documents.filter((doc) => doc.metadata?.teamDocsId === selectedTeamDocsId)
+          : [];
+
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return activeTabFiltered;
+    }
+
+    return activeTabFiltered.filter((doc) => {
+      const title = doc.metadata?.title?.toLowerCase() || '';
+      if (title.includes(normalizedQuery)) {
+        return true;
+      }
+
+      const folderPath = doc.metadata?.folderPath?.toLowerCase() || '';
+      if (folderPath.includes(normalizedQuery)) {
+        return true;
+      }
+
+      if (doc.content.toLowerCase().includes(normalizedQuery)) {
+        return true;
+      }
+
+      const chunks = doc.metadata?._chunks || [];
+      for (const chunk of chunks) {
+        if (chunk.content && chunk.content.toLowerCase().includes(normalizedQuery)) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+  }, [documents, activeTab, selectedTeamDocsId, searchQuery]);
+
+  const treeNodes = useMemo(
+    () => buildDocumentTree(filteredDocuments),
+    [filteredDocuments, emptyFolders, expandedFolders, t]
+  );
 
   // 문서 카드 렌더링 (공통)
   const renderDocumentCard = (doc: VectorDocument, compact: boolean = false) => {
@@ -875,8 +863,6 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
   // Tree 뷰 렌더링
   const renderTreeView = () => {
-    const treeNodes = buildDocumentTree(filteredDocuments);
-
     const renderTreeNode = (node: DocumentTreeNode, level: number = 0): React.ReactNode => {
       const isExpanded = node.type === 'folder' && expandedFolders.has(node.id);
       const paddingLeft = level * 20;
@@ -963,23 +949,41 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
       const result = await window.electronAPI.githubSync.pullDocuments(personalRepo);
 
       if (result.success && result.documents && result.documents.length > 0) {
-        const allDocs = await getAllDocuments();
-        const docsToDelete: string[] = [];
+        const allDocs = chunkedDocuments;
+        const docsToDelete = new Set<string>();
+        const personalSource = `${personalRepo.owner}/${personalRepo.repo}`;
 
         for (const newDoc of result.documents) {
-          const matchingDocs = allDocs.filter(
-            (existing: VectorDocument) =>
+          const incomingGithubPath =
+            typeof newDoc.metadata?.githubPath === 'string' ? newDoc.metadata.githubPath : '';
+
+          const matchingDocs = allDocs.filter((existing: VectorDocument) => {
+            if (existing.metadata?.docGroup === 'team') {
+              return false;
+            }
+
+            const existingGithubPath =
+              typeof existing.metadata?.githubPath === 'string'
+                ? (existing.metadata.githubPath as string)
+                : '';
+
+            if (incomingGithubPath && existingGithubPath) {
+              return existingGithubPath === incomingGithubPath;
+            }
+
+            return (
+              existing.metadata?.source === personalSource &&
               existing.metadata?.title === newDoc.title &&
-              existing.metadata?.folderPath === newDoc.metadata?.folderPath &&
-              existing.metadata?.docGroup !== 'team'
-          );
+              existing.metadata?.folderPath === newDoc.metadata?.folderPath
+            );
+          });
           for (const match of matchingDocs) {
-            docsToDelete.push(match.id);
+            docsToDelete.add(match.id);
           }
         }
 
-        if (docsToDelete.length > 0) {
-          await window.electronAPI.vectorDB.delete(docsToDelete);
+        if (docsToDelete.size > 0) {
+          await window.electronAPI.vectorDB.delete(Array.from(docsToDelete));
         }
 
         const generateId = () => {
@@ -1075,11 +1079,22 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
   // Team Docs Pull 핸들러
   const handlePullTeamDoc = async (config: TeamDocsConfig) => {
+    if (!config.enabled) {
+      setMessage({
+        type: 'error',
+        text: 'Team Docs repository is disabled. Enable it in settings first.',
+      });
+      return;
+    }
+
     setSyncingTeamId(`pull-${config.id}`);
     setMessage(null);
 
     logger.info('[DocumentList] Starting pull for:', config.name, config.id);
-    logger.info('[DocumentList] Config:', config);
+    logger.info('[DocumentList] Config:', {
+      ...config,
+      token: config.token ? '[REDACTED]' : '',
+    });
 
     try {
       const result = await window.electronAPI.teamDocs.syncDocuments(config);
@@ -1114,6 +1129,14 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
 
   // Team Docs Push 핸들러
   const handlePushTeamDoc = async (config: TeamDocsConfig) => {
+    if (!config.enabled) {
+      setMessage({
+        type: 'error',
+        text: 'Team Docs repository is disabled. Enable it in settings first.',
+      });
+      return;
+    }
+
     setSyncingTeamId(`push-${config.id}`);
     setMessage(null);
 
@@ -1155,8 +1178,16 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
     }
   };
 
-  // 필터링된 문서 목록
-  const filteredDocuments = filterDocuments(documents);
+  const currentTeam = useMemo(
+    () => teamDocs.find((td) => td.id === selectedTeamDocsId),
+    [teamDocs, selectedTeamDocsId]
+  );
+  const isCurrentTeamEnabled = currentTeam ? currentTeam.enabled !== false : false;
+  const teamDocCount = currentTeam ? filteredDocuments.length : 0;
+  const hasModifiedDocs = useMemo(
+    () => (currentTeam ? filteredDocuments.some((doc) => doc.metadata?.modifiedLocally) : false),
+    [currentTeam, filteredDocuments]
+  );
 
   return (
     <div className="space-y-4">
@@ -1194,29 +1225,18 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                       </option>
                     ))}
                   </select>
-                  {(() => {
-                    const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
-                    const teamDocCount = currentTeam ? filteredDocuments.length : 0;
-                    const hasModifiedDocs = currentTeam
-                      ? filteredDocuments.some((doc) => doc.metadata?.modifiedLocally)
-                      : false;
-                    return (
-                      <>
-                        {currentTeam && (
-                          <>
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
-                              {t('documents.labels.count', { count: teamDocCount })}
-                            </span>
-                            {hasModifiedDocs && (
-                              <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-2 py-1 rounded whitespace-nowrap">
-                                {t('documents.labels.modified')}
-                              </span>
-                            )}
-                          </>
-                        )}
-                      </>
-                    );
-                  })()}
+                  {currentTeam && (
+                    <>
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded whitespace-nowrap">
+                        {t('documents.labels.count', { count: teamDocCount })}
+                      </span>
+                      {hasModifiedDocs && (
+                        <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-2 py-1 rounded whitespace-nowrap">
+                          {t('documents.labels.modified')}
+                        </span>
+                      )}
+                    </>
+                  )}
                 </>
               ) : (
                 <div className="text-sm text-muted-foreground">
@@ -1231,12 +1251,13 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
                       if (currentTeam) {
                         handlePullTeamDoc(currentTeam);
                       }
                     }}
-                    disabled={syncingTeamId !== null || isLoading}
+                    disabled={
+                      syncingTeamId !== null || isLoading || !currentTeam || !isCurrentTeamEnabled
+                    }
                   >
                     {syncingTeamId === `pull-${selectedTeamDocsId}` ? (
                       <>
@@ -1254,12 +1275,13 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
                       if (currentTeam) {
                         handlePushTeamDoc(currentTeam);
                       }
                     }}
-                    disabled={syncingTeamId !== null || isLoading}
+                    disabled={
+                      syncingTeamId !== null || isLoading || !currentTeam || !isCurrentTeamEnabled
+                    }
                   >
                     {syncingTeamId === `push-${selectedTeamDocsId}` ? (
                       <>
@@ -1290,23 +1312,20 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
               </Button>
             </div>
           </div>
-          {teamDocs.length > 0 &&
-            (() => {
-              const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
-              return (
-                currentTeam && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {currentTeam.description || t('documents.team.repositoryDefault')}
-                    {currentTeam.lastSyncAt && (
-                      <span className="ml-2">
-                        • {t('documents.sync.lastSync')}:{' '}
-                        {new Date(currentTeam.lastSyncAt).toLocaleString('ko-KR')}
-                      </span>
-                    )}
-                  </p>
-                )
-              );
-            })()}
+          {currentTeam && (
+            <p className="text-xs text-muted-foreground mt-2">
+              {currentTeam.description || t('documents.team.repositoryDefault')}
+              {currentTeam.lastSyncAt && (
+                <span className="ml-2">
+                  • {t('documents.sync.lastSync')}:{' '}
+                  {new Date(currentTeam.lastSyncAt).toLocaleString('ko-KR')}
+                </span>
+              )}
+              {!isCurrentTeamEnabled && (
+                <span className="ml-2 text-amber-600 dark:text-amber-400">• Disabled</span>
+              )}
+            </p>
+          )}
         </div>
       )}
 
@@ -1551,10 +1570,7 @@ export function DocumentList({ onDelete, onEdit, onRefresh, disabled = false }: 
                 <div>
                   <p className="text-sm text-muted-foreground">
                     {t('documents.empty.noDocsInRepository', {
-                      name: (() => {
-                        const currentTeam = teamDocs.find((td) => td.id === selectedTeamDocsId);
-                        return currentTeam ? currentTeam.name : '';
-                      })(),
+                      name: currentTeam?.name || '',
                     })}
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">

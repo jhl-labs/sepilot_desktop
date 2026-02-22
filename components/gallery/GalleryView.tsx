@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   X,
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { isElectron } from '@/lib/platform';
 import type { Message } from '@/types';
+import { runPromisesInBatches } from '@/lib/utils/batch';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -41,6 +42,27 @@ interface GalleryViewProps {
   onClose: () => void;
 }
 
+const DEFAULT_MESSAGE_LOAD_BATCH_SIZE = 8;
+const MAX_MESSAGE_LOAD_BATCH_SIZE = 32;
+
+function getMessageLoadBatchSize(): number {
+  if (typeof window === 'undefined') {
+    return DEFAULT_MESSAGE_LOAD_BATCH_SIZE;
+  }
+
+  const raw = window.localStorage.getItem('sepilot_gallery_batch_size');
+  if (!raw) {
+    return DEFAULT_MESSAGE_LOAD_BATCH_SIZE;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isNaN(parsed)) {
+    return DEFAULT_MESSAGE_LOAD_BATCH_SIZE;
+  }
+
+  return Math.min(Math.max(parsed, 1), MAX_MESSAGE_LOAD_BATCH_SIZE);
+}
+
 export function GalleryView({ onClose }: GalleryViewProps) {
   const { t } = useTranslation();
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -60,6 +82,55 @@ export function GalleryView({ onClose }: GalleryViewProps) {
     return Array.from(matches, (match) => match[1]);
   };
 
+  const collectImagesFromMessage = (
+    message: Message,
+    conversationId: string,
+    conversationTitle?: string
+  ): GalleryImage[] => {
+    const extracted: GalleryImage[] = [];
+
+    if (message.images && message.images.length > 0) {
+      for (const img of message.images) {
+        if (!img.base64) {
+          continue;
+        }
+
+        extracted.push({
+          id: img.id,
+          base64: img.base64,
+          filename: img.filename,
+          mimeType: img.mimeType,
+          conversationId,
+          conversationTitle,
+          messageId: message.id,
+          createdAt: message.created_at,
+          type: message.role === 'assistant' ? 'generated' : 'pasted',
+          provider: message.role === 'assistant' ? img.provider : undefined,
+        });
+      }
+    }
+
+    if (message.content) {
+      const imageUrls = extractMarkdownImages(message.content);
+      for (const url of imageUrls) {
+        extracted.push({
+          id: `${message.id}-${url}`,
+          base64: url, // URL을 base64 필드에 저장 (표시용)
+          filename: url.split('/').pop() || 'linked-image',
+          mimeType: 'image/png', // 기본값
+          conversationId,
+          conversationTitle,
+          messageId: message.id,
+          createdAt: message.created_at,
+          type: 'linked',
+          url,
+        });
+      }
+    }
+
+    return extracted;
+  };
+
   const loadImages = async () => {
     setLoading(true);
     try {
@@ -69,66 +140,23 @@ export function GalleryView({ onClose }: GalleryViewProps) {
         // Electron: Load from database
         const conversationsResult = await window.electronAPI.chat.loadConversations();
         if (conversationsResult.success && conversationsResult.data) {
-          for (const conversation of conversationsResult.data) {
-            const messagesResult = await window.electronAPI.chat.loadMessages(conversation.id);
-            if (messagesResult.success && messagesResult.data) {
-              for (const message of messagesResult.data) {
-                // User messages with pasted images
-                if (message.role === 'user' && message.images && message.images.length > 0) {
-                  for (const img of message.images) {
-                    if (img.base64) {
-                      allImages.push({
-                        id: img.id,
-                        base64: img.base64,
-                        filename: img.filename,
-                        mimeType: img.mimeType,
-                        conversationId: conversation.id,
-                        conversationTitle: conversation.title,
-                        messageId: message.id,
-                        createdAt: message.created_at,
-                        type: 'pasted',
-                      });
-                    }
-                  }
-                }
-                // Assistant messages with generated images
-                if (message.role === 'assistant' && message.images && message.images.length > 0) {
-                  for (const img of message.images) {
-                    if (img.base64) {
-                      allImages.push({
-                        id: img.id,
-                        base64: img.base64,
-                        filename: img.filename,
-                        mimeType: img.mimeType,
-                        conversationId: conversation.id,
-                        conversationTitle: conversation.title,
-                        messageId: message.id,
-                        createdAt: message.created_at,
-                        type: 'generated',
-                        provider: img.provider,
-                      });
-                    }
-                  }
-                }
-                // Extract markdown image links from message content
-                if (message.content) {
-                  const imageUrls = extractMarkdownImages(message.content);
-                  for (const url of imageUrls) {
-                    allImages.push({
-                      id: `${message.id}-${url}`,
-                      base64: url, // URL을 base64 필드에 저장 (표시용)
-                      filename: url.split('/').pop() || 'linked-image',
-                      mimeType: 'image/png', // 기본값
-                      conversationId: conversation.id,
-                      conversationTitle: conversation.title,
-                      messageId: message.id,
-                      createdAt: message.created_at,
-                      type: 'linked',
-                      url: url,
-                    });
-                  }
-                }
+          const messageLoadResults = await runPromisesInBatches(
+            conversationsResult.data,
+            getMessageLoadBatchSize(),
+            async (conversation) => {
+              const messagesResult = await window.electronAPI.chat.loadMessages(conversation.id);
+              if (!messagesResult.success || !messagesResult.data) {
+                return [];
               }
+              return messagesResult.data.flatMap((message) =>
+                collectImagesFromMessage(message, conversation.id, conversation.title)
+              );
+            }
+          );
+
+          for (const result of messageLoadResults) {
+            if (result.status === 'fulfilled') {
+              allImages.push(...result.value);
             }
           }
         }
@@ -138,42 +166,9 @@ export function GalleryView({ onClose }: GalleryViewProps) {
         if (savedMessages) {
           const messagesMap = JSON.parse(savedMessages) as Record<string, Message[]>;
           for (const [convId, messages] of Object.entries(messagesMap)) {
-            for (const message of messages) {
-              if (message.images && message.images.length > 0) {
-                for (const img of message.images) {
-                  if (img.base64) {
-                    allImages.push({
-                      id: img.id,
-                      base64: img.base64,
-                      filename: img.filename,
-                      mimeType: img.mimeType,
-                      conversationId: convId,
-                      messageId: message.id,
-                      createdAt: message.created_at,
-                      type: message.role === 'user' ? 'pasted' : 'generated',
-                      provider: img.provider,
-                    });
-                  }
-                }
-              }
-              // Extract markdown image links from message content
-              if (message.content) {
-                const imageUrls = extractMarkdownImages(message.content);
-                for (const url of imageUrls) {
-                  allImages.push({
-                    id: `${message.id}-${url}`,
-                    base64: url, // URL을 base64 필드에 저장 (표시용)
-                    filename: url.split('/').pop() || 'linked-image',
-                    mimeType: 'image/png', // 기본값
-                    conversationId: convId,
-                    messageId: message.id,
-                    createdAt: message.created_at,
-                    type: 'linked',
-                    url: url,
-                  });
-                }
-              }
-            }
+            allImages.push(
+              ...messages.flatMap((message) => collectImagesFromMessage(message, convId))
+            );
           }
         }
       }
@@ -222,12 +217,33 @@ export function GalleryView({ onClose }: GalleryViewProps) {
     handleDownload(image);
   };
 
-  const filteredImages = images.filter((img) => {
-    if (filter === 'all') {
-      return true;
+  const imageCounts = useMemo(() => {
+    const counts = {
+      all: images.length,
+      pasted: 0,
+      generated: 0,
+      linked: 0,
+    };
+
+    for (const image of images) {
+      if (image.type === 'pasted') {
+        counts.pasted += 1;
+      } else if (image.type === 'generated') {
+        counts.generated += 1;
+      } else {
+        counts.linked += 1;
+      }
     }
-    return img.type === filter;
-  });
+
+    return counts;
+  }, [images]);
+
+  const filteredImages = useMemo(() => {
+    if (filter === 'all') {
+      return images;
+    }
+    return images.filter((img) => img.type === filter);
+  }, [filter, images]);
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString('ko-KR', {
@@ -250,7 +266,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
             {t('gallery.count', { count: filteredImages.length })}
           </span>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close Gallery">
           <X className="h-5 w-5" />
         </Button>
       </div>
@@ -263,7 +279,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
             size="sm"
             onClick={() => setFilter('all')}
           >
-            {t('gallery.filters.all', { count: images.length })}
+            {t('gallery.filters.all', { count: imageCounts.all })}
           </Button>
           <Button
             variant={filter === 'pasted' ? 'default' : 'outline'}
@@ -272,9 +288,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
             className="gap-1"
           >
             <Clipboard className="h-4 w-4" />
-            {t('gallery.filters.pasted', {
-              count: images.filter((i) => i.type === 'pasted').length,
-            })}
+            {t('gallery.filters.pasted', { count: imageCounts.pasted })}
           </Button>
           <Button
             variant={filter === 'generated' ? 'default' : 'outline'}
@@ -283,9 +297,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
             className="gap-1"
           >
             <Sparkles className="h-4 w-4" />
-            {t('gallery.filters.generated', {
-              count: images.filter((i) => i.type === 'generated').length,
-            })}
+            {t('gallery.filters.generated', { count: imageCounts.generated })}
           </Button>
           <Button
             variant={filter === 'linked' ? 'default' : 'outline'}
@@ -294,9 +306,7 @@ export function GalleryView({ onClose }: GalleryViewProps) {
             className="gap-1"
           >
             <Link className="h-4 w-4" />
-            {t('gallery.filters.linked', {
-              count: images.filter((i) => i.type === 'linked').length,
-            })}
+            {t('gallery.filters.linked', { count: imageCounts.linked })}
           </Button>
         </div>
       </div>
@@ -451,7 +461,12 @@ export function GalleryView({ onClose }: GalleryViewProps) {
                 >
                   <Download className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => setSelectedImage(null)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedImage(null)}
+                  aria-label="Close Image Preview"
+                >
                   <X className="h-4 w-4" />
                 </Button>
               </div>

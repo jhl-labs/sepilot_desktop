@@ -1,0 +1,24 @@
+{
+  "id": "com.sepilot.builtin.performance",
+  "name": "성능 최적화 가이드",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "React 렌더링 최적화, 번들 크기 분석, 메모리 관리, Electron 성능, IPC 최적화 가이드를 제공합니다",
+  "category": "productivity",
+  "tags": ["performance", "optimization", "성능", "최적화", "memory", "bundle", "렌더링", "메모리"],
+  "autoLoad": false,
+  "contextPatterns": [
+    "성능 최적화",
+    "성능 개선",
+    "performance optimization",
+    "최적화 방법",
+    "메모리 누수",
+    "memory leak",
+    "번들 크기",
+    "bundle size",
+    "렌더링 최적화",
+    "렌더링 성능",
+    "로딩 속도",
+    "프로파일링"
+  ]
+}

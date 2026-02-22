@@ -185,6 +185,7 @@ export const IPC_CHANNELS = {
   COMFYUI_TEST_CONNECTION: 'comfyui-test-connection',
   COMFYUI_QUEUE_PROMPT: 'comfyui-queue-prompt',
   COMFYUI_FETCH_IMAGE: 'comfyui-fetch-image',
+  NANOBANANA_TEST_CONNECTION: 'nanobanana-test-connection',
 } as const;
 
 // ========================================

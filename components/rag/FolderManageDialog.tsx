@@ -41,7 +41,7 @@ export function FolderManageDialog({
     }
 
     // 폴더 경로 검증 (슬래시로 구분, 공백만 있는 경우 제외)
-    const parts = trimmed.split('/').filter((p) => p.trim());
+    const parts = trimmed.split('/').filter((p: any) => p.trim());
     if (parts.length === 0) {
       setError('유효한 폴더 경로를 입력해주세요.');
       return;

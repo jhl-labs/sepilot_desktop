@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GraphFactory } from '@/lib/langgraph';
-import type { GraphConfig } from '@/lib/langgraph/types';
+import { GraphFactory } from '@/lib/domains/agent';
+import type { GraphConfig } from '@/lib/domains/agent/types';
 import type { Message } from '@/types';
 
 /**

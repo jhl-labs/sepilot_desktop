@@ -28,7 +28,7 @@ import {
   Lightbulb,
   Chrome,
 } from 'lucide-react';
-import { MCPServerConfig } from '@/lib/mcp/types';
+import { MCPServerConfig } from '@/lib/domains/mcp/types';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -40,6 +40,7 @@ interface MCPServerConfigComponentProps {
 
 export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProps) {
   const { t } = useTranslation();
+  const MCP_UPDATED_EVENT = 'sepilot:mcp-updated';
 
   const PRESETS = useMemo(
     () => ({
@@ -267,6 +268,8 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
           setEnvText('');
           setSelectedPreset(null);
 
+          window.dispatchEvent(new CustomEvent(MCP_UPDATED_EVENT));
+
           // 부모 컴포넌트에 알림
           onAdd();
         } else {
@@ -280,11 +283,9 @@ export function MCPServerConfigComponent({ onAdd }: MCPServerConfigComponentProp
       console.error('Failed to add MCP server:', error);
 
       // 타임아웃 에러 감지 및 특별 처리
-      let errorMessage =
-        error instanceof Error
-          ? error.message
-          : String(error) || t('settings.mcp.config.messages.failed');
-      if (error instanceof Error ? error.message : String(error)?.includes('timeout')) {
+      const rawErrorMessage = error instanceof Error ? error.message : String(error);
+      let errorMessage = rawErrorMessage || t('settings.mcp.config.messages.failed');
+      if (rawErrorMessage.toLowerCase().includes('timeout')) {
         errorMessage = t('settings.mcp.config.messages.timeout', {
           hint:
             transport === 'stdio'

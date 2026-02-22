@@ -1,0 +1,31 @@
+{
+  "id": "com.sepilot.builtin.document-creation",
+  "name": "문서 생성 가이드",
+  "version": "1.2.0",
+  "author": "SEPilot Team",
+  "description": "Word, PowerPoint, Excel 등 Office 문서 파일을 Python 라이브러리를 활용하여 생성합니다",
+  "category": "productivity",
+  "tags": ["docx", "pptx", "xlsx", "word", "powerpoint", "excel", "문서", "보고서"],
+  "autoLoad": false,
+  "contextPatterns": [
+    "docx",
+    "pptx",
+    "xlsx",
+    ".docx",
+    ".pptx",
+    ".xlsx",
+    "word",
+    "powerpoint",
+    "excel",
+    "워드",
+    "파워포인트",
+    "엑셀",
+    "문서 생성",
+    "문서 작성",
+    "보고서 작성",
+    "프레젠테이션 작성",
+    "document creation",
+    "create document",
+    "generate report"
+  ]
+}

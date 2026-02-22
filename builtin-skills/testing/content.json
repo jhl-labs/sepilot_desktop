@@ -1,0 +1,71 @@
+{
+  "systemPrompt": "당신은 테스트 전문가입니다. 단위 테스트, 통합 테스트, E2E 테스트 등 다양한 레벨의 테스트를 효과적으로 작성하는 것을 지원합니다. 테스트의 가독성, 유지보수성, 신뢰성을 중시하며, 항상 Arrange-Act-Assert 패턴을 따릅니다. Electron+Next.js 환경의 특수성을 고려한 테스트 전략을 제시합니다.",
+  "knowledge": [
+    {
+      "title": "테스트 전략 피라미드",
+      "content": "# 테스트 전략 피라미드\n\n## 단위 테스트 (70%)\n- 순수 함수, 유틸리티, 비즈니스 로직을 검증합니다\n- 외부 의존성은 jest.mock()으로 격리합니다\n- 실행 속도가 빠르고 디버깅이 쉬워야 합니다\n\n## 통합 테스트 (20%)\n- 컴포넌트 간 상호작용, IPC 통신 흐름을 검증합니다\n- React Testing Library로 사용자 관점에서 테스트합니다\n- Zustand store와 컴포넌트 연동을 테스트합니다\n\n## E2E 테스트 (10%)\n- Playwright로 전체 사용자 시나리오를 검증합니다\n- 핵심 워크플로우(채팅, 설정 변경 등)에 집중합니다\n- CI/CD에서 자동 실행되도록 구성합니다\n\n## 원칙\n- 구현이 아닌 행동(behavior)을 테스트합니다\n- 테스트 이름은 '~하면 ~해야 한다' 형식으로 작성합니다"
+    },
+    {
+      "title": "Jest 테스트 패턴",
+      "content": "# Jest 테스트 패턴\n\n## 기본 구조 (AAA 패턴)\n```typescript\ndescribe('calculateTotal', () => {\n  it('할인이 적용되면 총액이 감소해야 한다', () => {\n    // Arrange: 테스트 데이터 준비\n    const items = [{ price: 100, qty: 2 }];\n    const discount = 0.1;\n    // Act: 실행\n    const result = calculateTotal(items, discount);\n    // Assert: 검증\n    expect(result).toBe(180);\n  });\n});\n```\n\n## Mock 패턴\n```typescript\n// IPC 호출 모킹\njest.mock('electron', () => ({\n  ipcMain: { handle: jest.fn() },\n  ipcRenderer: { invoke: jest.fn() },\n}));\n\n// 서비스 모킹\nconst mockService = {\n  getData: jest.fn().mockResolvedValue({ success: true, data: [] }),\n};\n```\n\n## 비동기 테스트\n```typescript\nit('데이터를 비동기로 로드해야 한다', async () => {\n  const result = await loadData();\n  expect(result).toHaveLength(3);\n});\n```"
+    },
+    {
+      "title": "React Testing Library 패턴",
+      "content": "# React Testing Library 패턴\n\n## 사용자 관점 테스트\n```typescript\nimport { render, screen, fireEvent } from '@testing-library/react';\nimport userEvent from '@testing-library/user-event';\n\nit('버튼 클릭 시 다이얼로그가 열려야 한다', async () => {\n  const user = userEvent.setup();\n  render(<SettingsPanel />);\n  await user.click(screen.getByRole('button', { name: '설정' }));\n  expect(screen.getByRole('dialog')).toBeInTheDocument();\n});\n```\n\n## 쿼리 우선순위\n1. getByRole - 접근성 역할 (button, dialog, textbox)\n2. getByLabelText - 폼 요소\n3. getByText - 텍스트 콘텐츠\n4. getByTestId - 최후의 수단\n\n## Zustand Store 테스트\n```typescript\n// Store를 직접 테스트\nconst { result } = renderHook(() => useChatStore());\nact(() => { result.current.addMessage(msg); });\nexpect(result.current.messages).toHaveLength(1);\n```"
+    },
+    {
+      "title": "Playwright E2E 패턴",
+      "content": "# Playwright E2E 테스트 패턴\n\n## 기본 테스트 구조\n```typescript\nimport { test, expect } from '@playwright/test';\n\ntest('채팅 메시지 전송 워크플로우', async ({ page }) => {\n  await page.goto('/');\n  const input = page.getByPlaceholder('메시지 입력');\n  await input.fill('안녕하세요');\n  await input.press('Enter');\n  await expect(page.getByText('안녕하세요')).toBeVisible();\n});\n```\n\n## Page Object Model\n```typescript\nclass ChatPage {\n  constructor(private page: Page) {}\n  async sendMessage(text: string) {\n    await this.page.getByPlaceholder('메시지 입력').fill(text);\n    await this.page.getByRole('button', { name: '전송' }).click();\n  }\n}\n```\n\n## Electron 앱 테스트 시 주의사항\n- electronApplication.firstWindow()로 창 획득\n- IPC 호출은 evaluate()로 테스트\n- 파일 시스템 접근은 임시 디렉토리 사용"
+    }
+  ],
+  "templates": [
+    {
+      "id": "jest-unit-test",
+      "name": "Jest 단위 테스트 템플릿",
+      "description": "Jest 단위 테스트 파일을 새로 작성할 때 사용하는 AAA 패턴 기반 템플릿",
+      "prompt": "import { {{함수명}} } from '{{모듈경로}}';\n\ndescribe('{{함수명}}', () => {\n  it('{{테스트설명}}', () => {\n    // Arrange\n    {{준비코드}}\n\n    // Act\n    const result = {{함수명}}({{인자}});\n\n    // Assert\n    expect(result).{{매처}};\n  });\n});",
+      "variables": [
+        { "name": "함수명", "description": "테스트 대상 함수/클래스 이름", "required": true },
+        {
+          "name": "모듈경로",
+          "description": "import 경로 (예: @/lib/utils/token-counter)",
+          "required": true
+        },
+        {
+          "name": "테스트설명",
+          "description": "~하면 ~해야 한다 형식의 테스트 설명",
+          "required": true
+        },
+        {
+          "name": "준비코드",
+          "description": "테스트 데이터 준비 코드",
+          "required": false,
+          "default": ""
+        },
+        { "name": "인자", "description": "함수 호출 인자", "required": false, "default": "" },
+        {
+          "name": "매처",
+          "description": "expect 매처 (예: toBe(expected), toHaveLength(3))",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "playwright-e2e-test",
+      "name": "Playwright E2E 테스트 템플릿",
+      "description": "Playwright E2E 테스트 파일을 새로 작성할 때 사용하는 템플릿",
+      "prompt": "import { test, expect } from '@playwright/test';\n\ntest.describe('{{기능명}}', () => {\n  test('{{시나리오}}', async ({ page }) => {\n    await page.goto('{{경로}}');\n    {{테스트코드}}\n  });\n});",
+      "variables": [
+        { "name": "기능명", "description": "테스트할 기능 이름", "required": true },
+        { "name": "시나리오", "description": "테스트 시나리오 설명", "required": true },
+        {
+          "name": "경로",
+          "description": "시작 페이지 경로 (기본: /)",
+          "required": false,
+          "default": "/"
+        },
+        { "name": "테스트코드", "description": "테스트 로직 코드", "required": true }
+      ]
+    }
+  ]
+}

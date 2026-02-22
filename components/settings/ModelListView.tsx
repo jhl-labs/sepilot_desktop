@@ -17,6 +17,7 @@ import { LLMConnection, ModelConfig, ModelRoleTag, NetworkConfig } from '@/types
 import { RefreshCw, ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import { fetchAvailableModels } from './settingsUtils';
 import { CustomHeadersManager } from './CustomHeadersManager';
+import { runPromisesInBatches } from '@/lib/utils/batch';
 
 interface ModelListViewProps {
   connections: LLMConnection[];
@@ -37,6 +38,8 @@ interface AvailableModel {
   modelId: string;
   connectionName: string;
 }
+
+const MODEL_FETCH_BATCH_SIZE = 4;
 
 export function ModelListView({
   connections,
@@ -108,13 +111,12 @@ export function ModelListView({
 
     const allModels: AvailableModel[] = [];
     const errors: Array<{ connection: string; error: string }> = [];
+    const enabledConnections = connections.filter((connection) => connection.enabled);
 
-    for (const connection of connections) {
-      if (!connection.enabled) {
-        continue;
-      }
-
-      try {
+    const modelFetchResults = await runPromisesInBatches(
+      enabledConnections,
+      MODEL_FETCH_BATCH_SIZE,
+      async (connection) => {
         const modelIds = await fetchAvailableModels({
           provider: connection.provider,
           baseURL: connection.baseURL,
@@ -122,8 +124,18 @@ export function ModelListView({
           customHeaders: connection.customHeaders,
           networkConfig,
         });
+        return { connection, modelIds };
+      }
+    );
 
-        modelIds.forEach((modelId) => {
+    modelFetchResults.forEach((result, index) => {
+      const connection = enabledConnections[index];
+      if (!connection) {
+        return;
+      }
+
+      if (result.status === 'fulfilled') {
+        result.value.modelIds.forEach((modelId) => {
           allModels.push({
             id: `${connection.id}-${modelId}`,
             connectionId: connection.id,
@@ -131,17 +143,24 @@ export function ModelListView({
             connectionName: connection.name,
           });
         });
-      } catch (error) {
-        console.error(`Failed to fetch models from ${connection.name}:`, error);
-        // error.message에 이미 자세한 정보가 포함되어 있음 (IPC 핸들러에서 생성)
-        errors.push({
-          connection: connection.name,
-          error:
-            error instanceof Error
-              ? error.message
-              : String(error) || t('settings.llm.models.validation.unknownError'),
-        });
+        return;
       }
+
+      console.error(`Failed to fetch models from ${connection.name}:`, result.reason);
+      errors.push({
+        connection: connection.name,
+        error:
+          result.reason instanceof Error
+            ? result.reason.message
+            : String(result.reason) || t('settings.llm.models.validation.unknownError'),
+      });
+    });
+
+    if (enabledConnections.length === 0) {
+      setAvailableModels([]);
+      setIsLoadingModels(false);
+      setLoadError(t('settings.llm.models.validation.fetchErrorAll'));
+      return;
     }
 
     setAvailableModels(allModels);
@@ -206,7 +225,7 @@ export function ModelListView({
     }
 
     // 2. Validate connection exists
-    const connection = connections.find((c) => c.id === manualConnectionId);
+    const connection = connections.find((c: any) => c.id === manualConnectionId);
     if (!connection) {
       setManualAddError(t('settings.llm.models.validation.invalidConnection'));
       return;
@@ -246,7 +265,7 @@ export function ModelListView({
 
   // Remove model from configuration
   const handleRemoveModel = (modelId: string) => {
-    onModelsChange(models.filter((m) => m.id !== modelId));
+    onModelsChange(models.filter((m: any) => m.id !== modelId));
 
     // Clear active selections if the removed model was active
     if (activeBaseModelId === modelId) {
@@ -268,7 +287,7 @@ export function ModelListView({
           return m;
         }
 
-        const tags = m.tags.includes(tag) ? m.tags.filter((t) => t !== tag) : [...m.tags, tag];
+        const tags = m.tags.includes(tag) ? m.tags.filter((t: any) => t !== tag) : [...m.tags, tag];
 
         return { ...m, tags };
       })
@@ -292,7 +311,7 @@ export function ModelListView({
   };
 
   const getConnectionName = (connectionId: string) => {
-    return connections.find((c) => c.id === connectionId)?.name || 'Unknown';
+    return connections.find((c: any) => c.id === connectionId)?.name || 'Unknown';
   };
 
   const isModelAdded = (availableModel: AvailableModel) => {
@@ -315,7 +334,7 @@ export function ModelListView({
           <div className="flex gap-2">
             <Button
               onClick={handleFetchAllModels}
-              disabled={isLoadingModels || connections.filter((c) => c.enabled).length === 0}
+              disabled={isLoadingModels || connections.filter((c: any) => c.enabled).length === 0}
               size="sm"
               variant="default"
             >
@@ -328,7 +347,7 @@ export function ModelListView({
               onClick={() => setShowManualAddForm(!showManualAddForm)}
               size="sm"
               variant="outline"
-              disabled={connections.filter((c) => c.enabled).length === 0}
+              disabled={connections.filter((c: any) => c.enabled).length === 0}
             >
               <Plus className="h-4 w-4 mr-1" />
               {t('settings.llm.models.manual.button')}
@@ -343,6 +362,21 @@ export function ModelListView({
               <div className="flex-1">
                 <pre className="whitespace-pre-wrap break-words font-sans text-sm">{loadError}</pre>
               </div>
+            </div>
+            {/* Manual add guide when fetch fails */}
+            <div className="mt-3 pt-3 border-t border-destructive/30">
+              <p className="text-sm text-muted-foreground mb-2">
+                {t('settings.llm.models.manual.fetchFailedHint')}
+              </p>
+              <Button
+                onClick={() => setShowManualAddForm(true)}
+                size="sm"
+                variant="outline"
+                className="border-destructive/50 hover:bg-destructive/10"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                {t('settings.llm.models.manual.button')}
+              </Button>
             </div>
           </div>
         )}
@@ -377,7 +411,7 @@ export function ModelListView({
                 </SelectTrigger>
                 <SelectContent>
                   {connections
-                    .filter((c) => c.enabled)
+                    .filter((c: any) => c.enabled)
                     .map((connection) => (
                       <SelectItem key={connection.id} value={connection.id}>
                         {connection.name}
@@ -472,7 +506,7 @@ export function ModelListView({
         ) : (
           <div className="space-y-2">
             {models.map((model) => {
-              const connection = connections.find((c) => c.id === model.connectionId);
+              const connection = connections.find((c: any) => c.id === model.connectionId);
 
               return (
                 <div key={model.id} className="border rounded-lg overflow-hidden">

@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    "outDir": "./dist/electron",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "resolvePackageJsonExports": false,
+    "types": ["node"],
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@sepilot/extension-terminal/agents/*": ["./resources/extensions/terminal/dist/agents/*"]
+    }
+  },
+  "include": ["electron/**/*.ts", "lib/**/*.ts", "types/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "lib/extension-sdk/**/*",
+    "lib/extensions/**/*",
+    "resources/**/*",
+    "app/**/*",
+    "components/**/*",
+    "hooks/**/*",
+    ".next/**/*",
+    "out/**/*",
+    "dist/**/*",
+    "electron/test-import.ts",
+    "electron/agents/get_history.ts",
+    "electron/agents/search_commands.ts",
+    "electron/agents/terminal-agent.ts"
+  ]
+}

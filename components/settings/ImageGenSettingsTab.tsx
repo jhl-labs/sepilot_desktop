@@ -12,6 +12,91 @@ import { SettingsSectionHeader } from './SettingsSectionHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { httpFetch } from '@/lib/http';
 
+const DEFAULT_VERTEX_LOCATION = 'us-central1';
+const DEFAULT_VERTEX_MODEL = 'imagen-3.0-generate-001';
+
+function buildVertexModelEndpoint(projectId: string, location: string, model: string): string {
+  return `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}`;
+}
+
+async function testNanoBananaConnectionInRenderer(
+  config: NonNullable<ImageGenConfig['nanobanana']>,
+  networkConfig: NetworkConfig
+): Promise<{ success: boolean; error?: string }> {
+  const provider = config.provider || 'nanobananaapi';
+  const apiKey = config.apiKey.trim();
+
+  if (provider === 'vertex-ai') {
+    const projectId = config.projectId?.trim();
+    if (!projectId) {
+      return {
+        success: false,
+        error: 'Google Cloud Project ID is required for Vertex AI',
+      };
+    }
+
+    const location = config.location?.trim() || DEFAULT_VERTEX_LOCATION;
+    const model = config.model?.trim() || DEFAULT_VERTEX_MODEL;
+    const endpoint = buildVertexModelEndpoint(projectId, location, model);
+
+    const response = await httpFetch(endpoint, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      networkConfig,
+      timeout: 30000,
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      return { success: false, error: 'Invalid Google OAuth 2 access token' };
+    }
+
+    if (response.status === 404) {
+      return {
+        success: false,
+        error: 'Vertex AI model not found. Check project ID, location, and model name',
+      };
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        error: `Google Vertex AI error: HTTP ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+      };
+    }
+
+    return { success: true };
+  }
+
+  const probeTaskId = `sepilot-connection-test-${Date.now()}`;
+  const endpoint = `https://api.nanobananaapi.ai/api/v1/nanobanana/record-info?taskId=${encodeURIComponent(probeTaskId)}`;
+
+  const response = await httpFetch(endpoint, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+    networkConfig,
+    timeout: 30000,
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    return { success: false, error: 'Invalid NanoBanana API key' };
+  }
+
+  if (!response.ok && response.status !== 400 && response.status !== 404) {
+    const errorText = await response.text();
+    return {
+      success: false,
+      error: `NanoBanana API error: HTTP ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+    };
+  }
+
+  return { success: true };
+}
+
 interface ImageGenSettingsTabProps {
   imageGenConfig: ImageGenConfig;
   setImageGenConfig: React.Dispatch<React.SetStateAction<ImageGenConfig>>;
@@ -104,12 +189,32 @@ export function ImageGenSettingsTab({
     setMessage(null);
 
     try {
-      if (!imageGenConfig.nanobanana?.apiKey.trim()) {
+      const nanobananaConfig = imageGenConfig.nanobanana;
+
+      if (!nanobananaConfig?.apiKey.trim()) {
         throw new Error(t('settings.imagegen.nanobanana.apiKeyRequired'));
       }
 
-      // TODO: Implement NanoBanana connection test via IPC
-      // For now, just validate API key format
+      if (nanobananaConfig.provider === 'vertex-ai' && !nanobananaConfig.projectId?.trim()) {
+        throw new Error(t('settings.imagegen.nanobanana.projectIdRequired'));
+      }
+
+      if (typeof window !== 'undefined' && window.electronAPI?.nanobanana) {
+        const result = await window.electronAPI.nanobanana.testConnection(
+          nanobananaConfig,
+          networkConfig
+        );
+
+        if (!result.success) {
+          throw new Error(result.error || t('settings.imagegen.nanobanana.connectionTestFailed'));
+        }
+      } else {
+        const result = await testNanoBananaConnectionInRenderer(nanobananaConfig, networkConfig);
+        if (!result.success) {
+          throw new Error(result.error || t('settings.imagegen.nanobanana.connectionTestFailed'));
+        }
+      }
+
       setMessage({ type: 'success', text: t('settings.imagegen.nanobanana.configValid') });
     } catch (error) {
       console.error('Failed to test NanoBanana connection:', error);
@@ -771,6 +876,8 @@ export function ImageGenSettingsTab({
                 onClick={handleTestNanoBananaConnection}
                 disabled={
                   !imageGenConfig.nanobanana?.apiKey.trim() ||
+                  (imageGenConfig.nanobanana?.provider === 'vertex-ai' &&
+                    !imageGenConfig.nanobanana?.projectId?.trim()) ||
                   isTestingConnection ||
                   !imageGenConfig.nanobanana?.enabled
                 }
@@ -804,7 +911,9 @@ export function ImageGenSettingsTab({
               !imageGenConfig.comfyui?.httpUrl.trim()) ||
             (imageGenConfig.provider === 'nanobanana' &&
               imageGenConfig.nanobanana?.enabled &&
-              !imageGenConfig.nanobanana?.apiKey.trim())
+              (!imageGenConfig.nanobanana?.apiKey.trim() ||
+                (imageGenConfig.nanobanana?.provider === 'vertex-ai' &&
+                  !imageGenConfig.nanobanana?.projectId?.trim())))
           }
         >
           {isSaving ? t('common.saving') : t('common.save')}

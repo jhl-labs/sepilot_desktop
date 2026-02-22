@@ -4,10 +4,19 @@ import fs from 'fs';
 import { app } from 'electron';
 import { Conversation, Message, Activity } from '../../types';
 import { Persona } from '../../types/persona';
+import { ScheduledTask, ExecutionRecord, ExecutionHistoryQuery } from '../../types/scheduler';
 
 class DatabaseService {
   private db: Database | null = null;
   private dbPath: string = '';
+  private saveTimeout: ReturnType<typeof setTimeout> | null = null;
+  private firstDirtyAt = 0;
+  private hasDirtyChanges = false;
+
+  private readonly saveDebounceMs = 300;
+  private readonly maxSaveDelayMs = 1000;
+  private readonly maxSearchMessageRows = 2000;
+  private readonly maxMatchedMessagesPerConversation = 20;
 
   async initialize() {
     const userDataPath = app.getPath('userData');
@@ -76,14 +85,136 @@ class DatabaseService {
     }
 
     this.createTables();
-    this.saveDatabase();
+    this.saveDatabase(true);
   }
 
-  private saveDatabase() {
-    if (!this.db) return;
+  /**
+   * 대기 중인 변경사항을 즉시 디스크에 기록합니다.
+   * 스케줄러 등 외부 서비스에서 DB 쓰기 직후 즉각 반영이 필요할 때 사용합니다.
+   */
+  flushNow(): void {
+    this.saveDatabase(true);
+  }
+
+  private flushDatabaseToDisk() {
+    if (!this.db || !this.hasDirtyChanges) {
+      return;
+    }
+
     const data = this.db.export();
     const buffer = Buffer.from(data);
     fs.writeFileSync(this.dbPath, buffer);
+    this.hasDirtyChanges = false;
+    this.firstDirtyAt = 0;
+  }
+
+  private saveDatabase(immediate = false) {
+    if (!this.db) {
+      return;
+    }
+
+    this.hasDirtyChanges = true;
+
+    if (immediate) {
+      if (this.saveTimeout) {
+        clearTimeout(this.saveTimeout);
+        this.saveTimeout = null;
+      }
+      this.flushDatabaseToDisk();
+      return;
+    }
+
+    const now = Date.now();
+    if (!this.firstDirtyAt) {
+      this.firstDirtyAt = now;
+    }
+
+    const elapsed = now - this.firstDirtyAt;
+    const delay = elapsed >= this.maxSaveDelayMs ? 0 : this.saveDebounceMs;
+
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+    }
+
+    this.saveTimeout = setTimeout(() => {
+      this.saveTimeout = null;
+      this.flushDatabaseToDisk();
+    }, delay);
+  }
+
+  private parseChatSettings(
+    chatSettingsJson: string | null
+  ): Conversation['chatSettings'] | undefined {
+    if (!chatSettingsJson) {
+      return undefined;
+    }
+
+    try {
+      return JSON.parse(chatSettingsJson);
+    } catch (error) {
+      console.error('Failed to parse chatSettings:', error);
+      return undefined;
+    }
+  }
+
+  private parseJsonField<T>(value: unknown, fieldName: string): T | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    try {
+      return JSON.parse(value) as T;
+    } catch (error) {
+      console.error(`Failed to parse ${fieldName}:`, error);
+      return undefined;
+    }
+  }
+
+  private mapConversationRow(row: readonly unknown[]): Conversation {
+    return {
+      id: row[0] as string,
+      title: row[1] as string,
+      created_at: row[2] as number,
+      updated_at: row[3] as number,
+      chatSettings: this.parseChatSettings((row[4] as string | null) ?? null),
+    };
+  }
+
+  private mapMessageRow(row: readonly unknown[]): Message {
+    return {
+      id: row[0] as string,
+      conversation_id: row[1] as string,
+      role: row[2] as Message['role'],
+      content: row[3] as string,
+      created_at: row[4] as number,
+      tool_calls: this.parseJsonField(row[5], 'tool_calls'),
+      tool_results: this.parseJsonField(row[6], 'tool_results'),
+      images: this.parseJsonField(row[7], 'images'),
+      referenced_documents: this.parseJsonField(row[8], 'referenced_documents'),
+    };
+  }
+
+  private escapeLikeQuery(value: string): string {
+    return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+  }
+
+  private appendMatchedMessage(
+    resultMap: Map<string, { conversation: Conversation; matchedMessages: Message[] }>,
+    conversation: Conversation,
+    message: Message
+  ) {
+    const existing = resultMap.get(conversation.id);
+    if (existing) {
+      if (existing.matchedMessages.length < this.maxMatchedMessagesPerConversation) {
+        existing.matchedMessages.push(message);
+      }
+      return;
+    }
+
+    resultMap.set(conversation.id, {
+      conversation,
+      matchedMessages: [message],
+    });
   }
 
   /**
@@ -191,6 +322,25 @@ class DatabaseService {
       )
     `);
 
+    // Message Subscription Config table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS message_subscription_config (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        config TEXT NOT NULL
+      )
+    `);
+
+    // Processed Message Hashes table (중복 방지 및 통계)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS processed_message_hashes (
+        hash TEXT PRIMARY KEY,
+        conversation_id TEXT,
+        processed_at INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        source TEXT NOT NULL
+      )
+    `);
+
     // Create indexes
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_messages_conversation
@@ -213,8 +363,75 @@ class DatabaseService {
     `);
 
     this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_processed_hashes_time
+      ON processed_message_hashes(processed_at DESC)
+    `);
+
+    this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_skill_usage_conversation_id
       ON skill_usage_history(conversation_id, activated_at DESC)
+    `);
+
+    // Scheduler tables
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS scheduled_tasks (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        schedule_config TEXT NOT NULL,
+        prompt TEXT NOT NULL,
+        thinking_mode TEXT NOT NULL,
+        enable_rag INTEGER NOT NULL DEFAULT 0,
+        enable_tools INTEGER NOT NULL DEFAULT 0,
+        allowed_tools TEXT,
+        result_handlers TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        last_executed_at INTEGER,
+        next_execution_at INTEGER
+      )
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_enabled
+      ON scheduled_tasks(enabled)
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_next_execution
+      ON scheduled_tasks(next_execution_at)
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS scheduler_execution_history (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        task_name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        trigger TEXT,
+        attempt_count INTEGER,
+        started_at INTEGER NOT NULL,
+        completed_at INTEGER,
+        duration INTEGER,
+        result_summary TEXT,
+        error_message TEXT,
+        conversation_id TEXT,
+        saved_file_path TEXT,
+        notification_sent INTEGER,
+        tools_executed TEXT,
+        tools_blocked TEXT
+      )
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_execution_history_task_id
+      ON scheduler_execution_history(task_id)
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_execution_history_started_at
+      ON scheduler_execution_history(started_at DESC)
     `);
 
     // Add columns if they don't exist (for migration)
@@ -240,6 +457,16 @@ class DatabaseService {
     }
     try {
       this.db.exec('ALTER TABLE conversations ADD COLUMN chatSettings TEXT');
+    } catch (error) {
+      // Ignore errors if columns already exist
+    }
+    try {
+      this.db.exec('ALTER TABLE scheduler_execution_history ADD COLUMN trigger TEXT');
+    } catch (error) {
+      // Ignore errors if columns already exist
+    }
+    try {
+      this.db.exec('ALTER TABLE scheduler_execution_history ADD COLUMN attempt_count INTEGER');
     } catch (error) {
       // Ignore errors if columns already exist
     }
@@ -270,6 +497,41 @@ class DatabaseService {
     this.saveDatabase();
   }
 
+  saveConversationsBulk(conversations: Conversation[]): void {
+    if (!this.db) throw new Error('Database not initialized');
+    if (!conversations.length) {
+      return;
+    }
+
+    try {
+      this.db.run('BEGIN TRANSACTION');
+
+      for (const conversation of conversations) {
+        const chatSettingsJson = conversation.chatSettings
+          ? JSON.stringify(conversation.chatSettings)
+          : null;
+
+        this.db.run(
+          `INSERT OR REPLACE INTO conversations (id, title, created_at, updated_at, chatSettings)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            conversation.id,
+            conversation.title,
+            conversation.created_at,
+            conversation.updated_at,
+            chatSettingsJson,
+          ]
+        );
+      }
+
+      this.db.run('COMMIT');
+      this.saveDatabase();
+    } catch (error) {
+      this.db.run('ROLLBACK');
+      throw error;
+    }
+  }
+
   getAllConversations(): Conversation[] {
     if (!this.db) throw new Error('Database not initialized');
 
@@ -281,28 +543,7 @@ class DatabaseService {
 
     if (result.length === 0) return [];
 
-    const conversations: Conversation[] = [];
-    for (const row of result[0].values) {
-      const chatSettingsJson = row[4] as string | null;
-      let chatSettings = undefined;
-      if (chatSettingsJson) {
-        try {
-          chatSettings = JSON.parse(chatSettingsJson);
-        } catch (error) {
-          console.error('Failed to parse chatSettings:', error);
-        }
-      }
-
-      conversations.push({
-        id: row[0] as string,
-        title: row[1] as string,
-        created_at: row[2] as number,
-        updated_at: row[3] as number,
-        chatSettings,
-      });
-    }
-
-    return conversations;
+    return result[0].values.map((row) => this.mapConversationRow(row));
   }
 
   getConversation(id: string): Conversation | null {
@@ -317,24 +558,7 @@ class DatabaseService {
 
     if (result.length === 0 || result[0].values.length === 0) return null;
 
-    const row = result[0].values[0];
-    const chatSettingsJson = row[4] as string | null;
-    let chatSettings = undefined;
-    if (chatSettingsJson) {
-      try {
-        chatSettings = JSON.parse(chatSettingsJson);
-      } catch (error) {
-        console.error('Failed to parse chatSettings:', error);
-      }
-    }
-
-    return {
-      id: row[0] as string,
-      title: row[1] as string,
-      created_at: row[2] as number,
-      updated_at: row[3] as number,
-      chatSettings,
-    };
+    return this.mapConversationRow(result[0].values[0]);
   }
 
   deleteConversation(id: string): void {
@@ -398,6 +622,41 @@ class DatabaseService {
     this.saveDatabase();
   }
 
+  saveMessagesBulk(messages: Message[]): void {
+    if (!this.db) throw new Error('Database not initialized');
+    if (!messages.length) {
+      return;
+    }
+
+    try {
+      this.db.run('BEGIN TRANSACTION');
+
+      for (const message of messages) {
+        this.db.run(
+          `INSERT OR REPLACE INTO messages (id, conversation_id, role, content, created_at, tool_calls, tool_results, images, referenced_documents)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            message.id,
+            message.conversation_id ?? '',
+            message.role,
+            message.content,
+            message.created_at,
+            message.tool_calls ? JSON.stringify(message.tool_calls) : null,
+            message.tool_results ? JSON.stringify(message.tool_results) : null,
+            message.images ? JSON.stringify(message.images) : null,
+            message.referenced_documents ? JSON.stringify(message.referenced_documents) : null,
+          ]
+        );
+      }
+
+      this.db.run('COMMIT');
+      this.saveDatabase();
+    } catch (error) {
+      this.db.run('ROLLBACK');
+      throw error;
+    }
+  }
+
   getMessages(conversationId: string): Message[] {
     if (!this.db) throw new Error('Database not initialized');
 
@@ -413,17 +672,7 @@ class DatabaseService {
 
     const messages: Message[] = [];
     for (const row of result[0].values) {
-      const message: Message = {
-        id: row[0] as string,
-        conversation_id: row[1] as string,
-        role: row[2] as 'user' | 'assistant' | 'system',
-        content: row[3] as string,
-        created_at: row[4] as number,
-        tool_calls: row[5] ? JSON.parse(row[5] as string) : undefined,
-        tool_results: row[6] ? JSON.parse(row[6] as string) : undefined,
-        images: row[7] ? JSON.parse(row[7] as string) : undefined,
-        referenced_documents: row[8] ? JSON.parse(row[8] as string) : undefined,
-      };
+      const message = this.mapMessageRow(row);
 
       if (message.images && message.images.length > 0) {
         console.log('[Database] Loading message with images:', {
@@ -449,6 +698,85 @@ class DatabaseService {
     });
 
     return messages;
+  }
+
+  searchConversations(
+    query: string
+  ): Array<{ conversation: Conversation; matchedMessages: Message[] }> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return [];
+    }
+
+    const searchPattern = `%${this.escapeLikeQuery(normalizedQuery)}%`;
+    const resultMap = new Map<string, { conversation: Conversation; matchedMessages: Message[] }>();
+
+    const titleMatches = this.db.exec(
+      `SELECT id, title, created_at, updated_at, chatSettings
+       FROM conversations
+       WHERE LOWER(title) LIKE ? ESCAPE '\\'
+       ORDER BY updated_at DESC`,
+      [searchPattern]
+    );
+
+    if (titleMatches.length > 0) {
+      for (const row of titleMatches[0].values) {
+        const conversation = this.mapConversationRow(row);
+        resultMap.set(conversation.id, {
+          conversation,
+          matchedMessages: [],
+        });
+      }
+    }
+
+    const messageMatches = this.db.exec(
+      `SELECT c.id, c.title, c.created_at, c.updated_at, c.chatSettings,
+              m.id, m.conversation_id, m.role, m.content, m.created_at, m.tool_calls, m.tool_results, m.images, m.referenced_documents
+       FROM messages m
+       INNER JOIN conversations c ON c.id = m.conversation_id
+       WHERE LOWER(m.content) LIKE ? ESCAPE '\\'
+       ORDER BY c.updated_at DESC, m.created_at DESC
+       LIMIT ?`,
+      [searchPattern, this.maxSearchMessageRows]
+    );
+
+    if (messageMatches.length > 0) {
+      for (const row of messageMatches[0].values) {
+        const conversation = this.mapConversationRow([row[0], row[1], row[2], row[3], row[4]]);
+        const message = this.mapMessageRow([
+          row[5],
+          row[6],
+          row[7],
+          row[8],
+          row[9],
+          row[10],
+          row[11],
+          row[12],
+          row[13],
+        ]);
+        this.appendMatchedMessage(resultMap, conversation, message);
+      }
+    }
+
+    const results = Array.from(resultMap.values());
+    results.sort((a, b) => {
+      const aTitleMatch = a.conversation.title.toLowerCase().includes(normalizedQuery) ? 1 : 0;
+      const bTitleMatch = b.conversation.title.toLowerCase().includes(normalizedQuery) ? 1 : 0;
+
+      if (aTitleMatch !== bTitleMatch) {
+        return bTitleMatch - aTitleMatch;
+      }
+
+      if (a.matchedMessages.length !== b.matchedMessages.length) {
+        return b.matchedMessages.length - a.matchedMessages.length;
+      }
+
+      return b.conversation.updated_at - a.conversation.updated_at;
+    });
+
+    return results;
   }
 
   deleteMessage(id: string): void {
@@ -524,6 +852,21 @@ class DatabaseService {
     if (result.length === 0 || result[0].values.length === 0) return null;
 
     return result[0].values[0][0] as string;
+  }
+
+  getAllSettings(): Record<string, string> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const result = this.db.exec('SELECT key, value FROM settings');
+
+    if (result.length === 0 || result[0].values.length === 0) return {};
+
+    const settings: Record<string, string> = {};
+    result[0].values.forEach((row) => {
+      settings[row[0] as string] = row[1] as string;
+    });
+
+    return settings;
   }
 
   setSetting(key: string, value: string): void {
@@ -706,10 +1049,316 @@ class DatabaseService {
     this.saveDatabase();
   }
 
+  // Scheduled Tasks Operations
+  saveScheduledTask(task: ScheduledTask) {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run(
+      `INSERT OR REPLACE INTO scheduled_tasks
+       (id, name, description, enabled, schedule_config, prompt, thinking_mode,
+        enable_rag, enable_tools, allowed_tools, result_handlers, created_at,
+        updated_at, last_executed_at, next_execution_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        task.id,
+        task.name,
+        task.description || null,
+        task.enabled ? 1 : 0,
+        JSON.stringify(task.schedule),
+        task.prompt,
+        task.thinkingMode,
+        task.enableRAG ? 1 : 0,
+        task.enableTools ? 1 : 0,
+        JSON.stringify(task.allowedTools),
+        JSON.stringify(task.resultHandlers),
+        task.created_at,
+        task.updated_at,
+        task.lastExecutedAt || null,
+        task.nextExecutionAt || null,
+      ]
+    );
+
+    this.saveDatabase();
+  }
+
+  getAllScheduledTasks(): ScheduledTask[] {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const result = this.db.exec(`
+      SELECT id, name, description, enabled, schedule_config, prompt, thinking_mode,
+             enable_rag, enable_tools, allowed_tools, result_handlers, created_at,
+             updated_at, last_executed_at, next_execution_at
+      FROM scheduled_tasks
+      ORDER BY created_at DESC
+    `);
+
+    if (result.length === 0) return [];
+
+    const tasks: ScheduledTask[] = [];
+    for (const row of result[0].values) {
+      tasks.push({
+        id: row[0] as string,
+        name: row[1] as string,
+        description: (row[2] as string | null) || undefined,
+        enabled: (row[3] as number) === 1,
+        schedule: JSON.parse(row[4] as string),
+        prompt: row[5] as string,
+        thinkingMode: row[6] as any,
+        enableRAG: (row[7] as number) === 1,
+        enableTools: (row[8] as number) === 1,
+        allowedTools: JSON.parse(row[9] as string),
+        resultHandlers: JSON.parse(row[10] as string),
+        created_at: row[11] as number,
+        updated_at: row[12] as number,
+        lastExecutedAt: (row[13] as number | null) || undefined,
+        nextExecutionAt: (row[14] as number | null) || undefined,
+      });
+    }
+
+    return tasks;
+  }
+
+  getScheduledTask(id: string): ScheduledTask | null {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const result = this.db.exec(
+      `SELECT id, name, description, enabled, schedule_config, prompt, thinking_mode,
+              enable_rag, enable_tools, allowed_tools, result_handlers, created_at,
+              updated_at, last_executed_at, next_execution_at
+       FROM scheduled_tasks
+       WHERE id = ?`,
+      [id]
+    );
+
+    if (result.length === 0 || result[0].values.length === 0) return null;
+
+    const row = result[0].values[0];
+    return {
+      id: row[0] as string,
+      name: row[1] as string,
+      description: (row[2] as string | null) || undefined,
+      enabled: (row[3] as number) === 1,
+      schedule: JSON.parse(row[4] as string),
+      prompt: row[5] as string,
+      thinkingMode: row[6] as any,
+      enableRAG: (row[7] as number) === 1,
+      enableTools: (row[8] as number) === 1,
+      allowedTools: JSON.parse(row[9] as string),
+      resultHandlers: JSON.parse(row[10] as string),
+      created_at: row[11] as number,
+      updated_at: row[12] as number,
+      lastExecutedAt: (row[13] as number | null) || undefined,
+      nextExecutionAt: (row[14] as number | null) || undefined,
+    };
+  }
+
+  deleteScheduledTask(id: string) {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run('DELETE FROM scheduled_tasks WHERE id = ?', [id]);
+    this.saveDatabase();
+  }
+
+  updateScheduledTask(id: string, updates: Partial<ScheduledTask>) {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const task = this.getScheduledTask(id);
+    if (!task) throw new Error(`Task not found: ${id}`);
+
+    const updatedTask: ScheduledTask = {
+      ...task,
+      ...updates,
+      updated_at: Date.now(),
+    };
+
+    this.saveScheduledTask(updatedTask);
+  }
+
+  // Scheduler Execution History Operations
+  saveExecutionRecord(record: ExecutionRecord) {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run(
+      `INSERT OR REPLACE INTO scheduler_execution_history
+       (id, task_id, task_name, status, trigger, attempt_count, started_at, completed_at, duration,
+        result_summary, error_message, conversation_id, saved_file_path,
+        notification_sent, tools_executed, tools_blocked)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        record.id,
+        record.taskId,
+        record.taskName,
+        record.status,
+        record.trigger || null,
+        record.attemptCount || null,
+        record.startedAt,
+        record.completedAt || null,
+        record.duration || null,
+        record.resultSummary || null,
+        record.errorMessage || null,
+        record.conversationId || null,
+        record.savedFilePath || null,
+        record.notificationSent ? 1 : null,
+        record.toolsExecuted ? JSON.stringify(record.toolsExecuted) : null,
+        record.toolsBlocked ? JSON.stringify(record.toolsBlocked) : null,
+      ]
+    );
+
+    this.saveDatabase();
+  }
+
+  getExecutionHistory(taskId?: string, filters?: ExecutionHistoryQuery): ExecutionRecord[] {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const requestedLimit = Number(filters?.limit ?? 50);
+    const normalizedLimit = Number.isFinite(requestedLimit) ? Math.floor(requestedLimit) : 50;
+    const limit = Math.min(Math.max(1, normalizedLimit), 500);
+
+    let sql = `
+      SELECT id, task_id, task_name, status, trigger, attempt_count, started_at, completed_at, duration,
+             result_summary, error_message, conversation_id, saved_file_path,
+             notification_sent, tools_executed, tools_blocked
+      FROM scheduler_execution_history
+    `;
+
+    const params: any[] = [];
+    const whereClauses: string[] = [];
+    if (taskId) {
+      whereClauses.push('task_id = ?');
+      params.push(taskId);
+    }
+
+    if (filters?.status) {
+      whereClauses.push('status = ?');
+      params.push(filters.status);
+    }
+
+    if (filters?.trigger) {
+      whereClauses.push('trigger = ?');
+      params.push(filters.trigger);
+    }
+
+    if (typeof filters?.startedAfter === 'number') {
+      whereClauses.push('started_at >= ?');
+      params.push(filters.startedAfter);
+    }
+
+    if (typeof filters?.startedBefore === 'number') {
+      whereClauses.push('started_at <= ?');
+      params.push(filters.startedBefore);
+    }
+
+    if (whereClauses.length > 0) {
+      sql += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    sql += ' ORDER BY started_at DESC LIMIT ?';
+    params.push(limit);
+
+    const result = this.db.exec(sql, params);
+
+    if (result.length === 0) return [];
+
+    const records: ExecutionRecord[] = [];
+    for (const row of result[0].values) {
+      records.push({
+        id: row[0] as string,
+        taskId: row[1] as string,
+        taskName: row[2] as string,
+        status: row[3] as any,
+        trigger: (row[4] as any) || undefined,
+        attemptCount: (row[5] as number | null) || undefined,
+        startedAt: row[6] as number,
+        completedAt: (row[7] as number | null) || undefined,
+        duration: (row[8] as number | null) || undefined,
+        resultSummary: (row[9] as string | null) || undefined,
+        errorMessage: (row[10] as string | null) || undefined,
+        conversationId: (row[11] as string | null) || undefined,
+        savedFilePath: (row[12] as string | null) || undefined,
+        notificationSent: (row[13] as number | null) === 1 || undefined,
+        toolsExecuted: row[14] ? JSON.parse(row[14] as string) : undefined,
+        toolsBlocked: row[15] ? JSON.parse(row[15] as string) : undefined,
+      });
+    }
+
+    return records;
+  }
+
+  // ===== Message Subscription =====
+
+  getMessageSubscriptionConfig():
+    | import('../../types/message-subscription').MessageSubscriptionConfig
+    | null {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const result = this.db.exec('SELECT config FROM message_subscription_config WHERE id = 1');
+
+    if (result.length === 0 || result[0].values.length === 0) {
+      return null;
+    }
+
+    const configJson = result[0].values[0][0] as string;
+    return JSON.parse(configJson);
+  }
+
+  saveMessageSubscriptionConfig(
+    config: import('../../types/message-subscription').MessageSubscriptionConfig
+  ): void {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const configJson = JSON.stringify(config);
+
+    // Insert or replace
+    this.db.run('INSERT OR REPLACE INTO message_subscription_config (id, config) VALUES (1, ?)', [
+      configJson,
+    ]);
+
+    this.saveDatabase();
+  }
+
+  recordProcessedHash(hash: string, conversationId: string, type: string, source: string): void {
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run(
+      'INSERT OR REPLACE INTO processed_message_hashes (hash, conversation_id, processed_at, type, source) VALUES (?, ?, ?, ?, ?)',
+      [hash, conversationId, Date.now(), type, source]
+    );
+
+    this.saveDatabase();
+  }
+
+  isHashProcessed(hash: string): boolean {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const result = this.db.exec('SELECT hash FROM processed_message_hashes WHERE hash = ?', [hash]);
+
+    return result.length > 0 && result[0].values.length > 0;
+  }
+
+  cleanupOldHashes(days: number = 7): number {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const cutoffTime = Date.now() - days * 24 * 60 * 60 * 1000;
+
+    const result = this.db.exec('DELETE FROM processed_message_hashes WHERE processed_at < ?', [
+      cutoffTime,
+    ]);
+
+    this.saveDatabase();
+
+    // 삭제된 행 수 반환 (변경 사항이 있으면 1, 없으면 0)
+    return result.length > 0 ? 1 : 0;
+  }
+
   // Utility
   close() {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
+
     if (this.db) {
-      this.saveDatabase();
+      this.saveDatabase(true);
       this.db.close();
       this.db = null;
       console.log('[Database] Closed');

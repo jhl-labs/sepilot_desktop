@@ -100,7 +100,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       setBranch(config.branch || 'main');
       setErrorReportingEnabled(config.errorReporting ?? false);
       setSyncItems((prev) =>
-        prev.map((item) => ({
+        prev.map((item: any) => ({
           ...item,
           enabled:
             item.id === 'settings'
@@ -117,7 +117,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
 
   const toggleSyncItem = (id: string) => {
     setSyncItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, enabled: !item.enabled } : item))
+      prev.map((item: any) => (item.id === id ? { ...item, enabled: !item.enabled } : item))
     );
   };
 
@@ -369,6 +369,87 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
     }
   };
 
+  const handlePullSettings = async () => {
+    if (!token || !owner || !repo) {
+      setMessage({ type: 'error', text: t('settings.githubSync.messages.saveFirst') });
+      return;
+    }
+
+    if (serverType === 'ghes' && !ghesUrl) {
+      setMessage({ type: 'error', text: t('settings.githubSync.messages.ghesUrlRequired') });
+      return;
+    }
+
+    setIsSyncing('pull-settings');
+    setMessage(null);
+
+    try {
+      const syncConfig: GitHubSyncConfig = {
+        serverType,
+        ghesUrl: serverType === 'ghes' ? ghesUrl : undefined,
+        token,
+        owner,
+        repo,
+        branch: branch || 'main',
+        syncSettings: syncItems.find((i) => i.id === 'settings')?.enabled ?? true,
+        syncDocuments: false,
+        syncImages: syncItems.find((i) => i.id === 'images')?.enabled ?? false,
+        syncConversations: syncItems.find((i) => i.id === 'conversations')?.enabled ?? false,
+        syncPersonas: syncItems.find((i) => i.id === 'personas')?.enabled ?? false,
+      };
+
+      if (typeof window !== 'undefined' && window.electronAPI) {
+        const result = await window.electronAPI.githubSync.pullSettings(syncConfig);
+        if (!result.success) {
+          throw new Error(result.error || t('settings.githubSync.messages.pullFailed'));
+        }
+
+        const pulled = result.data?.githubSync;
+        if (pulled) {
+          setServerType(pulled.serverType || 'github.com');
+          setGhesUrl(pulled.ghesUrl || '');
+          setOwner(pulled.owner || '');
+          setRepo(pulled.repo || '');
+          setBranch(pulled.branch || 'main');
+          setErrorReportingEnabled(pulled.errorReporting ?? false);
+          setSyncItems((prev) =>
+            prev.map((item: any) => ({
+              ...item,
+              enabled:
+                item.id === 'settings'
+                  ? (pulled.syncSettings ?? true)
+                  : item.id === 'personas'
+                    ? (pulled.syncPersonas ?? false)
+                    : item.id === 'images'
+                      ? (pulled.syncImages ?? false)
+                      : (pulled.syncConversations ?? false),
+            }))
+          );
+        }
+
+        // 앱 전역에 설정 변경 브로드캐스트
+        window.dispatchEvent(
+          new CustomEvent('sepilot:config-updated', {
+            detail: result.data ?? {},
+          })
+        );
+
+        setMessage({
+          type: 'success',
+          text: result.message || t('settings.githubSync.messages.pullSuccess'),
+        });
+      }
+    } catch (error: unknown) {
+      const err = error as Error;
+      setMessage({
+        type: 'error',
+        text: err.message || t('settings.githubSync.messages.pullFailed'),
+      });
+    } finally {
+      setIsSyncing(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {message && (
@@ -523,7 +604,7 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
       <div>
         <h3 className="text-lg font-semibold mb-4">{t('settings.githubSync.dataSync')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {syncItems.map((item) => {
+          {syncItems.map((item: any) => {
             const Icon = item.icon;
             const isDisabled = !item.enabled || isSyncing !== null;
             const title = t(`settings.sync.${item.id}.title`);
@@ -564,6 +645,27 @@ export function GitHubSyncSettings({ config, onSave }: GitHubSyncSettingsProps) 
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="flex gap-2">
+                    {item.id === 'settings' && (
+                      <Button
+                        onClick={handlePullSettings}
+                        disabled={isDisabled}
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                      >
+                        {isSyncing === 'pull-settings' ? (
+                          <>
+                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                            {t('settings.githubSync.pulling')}
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="mr-2 h-3 w-3" />
+                            {t('settings.githubSync.pull')}
+                          </>
+                        )}
+                      </Button>
+                    )}
                     <Button
                       onClick={() => handleSync(item.id)}
                       disabled={isDisabled}

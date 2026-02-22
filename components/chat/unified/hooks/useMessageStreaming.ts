@@ -9,19 +9,23 @@ import { logger } from '@/lib/utils/logger';
 import { useRef, useCallback } from 'react';
 import { useChatStore } from '@/lib/store/chat-store';
 import { isElectron } from '@/lib/platform';
-import { getWebLLMClient } from '@/lib/llm/web-client';
-import type { Message, ImageAttachment, ToolCall } from '@/types';
+import { getWebLLMClient } from '@/lib/domains/llm/web-client';
+import type { Message, ImageAttachment, ToolCall, ApprovalHistoryEntry } from '@/types';
 import { generateId } from '@/lib/utils/id-generator';
-import { getVisualizationInstructions } from '@/lib/langgraph/utils/system-message';
-import type { ToolResult } from '@/lib/langgraph/types';
+import { getVisualizationInstructions } from '@/lib/domains/agent/utils/system-message';
+import {
+  analyzeToolApprovalRisk,
+  buildToolApprovalNote,
+  UNTRUSTED_APPROVAL_MARKER,
+  SECURITY_GUARDRAIL_MARKER,
+} from '@/lib/domains/agent/utils/tool-approval-risk';
+import type { ToolResult } from '@/lib/domains/agent/types';
 import {
   createFlowTracker,
   addFlowNode,
-  completeFlow,
-  generateMermaidDiagram,
-  generateFlowSummary,
   type AgentFlowTracker,
 } from '@/lib/utils/agent-flow-visualizer';
+import { shouldGenerateTitle, generateConversationTitle } from '@/lib/domains/chat/title-generator';
 
 interface StreamingOptions {
   conversationId: string;
@@ -38,7 +42,6 @@ export function useMessageStreaming() {
   const { language } = useLanguage();
   const { showNotification } = useNotification();
   const {
-    messages,
     addMessage,
     updateMessage,
     startStreaming,
@@ -47,10 +50,11 @@ export function useMessageStreaming() {
     updateConversationTitle,
     conversations,
     setPendingToolApproval,
-    clearPendingToolApproval,
+    clearPendingToolApprovalForConversation,
     setImageGenerationProgress,
     clearImageGenerationProgress,
     setAgentProgress,
+    updateAgentProgress,
     clearAgentProgress,
     setEnableImageGeneration,
     enableTools,
@@ -58,10 +62,18 @@ export function useMessageStreaming() {
     thinkingMode,
     workingDirectory,
     appMode,
+    setCoworkPlan,
+    updateCoworkTaskStatus,
+    setCoworkTeamStatus,
+    resetCoworkState,
   } = useChatStore();
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const rafIdRef = useRef<number | null>(null);
+  const streamingConversationIdRef = useRef<string | null>(null);
+  const streamEventCleanupRef = useRef<(() => void) | null>(null);
+  const streamDoneCleanupRef = useRef<(() => void) | null>(null);
+  const streamErrorCleanupRef = useRef<(() => void) | null>(null);
 
   // Execute streaming in background
   const executeStreaming = useCallback(
@@ -82,10 +94,34 @@ export function useMessageStreaming() {
       let cleanupDoneHandler: (() => void) | null = null;
       let cleanupErrorHandler: (() => void) | null = null;
 
-      // Agent flow tracker for Coding mode
+      const coerceApprovalHistory = (value: unknown): ApprovalHistoryEntry[] | undefined => {
+        if (!Array.isArray(value)) {
+          return undefined;
+        }
+        const normalized = value.filter(
+          (entry): entry is ApprovalHistoryEntry =>
+            !!entry &&
+            typeof entry === 'object' &&
+            typeof (entry as ApprovalHistoryEntry).id === 'string' &&
+            typeof (entry as ApprovalHistoryEntry).decision === 'string' &&
+            typeof (entry as ApprovalHistoryEntry).source === 'string' &&
+            typeof (entry as ApprovalHistoryEntry).summary === 'string'
+        );
+        return normalized.length > 0 ? normalized : undefined;
+      };
+
+      const isCodingBackedMode = thinkingMode === 'coding' || thinkingMode === 'cowork';
+      const isCoworkMode = thinkingMode === 'cowork';
+
+      // Agent flow tracker for coding-backed modes
       let flowTracker: AgentFlowTracker | null = null;
-      if (thinkingMode === 'coding') {
+      if (isCodingBackedMode) {
         flowTracker = createFlowTracker();
+      }
+
+      // Reset cowork state at the start of a new cowork stream
+      if (isCoworkMode) {
+        resetCoworkState();
       }
 
       try {
@@ -105,6 +141,11 @@ export function useMessageStreaming() {
         const enhancedPersonaPrompt = personaSystemPrompt
           ? `${personaSystemPrompt}\n\n${visualizationInstructions}`
           : null;
+
+        const currentState = useChatStore.getState();
+        const currentConversationMessages =
+          currentState.messagesCache.get(conversationId) ||
+          (currentState.activeConversationId === conversationId ? currentState.messages : []);
 
         const allMessages = [
           // Add persona system prompt with visualization instructions (if no Quick Question system message)
@@ -129,7 +170,7 @@ export function useMessageStreaming() {
                 },
               ]
             : []),
-          ...messages,
+          ...currentConversationMessages,
           {
             id: 'temp',
             role: 'user' as const,
@@ -150,6 +191,7 @@ export function useMessageStreaming() {
 
         const assistantMessageId = assistantMessage.id;
         startStreaming(conversationId, assistantMessageId);
+        streamingConversationIdRef.current = conversationId;
 
         // Create abort controller
         abortControllerRef.current = new AbortController();
@@ -196,6 +238,31 @@ export function useMessageStreaming() {
               return;
             }
 
+            // Handle Cowork events
+            if (isCoworkMode) {
+              if (event.type === 'cowork_plan' && event.data) {
+                setCoworkPlan(event.data);
+                setCoworkTeamStatus('executing');
+                return;
+              }
+              if (event.type === 'cowork_task_start' && event.data?.taskId) {
+                updateCoworkTaskStatus(event.data.taskId, 'in_progress');
+                return;
+              }
+              if (event.type === 'cowork_task_complete' && event.data?.taskId) {
+                updateCoworkTaskStatus(event.data.taskId, 'completed', event.data.result);
+                return;
+              }
+              if (event.type === 'cowork_task_failed' && event.data?.taskId) {
+                updateCoworkTaskStatus(event.data.taskId, 'failed');
+                return;
+              }
+              if (event.type === 'cowork_synthesizing') {
+                setCoworkTeamStatus('synthesizing');
+                return;
+              }
+            }
+
             // Handle streaming chunks
             if (event.type === 'streaming' && event.chunk) {
               accumulatedContent += event.chunk;
@@ -203,10 +270,34 @@ export function useMessageStreaming() {
               return;
             }
 
+            // Handle referenced_documents for RAG
+            if (event.type === 'referenced_documents' && event.referenced_documents) {
+              scheduleUpdate({ referenced_documents: event.referenced_documents });
+              return;
+            }
+
+            // Handle cowork discuss input request
+            if (event.type === 'cowork_discuss_request') {
+              const discussBlock = [
+                '\n\n:::discuss-input',
+                `conversationId: ${event.conversationId}`,
+                `stepIndex: ${event.stepIndex}`,
+                `question: ${event.question || ''}`,
+                ':::\n\n',
+              ].join('\n');
+              accumulatedContent = `${accumulatedContent || ''}${discussBlock}`;
+              scheduleUpdate({ content: accumulatedContent });
+              return;
+            }
+
             // Handle tool approval request
             if (event.type === 'tool_approval_request') {
               const currentStore = useChatStore.getState();
-              if (currentStore.alwaysApproveToolsForSession) {
+              const policyNote = typeof event.note === 'string' ? event.note : '';
+              const requiresManualApprovalByPolicy =
+                policyNote.includes(UNTRUSTED_APPROVAL_MARKER) ||
+                policyNote.includes(SECURITY_GUARDRAIL_MARKER);
+              if (currentStore.alwaysApproveToolsForSession && !requiresManualApprovalByPolicy) {
                 // Auto-approve
                 (async () => {
                   try {
@@ -223,15 +314,78 @@ export function useMessageStreaming() {
                 return;
               }
 
-              setPendingToolApproval({
-                conversationId: event.conversationId!,
-                messageId: event.messageId!,
-                toolCalls: event.toolCalls!,
-                timestamp: Date.now(),
+              const requestKey = JSON.stringify(
+                (event.toolCalls || []).map((tool: ToolCall) => ({
+                  name: tool.name,
+                  arguments: tool.arguments,
+                }))
+              );
+              const pendingQueue = Array.isArray((currentStore as any).pendingToolApprovalQueue)
+                ? ((currentStore as any).pendingToolApprovalQueue as Array<{
+                    requestKey?: string;
+                    conversationId?: string;
+                    messageId?: string;
+                  }>)
+                : currentStore.pendingToolApproval
+                  ? [currentStore.pendingToolApproval]
+                  : [];
+
+              const isDuplicateApprovalRequest = pendingQueue.some((approval) => {
+                if (approval?.requestKey) {
+                  return approval.requestKey === requestKey;
+                }
+                return (
+                  approval?.conversationId === event.conversationId &&
+                  approval?.messageId === event.messageId
+                );
               });
 
+              if (isDuplicateApprovalRequest) {
+                const currentProgress = currentStore.agentProgress.get(conversationId);
+                const approvalHistory = coerceApprovalHistory((event as any).approvalHistory);
+                if (isCodingBackedMode && currentProgress && approvalHistory) {
+                  updateAgentProgress(conversationId, { approvalHistory });
+                }
+                return;
+              }
+
+              const derivedRiskLevel =
+                event.riskLevel || analyzeToolApprovalRisk(event.toolCalls || []).riskLevel;
+              const normalizedPolicyNote = policyNote
+                ? policyNote.replace(UNTRUSTED_APPROVAL_MARKER, '').trim()
+                : '';
+              const derivedNote =
+                normalizedPolicyNote.length > 0
+                  ? normalizedPolicyNote
+                  : buildToolApprovalNote(event.toolCalls || []);
+
+              setPendingToolApproval({
+                conversationId: event.conversationId!,
+                messageId: event.messageId || `approval-${Date.now()}`,
+                toolCalls: event.toolCalls!,
+                timestamp: Date.now(),
+                requestKey,
+                note: derivedNote,
+                riskLevel: derivedRiskLevel,
+                traceMetrics: (event as any).traceMetrics,
+                approvalHistory: coerceApprovalHistory((event as any).approvalHistory),
+              });
+
+              const currentProgress = currentStore.agentProgress.get(conversationId);
+              const approvalHistory =
+                coerceApprovalHistory((event as any).approvalHistory) ||
+                currentProgress?.approvalHistory;
+              if (isCodingBackedMode && currentProgress) {
+                updateAgentProgress(conversationId, {
+                  status: 'executing',
+                  message: `Approval requested: ${derivedNote}`,
+                  approvalHistory,
+                  traceMetrics: (event as any).traceMetrics || currentProgress.traceMetrics,
+                });
+              }
+
               // Add approval waiting message only if not already present
-              const approvalMessage = '🔔 도구 실행 승인을 기다리는 중...';
+              const approvalMessage = `🔔 승인 대기: ${derivedNote}`;
               if (!accumulatedContent.includes(approvalMessage)) {
                 accumulatedContent = `${accumulatedContent || ''}\n\n${approvalMessage}`;
                 scheduleUpdate({ content: accumulatedContent });
@@ -241,7 +395,24 @@ export function useMessageStreaming() {
 
             // Handle tool approval result
             if (event.type === 'tool_approval_result') {
-              clearPendingToolApproval();
+              clearPendingToolApprovalForConversation(event.conversationId || conversationId);
+              if (isCodingBackedMode) {
+                const currentProgress = useChatStore.getState().agentProgress.get(conversationId);
+                const approvalHistory =
+                  coerceApprovalHistory((event as any).approvalHistory) ||
+                  currentProgress?.approvalHistory;
+
+                if (currentProgress) {
+                  updateAgentProgress(conversationId, {
+                    status: event.approved ? 'executing' : 'working',
+                    message: event.approved
+                      ? 'Approval granted. Continuing execution...'
+                      : 'Tool execution denied by user',
+                    approvalHistory,
+                    traceMetrics: (event as any).traceMetrics || currentProgress.traceMetrics,
+                  });
+                }
+              }
               if (!event.approved) {
                 accumulatedContent = `${accumulatedContent || ''}\n\n❌ 도구 실행이 거부되었습니다.`;
                 scheduleUpdate({ content: accumulatedContent });
@@ -318,10 +489,8 @@ export function useMessageStreaming() {
               }
             }
 
-            // Handle Coding Agent display
-            if (thinkingMode === 'coding' && event.type === 'node' && event.data?.messages) {
-              const allMsgs = event.data.messages;
-
+            // Handle coding-backed agent display
+            if (isCodingBackedMode && event.type === 'node') {
               // Update agent progress if available
               const eventData = event.data as any; // Type assertion for dynamic data
               if (eventData?.iterationCount !== undefined && eventData?.maxIterations) {
@@ -338,11 +507,19 @@ export function useMessageStreaming() {
                   ? eventData.statusMessage
                   : `${event.node || 'Processing'}`;
 
+                const currentProgress = useChatStore.getState().agentProgress.get(conversationId);
+                const approvalHistory =
+                  coerceApprovalHistory(eventData?.approvalHistory) ||
+                  currentProgress?.approvalHistory;
+                const traceMetrics = eventData?.traceMetrics || currentProgress?.traceMetrics;
+
                 setAgentProgress(conversationId, {
                   iteration: eventData.iterationCount,
                   maxIterations: eventData.maxIterations,
                   status: statusMap[nodeStatus] || 'working',
                   message: detailedMessage,
+                  approvalHistory,
+                  traceMetrics,
                 });
 
                 // Track node in flow tracker
@@ -355,6 +532,8 @@ export function useMessageStreaming() {
                   );
                 }
               }
+
+              const allMsgs = eventData?.messages;
 
               if (allMsgs && allMsgs.length > 0) {
                 let displayContent = '';
@@ -405,9 +584,9 @@ ${msg.content}
               }
             }
 
-            // Extract referenced_documents and images for non-coding modes
+            // Extract referenced_documents and images for non coding-backed modes
             if (
-              thinkingMode !== 'coding' &&
+              !isCodingBackedMode &&
               event.type === 'node' &&
               event.data?.messages &&
               event.data.messages.length > 0
@@ -426,6 +605,7 @@ ${msg.content}
                   'deep_thinking',
                   'deep-web-research',
                   'coding',
+                  'cowork',
                 ].includes(thinkingMode) ||
                 appMode === 'browser' ||
                 appMode === 'editor' ||
@@ -543,6 +723,8 @@ ${msg.content}
             }
           });
 
+          streamEventCleanupRef.current = cleanupEventHandler || null;
+
           cleanupDoneHandler = window.electronAPI.langgraph.onStreamDone(
             (data?: { conversationId?: string }) => {
               if (data?.conversationId && data.conversationId !== conversationId) {
@@ -551,15 +733,9 @@ ${msg.content}
               if (!abortControllerRef.current?.signal.aborted) {
                 scheduleUpdate({}, true);
 
-                // Add Mermaid diagram for Coding Agent flow
-                if (flowTracker) {
-                  completeFlow(flowTracker);
-                  const mermaidDiagram = generateMermaidDiagram(flowTracker);
-                  const flowSummary = generateFlowSummary(flowTracker);
-
-                  // Append flow visualization to the message
-                  const finalContent = `${accumulatedContent}\n\n---\n\n## 🔄 Agent Execution Flow\n\n${flowSummary}\n\n${mermaidDiagram}`;
-                  scheduleUpdate({ content: finalContent }, true);
+                // Cowork 모드: 스트림 완료 시 상태를 'idle'로 전환
+                if (isCoworkMode) {
+                  setCoworkTeamStatus('idle');
                 }
 
                 // 백그라운드 스트리밍 감지 및 알림 (신규 추가)
@@ -573,7 +749,7 @@ ${msg.content}
                   );
 
                   // 시스템 알림 표시
-                  const conversation = conversations.find((c) => c.id === conversationId);
+                  const conversation = conversations.find((c: any) => c.id === conversationId);
                   const conversationTitle = conversation?.title || '새 대화';
 
                   showNotification({
@@ -585,6 +761,8 @@ ${msg.content}
               }
             }
           );
+
+          streamDoneCleanupRef.current = cleanupDoneHandler || null;
 
           cleanupErrorHandler = window.electronAPI.langgraph.onStreamError(
             (data: { error: string; conversationId?: string }) => {
@@ -603,6 +781,8 @@ ${msg.content}
             }
           );
 
+          streamErrorCleanupRef.current = cleanupErrorHandler || null;
+
           // Get ImageGen and Network config
           let imageGenConfig = null;
           let networkConfig = null;
@@ -610,7 +790,16 @@ ${msg.content}
             try {
               const result = await window.electronAPI.config.load();
               if (result.success && result.data) {
-                imageGenConfig = result.data.imageGen || null;
+                imageGenConfig =
+                  result.data.imageGen ||
+                  (result.data.comfyUI
+                    ? {
+                        provider: 'comfyui',
+                        comfyui: result.data.comfyUI,
+                      }
+                    : null);
+
+                networkConfig = result.data.network || null;
 
                 // Override provider if user selected a specific one
                 const selectedProvider = useChatStore.getState().selectedImageGenProvider;
@@ -629,7 +818,9 @@ ${msg.content}
                     selectedProvider
                   );
                 }
+              }
 
+              if (!networkConfig) {
                 const networkConfigStr = localStorage.getItem('sepilot_network_config');
                 networkConfig = networkConfigStr ? JSON.parse(networkConfigStr) : null;
               }
@@ -684,12 +875,11 @@ ${msg.content}
         }
 
         // Auto-generate title if needed
-        const { shouldGenerateTitle, generateConversationTitle } =
-          await import('@/lib/chat/title-generator');
-        const currentConversation = conversations.find((c) => c.id === conversationId);
+        const currentConversation = conversations.find((c: any) => c.id === conversationId);
         if (currentConversation && shouldGenerateTitle(currentConversation.title)) {
+          // Keep title-generation context aligned with the exact stream input context.
           const allMessagesForTitle = [
-            ...messages,
+            ...currentConversationMessages,
             { role: 'user' as const, content: userMessage },
             { role: 'assistant' as const, content: accumulatedContent },
           ];
@@ -711,6 +901,10 @@ ${msg.content}
           },
           conversationId
         );
+        // Cowork 모드 에러 시에도 상태 리셋
+        if (isCoworkMode) {
+          setCoworkTeamStatus('idle');
+        }
       } finally {
         // Cleanup
         if (rafIdRef.current !== null) {
@@ -719,23 +913,40 @@ ${msg.content}
 
         if (cleanupEventHandler) {
           cleanupEventHandler();
+          if (streamEventCleanupRef.current === cleanupEventHandler) {
+            streamEventCleanupRef.current = null;
+          }
         }
         if (cleanupDoneHandler) {
           cleanupDoneHandler();
+          if (streamDoneCleanupRef.current === cleanupDoneHandler) {
+            streamDoneCleanupRef.current = null;
+          }
         }
         if (cleanupErrorHandler) {
           cleanupErrorHandler();
+          if (streamErrorCleanupRef.current === cleanupErrorHandler) {
+            streamErrorCleanupRef.current = null;
+          }
         }
 
         // Clear agent progress when streaming stops
         clearAgentProgress(conversationId);
 
+        // Cowork 모드: 스트림 종료 시 상태 리셋 (synthesizing에 걸리는 것 방지)
+        if (isCoworkMode) {
+          const currentStatus = useChatStore.getState().coworkTeamStatus;
+          if (currentStatus !== 'idle') {
+            setCoworkTeamStatus('idle');
+          }
+        }
+
         stopStreaming(conversationId);
         abortControllerRef.current = null;
+        streamingConversationIdRef.current = null;
       }
     },
     [
-      messages,
       addMessage,
       updateMessage,
       startStreaming,
@@ -744,10 +955,11 @@ ${msg.content}
       updateConversationTitle,
       conversations,
       setPendingToolApproval,
-      clearPendingToolApproval,
+      clearPendingToolApprovalForConversation,
       setImageGenerationProgress,
       clearImageGenerationProgress,
       setAgentProgress,
+      updateAgentProgress,
       clearAgentProgress,
       setEnableImageGeneration,
       enableTools,
@@ -755,14 +967,44 @@ ${msg.content}
       thinkingMode,
       workingDirectory,
       appMode,
+      setCoworkPlan,
+      updateCoworkTaskStatus,
+      setCoworkTeamStatus,
+      resetCoworkState,
     ]
   );
 
   const stopCurrentStreaming = useCallback(() => {
+    // Abort the controller (event handlers will check signal.aborted and return early)
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-  }, []);
+
+    // Cancel any pending RAF update
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+
+    // Detach stream listeners immediately so late backend events can't mutate UI
+    if (streamEventCleanupRef.current) {
+      streamEventCleanupRef.current();
+      streamEventCleanupRef.current = null;
+    }
+    if (streamDoneCleanupRef.current) {
+      streamDoneCleanupRef.current();
+      streamDoneCleanupRef.current = null;
+    }
+    if (streamErrorCleanupRef.current) {
+      streamErrorCleanupRef.current();
+      streamErrorCleanupRef.current = null;
+    }
+
+    // Immediately update store state so UI responds instantly
+    if (streamingConversationIdRef.current) {
+      stopStreaming(streamingConversationIdRef.current);
+    }
+  }, [stopStreaming]);
 
   return {
     executeStreaming,

@@ -1,0 +1,76 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"],
+      "@sepilot/extension-sdk": ["./lib/extension-sdk/src/index.ts"],
+      "@sepilot/extension-sdk/ui": ["./lib/extension-sdk/src/ui/index.ts"],
+      "@sepilot/extension-sdk/ui/*": ["./lib/extension-sdk/src/ui/*"],
+      "@sepilot/extension-sdk/utils": ["./lib/extension-sdk/src/utils/index.ts"],
+      "@sepilot/extension-sdk/utils/*": ["./lib/extension-sdk/src/utils/*"],
+      "@sepilot/extension-sdk/hooks": ["./lib/extension-sdk/src/hooks/index.ts"],
+      "@sepilot/extension-sdk/hooks/*": ["./lib/extension-sdk/src/hooks/*"],
+      "@sepilot/extension-sdk/types": ["./lib/extension-sdk/src/types/index.ts"],
+      "@sepilot/extension-sdk/ipc": ["./lib/extension-sdk/src/ipc/index.ts"],
+      "@sepilot/extension-sdk/runtime": ["./lib/extension-sdk/src/runtime/index.ts"],
+      "@sepilot/extension-sdk/store": ["./lib/extension-sdk/src/store/index.ts"],
+      "@sepilot/extension-sdk/chat": ["./lib/extension-sdk/src/chat/index.ts"],
+      "@sepilot/extension-sdk/services": ["./lib/extension-sdk/src/services/index.ts"],
+      "@sepilot/extension-sdk/agent": ["./lib/extension-sdk/src/agent/index.ts"],
+      "@sepilot/extension-sdk/host": ["./lib/extension-sdk/src/host/index.ts"]
+    },
+    "target": "ES2020",
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "extensions.d.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "lib/**/*.ts",
+    "lib/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "extensions/**/*.ts",
+    "extensions/**/*.tsx",
+    "hooks/**/*.ts",
+    "hooks/**/*.tsx",
+    "types/**/*.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "out/types/**/*.ts",
+    "out/dev/types/**/*.ts",
+    "e2e_tests/**/*.ts",
+    "playwright.config.ts",
+    "commitlint.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "electron",
+    "dist",
+    "out",
+    ".next",
+    "components/_deprecated",
+    "lib/extension-sdk"
+  ]
+}

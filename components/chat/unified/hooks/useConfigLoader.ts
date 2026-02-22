@@ -7,10 +7,10 @@ import { logger } from '@/lib/utils/logger';
 
 import { useState, useEffect } from 'react';
 import { isElectron } from '@/lib/platform';
-import { initializeLLMClient } from '@/lib/llm/client';
-import { initializeComfyUIClient } from '@/lib/comfyui/client';
-import { configureWebLLMClient } from '@/lib/llm/web-client';
-import { isLLMConfigV2, convertV2ToV1 } from '@/lib/config/llm-config-migration';
+import { initializeLLMClient } from '@/lib/domains/llm/client';
+import { initializeComfyUIClient } from '@/lib/domains/integration/comfyui/client';
+import { configureWebLLMClient } from '@/lib/domains/llm/web-client';
+import { isLLMConfigV2, convertV2ToV1 } from '@/lib/domains/config/llm-config-migration';
 import type { LLMConfig, ImageGenConfig } from '@/types';
 
 export function useConfigLoader() {
@@ -231,7 +231,12 @@ export function useConfigLoader() {
                     activeModel.temperature !== newConfig.temperature ||
                     activeModel.maxTokens !== newConfig.maxTokens
                   ) {
-                    logger.info('[useConfigLoader] Updating active model parameters');
+                    logger.info('[useConfigLoader] Updating active model parameters', {
+                      id: activeModel.id,
+                      modelId: activeModel.modelId,
+                      oldMaxTokens: activeModel.maxTokens,
+                      newMaxTokens: newConfig.maxTokens,
+                    });
                     v2Config.models[activeModelIndex] = {
                       ...activeModel,
                       temperature: newConfig.temperature,

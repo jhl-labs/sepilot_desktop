@@ -3,8 +3,10 @@
 import React, { ReactNode } from 'react';
 import Markdown from 'markdown-to-jsx';
 import { CodeBlock } from './CodeBlock';
+import { MathRenderer } from './MathRenderer';
 import { MermaidDiagram } from './MermaidDiagram';
 import { PlotlyChart } from './PlotlyChart';
+import { TableWrapper } from './TableWrapper';
 import { cn } from '@/lib/utils';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { logger } from '@/lib/utils/logger';
@@ -23,6 +25,33 @@ interface MarkdownRendererProps {
   currentFilePath?: string;
   /** Optional: Working directory path (base path for resolving relative image paths) */
   workingDirectory?: string;
+  onCodeBlockRun?: (code: string, language: string) => void;
+}
+
+// Auto-close unclosed markdown blocks (code, math) during streaming
+function autoCloseMarkdown(content: string): string {
+  let corrected = content;
+
+  // 1. Correct unclosed code blocks (```)
+  const codeBlockCount = (content.match(/```/g) || []).length;
+  if (codeBlockCount % 2 !== 0) {
+    corrected += '\n```';
+  }
+
+  // 2. Correct unclosed math blocks ($$)
+  const mathBlockCount = (content.match(/\$\$/g) || []).length;
+  if (mathBlockCount % 2 !== 0) {
+    corrected += '\n$$';
+  }
+
+  // 3. Correct unclosed inline math ($)
+  // Ensure we don't match escaped \$ or double $$
+  const inlineMathCount = (content.replace(/\\\$|\$\$/g, '').match(/\$/g) || []).length;
+  if (inlineMathCount % 2 !== 0) {
+    corrected += '$';
+  }
+
+  return corrected;
 }
 
 // Helper function to extract text content from React children
@@ -48,12 +77,14 @@ function getTextContent(children: ReactNode): string {
 interface CustomPreComponentProps {
   children: ReactNode;
   isStreaming?: boolean;
+  onCodeBlockRun?: (code: string, language: string) => void;
 }
 
 // Custom Pre component to handle code blocks
 function CustomPreComponent({
   children,
   isStreaming,
+  onCodeBlockRun,
   ...props
 }: CustomPreComponentProps & React.HTMLAttributes<HTMLPreElement>) {
   // Check if this is a code block with language
@@ -125,7 +156,13 @@ function CustomPreComponent({
       }
 
       // Handle regular code blocks
-      return <CodeBlock language={language} code={codeText} />;
+      const isShell = ['bash', 'sh', 'zsh', 'shell', 'cmd', 'powershell', 'ps1'].includes(
+        language.toLowerCase()
+      );
+      const handleRun =
+        isShell && onCodeBlockRun ? () => onCodeBlockRun(codeText, language) : undefined;
+
+      return <CodeBlock language={language} code={codeText} onRun={handleRun} />;
     }
   }
 
@@ -211,10 +248,11 @@ export function MarkdownRenderer({
   isStreaming = false,
   currentFilePath,
   workingDirectory,
+  onCodeBlockRun,
 }: MarkdownRendererProps) {
   // Create a wrapped component that includes isStreaming
   const CustomPre = (props: React.HTMLAttributes<HTMLPreElement> & { children: ReactNode }) => (
-    <CustomPreComponent {...props} isStreaming={isStreaming} />
+    <CustomPreComponent {...props} isStreaming={isStreaming} onCodeBlockRun={onCodeBlockRun} />
   );
 
   // Custom image component for local file support
@@ -481,8 +519,11 @@ export function MarkdownRenderer({
   // Render markdown content
   const renderMarkdownContent = () => {
     try {
-      // Sanitize content before rendering
-      const sanitizedContent = sanitizeMarkdownContent(content);
+      // 1. Auto-close blocks if streaming
+      const displayContent = isStreaming ? autoCloseMarkdown(content) : content;
+
+      // 2. Sanitize and transform content (math, links, etc.)
+      const sanitizedContent = sanitizeMarkdownContent(displayContent);
 
       return (
         <Markdown
@@ -492,6 +533,18 @@ export function MarkdownRenderer({
             // This is a known bug in markdown-to-jsx that causes URI malformed errors
             disableParsingRawHTML: true,
             overrides: {
+              'math-inline': {
+                component: MathRenderer,
+                props: {
+                  displayMode: false,
+                },
+              },
+              'math-block': {
+                component: MathRenderer,
+                props: {
+                  displayMode: true,
+                },
+              },
               pre: {
                 component: CustomPre,
               },
@@ -555,6 +608,7 @@ export function MarkdownRenderer({
                 },
               },
               table: {
+                component: TableWrapper,
                 props: {
                   className: 'w-full border-collapse border border-border my-4',
                 },

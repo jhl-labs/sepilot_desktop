@@ -1,47 +1,8 @@
 {
-  "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./*"]
-    },
-    "target": "ES2020",
-    "forceConsistentCasingInFileNames": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
-  },
-  "include": [
-    "next-env.d.ts",
-    "app/**/*.ts",
-    "app/**/*.tsx",
-    "lib/**/*.ts",
-    "lib/**/*.tsx",
-    "components/**/*.ts",
-    "components/**/*.tsx",
-    "types/**/*.ts",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "out/types/**/*.ts",
-    "out/dev/types/**/*.ts",
-    "e2e_tests/**/*.ts",
-    "playwright.config.ts"
-  ],
-  "exclude": ["node_modules", "electron", "dist", "out", ".next", "components/_deprecated"]
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.frontend.json" },
+    { "path": "./tsconfig.backend.json" },
+    { "path": "./lib/extension-sdk" }
+  ]
 }

@@ -21,19 +21,20 @@ import {
   TeamDocsConfig,
   BetaConfig,
 } from '@/types';
-import { initializeLLMClient } from '@/lib/llm/client';
+import { initializeLLMClient } from '@/lib/domains/llm/client';
 import { VectorDBSettings } from '@/components/rag/VectorDBSettings';
-import { VectorDBConfig, EmbeddingConfig } from '@/lib/vectordb/types';
-import { initializeVectorDB } from '@/lib/vectordb/client';
-import { initializeEmbedding } from '@/lib/vectordb/embeddings/client';
+import { VectorDBConfig, EmbeddingConfig } from '@/lib/domains/rag/types';
+import { initializeVectorDB } from '@/lib/domains/rag/client';
+import { initializeEmbedding } from '@/lib/domains/rag/embeddings/client';
 import { isElectron } from '@/lib/platform';
-import { configureWebLLMClient } from '@/lib/llm/web-client';
+import { configureWebLLMClient } from '@/lib/domains/llm/web-client';
 import { changeLanguage, SupportedLanguage, getI18nInstance } from '@/lib/i18n';
 import { GitHubSyncSettings } from '@/components/settings/GitHubSyncSettings';
 import { PersonalDocsSettings } from '@/components/settings/PersonalDocsSettings';
 import { TeamDocsSettings } from '@/components/settings/TeamDocsSettings';
 import { BackupRestoreSettings } from '@/components/settings/BackupRestoreSettings';
 import { GeneralSettingsTab } from './GeneralSettingsTab';
+import { NotificationSettingsTab } from './NotificationSettingsTab';
 import { LLMSettingsTab } from './LLMSettingsTab';
 import { NetworkSettingsTab } from './NetworkSettingsTab';
 import { ImageGenSettingsTab } from './ImageGenSettingsTab';
@@ -42,7 +43,9 @@ import { SkillsSettingsTab } from './SkillsSettingsTab';
 import { QuickInputSettingsTab } from './QuickInputSettingsTab';
 import { ExtensionManagerTab } from './ExtensionManagerTab';
 import { SettingsSidebar, SettingSection } from './SettingsSidebar';
-import { BetaSettingsTab } from './BetaSettingsTab';
+import { SchedulerSettingsTab } from './SchedulerSettingsTab';
+import { MessageSubscriptionSettings } from './MessageSubscriptionSettings';
+import { MessageQueueViewer } from './MessageQueueViewer';
 import {
   createDefaultLLMConfig,
   createDefaultNetworkConfig,
@@ -52,7 +55,11 @@ import {
   mergeComfyConfig,
   mergeImageGenConfig,
 } from './settingsUtils';
-import { migrateLLMConfig, convertV2ToV1, isLLMConfigV2 } from '@/lib/config/llm-config-migration';
+import {
+  migrateLLMConfig,
+  convertV2ToV1,
+  isLLMConfigV2,
+} from '@/lib/domains/config/llm-config-migration';
 import { SettingsJsonEditor } from './SettingsJsonEditor';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useExtensions } from '@/lib/extensions/use-extensions';
@@ -61,6 +68,7 @@ import { logger } from '@/lib/utils/logger';
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialSection?: SettingSection;
 }
 
 const createDefaultQuickInputConfig = (): QuickInputConfig => ({
@@ -69,8 +77,10 @@ const createDefaultQuickInputConfig = (): QuickInputConfig => ({
 });
 
 const createDefaultBetaConfig = (): BetaConfig => ({});
+const resolveNotificationType = (value: unknown): 'os' | 'application' =>
+  value === 'application' ? 'application' : 'os';
 
-export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsDialogProps) {
   const { t } = useTranslation();
   const { activeExtensions } = useExtensions();
   const [activeTab, setActiveTab] = useState<SettingSection>('general');
@@ -101,6 +111,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setMessage(null);
     setImageGenMessage(null);
   }, [activeTab]);
+
+  useEffect(() => {
+    if (open && initialSection) {
+      setActiveTab(initialSection);
+      setViewMode('ui');
+    }
+  }, [open, initialSection]);
 
   // VectorDB & Embedding 설정 상태
   const [vectorDBConfig, setVectorDBConfig] = useState<VectorDBConfig | null>(null);
@@ -151,6 +168,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
             const normalizedConfig: AppConfig = {
               llm: llmConfig,
+              notification: result.data.notification ?? { type: 'os' },
               network: mergeNetworkConfig(result.data.network),
               mcp: result.data.mcp ?? [],
               vectorDB: result.data.vectorDB,
@@ -162,6 +180,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               teamDocs: result.data.teamDocs ?? [],
               quickInput: result.data.quickInput ?? createDefaultQuickInputConfig(),
               beta: result.data.beta ?? createDefaultBetaConfig(),
+              extensions: result.data.extensions,
+              theme: result.data.theme,
             };
             setAppConfigSnapshot(normalizedConfig);
             setConfig(llmConfig);
@@ -379,6 +399,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     // Merge all config sections: partial (new) > currentConfig (DB) > appConfigSnapshot (fallback)
     const merged: AppConfig = {
       llm: mergedLLM as unknown as LLMConfig, // LLMConfigV2 is stored as llm in AppConfig
+      notification: partial.notification ??
+        currentConfig.notification ??
+        appConfigSnapshot?.notification ?? { type: 'os' },
       network:
         partial.network ??
         currentConfig.network ??
@@ -395,6 +418,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       beta: partial.beta ?? currentConfig.beta ?? appConfigSnapshot?.beta,
       general: partial.general ?? currentConfig.general ?? appConfigSnapshot?.general,
       teamDocs: partial.teamDocs ?? currentConfig.teamDocs ?? appConfigSnapshot?.teamDocs ?? [],
+      extensions: partial.extensions ?? currentConfig.extensions ?? appConfigSnapshot?.extensions,
+      theme: partial.theme ?? currentConfig.theme ?? appConfigSnapshot?.theme,
     };
 
     const result = await window.electronAPI.config.save(merged);
@@ -602,12 +627,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         if (!imageGenConfig.comfyui.httpUrl.trim()) {
           throw new Error(t('settings.imagegen.validation.httpUrlRequired'));
         }
-        if (!imageGenConfig.comfyui.workflowId.trim()) {
-          throw new Error(t('settings.imagegen.validation.workflowIdRequired'));
-        }
       } else if (imageGenConfig.provider === 'nanobanana' && imageGenConfig.nanobanana?.enabled) {
         if (!imageGenConfig.nanobanana.apiKey.trim()) {
           throw new Error(t('settings.imagegen.validation.apiKeyRequired'));
+        }
+
+        if (
+          imageGenConfig.nanobanana.provider === 'vertex-ai' &&
+          !imageGenConfig.nanobanana.projectId?.trim()
+        ) {
+          throw new Error(t('settings.imagegen.nanobanana.projectIdRequired'));
         }
       }
 
@@ -724,41 +753,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       setMessage({ type: 'success', text: t('settings.quickinput.saved') });
     } catch (error) {
       console.error('Failed to save QuickInput config:', error);
-      setMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : String(error) || t('settings.saveFailed'),
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleBetaSave = async () => {
-    setIsSaving(true);
-    setMessage(null);
-
-    try {
-      if (isElectron() && window.electronAPI) {
-        try {
-          await persistAppConfig({ beta: betaConfig });
-        } catch (error) {
-          console.error('Error saving Beta config to DB:', error);
-        }
-      }
-
-      // Always save to localStorage for Sidebar sync (Sidebar reads from localStorage)
-      localStorage.setItem('sepilot_beta_config', JSON.stringify(betaConfig));
-
-      // Notify other components about Beta config update
-      window.dispatchEvent(
-        new CustomEvent('sepilot:config-updated', {
-          detail: { beta: betaConfig },
-        })
-      );
-
-      setMessage({ type: 'success', text: t('settings.beta.saved') });
-    } catch (error) {
-      console.error('Failed to save Beta config:', error);
       setMessage({
         type: 'error',
         text: error instanceof Error ? error.message : String(error) || t('settings.saveFailed'),
@@ -907,6 +901,15 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       setEmbeddingConfig(newConfig.embedding ?? null);
       setAppConfigSnapshot(newConfig);
 
+      if (newConfig.notification?.type) {
+        localStorage.setItem('sepilot_notification_type', newConfig.notification.type);
+        window.dispatchEvent(
+          new CustomEvent('sepilot:notification-type-change', {
+            detail: newConfig.notification.type,
+          })
+        );
+      }
+
       // Initialize clients
       if (isElectron() && typeof initializeLLMClient !== 'undefined') {
         initializeLLMClient(llmConfig);
@@ -943,6 +946,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   // Get current AppConfig for JSON editor
   const getCurrentAppConfig = (): AppConfig => {
+    const fallbackNotificationType =
+      typeof window !== 'undefined'
+        ? resolveNotificationType(localStorage.getItem('sepilot_notification_type'))
+        : 'os';
+
     return {
       llm: (configV2 as unknown as LLMConfig) || config,
       network: networkConfig,
@@ -956,6 +964,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       quickInput: quickInputConfig,
       beta: betaConfig,
       general: generalConfig ?? undefined,
+      notification: appConfigSnapshot?.notification ?? { type: fallbackNotificationType },
+      extensions: appConfigSnapshot?.extensions,
+      theme: appConfigSnapshot?.theme,
     };
   };
 
@@ -1025,6 +1036,61 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     message={message}
                   />
                 )}
+
+                {activeTab === 'notification' && (
+                  <NotificationSettingsTab
+                    onSave={async (notificationType) => {
+                      try {
+                        setIsSaving(true);
+                        setMessage(null);
+
+                        if (isElectron() && window.electronAPI) {
+                          const savedConfig = await persistAppConfig({
+                            notification: { type: notificationType },
+                          });
+
+                          if (!savedConfig) {
+                            setMessage({
+                              type: 'error',
+                              text: t('common.saveError', '저장에 실패했습니다.'),
+                            });
+                            return false;
+                          }
+                        } else {
+                          const currentConfig = getCurrentAppConfig();
+                          setAppConfigSnapshot({
+                            ...currentConfig,
+                            notification: { type: notificationType },
+                          });
+                        }
+
+                        localStorage.setItem('sepilot_notification_type', notificationType);
+                        window.dispatchEvent(
+                          new CustomEvent('sepilot:notification-type-change', {
+                            detail: notificationType,
+                          })
+                        );
+                        setMessage({
+                          type: 'success',
+                          text: t('settings.notification.saved'),
+                        });
+                        return true;
+                      } catch (error) {
+                        console.error('Failed to save notification settings:', error);
+                        setMessage({
+                          type: 'error',
+                          text: t('common.saveError', '저장에 실패했습니다.'),
+                        });
+                        return false;
+                      } finally {
+                        setIsSaving(false);
+                      }
+                    }}
+                    isSaving={isSaving}
+                    message={message}
+                  />
+                )}
+
                 {activeTab === 'llm' && configV2 && (
                   <LLMSettingsTab
                     config={configV2}
@@ -1170,6 +1236,23 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   />
                 )}
 
+                {activeTab === 'scheduler' && (
+                  <SchedulerSettingsTab
+                    onSave={() =>
+                      setMessage({
+                        type: 'success',
+                        text: t('scheduler.saveSuccess'),
+                      })
+                    }
+                    isSaving={isSaving}
+                    message={message}
+                  />
+                )}
+
+                {activeTab === 'message-subscription' && <MessageSubscriptionSettings />}
+
+                {activeTab === 'message-queue' && <MessageQueueViewer />}
+
                 {activeTab === 'extensions' && (
                   <ExtensionManagerTab
                     onSectionChange={(section) => setActiveTab(section)}
@@ -1201,16 +1284,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     }
                     return null;
                   })}
-
-                {activeTab === 'beta' && (
-                  <BetaSettingsTab
-                    config={betaConfig}
-                    setConfig={setBetaConfig}
-                    onSave={handleBetaSave}
-                    isSaving={isSaving}
-                    message={message}
-                  />
-                )}
               </div>
             </>
           ) : (

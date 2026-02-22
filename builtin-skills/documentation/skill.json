@@ -1,0 +1,22 @@
+{
+  "id": "com.sepilot.builtin.documentation",
+  "name": "기술 문서 작성 가이드",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "JSDoc/TSDoc, README, API 문서화, 코드 주석 등 기술 문서 작성 원칙과 패턴을 제공합니다",
+  "category": "productivity",
+  "tags": ["documentation", "문서", "JSDoc", "TSDoc", "README", "API doc", "주석", "가이드"],
+  "autoLoad": false,
+  "contextPatterns": [
+    "documentation",
+    "기술 문서",
+    "문서 작성",
+    "README",
+    "JSDoc",
+    "TSDoc",
+    "API doc",
+    "코드 주석",
+    "주석 작성",
+    "docs 작성"
+  ]
+}

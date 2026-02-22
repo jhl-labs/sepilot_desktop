@@ -8,7 +8,7 @@
  */
 
 import { Brain, Wrench, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import type { BrowserAgentLogEntry } from '@/extensions/browser/types';
+import type { BrowserAgentLogEntry } from '@sepilot/extension-sdk/types';
 
 interface AgentLogsPluginProps {
   logs: BrowserAgentLogEntry[];

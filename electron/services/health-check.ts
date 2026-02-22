@@ -1,7 +1,7 @@
 import { databaseService } from './database';
 import { vectorDBService } from './vectordb';
 import { logger } from './logger';
-import { MCPServerManager } from '../../lib/mcp/server-manager';
+import { MCPServerManager } from '../../lib/domains/mcp/server-manager';
 import type { AppConfig, LLMConfigV2 } from '../../types';
 
 /**

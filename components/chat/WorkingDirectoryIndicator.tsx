@@ -12,9 +12,10 @@ export function WorkingDirectoryIndicator() {
   const { t } = useTranslation();
   const { workingDirectory, setWorkingDirectory, thinkingMode } = useChatStore();
   const [isSelecting, setIsSelecting] = useState(false);
+  const needsWorkingDirectory = thinkingMode === 'coding' || thinkingMode === 'cowork';
 
-  // Only show in coding mode
-  if (thinkingMode !== 'coding') {
+  // Only show in coding-backed modes
+  if (!needsWorkingDirectory) {
     return null;
   }
 
@@ -49,8 +50,8 @@ export function WorkingDirectoryIndicator() {
     return `.../${segments.slice(-2).join('/')}`;
   };
 
-  // Show warning if no working directory in coding mode
-  if (thinkingMode === 'coding' && !workingDirectory) {
+  // Show warning if no working directory in coding-backed modes
+  if (!workingDirectory) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-2 border-t border-orange-500/50 bg-orange-500/10">
         <div className="flex items-center gap-2 text-xs">

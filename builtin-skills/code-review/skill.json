@@ -1,0 +1,19 @@
+{
+  "id": "com.sepilot.builtin.code-review",
+  "name": "코드 리뷰 가이드",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "코드 리뷰 시 체크리스트, SOLID 원칙, 코드 스멜 감지, 리팩토링 패턴을 제공합니다",
+  "category": "productivity",
+  "tags": ["code review", "refactoring", "clean code", "SOLID", "코드 리뷰", "리팩토링"],
+  "autoLoad": false,
+  "contextPatterns": [
+    "code review",
+    "코드 리뷰",
+    "PR review",
+    "리팩토링",
+    "코드 품질",
+    "refactor",
+    "clean code"
+  ]
+}

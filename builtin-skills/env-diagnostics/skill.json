@@ -1,0 +1,43 @@
+{
+  "id": "com.sepilot.builtin.env-diagnostics",
+  "name": "환경 진단 (Enterprise)",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "기업 환경의 프록시, 인증서, DNS, 방화벽, 패키지 매니저 설정 문제를 PowerShell/bash 명령어로 진단합니다",
+  "category": "devops",
+  "tags": [
+    "proxy",
+    "certificate",
+    "dns",
+    "firewall",
+    "network",
+    "diagnostics",
+    "환경",
+    "프록시",
+    "인증서",
+    "진단"
+  ],
+  "autoLoad": false,
+  "contextPatterns": [
+    "프록시 설정",
+    "proxy 설정",
+    "인증서 오류",
+    "certificate error",
+    "SSL 오류",
+    "self-signed",
+    "연결 안 됨",
+    "connection failed",
+    "DNS 오류",
+    "방화벽 차단",
+    "설치 실패",
+    "install failed",
+    "ETIMEDOUT",
+    "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+    "SELF_SIGNED_CERT_IN_CHAIN",
+    "기업 환경",
+    "enterprise network",
+    "환경 진단",
+    "네트워크 진단",
+    "npm install 실패"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "com.sepilot.builtin.git-workflow",
+  "name": "Git 워크플로우 가이드",
+  "version": "1.0.0",
+  "author": "SEPilot Team",
+  "description": "Git 브랜치 전략, 커밋 메시지 작성, PR 워크플로우, 충돌 해결 가이드를 제공합니다",
+  "category": "productivity",
+  "tags": ["git", "commit", "branch", "merge", "PR", "rebase", "깃", "버전 관리", "워크플로우"],
+  "autoLoad": false,
+  "contextPatterns": [
+    "git 사용",
+    "git 명령",
+    "커밋 메시지",
+    "commit message",
+    "브랜치 전략",
+    "branch 생성",
+    "merge conflict",
+    "병합 충돌",
+    "pull request",
+    "PR 리뷰",
+    "rebase",
+    "깃 워크플로우",
+    "버전 관리",
+    "cherry-pick"
+  ]
+}

@@ -24,6 +24,7 @@ import {
 import type { HeadingNode } from '@/lib/utils/markdown-parser';
 import { logger } from '@/lib/utils/logger';
 import { useTranslation } from 'react-i18next';
+import { runPromisesInBatches } from '@/lib/utils/batch';
 import {
   DndContext,
   closestCenter,
@@ -62,6 +63,8 @@ interface WikiFileNode {
   headings: HeadingNode[];
   linkCount: number;
 }
+
+const WIKI_FILE_READ_BATCH_SIZE = 12;
 
 interface SortableFileItemProps {
   file: WikiFileNode;
@@ -335,27 +338,40 @@ export function WikiTree() {
       const mdFiles = result.data;
       logger.info(`[WikiTree] Found ${mdFiles.length} markdown files`);
 
-      // Parse each markdown file
-      const parsedFiles: WikiFileNode[] = [];
+      // Parse each markdown file (batched to avoid long sequential I/O waits)
+      const parsedFileResults = await runPromisesInBatches(
+        mdFiles,
+        WIKI_FILE_READ_BATCH_SIZE,
+        async (filePath) => {
+          const content = await readFile(filePath);
+          if (content === null) {
+            return null;
+          }
 
-      for (const filePath of mdFiles) {
-        const content = await readFile(filePath);
-        if (content === null) {
+          const filename = filePath.split(/[\\/]/).pop() || filePath;
+          const parsed = parseMarkdown(content);
+          const title = extractMarkdownTitle(content, filename);
+          const headingHierarchy = buildHeadingHierarchy(parsed.headings);
+
+          return {
+            path: filePath,
+            filename,
+            title,
+            headings: headingHierarchy,
+            linkCount: parsed.links.length,
+          } satisfies WikiFileNode;
+        }
+      );
+
+      const parsedFiles: WikiFileNode[] = [];
+      for (const result of parsedFileResults) {
+        if (result.status === 'rejected') {
+          console.error('[WikiTree] Failed to parse markdown file:', result.reason);
           continue;
         }
-
-        const filename = filePath.split(/[\\/]/).pop() || filePath;
-        const parsed = parseMarkdown(content);
-        const title = extractMarkdownTitle(content, filename);
-        const headingHierarchy = buildHeadingHierarchy(parsed.headings);
-
-        parsedFiles.push({
-          path: filePath,
-          filename,
-          title,
-          headings: headingHierarchy,
-          linkCount: parsed.links.length,
-        });
+        if (result.value) {
+          parsedFiles.push(result.value);
+        }
       }
 
       setWikiFiles(parsedFiles);
@@ -463,7 +479,7 @@ export function WikiTree() {
     const updatedFiles = {
       ...wikiConfig.files,
       [filePath]: {
-        ...(wikiConfig.files[filePath] || {}),
+        ...(wikiConfig.files[filePath] || { id: filePath, order: 0 }),
         pinned: true,
       },
     };
@@ -475,7 +491,7 @@ export function WikiTree() {
     const updatedFiles = {
       ...wikiConfig.files,
       [filePath]: {
-        ...(wikiConfig.files[filePath] || {}),
+        ...(wikiConfig.files[filePath] || { id: filePath, order: 0 }),
         pinned: false,
       },
     };
@@ -487,7 +503,7 @@ export function WikiTree() {
     const updatedFiles = {
       ...wikiConfig.files,
       [filePath]: {
-        ...(wikiConfig.files[filePath] || {}),
+        ...(wikiConfig.files[filePath] || { id: filePath, order: 0 }),
         favorite: true,
       },
     };
@@ -499,7 +515,7 @@ export function WikiTree() {
     const updatedFiles = {
       ...wikiConfig.files,
       [filePath]: {
-        ...(wikiConfig.files[filePath] || {}),
+        ...(wikiConfig.files[filePath] || { id: filePath, order: 0 }),
         favorite: false,
       },
     };
@@ -511,7 +527,7 @@ export function WikiTree() {
     const updatedFiles = {
       ...wikiConfig.files,
       [filePath]: {
-        ...(wikiConfig.files[filePath] || {}),
+        ...(wikiConfig.files[filePath] || { id: filePath, order: 0 }),
         color: color || undefined,
       },
     };

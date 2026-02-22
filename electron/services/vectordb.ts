@@ -8,9 +8,10 @@ import {
   RawDocument,
   IndexingOptions,
   SearchOptions,
-} from '../../lib/vectordb/types';
-import { chunkDocuments } from '../../lib/vectordb/indexing';
-import { getEmbeddingProvider } from '../../lib/vectordb/embeddings/client';
+} from '../../lib/domains/rag/types';
+import { chunkDocuments } from '../../lib/domains/rag/indexing';
+import { getEmbeddingProvider } from '../../lib/domains/rag/embeddings/client';
+import { ErrorRecovery } from '../../lib/domains/agent/utils/error-recovery';
 
 interface VectorDBServiceConfig {
   indexName: string;
@@ -202,6 +203,36 @@ class VectorDBService {
   }
 
   async searchByVector(
+    queryEmbedding: number[],
+    k: number,
+    options?: SearchOptions,
+    queryText?: string
+  ): Promise<SearchResult[]> {
+    // 🔄 타임아웃 래핑 추가 (30초)
+    const result = await ErrorRecovery.withTimeoutAndRetry(
+      async () => this.searchByVectorInternal(queryEmbedding, k, options, queryText),
+      30000, // 30초 타임아웃
+      {
+        maxRetries: 1, // 1회 재시도
+        initialDelayMs: 1000,
+      },
+      'VectorDB Search'
+    );
+
+    if (!result.success) {
+      const error = result.error || new Error('VectorDB search failed');
+      console.error('[VectorDB] Search failed:', {
+        attempts: result.attempts,
+        duration: result.totalDurationMs,
+        error: error.message,
+      });
+      throw error;
+    }
+
+    return result.result || [];
+  }
+
+  private async searchByVectorInternal(
     queryEmbedding: number[],
     k: number,
     options?: SearchOptions,
@@ -530,7 +561,7 @@ class VectorDBService {
     // 각 쿼리 term에 대해 BM25 점수 계산
     for (const term of queryTerms) {
       // Term frequency (TF)
-      const tf = docTerms.filter((t) => t === term).length;
+      const tf = docTerms.filter((t: any) => t === term).length;
 
       if (tf === 0) {
         continue;
@@ -636,13 +667,17 @@ class VectorDBService {
     return result[0].values[0][0] as number;
   }
 
-  async getAllDocuments(): Promise<VectorDocument[]> {
+  async getAllDocuments(options?: { includeEmbedding?: boolean }): Promise<VectorDocument[]> {
     if (!this.db || !this.config) throw new Error('Database not initialized');
 
     const indexName = this.config.indexName;
+    const includeEmbedding = options?.includeEmbedding ?? false;
+    const selectColumns = includeEmbedding
+      ? 'id, content, metadata, embedding, created_at'
+      : 'id, content, metadata, created_at';
 
     const result = this.db.exec(
-      `SELECT id, content, metadata, embedding, created_at FROM ${indexName} ORDER BY created_at DESC`
+      `SELECT ${selectColumns} FROM ${indexName} ORDER BY created_at DESC`
     );
 
     if (result.length === 0) return [];
@@ -660,7 +695,7 @@ class VectorDBService {
         id: row[0] as string,
         content: row[1] as string,
         metadata: metadata,
-        embedding: JSON.parse(row[3] as string),
+        embedding: includeEmbedding ? JSON.parse(row[3] as string) : undefined,
       });
     }
 

@@ -11,13 +11,18 @@ import {
   BookOpen,
   Copy,
   FileArchive,
+  Pin,
+  PinOff,
+  Calendar,
+  Download,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatStore } from '@/lib/store/chat-store';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,7 +49,9 @@ import { SaveKnowledgeDialog } from '@/components/chat/SaveKnowledgeDialog';
 import { CompressConversationDialog } from '@/components/chat/CompressConversationDialog';
 import { isElectron } from '@/lib/platform';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import type { Persona } from '@/types/persona';
+import { useShallow } from 'zustand/react/shallow';
 
 import { logger } from '@/lib/utils/logger';
 interface ChatHistoryProps {
@@ -61,10 +68,33 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     duplicateConversation,
     updateConversationTitle,
     updateConversationPersona,
+    togglePinConversation,
     searchConversations,
     personas,
     clearMessagesCache,
-  } = useChatStore();
+  } = useChatStore(
+    useShallow((state) => ({
+      conversations: state.conversations,
+      activeConversationId: state.activeConversationId,
+      setActiveConversation: state.setActiveConversation,
+      deleteConversation: state.deleteConversation,
+      duplicateConversation: state.duplicateConversation,
+      updateConversationTitle: state.updateConversationTitle,
+      updateConversationPersona: state.updateConversationPersona,
+      togglePinConversation: state.togglePinConversation,
+      searchConversations: state.searchConversations,
+      personas: state.personas,
+      clearMessagesCache: state.clearMessagesCache,
+    }))
+  );
+
+  const personasById = useMemo(() => {
+    const personaMap = new Map<string, Persona>();
+    for (const persona of personas) {
+      personaMap.set(persona.id, persona);
+    }
+    return personaMap;
+  }, [personas]);
 
   // Builtin persona의 번역된 이름, 설명을 가져오는 헬퍼 함수
   const getPersonaDisplayText = (persona: Persona, field: 'name' | 'description') => {
@@ -80,6 +110,8 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isExporting, setIsExporting] = useState<string | null>(null);
+  const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<
     Array<{ conversation: Conversation; matchedMessages: Message[] }>
   >([]);
@@ -93,6 +125,8 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   const [compressConversation, setCompressConversation] = useState<Conversation | null>(null);
   const [compressMessages, setCompressMessages] = useState<Message[]>([]);
   const editInputRef = useRef<HTMLInputElement>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRequestIdRef = useRef(0);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -101,6 +135,44 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
       editInputRef.current.select();
     }
   }, [editingId]);
+
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const requestId = ++searchRequestIdRef.current;
+
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const results = await searchConversations(trimmedQuery);
+        if (searchRequestIdRef.current === requestId) {
+          setSearchResults(results);
+        }
+      } catch (error) {
+        console.error('Search failed:', error);
+        if (searchRequestIdRef.current === requestId) {
+          setSearchResults([]);
+        }
+      }
+    }, 300);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = null;
+      }
+    };
+  }, [searchQuery, searchConversations]);
 
   const handleStartEdit = (id: string, title: string) => {
     setEditingId(id);
@@ -127,19 +199,104 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   };
 
   const handleDuplicate = async (id: string) => {
+    if (isDuplicating) {
+      return;
+    }
     try {
+      setIsDuplicating(id);
       const newConversationId = await duplicateConversation(id);
       // Switch to the duplicated conversation
       await setActiveConversation(newConversationId);
       onConversationClick?.();
     } catch (error) {
       console.error('Failed to duplicate conversation:', error);
-      // TODO: Show error toast to user
+      toast.error('대화 복제에 실패했습니다.');
+    } finally {
+      setIsDuplicating(null);
+    }
+  };
+
+  const handleExport = async (conversationId: string) => {
+    if (isExporting) {
+      return;
+    }
+    const conversation = conversations.find((c: any) => c.id === conversationId);
+    if (!conversation) {
+      return;
+    }
+
+    try {
+      setIsExporting(conversationId);
+      // Load messages for this conversation
+      let messages: Message[] = [];
+      if (isElectron() && window.electronAPI) {
+        const result = await window.electronAPI.chat.loadMessages(conversationId);
+        if (result.success && result.data) {
+          messages = result.data;
+        }
+      } else {
+        const allMessages = localStorage.getItem('sepilot_messages');
+        if (allMessages) {
+          const parsed = JSON.parse(allMessages) as Record<string, Message[]>;
+          messages = parsed[conversationId] || [];
+        }
+      }
+
+      if (messages.length === 0) {
+        toast.error('내보낼 메시지가 없습니다.');
+        return;
+      }
+
+      // Format as Markdown
+      let markdown = `# ${conversation.title}\n\n`;
+      markdown += `*생성일: ${new Date(conversation.created_at).toLocaleString()}*\n\n---\n\n`;
+
+      messages.forEach((msg) => {
+        const role =
+          msg.role === 'user'
+            ? '## 👤 You'
+            : `## 🤖 ${getPersonaDisplayText(personas.find((p: Persona) => p.id === (conversation.personaId || 'default')) || personas[0], 'name')}`;
+        markdown += `${role}\n\n${msg.content}\n\n`;
+
+        if (msg.images && msg.images.length > 0) {
+          markdown += `*첨부 이미지: ${msg.images.length}개 (이미지 데이터는 마크다운 텍스트에 포함되지 않습니다.)*\n\n`;
+        }
+
+        markdown += `---\n\n`;
+      });
+
+      // Save as file
+      if (isElectron() && window.electronAPI) {
+        const safeTitle = conversation.title.replace(/[/\\?%*:|"<>]/g, '-');
+        const defaultFilename = `${safeTitle}.md`;
+        const saveResult = await window.electronAPI.invoke(
+          'file:save-as',
+          markdown,
+          defaultFilename
+        );
+        if (saveResult.success && saveResult.data) {
+          toast.success('대화가 내보내기 되었습니다.');
+        }
+      } else {
+        // Web fallback: download as blob
+        const blob = new Blob([markdown], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${conversation.title}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('내보내기 중 오류가 발생했습니다.');
+    } finally {
+      setIsExporting(null);
     }
   };
 
   const handleCompress = async (conversationId: string) => {
-    const conversation = conversations.find((c) => c.id === conversationId);
+    const conversation = conversations.find((c: any) => c.id === conversationId);
     if (!conversation) {
       return;
     }
@@ -198,7 +355,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   };
 
   const handleOpenSaveKnowledgeDialog = async (conversationId: string) => {
-    const conversation = conversations.find((c) => c.id === conversationId);
+    const conversation = conversations.find((c: any) => c.id === conversationId);
     if (!conversation) {
       return;
     }
@@ -280,7 +437,8 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     } catch (error) {
       console.error('Failed to save knowledge:', error);
       throw new Error(
-        error instanceof Error ? error.message : String(error) || '지식 저장에 실패했습니다.'
+        error instanceof Error ? error.message : String(error) || '지식 저장에 실패했습니다.',
+        { cause: error }
       );
     }
   };
@@ -318,31 +476,18 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
     } catch (error) {
       console.error('Failed to compress conversation:', error);
       throw new Error(
-        error instanceof Error ? error.message : String(error) || '대화 압축에 실패했습니다.'
+        error instanceof Error ? error.message : String(error) || '대화 압축에 실패했습니다.',
+        { cause: error }
       );
     }
   };
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-
-    if (!query.trim()) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      const results = await searchConversations(query);
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Search failed:', error);
-      setSearchResults([]);
-    }
-  };
-
   const handleClearSearch = () => {
+    searchRequestIdRef.current += 1;
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
     setSearchQuery('');
     setSearchResults([]);
     setIsSearching(false);
@@ -355,8 +500,264 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
   };
 
   const selectedConversation = selectedConversationId
-    ? conversations.find((c) => c.id === selectedConversationId)
+    ? conversations.find((c: any) => c.id === selectedConversationId)
     : null;
+
+  // Sort conversations: Pinned first, then by updated_at descending
+  const sortedConversations = useMemo(() => {
+    return [...conversations].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) {
+        return -1;
+      }
+      if (!a.isPinned && b.isPinned) {
+        return 1;
+      }
+      return b.updated_at - a.updated_at;
+    });
+  }, [conversations]);
+
+  const conversationGroups = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterday = today - 24 * 60 * 60 * 1000;
+    const lastWeek = today - 7 * 24 * 60 * 60 * 1000;
+
+    const groups = {
+      pinned: [] as Conversation[],
+      today: [] as Conversation[],
+      yesterday: [] as Conversation[],
+      lastWeek: [] as Conversation[],
+      older: [] as Conversation[],
+    };
+
+    for (const conversation of sortedConversations) {
+      if (conversation.isPinned) {
+        groups.pinned.push(conversation);
+        continue;
+      }
+
+      if (conversation.updated_at >= today) {
+        groups.today.push(conversation);
+      } else if (conversation.updated_at >= yesterday) {
+        groups.yesterday.push(conversation);
+      } else if (conversation.updated_at >= lastWeek) {
+        groups.lastWeek.push(conversation);
+      } else {
+        groups.older.push(conversation);
+      }
+    }
+
+    return groups;
+  }, [sortedConversations]);
+
+  const renderConversationItem = (conversation: any) => (
+    <div
+      key={conversation.id}
+      className={cn(
+        'group relative flex items-center gap-1 rounded-lg transition-colors hover:bg-accent',
+        activeConversationId === conversation.id && 'bg-accent text-accent-foreground'
+      )}
+    >
+      {editingId === conversation.id ? (
+        <div className="flex-1 px-3 py-2">
+          <Input
+            ref={editInputRef}
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSaveEdit();
+              } else if (e.key === 'Escape') {
+                handleCancelEdit();
+              }
+            }}
+            onBlur={handleSaveEdit}
+            className="h-7 text-sm"
+          />
+        </div>
+      ) : (
+        <>
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
+              <button
+                onClick={async () => {
+                  await setActiveConversation(conversation.id);
+                  onConversationClick?.();
+                }}
+                className="flex flex-1 flex-col items-start px-3 py-2 text-left"
+              >
+                <div className="flex items-center gap-1.5 w-full">
+                  {conversation.personaId && personasById.get(conversation.personaId)?.avatar && (
+                    <span className="text-sm flex-shrink-0">
+                      {personasById.get(conversation.personaId)?.avatar}
+                    </span>
+                  )}
+                  <span className="text-sm font-medium line-clamp-1">{conversation.title}</span>
+                  {conversation.isPinned && (
+                    <Pin className="h-3 w-3 text-primary shrink-0 fill-current" />
+                  )}
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {formatDate(conversation.updated_at)}
+                </span>
+              </button>
+            </ContextMenuTrigger>
+            <ContextMenuContent collisionPadding={8} avoidCollisions={true}>
+              <ContextMenuItem onClick={() => togglePinConversation(conversation.id)}>
+                {conversation.isPinned ? (
+                  <>
+                    <PinOff className="mr-2 h-4 w-4" />
+                    {t('chat.unpin', '고정 해제')}
+                  </>
+                ) : (
+                  <>
+                    <Pin className="mr-2 h-4 w-4" />
+                    {t('chat.pin', '고정')}
+                  </>
+                )}
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => handleStartEdit(conversation.id, conversation.title)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                {t('chat.rename')}
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => handleOpenPersonaDialog(conversation.id)}>
+                <User className="mr-2 h-4 w-4" />
+                {t('chat.persona')}
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => handleOpenSaveKnowledgeDialog(conversation.id)}>
+                <BookOpen className="mr-2 h-4 w-4" />
+                {t('chat.saveKnowledge')}
+              </ContextMenuItem>
+              <ContextMenuItem
+                onClick={() => handleDuplicate(conversation.id)}
+                disabled={!!isDuplicating || !!isExporting}
+              >
+                {isDuplicating === conversation.id ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Copy className="mr-2 h-4 w-4" />
+                )}
+                {t('chat.duplicate')}
+              </ContextMenuItem>
+              <ContextMenuItem
+                onClick={() => handleExport(conversation.id)}
+                disabled={!!isDuplicating || !!isExporting}
+              >
+                {isExporting === conversation.id ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {t('chat.export', 'Markdown으로 내보내기')}
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => handleCompress(conversation.id)}>
+                <FileArchive className="mr-2 h-4 w-4" />
+                {t('chat.compress')}
+              </ContextMenuItem>
+              <ContextMenuItem
+                onClick={() => handleDelete(conversation.id)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t('chat.delete')}
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Conversation Options"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => togglePinConversation(conversation.id)}>
+                {conversation.isPinned ? (
+                  <>
+                    <PinOff className="mr-2 h-4 w-4" />
+                    {t('chat.unpin', '고정 해제')}
+                  </>
+                ) : (
+                  <>
+                    <Pin className="mr-2 h-4 w-4" />
+                    {t('chat.pin', '고정')}
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleStartEdit(conversation.id, conversation.title)}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                {t('chat.rename')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOpenPersonaDialog(conversation.id)}>
+                <User className="mr-2 h-4 w-4" />
+                {t('chat.persona')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleOpenSaveKnowledgeDialog(conversation.id)}>
+                <BookOpen className="mr-2 h-4 w-4" />
+                {t('chat.saveKnowledge')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleDuplicate(conversation.id)}
+                disabled={!!isDuplicating || !!isExporting}
+              >
+                {isDuplicating === conversation.id ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Copy className="mr-2 h-4 w-4" />
+                )}
+                {t('chat.duplicate')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleExport(conversation.id)}
+                disabled={!!isDuplicating || !!isExporting}
+              >
+                {isExporting === conversation.id ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {t('chat.export', 'Markdown으로 내보내기')}
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onClick={() => handleCompress(conversation.id)}>
+                <FileArchive className="mr-2 h-4 w-4" />
+                {t('chat.compress')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleDelete(conversation.id)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t('chat.delete')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      )}
+    </div>
+  );
+
+  const renderSection = (title: string, convs: Conversation[]) => {
+    if (convs.length === 0) {
+      return null;
+    }
+    return (
+      <div className="mb-4">
+        <h3 className="px-3 mb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <Calendar className="h-3 w-3" />
+          {title}
+        </h3>
+        <div className="space-y-1">{convs.map(renderConversationItem)}</div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -368,7 +769,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
             type="text"
             placeholder={t('chat.searchPlaceholder')}
             value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 pr-9 h-9"
           />
           {searchQuery && (
@@ -406,12 +807,11 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         {conversation.personaId &&
-                          (() => {
-                            const persona = personas.find((p) => p.id === conversation.personaId);
-                            return persona?.avatar ? (
-                              <span className="text-sm flex-shrink-0">{persona.avatar}</span>
-                            ) : null;
-                          })()}
+                          personasById.get(conversation.personaId)?.avatar && (
+                            <span className="text-sm flex-shrink-0">
+                              {personasById.get(conversation.personaId)?.avatar}
+                            </span>
+                          )}
                         <h3 className="text-sm font-medium line-clamp-1">{conversation.title}</h3>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -450,145 +850,12 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
             <p className="mt-1 text-xs">{t('chat.startNewConversation')}</p>
           </div>
         ) : (
-          <div className="space-y-1">
-            {conversations.map((conversation) => (
-              <div
-                key={conversation.id}
-                className={cn(
-                  'group relative flex items-center gap-1 rounded-lg transition-colors hover:bg-accent',
-                  activeConversationId === conversation.id && 'bg-accent text-accent-foreground'
-                )}
-              >
-                {editingId === conversation.id ? (
-                  <div className="flex-1 px-3 py-2">
-                    <Input
-                      ref={editInputRef}
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleSaveEdit();
-                        } else if (e.key === 'Escape') {
-                          handleCancelEdit();
-                        }
-                      }}
-                      onBlur={handleSaveEdit}
-                      className="h-7 text-sm"
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <ContextMenu>
-                      <ContextMenuTrigger asChild>
-                        <button
-                          onClick={async () => {
-                            await setActiveConversation(conversation.id);
-                            onConversationClick?.();
-                          }}
-                          className="flex flex-1 flex-col items-start px-3 py-2 text-left"
-                        >
-                          <div className="flex items-center gap-1.5 w-full">
-                            {conversation.personaId &&
-                              (() => {
-                                const persona = personas.find(
-                                  (p) => p.id === conversation.personaId
-                                );
-                                return persona?.avatar ? (
-                                  <span className="text-sm flex-shrink-0">{persona.avatar}</span>
-                                ) : null;
-                              })()}
-                            <span className="text-sm font-medium line-clamp-1">
-                              {conversation.title}
-                            </span>
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(conversation.updated_at)}
-                          </span>
-                        </button>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent collisionPadding={8} avoidCollisions={true}>
-                        <ContextMenuItem
-                          onClick={() => handleStartEdit(conversation.id, conversation.title)}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          {t('chat.rename')}
-                        </ContextMenuItem>
-                        <ContextMenuItem onClick={() => handleOpenPersonaDialog(conversation.id)}>
-                          <User className="mr-2 h-4 w-4" />
-                          {t('chat.persona')}
-                        </ContextMenuItem>
-                        <ContextMenuItem
-                          onClick={() => handleOpenSaveKnowledgeDialog(conversation.id)}
-                        >
-                          <BookOpen className="mr-2 h-4 w-4" />
-                          {t('chat.saveKnowledge')}
-                        </ContextMenuItem>
-                        <ContextMenuItem onClick={() => handleDuplicate(conversation.id)}>
-                          <Copy className="mr-2 h-4 w-4" />
-                          {t('chat.duplicate')}
-                        </ContextMenuItem>
-                        <ContextMenuItem onClick={() => handleCompress(conversation.id)}>
-                          <FileArchive className="mr-2 h-4 w-4" />
-                          {t('chat.compress')}
-                        </ContextMenuItem>
-                        <ContextMenuItem
-                          onClick={() => handleDelete(conversation.id)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {t('chat.delete')}
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleStartEdit(conversation.id, conversation.title)}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          {t('chat.rename')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleOpenPersonaDialog(conversation.id)}>
-                          <User className="mr-2 h-4 w-4" />
-                          {t('chat.persona')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleOpenSaveKnowledgeDialog(conversation.id)}
-                        >
-                          <BookOpen className="mr-2 h-4 w-4" />
-                          {t('chat.saveKnowledge')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicate(conversation.id)}>
-                          <Copy className="mr-2 h-4 w-4" />
-                          {t('chat.duplicate')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleCompress(conversation.id)}>
-                          <FileArchive className="mr-2 h-4 w-4" />
-                          {t('chat.compress')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDelete(conversation.id)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {t('chat.delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </>
-                )}
-              </div>
-            ))}
+          <div className="py-2">
+            {renderSection(t('chat.pinned', '고정됨'), conversationGroups.pinned)}
+            {renderSection(t('chat.today', '오늘'), conversationGroups.today)}
+            {renderSection(t('chat.yesterday', '어제'), conversationGroups.yesterday)}
+            {renderSection(t('chat.lastWeek', '최근 7일'), conversationGroups.lastWeek)}
+            {renderSection(t('chat.older', '이전'), conversationGroups.older)}
           </div>
         )}
       </ScrollArea>
@@ -620,7 +887,7 @@ export function ChatHistory({ onConversationClick }: ChatHistoryProps) {
             </button>
 
             {/* Persona options */}
-            {personas.map((persona) => (
+            {personas.map((persona: any) => (
               <button
                 key={persona.id}
                 onClick={() => handleSetPersona(persona.id)}

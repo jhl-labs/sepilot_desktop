@@ -7,8 +7,9 @@
 
 import { useRef, useCallback } from 'react';
 import { isElectron } from '@/lib/platform';
-import { getWebLLMClient } from '@/lib/llm/web-client';
+import { getWebLLMClient } from '@/lib/domains/llm/web-client';
 import type { Message } from '@/types';
+import { UNTRUSTED_APPROVAL_MARKER } from '@/lib/domains/agent/utils/tool-approval-risk';
 
 // Stream event types
 interface StreamEventProgress {
@@ -130,7 +131,7 @@ export function useLangGraphStream(options: UseLangGraphStreamOptions) {
   const startStream = useCallback(
     async (
       userMessage: string,
-      thinkingMode: 'editor-agent' | 'coding' | 'browser-agent'
+      thinkingMode: 'editor-agent' | 'coding' | 'cowork' | 'browser-agent'
     ): Promise<void> => {
       // Create abort controller for cancellation
       abortControllerRef.current = new AbortController();
@@ -147,16 +148,8 @@ export function useLangGraphStream(options: UseLangGraphStreamOptions) {
           enableImageGeneration: false,
         };
 
-        // Prepare messages for LLM
-        const allMessages = [
-          ...getMessages(),
-          {
-            id: 'temp',
-            role: 'user' as const,
-            content: userMessage,
-            created_at: Date.now(),
-          },
-        ];
+        // Prepare messages for LLM (getMessages() should already include the latest user turn)
+        const allMessages = [...getMessages()];
 
         // Setup stream event listener
         const eventHandler = window.electronAPI.langgraph.onStreamEvent((event: unknown) => {
@@ -220,9 +213,12 @@ export function useLangGraphStream(options: UseLangGraphStreamOptions) {
             // Handle tool approval request (Editor Agent only)
             if ((evt as any).type === 'tool_approval_request') {
               const toolEvent = evt as any;
+              const requiresManualApprovalByPolicy =
+                typeof toolEvent?.note === 'string' &&
+                toolEvent.note.includes(UNTRUSTED_APPROVAL_MARKER);
 
               // Auto-approve if session-wide approval is enabled
-              if (alwaysApproveToolsForSession) {
+              if (alwaysApproveToolsForSession && !requiresManualApprovalByPolicy) {
                 console.log(
                   '[useLangGraphStream] Auto-approving tools (session-wide approval enabled)'
                 );

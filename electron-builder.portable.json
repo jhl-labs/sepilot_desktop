@@ -1,0 +1,19 @@
+{
+  "extends": "electron-builder.json",
+  "afterPack": "./scripts/after-pack-portable.js",
+  "win": {
+    "target": [
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "assets/icon.ico",
+    "signAndEditExecutable": false,
+    "verifyUpdateCodeSignature": false
+  },
+  "portable": {
+    "useZip": false,
+    "artifactName": "${productName} ${version} Portable.${ext}"
+  }
+}

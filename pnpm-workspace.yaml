@@ -1,5 +1,11 @@
+packages:
+  - resources/extensions/*
+  - lib/extension-sdk
+
 ignoredBuiltDependencies:
   - better-sqlite3
   - electron
   - lzma-native
   - unrs-resolver
+
+onlyBuiltDependencies: esbuild

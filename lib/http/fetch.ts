@@ -156,7 +156,8 @@ function classifyError(error: Error, url: string): HttpError {
     message.includes('econnrefused') ||
     message.includes('connection refused') ||
     message.includes('econnreset') ||
-    message.includes('connection reset')
+    message.includes('connection reset') ||
+    message.includes('fetch failed')
   ) {
     return new HttpError({
       type: 'CONNECTION_REFUSED',
@@ -316,8 +317,14 @@ export async function httpFetch(url: string, options: HttpRequestOptions = {}): 
   if (env === 'electron-main' || env === 'node') {
     const agent = await createHttpAgent(networkConfig, url);
     if (agent) {
-      // Node.js v18+ 기본 fetch (undici)는 dispatcher 옵션 사용
-      (fetchOptions as any).dispatcher = agent;
+      // TODO: Node.js v18+ 기본 fetch (undici)는 dispatcher가 Dispatcher 인터페이스를 구현해야 함
+      // 현재 https.Agent는 undici Dispatcher와 호환되지 않아 agent.dispatch is not a function 에러 발생
+      // 프록시/SSL 설정을 위해서는 undici의 ProxyAgent나 Agent를 사용해야 함
+      // 임시로 주석 처리하여 에러 방지 (프록시/SSL 설정은 적용되지 않음)
+      // (fetchOptions as any).dispatcher = agent;
+      logger.warn(
+        '[HTTP Fetch] Agent created but not applied - undici compatibility issue. Proxy/SSL settings will be ignored.'
+      );
     }
   }
 
@@ -391,6 +398,13 @@ async function fetchWithRetry(
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
+      logger.debug('[HTTP Fetch] Attempting request', {
+        url,
+        method: options.method || 'GET',
+        attempt: attempt + 1,
+        maxAttempts: retries + 1,
+      });
+
       const response = await fetch(url, options);
 
       // 429 (Too Many Requests) 처리
@@ -454,6 +468,10 @@ async function fetchWithRetry(
           errorType: httpError.type,
           message: httpError.message,
           userMessage: httpError.getUserMessage(),
+          originalErrorName: lastError.name,
+          originalErrorMessage: lastError.message,
+          errorCause: (lastError as any).cause,
+          errorStack: lastError.stack?.split('\n').slice(0, 3).join('\n'),
           proxyEnabled: networkConfig?.proxy?.enabled,
           proxyMode: networkConfig?.proxy?.mode,
           proxyUrl: networkConfig?.proxy?.enabled ? networkConfig?.proxy?.url : undefined,

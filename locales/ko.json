@@ -71,6 +71,7 @@
       "core": "핵심 설정",
       "integrations": "연동",
       "features": "기능",
+      "extensionSettings": "Extension 설정",
       "documents": "문서",
       "system": "시스템"
     },
@@ -109,6 +110,23 @@
         "previewText": "이것은 채팅 메시지의 미리보기입니다. 슬라이더를 조절하여 원하는 너비를 설정해보세요."
       },
       "saved": "일반 설정이 저장되었습니다!"
+    },
+    "notification": {
+      "title": "알림 설정",
+      "description": "알림 표시 방식과 테스트를 관리합니다",
+      "saved": "알림 설정이 저장되었습니다!",
+      "type": {
+        "label": "알림 유형",
+        "os": "시스템 기본 알림 (OS)",
+        "app": "애플리케이션 자체 알림 (In-App)",
+        "osDesc": "운영체제의 알림 센터를 사용합니다. 앱이 최소화되어 있어도 알림을 받을 수 있습니다.",
+        "appDesc": "앱 내에서 디자인된 알림을 표시합니다. 앱이 화면에 보일 때만 유용합니다."
+      },
+      "test": {
+        "title": "알림 테스트",
+        "description": "선택한 알림 유형으로 테스트 알림을 발송합니다.",
+        "button": "테스트 알림 보내기"
+      }
     },
     "llm": {
       "title": "LLM",
@@ -160,7 +178,8 @@
           "selectConnection": "Connection을 선택하세요",
           "modelId": "Model ID",
           "modelIdPlaceholder": "예: gpt-4, claude-3-5-sonnet-20241022",
-          "addButton": "모델 추가"
+          "addButton": "모델 추가",
+          "fetchFailedHint": "일부 LLM 서버는 /v1/models 엔드포인트를 지원하지 않습니다. 모델 ID를 알고 있다면 수동으로 추가할 수 있습니다."
         },
         "configured": {
           "title": "구성된 모델",
@@ -354,14 +373,15 @@
         "providerVertexAi": "Google Vertex AI (직접 연결)",
         "vertexAiDescription": "Google Cloud Vertex AI를 직접 사용합니다. OAuth 2 access token이 필요합니다.",
         "apiDescription": "NanoBanana API를 사용합니다. 간단한 API key로 사용 가능합니다.",
-        "vertexAiApiKeyLabel": "Google Cloud API Key (OAuth 2 Token)",
+        "vertexAiApiKeyLabel": "Google Cloud OAuth 2 Access Token",
         "apiKeyLabel": "NanoBanana API Key",
-        "vertexAiApiKeyPlaceholder": "Google Cloud OAuth 2 Token",
+        "vertexAiApiKeyPlaceholder": "Google OAuth 2 access token",
         "apiKeyPlaceholder": "NanoBanana API Key",
-        "vertexAiApiKeyDescription": "Google Cloud Console에서 발급받은 OAuth 2 access token을 입력하세요.",
+        "vertexAiApiKeyDescription": "Vertex AI용 OAuth 2 access token을 입력하세요.",
         "apiKeyDescription": "https://nanobananaapi.ai 에서 발급받은 API Key를 입력하세요.",
         "projectId": "Project ID",
         "projectIdPlaceholder": "my-project-id",
+        "projectIdRequired": "Vertex AI 사용 시 Google Cloud Project ID를 입력해주세요.",
         "projectIdDescription": "Google Cloud Project ID (Vertex AI 사용 시 필수)",
         "location": "Location",
         "locationPlaceholder": "us-central1",
@@ -562,6 +582,104 @@
         }
       }
     },
+    "skills": {
+      "title": "Skills 시스템",
+      "description": "Skills는 AI 에이전트에 특정 도메인 지식을 주입하여 전문성을 향상시킵니다.\n마켓플레이스에서 커뮤니티가 제작한 스킬을 다운로드하거나 직접 제작할 수 있습니다.",
+      "openMarketplace": "마켓플레이스 열기",
+      "comingSoon": "준비 중",
+      "importLocal": "로컬에서 가져오기",
+      "localImportGuide": "각 스킬 폴더 안에 <1>manifest.json</1> (또는 <3>skill.json</3>) + <5>content.json</5> 조합을 두거나, <7>SKILL.md/skill.md</7> 단일 파일만으로 등록(또는 업데이트)할 수 있습니다.",
+      "userSkillsFolder": "사용자 스킬 폴더",
+      "userSkillsFolderDesc": "폴더를 등록한 뒤 스캔하면 하위 폴더를 재귀적으로 탐색해 스킬들을 일괄 등록/업데이트합니다 (예: .claude/skills 구조).",
+      "currentFolder": "현재 폴더: {{path}}",
+      "notSet": "설정되지 않음",
+      "selectFolder": "스킬 폴더 선택",
+      "scanning": "스캔 중...",
+      "scanFolder": "스킬 폴더 스캔",
+      "dedupeStrategy": "중복 스킬 선택 전략",
+      "strategies": {
+        "version": "버전 우선 (동일 버전이면 최신 수정일)",
+        "mtime": "최신 수정일 우선",
+        "first": "먼저 발견된 항목 유지"
+      },
+      "includeHidden": "숨김 폴더(.으로 시작)도 스캔 (.claude 같은 경로에 필요)",
+      "copyFailures": "실패 목록 복사",
+      "recentFailures": "최근 스캔 실패 항목",
+      "installedSkills": "설치된 스킬",
+      "installedSkillsDesc": "현재 설치된 스킬을 관리하고 활성화/비활성화할 수 있습니다.",
+      "toasts": {
+        "importFailed": "로컬 스킬 등록에 실패했습니다.",
+        "importSuccess": "로컬 스킬이 등록되었습니다.",
+        "importError": "로컬 스킬 등록 중 오류가 발생했습니다.",
+        "saveFolderFailed": "사용자 스킬 폴더 저장에 실패했습니다.",
+        "saveFolderSuccess": "사용자 스킬 폴더가 설정되었습니다.",
+        "saveFolderError": "사용자 스킬 폴더 설정 중 오류가 발생했습니다.",
+        "scanFailed": "사용자 스킬 폴더 스캔에 실패했습니다.",
+        "scanPartial": "스킬 폴더 스캔이 부분 완료되었습니다.",
+        "scanPartialDesc": "대상 {{scanned}}개 (중복 제거 {{deduplicated}}개) 중 등록/업데이트 {{imported}}개, 실패 {{failed}}개{{failureExample}}",
+        "scanNoSkills": "스캔 가능한 스킬이 없습니다.",
+        "scanNoSkillsDesc": "manifest.json(또는 skill.json) + content.json 조합, 또는 SKILL.md/skill.md 파일이 있는 폴더를 확인하세요. (.claude 경로라면 숨김 폴더 스캔 옵션도 켜세요)",
+        "scanComplete": "스킬 폴더 스캔이 완료되었습니다.",
+        "scanCompleteDesc": "대상 {{scanned}}개 (중복 제거 {{deduplicated}}개) 중 등록/업데이트 {{imported}}개",
+        "scanError": "사용자 스킬 폴더 스캔 중 오류가 발생했습니다.",
+        "saveStrategyFailed": "중복 스킬 선택 전략 저장에 실패했습니다.",
+        "saveHiddenOptionFailed": "숨김 폴더 스캔 옵션 저장에 실패했습니다.",
+        "copyFailuresSuccess": "최근 스캔 실패 항목을 복사했습니다.",
+        "copyFailuresError": "실패 항목 복사에 실패했습니다."
+      },
+      "manager": {
+        "noSkills": {
+          "title": "설치된 스킬이 없습니다",
+          "description": "마켓플레이스에서 스킬을 다운로드하거나 로컬에서 설치하세요"
+        },
+        "stats": {
+          "total": "전체 스킬",
+          "enabled": "활성화됨",
+          "usage": "총 사용 횟수"
+        },
+        "sources": {
+          "builtin": {
+            "label": "내장 스킬",
+            "desc": "SEPilot에 기본으로 제공되는 스킬"
+          },
+          "local": {
+            "label": "로컬 스킬",
+            "desc": "로컬에서 직접 추가한 스킬"
+          },
+          "marketplace": {
+            "label": "마켓플레이스",
+            "desc": "커뮤니티 마켓플레이스에서 설치한 스킬"
+          },
+          "github": {
+            "label": "GitHub",
+            "desc": "GitHub 저장소에서 설치한 스킬"
+          }
+        },
+        "table": {
+          "name": "스킬 이름",
+          "category": "카테고리",
+          "version": "버전",
+          "usage": "사용 횟수",
+          "installed": "설치일",
+          "enabled": "활성화",
+          "lastUsed": "마지막 사용: {{date}}",
+          "neverUsed": "없음",
+          "cannotRemoveBuiltin": "내장 스킬은 제거할 수 없습니다",
+          "removeTooltip": "스킬 제거"
+        },
+        "deleteDialog": {
+          "title": "스킬 제거",
+          "desc": "<1>{{name}}</1> 스킬을 제거하시겠습니까?",
+          "warning": "이 작업은 되돌릴 수 없습니다."
+        }
+      },
+      "openGuide": "스킬 작성 가이드 보기",
+      "hideGuide": "스킬 작성 가이드 숨기기",
+      "skillGuideTitle": "Skill 생성 가이드",
+      "skillGuideDescription": "SKILL.md(또는 skill.md) 한 파일만으로도 스킬을 만들 수 있습니다.",
+      "skillGuideSummary": "권장 방식은 Markdown 기반 SKILL.md 입니다.\n- 스캔은 하위 폴더를 재귀적으로 탐색합니다\n- 형식 1: manifest.json/skill.json + content.json\n- 형식 2(권장): SKILL.md/skill.md (+ YAML frontmatter)\n참고: .claude 같은 숨김 폴더를 쓰면 '숨김 폴더 스캔' 옵션을 켜세요.",
+      "skillGuideExample": "---\nid: local.react-reviewer\nname: React Reviewer\nversion: 1.0.0\nauthor: Your Name\ndescription: React 코드 리뷰에 특화된 스킬\ncategory: web-development\ntags:\n  - react\n  - review\ncontextPatterns:\n  - react\n  - code review\nsystemPrompt: |\n  React 리뷰 기준(성능, 접근성, 유지보수성)을 우선 적용하세요.\n---\n\n# 리뷰 체크리스트\n- 상태 관리 패턴 점검\n- 렌더링 최적화 포인트 제안\n- 테스트 케이스 누락 여부 확인\n"
+    },
     "teamDocs": {
       "title": "Team Docs",
       "description": "팀 문서 동기화 (다중 Repo)",
@@ -649,6 +767,8 @@
       "save": "설정 저장",
       "saving": "저장 중...",
       "dataSync": "데이터 동기화",
+      "pull": "Pull",
+      "pulling": "Pull 중...",
       "push": "Push",
       "pushing": "Push 중...",
       "syncAll": "전체 동기화 (활성화된 항목만)",
@@ -687,10 +807,16 @@
         "testFailed": "연결 테스트 실패",
         "saveSuccess": "GitHub Sync 설정이 저장되었습니다!",
         "saveFailed": "설정 저장 실패",
+        "pullSuccess": "GitHub에서 설정을 가져왔습니다!",
+        "pullFailed": "설정 가져오기 실패",
         "syncSuccess": "{{type}} 동기화 완료!",
         "syncFailed": "{{type}} 동기화 실패",
         "saveFirst": "먼저 설정을 저장해주세요."
       }
+    },
+    "githubActions": {
+      "title": "GitHub Actions",
+      "description": "GitHub Actions CI/CD 관리"
     },
     "githubOAuth": {
       "steps": {
@@ -820,7 +946,252 @@
       "author": "작성자",
       "saved": "Extension 설정이 저장되었습니다",
       "saveFailed": "Extension 설정 저장에 실패했습니다",
-      "notFound": "Extension을 찾을 수 없습니다"
+      "notFound": "Extension을 찾을 수 없습니다",
+      "architect": {
+        "title": "아키텍처 분석기",
+        "description": "코드 통계, 정적 분석, 의존성 그래프를 통한 아키텍처 분석",
+        "selectFolder": "폴더 선택",
+        "fullAnalysis": "전체 분석",
+        "steps": "단계",
+        "analyzing": "분석 중...",
+        "analyzedPath": "분석 경로",
+        "analysisComplete": "분석 완료",
+        "analysisCompleteDesc": "4단계 전체 분석이 성공적으로 완료되었습니다",
+        "partialAnalysisComplete": "분석 완료 (일부 제외)",
+        "partialAnalysisCompleteDesc": "{{completed}} 분석이 완료되었습니다. AI 분석은 실패했지만 다른 결과는 정상적으로 확인할 수 있습니다.",
+        "analysisFailed": "분석 실패",
+        "unknownError": "알 수 없는 오류가 발생했습니다",
+        "noAnalysis": "분석 결과가 없습니다",
+        "selectFolderPrompt": "폴더를 선택하여 분석을 시작하세요",
+        "overview": "개요",
+        "languages": "언어별 통계",
+        "settings": "설정",
+        "totalFiles": "총 파일 수",
+        "totalLines": "총 라인 수",
+        "codeLines": "코드 라인",
+        "commentLines": "주석 라인",
+        "languageBreakdown": "언어별 분석",
+        "languageBreakdownDesc": "프로젝트에서 사용된 프로그래밍 언어 통계",
+        "language": "언어",
+        "files": "파일",
+        "blank": "빈 줄",
+        "comment": "주석",
+        "code": "코드",
+        "percentage": "비율",
+        "lines": "라인",
+        "additionalStats": "추가 통계",
+        "blankLines": "빈 줄",
+        "avgLinesPerFile": "파일당 평균 라인",
+        "languageCount": "사용 언어 수",
+        "currentAnalysis": "현재 분석",
+        "history": "분석 기록",
+        "noHistory": "분석 기록이 없습니다",
+        "startAnalyzing": "폴더를 선택하여 분석을 시작하세요",
+        "clocStatus": "cloc 설치 상태",
+        "clocStatusDesc": "cloc 도구가 설치되어 있어야 분석을 실행할 수 있습니다",
+        "checkingCloc": "cloc 설치 확인 중...",
+        "clocInstalled": "cloc이 설치되어 있습니다",
+        "clocNotInstalled": "cloc이 설치되지 않았습니다",
+        "installCloc": "cloc 설치 방법:",
+        "recheckCloc": "다시 확인",
+        "excludePatterns": "제외 패턴",
+        "excludePatternsDesc": "분석에서 제외할 폴더/파일 패턴",
+        "addPattern": "패턴 추가...",
+        "noExcludePatterns": "제외 패턴이 없습니다",
+        "historySettings": "기록 설정",
+        "historySettingsDesc": "분석 기록 관리 옵션",
+        "maxHistorySize": "최대 기록 수",
+        "maxHistorySizeDesc": "저장할 분석 기록의 최대 개수",
+        "clearHistory": "기록 삭제",
+        "electronOnly": "이 기능은 Electron 환경에서만 사용할 수 있습니다",
+        "issues": "이슈",
+        "runStaticAnalysis": "정적 분석 실행",
+        "noStaticAnalysis": "정적 분석이 실행되지 않았습니다",
+        "totalErrors": "총 에러",
+        "totalWarnings": "총 경고",
+        "totalIssues": "총 이슈",
+        "shown": "표시됨",
+        "issuesList": "이슈 목록",
+        "issuesListDesc": "ESLint 및 TypeScript 컴파일러 이슈",
+        "noIssues": "이슈가 없습니다!",
+        "noMatchingIssues": "필터와 일치하는 이슈가 없습니다",
+        "severity": "심각도",
+        "source": "소스",
+        "location": "위치",
+        "rule": "규칙",
+        "dependencies": "의존성",
+        "aiRefactor": "AI 리팩토링",
+        "noDependencyAnalysis": "의존성 분석이 실행되지 않았습니다",
+        "runDependencyAnalysis": "의존성 분석 실행",
+        "totalDependencies": "총 의존성",
+        "circularDependencies": "순환 의존성",
+        "avgDependencies": "평균 의존성",
+        "circularDependenciesFound": "순환 의존성 발견",
+        "circularDependenciesDesc": "순환 의존성을 제거하면 코드의 유지보수성이 향상됩니다",
+        "cycle": "사이클",
+        "file": "파일",
+        "dependencyGraph": "의존성 그래프",
+        "dependencyGraphDesc": "파일 간 의존성 관계를 시각화합니다. 빨간색은 순환 의존성을 나타냅니다.",
+        "noAIAnalysis": "AI 분석이 실행되지 않았습니다",
+        "runAIAnalysis": "AI 분석 실행",
+        "aiAnalyzing": "AI 분석 중...",
+        "aiAnalyzingDesc": "코드베이스를 분석하여 리팩토링 제안을 생성하고 있습니다",
+        "aiSummary": "AI 요약",
+        "analyzedAt": "분석 시간",
+        "priorityHigh": "높음",
+        "priorityMedium": "중간",
+        "priorityLow": "낮음",
+        "refactorSuggestions": "리팩토링 제안",
+        "suggestionsFound": "개의 제안을 찾았습니다",
+        "noSuggestions": "제안 사항이 없습니다. 코드베이스가 양호한 상태입니다!",
+        "itemDescription": "설명",
+        "reasoning": "근거",
+        "estimatedImpact": "예상 영향",
+        "affectedFiles": "영향받는 파일",
+        "staticAnalysisComplete": "정적 분석 완료",
+        "staticAnalysisCompleteDesc": "ESLint 및 TypeScript 분석이 완료되었습니다",
+        "dependencyAnalysisComplete": "의존성 분석 완료",
+        "dependencyAnalysisCompleteDesc": "madge 의존성 분석이 완료되었습니다",
+        "aiAnalysisComplete": "AI 분석 완료",
+        "aiAnalysisCompleteDesc": "AI 리팩토링 제안 생성이 완료되었습니다"
+      },
+      "prReview": {
+        "title": "GitHub PR 리뷰",
+        "description": "AI 기반 코드 리뷰",
+        "loadPR": "PR 로드",
+        "loading": "로딩 중...",
+        "refreshPR": "새로고침",
+        "clearSession": "세션 종료",
+        "startAnalysis": "AI 분석 시작",
+        "stopAnalysis": "분석 중지",
+        "analyzing": "AI가 코드를 분석하고 있습니다...",
+        "noAnalysis": "아직 분석 결과가 없습니다. 'AI 분석 시작' 버튼을 클릭하세요.",
+        "sidebar": {
+          "title": "PR Review",
+          "description": "AI 기반 코드 리뷰",
+          "prUrl": "PR URL (선택)",
+          "prUrlPlaceholder": "https://github.com/owner/repo/pull/123",
+          "parse": "파싱",
+          "owner": "Owner",
+          "ownerPlaceholder": "e.g., facebook",
+          "repository": "Repository",
+          "repositoryPlaceholder": "e.g., react",
+          "pullNumber": "Pull Request 번호",
+          "pullNumberPlaceholder": "e.g., 123",
+          "currentPR": "현재 PR",
+          "repo": "Repository:",
+          "author": "작성자:",
+          "state": "상태:",
+          "changes": "변경:",
+          "recentReviews": "최근 리뷰",
+          "recentReviewsDesc": "이전에 수행한 리뷰 히스토리",
+          "loadHistory": "불러오기",
+          "deleteHistory": "삭제",
+          "deleteConfirm": "\"{{title}}\" 리뷰 히스토리를 삭제하시겠습니까?",
+          "suggestions": "제안",
+          "howToUse": "사용 방법",
+          "step1": "GitHub PR URL을 입력하거나 수동으로 입력",
+          "step2": "PR을 로드하여 정보 확인",
+          "step3": "메인 패널에서 'AI 분석 시작' 클릭",
+          "step4": "분석 결과를 확인하고 GitHub에 리뷰 게시"
+        },
+        "tabs": {
+          "overview": "Overview",
+          "files": "Files",
+          "analysis": "Analysis",
+          "conversation": "Conversation"
+        },
+        "overview": {
+          "title": "PR 정보",
+          "state": "상태:",
+          "author": "작성자:",
+          "baseBranch": "Base 브랜치:",
+          "headBranch": "Head 브랜치:",
+          "changedFiles": "변경된 파일:",
+          "additions": "추가:",
+          "deletions": "삭제:",
+          "prDescription": "설명"
+        },
+        "analysis": {
+          "title": "리뷰 제안",
+          "unposted": "개 미게시",
+          "postToGitHub": "GitHub에 게시",
+          "event": {
+            "comment": "Comment",
+            "approve": "Approve",
+            "requestChanges": "Request Changes"
+          },
+          "posted": "게시됨",
+          "line": "Line",
+          "edit": "수정",
+          "remove": "제거",
+          "postSingle": "개별 게시",
+          "editPrompt": "리뷰 코멘트 수정:"
+        },
+        "conversation": {
+          "title": "AI와 대화",
+          "description": "PR에 대해 질문하고 추가 분석을 요청하세요.",
+          "placeholder": "메시지를 입력하세요...",
+          "emptyState": "대화를 시작하려면 아래에 메시지를 입력하세요."
+        },
+        "diff": {
+          "additions": "추가",
+          "deletions": "삭제",
+          "changes": "변경",
+          "addComment": "코멘트 추가",
+          "expand": "확장",
+          "collapse": "축소"
+        },
+        "comment": {
+          "title": "코멘트 추가",
+          "file": "파일",
+          "line": "라인",
+          "side": "Side",
+          "severity": "심각도",
+          "critical": "Critical",
+          "warning": "Warning",
+          "suggestion": "Suggestion",
+          "placeholder": "리뷰 코멘트를 입력하세요...",
+          "cancel": "취소",
+          "add": "코멘트 추가"
+        },
+        "settings": {
+          "title": "GitHub PR Review 설정",
+          "description": "AI 기반 코드 리뷰 동작을 설정합니다",
+          "patRequired": "GitHub PAT 필요",
+          "patRequiredDesc": "GitHub PR Review는 GitHub Actions Extension의 PAT를 재사용합니다. Settings → GitHub Actions에서 PAT를 설정하세요.",
+          "patScopes": "필요한 권한: repo (읽기 및 쓰기)",
+          "goToSettings": "설정으로 이동",
+          "reviewPreferences": "리뷰 설정",
+          "reviewPreferencesDesc": "AI 리뷰 스타일 및 포커스 영역 설정",
+          "commentStyle": "코멘트 스타일",
+          "commentStyleDesc": "AI가 생성하는 코멘트의 톤과 스타일",
+          "constructive": "Constructive",
+          "constructiveDesc": "건설적이고 친절한 피드백",
+          "strict": "Strict",
+          "strictDesc": "엄격하고 상세한 피드백",
+          "minimal": "Minimal",
+          "minimalDesc": "간결하고 핵심만 포함",
+          "focusAreas": "포커스 영역",
+          "focusAreasDesc": "AI가 집중할 리뷰 영역 (다중 선택)",
+          "security": "보안",
+          "performance": "성능",
+          "maintainability": "유지보수성",
+          "testing": "테스트",
+          "documentation": "문서화",
+          "autoAnalyze": "자동 분석",
+          "autoAnalyzeDesc": "PR 로드 시 자동으로 분석 시작",
+          "strictnessLevel": "엄격도",
+          "strictnessLevelDesc": "코드 리뷰의 엄격한 정도",
+          "relaxed": "Relaxed",
+          "balanced": "Balanced",
+          "strictLevel": "Strict"
+        },
+        "empty": {
+          "title": "GitHub PR Review",
+          "description": "Sidebar에서 PR을 로드하여 AI 기반 코드 리뷰를 시작하세요."
+        }
+      }
     },
     "beta": {
       "title": "Beta",
@@ -848,11 +1219,18 @@
       "saveFailed": "설정 저장에 실패했습니다."
     },
     "presentation": {
-      "title": "프레젠테이션"
+      "title": "프레젠테이션",
+      "description": "AI 기반 프레젠테이션 생성 및 PPT/PDF/HTML 내보내기 설정",
+      "saved": "프레젠테이션 설정이 저장되었습니다"
     },
     "terminal": {
       "title": "터미널",
-      "description": "AI 기반 인텔리전트 터미널 설정"
+      "description": "AI 기반 인텔리전트 터미널 설정",
+      "saved": "터미널 설정이 저장되었습니다"
+    },
+    "scheduler": {
+      "title": "스케줄러",
+      "description": "백그라운드에서 Agent를 자동 실행하는 작업을 설정합니다"
     },
     "mcp": {
       "title": "MCP",
@@ -906,6 +1284,10 @@
           "delete": "서버 삭제",
           "activate": "활성화",
           "deactivate": "비활성화"
+        },
+        "actions": {
+          "selectAll": "전체 선택",
+          "deselectAll": "전체 해제"
         },
         "agentInfo": "Agent 모드에서 이 서버의 도구를 LLM이 사용할 수 있습니다. 도구를 사용하려면 서버가 활성화되어 있어야 합니다.",
         "expand": {
@@ -993,6 +1375,34 @@
         }
       },
       "addNew": "새 서버 추가"
+    },
+    "architect": {
+      "title": "아키텍처 분석기",
+      "description": "코드 통계, 정적 분석, 의존성 그래프를 통한 아키텍처 분석",
+      "saved": "아키텍처 설정이 저장되었습니다"
+    },
+    "confluence": {
+      "title": "Confluence Space Manager",
+      "description": "Confluence 스페이스를 저호출 방식으로 동기화하고 로컬 캐시를 관리합니다",
+      "saved": "Confluence 설정이 저장되었습니다"
+    },
+    "gitDesktopAssistant": {
+      "title": "Git 데스크톱 어시스턴트",
+      "description": "로컬 Git, 커밋 자동완성, PR 제안을 위한 데스크톱 워크플로우 도우미"
+    },
+    "mailFileWatcher": {
+      "title": "기업 메일 파일 연동",
+      "description": "폴더 감시 및 Python 파서 기반 수신 메일 알림 설정"
+    },
+    "git-desktop-assistant": {
+      "saved": "Git 데스크톱 어시스턴트 설정이 저장되었습니다"
+    },
+    "mail-file-watcher": {
+      "saved": "메일 파일 감시 설정이 저장되었습니다"
+    },
+    "githubProject": {
+      "title": "GitHub Project",
+      "description": "GitHub Project 확장 설정을 관리합니다"
     }
   },
   "chat": {
@@ -1003,7 +1413,7 @@
       "select": "디렉토리 선택",
       "selecting": "선택 중...",
       "remove": "작업 디렉토리 제거",
-      "warning": "코딩 에이전트를 사용하려면 작업 디렉토리가 필요합니다",
+      "warning": "코딩/코워크 에이전트를 사용하려면 작업 디렉토리가 필요합니다",
       "selectNow": "지금 선택"
     },
     "welcome": {
@@ -1938,6 +2348,290 @@
       "newTerminal": "새 터미널 (Ctrl+Shift+`)"
     }
   },
+  "scheduler": {
+    "title": "스케줄 작업",
+    "addTask": "새 작업 추가",
+    "taskName": "작업 이름",
+    "taskDescription": "설명",
+    "schedule": "스케줄",
+    "scheduleType": "스케줄 타입",
+    "preset": "프리셋",
+    "cron": "Cron 표현식",
+    "presetEveryMinute": "매분 (테스트용)",
+    "presetHourly": "매시간",
+    "presetDaily": "매일",
+    "presetWeekly": "매주",
+    "presetMonthly": "매월",
+    "time": "시각",
+    "dayOfWeek": "요일",
+    "dayOfMonth": "날짜",
+    "prompt": "프롬프트",
+    "thinkingMode": "사고 모드",
+    "enableRAG": "RAG 활성화",
+    "enableTools": "도구 활성화",
+    "allowedTools": "허용 도구",
+    "resultHandlers": "결과 처리",
+    "createConversation": "새 대화 생성",
+    "sendNotification": "알림 전송",
+    "saveToFile": "파일 저장",
+    "notificationTitle": "알림 제목",
+    "fileDirectory": "저장 디렉토리",
+    "fileFormat": "파일 형식",
+    "executionHistory": "실행 히스토리",
+    "lastExecuted": "마지막 실행",
+    "nextExecution": "다음 실행",
+    "runNow": "지금 실행",
+    "edit": "수정",
+    "delete": "삭제",
+    "enable": "활성화",
+    "disable": "비활성화",
+    "save": "저장",
+    "cancel": "취소",
+    "taskCount": "{{count}}개의 작업",
+    "activeCount": "{{count}}개 활성",
+    "noTasks": "등록된 작업이 없습니다",
+    "cronExpression": "Cron 표현식",
+    "cronHelp": "분 시 일 월 요일 (예: 0 9 * * 1-5 = 평일 오전 9시)",
+    "filename": "파일명",
+    "filenameTemplate": "파일명 템플릿 (예: result_{timestamp}.md)",
+    "viewHistory": "히스토리 보기",
+    "status": {
+      "success": "성공",
+      "error": "오류",
+      "running": "실행 중",
+      "cancelled": "취소됨"
+    },
+    "validation": {
+      "nameRequired": "작업 이름을 입력하세요",
+      "promptRequired": "프롬프트를 입력하세요",
+      "invalidCron": "유효하지 않은 Cron 표현식입니다",
+      "selectAtLeastOneHandler": "최소 하나의 결과 처리 방식을 선택하세요"
+    },
+    "confirmDelete": "작업을 삭제하시겠습니까?",
+    "deleteSuccess": "작업이 삭제되었습니다",
+    "deleteFailed": "작업 삭제에 실패했습니다",
+    "saveSuccess": "작업이 저장되었습니다",
+    "saveFailed": "작업 저장에 실패했습니다",
+    "runSuccess": "작업이 실행되었습니다",
+    "runFailed": "작업 실행에 실패했습니다",
+    "loadFailed": "작업 목록을 불러오는데 실패했습니다",
+    "duration": "소요 시간",
+    "resultSummary": "결과 요약",
+    "errorMessage": "오류 메시지",
+    "conversationCreated": "대화 생성됨",
+    "fileSaved": "파일 저장됨",
+    "notificationSent": "알림 전송됨",
+    "toolsExecuted": "실행된 도구",
+    "toolsBlocked": "차단된 도구",
+    "daySunday": "일요일",
+    "dayMonday": "월요일",
+    "dayTuesday": "화요일",
+    "dayWednesday": "수요일",
+    "dayThursday": "목요일",
+    "dayFriday": "금요일",
+    "daySaturday": "토요일",
+    "taskLabel": "작업: {{taskName}}",
+    "allTasksExecutionHistory": "모든 작업의 실행 히스토리",
+    "loadingHistory": "로딩 중...",
+    "noExecutionHistory": "실행 히스토리가 없습니다",
+    "historyExecutedAt": "실행 시각",
+    "historyStatus": "상태",
+    "historyResultProcessing": "결과 처리",
+    "historyTrigger": "실행 트리거",
+    "historyAttempts": "시도 횟수",
+    "toggleEnabled": "작업이 활성화되었습니다",
+    "toggleDisabled": "작업이 비활성화되었습니다",
+    "toggleFailed": "작업 상태 변경에 실패했습니다",
+    "deleteWarning": "이 작업은 되돌릴 수 없습니다. 작업을 삭제하시겠습니까?",
+    "trigger": {
+      "manual": "수동",
+      "schedule": "스케줄",
+      "catch-up": "미실행 복구"
+    },
+    "filterStatus": "상태 필터",
+    "filterTrigger": "트리거 필터",
+    "filterAll": "전체",
+    "filterFromDate": "시작일",
+    "filterToDate": "종료일",
+    "filterInvalidDateRange": "시작일은 종료일보다 늦을 수 없습니다",
+    "presetLast24Hours": "최근 24시간",
+    "presetLast7Days": "최근 7일",
+    "presetLast30Days": "최근 30일",
+    "clearFilters": "필터 초기화"
+  },
+  "messageSubscription": {
+    "title": "메시지 구독",
+    "description": "외부 API 서버로부터 메시지를 구독하고 알림을 받습니다",
+    "tabs": {
+      "connection": "연결 설정",
+      "queue": "큐 설정",
+      "ai": "AI 설정",
+      "notification": "알림 설정"
+    },
+    "guide": {
+      "openButton": "기능 안내 보기",
+      "title": "메시지 구독 이용 안내",
+      "description": "이 페이지의 기능, 목적, 활용 방법과 외부 시스템 연동 방법을 한 번에 확인할 수 있습니다.",
+      "purposeTitle": "기능 목적",
+      "purposeBody": "메시지 구독은 외부 API 서버에서 메시지를 주기적으로 받아와 SEPilot 내부 큐에 저장하고, 필요 시 AI 처리 및 알림까지 자동으로 연결하기 위한 기능입니다.",
+      "usageTitle": "활용 방법",
+      "usageSteps": {
+        "step1": "연결 설정 탭에서 API URL, Polling 주기, 인증 토큰을 입력하고 저장합니다.",
+        "step2": "우측 상단의 구독 시작 버튼으로 수집을 활성화합니다.",
+        "step3": "큐 설정/AI 설정에서 처리 정책(재시도, 자동 처리, 요약 방식)을 조정합니다.",
+        "step4": "알림 설정에서 완료 알림 노출 여부를 선택해 운영 흐름에 맞춥니다."
+      },
+      "integrationTitle": "연동 방법",
+      "integrationSteps": {
+        "step1": "외부 서버가 메시지 목록을 JSON으로 반환하도록 엔드포인트를 준비합니다.",
+        "step2": "필요하면 Bearer 토큰 또는 커스텀 헤더를 설정해 인증을 맞춥니다.",
+        "step3": "수동 새로고침 버튼으로 실제 수신 여부를 먼저 검증합니다.",
+        "step4": "실패 메시지는 큐 관리에서 재처리/삭제하여 안정적으로 운영합니다."
+      }
+    },
+    "connection": {
+      "type": "연결 타입",
+      "polling": "HTTP Polling",
+      "websocket": "WebSocket (준비 중)",
+      "nats": "NATS JetStream",
+      "natsUrl": "NATS 서버 URL",
+      "natsUrlPlaceholder": "nats://broker.example.com:4222",
+      "natsConsumerId": "Consumer ID (선택)",
+      "natsConsumerIdPlaceholder": "Consumer ID",
+      "natsConsumerSecret": "Consumer Secret (선택)",
+      "natsConsumerSecretPlaceholder": "Consumer Secret",
+      "natsStreamName": "Stream 이름",
+      "natsSubject": "Subject 패턴",
+      "natsSubjectPlaceholder": "webhooks.>",
+      "natsBatchSize": "Fetch 배치 크기",
+      "url": "API URL",
+      "urlPlaceholder": "https://api.example.com/messages",
+      "urlRequired": "API URL을 입력하세요",
+      "pollingInterval": "Polling 주기 (초)",
+      "authToken": "인증 토큰 (선택)",
+      "authTokenPlaceholder": "Bearer token...",
+      "refreshNow": "지금 새로고침",
+      "refreshSuccess": "{{count}}개의 새 메시지를 받았습니다",
+      "refreshFailed": "새로고침 실패: {{error}}",
+      "status": "연결 상태",
+      "connected": "연결됨",
+      "disconnected": "연결 안 됨",
+      "lastPolled": "마지막 Polling",
+      "testConnection": "연결 테스트"
+    },
+    "queue": {
+      "maxQueueSize": "최대 큐 크기",
+      "maxQueueSizeDesc": "메시지 큐의 최대 크기를 설정합니다",
+      "retentionDays": "보관 기간 (일)",
+      "retentionDaysDesc": "완료된 메시지를 보관할 일수",
+      "autoProcess": "자동 처리",
+      "autoProcessDesc": "메시지를 자동으로 처리합니다",
+      "retryAttempts": "재시도 횟수",
+      "retryAttemptsDesc": "처리 실패 시 재시도 횟수",
+      "status": {
+        "title": "큐 상태",
+        "pending": "대기 중",
+        "processing": "처리 중",
+        "completed": "완료",
+        "failed": "실패",
+        "totalProcessed": "총 처리 메시지"
+      },
+      "actions": {
+        "cleanup": "완료된 메시지 정리",
+        "cleanupSuccess": "{{count}}개의 오래된 메시지를 정리했습니다",
+        "cleanupFailed": "정리 실패: {{error}}"
+      }
+    },
+    "ai": {
+      "useAIProcessing": "AI 요약 사용",
+      "useAIProcessingDesc": "활성화 시 메시지를 AI가 요약합니다. 비활성화 시 원본 그대로 표시합니다.",
+      "thinkingMode": "Thinking Mode",
+      "instant": "즉시 응답",
+      "sequential": "순차 사고",
+      "promptTemplate": "요약 프롬프트 (선택)",
+      "promptTemplatePlaceholder": "기본 템플릿 사용됨",
+      "promptTemplateDesc": "{type}, {source}, {title}, {content} 변수를 사용할 수 있습니다"
+    },
+    "notification": {
+      "show": "알림 표시",
+      "showDesc": "새 메시지 처리 완료 시 알림을 표시합니다",
+      "type": "알림 타입",
+      "typeGlobalDesc": "알림 타입은 전역 설정 > 알림 설정에서 관리됩니다.",
+      "os": "OS 네이티브",
+      "application": "앱 내 알림"
+    },
+    "queueViewer": {
+      "title": "큐 관리",
+      "description": "메시지 큐 상태를 확인하고 관리합니다",
+      "tabs": {
+        "failed": "실패",
+        "pending": "대기",
+        "completed": "완료",
+        "guide": "이용 안내"
+      },
+      "guide": {
+        "button": "안내 페이지",
+        "purposeTitle": "이 페이지의 목적",
+        "purposeBody": "메시지 누락이나 실패를 빠르게 복구하고, 큐 처리 상태를 지속적으로 관리해 자동화 흐름을 안정적으로 운영하기 위한 운영 페이지입니다.",
+        "integrationTitle": "연동 및 운영 포인트",
+        "integrationItems": {
+          "connection": "메시지 구독 > 연결 설정에서 API URL/인증 토큰을 먼저 구성한 뒤 큐 상태를 확인하세요.",
+          "autoProcess": "자동 처리가 켜져 있으면 수신 메시지가 바로 처리되며, 실패 시 이 페이지에서 재처리할 수 있습니다.",
+          "recovery": "실패 메시지의 에러를 확인한 다음 재처리하여 외부 시스템 이슈(인증 만료, 일시 장애 등) 복구 여부를 점검하세요.",
+          "monitoring": "완료 메시지 정리를 주기적으로 실행해 저장 공간을 관리하고, 적체 증가 시 Polling 주기/API 상태를 함께 점검하세요."
+        }
+      },
+      "columns": {
+        "title": "제목",
+        "type": "타입",
+        "time": "시간",
+        "error": "에러",
+        "conversation": "대화",
+        "actions": "작업"
+      },
+      "actions": {
+        "reprocess": "재처리",
+        "viewConversation": "대화 보기",
+        "delete": "삭제",
+        "reprocessSuccess": "메시지를 재처리합니다",
+        "reprocessFailed": "재처리 실패: {{error}}",
+        "deleteSuccess": "메시지를 삭제했습니다",
+        "deleteFailed": "삭제 실패: {{error}}"
+      },
+      "empty": "메시지가 없습니다"
+    },
+    "apiFormat": {
+      "title": "API 응답 표준 형식",
+      "description": "외부 API는 다음 형식으로 응답해야 합니다",
+      "example": "예시"
+    },
+    "enabled": "구독 활성화",
+    "disabled": "구독 비활성화",
+    "start": "구독 시작",
+    "stop": "구독 중지",
+    "startSuccess": "메시지 구독을 시작했습니다",
+    "startFailed": "구독 시작 실패: {{error}}",
+    "stopSuccess": "메시지 구독을 중지했습니다",
+    "stopFailed": "구독 중지 실패: {{error}}",
+    "saveSuccess": "설정이 저장되었습니다",
+    "saveFailed": "설정 저장 실패: {{error}}",
+    "help": {
+      "queue": {
+        "buttonAria": "큐 관리 도움말 열기",
+        "title": "큐 관리 안내",
+        "description": "큐 관리는 수신된 메시지의 처리 상태를 추적하고, 실패 항목을 복구하거나 불필요한 데이터를 정리하는 기능입니다.",
+        "whatItDoesTitle": "무엇을 하는 기능인가요?",
+        "whatItDoesBody": "대기/처리/완료/실패 상태를 실시간으로 보여주며, 실패 메시지 재처리, 메시지 삭제, 완료 메시지 정리를 수행할 수 있습니다.",
+        "howToUseTitle": "어떻게 사용하나요?",
+        "steps": {
+          "step1": "상단 상태 카드에서 현재 큐 적체 현황을 먼저 확인합니다.",
+          "step2": "실패 탭에서 원인(에러 메시지)을 확인하고 \"재처리\"로 복구를 시도합니다.",
+          "step3": "처리가 불필요한 항목은 \"삭제\"하여 큐를 정리합니다.",
+          "step4": "주기적으로 \"완료된 메시지 정리\"를 실행해 저장 공간과 성능을 관리합니다."
+        }
+      }
+    }
+  },
   "documents": {
     "untitled": "제목 없음",
     "title": "업로드된 문서",
@@ -2150,6 +2844,14 @@
       "default": "메시지를 입력하세요... (Shift+Enter로 줄바꿈)"
     },
     "settings": "설정",
+    "workingDirectory": {
+      "set": "작업 디렉토리 설정",
+      "change": "작업 디렉토리 변경",
+      "selecting": "선택 중...",
+      "requiredForCoding": "Coding 모드에서 전송하려면 작업 디렉토리를 먼저 선택하세요.",
+      "autoSendBlocked": "작업 디렉토리 미설정으로 Quick Input 전송이 차단되었습니다.",
+      "tooltip": "작업 디렉토리"
+    },
     "thinking": {
       "instant": "Instant",
       "instant.desc": "빠른 응답",
@@ -2162,7 +2864,25 @@
       "deepWebResearch": "Deep Web Research",
       "deepWebResearch.desc": "웹 검색 기반 심층 조사",
       "coding": "Coding",
-      "coding.desc": "코딩 최적화"
+      "coding.desc": "코딩 최적화",
+      "cowork": "Cowork",
+      "cowork.desc": "도구 활용 협업 실행"
+    },
+    "cowork": {
+      "panel": {
+        "title": "팀 작업 현황",
+        "objective": "목표",
+        "tokens": "토큰",
+        "waitingFor": "대기",
+        "dependency": "의존"
+      }
+    },
+    "trust": {
+      "title": "입력 신뢰 레벨",
+      "trusted": "신뢰 입력",
+      "trustedDesc": "자동 승인 정책을 기본 수준으로 적용합니다.",
+      "untrusted": "비신뢰 입력",
+      "untrustedDesc": "위험 도구는 항상 명시적 승인을 요구합니다."
     },
     "tools": {
       "status": "{{active}}/{{total}} 활성화",
@@ -2172,7 +2892,12 @@
       "error": "도구 로드 오류: {{error}}",
       "errorHint": "MCP 서버 설정을 확인하세요. 서버가 활성화되어 있고 올바르게 구성되어 있는지 확인하세요.",
       "noTools": "사용 가능한 도구가 없습니다",
-      "noToolsHint": "설정에서 MCP 서버를 추가하여 도구를 활성화하세요. 서버가 활성화되어 있는지 확인하세요."
+      "noToolsHint": "설정에서 MCP 서버를 추가하여 도구를 활성화하세요. 서버가 활성화되어 있는지 확인하세요.",
+      "serverStatusTitle": "MCP 서버 문제",
+      "serverIssueStatus": {
+        "error": "오류",
+        "disconnected": "연결 끊김"
+      }
     },
     "imageGen": "이미지 생성",
     "fileDrop": {
@@ -2183,7 +2908,23 @@
       "thinking": "🤔 생각 중...",
       "executing": "⚙️ 실행 중...",
       "working": "🔄 작업 중...",
-      "stop": "중단"
+      "stop": "중단",
+      "approvalHistory": "승인 이력 ({{count}})",
+      "timeline": {
+        "title": "승인 타임라인",
+        "count": "{{visible}}/{{total}}",
+        "risk": "위험도: {{level}}",
+        "decisions": {
+          "approved": "승인됨",
+          "feedback": "승인 필요",
+          "denied": "거부됨"
+        },
+        "sources": {
+          "policy": "정책",
+          "system": "시스템",
+          "user": "사용자"
+        }
+      }
     },
     "actions": {
       "stop": "중지 (Esc)",
@@ -2196,6 +2937,9 @@
     "imageUpload": {
       "tooltip": "이미지 첨부",
       "ariaLabel": "이미지 첨부 버튼"
+    },
+    "persona": {
+      "switched": "페르소나가 {{name}}(으)로 변경되었습니다"
     }
   },
   "quickInput": {
@@ -2253,6 +2997,8 @@
       "deep.desc": "깊은 사고 - 최고 품질 (느림)",
       "coding": "Coding (beta)",
       "coding.desc": "복잡한 코딩 작업 - ReAct Agent",
+      "cowork": "Cowork (beta)",
+      "cowork.desc": "협업형 실행 작업 - Tool-first Agent",
       "imageGenOnly": "이미지 생성 모드에서는 Instant 모드만 사용 가능합니다"
     },
     "rag": {
@@ -2431,6 +3177,44 @@
       "approveStructure": "구조 승인",
       "autoCreate": "자동으로 생성",
       "done": "완료"
+    }
+  },
+  "prReview": {
+    "title": "GitHub PR 리뷰",
+    "loadPR": "PR 로드",
+    "loading": "로딩 중...",
+    "analyzing": "분석 중...",
+    "overview": "개요",
+    "files": "파일",
+    "analysis": "분석",
+    "conversation": "대화",
+    "startAnalysis": "AI 분석 시작",
+    "stopAnalysis": "분석 중지",
+    "postToGitHub": "GitHub에 게시",
+    "addComment": "코멘트 추가",
+    "editComment": "코멘트 수정",
+    "removeComment": "코멘트 제거",
+    "severity": {
+      "critical": "치명적",
+      "warning": "경고",
+      "suggestion": "제안"
+    },
+    "commentStyle": {
+      "constructive": "건설적",
+      "strict": "엄격함",
+      "minimal": "최소"
+    },
+    "strictnessLevel": {
+      "relaxed": "관대함",
+      "balanced": "균형",
+      "strict": "엄격함"
+    },
+    "focusAreas": {
+      "security": "보안",
+      "performance": "성능",
+      "maintainability": "유지보수성",
+      "testing": "테스트",
+      "documentation": "문서화"
     }
   }
 }

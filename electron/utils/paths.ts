@@ -27,6 +27,51 @@ export class PathsUtil {
     return path.join(this.getUserDataPath(), 'sepilot.db');
   }
 
+  /**
+   * 메시지 큐 루트 디렉토리
+   */
+  static getMessagesPath(): string {
+    const messagesPath = path.join(this.getUserDataPath(), 'messages');
+    this.ensureDirectoryExists(messagesPath);
+    return messagesPath;
+  }
+
+  /**
+   * 대기 중인 메시지 큐 디렉토리
+   */
+  static getMessagesQueuePath(): string {
+    const queuePath = path.join(this.getMessagesPath(), 'queue');
+    this.ensureDirectoryExists(queuePath);
+    return queuePath;
+  }
+
+  /**
+   * 처리 중인 메시지 디렉토리
+   */
+  static getMessagesProcessingPath(): string {
+    const processingPath = path.join(this.getMessagesPath(), 'processing');
+    this.ensureDirectoryExists(processingPath);
+    return processingPath;
+  }
+
+  /**
+   * 완료된 메시지 디렉토리
+   */
+  static getMessagesCompletedPath(): string {
+    const completedPath = path.join(this.getMessagesPath(), 'completed');
+    this.ensureDirectoryExists(completedPath);
+    return completedPath;
+  }
+
+  /**
+   * 실패한 메시지 디렉토리
+   */
+  static getMessagesFailedPath(): string {
+    const failedPath = path.join(this.getMessagesPath(), 'failed');
+    this.ensureDirectoryExists(failedPath);
+    return failedPath;
+  }
+
   static ensureDirectoryExists(dirPath: string): void {
     if (!fs.existsSync(dirPath)) {
       fs.mkdirSync(dirPath, { recursive: true });

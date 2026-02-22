@@ -16,18 +16,33 @@ import { logger } from '@/lib/utils/logger';
 const CHAT_WIDTH_KEY = 'sepilot_chat_message_width';
 const DEFAULT_CHAT_WIDTH = 896; // max-w-4xl = 56rem = 896px
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Bug, Copy, Check, FileText } from 'lucide-react';
+import {
+  MessageSquare,
+  Bug,
+  Copy,
+  Check,
+  FileText,
+  Search,
+  X as XIcon,
+  ChevronUp,
+  ChevronDown,
+  ArrowDown,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MessageBubble } from '../MessageBubble';
+import { Input } from '@/components/ui/input';
+import { MessageBubble } from './components/MessageBubble';
 import { MarkdownRenderer } from '@/components/markdown/MarkdownRenderer';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useChatMessages } from './hooks/useChatMessages';
 import type { ChatConfig } from './types';
 import { parseInteractiveContent } from '@/lib/utils/interactive-parser';
-import { ToolResult } from '../ToolResult';
-import { InteractiveSelect } from '../InteractiveSelect';
-import { InteractiveInput } from '../InteractiveInput';
-import { ToolApprovalRequest } from '../ToolApprovalRequest';
+import { ToolResult } from './components/ToolResult';
+import { InteractiveSelect } from './components/InteractiveSelect';
+import { InteractiveInput } from './components/InteractiveInput';
+import { ToolApprovalRequest } from './components/ToolApprovalRequest';
 import { ConversationReportDialog } from '@/components/ConversationReportDialog';
+import { CoworkPanel } from './plugins/CoworkPanel';
+import { useChatStore } from '@/lib/store/chat-store';
 import { isErrorReportingEnabled } from '@/lib/error-reporting';
 import { copyToClipboard } from '@/lib/utils/clipboard';
 import {
@@ -36,6 +51,86 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { memo } from 'react';
+
+// Cowork Panel connector — subscribes to cowork store state
+function CoworkPanelConnector() {
+  const coworkPlan = useChatStore((s: any) => s.coworkPlan);
+  const coworkTeamStatus = useChatStore((s: any) => s.coworkTeamStatus);
+  const coworkTokensConsumed = useChatStore((s: any) => s.coworkTokensConsumed);
+  const coworkTotalTokenBudget = useChatStore((s: any) => s.coworkTotalTokenBudget);
+  const thinkingMode = useChatStore((s: any) => s.thinkingMode);
+
+  if (thinkingMode !== 'cowork' || !coworkPlan) {
+    return null;
+  }
+
+  return (
+    <div className="px-4 pt-2">
+      <CoworkPanel
+        plan={coworkPlan}
+        teamStatus={coworkTeamStatus}
+        tokensConsumed={coworkTokensConsumed}
+        totalTokenBudget={coworkTotalTokenBudget}
+      />
+    </div>
+  );
+}
+
+// Optimized Message List component to prevent full area re-renders
+const MessageList = memo(function MessageList({
+  messages,
+  isStreaming,
+  onEdit,
+  onRegenerate,
+  activePersona,
+  onCodeRun,
+  features,
+}: {
+  messages: any[];
+  isStreaming: boolean;
+  onEdit?: any;
+  onRegenerate?: any;
+  activePersona?: any;
+  onCodeRun?: any;
+  features: any;
+}) {
+  return (
+    <>
+      {messages.map((message, index) => {
+        const isLastAssistantMessage =
+          message.role === 'assistant' && index === messages.length - 1;
+        const isMessageStreaming = isStreaming && isLastAssistantMessage;
+
+        return (
+          <ErrorBoundary
+            key={message.id}
+            fallback={
+              <div className="p-3 border border-destructive rounded-lg bg-destructive/5 text-xs">
+                <p className="text-destructive font-medium">메시지 렌더링 오류</p>
+                <p className="text-muted-foreground mt-1">
+                  이 메시지를 표시하는 중 오류가 발생했습니다.
+                </p>
+              </div>
+            }
+          >
+            <div data-message-index={index}>
+              <MessageBubble
+                message={message}
+                onEdit={features.enableEdit ? onEdit : undefined}
+                onRegenerate={features.enableRegenerate ? onRegenerate : undefined}
+                isLastAssistantMessage={isLastAssistantMessage}
+                isStreaming={isMessageStreaming}
+                activePersona={activePersona}
+                onCodeRun={onCodeRun}
+              />
+            </div>
+          </ErrorBoundary>
+        );
+      })}
+    </>
+  );
+});
 
 interface UnifiedChatAreaProps {
   config: ChatConfig;
@@ -58,6 +153,100 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
   // Chat width state with localStorage persistence (only for main mode)
   const [chatWidth, setChatWidth] = useState<number>(DEFAULT_CHAT_WIDTH);
 
+  // 대화 내 검색 상태
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchMatches, setSearchMatches] = useState<number[]>([]); // 일치하는 메시지 인덱스 목록
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
+
+  // 맨 아래로 이동 버튼 상태
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  // 스크롤 감지 로직
+  useEffect(() => {
+    const scrollArea = scrollRef.current;
+    if (!scrollArea) {
+      return;
+    }
+
+    // Radix ScrollArea의 뷰포트 찾기
+    const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
+    if (!viewport) {
+      return;
+    }
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = viewport;
+      // 바닥에서 200px 이상 떨어졌을 때 버튼 표시
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 200;
+      setShowScrollButton(!isAtBottom);
+    };
+
+    viewport.addEventListener('scroll', handleScroll);
+    return () => viewport.removeEventListener('scroll', handleScroll);
+  }, [scrollRef]);
+
+  const scrollToBottom = useCallback(() => {
+    const scrollArea = scrollRef.current;
+    if (!scrollArea) {
+      return;
+    }
+    const viewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]');
+    if (viewport) {
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+    }
+  }, [scrollRef]);
+
+  // 검색어 변경 시 일치 항목 찾기
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setSearchMatches([]);
+      setCurrentMatchIndex(-1);
+      return;
+    }
+
+    const matches: number[] = [];
+    const term = searchTerm.toLowerCase();
+    messages.forEach((msg, idx) => {
+      if (msg.content.toLowerCase().includes(term)) {
+        matches.push(idx);
+      }
+    });
+    setSearchMatches(matches);
+    setCurrentMatchIndex(matches.length > 0 ? matches.length - 1 : -1); // 가장 최근 메시지부터
+  }, [searchTerm, messages]);
+
+  // 검색 결과 이동
+  const scrollToMatch = useCallback(
+    (matchIdx: number) => {
+      if (matchIdx < 0 || matchIdx >= searchMatches.length) {
+        return;
+      }
+
+      const messageIdx = searchMatches[matchIdx];
+      const element = document.querySelector(`[data-message-index="${messageIdx}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // 시각적 강조를 위해 잠시 클래스 추가 가능
+      }
+    },
+    [searchMatches]
+  );
+
+  useEffect(() => {
+    if (currentMatchIndex !== -1) {
+      scrollToMatch(currentMatchIndex);
+    }
+  }, [currentMatchIndex, scrollToMatch]);
+
+  const handleNextMatch = () => {
+    setCurrentMatchIndex((prev) => (prev + 1) % searchMatches.length);
+  };
+
+  const handlePrevMatch = () => {
+    setCurrentMatchIndex((prev) => (prev - 1 + searchMatches.length) % searchMatches.length);
+  };
+
   // Load chat width from localStorage on mount and listen for changes
   useEffect(() => {
     if (mode !== 'main' || style?.compact) {
@@ -77,17 +266,15 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
     loadChatWidth();
 
     // Listen for chat width changes from settings
-    const handleChatWidthChange = (event: CustomEvent<number>) => {
-      setChatWidth(event.detail);
+    const handleChatWidthChange = (event: Event) => {
+      const customEvent = event as CustomEvent<number>;
+      setChatWidth(customEvent.detail);
     };
 
-    window.addEventListener('sepilot:chat-width-change', handleChatWidthChange as EventListener);
+    window.addEventListener('sepilot:chat-width-change', handleChatWidthChange);
 
     return () => {
-      window.removeEventListener(
-        'sepilot:chat-width-change',
-        handleChatWidthChange as EventListener
-      );
+      window.removeEventListener('sepilot:chat-width-change', handleChatWidthChange);
     };
   }, [mode, style?.compact]);
 
@@ -192,6 +379,24 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
     }
   }, []);
 
+  // Determine base font size
+  const baseFontSize = style?.fontSize || (style?.compact ? '11px' : '14px');
+  const maxWidth = style?.maxWidth || (style?.compact ? '95%' : '4xl');
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      } else if (e.key === 'Escape' && isSearchOpen) {
+        setIsSearchOpen(false);
+        setSearchTerm('');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchOpen]);
+
   // Empty state
   if (messages.length === 0) {
     return (
@@ -232,12 +437,8 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
     );
   }
 
-  // Determine base font size
-  const baseFontSize = style?.fontSize || (style?.compact ? '11px' : '14px');
-  const maxWidth = style?.maxWidth || (style?.compact ? '95%' : '4xl');
-
   return (
-    <>
+    <div className="flex flex-1 flex-col min-h-0 relative">
       {/* 대화 리포트 다이얼로그 */}
       <ConversationReportDialog
         open={showReportDialog}
@@ -248,7 +449,79 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
         onCancel={() => setShowReportDialog(false)}
       />
 
-      <ScrollArea ref={scrollRef} className="flex-1 overflow-y-auto">
+      {/* 대화 내 검색 바 */}
+      {isSearchOpen && (
+        <div className="absolute top-2 right-6 z-50 flex items-center gap-2 bg-background/95 backdrop-blur-sm border shadow-md rounded-lg p-1.5 animate-in slide-in-from-top-2 duration-200">
+          <div className="relative w-48 sm:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="대화 내 검색..."
+              className="h-8 pl-8 pr-16 text-xs"
+              autoFocus
+            />
+            {searchMatches.length > 0 && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-medium">
+                {searchMatches.length > 0 ? currentMatchIndex + 1 : 0} / {searchMatches.length}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-0.5 border-l pl-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handlePrevMatch}
+              disabled={searchMatches.length === 0}
+              className="h-7 w-7"
+              title="이전 결과"
+            >
+              <ChevronUp className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleNextMatch}
+              disabled={searchMatches.length === 0}
+              className="h-7 w-7"
+              title="다음 결과"
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => {
+                setIsSearchOpen(false);
+                setSearchTerm('');
+              }}
+              className="h-7 w-7 hover:text-destructive"
+              title="닫기"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 검색 열기 버튼 (우측 상단 플로팅) */}
+      {!isSearchOpen && messages.length > 0 && (
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setIsSearchOpen(true)}
+          className="absolute top-2 right-6 z-10 h-8 w-8 rounded-full bg-background/50 backdrop-blur-sm border shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+          title="대화 내 검색 (Ctrl+F)"
+          aria-label="Search in Conversation"
+        >
+          <Search className="h-4 w-4" />
+        </Button>
+      )}
+
+      {/* Cowork Task Board */}
+      <CoworkPanelConnector />
+
+      <ScrollArea ref={scrollRef} className="flex-1 overflow-y-auto group">
         <div
           className={`${style?.compact ? 'px-2 py-1.5 space-y-2' : 'mx-auto'}`}
           style={{
@@ -256,149 +529,143 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
             maxWidth: style?.compact ? undefined : `${chatWidth}px`,
           }}
         >
-          {messages.map((message, index) => {
-            const isLastAssistantMessage =
-              message.role === 'assistant' && index === messages.length - 1;
-            const isMessageStreaming = isStreaming && isLastAssistantMessage;
-
-            // Main mode: Use full MessageBubble with all features
-            if (mode === 'main' && !style?.compact) {
+          {mode === 'main' && !style?.compact ? (
+            <MessageList
+              messages={messages}
+              isStreaming={isStreaming}
+              onEdit={onEdit}
+              onRegenerate={onRegenerate}
+              activePersona={activePersona}
+              onCodeRun={config.onCodeRun}
+              features={features}
+            />
+          ) : (
+            messages.map((message: any, _index: number) => {
+              // Compact mode (Browser/Editor): Parse interactive components with copy button and context menu
               return (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  onEdit={features.enableEdit ? onEdit : undefined}
-                  onRegenerate={features.enableRegenerate ? onRegenerate : undefined}
-                  isLastAssistantMessage={isLastAssistantMessage}
-                  isStreaming={isMessageStreaming}
-                  activePersona={activePersona}
-                />
-              );
-            }
-
-            // Compact mode (Browser/Editor): Parse interactive components with copy button and context menu
-            return (
-              <ContextMenu key={message.id}>
-                <ContextMenuTrigger asChild>
-                  <div
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} group relative`}
-                    onMouseEnter={() => setHoveredMessageId(message.id)}
-                    onMouseLeave={() => setHoveredMessageId(null)}
-                  >
+                <ContextMenu key={message.id}>
+                  <ContextMenuTrigger asChild>
                     <div
-                      className={`max-w-[${maxWidth}] rounded-lg px-${style?.compact ? '2' : '2.5'} py-${style?.compact ? '1.5' : '1.5'} ${
-                        style?.compact ? 'text-[11px]' : 'text-xs'
-                      } ${message.role === 'user' ? 'bg-primary text-primary-foreground' : ''}`}
+                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} group relative`}
+                      onMouseEnter={() => setHoveredMessageId(message.id)}
+                      onMouseLeave={() => setHoveredMessageId(null)}
                     >
-                      {message.role === 'assistant' ? (
-                        <>
-                          {/* Parse and render interactive components */}
-                          {(() => {
-                            const parsed = parseInteractiveContent(message.content);
-                            return parsed.segments.map((segment, segIndex) => {
-                              if (segment.type === 'text') {
-                                return (
-                                  <div
-                                    key={segIndex}
-                                    className={`prose ${style?.compact ? 'prose-xs' : 'prose-sm'} dark:prose-invert max-w-none`}
-                                  >
-                                    <MarkdownRenderer
-                                      content={segment.content as string}
-                                      className={
-                                        style?.compact ? 'text-[11px] leading-tight' : undefined
-                                      }
-                                    />
-                                  </div>
-                                );
-                              } else {
-                                // Render interactive component
-                                const block = segment.content as any;
+                      <div
+                        className={`max-w-[${maxWidth}] rounded-lg px-${style?.compact ? '2' : '2.5'} py-${style?.compact ? '1.5' : '1.5'} ${
+                          style?.compact ? 'text-[11px]' : 'text-xs'
+                        } ${message.role === 'user' ? 'bg-primary text-primary-foreground' : ''}`}
+                      >
+                        {message.role === 'assistant' ? (
+                          <>
+                            {/* Parse and render interactive components */}
+                            {(() => {
+                              const parsed = parseInteractiveContent(message.content);
+                              return parsed.segments.map((segment, segIndex) => {
+                                if (segment.type === 'text') {
+                                  return (
+                                    <div
+                                      key={segIndex}
+                                      className={`prose ${style?.compact ? 'prose-xs' : 'prose-sm'} dark:prose-invert max-w-none`}
+                                    >
+                                      <MarkdownRenderer
+                                        content={segment.content as string}
+                                        className={
+                                          style?.compact ? 'text-[11px] leading-tight' : undefined
+                                        }
+                                        onCodeBlockRun={config.onCodeRun}
+                                      />
+                                    </div>
+                                  );
+                                } else {
+                                  // Render interactive component
+                                  const block = segment.content as any;
 
-                                if (block.type === 'interactive-select') {
-                                  return (
-                                    <InteractiveSelect
-                                      key={segIndex}
-                                      title={block.title}
-                                      options={block.options}
-                                    />
-                                  );
-                                } else if (block.type === 'interactive-input') {
-                                  return (
-                                    <InteractiveInput
-                                      key={segIndex}
-                                      title={block.title}
-                                      placeholder={block.placeholder}
-                                      multiline={block.multiline}
-                                    />
-                                  );
-                                } else if (block.type === 'tool-result') {
-                                  return (
-                                    <ToolResult
-                                      key={segIndex}
-                                      toolName={block.toolName}
-                                      status={block.status}
-                                      summary={block.summary}
-                                      details={block.details}
-                                      duration={block.duration}
-                                    />
-                                  );
-                                } else if (block.type === 'tool-approval') {
-                                  return (
-                                    <ToolApprovalRequest
-                                      key={segIndex}
-                                      messageId={block.messageId}
-                                      toolCalls={block.toolCalls}
-                                    />
-                                  );
+                                  if (block.type === 'interactive-select') {
+                                    return (
+                                      <InteractiveSelect
+                                        key={segIndex}
+                                        title={block.title}
+                                        options={block.options}
+                                      />
+                                    );
+                                  } else if (block.type === 'interactive-input') {
+                                    return (
+                                      <InteractiveInput
+                                        key={segIndex}
+                                        title={block.title}
+                                        placeholder={block.placeholder}
+                                        multiline={block.multiline}
+                                      />
+                                    );
+                                  } else if (block.type === 'tool-result') {
+                                    return (
+                                      <ToolResult
+                                        key={segIndex}
+                                        toolName={block.toolName}
+                                        status={block.status}
+                                        summary={block.summary}
+                                        details={block.details}
+                                        duration={block.duration}
+                                      />
+                                    );
+                                  } else if (block.type === 'tool-approval') {
+                                    return (
+                                      <ToolApprovalRequest
+                                        key={segIndex}
+                                        messageId={block.messageId}
+                                        toolCalls={block.toolCalls}
+                                      />
+                                    );
+                                  }
+
+                                  return null;
                                 }
+                              });
+                            })()}
+                          </>
+                        ) : (
+                          <p
+                            className={`whitespace-pre-wrap break-words ${style?.compact ? 'leading-tight' : ''}`}
+                          >
+                            {message.content}
+                          </p>
+                        )}
+                      </div>
 
-                                return null;
-                              }
-                            });
-                          })()}
-                        </>
-                      ) : (
-                        <p
-                          className={`whitespace-pre-wrap break-words ${style?.compact ? 'leading-tight' : ''}`}
+                      {/* Copy button (shown on hover) */}
+                      {features.enableCopy && hoveredMessageId === message.id && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleCopyMessage(message.id, message.content)}
+                          className="absolute right-2 top-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="복사"
                         >
-                          {message.content}
-                        </p>
+                          {copiedMessageId === message.id ? (
+                            <Check className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </Button>
                       )}
                     </div>
-
-                    {/* Copy button (shown on hover) */}
-                    {features.enableCopy && hoveredMessageId === message.id && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleCopyMessage(message.id, message.content)}
-                        className="absolute right-2 top-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="복사"
-                      >
-                        {copiedMessageId === message.id ? (
-                          <Check className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <Copy className="h-3 w-3" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </ContextMenuTrigger>
-                <ContextMenuContent className="w-56">
-                  <ContextMenuItem onClick={() => handleCopyMessage(message.id, message.content)}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    <span>복사</span>
-                  </ContextMenuItem>
-                  {message.role === 'assistant' && (
-                    <ContextMenuItem onClick={() => handleSaveAsDocument(message.content)}>
-                      <FileText className="mr-2 h-4 w-4" />
-                      <span>Document로 저장</span>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="w-56">
+                    <ContextMenuItem onClick={() => handleCopyMessage(message.id, message.content)}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      <span>복사</span>
                     </ContextMenuItem>
-                  )}
-                </ContextMenuContent>
-              </ContextMenu>
-            );
-          })}
+                    {message.role === 'assistant' && (
+                      <ContextMenuItem onClick={() => handleSaveAsDocument(message.content)}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>Document로 저장</span>
+                      </ContextMenuItem>
+                    )}
+                  </ContextMenuContent>
+                </ContextMenu>
+              );
+            })
+          )}
 
           {/* Streaming indicator for compact modes */}
           {isStreaming && style?.compact && (
@@ -435,6 +702,19 @@ export function UnifiedChatArea({ config, onEdit, onRegenerate }: UnifiedChatAre
           )}
         </div>
       </ScrollArea>
-    </>
+
+      {/* 맨 아래로 이동 버튼 */}
+      {showScrollButton && (
+        <Button
+          size="icon"
+          variant="secondary"
+          onClick={scrollToBottom}
+          className="absolute bottom-4 right-8 z-20 h-10 w-10 rounded-full shadow-lg border border-border animate-in fade-in zoom-in duration-200"
+          title="최신 메시지로 이동"
+        >
+          <ArrowDown className="h-5 w-5" />
+        </Button>
+      )}
+    </div>
   );
 }

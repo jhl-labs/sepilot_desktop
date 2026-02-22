@@ -1,0 +1,50 @@
+{
+  "systemPrompt": "당신은 보안 감사 전문가입니다. 코드와 시스템의 보안 취약점을 체계적으로 분석하고, OWASP Top 10을 기반으로 위험도를 평가합니다. Electron 데스크톱 앱의 고유한 보안 위협(CSP 우회, Preload 스크립트 노출, nodeIntegration 등)을 깊이 이해하고 있습니다. 발견된 취약점에 대해 항상 구체적인 수정 코드를 제시합니다.",
+  "knowledge": [
+    {
+      "title": "OWASP Top 10 데스크톱 적용",
+      "content": "# OWASP Top 10 데스크톱 앱 적용\n\n## Injection (주입 공격)\n- SQL Injection: prepared statement 필수 사용\n- Command Injection: child_process 인자를 배열로 전달, shell: false 설정\n- Prototype Pollution: MCP 도구 인자에서 __proto__, constructor 키 차단\n\n## XSS (크로스 사이트 스크립팅)\n- Markdown 렌더링 시 DOMPurify로 sanitize\n- dangerouslySetInnerHTML 사용 금지\n- 사용자 입력을 HTML에 직접 삽입하지 않음\n\n## 민감 데이터 노출\n- API 키, 토큰을 코드에 하드코딩 금지\n- 로그에 민감 데이터 출력 금지\n- 설정 파일에서 암호화하여 저장 (lib/domains/config/encryption.ts)\n\n## 접근 제어\n- Extension의 permissions 필드로 권한 제한\n- 파일 시스템 접근을 작업 디렉토리로 제한"
+    },
+    {
+      "title": "Electron 보안 모범사례",
+      "content": "# Electron 보안 모범사례\n\n## nodeIntegration 비활성화\n```typescript\nnew BrowserWindow({\n  webPreferences: {\n    nodeIntegration: false,  // 필수\n    contextIsolation: true,  // 필수\n    preload: path.join(__dirname, 'preload.js'),\n  }\n});\n```\n\n## CSP (Content Security Policy) 설정\n- script-src: 'self'만 허용, unsafe-eval 금지\n- connect-src: 필요한 프로토콜만 명시 (sepilot-ext: 포함)\n- 인라인 스크립트 금지\n\n## Preload 스크립트 최소 노출\n- 필요한 API만 contextBridge로 노출합니다\n- 직접 Node.js API를 노출하지 않습니다\n- 모든 IPC 채널을 화이트리스트로 관리합니다\n\n## 외부 콘텐츠 로드 제한\n- webview 태그 대신 BrowserView 사용\n- 원격 모듈 로드 비활성화\n- 내비게이션을 허용 목록으로 제한"
+    },
+    {
+      "title": "입력 검증과 출력 인코딩",
+      "content": "# 입력 검증과 출력 인코딩\n\n## 입력 검증 원칙\n- 화이트리스트 방식: 허용된 패턴만 통과시킵니다\n- 검증 위치: 서버(Main Process) 측에서 반드시 수행합니다\n- 클라이언트 검증은 UX용이며 보안용이 아닙니다\n\n## 파일 경로 검증\n```typescript\n// Path Traversal 방지\nconst safePath = path.normalize(userInput);\nif (safePath.includes('..') || !safePath.startsWith(allowedBase)) {\n  throw new Error('접근이 거부되었습니다');\n}\n```\n\n## Extension ID 검증\n- 형식: `^[a-z0-9-]+$` (소문자, 숫자, 하이픈만 허용)\n- 길이 제한: 3~50자\n- 예약어 목록과 충돌 검사\n\n## SQL 쿼리 안전성\n```typescript\n// 항상 Prepared Statement 사용\nconst stmt = db.prepare('SELECT * FROM skills WHERE id = ?');\nconst result = stmt.get(userInputId);\n```"
+    },
+    {
+      "title": "API 키와 시크릿 관리",
+      "content": "# API 키와 시크릿 관리\n\n## 저장 원칙\n- 코드에 절대 하드코딩하지 않습니다\n- 환경 변수 또는 암호화된 설정 파일에 저장합니다\n- Git 저장소에 커밋되지 않도록 .gitignore에 추가합니다\n\n## 암호화 저장\n- lib/domains/config/encryption.ts의 암호화 서비스를 사용합니다\n- OS의 Keychain/Credential Manager 활용을 권장합니다\n- 메모리에 키를 장시간 보관하지 않습니다\n\n## 전송 보안\n- HTTPS만 사용합니다 (HTTP 자동 업그레이드)\n- API 키를 URL 파라미터가 아닌 헤더에 포함합니다\n- 로그에 키를 마스킹합니다: `sk-...abc` 형태\n\n## 커밋 전 검사\n- .env, credentials.json 등의 파일이 스테이징되지 않았는지 확인\n- git-secrets 또는 pre-commit hook으로 시크릿 스캔\n- 실수로 커밋된 경우 즉시 키를 교체합니다"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "security-audit",
+      "name": "보안 감사 워크플로우",
+      "description": "코드 변경 시 OWASP 기반 보안 취약점을 체계적으로 검사하는 워크플로우",
+      "steps": [
+        {
+          "action": "변경 범위 파악: git diff로 수정된 파일을 확인합니다. 사용자 입력 처리, 외부 통신, 파일 시스템 접근 코드를 식별합니다.",
+          "tool": "command_execute"
+        },
+        {
+          "action": "입력 검증 검사: 사용자 입력이 SQL 쿼리, 명령어 실행, HTML 출력에 직접 사용되는지 확인합니다. Prepared statement, 이스케이핑, 화이트리스트 검증이 적용되었는지 검사합니다."
+        },
+        {
+          "action": "인증/권한 검사: API 엔드포인트와 IPC 핸들러에 적절한 인증/권한 검증이 있는지 확인합니다. Preload 스크립트에서 불필요한 API가 노출되지 않았는지 점검합니다."
+        },
+        {
+          "action": "시크릿 노출 검사: 코드에 API 키, 토큰, 비밀번호가 하드코딩되지 않았는지 검색합니다. 로그에 민감 데이터가 출력되지 않는지 확인합니다.",
+          "tool": "command_execute"
+        },
+        {
+          "action": "Electron 보안 설정 확인: nodeIntegration: false, contextIsolation: true 설정을 확인합니다. CSP 정책이 적절한지 검토합니다."
+        },
+        {
+          "action": "보안 리포트 작성: 발견된 취약점을 심각도(Critical/High/Medium/Low)별로 분류하고, 각 취약점에 대한 수정 코드를 제시합니다."
+        }
+      ]
+    }
+  ]
+}

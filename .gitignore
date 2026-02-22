@@ -21,6 +21,9 @@ dependency-graph.svg
 /build
 /dist
 /release
+/resources/extensions/**/dist
+/resources/extensions/**/node_modules
+/lib/extension-sdk/dist
 assets/icon.ico
 assets/icons/
 
@@ -115,7 +118,14 @@ coverage-*/
 .*.swp
 .*.swo
 .*.swn
+test_output*.txt
+tsc_output*.txt
 
 .gemini/
 gha-creds-*.json
-jest-frontend.json
+jest-frontend.json.test-extensions/
+lib/extension-sdk/node_modules/
+lib/extension-sdk/node_modules/
+.migration-backup-*/
+# Extension 빌드 산출물 (빌드 시 자동 생성됨)
+/extensions/*.sepx

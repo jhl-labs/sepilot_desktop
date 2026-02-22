@@ -12,11 +12,14 @@ import {
   Users,
   HardDrive,
   Zap,
-  FlaskConical,
   Languages,
   Bot,
   FileText,
   Package,
+  Clock,
+  Bell,
+  Mail,
+  Inbox,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +27,7 @@ import { useExtensions } from '@/lib/extensions/use-extensions';
 
 export type SettingSection =
   | 'general'
+  | 'notification'
   | 'llm'
   | 'network'
   | 'vectordb'
@@ -34,7 +38,8 @@ export type SettingSection =
   | 'backup'
   | 'quickinput'
   | 'extensions'
-  | 'beta'
+  | 'message-subscription'
+  | 'message-queue'
   | string; // Allow Extension-provided Settings tabs dynamically
 
 interface SettingsCategory {
@@ -72,6 +77,12 @@ export function SettingsSidebar({
           label: t('settings.general.title'),
           icon: Languages,
           description: t('settings.general.description'),
+        },
+        {
+          id: 'notification',
+          label: t('settings.notification.title'),
+          icon: Bell,
+          description: t('settings.notification.description'),
         },
         {
           id: 'llm',
@@ -133,20 +144,24 @@ export function SettingsSidebar({
           icon: Zap,
           description: t('settings.quickinput.description'),
         },
-        // Extension-based settings (dynamically discovered from active Extensions)
-        ...activeExtensions
-          .filter((ext) => ext.manifest.settingsTab && ext.SettingsTabComponent)
-          .map((ext) => {
-            const settingsTab = ext.manifest.settingsTab!;
-            const IconComponent: React.ComponentType<{ className?: string }> =
-              (LucideIcons[settingsTab.icon as keyof typeof LucideIcons] as any) || Bot;
-            return {
-              id: settingsTab.id as SettingSection,
-              label: t(settingsTab.label),
-              icon: IconComponent,
-              description: t(settingsTab.description),
-            };
-          }),
+        {
+          id: 'scheduler',
+          label: t('settings.scheduler.title'),
+          icon: Clock,
+          description: t('settings.scheduler.description'),
+        },
+        {
+          id: 'message-subscription',
+          label: t('messageSubscription.title'),
+          icon: Mail,
+          description: t('messageSubscription.description'),
+        },
+        {
+          id: 'message-queue',
+          label: t('messageSubscription.queueViewer.title'),
+          icon: Inbox,
+          description: t('messageSubscription.queueViewer.description'),
+        },
       ],
     },
     {
@@ -183,13 +198,24 @@ export function SettingsSidebar({
           icon: HardDrive,
           description: t('settings.backup.description'),
         },
-        {
-          id: 'beta',
-          label: t('settings.beta.title'),
-          icon: FlaskConical,
-          description: t('settings.beta.description'),
-        },
       ],
+    },
+    {
+      id: 'extensionSettings',
+      label: t('settings.categories.extensionSettings'),
+      items: activeExtensions
+        .filter((ext) => ext.manifest.settingsTab && ext.SettingsTabComponent)
+        .map((ext) => {
+          const settingsTab = ext.manifest.settingsTab!;
+          const IconComponent: React.ComponentType<{ className?: string }> =
+            (LucideIcons[settingsTab.icon as keyof typeof LucideIcons] as any) || Bot;
+          return {
+            id: settingsTab.id as SettingSection,
+            label: t(settingsTab.label),
+            icon: IconComponent,
+            description: t(settingsTab.description),
+          };
+        }),
     },
   ];
 
@@ -201,7 +227,7 @@ export function SettingsSidebar({
             {category.label}
           </h3>
           <div className="space-y-1">
-            {category.items.map((item) => {
+            {category.items.map((item: any) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
               return (
