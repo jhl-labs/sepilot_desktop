@@ -1,0 +1,178 @@
+{
+  "results": {
+    "storeState": {
+      "appMode": "chat",
+      "thinkingMode": "instant",
+      "hasModel": false,
+      "extensionsVersion": 3
+    },
+    "extensions": {
+      "error": "No registry"
+    },
+    "skills": {
+      "totalCount": 16,
+      "skills": [
+        {
+          "id": "com.sepilot.builtin.testing",
+          "name": "테스트 가이드",
+          "tags": ["test", "jest", "playwright", "TDD", "unit test", "e2e", "테스트", "통합 테스트"]
+        },
+        {
+          "id": "com.sepilot.builtin.coding-guide",
+          "name": "SEPilot 코딩 가이드",
+          "tags": ["sepilot", "coding", "guide", "electron", "nextjs", "typescript", "architecture"]
+        },
+        {
+          "id": "com.sepilot.builtin.security",
+          "name": "보안 감사 가이드",
+          "tags": [
+            "security",
+            "보안",
+            "OWASP",
+            "XSS",
+            "injection",
+            "CSP",
+            "취약점",
+            "vulnerability"
+          ]
+        },
+        {
+          "id": "com.sepilot.builtin.python-env-setup",
+          "name": "Python 실행 환경 (venv)",
+          "tags": ["python", "venv", "pip", "환경", "가상환경", "패키지"]
+        },
+        {
+          "id": "com.sepilot.builtin.pptx-processing",
+          "name": "PowerPoint 편집 가이드",
+          "tags": [
+            "pptx",
+            "powerpoint",
+            "파워포인트",
+            "프레젠테이션",
+            "슬라이드",
+            "발표",
+            "presentation",
+            "slide"
+          ]
+        },
+        {
+          "id": "com.sepilot.builtin.performance",
+          "name": "성능 최적화 가이드",
+          "tags": [
+            "performance",
+            "optimization",
+            "성능",
+            "최적화",
+            "memory",
+            "bundle",
+            "렌더링",
+            "메모리"
+          ]
+        },
+        {
+          "id": "com.sepilot.builtin.git-workflow",
+          "name": "Git 워크플로우 가이드",
+          "tags": [
+            "git",
+            "commit",
+            "branch",
+            "merge",
+            "PR",
+            "rebase",
+            "깃",
+            "버전 관리",
+            "워크플로우"
+          ]
+        },
+        {
+          "id": "com.sepilot.builtin.excel-processing",
+          "name": "Excel 데이터 처리 가이드",
+          "tags": [
+            "excel",
+            "xlsx",
+            "xls",
+            "csv",
+            "엑셀",
+            "스프레드시트",
+            "데이터 분석",
+            "pandas",
+            "openpyxl",
+            "피벗"
+          ]
+        },
+        {
+          "id": "com.sepilot.builtin.env-diagnostics",
+          "name": "환경 진단 (Enterprise)",
+          "tags": [
+            "proxy",
+            "certificate",
+            "dns",
+            "firewall",
+            "network",
+            "diagnostics",
+            "환경",
+            "프록시",
+            "인증서",
+            "진단"
+          ]
+        },
+        {
+          "id": "com.sepilot.builtin.documentation",
+          "name": "기술 문서 작성 가이드",
+          "tags": ["documentation", "문서", "JSDoc", "TSDoc", "README", "API doc", "주석", "가이드"]
+        },
+        {
+          "id": "com.sepilot.builtin.document-creation",
+          "name": "문서 생성 가이드",
+          "tags": ["docx", "pptx", "xlsx", "word", "powerpoint", "excel", "문서", "보고서"]
+        },
+        {
+          "id": "com.sepilot.builtin.debugging",
+          "name": "디버깅 가이드",
+          "tags": ["debug", "디버깅", "error", "bug", "버그", "troubleshooting", "stack trace"]
+        },
+        {
+          "id": "com.sepilot.builtin.data-visualization",
+          "name": "데이터 분석 및 시각화 가이드",
+          "tags": [
+            "plotly",
+            "mermaid",
+            "visualization",
+            "차트",
+            "그래프",
+            "시각화",
+            "데이터 분석",
+            "pandas",
+            "matplotlib",
+            "대시보드"
+          ]
+        },
+        {
+          "id": "com.sepilot.builtin.code-review",
+          "name": "코드 리뷰 가이드",
+          "tags": ["code review", "refactoring", "clean code", "SOLID", "코드 리뷰", "리팩토링"]
+        },
+        {
+          "id": "com.sepilot.builtin.bun-ts-env-setup",
+          "name": "Bun/TypeScript 실행 환경",
+          "tags": ["bun", "typescript", "javascript", "ts", "js", "node", "npm"]
+        },
+        {
+          "id": "com.sepilot.builtin.architecture",
+          "name": "아키텍처 설계 가이드",
+          "tags": ["architecture", "design", "pattern", "아키텍처", "설계", "클린 아키텍처", "DDD"]
+        }
+      ]
+    },
+    "chatInput": {
+      "hasInput": true,
+      "placeholder": "",
+      "isDisabled": false
+    },
+    "thinkingModes": {
+      "current": "instant"
+    }
+  },
+  "errors": [],
+  "warnings": []
+}

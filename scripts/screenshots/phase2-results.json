@@ -1,0 +1,29 @@
+{
+  "errors": [],
+  "thinkingModes": {
+    "instant": {
+      "set": true,
+      "thinkingMode": "instant"
+    },
+    "chat": {
+      "set": true,
+      "thinkingMode": "chat"
+    },
+    "coding": {
+      "set": true,
+      "thinkingMode": "coding"
+    },
+    "agent": {
+      "set": true,
+      "thinkingMode": "agent"
+    },
+    "deep-thinking": {
+      "set": true,
+      "thinkingMode": "deep-thinking"
+    },
+    "cowork": {
+      "set": true,
+      "thinkingMode": "cowork"
+    }
+  }
+}
