@@ -309,6 +309,7 @@ type ChatStore = ExtensionStoreState & {
   // Actions - Conversations
   createConversation: () => Promise<string>;
   deleteConversation: (id: string) => Promise<void>;
+  deleteAllConversations: () => Promise<string>;
   duplicateConversation: (id: string) => Promise<string>;
   setActiveConversation: (id: string) => Promise<void>;
   updateConversationTitle: (id: string, title: string) => Promise<void>;
@@ -1037,6 +1038,113 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       delete allMessages[id];
       saveToLocalStorage(STORAGE_KEYS.MESSAGES, allMessages);
     }
+  },
+
+  deleteAllConversations: async () => {
+    const state = get() as any;
+    const oldConversations: Conversation[] = state.conversations;
+
+    if (oldConversations.length === 0) {
+      return (state.activeConversationId as string) || '';
+    }
+
+    // 1. Abort any streaming conversations first
+    const streamingIds = Array.from((state.streamingConversations as Map<string, string>).keys());
+    if (streamingIds.length > 0 && isElectron() && window.electronAPI?.langgraph) {
+      await Promise.allSettled(
+        streamingIds.map((id) =>
+          window.electronAPI!.langgraph.abort(id).catch((err: Error) => {
+            console.error(`[deleteAllConversations] Failed to abort stream ${id}:`, err);
+          })
+        )
+      );
+    }
+
+    // 2. Create a new conversation (save to DB first)
+    let defaultTitle = '새 대화';
+    const i18n = getI18nInstance();
+    if (i18n && i18n.isInitialized) {
+      defaultTitle = i18n.t('chat.newConversation');
+    } else if (typeof window !== 'undefined') {
+      try {
+        const savedLang = localStorage.getItem('sepilot_language');
+        if (savedLang === 'en') {
+          defaultTitle = 'New Conversation';
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    const newConversation: Conversation = {
+      id: generateId(),
+      title: defaultTitle,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+      chatSettings: {
+        thinkingMode: 'instant',
+        inputTrustLevel: 'trusted',
+        enableRAG: false,
+        enableTools: false,
+        enabledTools: [],
+        enableImageGeneration: false,
+        selectedImageGenProvider: state.selectedImageGenProvider,
+      },
+    };
+
+    if (isElectron() && window.electronAPI) {
+      try {
+        await window.electronAPI.chat.saveConversation(newConversation);
+      } catch (error) {
+        console.error('[deleteAllConversations] Failed to save new conversation:', error);
+      }
+    }
+
+    // 3. Single atomic state update — instantly switch to new conversation
+    const oldConversationIds = oldConversations.map((c: Conversation) => c.id);
+    set({
+      conversations: [newConversation],
+      activeConversationId: newConversation.id,
+      messages: [],
+      messagesCache: new Map([[newConversation.id, []]]),
+      streamingConversations: new Map(),
+      isStreaming: false,
+      streamingMessageId: null,
+      isLoading: false,
+      thinkingMode: 'instant' as ThinkingMode,
+      inputTrustLevel: 'trusted' as InputTrustLevel,
+      enableRAG: false,
+      enableTools: false,
+      enabledTools: new Set(),
+      enableImageGeneration: false,
+    });
+
+    // 4. Background: delete old conversations from DB (non-blocking)
+    if (isElectron() && window.electronAPI) {
+      // Fire-and-forget — UI is already updated
+      (async () => {
+        const BATCH_SIZE = 20;
+        for (let i = 0; i < oldConversationIds.length; i += BATCH_SIZE) {
+          const batch = oldConversationIds.slice(i, i + BATCH_SIZE);
+          await Promise.allSettled(
+            batch.map((id) =>
+              window.electronAPI!.chat.deleteConversation(id).catch((err: unknown) => {
+                console.error(`[deleteAllConversations] DB delete failed for ${id}:`, err);
+              })
+            )
+          );
+        }
+        logger.info(
+          `[deleteAllConversations] Background DB cleanup done: ${oldConversationIds.length} conversations deleted`
+        );
+      })();
+    } else {
+      // Web mode: clear localStorage
+      saveToLocalStorage(STORAGE_KEYS.CONVERSATIONS, [newConversation]);
+      saveToLocalStorage(STORAGE_KEYS.MESSAGES, {});
+    }
+
+    return newConversation.id;
   },
 
   duplicateConversation: async (id: string) => {
