@@ -131,7 +131,7 @@
     "@types/node": "^25.2.3",
     "@types/node-cron": "^3.0.11",
     "@types/path-browserify": "^1.0.3",
-    "@types/plotly.js": "^3.0.9",
+    "@types/plotly.js": "^3.0.10",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/react-plotly.js": "^2.6.4",
