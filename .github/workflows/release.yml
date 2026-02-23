@@ -206,23 +206,17 @@ jobs:
           cat */SHA256SUMS-*.txt 2>/dev/null || echo "No checksums found"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: ncipollo/release-action@v1
         with:
-          files: |
-            artifacts/**/*.exe
-            artifacts/**/*.exe.blockmap
-            artifacts/**/*.dmg
-            artifacts/**/*.dmg.blockmap
-            artifacts/**/*.zip
-            artifacts/**/*.AppImage
-            artifacts/**/*.snap
-            artifacts/**/*.deb
-            artifacts/**/*.rpm
-            artifacts/**/*.yml
-            artifacts/**/SHA256SUMS-*.txt
+          artifacts: "artifacts/**/*.exe,artifacts/**/*.exe.blockmap,artifacts/**/*.dmg,artifacts/**/*.dmg.blockmap,artifacts/**/*.zip,artifacts/**/*.AppImage,artifacts/**/*.snap,artifacts/**/*.deb,artifacts/**/*.rpm,artifacts/**/*.yml,artifacts/**/SHA256SUMS-*.txt"
           draft: false
           prerelease: false
-          generate_release_notes: true
+          generateReleaseNotes: true
+          allowUpdates: true
+          replacesArtifacts: true
+          omitBodyDuringUpdate: false
+          omitNameDuringUpdate: false
+          makeLatest: true
           body: |
             ## 🎉 새 버전이 출시되었습니다!
 
