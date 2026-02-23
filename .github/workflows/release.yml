@@ -20,7 +20,7 @@ jobs:
           - os: windows-latest
             os_name: Windows
             build_command: pnpm build:win
-            portable_command: electron-builder --win portable --config electron-builder.portable.json
+            portable_command: pnpm exec electron-builder --win portable --config electron-builder.portable.json
             artifact_path: |
               release/*.exe
               release/*.exe.blockmap
