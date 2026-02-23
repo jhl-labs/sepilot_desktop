@@ -214,6 +214,9 @@ importers:
       p-queue:
         specifier: ^9.1.0
         version: 9.1.0
+      p-timeout:
+        specifier: ^7.0.1
+        version: 7.0.1
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
