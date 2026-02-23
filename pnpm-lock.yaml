@@ -160,6 +160,9 @@ importers:
       electron-serve:
         specifier: ^3.0.0
         version: 3.0.0
+      eventemitter3:
+        specifier: ^5.0.4
+        version: 5.0.4
       eventsource:
         specifier: ^4.1.0
         version: 4.1.0
@@ -208,6 +211,9 @@ importers:
       node-cron:
         specifier: ^4.2.1
         version: 4.2.1
+      p-queue:
+        specifier: ^9.1.0
+        version: 9.1.0
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
