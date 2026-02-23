@@ -1,6 +1,6 @@
 {
   "name": "sepilot-desktop",
-  "version": "0.99.4",
+  "version": "0.9.1",
   "description": "SEPilot Desktop - LLM Desktop Application with AI Agent",
   "author": {
     "name": "JHL Labs",
@@ -256,7 +256,8 @@
       "side-channel": "1.0.6",
       "get-intrinsic": "1.2.4",
       "which-typed-array": "1.1.16",
-      "tar": "^7.5.7",
+      "tar": "^7.5.8",
+      "minimatch": "^10.2.1",
       "lodash-es": "^4.17.23",
       "qs": "^6.14.2"
     },

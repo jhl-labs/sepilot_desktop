@@ -10,8 +10,43 @@ permissions:
   contents: write
 
 jobs:
+  # Extension 패키징 (공통, 한 번만 실행)
+  build-extensions:
+    name: Build Extensions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build and package extensions
+        run: |
+          pnpm run build:extensions
+          pnpm run package:extensions
+
+      - name: Upload extensions artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: extensions-sepx
+          path: extensions/*.sepx
+
   build:
     name: Build ${{ matrix.os_name }}
+    needs: build-extensions
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -124,6 +159,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y rpm libarchive-tools snapd
 
+      - name: Generate application icons
+        run: pnpm build:icon
+
       - name: Build for ${{ matrix.os_name }}
         uses: nick-invision/retry@v3
         with:
@@ -159,7 +197,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: build
+    needs: [build, build-extensions]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
 
@@ -174,6 +212,14 @@ jobs:
 
       - name: Display structure of downloaded files
         run: ls -R artifacts
+
+      - name: Create extensions zip bundle
+        run: |
+          cd artifacts/extensions-sepx
+          zip -r ../SEPilot-Extensions.zip *.sepx
+          cd ..
+          echo "📦 Extensions bundle created"
+          ls -la SEPilot-Extensions.zip
 
       - name: Generate checksums
         run: |
@@ -202,13 +248,20 @@ jobs:
             cd ..
           fi
 
+          # Extensions checksum
+          if [ -d "extensions-sepx" ]; then
+            cd extensions-sepx
+            sha256sum *.sepx > SHA256SUMS-extensions.txt 2>/dev/null || true
+            cd ..
+          fi
+
           echo "✅ Checksums generated"
           cat */SHA256SUMS-*.txt 2>/dev/null || echo "No checksums found"
 
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "artifacts/**/*.exe,artifacts/**/*.exe.blockmap,artifacts/**/*.dmg,artifacts/**/*.dmg.blockmap,artifacts/**/*.zip,artifacts/**/*.AppImage,artifacts/**/*.snap,artifacts/**/*.deb,artifacts/**/*.rpm,artifacts/**/*.yml,artifacts/**/SHA256SUMS-*.txt"
+          artifacts: "artifacts/**/*.exe,artifacts/**/*.exe.blockmap,artifacts/**/*.dmg,artifacts/**/*.dmg.blockmap,artifacts/**/*.zip,artifacts/*.zip,artifacts/**/*.AppImage,artifacts/**/*.snap,artifacts/**/*.deb,artifacts/**/*.rpm,artifacts/**/*.yml,artifacts/**/*.sepx,artifacts/**/SHA256SUMS-*.txt"
           draft: false
           prerelease: false
           generateReleaseNotes: true
@@ -223,9 +276,29 @@ jobs:
             ### 📥 설치 방법
 
             **Windows 사용자:**
+
+            **방법 1: 설치 프로그램 (권장)**
             1. `SEPilot-Setup-*.exe` 파일 다운로드
             2. 실행 시 Windows SmartScreen 경고가 표시될 수 있습니다
             3. "추가 정보" → "실행" 클릭하여 설치 진행
+
+            **방법 2: Portable + Extensions (설치 없이 실행)**
+            1. `SEPilot Desktop *.exe` (Portable) 다운로드
+            2. `SEPilot-Extensions.zip` 또는 개별 `.sepx` 파일 다운로드
+            3. 원하는 폴더에 exe 파일 배치
+            4. 같은 폴더에 `extensions/` 폴더 생성
+            5. `.sepx` 파일들을 `extensions/` 폴더에 배치
+            6. exe 실행
+
+            ```
+            📁 MyFolder/
+            ├── SEPilot Desktop 0.9.1.exe
+            └── extensions/
+                ├── editor-0.1.0.sepx
+                ├── terminal-0.1.0.sepx
+                ├── browser-1.0.0.sepx
+                └── ...
+            ```
 
             **macOS 사용자:**
             1. `SEPilot-*.dmg` 파일 다운로드
@@ -237,6 +310,18 @@ jobs:
             - **Debian/Ubuntu**: `SEPilot-*.deb` 파일 다운로드 후 `sudo dpkg -i SEPilot-*.deb` 실행
             - **Fedora/RHEL**: `SEPilot-*.rpm` 파일 다운로드 후 `sudo rpm -i SEPilot-*.rpm` 실행
             - **Snap**: `SEPilot-*.snap` 파일 다운로드 후 `sudo snap install SEPilot-*.snap --dangerous` 실행
+
+            ### 🧩 Extensions
+
+            다음 Extension들이 포함되어 있습니다:
+            - `editor` - 코드 에디터 (AI 코딩 에이전트)
+            - `terminal` - 터미널 (AI 명령어 지원)
+            - `browser` - 웹 브라우저 (AI 브라우징)
+            - `architect` - 아키텍처 설계
+            - `presentation` - 프레젠테이션 생성
+            - `github-actions` - GitHub Actions 관리
+            - `github-pr-review` - PR 리뷰 지원
+            - `github-project` - GitHub Project 관리
 
             ### 🔒 보안 검증
 
@@ -250,10 +335,14 @@ jobs:
 
             # Linux
             sha256sum -c SHA256SUMS-linux.txt
+
+            # Extensions
+            sha256sum -c SHA256SUMS-extensions.txt
             ```
 
             ### ⚙️ 자동 업데이트
-            앱 내에서 자동 업데이트가 지원됩니다.
+            설치 버전에서는 앱 내 자동 업데이트가 지원됩니다.
+            Portable 버전은 수동으로 업데이트해야 합니다.
 
             ---
         env:
