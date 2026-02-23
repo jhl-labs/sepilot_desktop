@@ -140,7 +140,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "eslint": "^10.0.0",
+    "eslint": "^10.0.1",
     "eslint-plugin-react": "^7.35.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "archiver": "^7.0.1",
