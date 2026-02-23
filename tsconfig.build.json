@@ -6,21 +6,18 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@sepilot/extension-sdk": ["./lib/extension-sdk/src/index.ts"],
-      "@sepilot/extension-sdk/ui": ["./lib/extension-sdk/src/ui/index.ts"],
-      "@sepilot/extension-sdk/ui/*": ["./lib/extension-sdk/src/ui/*"],
-      "@sepilot/extension-sdk/utils": ["./lib/extension-sdk/src/utils/index.ts"],
-      "@sepilot/extension-sdk/utils/*": ["./lib/extension-sdk/src/utils/*"],
-      "@sepilot/extension-sdk/hooks": ["./lib/extension-sdk/src/hooks/index.ts"],
-      "@sepilot/extension-sdk/hooks/*": ["./lib/extension-sdk/src/hooks/*"],
-      "@sepilot/extension-sdk/types": ["./lib/extension-sdk/src/types/index.ts"],
-      "@sepilot/extension-sdk/ipc": ["./lib/extension-sdk/src/ipc/index.ts"],
-      "@sepilot/extension-sdk/runtime": ["./lib/extension-sdk/src/runtime/index.ts"],
-      "@sepilot/extension-sdk/store": ["./lib/extension-sdk/src/store/index.ts"],
-      "@sepilot/extension-sdk/host": ["./lib/extension-sdk/src/host/index.ts"],
-      "@sepilot/extension-sdk/chat": ["./lib/extension-sdk/src/chat/index.ts"],
-      "@sepilot/extension-sdk/agent": ["./lib/extension-sdk/src/agent/index.ts"],
-      "@sepilot/extension-sdk/services": ["./lib/extension-sdk/src/services/index.ts"]
+      "@sepilot/extension-sdk": ["./node_modules/@sepilot/extension-sdk/src/index.ts"],
+      "@sepilot/extension-sdk/ui": ["./node_modules/@sepilot/extension-sdk/src/ui/index.ts"],
+      "@sepilot/extension-sdk/ui/*": ["./node_modules/@sepilot/extension-sdk/src/ui/*"],
+      "@sepilot/extension-sdk/utils": ["./node_modules/@sepilot/extension-sdk/src/utils/index.ts"],
+      "@sepilot/extension-sdk/utils/*": ["./node_modules/@sepilot/extension-sdk/src/utils/*"],
+      "@sepilot/extension-sdk/hooks/*": ["./node_modules/@sepilot/extension-sdk/src/hooks/*"],
+      "@sepilot/extension-sdk/types": ["./node_modules/@sepilot/extension-sdk/src/types/index.ts"],
+      "@sepilot/extension-sdk/ipc": ["./node_modules/@sepilot/extension-sdk/src/ipc/index.ts"],
+      "@sepilot/extension-sdk/runtime": [
+        "./node_modules/@sepilot/extension-sdk/src/runtime/index.ts"
+      ],
+      "@sepilot/extension-terminal/agents/*": ["./resources/extensions/terminal/dist/agents/*"]
     },
     "skipLibCheck": true,
     "types": ["node"]

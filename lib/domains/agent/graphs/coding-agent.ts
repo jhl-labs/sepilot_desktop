@@ -914,6 +914,183 @@ The user has selected text in the active editor.
     `p2.font.size = Pt(12)\n` +
     `p2.font.color.rgb = RGBColor(0x7F, 0x8C, 0x8D)\n` +
     `p2.alignment = PP_ALIGN.CENTER\n` +
+    `\`\`\`\n\n` +
+    `## DOCX DESIGN GUIDELINES (python-docx)\n` +
+    `When generating DOCX files, create **professionally formatted** documents:\n\n` +
+    `### Document Structure\n` +
+    `- Cover page: large centered title (36pt bold navy) + subtitle + author + date, then page break\n` +
+    `- Table of Contents (TOC) if document has 5+ sections\n` +
+    `- Use Heading 1/2/3 hierarchy consistently — NEVER use plain bold text as headings\n` +
+    `- Page breaks between major sections\n` +
+    `- Header (document title, 9pt gray) + Footer (page numbers, centered)\n\n` +
+    `### Visual Hierarchy\n` +
+    `- Heading 1: 24-28pt bold, navy (#1B3A5C), space before/after\n` +
+    `- Heading 2: 18-22pt bold, blue (#2E86C1)\n` +
+    `- Heading 3: 14-16pt bold, dark gray (#2D2D2D)\n` +
+    `- Body: 11-12pt, dark gray (#2D2D2D), 1.15 line spacing\n` +
+    `- Captions: 9-10pt, gray (#7F8C8D)\n\n` +
+    `### Color Scheme\n` +
+    `- Primary: navy (#1B3A5C) — headings, table headers\n` +
+    `- Accent: blue (#2E86C1) — subheadings, key terms\n` +
+    `- Body: dark gray (#2D2D2D)\n` +
+    `- Table alternate rows: light gray (#F2F3F4) / white\n` +
+    `- Emphasis: coral (#E74C3C) or teal (#1ABC9C) for highlights\n\n` +
+    `### Required Visual Elements\n` +
+    `- Tables: styled header (navy bg + white text), alternating row colors, thin borders\n` +
+    `- Bullet/numbered lists: use proper numbering definitions, not manual numbering\n` +
+    `- Horizontal separator lines (blue #2E86C1) between major sections\n` +
+    `- Bold + color for key statistics and important terms\n` +
+    `- Block quotes with left border for quoted content\n\n` +
+    `### Tables (python-docx)\n` +
+    `\`\`\`python\n` +
+    `from docx.oxml.ns import OxmlElement, qn\n` +
+    `table = doc.add_table(rows=5, cols=4)\n` +
+    `# Header row: navy background, white bold text\n` +
+    `for cell in table.rows[0].cells:\n` +
+    `    shading = cell._element.get_or_add_tcPr()\n` +
+    `    shd = OxmlElement('w:shd')\n` +
+    `    shd.set(qn('w:fill'), '1B3A5C')\n` +
+    `    shading.append(shd)\n` +
+    `    for p in cell.paragraphs:\n` +
+    `        for run in p.runs:\n` +
+    `            run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)\n` +
+    `            run.font.bold = True\n` +
+    `# Alternate rows: F2F3F4 / FFFFFF\n` +
+    `for i, row in enumerate(table.rows[1:], 1):\n` +
+    `    fill = 'F2F3F4' if i % 2 == 0 else 'FFFFFF'\n` +
+    `    for cell in row.cells:\n` +
+    `        shd = OxmlElement('w:shd')\n` +
+    `        shd.set(qn('w:fill'), fill)\n` +
+    `        cell._element.get_or_add_tcPr().append(shd)\n` +
+    `\`\`\`\n\n` +
+    `## XLSX DESIGN GUIDELINES (openpyxl)\n` +
+    `When generating XLSX files, create **professionally formatted** spreadsheets:\n\n` +
+    `### Workbook Structure\n` +
+    `- Multiple sheets: separate data, summary/dashboard, and charts\n` +
+    `- Meaningful sheet names (not "Sheet1") with tab colors\n` +
+    `- Summary/dashboard sheet first\n\n` +
+    `### Header Row (REQUIRED)\n` +
+    `- Background: navy (#1B3A5C) or blue (#2E86C1)\n` +
+    `- Font: white, bold, 12pt, center-aligned\n` +
+    `- Freeze pane below header row (ws.freeze_panes = 'A2')\n` +
+    `- Auto-filter on all data columns (ws.auto_filter.ref = ws.dimensions)\n\n` +
+    `### Data Formatting\n` +
+    `- Alternating row colors: light gray (#F2F3F4) / white (#FFFFFF)\n` +
+    `- Thin borders on all data cells\n` +
+    `- Number formats: currency (#,##0), percent (0.0%), dates (YYYY-MM-DD)\n` +
+    `- Column width auto-adjusted to content\n` +
+    `- Summary/total row: light blue (#D6EAF8) background, bold font\n\n` +
+    `### Color Scheme\n` +
+    `- Header: navy (#1B3A5C) bg + white text\n` +
+    `- Positive values: blue (#2E86C1)\n` +
+    `- Negative values: red (#E74C3C)\n` +
+    `- Total row: light blue (#D6EAF8) bg\n` +
+    `- Alternate rows: light gray (#F2F3F4)\n\n` +
+    `### Data Visualization (REQUIRED for numeric data)\n` +
+    `- Add at least 1 chart (BarChart, LineChart, or PieChart) for key data\n` +
+    `- Conditional formatting: data bars for comparisons, color scales for ranges\n` +
+    `- Formulas for totals, averages, growth rates — NOT hardcoded values\n\n` +
+    `### openpyxl Header Pattern\n` +
+    `\`\`\`python\n` +
+    `from openpyxl.styles import Font, PatternFill, Alignment, Border, Side\n` +
+    `header_font = Font(name='Malgun Gothic', size=12, bold=True, color='FFFFFF')\n` +
+    `header_fill = PatternFill(start_color='1B3A5C', end_color='1B3A5C', fill_type='solid')\n` +
+    `thin_border = Border(left=Side('thin'), right=Side('thin'), top=Side('thin'), bottom=Side('thin'))\n` +
+    `for col, header in enumerate(headers, 1):\n` +
+    `    cell = ws.cell(row=1, column=col, value=header)\n` +
+    `    cell.font = header_font\n` +
+    `    cell.fill = header_fill\n` +
+    `    cell.alignment = Alignment(horizontal='center', vertical='center')\n` +
+    `    cell.border = thin_border\n` +
+    `ws.freeze_panes = 'A2'\n` +
+    `ws.auto_filter.ref = ws.dimensions\n` +
+    `\`\`\`\n\n` +
+    `## PDF DESIGN GUIDELINES (reportlab / fpdf2)\n` +
+    `When generating PDF files, create **professionally formatted** documents:\n\n` +
+    `### Document Structure\n` +
+    `- Cover page: large centered title (28pt bold navy) + subtitle + author + date\n` +
+    `- Table of Contents for 5+ page documents\n` +
+    `- Header (document title, 9pt gray) + Footer (page number, centered)\n` +
+    `- Page breaks between major sections\n` +
+    `- Proper margins: 2cm left/right, 2.5cm top/bottom\n\n` +
+    `### Typography\n` +
+    `- Title: 28pt bold, navy (#1B3A5C)\n` +
+    `- Heading 1: 20pt bold, navy\n` +
+    `- Heading 2: 16pt bold, blue (#2E86C1)\n` +
+    `- Body: 11pt, dark gray (#2D2D2D), 1.2 line spacing\n` +
+    `- Caption: 8-9pt, gray (#7F8C8D)\n\n` +
+    `### Visual Elements (REQUIRED)\n` +
+    `- Tables with navy header row (#1B3A5C bg, white text) + alternating row colors\n` +
+    `- Horizontal separator lines (blue #2E86C1) between sections\n` +
+    `- Charts: embed matplotlib/plotly charts as images in PDF\n` +
+    `- Key metrics: bold + accent color (#2E86C1) for important numbers\n\n` +
+    `### reportlab Table Pattern\n` +
+    `\`\`\`python\n` +
+    `from reportlab.lib.colors import HexColor\n` +
+    `from reportlab.platypus import Table, TableStyle\n` +
+    `table = Table(data, colWidths=[6*cm, 4*cm, 4*cm])\n` +
+    `table.setStyle(TableStyle([\n` +
+    `    ('BACKGROUND', (0, 0), (-1, 0), HexColor('#1B3A5C')),\n` +
+    `    ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),\n` +
+    `    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),\n` +
+    `    ('BACKGROUND', (0, 1), (-1, -1), HexColor('#FFFFFF')),\n` +
+    `    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F2F3F4')]),\n` +
+    `    ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),\n` +
+    `]))\n` +
+    `\`\`\`\n\n` +
+    `## HTML REPORT DESIGN GUIDELINES\n` +
+    `When generating HTML reports/dashboards, create **modern, self-contained** documents:\n\n` +
+    `### Structure\n` +
+    `- Self-contained single HTML file with inline CSS + CDN JS (Chart.js)\n` +
+    `- Semantic HTML: header, main, section, footer\n` +
+    `- Responsive design (CSS Grid/Flexbox)\n` +
+    `- DOCTYPE + charset + viewport meta\n\n` +
+    `### Visual Elements (REQUIRED)\n` +
+    `- KPI cards: large number (36px bold accent) + label + trend indicator\n` +
+    `- Chart.js charts (bar/line/pie) with proper labels and legend\n` +
+    `- Styled tables: sticky header (navy bg), alternating rows, hover effect\n` +
+    `- Section cards with box-shadow and rounded corners\n\n` +
+    `### Color Scheme (CSS variables)\n` +
+    `\`\`\`css\n` +
+    `:root {\n` +
+    `  --primary: #1B3A5C; --accent: #2E86C1;\n` +
+    `  --success: #27AE60; --danger: #E74C3C;\n` +
+    `  --text: #2D2D2D; --bg-alt: #F8F9FA;\n` +
+    `}\n` +
+    `\`\`\`\n\n` +
+    `### Chart.js Pattern\n` +
+    `\`\`\`html\n` +
+    `<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>\n` +
+    `<canvas id="chart1"></canvas>\n` +
+    `<script>\n` +
+    `new Chart(document.getElementById('chart1'), {\n` +
+    `  type: 'bar',\n` +
+    `  data: { labels: [...], datasets: [{ data: [...], backgroundColor: '#2E86C1' }] },\n` +
+    `  options: { responsive: true, plugins: { legend: { position: 'bottom' } } }\n` +
+    `});\n` +
+    `</script>\n` +
+    `\`\`\`\n\n` +
+    `## DATA ANALYSIS & VISUALIZATION GUIDELINES (matplotlib/seaborn)\n` +
+    `When generating Python data analysis scripts with charts:\n\n` +
+    `### Chart Design (REQUIRED for every chart)\n` +
+    `- Title: 16pt bold navy (#1B3A5C) with pad=15\n` +
+    `- Axis labels: 12pt with clear units\n` +
+    `- Legend: positioned optimally (loc='best')\n` +
+    `- Figure size: (10, 6) minimum\n` +
+    `- Save: dpi=150, bbox_inches='tight'\n` +
+    `- Korean font: plt.rcParams['font.family'] = 'Malgun Gothic'\n` +
+    `- Remove top/right spines for clean look\n\n` +
+    `### Color Palette\n` +
+    `\`\`\`python\n` +
+    `PALETTE = ['#1B3A5C', '#2E86C1', '#27AE60', '#F39C12', '#E74C3C', '#1ABC9C', '#8E44AD']\n` +
+    `sns.set_theme(style='whitegrid', palette=PALETTE)\n` +
+    `\`\`\`\n\n` +
+    `### Multiple Charts Required\n` +
+    `- Generate 3+ different chart types (bar, line, scatter, heatmap, pie)\n` +
+    `- Save each as separate PNG file with descriptive name\n` +
+    `- Include value labels on bars, annotations on key points\n` +
+    `- Use subplots for dashboard-style overview\n` +
+    `- Add data insights as print() statements after each analysis step\n` +
     `\`\`\``;
 
   // Extract skill system messages already injected into state.messages

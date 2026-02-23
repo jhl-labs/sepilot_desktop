@@ -3,6 +3,14 @@
   "references": [
     { "path": "./tsconfig.frontend.json" },
     { "path": "./tsconfig.backend.json" },
-    { "path": "./lib/extension-sdk" }
+    { "path": "./lib/extension-sdk" },
+    { "path": "./resources/extensions/editor" },
+    { "path": "./resources/extensions/browser" },
+    { "path": "./resources/extensions/terminal" },
+    { "path": "./resources/extensions/architect" },
+    { "path": "./resources/extensions/presentation" },
+    { "path": "./resources/extensions/github-actions" },
+    { "path": "./resources/extensions/github-pr-review" },
+    { "path": "./resources/extensions/github-project" }
   ]
 }

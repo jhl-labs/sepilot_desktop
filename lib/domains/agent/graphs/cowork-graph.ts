@@ -384,6 +384,9 @@ export class CoworkStreamRunner {
         /pptx|ppt|프레젠테이션|슬라이드|발표\s*자료/,
         /docx|doc|문서\s*생성|보고서\s*작성/,
         /xlsx|엑셀|스프레드시트/,
+        /pdf\s*(생성|만들|작성|보고서)|보고서.*pdf/,
+        /html\s*(보고서|리포트|대시보드|report)|대시보드\s*생성/,
+        /데이터\s*(분석|시각화|차트)|matplotlib|seaborn|plotly|차트\s*생성/,
         /조사.*만들|리서치.*생성|검색.*작성/,
         /전체.*구현|모든.*수정|전면.*개편/,
       ];

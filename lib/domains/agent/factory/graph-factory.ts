@@ -320,6 +320,7 @@ export class GraphFactory {
    */
   private static async loadBrowserAgentGraphClass(): Promise<any> {
     try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore - Extension module resolved at runtime
       const mod = await import(
         /* webpackIgnore: true */ '@sepilot/extension-browser/agents/browser-agent-graph'
@@ -393,7 +394,8 @@ export class GraphFactory {
       await this.registerOptionalGraph(
         'editor-agent',
         async () => {
-          // @ts-ignore - Extension module resolved at runtime
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - Extension module resolved at runtime
           const { EditorAgentGraph } = await import(
             /* webpackIgnore: true */ '@sepilot/extension-editor/agents/editor-agent-graph'
           );
@@ -412,7 +414,8 @@ export class GraphFactory {
       await this.registerOptionalGraph(
         'terminal-agent',
         async () => {
-          // @ts-ignore - Extension module resolved at runtime
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - Extension module resolved at runtime
           const { TerminalAgentGraph } = (await import(
             /* webpackIgnore: true */ '@sepilot/extension-terminal/agents/terminal-agent-graph'
           )) as { TerminalAgentGraph: any };

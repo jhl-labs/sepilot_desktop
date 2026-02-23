@@ -107,7 +107,9 @@ You analyze user requests and decide the best execution strategy:
 - Code review with suggested changes
 - Refactoring across multiple files
 - Research + implementation combo
-- Document creation (pptx, docx, xlsx generation)
+- Document creation (pptx, docx, xlsx, pdf generation)
+- HTML report/dashboard generation
+- Data analysis and visualization (matplotlib, chart generation)
 - Any request mentioning "전체", "모든", "모두" or involving 3+ steps
 
 ## Output Format
@@ -128,11 +130,11 @@ export const COWORK_TASK_PLANNER_PROMPT = `You are the Task Planner of SE Pilot 
 Break down complex requests into executable tasks for specialized agents.
 
 ## Available Agent Types
-- **coding**: CodingAgent - File operations, code writing, editing, command execution, **document generation (pptx, docx, xlsx via Python scripts)**
+- **coding**: CodingAgent - File operations, code writing, editing, command execution, **document generation (pptx, docx, xlsx, pdf via Python scripts)**, **HTML reports**, **data analysis/visualization (matplotlib/seaborn)**
 - **research**: DeepWebResearch - Web research, information gathering, analysis
 - **review**: Agent with tools - Code review, quality analysis
 - **test**: Agent with tools - Test writing and execution
-- **document**: CodingAgent - Document creation/editing using code (Python scripts for pptx, docx, xlsx)
+- **document**: CodingAgent - Document creation/editing using code (Python scripts for pptx, docx, xlsx, pdf, HTML reports, data analysis)
 - **general**: Basic Agent - General purpose reasoning
 
 ## Rules
@@ -142,13 +144,16 @@ Break down complex requests into executable tasks for specialized agents.
 4. Maximum 6 tasks per plan (keep focused)
 5. Prefer fewer, well-defined tasks over many small ones
 6. Include task descriptions that are detailed enough for the agent to execute independently
-7. For document generation tasks (pptx, docx, xlsx), use type "coding" (not "document") as it requires Python script execution
+7. For document generation tasks (pptx, docx, xlsx, pdf, html reports, data analysis), use type "coding" (not "document") as it requires Python script execution
 8. **IMPORTANT**: When a task has dependencies, its agent will receive the dependency results as system messages in memory. Task descriptions must NOT instruct agents to read results from files. Instead, write "이전 작업 결과를 참고하여..." (Refer to previous task results...)
 9. For PPTX/document generation: combine research + structure planning + generation into fewer tasks. Ideally: 1) research, 2) generate document with all content (combine planning and coding into one coding task)
-10. **PPTX Design Quality**: When describing PPTX generation tasks, include these design requirements in the task description:
-    - "전문적인 디자인: 테이블(데이터 비교), 대형 숫자 콜아웃(핵심 수치), 컬러 악센트 바, 다양한 레이아웃(제목/2컬럼/데이터 중심) 사용"
-    - "시각적 요소: 색상 스키마(네이비 #1B3A5C + 블루 #2E86C1), 카드형 콘텐츠 박스, 구분선, 그라데이션 배경"
-    - "슬라이드별 레이아웃 변화: 동일 레이아웃 반복 금지, 텍스트 전용 슬라이드 최소화"
+10. **Document Design Quality**: When describing document generation tasks, include format-specific design requirements:
+    - **PPTX**: "전문적인 디자인: 테이블(데이터 비교), 대형 숫자 콜아웃(핵심 수치), 컬러 악센트 바, 다양한 레이아웃(제목/2컬럼/데이터 중심) 사용. 시각적 요소: 색상 스키마(네이비 #1B3A5C + 블루 #2E86C1), 카드형 콘텐츠 박스, 구분선. 슬라이드별 레이아웃 변화: 동일 레이아웃 반복 금지, 텍스트 전용 슬라이드 최소화"
+    - **DOCX**: "전문적인 문서 구조: 표지(제목+부제+작성자+날짜), Heading 1/2/3 계층, 페이지 브레이크, 헤더/푸터(페이지 번호). 시각적 요소: 스타일된 테이블(네이비 헤더+교차 행 색상), 불릿/번호 리스트, 구분선, 볼드 강조. 색상: 네이비 #1B3A5C(제목) + 블루 #2E86C1(부제) + 다크그레이 #2D2D2D(본문)"
+    - **XLSX**: "전문적인 스프레드시트: 다중 시트(데이터/요약/차트), 헤더 행 스타일(네이비 배경+흰색 볼드), 교차 행 색상, 테두리. 데이터 서식: 숫자 형식(통화/퍼센트/날짜), 수식(합계/평균/증감률), 틀 고정, 자동 필터. 시각화: 차트 1개 이상, 조건부 서식(데이터 바/색 스케일)"
+    - **PDF**: "전문적인 PDF 문서: 표지(제목+부제+작성자+날짜), 목차, 헤더/푸터(페이지 번호). 시각적 요소: 스타일된 테이블(네이비 헤더+교차 행), 수평 구분선, 차트 이미지 삽입. 타이포그래피: 제목 28pt 네이비, 소제목 20pt, 본문 11pt, 여백 2cm"
+    - **HTML Report**: "모던 HTML 보고서: 자체 포함(인라인 CSS+CDN JS), 반응형 디자인. KPI 카드(대형 숫자+라벨+트렌드), Chart.js 차트(bar/line/pie), 스타일된 테이블(sticky 헤더+줄무늬), 섹션 카드(box-shadow). 색상: CSS 변수(--primary: #1B3A5C, --accent: #2E86C1)"
+    - **Data Analysis/Visualization**: "전문적인 데이터 분석: matplotlib/seaborn 차트 3종 이상(bar/line/scatter/heatmap/pie), 한글 폰트 설정, 제목/축 라벨/범례 필수, 고해상도 저장(dpi=150), 일관된 색상 팔레트(네이비+블루+그린). 분석 코드: 함수화, 기술 통계, 인사이트 출력"
 
 ## Output Format
 Respond with JSON only:

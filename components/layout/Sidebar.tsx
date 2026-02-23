@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import { runPromisesInBatches } from '@/lib/utils/batch';
 
 interface SidebarProps {
   onDocumentsClick?: () => void;
@@ -26,21 +25,19 @@ interface SidebarProps {
   onConversationClick?: () => void;
 }
 
-const DELETE_CONVERSATION_BATCH_SIZE = 10;
-
 export function Sidebar({
   onDocumentsClick,
   onGalleryClick,
   onConversationClick,
 }: SidebarProps = {}) {
   const { t } = useTranslation();
-  const { appMode, setAppMode, createConversation, deleteConversation, setChatViewMode } =
+  const { appMode, setAppMode, createConversation, deleteAllConversations, setChatViewMode } =
     useChatStore(
       useShallow((state) => ({
         appMode: state.appMode,
         setAppMode: state.setAppMode,
         createConversation: state.createConversation,
-        deleteConversation: state.deleteConversation,
+        deleteAllConversations: state.deleteAllConversations,
         setChatViewMode: state.setChatViewMode,
       }))
     );
@@ -114,27 +111,7 @@ export function Sidebar({
         `모든 대화(${conversations.length}개)를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`
       )
     ) {
-      // 먼저 새 대화를 생성하여 activeConversationId가 null이 되는 것을 방지
-      const newConversationId = await createConversation();
-
-      // 그 다음 기존 대화들을 삭제 (새로 만든 대화는 제외)
-      const conversationIdsToDelete = conversations
-        .filter((conversation: { id: string }) => conversation.id !== newConversationId)
-        .map((conversation: { id: string }) => conversation.id);
-
-      const deleteResults = await runPromisesInBatches(
-        conversationIdsToDelete,
-        DELETE_CONVERSATION_BATCH_SIZE,
-        async (conversationId) => {
-          await deleteConversation(conversationId);
-          return conversationId;
-        }
-      );
-
-      const failedCount = deleteResults.filter((result) => result.status === 'rejected').length;
-      if (failedCount > 0) {
-        console.error(`[Sidebar] Failed to delete ${failedCount} conversations`);
-      }
+      await deleteAllConversations();
     }
   };
 
