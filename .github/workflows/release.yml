@@ -20,6 +20,7 @@ jobs:
           - os: windows-latest
             os_name: Windows
             build_command: pnpm build:win
+            portable_command: electron-builder --win portable --config electron-builder.portable.json
             artifact_path: |
               release/*.exe
               release/*.exe.blockmap
@@ -31,6 +32,7 @@ jobs:
           - os: macos-latest
             os_name: macOS
             build_command: pnpm build:mac
+            portable_command: ''
             artifact_path: |
               release/*.dmg
               release/*.dmg.blockmap
@@ -43,6 +45,7 @@ jobs:
           - os: ubuntu-latest
             os_name: Linux
             build_command: pnpm build:linux
+            portable_command: ''
             artifact_path: |
               release/*.AppImage
               release/*.snap
@@ -134,6 +137,19 @@ jobs:
           CI: true
           ELECTRON_GET_USE_PROXY: true
           GLOBAL_AGENT_HTTPS_PROXY: ''
+
+      - name: Build portable (Windows only)
+        if: matrix.os == 'windows-latest' && matrix.portable_command != ''
+        uses: nick-invision/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 30
+          command: ${{ matrix.portable_command }}
+        env:
+          ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          CI: true
 
       - name: Upload ${{ matrix.os_name }} artifacts
         uses: actions/upload-artifact@v6
