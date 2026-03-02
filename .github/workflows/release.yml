@@ -39,7 +39,7 @@ jobs:
           pnpm run package:extensions
 
       - name: Upload extensions artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: extensions-sepx
           path: extensions/*.sepx
@@ -190,7 +190,7 @@ jobs:
           CI: true
 
       - name: Upload ${{ matrix.os_name }} artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.artifact_path }}
