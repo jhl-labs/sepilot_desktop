@@ -163,7 +163,7 @@ jobs:
         run: pnpm build:icon
 
       - name: Build for ${{ matrix.os_name }}
-        uses: nick-invision/retry@v3
+        uses: nick-invision/retry@v4
         with:
           timeout_minutes: 30
           max_attempts: 3
@@ -178,7 +178,7 @@ jobs:
 
       - name: Build portable (Windows only)
         if: matrix.os == 'windows-latest' && matrix.portable_command != ''
-        uses: nick-invision/retry@v3
+        uses: nick-invision/retry@v4
         with:
           timeout_minutes: 30
           max_attempts: 3
