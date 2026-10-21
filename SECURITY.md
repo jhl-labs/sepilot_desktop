@@ -220,3 +220,11 @@ SEPilot Desktop 사용자를 위한 보안 권장사항:
 ---
 
 보안은 모두의 책임입니다. 의심스러운 활동이나 취약점을 발견하면 즉시 보고해주세요.
+
+## 자동 보안 점검 (Automated Security Checks)
+
+public 저장소에서 무료로 제공되는 GitHub 기능만 사용합니다. 유료 라이선스(GHAS Code Security/Secret Protection, Code Quality)와 AI 사용량 과금 기능(Copilot Autofix, AI 비밀정보 탐지)은 사용하지 않습니다.
+
+- Secret scanning + push protection, Dependabot alerts/security updates, 비공개 취약점 신고: 저장소 설정
+- CodeQL (`codeql.yml`), Trivy·Snyk (`security-scan.yml`), 워크플로·의존성 점검 (`security-hardening.yml`)
+- Dependency review(PR), OpenSSF Scorecard(main push, 주 1회): `security-checks.yml`. Scorecard 결과는 외부에 게시하지 않고 code scanning에만 올립니다.
