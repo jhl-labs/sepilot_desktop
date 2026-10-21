@@ -455,6 +455,7 @@ async function assertExtractedTree(destination, entries) {
     }
   }
   const destinationPrefix = resolve(destination).replace(/[\\/]$/u, '') + sep
+  const canonicalDestination = await realpath(destination)
   const metadata = new Map(entries.map((entry) => [entry.path.toLocaleLowerCase('en-US'), entry]))
 
   async function walk(directory) {
@@ -475,7 +476,7 @@ async function assertExtractedTree(destination, entries) {
           throw new Error(`7z extraction produced an undeclared symbolic link: ${archivePath}`)
         }
         const resolvedTarget = await realpath(fullPath)
-        if (!isWithinRoot(resolve(destination), resolvedTarget)) {
+        if (!isWithinRoot(canonicalDestination, resolvedTarget)) {
           throw new Error(`7z extraction symbolic link escaped destination: ${archivePath}`)
         }
         continue

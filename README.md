@@ -3,7 +3,7 @@
 Sepilot Desktop is the desktop app for Sepilot, a local-first AI agent. It
 starts and talks to the local `sepilotd` daemon over HTTP and WebSocket.
 
-Version: 1.0.8
+Version: 1.0.9
 
 ## License
 
