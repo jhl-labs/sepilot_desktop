@@ -4,7 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    # The public tree is regenerated from the private source on every release,
+    # so version-update PRs cannot land here. Security alerts and Dependabot
+    # security updates still report vulnerable versions.
+    open-pull-requests-limit: 0
     groups:
       development-dependencies:
         dependency-type: development
@@ -21,6 +24,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # The public tree is regenerated from the private source on every release,
+    # so version-update PRs cannot land here. Security alerts and Dependabot
+    # security updates still report vulnerable versions.
+    open-pull-requests-limit: 0
     groups:
       github-actions:
         patterns:

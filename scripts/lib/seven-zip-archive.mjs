@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
-import { mkdir, readdir, realpath } from 'node:fs/promises'
+import { constants as fsConstants } from 'node:fs'
+import { access, chmod, mkdir, readdir, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, posix, relative, resolve, sep } from 'node:path'
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000
@@ -505,7 +506,18 @@ export async function resolveSevenZipPath(explicitPath) {
   const module = await import('7zip-bin')
   const path = module.path7za ?? module.default?.path7za
   if (!path) throw new Error('7za binary could not be resolved')
+  await ensureExecutable(resolve(path))
   return resolve(path)
+}
+
+export async function ensureExecutable(path, platform = process.platform) {
+  if (platform === 'win32') return
+  try {
+    await access(path, fsConstants.X_OK)
+  } catch {
+    const { mode } = await stat(path)
+    await chmod(path, mode | 0o111)
+  }
 }
 
 export async function extractSevenZipSafely(sevenZipPath, archivePath, destination, options = {}) {
