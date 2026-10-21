@@ -1,0 +1,6 @@
+packages:
+  - 'packages/*'
+  - 'sepilot-cli/packages/core'
+  - 'sepilot-cli/packages/api-client'
+  - 'sepilot-cli/packages/presentation'
+  - 'sepilot-cli/packages/daemon'

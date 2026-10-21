@@ -1,0 +1,52 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "tsconfig.base.json",
+    "build.features.yaml"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "env": [
+        "NODE_ENV",
+        "SEPILOTD_RELEASE_BUILD"
+      ],
+      "outputs": [
+        "dist/**",
+        "out/**"
+      ]
+    },
+    "@sepilotd/desktop#build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "env": [
+        "NODE_ENV",
+        "SEPILOTD_RELEASE_BUILD",
+        "SEPILOT_BUILD_ID",
+        "SEPILOT_BUILD_FEATURES_FILE"
+      ],
+      "outputs": [
+        "dist/**",
+        "out/**"
+      ]
+    },
+    "dev": {
+      "dependsOn": [
+        "^build"
+      ],
+      "cache": false,
+      "persistent": true
+    },
+    "typecheck": {
+      "dependsOn": [
+        "^build"
+      ]
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

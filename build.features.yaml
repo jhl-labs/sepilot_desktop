@@ -1,0 +1,62 @@
+version: 1
+features:
+  browser: true
+  computer-use: true
+  micro-apps: true
+  channels:
+    telegram: true
+    slack: true
+    discord: true
+    mattermost: true
+    teams: true
+    line: true
+    whatsapp: true
+    webchat: true
+    webhook: true
+    github-issue: true
+  voice: true
+  swarm: true
+  pages: true
+  image-gen: true
+  market: true
+  media: true
+  office: true
+  mcp: true
+  delegation: true
+  extensions: true
+  a2a: true
+  acp: true
+  notebook: true
+  lsp: true
+  wiki: true
+  plugins: true
+  event-routing: true
+  desktop:
+    modes:
+      coding: true
+      computer-use: true
+    settings:
+      google: true
+      smart-home: false
+      github-oauth: false
+      github-sync: false
+      team-docs: true
+      snippets: false
+      shell: false
+      apps: true
+      canvas: false
+    apps:
+      enabled-template-ids:
+        - calendar
+        - todo
+        - briefing
+        - sticky
+        - vault
+        - kanban
+      default-open-template-ids:
+        - calendar
+        - todo
+        - briefing
+        - sticky
+        - vault
+        - kanban

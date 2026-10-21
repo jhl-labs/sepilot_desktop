@@ -1,0 +1,114 @@
+.pet {
+  position: fixed;
+  z-index: 35;
+  color: hsl(var(--foreground));
+}
+.avatar {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 35%;
+  background: transparent;
+  cursor: pointer;
+  transform-origin: bottom center;
+}
+.avatar:hover,
+.avatar:active {
+  box-shadow: none;
+}
+.avatar[data-motion='true'][data-mood='idle'] {
+  animation: breathe 4s ease-in-out infinite;
+}
+.avatar[data-motion='true'][data-mood='working'] {
+  animation: bob 1.4s ease-in-out infinite;
+}
+.avatar[data-motion='true'][data-mood='happy'] {
+  animation: bob 0.55s ease-in-out 3;
+}
+.handle {
+  display: flex;
+  justify-content: center;
+  width: 30px;
+  margin: 0 auto;
+  padding: 2px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: hsl(var(--background) / 0.85);
+  color: hsl(var(--muted-foreground));
+  cursor: grab;
+  touch-action: none;
+}
+.handle:active {
+  cursor: grabbing;
+}
+.bubble {
+  position: fixed;
+  width: 180px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px 14px 14px 3px;
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  box-shadow: 0 4px 18px #0002;
+}
+.bubble[data-streaming='true']::after {
+  display: inline-block;
+  width: 5px;
+  height: 1em;
+  margin-left: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  vertical-align: -2px;
+  content: '';
+  animation: stream-cursor 1s ease-in-out infinite;
+}
+.launcher {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  z-index: 40;
+  border-radius: 50%;
+  box-shadow: 0 3px 12px #0002;
+}
+.studio {
+  position: fixed;
+  right: 12px;
+  bottom: 58px;
+  z-index: 40;
+  width: min(760px, calc(100vw - 24px));
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 18px;
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  box-shadow: 0 12px 48px #0003;
+}
+@keyframes breathe {
+  50% {
+    transform: scaleY(0.97);
+  }
+}
+@keyframes bob {
+  50% {
+    transform: translateY(-4px) rotate(2deg);
+  }
+}
+@keyframes stream-cursor {
+  50% { opacity: 0.18; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar {
+    animation: none !important;
+  }
+  .bubble[data-streaming='true']::after {
+    animation: none;
+    opacity: 0.55;
+  }
+}

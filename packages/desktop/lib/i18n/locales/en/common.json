@@ -1,0 +1,439 @@
+{
+  "newChatMode": {
+    "title": "New conversations",
+    "label": "Default mode for new conversations",
+    "description": "Choose the mode used when starting a new conversation. The default is Auto. Changing this does not change the current conversation.",
+    "saveFailed": "Could not save the default chat mode."
+  },
+  "appTitle": "sepilotd",
+  "welcome": "Welcome",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System",
+  "languageKo": "한국어",
+  "languageEn": "English",
+  "daemonStatusOk": "Daemon connected",
+  "daemonStatusFail": "Daemon unreachable",
+  "desktopAgent": {
+    "cliUnavailable": "CLI unavailable",
+    "cliChecking": "Checking CLI",
+    "ariaLabel": "External CLI agent",
+    "backToChat": "← Back to chat",
+    "title": "External Agent",
+    "agentMode": "Agent mode",
+    "pty": "Interactive terminal · PTY",
+    "retry": "Try again",
+    "starting": "Starting {{agent}} CLI…",
+    "startingShort": "Starting…",
+    "notStarted": "The terminal could not be started. Try again or check the advanced settings.",
+    "workspaceRequired": "Choose a working folder to start the CLI terminal.",
+    "advanced": "Other location · SSH · session management",
+    "boundary": "The CLI runs directly on the daemon host. Sign-in, model selection, and approvals happen in the terminal using the CLI's own permissions.",
+    "session": "External CLI session",
+    "newSession": "New session",
+    "refreshSessions": "Refresh sessions",
+    "closeSession": "Close session",
+    "location": "Run on",
+    "daemonHost": "Daemon host",
+    "sshHost": "SSH remote host",
+    "localWorkspace": "Daemon host working folder",
+    "remoteWorkspace": "SSH host working folder",
+    "localWorkspacePlaceholder": "Absolute path on the daemon host",
+    "remoteWorkspacePlaceholder": "Remote absolute path (for example, /home/user/project)",
+    "chooseFolder": "Choose folder",
+    "startTerminal": "Start new CLI terminal",
+    "persistence": "The CLI keeps running when you leave this screen. Selecting it again restores the running session. The session ends when the daemon stops.",
+    "terminal": {
+      "connecting": "Connecting",
+      "connected": "Connected",
+      "reconnecting": "Reconnecting to the daemon…",
+      "restoring": "Restarting the session…",
+      "disconnected": "Disconnected",
+      "exited": "Exited",
+      "exitedWithCode": "Exited · code {{code}}",
+      "sequenceGap": "Terminal output was interrupted. Reconnect to restore the screen.",
+      "networkError": "Cannot connect to the daemon. Check the daemon connection, then reconnect.",
+      "remoteSessionEnded": "The SSH session ended. Start a new session with the same remote connection settings.",
+      "interrupt": "Send Ctrl+C",
+      "reconnect": "Reconnect",
+      "ariaLabel": "{{agent}} terminal"
+    },
+    "ssh": {
+      "hostname": "SSH host",
+      "hostnamePlaceholder": "Host or SSH config alias",
+      "user": "SSH user",
+      "userPlaceholder": "User (optional)",
+      "port": "SSH port",
+      "portPlaceholder": "Port (use SSH config)",
+      "help": "Uses the daemon host's SSH configuration and keys. Enter passwords and confirm host keys in the terminal."
+    }
+  },
+  "chatModes": {
+    "categories": {
+      "automatic": "Automatic",
+      "instant": "Instant response",
+      "general": "General tasks",
+      "thinking": "Reasoning",
+      "research": "Research",
+      "development": "Development",
+      "external": "External agents",
+      "automation": "Automation",
+      "collaboration": "Collaboration",
+      "custom": "Custom agents"
+    },
+    "modes": {
+      "chat-only": {"label": "Chat Only (ChatGPT)", "description": "Conversation with read-only RAG and stored knowledge. No actions or information writes.", "examplePrompt": "Explain this using stored knowledge: "},
+      "auto": {
+        "label": "Auto",
+        "description": "Chooses an execution approach that fits the task when the best approach is unclear.",
+        "examplePrompt": "Use the best approach for this request: "
+      },
+      "instant": {
+        "label": "Instant",
+        "description": "Starts with a fast answer and memory retrieval, then switches execution mode when the task needs tools.",
+        "examplePrompt": "Summarize this briefly and answer directly: "
+      },
+      "react": {"label": "General task agent", "description": "Uses permitted tools to inspect information, carry out tasks and check results before taking the next step.", "examplePrompt": "Use the available tools to complete this task and verify the result: "},
+      "sequential": {
+        "label": "Sequential reasoning",
+        "description": "Works well for requirements that need to be organized in order or decisions that need step-by-step reasoning.",
+        "examplePrompt": "Turn these requirements into a step-by-step execution plan: "
+      },
+      "tree-of-thought": {
+        "label": "Tree reasoning",
+        "description": "Compares multiple approaches and their tradeoffs for design and decision-making tasks.",
+        "examplePrompt": "Compare the tradeoffs of these options and recommend one: "
+      },
+      "deep": {
+        "label": "Deep reasoning",
+        "description": "Examines difficult problems and complex reasoning carefully when failure would be costly.",
+        "examplePrompt": "Review this design carefully for hidden risks and counterexamples: "
+      },
+      "deep-web-research": {
+        "label": "Web research",
+        "description": "Researches current information, verifies evidence, and compares sources.",
+        "examplePrompt": "Find recent sources and compare them with citations: "
+      },
+      "codebase-scout": { "label": "Codebase Scout", "description": "Read-only file exploration, dependency mapping and architecture analysis in the selected workspace.", "examplePrompt": "Analyze the architecture and dependencies of this codebase: " },
+      "coding": {
+        "label": "Coding",
+        "description": "Reads a repository, edits files, runs commands, and validates code changes.",
+        "examplePrompt": "Implement and test this feature in the repository: "
+      },
+      "writing": {
+        "label": "Writing",
+        "description": "Creates drafts, improves structure, and edits Markdown documents with you.",
+        "examplePrompt": "Structure and polish this as a Markdown document: "
+      },
+      "external-claude": {
+        "label": "Claude CLI",
+        "description": "Continues a local Claude CLI coding workflow from this chat.",
+        "examplePrompt": "Use Claude CLI in this working directory for the following coding task: "
+      },
+      "external-codex": {
+        "label": "Codex CLI",
+        "description": "Runs a terminal coding session based on Codex CLI from this chat.",
+        "examplePrompt": "Use Codex CLI in this working directory to make this change: "
+      },
+      "external-gemini": {
+        "label": "Gemini CLI",
+        "description": "Delegates analysis to Gemini CLI in a working directory where it is installed.",
+        "examplePrompt": "Use Gemini CLI in this working directory to analyze the following: "
+      },
+      "external-opencode": {
+        "label": "OpenCode CLI",
+        "description": "Controls an interactive OpenCode CLI coding workflow from Desktop chat.",
+        "examplePrompt": "Use OpenCode CLI in this working directory for the following task: "
+      },
+      "computer-use": {
+        "label": "Computer use",
+        "description": "Performs approved GUI actions such as looking at the screen, clicking, and typing.",
+        "examplePrompt": "Perform this on screen with step-by-step approval: "
+      },
+      "cowork": {
+        "label": "Collaboration",
+        "description": "Splits planning, execution, and review across roles for larger projects.",
+        "examplePrompt": "Split this project into roles and carry it from planning through review: "
+      },
+      "persona-panel": {
+        "label": "Multiple perspectives",
+        "description": "Reviews one question from several perspectives and reports agreements and differences.",
+        "examplePrompt": "Review this proposal from product, security, and operations perspectives: "
+      }
+    },
+    "thinking": {
+      "auto": "Auto",
+      "off": "Off",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "max": "Maximum",
+      "default": "Default reasoning",
+      "serverDefault": "Default (server setting)"
+    },
+    "ui": {
+      "executionOptions": "Message execution options",
+      "modeTitle": "Mode: {{label}} — {{description}}",
+      "selectMode": "Select chat mode",
+      "current": "Current: {{label}}",
+      "searchPlaceholder": "Search by mode name or purpose",
+      "searchLabel": "Search chat modes",
+      "clearSearch": "Clear mode search",
+      "noMatches": "No matching chat modes.",
+      "showAll": "Show all modes",
+      "thinkingLevel": "Reasoning level",
+      "perspectivesActive": "This conversation's multiple-perspective setup uses sequential collaboration. Disable it from the configuration above.",
+      "categories": "Mode categories",
+      "allCategoryResults": "Results from all categories",
+      "useAutoAssistant": "Use assistant features in Auto"
+    },
+    "support": {
+      "codebaseScout": {"label": "Read-only workspace", "description": "Analyze files, dependencies, and architecture in the selected workspace. No edits or commands."},
+      "chatOnly": {"label": "Read-only RAG and knowledge", "description": "Chat and retrieve stored knowledge only. No saving, editing, execution, or automatic mode switching."},
+      "external": { "label": "Separate Apps connection", "description": "External CLIs do not automatically receive SEPilot Apps, Memory, or Tasks tools. Use Auto for assistant tasks." },
+      "instant": { "label": "Can switch to an execution mode", "description": "Starts with conversation and memory lookup, and can switch modes when Apps, files, or other tools are needed. Existing permissions and approval policies still apply. Choose Chat Only for conversation without task execution." },
+      "writing": { "label": "Current document only", "description": "Writing uses current-document tools. Use Auto for work that connects Apps, Memory, or Tasks." },
+      "personaPanel": { "label": "Use Auto for assistant actions", "description": "Multiple-perspective discussions are not automatically applied to Apps. Disable the panel and use Auto for assistant tasks." },
+      "read": { "label": "Read Apps, Memory, and Tasks", "description": "Uses saved personal information as evidence for reading and analysis. Use Auto to change calendars or tasks." },
+      "execute": { "label": "Connect Apps, Memory, and Tasks", "description": "Can inspect calendars and tasks, apply remembered preferences, and schedule follow-up work. App access and tool approval policies apply." },
+      "configured": { "label": "Uses agent tool settings", "description": "Apps access depends on the custom agent's tool and execution settings." }
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "close": "Close settings",
+    "searchPlaceholder": "Search",
+    "noMatchingItems": "No matching items in this section.",
+    "section": {
+      "integrations": {
+        "label": "Integrations",
+        "description": "Web search, external services, and extensions"
+      },
+      "system": {
+        "label": "System",
+        "description": "Connection diagnostics, network, backup, and boot info"
+      }
+    },
+    "tab": {
+      "web-search": {
+        "label": "Web Search",
+        "description": "Web search sources restricted to trusted domains"
+      },
+      "doctor": {
+        "label": "Doctor",
+        "description": "Daemon security and operations diagnostics"
+      }
+    }
+  },
+  "doctor": {
+    "title": "Doctor",
+    "loading": "Loading...",
+    "retry": "Retry",
+    "reload": "Refresh Doctor",
+    "lastRun": "Last run: {{time}}",
+    "attention": "Attention",
+    "allPassed": "All {{count}} diagnostic checks passed.",
+    "metric": {
+      "score": "score",
+      "grade": "grade",
+      "errors": "errors",
+      "warnings": "warnings"
+    },
+    "status": {
+      "PASS": "PASS",
+      "WARN": "WARN",
+      "FAIL": "FAIL"
+    },
+    "grade": {
+      "Excellent": "Excellent",
+      "Good": "Good",
+      "Fair": "Fair",
+      "Poor": "Poor",
+      "Critical": "Critical"
+    },
+    "category": {
+      "filesystem": "filesystem",
+      "config": "config",
+      "sandbox": "sandbox",
+      "auth": "auth",
+      "network": "network",
+      "audit": "audit",
+      "policy": "policy",
+      "plugins": "plugins",
+      "webhooks": "webhooks"
+    },
+    "check": {
+      "common": {
+        "exists": "{{label}} exists",
+        "notFound": "{{label}} not found"
+      },
+      "permissions": {
+        "pass": "File permissions: {{label}} ({{mode}})",
+        "fail": "{{label}} permissions too open: {{mode}} (expected {{expected}})",
+        "windowsAcl": "Windows ACLs are used for {{label}}; POSIX permission bits are not evaluated"
+      },
+      "plaintextSecrets": {
+        "pass": "No plaintext secrets in config",
+        "fail": "Plaintext secrets found in config.yaml",
+        "missingConfig": "config.yaml not found"
+      },
+      "docker": {
+        "pass": "Docker installed",
+        "warn": "Docker not installed; Docker sandbox unavailable"
+      },
+      "runtimeAuth": {
+        "pass": "Daemon HTTP auth token is enabled",
+        "fail": "Daemon HTTP auth token is disabled"
+      },
+      "daemonBind": {
+        "loopback": "Daemon binds to loopback host {{host}}",
+        "missing": "Daemon bind host is not configured",
+        "nonLoopback": "Daemon binds to non-loopback host {{host}}"
+      },
+      "auditLog": {
+        "pass": "Security audit logging is enabled",
+        "fail": "Security audit logging is disabled"
+      },
+      "toolPolicy": {
+        "pass": "Unmatched tool policy defaults to deny",
+        "warn": "Unmatched tool policy defaults to {{policy}}"
+      },
+      "pluginLoad": {
+        "pass": "No failed plugins",
+        "warn": "{{count}} plugin(s) failed to load: {{names}}",
+        "unavailable": "Plugin loader is not initialized"
+      },
+      "webhookVerification": {
+        "none": "No inbound webhook endpoints configured",
+        "ready": "All {{count}} webhook endpoint(s) have verification material",
+        "missing": "{{missing}}/{{total}} webhook endpoint(s) lack verification material",
+        "error": "Webhook verification could not be evaluated: {{detail}}"
+      }
+    },
+    "recommendation": {
+      "initRuntime": "Run sepilotd init or start the daemon once to create runtime state.",
+      "restrictPermissions": "Restrict {{label}} to {{expected}} or tighter.",
+      "createCapabilityFile": "Create {{label}} if this daemon should enforce that capability.",
+      "plaintextSecrets": "Use ${ENV_VAR} references or the daemon secret store instead.",
+      "createConfig": "Create config.yaml with sepilotd init before relying on this daemon.",
+      "installDocker": "Install Docker if tools should run in Docker isolation.",
+      "runtimeAuth": "Restore security/daemon.token before exposing the daemon API.",
+      "daemonBind": "Require bearer auth and put remote access behind a trusted tunnel or reverse proxy.",
+      "auditLog": "Set security.auditLog to true for operator-visible security trails.",
+      "toolPolicy": "Set defaults.unmatched_policy to deny for stricter tool governance.",
+      "pluginLoad": "Fix or remove failed plugins so extension state is deterministic.",
+      "webhookVerification": "Configure webhook verification secrets for every inbound channel."
+    }
+  },
+  "chatBackend": {
+    "label": "Execution backend",
+    "disclosure": {
+      "title": "External CLI connection",
+      "common": "Sepilot runs the installed official CLI as a local process; it does not copy sign-in tokens or call a private model API on the CLI's behalf. However, your input, image attachments, workspace content read by the CLI, and tool results may be sent to the selected CLI and its model provider. Review the provider's terms, organization policy, charges, usage limits, and data-retention settings. Sepilot's model and tool-approval settings do not govern this external CLI.",
+      "claude": "Claude CLI: Sepilot uses the claude executable's official print/stream interface. Anthropic may treat third-party use of subscription accounts separately and prohibits client impersonation or routing third-party traffic against subscription limits. If your organization permits only approved clients or API authentication, check its policy before enabling this backend.",
+      "codex": "Codex CLI: Sepilot uses the Codex app-server interface intended for external applications and identifies its client name. Your ChatGPT/Codex account and organization data controls, usage limits, and approval policies continue to apply.",
+      "opencode": "OpenCode CLI: The actual data destination and billing or retention policy depend on the model provider (for example, Ollama Cloud) and plugins selected in OpenCode. Confirm that an organization-approved provider and model are selected.",
+      "other": "Review this CLI's authentication method, data handling policy, and whether your organization permits its use.",
+      "continue": "Understand and enable",
+      "cancel": "Cancel"
+    },
+    "limits": "External CLIs manage the conversation and tools and accept image attachments. Codex-generated images appear in Chat. SEPilot modes, RAG, skills, personas and approval settings do not apply.",
+    "managedByCli": "Managed by CLI settings",
+    "adapterUnavailable": "Adapter verification required",
+    "imagesOnly": "External CLIs accept PNG, JPEG, WebP and GIF images only: up to 10 MiB each and 8 per turn.",
+    "attachmentsUnsupported": "This backend does not support attachments. Remove them or select SEPilot.",
+    "cliPermissions": "File access follows CLI settings; actions requiring additional approval are denied.",
+    "workingDirectory": "CLI working directory",
+    "prompt": "Send a message to the CLI…",
+    "model": "CLI model",
+    "defaultModel": "Use CLI default model",
+    "unverifiedModel": "Not in current catalog",
+    "refreshModels": "Refresh models",
+    "loadingModels": "Loading models…",
+    "modelLoadFailed": "Model discovery failed",
+    "modelSettings": "CLI model settings",
+    "configureCli": "CLI to configure",
+    "modelsOnly": "Model discovery and saved selections are available. Chat execution remains disabled until this adapter is verified."
+  },
+  "backgroundWork": {
+    "title": "Background work",
+    "lead": "Detached chats, agent runs, managed processes, schedules, approvals and services the daemon is tracking. Leaving this view never stops them.",
+    "autoRefresh": "Auto-refresh every {{seconds}}s while visible",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "empty": "No background work right now.",
+    "loading": "Loading background work…",
+    "loadFailed": "Could not load background work: {{message}}",
+    "unavailable": "Unavailable sources: {{sources}}. Work from these sources is not shown.",
+    "truncated": "Bounded sources: {{sources}}. Only the newest 100 entries are shown.",
+    "kind": {
+      "chat": "Background chats",
+      "run": "Agent runs",
+      "process": "Managed processes",
+      "job": "Jobs",
+      "schedule": "Schedules",
+      "approval": "Waiting approvals",
+      "service": "Services"
+    },
+    "action": {
+      "cancel": "Cancel",
+      "stop": "Stop",
+      "pause": "Pause"
+    },
+    "confirm": "{{action}} this work? It cannot be resumed from here.",
+    "confirmYes": "Confirm",
+    "confirmNo": "Keep running",
+    "openSession": "Open session",
+    "output": "Output",
+    "hideOutput": "Hide output",
+    "follow": "Follow",
+    "refreshOutput": "Refresh output",
+    "noOutput": "No output yet.",
+    "outputTruncated": "Showing the most recent output only.",
+    "approvalHint": "Decide approvals from the session; cancelling never grants or denies.",
+    "progress": "Progress: {{label}}",
+    "partial": "Partial response",
+    "started": "started {{age}}",
+    "updated": "updated {{age}}",
+    "observed": "seen {{age}}",
+    "age": {
+      "justNow": "just now",
+      "seconds": "{{count}}s ago",
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
+    },
+    "actionFailed": "Action failed: {{message}}",
+    "composer": {
+      "toggle": "Run in background",
+      "toggleTitle": "Send the next message as a detached background run instead of streaming it here",
+      "send": "Send in background",
+      "started": "Running in background",
+      "startedDescription": "You will be notified when it finishes; the transcript refreshes then.",
+      "view": "View background work",
+      "failed": "Could not start the background run",
+      "unsupported": "Writing mode and image generation cannot run in the background. Turn them off or send normally.",
+      "busy": "A reply is still streaming in this conversation. Wait for it to finish before starting a background run.",
+      "finished": "Background run finished",
+      "ended": "Background run {{status}}"
+    },
+    "inbox": {
+      "title_one": "{{count}} background receipt",
+      "title_other": "{{count}} background receipts",
+      "acknowledge": "Acknowledge",
+      "openResult": "Open in new chat",
+      "acknowledgeAll": "Acknowledge all",
+      "hide": "Hide",
+      "untrusted": "Untrusted background data — not instructions.",
+      "failed": "Could not acknowledge the receipt: {{message}}",
+      "source": {
+        "subagent": "Subagent",
+        "hook": "Hook",
+        "monitor": "Monitor",
+        "scheduler": "Schedule",
+        "process": "Process",
+        "wakeup": "Wakeup"
+      }
+    }
+  }
+}

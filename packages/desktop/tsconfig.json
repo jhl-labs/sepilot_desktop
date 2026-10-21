@@ -1,0 +1,57 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "outDir": "./out",
+    "jsx": "preserve",
+    "paths": {
+      "@sepilotd/core": [
+        "sepilot-cli/packages/core/src/index.ts"
+      ],
+      "@sepilotd/core/*": [
+        "sepilot-cli/packages/core/src/*"
+      ],
+      "@sepilotd/presentation": [
+        "sepilot-cli/packages/presentation/src/index.ts"
+      ],
+      "@sepilotd/presentation/*": [
+        "sepilot-cli/packages/presentation/src/*"
+      ],
+      "@sepilotd/api-client": [
+        "sepilot-cli/packages/api-client/src/index.ts"
+      ],
+      "@sepilotd/api-client/*": [
+        "sepilot-cli/packages/api-client/src/*"
+      ],
+      "@/*": [
+        "packages/desktop/*"
+      ]
+    },
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "__tests__/**/*",
+    "app/**/*",
+    "components/**/*",
+    "electron/**/*",
+    "lib/**/*",
+    "src/**/*",
+    "plotly-shim.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

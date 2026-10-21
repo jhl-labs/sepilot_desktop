@@ -1,0 +1,3 @@
+[submodule "sepilot-cli"]
+	path = sepilot-cli
+	url = https://github.com/jhl-labs/sepilot-cli.git

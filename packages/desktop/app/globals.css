@@ -1,0 +1,184 @@
+@import './interactions.css';
+
+@import '@xterm/xterm/css/xterm.css';
+
+@import 'github-markdown-css/github-markdown.css';
+@import 'highlight.js/styles/github.css';
+
+@tailwind components;
+@tailwind utilities;
+
+@import 'highlight.js/styles/github-dark.css' (prefers-color-scheme: dark);
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --ring: 221.2 83.2% 53.3%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --ring: 224.3 76.3% 48%;
+}
+
+html,
+body,
+#__next {
+  height: 100%;
+}
+
+html {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+  font-family: 'Pretendard Variable', 'SUIT Variable', 'Inter', 'Segoe UI', sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+select,
+select option {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+::selection {
+  background-color: hsl(var(--primary) / 0.35);
+  color: hsl(var(--foreground));
+}
+.dark ::selection {
+  background-color: hsl(var(--primary) / 0.45);
+  color: hsl(var(--foreground));
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+.dialog-scroll-region {
+  scrollbar-width: auto;
+  scrollbar-color:
+    hsl(var(--muted-foreground) / 0.68)
+    hsl(var(--muted) / 0.55);
+}
+
+.dialog-scroll-region::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.dialog-scroll-region::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.55);
+}
+
+.dialog-scroll-region::-webkit-scrollbar-thumb {
+  min-height: 36px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: hsl(var(--muted-foreground) / 0.68);
+  background-clip: padding-box;
+}
+
+.dialog-scroll-region::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.86);
+  background-clip: padding-box;
+}
+
+[data-settings-density='compact']
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+[data-settings-density='compact'] select {
+  height: 2rem;
+  min-height: 2rem;
+  font-size: 0.75rem;
+}
+
+[data-settings-density='compact'] textarea {
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.shell-terminal-host .xterm {
+  height: 100%;
+  padding: 12px;
+}
+
+.shell-terminal-host .xterm-viewport,
+.shell-terminal-host .xterm-screen {
+  background-color: transparent !important;
+}
+
+.workspace-sidebar {
+  background-color: color-mix(in srgb, hsl(var(--muted)) 75%, hsl(var(--background)));
+}
+
+.workspace-composer-panel {
+  background-color: color-mix(in srgb, hsl(var(--muted)) 60%, hsl(var(--background)));
+  box-shadow: inset 0 1px 0 hsl(var(--background) / 0.5);
+}

@@ -1,0 +1,160 @@
+appId: com.sepilot.desktop
+productName: sepilotd
+copyright: Copyright © 2026 JHL Labs
+directories:
+  app: .electron-builder/app
+  buildResources: build
+  output: release
+compression: maximum
+electronLanguages:
+  - en-US
+  - ko
+files:
+  - out/**/*
+  - package.json
+  - '!**/release/**'
+  - '!**/release-*/**'
+  - '!**/.electron-builder/**'
+  - '!**/.turbo/**'
+  - '!node_modules/@sepilotd/gateway/**'
+  - '!**/src/**/__tests__/**'
+  - '!**/*.{test,spec}.*'
+  - '!**/*.map'
+  - '!**/*.pdb'
+  - '!**/*.tsbuildinfo'
+  - '!**/*.{d.ts,d.cts,d.mts}'
+  - '!**/*.{ts,tsx,cts,mts}'
+  - '!**/*.{flow,flow.js}'
+  - '!**/*.{coffee,litcoffee}'
+  - '!**/{LICENSE,LICENCE,CHANGELOG,HISTORY,CONTRIBUTING,AUTHORS,NOTICE,SECURITY}*'
+  - '!**/{readme,README,Readme}*'
+  - '!**/*.markdown'
+  - '!**/*.md'
+  - '!**/{examples,demos,docs,__tests__,benchmarks}/**'
+  - '!**/node_modules/ssh2/test/**'
+  - '!**/node_modules/{tar-fs,thread-stream}/test/**'
+  - '!**/.github/**'
+  - '!**/.circleci/**'
+  - '!**/.vscode/**'
+  - '!**/.idea/**'
+  - '!**/{.eslintrc*,.eslintignore,.prettierrc*,.prettierignore,.editorconfig,.npmignore,.travis.yml,.gitlab-ci.yml,.npmrc,.yarnrc,.babelrc*,tsconfig*.json,jest.config*,vitest.config*,tsup.config*,rollup.config*,vite.config*,webpack.config*}'
+  - '!**/{yarn.lock,package-lock.json,pnpm-lock.yaml}'
+  - '!**/.env'
+  - '!**/.env.*'
+  - '!**/*.token'
+  - '!**/credentials.json'
+  - '!**/credentials*.json'
+  - '!**/service-account*.json'
+  - '!**/id_rsa'
+  - '!**/id_ed25519'
+  - '!**/id_ecdsa'
+  - '!**/id_dsa'
+  - '!**/*.pem'
+  - '!**/*.p12'
+  - '!**/*.pfx'
+  - '!**/*.keystore'
+  - '!**/*.jks'
+asar: true
+afterPack: 'scripts/after-pack.mjs'
+npmRebuild: false
+asarUnpack:
+  - node_modules/**/*.node
+extraResources:
+  - from: 'build/icon.png'
+    to: 'icon.png'
+  - from: '.electron-builder/daemon'
+    to: 'daemon'
+    filter:
+      - '**/*'
+      - '!**/*.map'
+      - '!**/*.pdb'
+      - '!**/*.tsbuildinfo'
+      - '!**/*.{d.ts,d.cts,d.mts}'
+      - '!**/*.{ts,tsx,cts,mts}'
+      - '!**/*.{flow,flow.js,coffee,litcoffee}'
+      - '!**/{LICENSE,LICENCE,CHANGELOG,HISTORY,CONTRIBUTING,AUTHORS,NOTICE,SECURITY}*'
+      - '!**/{readme,README,Readme}*'
+      - '!**/*.{md,markdown}'
+      - '!**/{examples,demos,docs,__tests__,benchmarks}/**'
+      - '!**/node_modules/ssh2/test/**'
+      - '!**/node_modules/{tar-fs,thread-stream}/test/**'
+      - '!**/{.circleci,.github,.vscode,.idea}/**'
+      - '!**/{.eslintrc*,.prettierrc*,.editorconfig,.npmignore,.babelrc*,tsconfig*.json,jest.config*,vitest.config*,tsup.config*,rollup.config*,vite.config*}'
+      - '!**/{yarn.lock,package-lock.json,pnpm-lock.yaml}'
+      - '!**/.env'
+      - '!**/.env.*'
+      - '!**/*.token'
+      - '!**/credentials.json'
+      - '!**/credentials*.json'
+      - '!**/service-account*.json'
+      - '!**/id_rsa'
+      - '!**/id_ed25519'
+      - '!**/id_ecdsa'
+      - '!**/id_dsa'
+      - '!**/*.pem'
+      - '!**/*.p12'
+      - '!**/*.pfx'
+      - '!**/*.keystore'
+      - '!**/*.jks'
+  - from: '.electron-builder/gateway'
+    to: 'gateway'
+    filter:
+      - '**/*'
+      - '!**/*.map'
+      - '!**/*.pdb'
+      - '!**/*.tsbuildinfo'
+      - '!**/*.{d.ts,d.cts,d.mts}'
+      - '!**/*.{ts,tsx,cts,mts}'
+      - '!**/*.{flow,flow.js,coffee,litcoffee}'
+      - '!**/{LICENSE,LICENCE,CHANGELOG,HISTORY,CONTRIBUTING,AUTHORS,NOTICE,SECURITY}*'
+      - '!**/{readme,README,Readme}*'
+      - '!**/*.{md,markdown}'
+      - '!**/{examples,demos,docs,__tests__,benchmarks}/**'
+      - '!**/node_modules/ssh2/test/**'
+      - '!**/node_modules/{tar-fs,thread-stream}/test/**'
+      - '!**/{.circleci,.github,.vscode,.idea}/**'
+      - '!**/{.eslintrc*,.prettierrc*,.editorconfig,.npmignore,.babelrc*,tsconfig*.json,jest.config*,vitest.config*,tsup.config*,rollup.config*,vite.config*}'
+      - '!**/{yarn.lock,package-lock.json,pnpm-lock.yaml}'
+      - '!**/.env'
+      - '!**/.env.*'
+      - '!**/*.token'
+      - '!**/credentials.json'
+      - '!**/credentials*.json'
+      - '!**/service-account*.json'
+      - '!**/id_rsa'
+      - '!**/id_ed25519'
+      - '!**/id_ecdsa'
+      - '!**/id_dsa'
+      - '!**/*.pem'
+      - '!**/*.p12'
+      - '!**/*.pfx'
+      - '!**/*.keystore'
+      - '!**/*.jks'
+mac:
+  target:
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.developer-tools
+  identity: null
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Development
+  maintainer: jhl-labs
+win:
+  target:
+    - portable
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  signAndEditExecutable: false
+portable:
+  artifactName: sepilot-desktop.${ext}
+  requestExecutionLevel: user
+  splashImage: build/portable-splash.bmp
+  unpackDirName: sepilot-desktop-portable
+publish:
+  provider: github
+  owner: jhl-labs
+  repo: sepilot_desktop

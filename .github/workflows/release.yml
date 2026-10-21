@@ -1,0 +1,143 @@
+name: Release desktop
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: Build Linux AppImage
+    runs-on: ubuntu-latest
+    env:
+      # The daemon's declaration build exceeds the default worker heap on
+      # 7 GB macOS runners.
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.0
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Package
+        run: |
+          pnpm --dir packages/desktop run stage:app
+          pnpm --dir packages/desktop exec electron-builder --linux AppImage --publish never
+      - name: Verify artifacts
+        run: |
+          node scripts/verify-no-source-leak.mjs packages/desktop/release
+          node scripts/scan-desktop-artifacts.mjs packages/desktop/release
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.0
+        with:
+          name: desktop-linux
+          path: packages/desktop/release/*.AppImage
+          if-no-files-found: error
+          retention-days: 1
+
+  macos:
+    name: Build macOS ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: macos-15-intel
+          - arch: arm64
+            runner: macos-latest
+    runs-on: ${{ matrix.runner }}
+    env:
+      # The daemon's declaration build exceeds the default worker heap on
+      # 7 GB macOS runners.
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.0
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Package
+        env:
+          npm_config_target_arch: ${{ matrix.arch }}
+        run: |
+          pnpm --dir packages/desktop run stage:app
+          pnpm --dir packages/desktop exec electron-builder --mac zip --${{ matrix.arch }} --publish never
+      - name: Verify artifacts
+        run: |
+          node scripts/verify-no-source-leak.mjs packages/desktop/release
+          node scripts/scan-desktop-artifacts.mjs packages/desktop/release
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.0
+        with:
+          name: desktop-mac-${{ matrix.arch }}
+          path: packages/desktop/release/*-mac.zip
+          if-no-files-found: error
+          retention-days: 1
+
+  windows:
+    name: Build Windows portable exe
+    runs-on: windows-latest
+    env:
+      # The daemon's declaration build exceeds the default worker heap on
+      # 7 GB macOS runners.
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.0
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Build launcher
+        run: cargo build --locked --release --manifest-path tools/launcher/Cargo.toml
+      - name: Package
+        run: pnpm --dir packages/desktop run dist:win
+      - name: Smoke test packaged runtime
+        run: pnpm --dir packages/desktop run smoke:packaged:win
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.0
+        with:
+          name: desktop-windows
+          path: packages/desktop/release/sepilot-desktop.exe
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish GitHub Release
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.0
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Create release and upload assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" release-assets/* --repo "$GITHUB_REPOSITORY" --generate-notes

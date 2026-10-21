@@ -1,0 +1,27 @@
+node_modules/
+.pnpm-store/
+.npmrc
+dist/
+out/
+.next/
+next-env.d.ts
+.turbo/
+release/
+.electron-builder/
+target/
+coverage/
+*.tsbuildinfo
+*.log
+
+# Local secrets and runtime state never belong in this repository.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.token
+secrets/
+service-account*.json

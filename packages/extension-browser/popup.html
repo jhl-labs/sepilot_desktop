@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>SEPilot Browser</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <h1>SEPilot Browser</h1>
+    <p>현재 탭 하나를 Desktop과 공유합니다. 연결 중인 화면이 Desktop에 표시됩니다.</p>
+    <form id="connect">
+      <label>로컬 daemon 주소<input id="origin" value="http://127.0.0.1:17600" required /></label>
+      <label
+        >브라우저 이름<input id="label" value="Chrome / Edge" maxlength="100" required
+      /></label>
+      <label
+        >Desktop의 브라우저 연결 토큰<input id="token" type="password" autocomplete="off" required
+      /></label>
+      <button type="submit">이 탭 연결</button>
+    </form>
+    <div id="controls" hidden>
+      <button id="pause">직접 조작하기</button><button id="stop">연결 해제</button>
+    </div>
+    <p id="status" role="status" aria-live="polite"></p>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+# Auto detect text files
+* text=auto
+.gitattributes text eol=lf
+
+# Source
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.patch text eol=lf
+
+# Binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+
+# Lock files
+pnpm-lock.yaml -diff linguist-generated=true
+
+# Reviewed, generated third-party browser distributions. Release hardening
+# verifies their exact SHA-256 values before they can use the vendor fast path.
+packages/desktop/public/vendor/mermaid.min.js -diff linguist-generated=true
