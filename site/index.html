@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sepilot — 로컬 AI 에이전트 CLI와 데스크톱</title>
-<meta name="description" content="Sepilot은 내 컴퓨터에서 실행되는 데몬 sepilotd 위에 터미널 CLI와 데스크톱 앱을 올린 로컬 우선 AI 에이전트입니다.">
-<meta property="og:title" content="Sepilot — 로컬 AI 에이전트 CLI와 데스크톱">
-<meta property="og:description" content="한 데몬, 두 개의 화면. 에이전트에게 얼마나 맡길지 키 하나로 정합니다.">
+<title>Sepilot Desktop — 로컬 AI 에이전트 데스크톱 앱</title>
+<meta name="description" content="Sepilot Desktop은 내 컴퓨터의 sepilotd 데몬과 함께 동작하는 AI 작업 공간입니다. 채팅, 코드 분석, 비서와 내장 앱, 도구 관리를 한 앱에서 다룹니다.">
+<meta property="og:title" content="Sepilot Desktop">
+<meta property="og:description" content="대화하고, 일정을 챙기고, 코드를 살피는 로컬 AI 작업 공간.">
+<meta property="og:image" content="img/chat-plan.webp">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2313202E'/%3E%3Cpath d='M9 21l6-5-6-5' stroke='%23E39B12' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M17 22h7' stroke='%23F4F7FA' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,192 +23,129 @@
   --amber: #C98205;
   --amber-glow: #E39B12;
   --teal: #0D7A72;
-  --rose: #B23E39;
-  --term: #101A25;
-  --term-text: #DCE6EE;
-  --term-dim: #7F91A3;
+  --frame: #FFFFFF;
   --display: "Bricolage Grotesque", "IBM Plex Sans KR", system-ui, sans-serif;
   --body: "IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --radius: 10px;
-  --max: 1160px;
+  --max: 1180px;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --sky: #0E1620;
-    --paper: #16212D;
-    --ink: #E7EEF4;
-    --muted: #9AABBB;
-    --line: #2A3947;
-    --amber: #E8A532;
-    --teal: #3CB8AD;
-    --rose: #E2726B;
-    --term: #0A1118;
-  }
+  :root { --sky: #0E1620; --paper: #16212D; --ink: #E7EEF4; --muted: #9AABBB; --line: #2A3947; --amber: #E8A532; --teal: #3CB8AD; --frame: #1B2734; }
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body {
-  margin: 0;
-  background: var(--sky);
-  color: var(--ink);
-  font: 400 16px/1.7 var(--body);
-  -webkit-font-smoothing: antialiased;
-  word-break: keep-all;
-}
+body { margin: 0; background: var(--sky); color: var(--ink); font: 400 16px/1.7 var(--body); -webkit-font-smoothing: antialiased; word-break: keep-all; }
 a { color: inherit; }
+img { display: block; max-width: 100%; height: auto; }
 :focus-visible { outline: 2px solid var(--amber-glow); outline-offset: 3px; border-radius: 4px; }
-code, kbd, .mono { font-family: var(--mono); }
+code, kbd { font-family: var(--mono); font-size: .92em; }
 .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
 
 .top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--sky) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
 .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 16px; }
 .mark { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 800 21px/1 var(--display); letter-spacing: -0.02em; }
 .mark svg { width: 26px; height: 26px; }
+.mark small { font: 500 13px/1 var(--mono); color: var(--muted); letter-spacing: 0; }
 .top nav { display: flex; gap: 22px; font-size: 14px; font-weight: 500; }
 .top nav a { text-decoration: none; color: var(--muted); }
 .top nav a:hover { color: var(--ink); }
 
-.hero { padding: 72px 0 88px; }
-.hero .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 56px; align-items: center; }
 .eyebrow { font: 500 13px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--amber); margin: 0 0 18px; }
-h1 { font: 700 clamp(34px, 4.6vw, 54px)/1.18 var(--body); letter-spacing: -0.03em; margin: 0 0 22px; }
+h1 { font: 700 clamp(34px, 4.6vw, 56px)/1.16 var(--body); letter-spacing: -0.03em; margin: 0 0 20px; }
 h1 em { font-style: normal; color: var(--amber); }
-.lede { font-size: 18px; color: var(--muted); max-width: 34em; margin: 0 0 32px; }
+h2 { font: 700 clamp(26px, 3vw, 38px)/1.24 var(--body); letter-spacing: -0.025em; margin: 0 0 14px; }
+h3 { margin: 0 0 8px; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.lede { font-size: 18px; color: var(--muted); max-width: 40em; margin: 0 0 30px; }
 .lede b { color: var(--ink); font-weight: 600; }
-.cta { display: flex; flex-wrap: wrap; gap: 12px; }
 .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 15px; text-decoration: none; border: 1px solid var(--ink); }
 .btn.primary { background: var(--ink); color: var(--sky); }
-.btn.primary:hover { background: color-mix(in srgb, var(--ink) 86%, var(--amber)); }
 .btn.ghost:hover { background: var(--paper); }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; }
 
-.term { background: var(--term); color: var(--term-text); border-radius: 14px; box-shadow: 0 30px 60px -30px rgba(10, 20, 30, 0.55), 0 0 0 1px rgba(255,255,255,0.04) inset; font: 400 14px/1.65 var(--mono); overflow: hidden; }
-.term-bar { display: flex; align-items: center; gap: 7px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); color: var(--term-dim); font-size: 12px; }
-.term-bar i { width: 11px; height: 11px; border-radius: 50%; background: #2A3A4A; display: block; }
-.term-bar span { margin-left: 10px; }
-.term-body { padding: 18px 20px 6px; }
-.term-body p { margin: 0 0 4px; white-space: pre-wrap; }
-.prompt { color: var(--amber-glow); }
-.dim { color: var(--term-dim); }
-.act { display: grid; grid-template-columns: 1.3em 1fr auto; gap: 8px; align-items: baseline; padding: 5px 0; border-top: 1px dashed rgba(255,255,255,0.06); }
-.act:first-of-type { border-top: 0; }
-.verdict { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 4px; transition: background .25s, color .25s; }
-.v-auto { background: rgba(60, 184, 173, 0.16); color: #6FD6CC; }
-.v-ask { background: rgba(227, 155, 18, 0.16); color: #F2B94B; }
-.v-deny { background: rgba(226, 114, 107, 0.16); color: #F0948E; }
-.status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.025); font-size: 13px; }
-.mode-chip { appearance: none; border: 1px solid currentColor; background: transparent; font: 600 13px/1 var(--mono); padding: 7px 10px; border-radius: 6px; cursor: pointer; color: #F2B94B; transition: color .25s; }
-.mode-chip[data-mode="accept-edits"] { color: #6FD6CC; }
-.mode-chip[data-mode="workspace-write"] { color: #F2B94B; }
-.mode-chip[data-mode="readonly"] { color: #8DB8F0; }
-.mode-chip[data-mode="supervised"] { color: var(--term-text); }
-.mode-desc { color: var(--term-dim); flex: 1; }
-.hint { color: var(--term-dim); font-size: 12px; white-space: nowrap; }
-kbd { display: inline-block; padding: 1px 6px; border: 1px solid rgba(255,255,255,0.22); border-bottom-width: 2px; border-radius: 4px; font-size: 11px; color: var(--term-text); }
-.term-note { margin: 14px 2px 0; font-size: 13px; color: var(--muted); }
-.term-note kbd { color: var(--ink); border-color: var(--line); }
+.hero { padding: 64px 0 40px; text-align: center; }
+.hero .lede { margin-left: auto; margin-right: auto; }
+.hero .cta { justify-content: center; }
+.window { background: var(--frame); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 40px 80px -40px rgba(10, 25, 40, 0.45); margin: 0; }
+.window .bar { height: 30px; display: flex; align-items: center; gap: 7px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--paper); }
+.window .bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); display: block; }
+.window .bar span { margin-left: 8px; font: 500 12px/1 var(--mono); color: var(--muted); }
+.hero .window { margin: 48px auto 0; max-width: 1080px; }
+.caption { font-size: 14px; color: var(--muted); margin: 14px 0 0; }
 
-section { padding: 88px 0; }
-.sec-head { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 48px; align-items: end; margin-bottom: 44px; }
-h2 { font: 700 clamp(28px, 3.3vw, 40px)/1.22 var(--body); letter-spacing: -0.025em; margin: 0; }
-.sec-head p { margin: 0; color: var(--muted); font-size: 17px; }
-.tag { font: 800 15px/1 var(--display); letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+section { padding: 84px 0; }
+.alt { background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.tag { font: 800 15px/1 var(--display); display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .tag::before { content: ""; width: 18px; height: 3px; background: var(--amber); border-radius: 2px; }
 
-.arch { background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.flow { display: grid; grid-template-columns: 1fr auto 1.25fr auto 1fr; gap: 18px; align-items: center; }
-.node { border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; background: var(--sky); }
-.node h3 { margin: 0 0 6px; font: 700 20px/1.2 var(--display); }
-.node p { margin: 0; font-size: 14px; color: var(--muted); }
-.node.core { border: 2px solid var(--ink); background: var(--paper); }
-.node.core h3 { font-size: 24px; }
-.node.core .mono { font-size: 12.5px; color: var(--amber); display: block; margin-top: 10px; }
-.stack { display: grid; gap: 12px; }
-.wire { font: 500 12px/1.3 var(--mono); color: var(--muted); text-align: center; }
-.wire::before { content: ""; display: block; height: 2px; width: 56px; margin: 0 auto 6px; background: repeating-linear-gradient(90deg, var(--amber) 0 6px, transparent 6px 10px); }
-.right .node { padding: 14px 18px; }
-.right .node p { font-size: 13px; }
+.feature { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 52px; align-items: center; }
+.feature.flip { grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr); }
+.feature.flip .copy { order: 2; }
+.feature + .feature { margin-top: 96px; }
+.copy p { color: var(--muted); margin: 0 0 16px; }
+.points { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.points li { padding-left: 22px; position: relative; font-size: 15px; }
+.points li::before { content: ""; position: absolute; left: 2px; top: .75em; width: 10px; height: 2px; background: var(--amber); }
+.points b { font-weight: 600; }
 
-.tool { scroll-margin-top: 70px; }
-.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.cell { background: var(--paper); padding: 26px 24px 24px; display: flex; flex-direction: column; gap: 10px; }
-.cell h3 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
-.cell p { margin: 0; color: var(--muted); font-size: 15px; }
-.cell pre { margin: auto 0 0; padding: 10px 12px; background: var(--sky); border-radius: 6px; font: 400 12.5px/1.6 var(--mono); overflow-x: auto; color: var(--ink); }
-.cell .cmt { color: var(--muted); }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
-.chips span { font: 500 12px/1 var(--mono); padding: 6px 8px; border-radius: 5px; background: var(--sky); color: var(--ink); }
+.shared { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: center; }
+.term-mini { background: #0F1720; color: #DCE6EE; border-radius: 10px; padding: 16px 18px; font: 400 13px/1.7 var(--mono); overflow-x: auto; white-space: pre; }
+.term-mini .p { color: #7FD3E6; }
+.term-mini .d { color: #7F91A3; }
 
-.daemon { background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.spec { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 56px; }
-.row { display: grid; grid-template-columns: 9.5em 1fr; gap: 20px; padding: 18px 0; border-top: 1px solid var(--line); }
-.row dt { font-weight: 700; }
-.row dd { margin: 0; color: var(--muted); font-size: 15px; }
+.apps-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 28px 0 14px; }
+.apps-tabs button { appearance: none; border: 1px solid var(--line); background: var(--frame); color: var(--muted); font: 600 14px/1 var(--body); padding: 9px 14px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.apps-tabs button::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--dot, var(--amber)); }
+.apps-tabs button[aria-selected="true"] { background: var(--ink); color: var(--sky); border-color: var(--ink); }
+.apps-desc { color: var(--muted); margin: 0 0 18px; min-height: 1.7em; }
 
-.install .panes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-.pane { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; }
-.pane h3 { margin: 0 0 4px; font: 700 22px/1.2 var(--display); }
-.pane > p { margin: 0 0 18px; color: var(--muted); font-size: 15px; }
-.tabs { display: flex; gap: 4px; margin-bottom: 10px; }
-.tabs button { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--muted); font: 600 13px/1 var(--body); padding: 8px 12px; border-radius: 6px; cursor: pointer; }
-.tabs button[aria-selected="true"] { background: var(--ink); color: var(--sky); border-color: var(--ink); }
-.cmd { display: flex; align-items: center; gap: 10px; background: var(--term); color: var(--term-text); border-radius: 8px; padding: 10px 10px 10px 16px; font: 400 13px/1.6 var(--mono); }
-.cmd[hidden] { display: none; }
-.cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: pre; padding: 4px 0; }
-.copy { flex: none; appearance: none; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: var(--term-text); font: 600 12px/1 var(--body); padding: 6px 9px; border-radius: 5px; cursor: pointer; }
-.pane small { display: block; margin-top: 12px; color: var(--muted); font-size: 13px; }
-.dl { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.dl a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; background: var(--sky); }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-top: 28px; }
+.cell { background: var(--frame); padding: 22px 22px 20px; }
+.cell h3 { font-size: 16px; }
+.cell p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+.duo { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 28px; align-items: center; margin-top: 56px; }
+
+.dl { list-style: none; margin: 24px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.dl a { display: flex; flex-direction: column; gap: 6px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; text-decoration: none; background: var(--frame); height: 100%; }
 .dl a:hover { border-color: var(--ink); }
-.dl b { font-weight: 600; }
-.dl span { font: 400 12.5px/1 var(--mono); color: var(--muted); }
+.dl b { font-size: 16px; }
+.dl span { font: 400 12.5px/1.4 var(--mono); color: var(--muted); }
+.note { font-size: 14px; color: var(--muted); margin-top: 16px; }
+.cmd { background: #0F1720; color: #DCE6EE; border-radius: 8px; padding: 14px 16px; font: 400 13px/1.6 var(--mono); overflow-x: auto; white-space: pre; margin: 12px 0 0; }
 
 footer { padding: 40px 0 56px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
 footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
-footer a { color: var(--ink); }
 
-@media (prefers-reduced-motion: no-preference) {
-  .hero .copyblock > * { animation: rise .7s cubic-bezier(.2,.7,.2,1) both; }
-  .hero .copyblock > *:nth-child(2) { animation-delay: .06s; }
-  .hero .copyblock > *:nth-child(3) { animation-delay: .12s; }
-  .hero .copyblock > *:nth-child(4) { animation-delay: .18s; }
-  .term { animation: rise .8s .15s cubic-bezier(.2,.7,.2,1) both; }
-  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-}
 @media (max-width: 960px) {
-  .hero .wrap, .sec-head, .install .panes, .spec { grid-template-columns: minmax(0, 1fr); }
-  .hero .wrap { gap: 40px; }
-  .sec-head { gap: 14px; }
-  .flow { grid-template-columns: minmax(0, 1fr); }
-  .wire::before { width: 2px; height: 26px; background: repeating-linear-gradient(180deg, var(--amber) 0 6px, transparent 6px 10px); }
+  .feature, .feature.flip, .shared, .duo { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .feature.flip .copy { order: 0; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
   .wrap { padding: 0 16px; }
-  .top nav a:not(.gh) { display: none; }
-  .hero { padding: 48px 0 64px; }
-  section { padding: 64px 0; }
-  .grid { grid-template-columns: minmax(0, 1fr); }
-  .row { grid-template-columns: 1fr; gap: 4px; }
-  .status { flex-wrap: wrap; }
-  .hint { display: none; }
-  .term { font-size: 12.5px; }
+  .top nav a:not(.keep) { display: none; }
+  .hero { padding: 44px 0 24px; }
+  section { padding: 60px 0; }
+  .grid, .dl { grid-template-columns: minmax(0, 1fr); }
+  .feature + .feature { margin-top: 64px; }
 }
 </style>
 </head>
 <body>
 <header class="top">
   <div class="wrap">
-    <a class="mark" href="#top" aria-label="Sepilot 처음으로">
+    <a class="mark" href="#top" aria-label="Sepilot Desktop 처음으로">
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="currentColor"/><path d="M9 21l6-5-6-5" stroke="#E39B12" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 22h7" style="stroke:var(--sky)" stroke-width="3" stroke-linecap="round"/></svg>
-      sepilot
+      sepilot <small>desktop</small>
     </a>
     <nav aria-label="주요 메뉴">
-      <a href="#cli">CLI</a>
-      <a href="#desktop">Desktop</a>
-      <a href="#daemon">데몬</a>
-      <a href="#install">설치</a>
-      <a class="gh" href="https://github.com/jhl-labs/sepilot-cli">GitHub</a>
+      <a href="#chat">대화</a>
+      <a href="#assistant">비서와 앱</a>
+      <a href="#tools">도구</a>
+      <a href="#download">다운로드</a>
+      <a class="keep" href="https://jhl-labs.github.io/sepilot-cli/">CLI</a>
     </nav>
   </div>
 </header>
@@ -215,197 +153,201 @@ footer a { color: var(--ink); }
 <main id="top">
   <section class="hero" aria-labelledby="hero-title">
     <div class="wrap">
-      <div class="copyblock">
-        <p class="eyebrow">로컬 우선 AI 에이전트</p>
-        <h1 id="hero-title">에이전트에게 얼마나 맡길지, <em>키 하나</em>로 정합니다.</h1>
-        <p class="lede">Sepilot은 내 컴퓨터에서 실행되는 데몬 <b>sepilotd</b> 위에 터미널 <b>CLI</b>와 <b>데스크톱 앱</b>을 올린 AI 에이전트입니다. 세션, 도구, 승인, 메모리는 데몬 하나가 관리하고, 두 화면은 같은 작업을 이어서 다룹니다.</p>
-        <div class="cta">
-          <a class="btn primary" href="#install">설치하기</a>
-          <a class="btn ghost" href="https://github.com/jhl-labs/sepilot-cli/releases/latest">최신 릴리스</a>
-        </div>
+      <p class="eyebrow">로컬 우선 AI 작업 공간</p>
+      <h1 id="hero-title">대화하고, 일정을 챙기고,<br><em>코드를 살피는</em> 데스크톱 앱</h1>
+      <p class="lede">Sepilot Desktop은 내 컴퓨터에서 도는 데몬 <b>sepilotd</b>와 함께 동작합니다. 채팅, 코드 분석, 개인 비서, 캘린더와 칸반 같은 내장 앱, 도구와 확장 관리를 한 창에서 다룹니다.</p>
+      <div class="cta">
+        <a class="btn primary" href="#download">다운로드</a>
+        <a class="btn ghost" href="https://github.com/jhl-labs/sepilot_desktop">GitHub</a>
       </div>
+      <figure class="window">
+        <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>Sepilot Desktop</span></div>
+        <img src="img/chat-plan.webp" width="1440" height="900" alt="채팅 화면. 왼쪽에 대화 목록이 있고, 오른쪽에 스프린트 계획 초안이 목표, 작업 표, 진행 순서, 위험 요소 표로 정리되어 있다.">
+      </figure>
+      <p class="caption">스프린트 계획을 부탁한 대화. 표와 목록이 바로 정리되고, 아래 입력창에서 모델·권한·작업 폴더를 고릅니다.</p>
+    </div>
+  </section>
 
+  <section class="alt" id="shared" aria-labelledby="shared-title">
+    <div class="wrap shared">
+      <div class="copy">
+        <div class="tag">하나의 데몬</div>
+        <h2 id="shared-title">터미널에서 시작한 대화를 앱에서 이어 갑니다</h2>
+        <p>CLI와 데스크톱은 같은 컴퓨터의 sepilotd 하나를 함께 씁니다. 세션, 승인 기록, 메모리, 예약 작업이 한곳에 쌓이므로 어느 화면에서 시작했든 다른 화면에서 그대로 이어집니다.</p>
+        <ul class="points">
+          <li>창을 닫아도 트레이와 데몬은 계속 실행되어 예약 작업이 멈추지 않습니다.</li>
+          <li><kbd>Ctrl/⌘</kbd>+<kbd>Alt</kbd>+<kbd>Space</kbd> 빠른 입력창으로 다른 앱을 쓰다가도 바로 묻습니다.</li>
+          <li>로그인할 때 자동 시작, 새 대화, 데몬 종료를 트레이 메뉴에서 다룹니다.</li>
+        </ul>
+      </div>
       <div>
-        <div class="term" role="group" aria-label="권한 모드 체험 터미널">
-          <div class="term-bar"><i></i><i></i><i></i><span>sepilot — ~/projects/web-shop</span></div>
-          <div class="term-body">
-            <p><span class="prompt">›</span> 설치 안내가 틀렸어. README 고치고 테스트 돌려줘</p>
-            <p class="dim">계획: 파일 확인 → 문서 수정 → 테스트 실행</p>
-            <div style="margin-top:12px" aria-live="polite">
-              <div class="act"><span class="dim">1</span><span>fs.read <span class="dim">README.md</span></span><span class="verdict" data-step="read"></span></div>
-              <div class="act"><span class="dim">2</span><span>fs.edit <span class="dim">README.md</span></span><span class="verdict" data-step="edit"></span></div>
-              <div class="act"><span class="dim">3</span><span>terminal.run <span class="dim">pnpm test</span></span><span class="verdict" data-step="run"></span></div>
-            </div>
-          </div>
-          <div class="status">
-            <button class="mode-chip" id="mode" type="button" data-mode="supervised" aria-describedby="mode-desc">supervised</button>
-            <span class="mode-desc" id="mode-desc"></span>
-            <span class="hint"><kbd>Shift</kbd>+<kbd>Tab</kbd></span>
-          </div>
-        </div>
-        <p class="term-note">모드 버튼을 누르거나 버튼에 포커스한 채 <kbd>Shift</kbd>+<kbd>Tab</kbd>을 누르면, 실제 TUI처럼 권한 모드가 바뀝니다. 같은 요청이라도 모드에 따라 자동으로 실행할 일과 승인을 받을 일이 달라집니다.</p>
+        <div class="term-mini"><span class="p">~/projects/web-shop $</span> sepilot ask --mode instant \
+  "다음 주 web-shop 스프린트 계획 초안을 만들어줘"
+<span class="d">… 목표 · 작업 표 · 위험 요소를 정리했습니다.</span>
+
+<span class="p">~/projects/web-shop $</span> sepilot sessions list
+  71c911f3  web-shop 다음 주 스프린트 계획 초안   completed</div>
+        <p class="caption">CLI에서 만든 이 세션이 위 데스크톱 화면의 대화 목록에 그대로 나타납니다.</p>
       </div>
     </div>
   </section>
 
-  <section class="arch" aria-labelledby="arch-title">
+  <section id="chat" aria-labelledby="chat-title">
     <div class="wrap">
-      <div class="sec-head">
-        <div><div class="tag">구조</div><h2 id="arch-title">한 데몬, 두 개의 화면</h2></div>
-        <p>CLI와 데스크톱은 얇은 화면입니다. 실제 에이전트 실행과 도구 호출, 승인 정책, 기록은 모두 로컬 데몬이 맡습니다. 같은 컴퓨터의 CLI와 데스크톱은 데몬 하나를 함께 씁니다.</p>
-      </div>
-      <div class="flow">
-        <div class="stack">
-          <div class="node"><h3>sepilot CLI</h3><p>터미널 TUI와 자동화용 명령</p></div>
-          <div class="node"><h3>Sepilot Desktop</h3><p>Electron 앱, 트레이, 빠른 입력</p></div>
-        </div>
-        <div class="wire">HTTP<br>WebSocket</div>
-        <div class="node core">
-          <h3>sepilotd</h3>
-          <p>세션, 에이전트 엔진, 도구, 승인 정책, 메모리, 스킬, 예약 작업을 관리하는 로컬 데몬</p>
-          <span class="mono">localhost:17600 · ~/.sepilotd</span>
-        </div>
-        <div class="wire">필요할 때만<br>바깥으로</div>
-        <div class="stack right">
-          <div class="node"><h3>모델 제공자</h3><p>Ollama, OpenAI, Anthropic, Gemini 등</p></div>
-          <div class="node"><h3>MCP 서버 · 메신저</h3><p>사용자가 연결한 것만</p></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="tool" id="cli" aria-labelledby="cli-title">
-    <div class="wrap">
-      <div class="sec-head">
-        <div><div class="tag">sepilot CLI</div><h2 id="cli-title">터미널에서 대화하고, 스크립트에서 부릅니다</h2></div>
-        <p>인자 없이 실행하면 대화형 TUI가 열리고, 명령으로 쓰면 파이프와 CI에 그대로 연결됩니다. 데몬이 내장된 단일 실행 파일이라 따로 설치할 런타임이 없습니다.</p>
-      </div>
-      <div class="grid">
-        <article class="cell">
-          <h3>스크롤을 지키는 인라인 TUI</h3>
-          <p>화면 전체를 차지하지 않고 터미널 기록 위에 이어서 그립니다. <code>@파일</code>로 파일을 첨부하고, 클립보드 이미지를 붙여 넣고, <code>!</code>로 시작하면 로컬 셸 명령을 바로 실행합니다.</p>
-          <pre><span class="cmt"># 대화 시작</span>
-sepilot</pre>
-        </article>
-        <article class="cell">
-          <h3>슬래시 명령으로 전환</h3>
-          <p>모델, 역할 봇, 실행 모드를 대화 중에 바꿉니다. 승인 대기, 변경 diff, 작업 목록, 사용량도 패널로 엽니다.</p>
-          <div class="chips"><span>/model</span><span>/bot</span><span>/mode</span><span>/diff</span><span>/approvals</span><span>/rewind</span></div>
-        </article>
-        <article class="cell">
-          <h3>되감고, 가지치고, 내보내는 세션</h3>
-          <p>지난 세션을 이어 가거나 특정 지점에서 갈라 새로 시도합니다. 대화와 파일 변경을 함께 되돌리고, 결과를 문서로 내보냅니다.</p>
-          <pre>sepilot sessions branch &lt;id&gt;
-sepilot rewind &lt;id&gt;</pre>
-        </article>
-        <article class="cell">
-          <h3>자동화에 맞춘 출력</h3>
-          <p>한 번 묻고 끝내거나, 이벤트를 줄 단위 JSON으로 받아 다른 도구로 넘깁니다. JSONL 파일로 여러 작업을 한꺼번에 돌립니다.</p>
-          <pre>git diff | sepilot ask "이 변경을 리뷰해 줘"
-sepilot -p "..." --output-format stream-json</pre>
-        </article>
-        <article class="cell">
-          <h3>예약과 백그라운드 작업</h3>
-          <p>cron이나 자연어로 반복 작업을 걸고, 결과를 메신저로 받습니다. 오래 걸리는 일은 백그라운드 작업과 서브에이전트로 나눕니다.</p>
-          <pre>sepilot schedule add
-sepilot jobs</pre>
-        </article>
-        <article class="cell">
-          <h3>다른 코딩 에이전트와 함께</h3>
-          <p>Claude Code, Codex, Gemini CLI, OpenCode를 swarm으로 띄워 일을 나누고, 실행 중인 세션에 붙어 지켜봅니다. ACP 서버로 편집기와도 연결합니다.</p>
-          <pre>sepilot swarm run
-sepilot swarm attach &lt;id&gt;</pre>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <section class="tool" id="desktop" aria-labelledby="desktop-title" style="padding-top:0">
-    <div class="wrap">
-      <div class="sec-head">
-        <div><div class="tag">Sepilot Desktop</div><h2 id="desktop-title">항상 곁에 있는 데스크톱 작업 공간</h2></div>
-        <p>창을 닫아도 트레이에 남아 있다가 단축키 하나로 질문을 받습니다. 대화 외에도 지식 관리와 일상 업무용 앱을 함께 담았습니다.</p>
-      </div>
-      <div class="grid">
-        <article class="cell">
-          <h3>모드와 엔진을 고르는 채팅</h3>
-          <p>빠른 답변부터 코딩, 심층 웹 조사, 페르소나 토론까지 작업에 맞는 모드를 고릅니다. Codex, Claude Code, OpenCode CLI를 대화 엔진으로 쓸 수도 있습니다.</p>
-          <div class="chips"><span>auto</span><span>coding</span><span>deep-web-research</span><span>persona-panel</span></div>
-        </article>
-        <article class="cell">
-          <h3>어디서든 빠른 입력</h3>
-          <p>다른 앱을 쓰다가 <kbd style="color:var(--ink);border-color:var(--line)">Ctrl/⌘</kbd> + <kbd style="color:var(--ink);border-color:var(--line)">Alt</kbd> + <kbd style="color:var(--ink);border-color:var(--line)">Space</kbd>로 입력창을 띄워 바로 묻습니다. 자주 쓰는 질문은 단축키로 등록합니다.</p>
-        </article>
-        <article class="cell">
-          <h3>트레이에서 관리</h3>
-          <p>연결 상태를 확인하고, 새 대화를 열고, 로그인할 때 자동으로 시작하도록 설정합니다. 창을 닫아도 데몬과 예약 작업은 계속 돌아갑니다.</p>
-        </article>
-        <article class="cell">
-          <h3>쌓이는 지식</h3>
-          <p>대화에서 기억할 것을 메모리로 남기고, 위키와 개인 문서, RAG 소스를 한곳에서 찾습니다. 검색은 로컬 SQLite 전문 검색과 벡터 검색을 함께 씁니다.</p>
-        </article>
-        <article class="cell">
-          <h3>내장 앱</h3>
-          <p>에이전트가 함께 다루는 작은 앱을 기본으로 제공합니다. 볼트는 암호구로 잠급니다.</p>
-          <div class="chips"><span>캘린더</span><span>할 일</span><span>데일리 브리핑</span><span>스티키 노트</span><span>볼트</span><span>칸반</span></div>
-        </article>
-        <article class="cell">
-          <h3>브라우저 탭 공유</h3>
-          <p>Chrome 확장으로 고른 탭 하나만 에이전트에게 맡기고, 언제든 제어를 되찾습니다. 확장은 앱 안에서 설치합니다.</p>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <section class="daemon" id="daemon" aria-labelledby="daemon-title">
-    <div class="wrap">
-      <div class="sec-head">
-        <div><div class="tag">sepilotd</div><h2 id="daemon-title">두 도구가 함께 쓰는 엔진</h2></div>
-        <p>CLI와 데스크톱의 기능은 대부분 데몬에서 옵니다. 어느 화면에서 시작한 작업이든 같은 정책과 기록 아래에서 실행됩니다.</p>
-      </div>
-      <dl class="spec">
-        <div class="row"><dt>모델</dt><dd>Ollama, OpenAI, Anthropic, Gemini, Groq, Together, DeepSeek, OpenRouter와 OpenAI 호환 엔드포인트. 장애가 나면 다른 제공자로 넘깁니다.</dd></div>
-        <div class="row"><dt>에이전트 엔진</dt><dd>빠른 답변(instant), 도구 루프(react), 경량 coder와 다단계 deep-coder, 리서치 그래프, 역할 봇.</dd></div>
-        <div class="row"><dt>도구</dt><dd>파일 읽기·편집·패치, 터미널과 백그라운드 프로세스, 웹 검색·가져오기, CDP 브라우저 제어, git, LSP 기반 코드 탐색.</dd></div>
-        <div class="row"><dt>승인과 보안</dt><dd>권한 모드와 정책 엔진, 기억되는 결정, 암호화된 비밀 저장소, 감사 로그, Docker·bubblewrap 샌드박스.</dd></div>
-        <div class="row"><dt>메모리</dt><dd>SQLite FTS5와 벡터 검색, MEMORY.md와 일일 노트, 리마인더, git·웹 동기화 RAG.</dd></div>
-        <div class="row"><dt>스킬과 MCP</dt><dd>문서(pptx·docx·xlsx) 작성 스킬과 마켓플레이스. MCP 서버는 stdio, SSE, streamable HTTP로 연결합니다.</dd></div>
-        <div class="row"><dt>메신저</dt><dd>Telegram, Slack, Discord, Mattermost, Teams, LINE, WhatsApp, 웹챗, 웹훅, GitHub Issues.</dd></div>
-        <div class="row"><dt>연동</dt><dd>OpenAPI 문서가 붙은 HTTP·WebSocket API, A2A 에이전트 카드, ACP 서버, 수신·발신 웹훅과 이벤트 라우팅.</dd></div>
-      </dl>
-    </div>
-  </section>
-
-  <section class="install" id="install" aria-labelledby="install-title">
-    <div class="wrap">
-      <div class="sec-head">
-        <div><div class="tag">설치</div><h2 id="install-title">필요한 화면부터 설치하세요</h2></div>
-        <p>모든 바이너리는 GitHub Actions가 공개 저장소에서 빌드해 GitHub Releases에 올립니다. 설치 후 <code>~/.sepilotd/config.yaml</code>이나 앱 설정에서 모델 제공자를 연결합니다.</p>
-      </div>
-      <div class="panes">
-        <div class="pane">
-          <h3>sepilot CLI</h3>
-          <p>Linux(x64, arm64), macOS(x64, arm64), Windows(x64). 설치 스크립트가 플랫폼에 맞는 릴리스를 받아 SHA-256 체크섬을 확인합니다.</p>
-          <div class="tabs" role="tablist" aria-label="운영체제">
-            <button role="tab" aria-selected="true" aria-controls="cli-unix" id="tab-unix" type="button">macOS · Linux</button>
-            <button role="tab" aria-selected="false" aria-controls="cli-win" id="tab-win" type="button" tabindex="-1">Windows</button>
-          </div>
-          <div class="cmd" role="tabpanel" id="cli-unix" aria-labelledby="tab-unix"><code>curl -fsSL https://raw.githubusercontent.com/jhl-labs/sepilot-cli/main/packages/bundle/scripts/install.sh | sh</code><button class="copy" type="button">복사</button></div>
-          <div class="cmd" role="tabpanel" id="cli-win" aria-labelledby="tab-win" hidden><code>irm https://raw.githubusercontent.com/jhl-labs/sepilot-cli/main/packages/bundle/scripts/install.ps1 | iex</code><button class="copy" type="button">복사</button></div>
-          <small>업데이트는 <code>sepilot upgrade</code>, 상태 확인은 <code>sepilot status</code>로 합니다.</small>
-        </div>
-        <div class="pane">
-          <h3>Sepilot Desktop</h3>
-          <p>데몬을 앱 안에 담고 있어 따로 설치할 것이 없습니다. 최신 릴리스에서 내 운영체제용 파일을 받으세요.</p>
-          <ul class="dl">
-            <li><a href="https://github.com/jhl-labs/sepilot_desktop/releases/latest"><b>Windows</b><span>portable .exe</span></a></li>
-            <li><a href="https://github.com/jhl-labs/sepilot_desktop/releases/latest"><b>macOS (Apple Silicon)</b><span>arm64-mac.zip</span></a></li>
-            <li><a href="https://github.com/jhl-labs/sepilot_desktop/releases/latest"><b>macOS (Intel)</b><span>mac.zip</span></a></li>
-            <li><a href="https://github.com/jhl-labs/sepilot_desktop/releases/latest"><b>Linux</b><span>AppImage</span></a></li>
+      <div class="feature">
+        <div class="copy">
+          <div class="tag">대화와 코드</div>
+          <h2 id="chat-title">작업 폴더를 열어 두고 물어보세요</h2>
+          <p>대화마다 작업 폴더를 연결하면 에이전트가 파일을 읽고 명령을 실행해 근거를 모읍니다. 실행한 도구는 작업 로그로 접혀 남고, 답변에는 원인과 위치가 정리됩니다.</p>
+          <ul class="points">
+            <li><b>작업 로그</b> — 어떤 도구가 몇 번 성공·실패했는지 펼쳐 봅니다.</li>
+            <li><b>파일 변경 검토와 되돌리기</b> — 에이전트가 바꾼 파일을 확인하고 되돌립니다.</li>
+            <li><b>감독 모드</b> — 편집과 명령은 승인한 것만 실행됩니다.</li>
+            <li><b>메시지 분기·재생성·낭독</b> — 특정 지점에서 갈라 다시 묻고, 답변을 소리로 듣습니다.</li>
           </ul>
-          <small>macOS 빌드는 서명되지 않았습니다. 처음 실행할 때 Finder에서 앱을 우클릭한 뒤 열기를 선택하세요.</small>
+        </div>
+        <figure class="window">
+          <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>web-shop · 코드 분석</span></div>
+          <img src="img/chat-analysis.webp" width="1440" height="900" loading="lazy" alt="테스트 실패 원인을 묻는 대화. 작업 로그에 도구 6건이 기록되어 있고, 답변은 src/cart.js 22번째 줄의 할인율 계산 오류와 수정 방향을 코드 블록과 함께 설명한다.">
+        </figure>
+      </div>
+
+      <div class="feature flip">
+        <div class="copy">
+          <div class="tag">실행 방식</div>
+          <h2>요청에 맞는 실행 방식을 고릅니다</h2>
+          <p>기본값인 <b>알아서 선택</b>은 요청 성격을 보고 실행 방식을 정합니다. 직접 고를 수도 있습니다.</p>
+          <ul class="points">
+            <li><b>즉시 응답</b>은 도구 없이 빠르게, <b>일반 작업</b>은 도구를 쓰며 처리합니다.</li>
+            <li><b>사고·연구</b>는 단계적 추론과 심층 웹 조사, <b>개발</b>은 코딩 루프와 심화 코딩입니다.</li>
+            <li><b>협업</b>은 여러 페르소나가 함께 검토하고, Codex·Claude Code·OpenCode CLI를 대화 엔진으로 쓸 수도 있습니다.</li>
+            <li>역할 봇(개발자, 아키텍트, 코드 리뷰어, 비서 등)을 골라 전문 영역을 지정합니다.</li>
+          </ul>
+        </div>
+        <figure class="window">
+          <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>실행 방식 선택</span></div>
+          <img src="img/modes.webp" width="1440" height="900" loading="lazy" alt="입력창 위에 열린 실행 방식 선택 패널. 자동, 즉시 응답, 일반 작업, 사고, 연구, 개발, 자동화, 협업, 사용자 Agent 분류가 있다.">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt" id="assistant" aria-labelledby="assistant-title">
+    <div class="wrap">
+      <div class="feature">
+        <div class="copy">
+          <div class="tag">나의 비서</div>
+          <h2 id="assistant-title">오늘 할 일을 함께 정리합니다</h2>
+          <p>비서 홈에서 오늘 계획 세우기, 회의 준비, 반복 브리핑 만들기, 하루 마무리 같은 일을 바로 시작합니다. 일정과 할 일, 기억해 둔 선호가 함께 반영됩니다.</p>
+          <ul class="points">
+            <li>반복 브리핑은 Tasks에 예약되어 데몬이 시간에 맞춰 실행합니다.</li>
+            <li>Google 계정과 메일 같은 서비스를 연결해 일정 신호를 넓힙니다.</li>
+            <li>기억한 선호와 결정은 다음 대화에서도 참고됩니다.</li>
+          </ul>
+        </div>
+        <figure class="window">
+          <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>Apps · 나의 비서</span></div>
+          <img src="img/assistant.webp" width="1440" height="900" loading="lazy" alt="비서 홈 화면. 비서에게 부탁하기 입력란과 오늘 계획 세우기, 회의 준비하기, 반복 브리핑 만들기 같은 바로가기 카드, 오늘의 일정과 최근 기억 패널이 있다.">
+        </figure>
+      </div>
+
+      <div style="margin-top:96px">
+        <div class="tag">내장 앱</div>
+        <h2>에이전트와 데이터를 나누는 작은 앱들</h2>
+        <p class="lede" style="margin-bottom:0">캘린더, 할 일, 오늘의 브리핑, 칸반, 스티키, 보안 금고가 기본으로 들어 있습니다. 각 앱은 샌드박스 안에서 실행되고, 에이전트는 허용된 앱 데이터만 읽고 고칩니다.</p>
+        <div class="apps-tabs" role="tablist" aria-label="내장 앱">
+          <button role="tab" type="button" aria-selected="true" aria-controls="app-view" data-img="app-calendar" data-desc="월간 달력과 일정 목록을 함께 봅니다. 회의 일정은 할 일·칸반과 연결됩니다." style="--dot:#2563EB">캘린더</button>
+          <button role="tab" type="button" aria-selected="false" aria-controls="app-view" tabindex="-1" data-img="app-todo" data-desc="오늘·예정·기한 지남으로 나눠 보고, 알림과 반복 일정을 정합니다." style="--dot:#16A34A">할 일</button>
+          <button role="tab" type="button" aria-selected="false" aria-controls="app-view" tabindex="-1" data-img="app-briefing" data-desc="일정·할 일·리스크를 묶어 오늘 먼저 할 일과 후속 액션을 정리합니다." style="--dot:#0E7490">오늘의 브리핑</button>
+          <button role="tab" type="button" aria-selected="false" aria-controls="app-view" tabindex="-1" data-img="app-kanban" data-desc="백로그부터 완료까지 카드를 옮기며 업무 흐름을 관리합니다. GitHub 프로젝트와 동기화할 수 있습니다." style="--dot:#EA580C">칸반</button>
+          <button role="tab" type="button" aria-selected="false" aria-controls="app-view" tabindex="-1" data-img="app-sticky" data-desc="리마인더와 리스크를 스티커 메모로 붙여 둡니다." style="--dot:#CA8A04">스티키</button>
+        </div>
+        <p class="apps-desc" id="app-desc">월간 달력과 일정 목록을 함께 봅니다. 회의 일정은 할 일·칸반과 연결됩니다.</p>
+        <figure class="window" id="app-view" role="tabpanel">
+          <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span id="app-bar">Apps · 캘린더</span></div>
+          <img id="app-img" src="img/app-calendar.webp" width="1440" height="900" loading="lazy" alt="내장 앱 캘린더 화면">
+        </figure>
+        <p class="note">보안 금고는 암호 구문으로 업무 메모를 암호화해 보관합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="tools" aria-labelledby="tools-title">
+    <div class="wrap">
+      <div class="feature">
+        <div class="copy">
+          <div class="tag">도구와 확장</div>
+          <h2 id="tools-title">에이전트가 쓸 도구를 직접 정합니다</h2>
+          <p>도구 카탈로그에서 그룹별로 켜고 끄며, 기본 대화가 차지하는 컨텍스트 크기를 바로 확인합니다. MCP 서버와 스킬도 같은 화면에서 관리합니다.</p>
+          <ul class="points">
+            <li>파일, 터미널, git, 웹 검색, 브라우저 제어, 메모리, 문서 작성 도구</li>
+            <li>MCP 서버 연결과 도구별 허용</li>
+            <li>설치형 스킬과 사용자 Agent 정의</li>
+            <li>웹 검색 출처 경계, 이미지 생성, 음성 설정</li>
+          </ul>
+        </div>
+        <figure class="window">
+          <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>설정 · Tools</span></div>
+          <img src="img/settings-tools.webp" width="1440" height="900" loading="lazy" alt="설정의 Tools 화면. 기본 대화의 도구 컨텍스트가 약 13.3K 토큰이고, 등록된 도구 207개와 Memory 도구 그룹 목록이 보인다.">
+        </figure>
+      </div>
+
+      <div class="duo">
+        <figure class="window">
+          <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>첫 실행 설정</span></div>
+          <img src="img/setup.webp" width="1440" height="900" loading="lazy" alt="첫 실행 설정 마법사의 AI 모델 단계. 연결된 모델 제공자와 기본 모델을 고른다.">
+        </figure>
+        <div class="copy">
+          <h3>3분 안에 끝나는 첫 설정</h3>
+          <p>처음 실행하면 모델 제공자와 기본 작업 폴더만 고르면 됩니다. 나머지는 기본값으로 시작하고 언제든 설정에서 바꿉니다.</p>
         </div>
       </div>
+      <div class="duo">
+        <figure class="window">
+          <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>다크 모드</span></div>
+          <img src="img/dark.webp" width="1440" height="900" loading="lazy" alt="다크 모드로 본 스프린트 계획 대화 화면">
+        </figure>
+        <figure class="window">
+          <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>펫 스튜디오</span></div>
+          <img src="img/pet.webp" width="756" height="789" loading="lazy" alt="펫 스튜디오. 고양이, 여우, 로봇 중에서 고르고 이름과 색상, 크기를 정한다.">
+        </figure>
+      </div>
+      <p class="caption">다크 모드로 바꾸고, 작업 상태를 알려 주는 데스크톱 펫을 다른 창 위에 띄울 수 있습니다.</p>
+    </div>
+  </section>
+
+  <section class="alt" aria-labelledby="more-title">
+    <div class="wrap">
+      <div class="tag">그 밖의 기능</div>
+      <h2 id="more-title">매일 쓰는 데 필요한 것들</h2>
+      <div class="grid">
+        <article class="cell"><h3>파일 첨부와 음성</h3><p>파일과 이미지를 붙이고, 음성으로 입력하거나 답변을 낭독합니다.</p></article>
+        <article class="cell"><h3>지식과 문서</h3><p>위키, 개인 문서, 팀 문서, RAG 소스를 모아 대화에서 찾습니다.</p></article>
+        <article class="cell"><h3>메모리</h3><p>SQLite 전문 검색과 벡터 검색, 장기 기억과 활동 기록을 관리합니다.</p></article>
+        <article class="cell"><h3>예약 작업</h3><p>반복 브리핑과 정해진 시각의 작업을 Tasks에서 만들고 멈춥니다.</p></article>
+        <article class="cell"><h3>알림과 메신저</h3><p>Slack, Telegram, Discord 등 채널과 발신 웹훅으로 결과를 보냅니다.</p></article>
+        <article class="cell"><h3>브라우저 탭 공유</h3><p>Chrome 확장으로 고른 탭 하나만 에이전트에게 맡기고 언제든 되찾습니다.</p></article>
+        <article class="cell"><h3>작업 폴더 격리</h3><p>대화마다 작업 폴더를 정하고, 그 밖의 경로는 실행 범위에서 막습니다.</p></article>
+        <article class="cell"><h3>컨텍스트와 백그라운드</h3><p>컨텍스트 사용량을 보며 긴 작업은 백그라운드로 돌립니다.</p></article>
+        <article class="cell"><h3>한국어·영어</h3><p>화면 언어와 테마를 설정에서 바꿉니다.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="download" aria-labelledby="download-title">
+    <div class="wrap">
+      <div class="tag">다운로드</div>
+      <h2 id="download-title">내 운영체제용 파일을 받으세요</h2>
+      <p class="lede" style="margin-bottom:0">데몬이 앱 안에 들어 있어 따로 설치할 것이 없습니다. 모든 파일은 공개 저장소의 GitHub Actions가 빌드해 GitHub Releases에 올립니다.</p>
+      <ul class="dl">
+        <li><a href="https://github.com/jhl-labs/sepilot_desktop/releases/latest"><b>Windows</b><span>sepilot-desktop.exe<br>설치 없는 포터블</span></a></li>
+        <li><a href="https://github.com/jhl-labs/sepilot_desktop/releases/latest"><b>macOS Apple Silicon</b><span>sepilotd-*-arm64-mac.zip</span></a></li>
+        <li><a href="https://github.com/jhl-labs/sepilot_desktop/releases/latest"><b>macOS Intel</b><span>sepilotd-*-mac.zip</span></a></li>
+        <li><a href="https://github.com/jhl-labs/sepilot_desktop/releases/latest"><b>Linux</b><span>sepilotd-*.AppImage</span></a></li>
+      </ul>
+      <p class="note">macOS 빌드는 서명되지 않았습니다. 처음 실행할 때 Finder에서 앱을 우클릭한 뒤 열기를 선택하세요. 소스에서 빌드하려면 서브모듈과 함께 받습니다.</p>
+      <div class="cmd">git clone --recurse-submodules https://github.com/jhl-labs/sepilot_desktop.git
+cd sepilot_desktop && pnpm install && pnpm build</div>
     </div>
   </section>
 </main>
@@ -413,74 +355,37 @@ sepilot swarm attach &lt;id&gt;</pre>
 <footer>
   <div class="wrap">
     <span>Sepilot은 소스 공개(source-available) 라이선스로 배포됩니다. 개인과 기업 모두 수정하지 않은 소프트웨어를 사용할 수 있습니다.</span>
-    <span><a href="https://github.com/jhl-labs/sepilot-cli">sepilot-cli</a> · <a href="https://github.com/jhl-labs/sepilot_desktop">sepilot_desktop</a></span>
+    <span><a href="https://jhl-labs.github.io/sepilot-cli/">sepilot CLI</a> · <a href="https://github.com/jhl-labs/sepilot_desktop">sepilot_desktop</a></span>
   </div>
 </footer>
 
 <script>
 (() => {
-  const MODES = {
-    supervised: { desc: '모든 변경과 명령을 승인받습니다', read: 'auto', edit: 'ask', run: 'ask' },
-    'accept-edits': { desc: '파일 편집은 바로, 명령은 승인받습니다', read: 'auto', edit: 'auto', run: 'ask' },
-    'workspace-write': { desc: '작업 폴더 안의 편집만 바로, 명령은 승인받습니다', read: 'auto', edit: 'auto', run: 'ask' },
-    readonly: { desc: '살펴보고 답만 합니다. 아무것도 바꾸지 않습니다', read: 'auto', edit: 'deny', run: 'deny' },
-  }
-  const LABELS = { auto: '자동 실행', ask: '승인 요청', deny: '차단' }
-  const order = Object.keys(MODES)
-  const chip = document.getElementById('mode')
-  const desc = document.getElementById('mode-desc')
-  const verdicts = document.querySelectorAll('.verdict')
-  let index = 0
-  function render() {
-    const name = order[index]
-    const mode = MODES[name]
-    chip.textContent = name
-    chip.dataset.mode = name
-    desc.textContent = mode.desc
-    verdicts.forEach((node) => {
-      const value = mode[node.dataset.step]
-      node.textContent = LABELS[value]
-      node.className = 'verdict v-' + value
-    })
-  }
-  function next() { index = (index + 1) % order.length; render() }
-  chip.addEventListener('click', next)
-  chip.addEventListener('keydown', (event) => {
-    if (event.key === 'Tab' && event.shiftKey) { event.preventDefault(); next() }
-  })
-  render()
-
-  const tabs = document.querySelectorAll('[role="tab"]')
+  const tabs = Array.from(document.querySelectorAll('.apps-tabs [role="tab"]'))
+  const img = document.getElementById('app-img')
+  const desc = document.getElementById('app-desc')
+  const bar = document.getElementById('app-bar')
   function select(tab) {
     tabs.forEach((other) => {
       const selected = other === tab
       other.setAttribute('aria-selected', String(selected))
       other.tabIndex = selected ? 0 : -1
-      document.getElementById(other.getAttribute('aria-controls')).hidden = !selected
     })
+    img.src = 'img/' + tab.dataset.img + '.webp'
+    img.alt = '내장 앱 ' + tab.textContent + ' 화면'
+    desc.textContent = tab.dataset.desc
+    bar.textContent = 'Apps · ' + tab.textContent
   }
-  tabs.forEach((tab, i) => {
+  tabs.forEach((tab, index) => {
     tab.addEventListener('click', () => select(tab))
     tab.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return
-      const target = tabs[(i + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]
-      select(target)
-      target.focus()
+      const next = tabs[(index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]
+      select(next)
+      next.focus()
     })
   })
 
-  document.querySelectorAll('.copy').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const text = button.parentElement.querySelector('code').textContent
-      try {
-        await navigator.clipboard.writeText(text)
-        button.textContent = '복사됨'
-      } catch {
-        button.textContent = '직접 복사하세요'
-      }
-      setTimeout(() => { button.textContent = '복사' }, 1600)
-    })
-  })
 })()
 </script>
 </body>

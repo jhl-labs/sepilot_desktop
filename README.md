@@ -5,7 +5,7 @@ starts and talks to the local `sepilotd` daemon over HTTP and WebSocket.
 
 Feature overview: <https://jhl-labs.github.io/sepilot_desktop/>
 
-Version: 1.0.10
+Version: 1.0.11
 
 ## License
 
