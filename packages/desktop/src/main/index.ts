@@ -1,4 +1,5 @@
 import { registerCliChatHandlers } from './cli-chat-ipc'
+import { disposeOpencodeServers } from './opencode-server'
 import { listCliModels } from './cli-models'
 import { deliverTaskNotification } from './task-notification-delivery'
 import { PetWindow } from './pet-window'
@@ -3907,6 +3908,7 @@ if (!gotLock) {
 
   app.on('will-quit', () => {
     globalShortcut.unregisterAll()
+    disposeOpencodeServers()
     stopNotificationWatch()
     stopDesktopCalendarAutoSync()
     terminalSessions.killAll()

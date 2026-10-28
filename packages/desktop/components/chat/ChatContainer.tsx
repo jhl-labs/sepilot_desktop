@@ -11,7 +11,8 @@ import { toast } from 'sonner'
 import { useChatStore } from '@/lib/store/chat-store'
 import { useSessionStore } from '@/lib/store/session-store'
 import { useSettingsStore } from '@/lib/store/settings-store'
-import { useSessionBrowserConnection } from './useSessionBrowserConnection'
+import { RemoteBrowserPanel } from './RemoteBrowserPanel'
+import type { BrowserConnection } from '@/lib/api/browser-remote'
 import { useTransport } from '@/components/providers/transport-provider'
 import { createChatApi, mapSessionDetailToMessages } from '@/lib/api/chat'
 import { createSessionsApi } from '@/lib/api/sessions'
@@ -52,6 +53,16 @@ import { normalizeChatMode, toDaemonMode, type ChatModeId } from '@/lib/chat/cha
 import type { SlashDispatchResult } from '@/lib/chat/slash-commands'
 import { buildChatTranscriptItems, currentTurnAssistantId, currentTurnToolGroupId, needsTurnWaitingIndicator } from '@/lib/chat/transcript-items'
 import { useTranscriptScroll } from '@/lib/chat/use-transcript-scroll'
+import {
+  beginSessionRun,
+  finishSessionRun,
+  getSessionRun,
+  isSessionRunLive,
+  markSessionRunMessageFailed,
+  recordSessionRunMessage,
+  settleSessionRunTools,
+  takeSessionRunReplay,
+} from '@/lib/chat/session-run-registry'
 import {
   buildInterruptedToolTransitions,
   toolTerminalStateForStreamFailure,
@@ -173,6 +184,7 @@ function BuiltinChatContainer({
   const upsert = useChatStore((s) => s.upsertMessage)
   const setPending = useChatStore((s) => s.setPending)
   const clear = useChatStore((s) => s.clear)
+  const resetForSessionSwitch = useChatStore((s) => s.resetForSessionSwitch)
   const pending = useChatStore((s) => s.pending)
   const setPlannerWorkingMemory = useChatStore((s) => s.setPlannerWorkingMemory)
   const appendEditRollback = useChatStore((s) => s.appendEditRollback)
@@ -219,7 +231,6 @@ function BuiltinChatContainer({
   const activeRunAbortRef = useRef<AbortController | null>(null)
   const activeRunToolMessageIdsRef = useRef<Set<string> | null>(null)
   const optimisticImageUrlsRef = useRef(new Set<string>())
-  const sessionRunsRef = useRef(new Map<string, { controller: AbortController; toolIds: Set<string> }>())
   const pendingQuestion = useChatStore((s) => s.pendingQuestion)
   const setPendingQuestion = useChatStore((s) => s.setPendingQuestion)
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -293,12 +304,13 @@ function BuiltinChatContainer({
   useEffect(() => {
     let cancelled = false
     setHistoryReadySessionId(null)
-    const run = activeId ? sessionRunsRef.current.get(activeId) : undefined
+    const run = activeId && isSessionRunLive(activeId) ? getSessionRun(activeId) : undefined
     activeRunAbortRef.current = run?.controller ?? null
     activeRunToolMessageIdsRef.current = run?.toolIds ?? null
-    clear()
-    setPending(Boolean(run && !run.controller.signal.aborted))
-    clearRunTelemetry()
+    resetForSessionSwitch()
+    setPending(Boolean(run))
+    if (run && activeId) beginRunTelemetry(activeId)
+    else clearRunTelemetry()
     setPendingQuestion(null)
     if (!activeId) {
       setHistoryLoading(false)
@@ -322,6 +334,9 @@ function BuiltinChatContainer({
       } catch {
       } finally {
         if (!cancelled) {
+          const replay = takeSessionRunReplay(activeId)
+          replay.messages.forEach(upsert)
+          if (!replay.live) setPending(false)
           setHistoryReadySessionId(activeId)
           setHistoryLoading(false)
         }
@@ -337,11 +352,12 @@ function BuiltinChatContainer({
     transport,
     upsert,
     setPending,
-    clear,
+    resetForSessionSwitch,
     setPlannerWorkingMemory,
     appendEditRollback,
     appendDebateRound,
     enqueueApproval,
+    beginRunTelemetry,
     clearRunTelemetry,
     setPendingQuestion,
   ])
@@ -498,11 +514,10 @@ function BuiltinChatContainer({
     }
   }, [activeId, transport, upsert])
 
-  const hasViews = useMemo(
-    () => messages.some((m) => m.role === 'assistant' && (m.liveViewIds?.length || m.views?.length)),
-    [messages],
-  )
-  const browserConnection = useSessionBrowserConnection(transport, activeId, hasViews)
+  const [observedBrowserConnection, setBrowserConnection] = useState<BrowserConnection>()
+  const [browserPanelOpenRequest, setBrowserPanelOpenRequest] = useState({ sessionId: '', version: 0 })
+  const browserConnection = backend.daemonFeatures && observedBrowserConnection?.sessionId === activeId
+    ? observedBrowserConnection : undefined
   const transcriptItems = useMemo(() => buildChatTranscriptItems(messages), [messages])
   const liveToolGroupId = useMemo(() => currentTurnToolGroupId(transcriptItems), [transcriptItems])
   const streamingAssistantId = useMemo(() => currentTurnAssistantId(messages), [messages])
@@ -779,8 +794,13 @@ function BuiltinChatContainer({
           createdAt: Date.now(),
         })
         try {
-          const questionsApi = await createSessionQuestionsApi(transport)
-          await questionsApi.answer(question.sessionId, question.id, text)
+          const desktopApi = getDesktopApi()
+          if (desktopApi?.answerSessionQuestion) {
+            await desktopApi.answerSessionQuestion(question.sessionId, question.id, text)
+          } else {
+            const questionsApi = await createSessionQuestionsApi(transport)
+            await questionsApi.answer(question.sessionId, question.id, text)
+          }
         } catch (error) {
           setPendingQuestion(question)
           setPending(false)
@@ -927,17 +947,22 @@ function BuiltinChatContainer({
       }
 
       const api = await createChatApi(transport)
-      const controller = new AbortController()
-      const runToolMessageIds = new Set<string>()
+      const { run, previous: previousRun } = beginSessionRun(activeId)
+      const controller = run.controller
+      const runToolMessageIds = run.toolIds
       const isVisibleRun = () => useSessionStore.getState().activeId === activeId
-        && sessionRunsRef.current.get(activeId)?.controller === controller
+        && getSessionRun(activeId) === run
         && !controller.signal.aborted
-      const previousRun = sessionRunsRef.current.get(activeId)
-      if (useSessionStore.getState().activeId === activeId && previousRun) {
-        terminalizeRunTools(previousRun.toolIds, 'cancelled')
+      if (previousRun && previousRun.status === 'live') {
+        if (useSessionStore.getState().activeId === activeId) {
+          terminalizeRunTools(previousRun.toolIds, 'cancelled')
+        }
+        previousRun.controller.abort()
       }
-      previousRun?.controller.abort()
-      sessionRunsRef.current.set(activeId, { controller, toolIds: runToolMessageIds })
+      const deliver = (message: Parameters<typeof upsert>[0]) => {
+        recordSessionRunMessage(run, message)
+        if (isVisibleRun()) upsert(message)
+      }
       if (isVisibleRun()) {
         activeRunAbortRef.current = controller
         activeRunToolMessageIdsRef.current = runToolMessageIds
@@ -951,7 +976,7 @@ function BuiltinChatContainer({
         .filter((url): url is string => Boolean(url))
       userImageUrls.forEach((url) => optimisticImageUrlsRef.current.add(url))
       const userMessageId = `u-${Date.now()}`
-      if (isVisibleRun()) append({
+      deliver({
         id: userMessageId,
         role: 'user',
         content: text,
@@ -1018,8 +1043,7 @@ function BuiltinChatContainer({
             },
             onUpsertMessage: (message) => {
               if (message.role === 'tool') runToolMessageIds.add(message.id)
-              if (!isVisibleRun()) return
-              upsert(message)
+              deliver(message)
             },
             onPlannerWorkingMemoryUpdated: (memory) => {
               if (!isVisibleRun()) return
@@ -1111,11 +1135,14 @@ function BuiltinChatContainer({
               )
             },
             onDone: () => {
+              settleSessionRunTools(run, 'error')
               if (!isVisibleRun()) return
               terminalizeRunTools(runToolMessageIds, 'error')
               setPending(false)
             },
             onError: (error) => {
+              settleSessionRunTools(run, toolTerminalStateForStreamFailure(error))
+              markSessionRunMessageFailed(run, userMessageId)
               if (!isVisibleRun()) return
               terminalizeRunTools(runToolMessageIds, toolTerminalStateForStreamFailure(error))
               setPending(false)
@@ -1169,11 +1196,14 @@ function BuiltinChatContainer({
         )
         if (isVisibleRun() && attachments.length > 0) clearAttachments()
       } catch (error) {
-        if (!isVisibleRun()) return
         if (controller.signal.aborted) {
-          terminalizeRunTools(runToolMessageIds, 'cancelled')
+          settleSessionRunTools(run, 'cancelled')
+          if (isVisibleRun()) terminalizeRunTools(runToolMessageIds, 'cancelled')
           return
         }
+        settleSessionRunTools(run, toolTerminalStateForStreamFailure(error))
+        markSessionRunMessageFailed(run, userMessageId)
+        if (!isVisibleRun()) return
         terminalizeRunTools(runToolMessageIds, toolTerminalStateForStreamFailure(error))
         setPending(false)
         setMessageFailed(userMessageId, true)
@@ -1182,10 +1212,12 @@ function BuiltinChatContainer({
           description: friendly.description,
         })
       } finally {
-        if (sessionRunsRef.current.get(activeId)?.controller === controller) {
-          sessionRunsRef.current.delete(activeId)
-          if (useSessionStore.getState().activeId === activeId) setPending(false)
-        }
+        const visible = useSessionStore.getState().activeId === activeId
+        const status = controller.signal.aborted
+          ? 'cancelled'
+          : run.messages.get(userMessageId)?.failed ? 'error' : 'done'
+        finishSessionRun(run, status, visible)
+        if (visible && getSessionRun(activeId) === undefined) setPending(false)
         if (activeRunAbortRef.current === controller) {
           activeRunAbortRef.current = null
         }
@@ -1552,6 +1584,14 @@ function BuiltinChatContainer({
         </NotificationBar>
       ) : null}
       {backend.daemonFeatures && activeSession ? <SessionPersonaBar session={activeSession} maxWidth={chatMaxWidth} /> : null}
+      {backend.daemonFeatures ? (
+        <RemoteBrowserPanel
+          key={activeId}
+          sessionId={activeId}
+          openRequest={browserPanelOpenRequest.sessionId === activeId ? browserPanelOpenRequest.version : 0}
+          onConnectionChange={setBrowserConnection}
+        />
+      ) : null}
       <div ref={transcriptScroll.viewportRef} onScroll={transcriptScroll.onScroll} className="min-h-0 flex-1 overflow-y-auto px-3 py-2 max-sm:px-2">
         <div ref={transcriptScroll.contentRef} className="mx-auto flex flex-col gap-1" style={{ maxWidth: `${chatMaxWidth}px` }}>
           {historyLoading && transcriptItems.length === 0 ? (
@@ -1593,7 +1633,13 @@ function BuiltinChatContainer({
               </ChatItemErrorBoundary>
             ))
           )}
-          {backend.daemonFeatures ? <BrowserPrerequisiteNotice messages={messages} /> : null}
+          {backend.daemonFeatures ? (
+            <BrowserPrerequisiteNotice
+              messages={messages}
+              connection={browserConnection}
+              onOpenConnection={() => setBrowserPanelOpenRequest((value) => ({ sessionId: activeId, version: value.version + 1 }))}
+            />
+          ) : null}
           {pending && !historyLoading && needsTurnWaitingIndicator(transcriptItems) ? (
             <div role="status" className="my-3 flex items-start gap-3 rounded-xl border bg-muted/30 px-4 py-3 text-sm">
               <span aria-hidden className="mt-1 h-3 w-3 shrink-0 animate-pulse rounded-full bg-primary" />

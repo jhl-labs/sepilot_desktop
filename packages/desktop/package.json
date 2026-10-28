@@ -65,7 +65,7 @@
     "sonner": "1.7.4",
     "tailwind-merge": "2.6.1",
     "yaml": "2.8.3",
-    "zod": "3.25.76",
+    "zod": "4.6.7",
     "zustand": "4.5.7"
   },
   "devDependencies": {

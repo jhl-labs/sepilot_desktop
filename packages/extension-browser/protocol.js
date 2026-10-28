@@ -1,5 +1,12 @@
 export function daemonOrigin(raw) {
-  const url = new URL(raw)
+  const message = '로컬 daemon 주소를 http://127.0.0.1:17600 형식으로 입력하세요'
+  let url
+  try {
+    if (typeof raw !== 'string' || !raw.trim()) throw new Error(message)
+    url = new URL(raw.trim())
+  } catch {
+    throw new Error(message)
+  }
   if (
     url.protocol !== 'http:' ||
     !['127.0.0.1', 'localhost'].includes(url.hostname) ||
@@ -9,15 +16,22 @@ export function daemonOrigin(raw) {
     url.hash ||
     url.pathname !== '/'
   ) {
-    throw new Error('Use a local daemon URL, such as http://127.0.0.1:17600')
+    throw new Error(message)
   }
   return url.origin
 }
 
 export function assertPageUrl(raw) {
-  const url = new URL(raw)
+  const message = '공유할 웹페이지가 아직 로드되지 않았거나 지원하지 않는 페이지입니다. HTTP(S) 웹페이지를 완전히 연 뒤 해당 탭에서 확장 아이콘을 눌러 연결하세요'
+  let url
+  try {
+    if (typeof raw !== 'string' || !raw.trim()) throw new Error(message)
+    url = new URL(raw)
+  } catch {
+    throw new Error(message)
+  }
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password)
-    throw new Error('Only HTTP(S) tabs can be shared')
+    throw new Error(message)
   return url.href
 }
 

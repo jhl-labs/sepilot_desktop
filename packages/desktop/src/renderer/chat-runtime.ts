@@ -27,6 +27,14 @@ import {
   resolveDaemonChatRunAbortReason,
   type DaemonChatRunController,
 } from '@sepilotd/api-client'
+import {
+  beginDesktopSessionRun,
+  finishDesktopSessionRun,
+  getDesktopSessionRun,
+  notifyDesktopSessionRun,
+  rebindDesktopSessionRun,
+  type DesktopSessionRun,
+} from './session-run-registry'
 
 export interface CreateDesktopChatRuntimeParams {
   api: SepilotDesktopApi
@@ -49,7 +57,8 @@ export interface CreateDesktopChatRuntimeParams {
   setAgentState: Dispatch<SetStateAction<AgentState>>
   setStopReason?: Dispatch<SetStateAction<RunStopReason | null>>
   messagesRef: MutableRefObject<Message[]>
-  activeRunControllerRef: MutableRefObject<DaemonChatRunController | null>
+  activitiesRef?: MutableRefObject<ActivityItem[]>
+  activeSessionIdRef: MutableRefObject<string | undefined>
   tokenSpeedTracker?: TokenSpeedTracker
   maxActivityItems: number
   formatError: (error: unknown) => string
@@ -78,16 +87,82 @@ export function createDesktopChatRuntime({
   setAgentState,
   setStopReason,
   messagesRef,
-  activeRunControllerRef,
+  activitiesRef,
+  activeSessionIdRef,
   tokenSpeedTracker,
   maxActivityItems,
   formatError,
   queuedPromptsRef,
   onQueuedPromptsChange,
 }: CreateDesktopChatRuntimeParams) {
-  const pushActivity = (nextItem: ActivityItem) => {
-    setActivities((prev) => [...prev.slice(-(maxActivityItems - 1)), nextItem])
+  let activeRun: DesktopSessionRun | null = null
+  const isRunVisible = (run: DesktopSessionRun | null): run is DesktopSessionRun =>
+    run !== null && activeSessionIdRef.current === run.sessionId
+
+  const resolveNext = <T,>(next: SetStateAction<T>, prev: T): T =>
+    typeof next === 'function' ? (next as (value: T) => T)(prev) : next
+
+  const scoped = {
+    setMessages: (next: SetStateAction<Message[]>) => {
+      if (!activeRun) { setMessages(next); return }
+      activeRun.messages = resolveNext(next, activeRun.messages)
+      if (isRunVisible(activeRun)) setMessages(activeRun.messages)
+      notifyDesktopSessionRun(activeRun)
+    },
+    setActivities: (next: SetStateAction<ActivityItem[]>) => {
+      if (!activeRun) { setActivities(next); return }
+      activeRun.activities = resolveNext(next, activeRun.activities)
+      if (isRunVisible(activeRun)) setActivities(activeRun.activities)
+      notifyDesktopSessionRun(activeRun)
+    },
+    setAgentState: (state: AgentState) => {
+      if (activeRun) activeRun.agentState = state
+      if (!activeRun || isRunVisible(activeRun)) setAgentState(state)
+      if (activeRun) notifyDesktopSessionRun(activeRun)
+    },
+    setStatus: (status: string | null) => {
+      if (activeRun) activeRun.statusText = status
+      if (!activeRun || isRunVisible(activeRun)) setStatusText(status)
+      if (activeRun) notifyDesktopSessionRun(activeRun)
+    },
+    setError: (next: SetStateAction<string | null>) => {
+      if (!activeRun) { setError(next); return }
+      activeRun.error = resolveNext(next, activeRun.error)
+      if (isRunVisible(activeRun)) setError(activeRun.error)
+      notifyDesktopSessionRun(activeRun)
+    },
+    setStopReason: (reason: RunStopReason | null) => {
+      if (activeRun) activeRun.stopReason = reason
+      if (!activeRun || isRunVisible(activeRun)) setStopReason?.(reason)
+      if (activeRun) notifyDesktopSessionRun(activeRun)
+    },
+    setLoading: (next: SetStateAction<boolean>) => {
+      if (!activeRun) { setLoading(next); return }
+      activeRun.loading = resolveNext(next, activeRun.loading)
+      if (isRunVisible(activeRun)) setLoading(activeRun.loading)
+      notifyDesktopSessionRun(activeRun)
+    },
   }
+
+  const pushActivity = (nextItem: ActivityItem) => {
+    scoped.setActivities((prev) => [...prev.slice(-(maxActivityItems - 1)), nextItem])
+  }
+
+  const openRun = (targetSessionId: string | undefined): DesktopSessionRun => {
+    const visible = activeSessionIdRef.current === targetSessionId
+    activeRun = beginDesktopSessionRun(targetSessionId, {
+      messages: visible ? messagesRef.current : [],
+      activities: visible ? (activitiesRef?.current ?? []) : [],
+    })
+    return activeRun
+  }
+
+  const closeRun = (run: DesktopSessionRun) => {
+    finishDesktopSessionRun(run, isRunVisible(run))
+  }
+
+  const runControllerFor = (run: DesktopSessionRun | null): DaemonChatRunController =>
+    run?.controller ?? createDaemonChatRunController()
 
   const syncProjectMembership = (nextSessionId: string) => {
     if (!selectedProjectId) return
@@ -108,7 +183,13 @@ export function createDesktopChatRuntime({
   }
 
   const handleAssignedSession = (nextSessionId: string) => {
-    onSessionChange(nextSessionId)
+    const run = activeRun
+    const followed = run !== null && activeSessionIdRef.current === run.sessionId && run.sessionId === undefined
+    if (run) rebindDesktopSessionRun(run, nextSessionId)
+    if (followed || !run) {
+      activeSessionIdRef.current = nextSessionId
+      onSessionChange(nextSessionId)
+    }
     syncProjectMembership(nextSessionId)
   }
 
@@ -118,36 +199,21 @@ export function createDesktopChatRuntime({
     pushActivity,
   })
 
-  const beginRunController = () => {
-    activeRunControllerRef.current?.cancel()
-    activeRunControllerRef.current?.dispose()
-    const controller = createDaemonChatRunController()
-    activeRunControllerRef.current = controller
-    return controller
-  }
-
-  const clearRunController = (controller: DaemonChatRunController) => {
-    controller.dispose()
-    if (activeRunControllerRef.current === controller) {
-      activeRunControllerRef.current = null
-    }
-  }
-
   let streamStopReason: RunStopReason | null = null
   const runChatStream = createManagedSurfaceStreamRunner({
     bindings: {
       setMessages: (next) =>
-        setMessages((prev) => {
+        scoped.setMessages((prev) => {
           const resolved = typeof next === 'function' ? next(prev) : next
           return sanitizeAssistantMessages(resolved, { stopReason: streamStopReason })
         }),
-      setActivities,
-      setAgentState,
-      setStatus: setStatusText,
-      setError,
+      setActivities: scoped.setActivities,
+      setAgentState: scoped.setAgentState,
+      setStatus: scoped.setStatus,
+      setError: scoped.setError,
       setStopReason: (reason) => {
         streamStopReason = reason
-        setStopReason?.(reason)
+        scoped.setStopReason(reason)
       },
     },
     createId: () => crypto.randomUUID(),
@@ -185,15 +251,17 @@ export function createDesktopChatRuntime({
       ? { ...(chatOptions ?? {}), ...chatOptionsOverride }
       : chatOptions
 
+    const targetSessionId = sessionId
     await runChatStream({
       lifecycle: {
-        setLoading,
+        setLoading: scoped.setLoading,
         beforeStart: () => {
+          openRun(targetSessionId)
           if (clearComposer) {
             setInput('')
           }
           streamStopReason = null
-          setStopReason?.(null)
+          scoped.setStopReason(null)
         },
         statusText: 'Contacting daemon...',
         agentState: 'thinking',
@@ -209,14 +277,17 @@ export function createDesktopChatRuntime({
       ],
       errorAssistantFallbackText: 'Failed to connect to daemon',
       run: async (handlePayload) => {
-        const runController = beginRunController()
+        const run = activeRun
+        const runController = runControllerFor(run)
 
         try {
-          await api.streamChat(trimmedPrompt, sessionId, effectiveChatOptions, handlePayload)
+          await api.streamChat(trimmedPrompt, targetSessionId, effectiveChatOptions, handlePayload)
+          const abortReason = resolveDaemonChatRunAbortReason(runController.signal)
+          if (abortReason) throw abortReason
         } catch (error) {
           throw resolveDaemonChatRunAbortReason(runController.signal, error) ?? error
         } finally {
-          clearRunController(runController)
+          if (run) closeRun(run)
         }
       },
     })
@@ -232,7 +303,10 @@ export function createDesktopChatRuntime({
 
     await runChatStream({
       lifecycle: {
-        setLoading,
+        setLoading: scoped.setLoading,
+        beforeStart: () => {
+          openRun(targetSessionId)
+        },
         statusText: approved ? `Resuming ${toolName}...` : `Resuming after denying ${toolName}...`,
         agentState: 'acting',
         activityLabel: 'Resuming run',
@@ -247,14 +321,15 @@ export function createDesktopChatRuntime({
       errorAssistantFallbackText: 'Failed to resume run',
       rethrow: true,
       run: async (handlePayload) => {
-        const runController = beginRunController()
+        const run = activeRun
+        const runController = runControllerFor(run)
 
         try {
           await api.streamApprovalResume(requestId, approved, targetSessionId, handlePayload)
         } catch (error) {
           throw resolveDaemonChatRunAbortReason(runController.signal, error) ?? error
         } finally {
-          clearRunController(runController)
+          if (run) closeRun(run)
         }
       },
     })
@@ -276,13 +351,14 @@ export function createDesktopChatRuntime({
 
     await runChatStream({
       lifecycle: {
-        setLoading,
+        setLoading: scoped.setLoading,
         afterFinish: async () => {
-          await loadSessionSnapshot(sessionId)
+          if (activeSessionIdRef.current === sessionId) await loadSessionSnapshot(sessionId)
         },
         beforeStart: () => {
+          openRun(sessionId)
           streamStopReason = null
-          setStopReason?.(null)
+          scoped.setStopReason(null)
         },
         statusText: 'Resuming interrupted run...',
         agentState: 'thinking',
@@ -295,7 +371,8 @@ export function createDesktopChatRuntime({
       approvalResumeAvailable: true,
       errorAssistantFallbackText: 'Failed to resume run',
       run: async (handlePayload) => {
-        const runController = beginRunController()
+        const run = activeRun
+        const runController = runControllerFor(run)
 
         try {
           await api.streamSessionResume(
@@ -306,20 +383,23 @@ export function createDesktopChatRuntime({
         } catch (error) {
           throw resolveDaemonChatRunAbortReason(runController.signal, error) ?? error
         } finally {
-          clearRunController(runController)
+          if (run) closeRun(run)
         }
       },
     })
   }
 
   const cancelActiveRun = () => {
-    if (!loading) {
+    const shownSessionId = activeSessionIdRef.current
+    const run = getDesktopSessionRun(shownSessionId)
+    if (!run || run.status !== 'live') {
       return
     }
 
+    run.statusText = 'Cancelling...'
     setStatusText('Cancelling...')
-    activeRunControllerRef.current?.cancel()
-    api.cancelActiveRun()
+    run.controller.cancel()
+    api.cancelActiveRun(shownSessionId)
   }
 
   const handleSend = async () => {

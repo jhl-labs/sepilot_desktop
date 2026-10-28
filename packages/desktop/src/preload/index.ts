@@ -69,7 +69,7 @@ import {
 } from '@sepilotd/api-client'
 import { sanitizeDesktopChatOptions } from './chat-options.js'
 import { DaemonWsClient } from '@sepilotd/api-client/node'
-import { streamExternalAgentChat } from './external-agent-chat.js'
+import { answerExternalQuestion, respondExternalApproval, streamExternalAgentChat } from './external-agent-chat.js'
 
 interface TransportConfig {
   daemonOrigin: string
@@ -515,9 +515,19 @@ const api: SepilotDesktopApi = {
       note?: string
     },
   ) => {
+    if (await respondExternalApproval(requestId, approved)) {
+      return {
+        requestId,
+        decision: approved ? 'approved' : 'denied',
+        approved,
+        resolved: true,
+        state: 'live',
+      }
+    }
     return (await getDaemonClient()).respondApproval(requestId, approved, options)
   },
   answerSessionQuestion: async (sessionId: string, questionId: string, answer: string) => {
+    if (await answerExternalQuestion(questionId, answer)) return { answered: true }
     return (await getDaemonClient()).answerSessionQuestion(sessionId, questionId, answer)
   },
   session: async (id: string) => (await getDaemonClient()).session(id),

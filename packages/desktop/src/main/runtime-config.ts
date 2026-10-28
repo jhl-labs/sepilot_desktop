@@ -1,15 +1,14 @@
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import {
+  resolveLocalDaemonEndpoint,
+  type LocalDaemonEndpoint,
+} from '@sepilotd/api-client/node'
 import { loadDesktopSettings } from './desktop-settings.js'
 import {
   isLocalHttpServiceOrigin,
   serviceOriginsEqual,
 } from '../shared/service-origin.js'
-
-export const DEFAULT_DAEMON_PORT = Number.parseInt(
-  process.env.SEPILOTD_PORT ?? '17600',
-  10,
-)
 
 const DEFAULT_GATEWAY_ORIGIN = 'http://127.0.0.1:17610'
 
@@ -36,10 +35,14 @@ export function getDesktopDaemonOrigin(): string {
   return getDesktopManagedDaemonOrigin()
 }
 
+export function getDesktopLocalDaemonEndpoint(): LocalDaemonEndpoint {
+  return resolveLocalDaemonEndpoint({ dataDir: getDesktopDataDir() })
+}
+
 export function getDesktopManagedDaemonOrigin(): string {
   return (
     process.env.SEPILOT_DESKTOP_DAEMON_ORIGIN?.trim()
-    ?? `http://127.0.0.1:${DEFAULT_DAEMON_PORT}`
+    || getDesktopLocalDaemonEndpoint().origin
   )
 }
 

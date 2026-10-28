@@ -14,7 +14,7 @@ import {
   waitForDaemonReady,
 } from '@sepilotd/api-client/node'
 import {
-  DEFAULT_DAEMON_PORT,
+  getDesktopLocalDaemonEndpoint,
   getDesktopDaemonOrigin,
   getDesktopDataDir,
   isDesktopManagedDaemonOrigin,
@@ -74,9 +74,9 @@ function canAutoStartLocalDaemon(): boolean {
 function daemonPortFromOrigin(origin: string): number {
   try {
     const port = Number.parseInt(new URL(origin).port, 10)
-    return Number.isFinite(port) && port > 0 ? port : DEFAULT_DAEMON_PORT
+    return Number.isFinite(port) && port > 0 ? port : getDesktopLocalDaemonEndpoint().port
   } catch {
-    return DEFAULT_DAEMON_PORT
+    return getDesktopLocalDaemonEndpoint().port
   }
 }
 

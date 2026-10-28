@@ -40,6 +40,15 @@ async function cdp(connection, method, params = {}) {
   return chrome.debugger.sendCommand({ tabId: connection.tabId }, method, params)
 }
 
+async function pageUrl(tab) {
+  let url = tab.url
+  if (!url) {
+    const result = await chrome.debugger.sendCommand({ tabId: tab.id }, 'Page.getFrameTree')
+    url = result.frameTree?.frame?.url
+  }
+  return assertPageUrl(url)
+}
+
 async function stop(message = '연결 해제됨') {
   const connection = active
   active = null
@@ -53,7 +62,7 @@ async function stop(message = '연결 해제됨') {
 
 async function frame(connection) {
   const tab = await chrome.tabs.get(connection.tabId)
-  assertPageUrl(tab.url)
+  const url = await pageUrl({ ...tab, id: connection.tabId })
   const shot = await cdp(connection, 'Page.captureScreenshot', {
     format: 'jpeg',
     quality: 45,
@@ -62,12 +71,12 @@ async function frame(connection) {
   const image = `data:image/jpeg;base64,${shot.data}`
   if (image.length > 2_000_000)
     throw new Error('브라우저 창이 너무 큽니다. 창 크기를 줄이고 다시 연결하세요.')
-  return { url: tab.url, title: (tab.title || '').slice(0, 500), image, capturedAt: Date.now() }
+  return { url, title: (tab.title || '').slice(0, 500), image, capturedAt: Date.now() }
 }
 
 async function execute(connection, command, version) {
   const tab = await chrome.tabs.get(connection.tabId)
-  const action = assertCommand(command, tab.url, connection.mode)
+  const action = assertCommand(command, await pageUrl({ ...tab, id: connection.tabId }), connection.mode)
   const send = async (method, params = {}) => {
     if (active !== connection || connection.mode !== 'agent' || connection.version !== version)
       throw new Error('Control changed; action interrupted')
@@ -205,7 +214,9 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     if (typeof message.token !== 'string' || !message.token.startsWith('sep_ext_'))
       throw new Error('Desktop에서 만든 브라우저 전용 연결 토큰을 입력하세요')
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-    assertPageUrl(tab?.url)
+    if (!Number.isInteger(tab?.id) || tab.id < 0)
+      throw new Error('공유할 탭을 찾을 수 없습니다. 웹페이지 탭에서 확장 아이콘을 다시 눌러 연결하세요')
+    if (tab.url) assertPageUrl(tab.url)
     const connection = {
       origin,
       token: message.token,
@@ -224,6 +235,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       catch { throw attachError }
     }
     try {
+      await pageUrl(tab)
       const connected = await request(connection, 'connect', { label: message.label || 'Browser' })
       connection.id = connected.id
       active = connection

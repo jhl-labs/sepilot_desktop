@@ -5,6 +5,7 @@ import { GallerySurface } from './GallerySurface'
 import { Inbox } from './Inbox'
 import { Skills } from './Skills'
 import { ChatView } from './ChatView'
+import { resetDesktopSessionRunRegistry } from './session-run-registry'
 import { MemorySearch } from './MemorySearch'
 import { KeyboardHelp } from './KeyboardHelp'
 import { SessionRail } from './SessionRail'
@@ -28,6 +29,7 @@ type ServiceStartupStatusPayload = {
 }
 
 export function App() {
+  useEffect(() => () => resetDesktopSessionRunRegistry(), [])
   const { locale } = useLocale()
   const [view, setView] = useState<DesktopView>('chat')
   const [sessionId, setSessionId] = useState<string | undefined>()

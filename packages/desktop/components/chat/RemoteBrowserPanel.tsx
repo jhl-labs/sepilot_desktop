@@ -23,7 +23,11 @@ function hostOf(url: string): string {
   }
 }
 
-export function RemoteBrowserPanel({ sessionId }: { sessionId: string }) {
+export function RemoteBrowserPanel({ sessionId, openRequest = 0, onConnectionChange }: {
+  sessionId: string
+  openRequest?: number
+  onConnectionChange?: (connection: BrowserConnection | undefined) => void
+}) {
   const transport = useTransport()
   const messages = useChatStore((state) => state.messages)
   const latestUserIndex = messages.findLastIndex((message) => message.role === 'user')
@@ -41,7 +45,14 @@ export function RemoteBrowserPanel({ sessionId }: { sessionId: string }) {
   const [cdpStatus, setCdpStatus] = useState<BrowserCdpStatus | null>(null)
   const [picker, setPicker] = useState<{ id: string; tabs: BrowserCdpTab[] } | null>(null)
   const attached = connections.find((connection) => connection.sessionId === sessionId)
+  const available = connections.filter((connection) => !connection.sessionId)
   const frame = attached?.frame
+  useEffect(() => {
+    if (openRequest > 0) setOpen(true)
+  }, [openRequest])
+  useEffect(() => {
+    onConnectionChange?.(attached)
+  }, [attached, onConnectionChange])
   useEffect(() => {
     if (!prerequisite || handledPrerequisite.current === prerequisite.id) return
     handledPrerequisite.current = prerequisite.id
@@ -138,29 +149,48 @@ export function RemoteBrowserPanel({ sessionId }: { sessionId: string }) {
       className="shrink-0 border-b border-border bg-muted/20"
       aria-label="브라우저 공동 탐색"
     >
-      <button
-        type="button"
-        className="flex w-full items-center gap-2 px-4 py-2 text-xs"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-      >
-        <Globe className="h-4 w-4" /> 브라우저 공동 탐색
-        {attached ? (
-          <span>
-            {attached.label} · {attached.mode === 'agent' ? '에이전트 제어 중' : '직접 조작 중'}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">브라우저 연결 시작 · Chrome / Edge</span>
+      <div className="flex items-center gap-2 pr-4">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 flex-wrap items-center gap-2 px-4 py-2 text-left text-xs"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+        >
+          <Globe className="h-4 w-4" /> 브라우저 공동 탐색
+          {attached ? (
+            <span className="min-w-0 truncate">
+              {attached.label} · {attached.mode === 'agent' ? '에이전트 제어 중' : '직접 조작 중'}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              {available.length > 0
+                ? `공유된 탭 ${available.length}개 · 이 대화에 연결 필요`
+                : '브라우저 연결 시작 · Chrome / Edge'}
+            </span>
+          )}
+        </button>
+        {attached && (
+          <button
+            type="button"
+            disabled={busy}
+            className="flex shrink-0 items-center gap-1 rounded border px-2 py-1 text-xs disabled:opacity-50"
+            onClick={() => void act((api) => api.control(
+              attached.id, sessionId, attached.mode === 'agent' ? 'human' : 'agent',
+            ))}
+          >
+            {attached.mode === 'agent' ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            {attached.mode === 'agent' ? '직접 조작하기' : '에이전트 제어 허용'}
+          </button>
         )}
-      </button>
+      </div>
+      {(error || connectionError) && (
+        <p role="alert" className="px-4 pb-2 text-xs text-destructive">
+          {error ||
+            `브라우저 연결 상태를 확인할 수 없습니다. 자동으로 다시 연결합니다. ${connectionError}`}
+        </p>
+      )}
       {open && (
         <div className="max-h-[45vh] space-y-3 overflow-y-auto px-4 pb-3 text-xs">
-          {(error || connectionError) && (
-            <p role="alert" className="text-destructive">
-              {error ||
-                `브라우저 연결 상태를 확인할 수 없습니다. 자동으로 다시 연결합니다. ${connectionError}`}
-            </p>
-          )}
           {!attached && picker && (
             <>
               <p className="font-medium">공유할 탭을 선택하세요</p>
@@ -189,6 +219,24 @@ export function RemoteBrowserPanel({ sessionId }: { sessionId: string }) {
           {!attached && !picker && (
             <>
               <p className="font-medium">브라우저 연결을 함께 준비해요</p>
+              {available.length > 0 && (
+                <div className="space-y-2 rounded border p-3">
+                  <p role="status">탭 공유는 완료됐어요. 아래에서 이 대화에 연결해 주세요.</p>
+                  <p className="text-muted-foreground">
+                    대화에 연결한 뒤 “에이전트 제어 허용”을 눌러야 에이전트가 화면을 확인하고 작업할 수 있어요.
+                  </p>
+                  {available.map((connection) => (
+                    <button
+                      key={connection.id}
+                      disabled={busy}
+                      className="mr-2 rounded border px-3 py-2"
+                      onClick={() => void act((api) => api.control(connection.id, sessionId, 'human'))}
+                    >
+                      {connection.label} 이 대화에 연결
+                    </button>
+                  ))}
+                </div>
+              )}
               {cdpStatus?.available && (
                 <>
                   <p>
@@ -228,20 +276,6 @@ export function RemoteBrowserPanel({ sessionId }: { sessionId: string }) {
                     이 환경에서는 Chrome 직접 연결을 사용할 수 없습니다. 아래 확장 방식을 사용하세요.
                   </p>
                 )}
-              {connections
-                .filter((connection) => !connection.sessionId)
-                .map((connection) => (
-                  <button
-                    key={connection.id}
-                    disabled={busy}
-                    className="mr-2 rounded border px-3 py-2"
-                    onClick={() =>
-                      void act((api) => api.control(connection.id, sessionId, 'human'))
-                    }
-                  >
-                    {connection.label} 연결
-                  </button>
-                ))}
               <details>
                 <summary className="cursor-pointer">다른 방법: 브라우저 확장 사용</summary>
                 <div className="mt-2 space-y-2">
@@ -254,6 +288,11 @@ export function RemoteBrowserPanel({ sessionId }: { sessionId: string }) {
                     주세요. 확장 아이콘을 눌러 토큰을 붙여넣고 “이 탭 연결”을 누르면 위 목록에
                     나타납니다.
                   </p>
+                  <p className="font-medium">3. 이 대화에 연결하고 제어 허용</p>
+                  <p>
+                    위 목록에서 “이 대화에 연결”을 누른 뒤 “에이전트 제어 허용”을 눌러 주세요.
+                    확장 팝업의 연결 완료는 탭 공유가 시작됐다는 뜻이며, 대화 연결은 별도로 필요합니다.
+                  </p>
                 </div>
               </details>
             </>
@@ -263,33 +302,13 @@ export function RemoteBrowserPanel({ sessionId }: { sessionId: string }) {
               <p role="status">
                 {attached.mode === 'agent'
                   ? '브라우저가 준비됐어요. 대화에 “이어서 진행해 줘”라고 입력해 주세요.'
-                  : '3. 연결됐어요. “에이전트 제어 허용”을 누르면 이 탭에서 작업할 수 있어요.'}
+                  : '이 대화에 연결됐어요. 마지막으로 “에이전트 제어 허용”을 눌러 주세요.'}
               </p>
               {transportLabel && (
                 <p className="text-muted-foreground">연결 방식: {transportLabel}</p>
               )}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="flex-1 truncate">{frame?.title || attached.label}</span>
-                <button
-                  disabled={busy}
-                  className="flex items-center gap-1 rounded border px-2 py-1"
-                  onClick={() =>
-                    void act((api) =>
-                      api.control(
-                        attached.id,
-                        sessionId,
-                        attached.mode === 'agent' ? 'human' : 'agent',
-                      ),
-                    )
-                  }
-                >
-                  {attached.mode === 'agent' ? (
-                    <Pause className="h-3 w-3" />
-                  ) : (
-                    <Play className="h-3 w-3" />
-                  )}
-                  {attached.mode === 'agent' ? '직접 조작하기' : '에이전트 제어 허용'}
-                </button>
                 <button
                   disabled={busy}
                   aria-label="브라우저 연결 해제"

@@ -1,6 +1,5 @@
 import React from 'react'
 import type {
-  DaemonChatRunController,
   DaemonHealthReportSnapshot,
   GatewayTicketWatchRevalidateHealth,
   RunStopNextAction,
@@ -42,14 +41,25 @@ function buildErrorFormatter(fallback: string): (error: unknown) => string {
 }
 
 export function ChatView({
-  sessionId,
+  sessionId: selectedSessionId,
   onSessionChange,
   initialPrompt,
   healthReportSnapshot,
   gatewayWatchHealth,
   onOpenMemory,
 }: ChatViewProps) {
-  const activeRunControllerRef = React.useRef<DaemonChatRunController | null>(null)
+  const [followedSessionId, setFollowedSessionId] = React.useState<string | undefined>()
+  React.useEffect(() => {
+    setFollowedSessionId(undefined)
+  }, [selectedSessionId])
+  const sessionId = selectedSessionId ?? followedSessionId
+  const handleSessionChange = React.useCallback((next?: string) => {
+    setFollowedSessionId(next)
+    onSessionChange(next)
+  }, [onSessionChange])
+
+  const activeSessionIdRef = React.useRef<string | undefined>(sessionId)
+  activeSessionIdRef.current = sessionId
   const tokenSpeedTrackerRef = React.useRef(createTokenSpeedTracker())
   const tokenSpeedSessionIdRef = React.useRef<string | undefined>(sessionId)
   const { locale } = useLocale()
@@ -144,12 +154,14 @@ export function ChatView({
     gatewayWatchHealth,
   })
 
+  const [stopReason, setStopReason] = React.useState<RunStopReason | null>(null)
+
   const { loadSessionSnapshot } = useSessionSurface({
     api: window.sepilot,
     sessionId,
     loading,
     sessionStatus: sessionDetail?.status,
-    onSessionChange,
+    onSessionChange: handleSessionChange,
     messagesRef,
     activitiesRef,
     setMessages,
@@ -158,6 +170,9 @@ export function ChatView({
     setArtifacts,
     setError,
     setAgentState,
+    setLoading,
+    setStatusText,
+    setStopReason,
   })
 
   React.useEffect(() => {
@@ -176,7 +191,6 @@ export function ChatView({
     message: string
   } | null>(null)
 
-  const [stopReason, setStopReason] = React.useState<RunStopReason | null>(null)
   const [iterationBudgetOverride, setIterationBudgetOverride] = React.useState<number | null>(null)
   const effectiveChatOptions = React.useMemo(
     () =>
@@ -203,7 +217,7 @@ export function ChatView({
       chatOptions: effectiveChatOptions,
       selectedProjectId,
       loadSessionSnapshot,
-      onSessionChange,
+      onSessionChange: handleSessionChange,
       setInput,
       setMessages,
       setActivities,
@@ -215,7 +229,8 @@ export function ChatView({
       setAgentState,
       setStopReason,
       messagesRef,
-      activeRunControllerRef,
+      activitiesRef,
+      activeSessionIdRef,
       tokenSpeedTracker: tokenSpeedTrackerRef.current,
       maxActivityItems: MAX_ACTIVITY_ITEMS,
       formatError,

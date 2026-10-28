@@ -4,14 +4,27 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { resolveLocalCommandLaunch } from './local-command'
-import { validateCliChatInput, validateCliImage, type CliChatInput, type CliChatOutput } from '../../lib/chat/cli-chat-contract'
+import { runOpencodeServerTurn } from './opencode-turn'
+import {
+  validateCliChatInput,
+  validateCliImage,
+  type CliAsk,
+  type CliChatInput,
+  type CliChatOutput,
+} from '../../lib/chat/cli-chat-contract'
 
 type Row = Record<string, unknown>
 const row = (value: unknown): Row => value && typeof value === 'object' ? value as Row : {}
 const str = (value: unknown): string => typeof value === 'string' ? value : ''
 export interface CliConversation { threadId?: string }
 
-export async function runCliChat(input: CliChatInput, state: CliConversation, signal: AbortSignal, emit: (event: CliChatOutput) => void): Promise<void> {
+const noInteractiveHost: CliAsk = async () => {
+  throw new Error('Desktop CLI chat has no interactive host for this request')
+}
+
+const TURN_TIMEOUT_MS = 20 * 60_000
+
+export async function runCliChat(input: CliChatInput, state: CliConversation, signal: AbortSignal, emit: (event: CliChatOutput) => void, ask: CliAsk = noInteractiveHost): Promise<void> {
   validateCliChatInput(input)
   if (input.cwd !== undefined && (typeof input.cwd !== 'string' || !isAbsolute(input.cwd))) throw new Error('CLI working directory must be absolute')
   if (signal.aborted) throw new Error('CLI run cancelled')
@@ -27,10 +40,13 @@ export async function runCliChat(input: CliChatInput, state: CliConversation, si
       }
     }
     if (signal.aborted) throw new Error('CLI run cancelled')
+    if (input.backend === 'opencode-cli') {
+      await runOpencodeServerTurn({ input, state, signal, emit, ask, files, timeoutMs: TURN_TIMEOUT_MS })
+      return
+    }
     const model = input.model ? ['--model', input.model] : []
     const command = input.backend === 'codex-cli' ? ['codex', 'app-server']
-      : input.backend === 'claude-cli' ? ['claude', '--print', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--permission-mode', 'dontAsk', ...model, ...(state.threadId ? ['--resume', state.threadId] : [])]
-        : ['opencode', 'run', '--format', 'json', ...model, ...(state.threadId ? ['--session', state.threadId] : []), ...files.flatMap((file) => ['--file', file])]
+      : ['claude', '--print', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--permission-prompts', 'host', ...model, ...(state.threadId ? ['--resume', state.threadId] : [])]
     const launch = resolveLocalCommandLaunch(command)
     await new Promise<void>((resolve, reject) => {
       const child = spawn(launch.file, launch.args, { cwd: input.cwd, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
@@ -53,10 +69,20 @@ export async function runCliChat(input: CliChatInput, state: CliConversation, si
         else resolve()
       }
       const abort = () => finish(new Error('CLI run cancelled'))
-      const timer = setTimeout(() => finish(new Error('CLI run timed out')), 20 * 60_000)
+      const timer = setTimeout(() => finish(new Error('CLI run timed out')), TURN_TIMEOUT_MS)
       signal.addEventListener('abort', abort, { once: true })
       const send = (value: unknown) => child.stdin.write(`${JSON.stringify(value)}\n`)
       const text = (value: unknown) => { if (typeof value === 'string' && value) emit({ type: 'text', text: value }) }
+      const answer = (work: () => Promise<void>) => { void work().catch((error: unknown) => finish(error instanceof Error ? error : new Error(String(error)))) }
+      const askApproval = async (request: { requestId: string; toolName: string; args: Record<string, unknown>; context?: string }): Promise<boolean> => {
+        const reply = await ask({ kind: 'approval', ...request })
+        return reply.kind === 'approval' && reply.approved
+      }
+      const askQuestion = async (requestId: string, prompt: string, choices?: string[]): Promise<string> => {
+        const reply = await ask({ kind: 'question', requestId, prompt, choices })
+        if (reply.kind !== 'question') throw new Error('Expected a question answer')
+        return reply.answer
+      }
       const parse = (line: string) => {
         if (!line.trim() || finished) return
         if (!line.trimStart().startsWith('{')) { emit({ type: 'progress', text: line.slice(0, 1000) }); return }
@@ -67,7 +93,7 @@ export async function runCliChat(input: CliChatInput, state: CliConversation, si
             send({ method: 'initialized' })
             send({ id: 2, method: state.threadId ? 'thread/resume' : 'thread/start', params: {
               ...(state.threadId ? { threadId: state.threadId } : {}), cwd: input.cwd, model: input.model,
-              approvalPolicy: 'never',
+              approvalPolicy: 'on-request',
             } })
           } else if (event.id === 2) {
             const threadId = str(row(row(event.result).thread).id)
@@ -104,9 +130,65 @@ export async function runCliChat(input: CliChatInput, state: CliConversation, si
             sawCompletion = true
             finish()
           }
-          if (event.id !== undefined && typeof event.method === 'string') send({ id: event.id, error: { code: -32601, message: 'Desktop CLI chat does not support this interactive request' } })
+          if (event.id !== undefined && typeof event.method === 'string') {
+            const requestId = String(event.id)
+            const reply = (result: unknown) => { if (!finished) send({ id: event.id, result }) }
+            if (event.method === 'item/commandExecution/requestApproval' || event.method === 'item/fileChange/requestApproval' || event.method === 'item/permissions/requestApproval') {
+              const toolName = event.method === 'item/commandExecution/requestApproval' ? 'command'
+                : event.method === 'item/fileChange/requestApproval' ? 'file_change' : 'permissions'
+              const { threadId: _thread, turnId: _turn, startedAtMs: _started, ...args } = params
+              answer(async () => {
+                const approved = await askApproval({ requestId, toolName, args, context: str(params.reason) || undefined })
+                reply({ decision: approved ? 'accept' : 'decline' })
+              })
+            } else if (event.method === 'item/tool/requestUserInput') {
+              const questions = Array.isArray(params.questions) ? params.questions.map(row) : []
+              answer(async () => {
+                const answers: Record<string, { answers: string[] }> = {}
+                for (const question of questions) {
+                  const id = str(question.id)
+                  if (!id) continue
+                  const options = Array.isArray(question.options) ? question.options.map((option) => str(row(option).label)).filter(Boolean) : []
+                  const text = await askQuestion(`${requestId}:${id}`, [str(question.header), str(question.question)].filter(Boolean).join(': '), options.length ? options : undefined)
+                  answers[id] = { answers: [text] }
+                }
+                reply({ answers })
+              })
+            } else {
+              send({ id: event.id, error: { code: -32601, message: 'Desktop CLI chat does not support this interactive request' } })
+            }
+          }
         } else if (input.backend === 'claude-cli') {
           if (typeof event.session_id === 'string') state.threadId = event.session_id
+          if (event.type === 'control_request') {
+            const requestId = str(event.request_id)
+            const request = row(event.request)
+            const respond = (response: unknown) => { if (!finished) send({ type: 'control_response', response: { subtype: 'success', request_id: requestId, response } }) }
+            if (request.subtype === 'can_use_tool' && requestId) {
+              const toolName = str(request.tool_name)
+              const toolInput = row(request.input)
+              if (toolName === 'AskUserQuestion') {
+                const questions = Array.isArray(toolInput.questions) ? toolInput.questions.map(row) : []
+                answer(async () => {
+                  const answers: Record<string, string> = {}
+                  for (const [index, question] of questions.entries()) {
+                    const prompt = str(question.question)
+                    const options = Array.isArray(question.options) ? question.options.map((option) => str(row(option).label)).filter(Boolean) : []
+                    answers[prompt] = await askQuestion(`${requestId}:${index}`, [str(question.header), prompt].filter(Boolean).join(': '), options.length ? options : undefined)
+                  }
+                  respond({ behavior: 'allow', updatedInput: { ...toolInput, answers } })
+                })
+              } else {
+                answer(async () => {
+                  const approved = await askApproval({ requestId, toolName, args: toolInput, context: str(request.description) || undefined })
+                  respond(approved ? { behavior: 'allow', updatedInput: toolInput } : { behavior: 'deny', message: 'The user declined this action in Sepilot Desktop.' })
+                })
+              }
+            } else if (requestId) {
+              send({ type: 'control_response', response: { subtype: 'error', request_id: requestId, error: 'Desktop CLI chat does not support this control request' } })
+            }
+            return
+          }
           if (event.type === 'assistant') {
             const content = row(event.message).content
             if (Array.isArray(content)) for (const part of content) if (row(part).type === 'text') text(row(part).text)
@@ -118,11 +200,6 @@ export async function runCliChat(input: CliChatInput, state: CliConversation, si
             sawCompletion = true
             finish()
           }
-        } else {
-          if (typeof event.sessionID === 'string') state.threadId = event.sessionID
-          if (event.type === 'error') throw new Error(str(row(row(event.error).data).message) || 'OpenCode turn failed')
-          if (event.type === 'text') text(row(event.part).text)
-          if (event.type === 'step_finish') sawCompletion = true
         }
       }
       child.on('error', finish)
@@ -148,10 +225,9 @@ export async function runCliChat(input: CliChatInput, state: CliConversation, si
       })
       if (signal.aborted) { abort(); return }
       if (input.backend === 'codex-cli') send({ id: 1, method: 'initialize', params: { clientInfo: { name: 'sepilot', version: '1.0.2' } } })
-      else if (input.backend === 'claude-cli') child.stdin.end(`${JSON.stringify({ type: 'user', message: { role: 'user', content: [
+      else send({ type: 'user', message: { role: 'user', content: [
         { type: 'text', text: input.message }, ...(input.images ?? []).map((image) => ({ type: 'image', source: { type: 'base64', media_type: image.mediaType, data: image.data } })),
-      ] } })}\n`)
-      else child.stdin.end(input.message)
+      ] } })
     })
   } finally {
     if (directory) await rm(directory, { recursive: true, force: true })

@@ -121,8 +121,22 @@ export interface SkillCreateInput {
   force?: boolean
 }
 
+export interface SkillListContext {
+  cwd?: string | null
+  workspaceRoot?: string | null
+}
+
+export function skillListQuery(context?: SkillListContext): string {
+  const params = new URLSearchParams({ includeDisabled: 'true', includeBuiltins: 'false' })
+  const cwd = context?.cwd?.trim()
+  const workspaceRoot = context?.workspaceRoot?.trim() || cwd
+  if (cwd) params.set('cwd', cwd)
+  if (workspaceRoot) params.set('workspaceRoot', workspaceRoot)
+  return `/skills?${params.toString()}`
+}
+
 export interface SkillsApi {
-  list: () => Promise<SkillItem[]>
+  list: (context?: SkillListContext) => Promise<SkillItem[]>
   get: (id: string) => Promise<SkillDetail>
   setEnabled: (name: string, enabled: boolean) => Promise<void>
   searchMarketplace: (
@@ -186,11 +200,8 @@ export async function createSkillsApi(transport: Transport): Promise<SkillsApi> 
   }
 
   return {
-    list: async () => {
-      const skills = await requestJson<SkillMetadata[]>(
-        'GET',
-        '/skills?includeDisabled=true&includeBuiltins=false',
-      )
+    list: async (context) => {
+      const skills = await requestJson<SkillMetadata[]>('GET', skillListQuery(context))
       return skills.map(mapSkillItem)
     },
     get: (id) => requestJson<SkillDetail>('GET', `/skills/${encodeURIComponent(id)}`),

@@ -114,6 +114,7 @@ interface ChatState {
   setMessageFailed: (id: string, failed: boolean) => void
   removeMessagesFromId: (id: string) => void
   clear: () => void
+  resetForSessionSwitch: () => void
 }
 
 const defaults = {
@@ -205,6 +206,16 @@ const { store, reset } = createResettableStore<ChatState>(
         set({
           messages: messages.map((message, index) =>
             index === optimisticIndex ? mergeOptimisticMessage(message, m) : message,
+          ),
+        })
+        return
+      }
+
+      const canonicalIndex = messages.findIndex((message) => sameOptimisticTurn(m, message))
+      if (canonicalIndex >= 0) {
+        set({
+          messages: messages.map((message, index) =>
+            index === canonicalIndex ? mergeOptimisticMessage(m, message) : message,
           ),
         })
         return
@@ -303,6 +314,7 @@ const { store, reset } = createResettableStore<ChatState>(
       })
     },
     clear: () => set({ ...defaults }),
+    resetForSessionSwitch: () => set({ ...defaults, pendingApprovals: get().pendingApprovals }),
   }),
   {
     ...defaults,
@@ -322,6 +334,7 @@ const { store, reset } = createResettableStore<ChatState>(
     setMessageFailed: () => {},
     removeMessagesFromId: () => {},
     clear: () => {},
+    resetForSessionSwitch: () => {},
   },
 )
 

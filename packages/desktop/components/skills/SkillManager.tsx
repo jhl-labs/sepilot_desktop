@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Download,
   Eye,
@@ -26,6 +26,7 @@ import {
 } from '@/lib/api/skills'
 import { createMarketplacesApi, type MarketplaceEntry } from '@/lib/api/marketplaces'
 import { useSkillsStore } from '@/lib/store/skills-store'
+import { useSessionStore } from '@/lib/store/session-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { explainChatStreamError } from '@/lib/utils/friendly-error'
@@ -58,6 +59,9 @@ interface SkillManagerProps {
 
 export function SkillManager({ density = 'default' }: SkillManagerProps) {
   const transport = useTransport()
+  const activeWorkspace = useSessionStore((s) => s.sessions.find((session) => session.id === s.activeId)?.cwd ?? null)
+  const activeWorkspaceRef = useRef(activeWorkspace)
+  activeWorkspaceRef.current = activeWorkspace
   const items = useSkillsStore((s) => s.items)
   const setItems = useSkillsStore((s) => s.setItems)
   const setEnabled = useSkillsStore((s) => s.setEnabled)
@@ -193,7 +197,7 @@ export function SkillManager({ density = 'default' }: SkillManagerProps) {
 
   async function refresh(): Promise<void> {
     try {
-      const list = await (await createSkillsApi(transport)).list()
+      const list = await (await createSkillsApi(transport)).list({ cwd: activeWorkspaceRef.current })
       setItems(list)
     } catch {
       setItems([])
@@ -204,7 +208,7 @@ export function SkillManager({ density = 'default' }: SkillManagerProps) {
     let cancelled = false
     void (async () => {
       try {
-        const list = await (await createSkillsApi(transport)).list()
+        const list = await (await createSkillsApi(transport)).list({ cwd: activeWorkspaceRef.current })
         if (!cancelled) setItems(list)
       } catch {
         if (!cancelled) setItems([])

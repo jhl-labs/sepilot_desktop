@@ -2,7 +2,7 @@ import { ipcRenderer } from 'electron'
 import { randomUUID } from 'node:crypto'
 import type { ChatStreamOptions, DaemonChatRunController, DaemonChatStreamPayload } from '@sepilotd/api-client'
 import { CHAT_BACKENDS } from '../../lib/chat/chat-backends'
-import { validateCliImage, type CliChatImage, type CliChatOutput } from '../../lib/chat/cli-chat-contract'
+import { validateCliImage, type CliChatImage, type CliChatOutput, type CliChatReply } from '../../lib/chat/cli-chat-contract'
 import { isCliModelBackend } from '../../lib/chat/cli-models'
 
 interface StreamExternalAgentChatInput {
@@ -26,6 +26,38 @@ interface StreamExternalAgentChatInput {
   clearActiveRun: (controller: DaemonChatRunController) => void
 }
 
+const externalRequests = new Map<string, { runId: string; kind: CliChatReply['kind']; sessionId?: string; onEvent: (event: DaemonChatStreamPayload) => void }>()
+
+function scopedRequestId(runId: string, requestId: string): string {
+  return `${runId}:${requestId}`
+}
+
+async function replyToExternalRun(scopedId: string, reply: CliChatReply): Promise<boolean> {
+  const entry = externalRequests.get(scopedId)
+  if (!entry || entry.kind !== reply.kind) return false
+  externalRequests.delete(scopedId)
+  const requestId = scopedId.slice(entry.runId.length + 1)
+  const accepted = await ipcRenderer.invoke('sepilot:cli/respond', entry.runId, { ...reply, requestId })
+  if (accepted !== true) throw new Error('The external agent is no longer waiting for this answer.')
+  if (reply.kind === 'approval') {
+    entry.onEvent({ type: 'approval_response', requestId: scopedId, approved: reply.approved, decision: reply.approved ? 'approved' : 'denied' })
+  }
+  return true
+}
+
+function registerExternalRequest(scopedId: string, entry: { runId: string; kind: CliChatReply['kind']; sessionId?: string; onEvent: (event: DaemonChatStreamPayload) => void }): boolean {
+  if (externalRequests.has(scopedId)) return false
+  externalRequests.set(scopedId, entry)
+  return true
+}
+
+export function respondExternalApproval(requestId: string, approved: boolean): Promise<boolean> {
+  return replyToExternalRun(requestId, { requestId, kind: 'approval', approved })
+}
+
+export function answerExternalQuestion(questionId: string, answer: string): Promise<boolean> {
+  return replyToExternalRun(questionId, { requestId: questionId, kind: 'question', answer })
+}
 
 export function isExternalAgentMode(mode: unknown): boolean {
   return CHAT_BACKENDS.some((entry) => entry.mode !== undefined && entry.mode === mode)
@@ -58,6 +90,26 @@ export async function streamExternalAgentChat(input: StreamExternalAgentChatInpu
       else if (output.type === 'image') {
         const url = await input.saveImage(validateCliImage(output.image))
         append(`\n\n![Generated image](${url})\n\n`)
+      } else if (output.type === 'approval_request') {
+        const scopedId = scopedRequestId(id, output.requestId)
+        if (!registerExternalRequest(scopedId, { runId: id, kind: 'approval', sessionId: input.sessionId, onEvent: input.onEvent })) return
+        input.onEvent({
+          type: 'approval_request',
+          requestId: scopedId,
+          sessionId: input.sessionId,
+          toolCall: { id: scopedId, name: `${backend.id}:${output.toolName}`, arguments: output.args },
+          ...(output.context ? { context: output.context } : {}),
+        } as DaemonChatStreamPayload)
+      } else if (output.type === 'question_request') {
+        const scopedId = scopedRequestId(id, output.requestId)
+        if (!registerExternalRequest(scopedId, { runId: id, kind: 'question', sessionId: input.sessionId, onEvent: input.onEvent })) return
+        input.onEvent({
+          type: 'question_request',
+          questionId: scopedId,
+          sessionId: input.sessionId,
+          prompt: output.prompt,
+          ...(output.choices ? { choices: output.choices } : {}),
+        } as DaemonChatStreamPayload)
       } else input.onEvent({ type: 'reasoning_step', label: backend.label, detail: output.text })
     }).catch((error: unknown) => { outputError = error })
   }
@@ -97,6 +149,7 @@ export async function streamExternalAgentChat(input: StreamExternalAgentChatInpu
   } finally {
     controller.signal.removeEventListener('abort', cancel)
     ipcRenderer.removeListener(channel, onData)
+    for (const [requestId, entry] of externalRequests) if (entry.runId === id) externalRequests.delete(requestId)
     input.clearActiveRun(controller)
   }
   return true
