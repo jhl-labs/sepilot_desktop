@@ -16,7 +16,7 @@ strip = true
 panic = "abort"
 
 [dependencies]
-sevenz-rust2 = "0.18"
+sevenz-rust2 = "0.21"
 sha2 = "0.10"
 hex = "0.4"
 
